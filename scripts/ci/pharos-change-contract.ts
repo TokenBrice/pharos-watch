@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -53,8 +53,11 @@ interface ChangeContract {
   docsToRead: string[];
   families: MatchedFamily[];
   hardRules: string[];
+  source: ChangeSource;
   warnings: string[];
 }
+
+type ChangeSource = "explicit files" | "staged index" | "base/head range" | "working tree";
 
 interface HookViolation {
   file?: string;
@@ -74,6 +77,7 @@ interface ChangedFileOptions {
 }
 
 interface CliOptions {
+  allowMissing: boolean;
   baseRef?: string;
   format: "json" | "text";
   headRef?: string;
@@ -116,6 +120,8 @@ const TYPED_PATH_FAMILIES = PATH_FAMILIES as PathFamilyRule[];
 const TYPED_DEFAULT_BASE_DOCS = DEFAULT_BASE_DOCS as string[];
 const TYPED_CORE_RULES = CORE_RULES as string[];
 
+class ExplicitPathError extends Error {}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -154,7 +160,144 @@ export function normalizeChangedFiles(files: readonly string[]): string[] {
   return unique(files.map((file) => normalizeRepoPath(file.trim())).filter(Boolean)).sort();
 }
 
+interface ExplicitPathResolution {
+  existencePaths: string[];
+  rawPath: string;
+  repoPath: string;
+}
+
+const WINDOWS_DRIVE_ABSOLUTE_PATH = /^[A-Za-z]:[\\/]/;
+
+function isWindowsDriveAbsolutePath(value: string): boolean {
+  return WINDOWS_DRIVE_ABSOLUTE_PATH.test(value);
+}
+
+function isAbsoluteRepoPath(value: string): boolean {
+  return isAbsolute(value) || isWindowsDriveAbsolutePath(value);
+}
+
+function getRelativeRepoPath(absolutePath: string, root: string): string | null {
+  const relativePath = normalizeRepoPath(relative(resolve(root), absolutePath));
+  if (
+    relativePath === ".." ||
+    relativePath.startsWith("../") ||
+    isAbsoluteRepoPath(relativePath)
+  ) {
+    return null;
+  }
+  return relativePath.replace(/^(?:\.\/)+/, "");
+}
+
+function getCurrentWorktreeRoot(execFile: GitExec = execFileSync as GitExec): string {
+  try {
+    const output = execFile("git", ["rev-parse", "--show-toplevel"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    }).trim();
+    return output ? resolve(normalizeRepoPath(output)) : REPO_ROOT;
+  } catch {
+    return REPO_ROOT;
+  }
+}
+
+function validateExistingExplicitPath(
+  { existencePaths, rawPath }: ExplicitPathResolution,
+  roots: readonly string[],
+): void {
+  const existingPaths = existencePaths.filter((path) => existsSync(path));
+  if (existingPaths.length === 0) return;
+
+  const realRoots = roots.map((root) => realpathSync(root));
+  for (const existingPath of existingPaths) {
+    let realPath: string;
+    try {
+      realPath = realpathSync(existingPath);
+    } catch {
+      throw new ExplicitPathError(`explicit path resolves outside repository: ${rawPath}`);
+    }
+
+    if (!realRoots.some((root) => getRelativeRepoPath(realPath, root) !== null)) {
+      throw new ExplicitPathError(`explicit path resolves outside repository: ${rawPath}`);
+    }
+  }
+}
+
+function resolveExplicitPath(
+  value: unknown,
+  currentWorktreeRoot: string,
+): ExplicitPathResolution | null {
+  const rawPath = normalizeRepoPath(String(value ?? "").trim());
+  if (!rawPath) return null;
+
+  const withoutFilePrefix = rawPath.startsWith("file://") ? rawPath.slice("file://".length) : rawPath;
+  const repoRoot = resolve(REPO_ROOT);
+  const currentRoot = resolve(currentWorktreeRoot);
+
+  if (isWindowsDriveAbsolutePath(withoutFilePrefix) && !isAbsolute(withoutFilePrefix)) {
+    throw new ExplicitPathError(`explicit path resolves outside repository: ${rawPath}`);
+  }
+
+  if (isAbsoluteRepoPath(withoutFilePrefix)) {
+    const absolutePath = resolve(withoutFilePrefix);
+    const roots = currentRoot === repoRoot ? [repoRoot] : [currentRoot, repoRoot];
+    for (const root of roots) {
+      const repoPath = getRelativeRepoPath(absolutePath, root);
+      if (repoPath !== null) {
+        return {
+          existencePaths: unique([absolutePath, resolve(repoRoot, repoPath)]),
+          rawPath,
+          repoPath,
+        };
+      }
+    }
+
+    throw new ExplicitPathError(`explicit path resolves outside repository: ${rawPath}`);
+  }
+
+  const relativeInput = withoutFilePrefix.replace(/^(?:\.\/)+/, "");
+  const absolutePath = resolve(repoRoot, relativeInput);
+  const repoPath = getRelativeRepoPath(absolutePath, repoRoot);
+  if (repoPath === null) {
+    throw new ExplicitPathError(`explicit path resolves outside repository: ${rawPath}`);
+  }
+
+  return {
+    existencePaths: unique([
+      absolutePath,
+      ...(currentRoot === repoRoot ? [] : [resolve(currentRoot, repoPath)]),
+    ]),
+    rawPath,
+    repoPath,
+  };
+}
+
+function normalizeExplicitFiles(
+  files: readonly string[],
+  { allowMissing = false, execFile = execFileSync as GitExec }: { allowMissing?: boolean; execFile?: GitExec } = {},
+): string[] {
+  const currentWorktreeRoot = getCurrentWorktreeRoot(execFile);
+  const missingWarnings = new Set<string>();
+  const resolvedFiles = files
+    .map((file) => resolveExplicitPath(file, currentWorktreeRoot))
+    .filter((file): file is ExplicitPathResolution => file !== null)
+    .map((resolution) => {
+      validateExistingExplicitPath(resolution, [REPO_ROOT, currentWorktreeRoot]);
+      const { existencePaths, repoPath } = resolution;
+      if (!allowMissing && !existencePaths.some((path) => existsSync(path)) && !missingWarnings.has(repoPath)) {
+        console.error(`warning: ${repoPath} does not exist (routing as a planned new file)`);
+        missingWarnings.add(repoPath);
+      }
+      return repoPath;
+    });
+
+  return normalizeChangedFiles(resolvedFiles);
+}
+
 export function classifyChangedFiles(files: readonly string[]): ChangeContract {
+  return classifyChangedFilesWithSource(files, "explicit files");
+}
+
+function classifyChangedFilesWithSource(files: readonly string[], source: ChangeSource): ChangeContract {
   const changedFiles = normalizeChangedFiles(files);
   const matchedFamilies = TYPED_PATH_FAMILIES.map((family) => ({
     ...family,
@@ -186,6 +329,7 @@ export function classifyChangedFiles(files: readonly string[]): ChangeContract {
       risk: family.risk,
     })),
     hardRules,
+    source,
     warnings,
   };
 }
@@ -781,9 +925,11 @@ export function readChangedFiles({
   headRef,
   staged = false,
 }: ChangedFileOptions = {}): string[] {
-  const mode = baseRef || headRef
-    ? { kind: "range" as const, base: baseRef || "origin/main", head: headRef || "HEAD" }
-    : staged ? { kind: "staged" as const } : { kind: "working" as const, includeUntracked: true };
+  const mode = staged
+    ? { kind: "staged" as const }
+    : baseRef || headRef
+      ? { kind: "range" as const, base: baseRef || "origin/main", head: headRef || "HEAD" }
+      : { kind: "working" as const, includeUntracked: true };
   return normalizeChangedFiles(collectGitPaths(mode, { cwd: REPO_ROOT, failure: "empty", execFile }));
 }
 
@@ -813,6 +959,7 @@ export function formatContract(
       : "- No current changed files detected.";
   const sections = [
     "Pharos change contract:",
+    `Source: ${contract.source}`,
     "",
     "Matched task families:",
     formatFamilies(contract.families),
@@ -931,7 +1078,7 @@ function buildPermissionRequestDenyOutput(reason: string) {
 export function buildPreToolUseHookOutput(hookInput: UnknownRecord = {}) {
   const violation = findPreToolUseViolation(hookInput);
   if (!violation) {
-    return { continue: true };
+    return {};
   }
 
   return buildToolDenyOutput(violation.reason, "PreToolUse");
@@ -940,7 +1087,7 @@ export function buildPreToolUseHookOutput(hookInput: UnknownRecord = {}) {
 export function buildPermissionRequestHookOutput(hookInput: UnknownRecord = {}) {
   const violation = findPermissionRequestViolation(hookInput);
   if (!violation) {
-    return { continue: true };
+    return {};
   }
 
   return buildPermissionRequestDenyOutput(violation.reason);
@@ -948,6 +1095,7 @@ export function buildPermissionRequestHookOutput(hookInput: UnknownRecord = {}) 
 
 function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options: CliOptions } {
   const options: CliOptions = {
+    allowMissing: false,
     baseRef: process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
     format: "text",
     headRef: process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
@@ -961,6 +1109,8 @@ function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options:
     const arg = argv[i];
     if (arg === "--json") {
       options.format = "json";
+    } else if (arg === "--new-file") {
+      options.allowMissing = true;
     } else if (arg === "--staged") {
       options.staged = true;
     } else if (arg === "--hook") {
@@ -1003,6 +1153,7 @@ Classify the current Pharos diff into docs, checks, and agent guardrails.
 Options:
   --json                  Emit the contract as JSON instead of text
   --staged                Classify staged files only
+  --new-file              Suppress missing explicit-file warnings (repeatable)
   --base-ref <ref>        Classify git diff base...head
   --head-ref <ref>        Classify git diff base...head
   --file <path>           Classify an explicit file path; repeatable
@@ -1033,15 +1184,40 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     return;
   }
 
-  const changedFiles =
-    explicitFiles.length > 0
-      ? normalizeChangedFiles(explicitFiles)
-      : readChangedFiles({
-          baseRef: options.baseRef,
-          headRef: options.headRef,
-          staged: options.staged,
-        });
-  const contract = classifyChangedFiles(changedFiles);
+  let changedFiles: string[];
+  let source: ChangeSource;
+  try {
+    if (explicitFiles.length > 0) {
+      source = "explicit files";
+      changedFiles = normalizeExplicitFiles(explicitFiles, { allowMissing: options.allowMissing });
+    } else if (options.staged) {
+      source = "staged index";
+      changedFiles = readChangedFiles({
+        baseRef: options.baseRef,
+        headRef: options.headRef,
+        staged: true,
+      });
+    } else if (options.baseRef || options.headRef) {
+      source = "base/head range";
+      changedFiles = readChangedFiles({
+        baseRef: options.baseRef,
+        headRef: options.headRef,
+        staged: false,
+      });
+    } else {
+      source = "working tree";
+      changedFiles = readChangedFiles({ staged: false });
+    }
+  } catch (error) {
+    if (error instanceof ExplicitPathError) {
+      console.error(`error: ${error.message}`);
+      process.exitCode = 2;
+      return;
+    }
+    throw error;
+  }
+
+  const contract = classifyChangedFilesWithSource(changedFiles, source);
 
   if (hookMode === "session-start") {
     console.log(JSON.stringify(buildSessionStartHookOutput(contract)));

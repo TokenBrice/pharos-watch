@@ -1,6 +1,6 @@
 # Testing & Linting
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Commands · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · Coverage · Adding a New Test · ESLint Configuration.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · Coverage · Adding a New Test · ESLint Configuration.
 
 ## Overview
 
@@ -27,9 +27,46 @@ npm run test:a11y
 npm run test:a11y:hydrated
 ```
 
-`check:pr` is the adaptive local PR contract. It refreshes `origin/main` before classification by default (`--no-fetch` or `PHAROS_PR_NO_FETCH=1` skips the fetch), warns when the resolved base commit is more than 24 hours old, runs the pinned Gitleaks scanner over `base..head`, and executes the deploy classifier with bare Node exactly as CI does. Docs-only diffs run the CI docs lane instead of static checks and tests; mixed diffs that touch `docs/` add that lane. Other diffs run changed-file ESLint, source typing (including generated Next route types), baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. When an enrolled critical source changes, `check:pr` also runs `coverage:critical` against the base SHA; `--skip-coverage` suppresses only that local rehearsal and prints a reminder that the remote gate still applies. Pages-surface changes print a reminder to consider `SEO_PREVIOUS_SITEMAP_URL=https://stablecoin-dashboard.pages.dev/sitemap.xml npm run check:release` before a release batch. GitHub Actions still invokes `check:pr:static` and `test:pr` directly rather than the local orchestrator. `check:bootstrap` rehearses a clean CI bootstrap from committed state, verifies every `@/generated/*` import resolves, and always restores the set-aside bootstrap-owned outputs afterwards, so the rehearsal leaves the working tree unchanged. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
+`check:pr` is the adaptive local PR contract. It refreshes `origin/main` before classification by default (`--no-fetch` or `PHAROS_PR_NO_FETCH=1` skips the fetch), warns when the resolved base commit is more than 24 hours old, runs the pinned Gitleaks scanner over `base..head`, and executes the deploy classifier with bare Node exactly as CI does. The docs lane runs for any PR that touches verified docs; docs-only PRs skip the static and test jobs. Other diffs run changed-file ESLint, source typing (including generated Next route types), baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. When an enrolled critical source changes, `check:pr` also runs `coverage:critical` against the base SHA; `--skip-coverage` suppresses only that local rehearsal and prints a reminder that the remote gate still applies. Pages-surface changes print a reminder to consider `SEO_PREVIOUS_SITEMAP_URL=https://stablecoin-dashboard.pages.dev/sitemap.xml npm run check:release` before a release batch. GitHub Actions still invokes `check:pr:static` and `test:pr` directly rather than the local orchestrator. `check:bootstrap` rehearses a clean CI bootstrap from committed state, verifies every `@/generated/*` import resolves, and always restores the set-aside bootstrap-owned outputs afterwards, so the rehearsal leaves the working tree unchanged. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
 
 Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` own critical-suite membership.
+
+### Smallest adequate check per area
+
+| Area | Smallest adequate local recipe | Conditional additions |
+| --- | --- | --- |
+| Shared `shared/lib` change | `npm run lint:changed -- --base=<ref>`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib/__tests__/<relevant>.test.ts` | Add `npm run check:stablecoin-data` for catalog/data semantics; run `npm run test:pr -- --base=<ref>` when the change touches critical consumers. |
+| Worker cron change | `npm run lint:changed -- --base=<ref>`; `npm run typecheck:worker`; `npx vitest run worker/src/cron/<relevant>.test.ts` | Add `npm run check:cron-sync` for schedule/trigger edits, `npm run check:cron-connections` for fetch/concurrency edits, `npm run check:migrations` for schema changes, and `npm run validate:worker-scheduled-smoke` for dispatch wiring. |
+| `src/components` change | `npm run lint:changed -- --base=<ref>`; `npm run typecheck`; `npx vitest run src/components/<relevant>.test.tsx` | Add `npm run check:table-primitives` for table markup/primitives; route/public-surface changes need the page-specific registry/CSP/SEO checks. |
+| API route (`worker/src/api` or `functions/`) change | `npm run lint:changed -- --base=<ref>`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run worker/src/api/<relevant>.test.ts` (or the matching `functions/<relevant>.test.ts`) | Add `npm run test:critical-contracts` for critical handlers and `npm run test:pr -- --base=<ref>` when dependency-selected or multi-mode contract coverage is needed. |
+| D1 migration | `npm run lint:changed -- --base=<ref>`; `npm run typecheck:worker`; `npm run check:migrations`; `npx vitest run worker/src/lib/<relevant>.test.ts` | Add the affected API test under `worker/src/api/<relevant>.test.ts` when runtime behavior changes; run `npm run test:pr -- --base=<ref>` for critical consumers. |
+| Stablecoin JSON (`shared/data/stablecoins/**`) | `npm run check:stablecoin-data`; `npm run check:generated-artifacts -- --only=stablecoin-client-projections`; `npm run typecheck`; `npm run typecheck:worker` | Add the focused catalog/registry test; `check:pr:static` also selects page and Worker checks because stablecoin data is a deploy-impact shared path. |
+| Docs-only change | `npm run check:verified-doc-links && npm run check:doc-source-paths && npm run check:doc-sync && npm run check:generated-artifacts -- --only=agents-doc` | This is the exact CI docs lane and applies to internal docs as classified by the deploy-impact rules. |
+
+### Generated-artifact failure playbook
+
+A `check:generated-artifacts` failure naming a `checkable: false` artifact is not ordinary freshness drift: the registry intentionally excludes that build-time projection from check-mode selection. `sitemap-dates` and `docs-metadata` have `inputState: "build-time"` and `reproducibility: "git-history-derived"`; their dates require full Git history.
+A shallow checkout or missing history therefore fails fast instead of using unsafe filesystem timestamps.
+
+For ordinary bootstrap-safe artifacts:
+
+```bash
+npm run bootstrap:generated
+```
+
+For the history-derived projections, obtain full history first, then:
+
+```bash
+npm run bootstrap:generated:history
+```
+
+For one checkable artifact:
+
+```bash
+npm run check:generated-artifacts -- --only=<id>
+```
+
+The former `check:commit-derived-artifacts` path is retired; do not retry it. Do not retry a history-derived `--check` in a shallow or incomplete checkout; fix the checkout and run the history bootstrap first.
 
 Common targeted runners:
 
@@ -403,7 +440,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 - `npm run check:clone-ratchet` checks exact duplicate significant-line windows against `scripts/lib/clone-ratchet-baseline.json`; `check:structural` enforces it for affected PR paths and nightly/manual validation. `npm run check:clone-ratchet:update-baseline` is reserved for an intentional, reviewed extraction or deletion effect, not for ratcheting new duplication into the baseline.
 - `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline. `check:structural` enforces it for affected PR paths and nightly/manual validation; it can also be run directly when CI/operator scripts change.
-- `npm run audit:coverage -- --domain=oracle-risk --enforce` remains the direct content audit for CDP oracle profiles and required branch evidence. It is a manual curation audit, not a merge gate; its reviewed applicability queue is advisory for current v8 scoring, while explicit unresolved dispositions remain v9 blockers rather than silently passing as profile-only evidence.
+- `npm run audit:coverage -- --domain=oracle-risk --enforce` remains the direct content audit for CDP oracle profiles and required branch evidence. It is a manual curation audit, not a merge gate; its reviewed applicability queue is advisory for current Safety Score V9 (`9.46`) scoring, while explicit unresolved dispositions remain V9 blockers rather than silently passing as profile-only evidence.
 - `src/lib/__tests__/term-markup.test.ts` owns AI-summary glossary-marker integrity as an ordinary noncritical runtime-parser test, including known slugs, balanced markers, and the current corpus totals.
 - Mechanism explainer completeness is split across ordinary noncritical domain tests: `src/app/learn/mechanisms/__tests__/content.test.ts` owns labels, one-liners, editorial content, and representative coin IDs; the existing dynamic-route test owns exact static params; `src/app/__tests__/sitemap-frozen.test.ts` owns sitemap membership. OG images remain generated-artifact-owned.
 - `shared/lib/selector/__tests__/editorial-policy.test.ts` owns the Selector banned-phrase rule matrix and complete editorial corpus as an ordinary noncritical domain test, including Picker route/component copy and checked-in worked examples.
@@ -573,16 +610,16 @@ Because flat config *replaces* a rule's options when several config objects matc
 
 ### Zod Runtime Validation
 
-Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQueryWithMeta(..., { schema })`. Use `rg "schema:" src/hooks src/lib` for the live callsite and schema set before adding or auditing endpoint validation; do not maintain a second response-schema inventory here.
+Schema validation in hooks flows from each endpoint descriptor's `schema` through `useRegisteredApiQuery`; in `src/hooks/api-hooks.ts`, meta responses use `createApiPollingQueryOptionsWithMeta` and are normalized with `unwrapApiQueryWithMetaResult`. Use `rg "schema:" src/hooks src/lib` for the live callsite and schema set before adding or auditing endpoint validation; do not maintain a second response-schema inventory here.
 
 When a schema is provided, frontend API helpers now validate in `strict` mode by default and throw on schema mismatch. Use `contractMode: "warn"` only for explicitly degraded surfaces where returning raw data is acceptable.
 
 When adding a new API endpoint:
 
 1. Define the response schema in `shared/types/index.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
-2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
+2. Attach the response schema to the descriptor consumed by `useRegisteredApiQuery`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
-**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
+**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
 
 **Worker CI note:** `shared/types/index.ts` imports `zod`, and the worker type-checks shared modules via the `@shared/*` path alias in the PR static gate (`npm run typecheck:worker`, selected when the diff touches worker paths) and in nightly validation, before a merge can reach the production deploy workflow. Root deps are installed first (`npm ci`) through the npm workspace so shared imports resolve from root `node_modules/`. If you add new npm packages imported at the top level of shared files, they do not need duplication in `worker/package.json` unless the worker uses a worker-local runtime/deploy path that genuinely requires it.

@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -19,6 +20,28 @@ function requireBlockingReason(output: unknown): string {
   }
 
   return output.reason;
+}
+
+function runHookCli(hook: "pre-tool-use" | "permission-request", input = ""): unknown {
+  return JSON.parse(
+    execFileSync(process.execPath, ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), `--hook=${hook}`], {
+      encoding: "utf8",
+      input,
+    }),
+  );
+}
+
+function runContractCli(args: readonly string[], env: NodeJS.ProcessEnv = process.env) {
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), ...args],
+    { cwd: process.cwd(), encoding: "utf8", env },
+  );
+  return {
+    ...result,
+    stderr: String(result.stderr ?? ""),
+    stdout: String(result.stdout ?? ""),
+  };
 }
 
 describe("normalizeChangedFiles", () => {
@@ -107,6 +130,122 @@ describe("formatContract", () => {
   });
 });
 
+describe("CLI path and source selection", () => {
+  it("normalizes absolute and ./ explicit paths before routing", () => {
+    const absolute = runContractCli(["--file", resolve(process.cwd(), "src/app/page.tsx"), "--json"]);
+    const dotSlash = runContractCli(["--file", "./src/app/page.tsx", "--json"]);
+    const absoluteContract = JSON.parse(absolute.stdout);
+    const dotSlashContract = JSON.parse(dotSlash.stdout);
+
+    expect(absolute.status).toBe(0);
+    expect(dotSlash.status).toBe(0);
+    expect(absoluteContract.changedFiles).toEqual(["src/app/page.tsx"]);
+    expect(dotSlashContract.changedFiles).toEqual(absoluteContract.changedFiles);
+    expect(dotSlashContract.families).toEqual(absoluteContract.families);
+  });
+
+  it("rejects explicit paths outside the repository with exit 2", () => {
+    const result = runContractCli(["--file", resolve(process.cwd(), "..", "outside-pharos-change-contract.ts")]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("error: explicit path resolves outside repository");
+  });
+
+  it("rejects relative explicit paths that escape the repository with exit 2", () => {
+    const result = runContractCli(["--file", "../outside-pharos-change-contract.ts"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("error: explicit path resolves outside repository");
+  });
+
+  it("rejects Windows drive paths on every host with exit 2", () => {
+    const result = runContractCli(["--file", String.raw`C:\outside\x.ts`]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("error: explicit path resolves outside repository");
+  });
+
+  it("rejects an existing repository symlink that targets outside the repository", ({ skip }) => {
+    const repositoryFixture = mkdtempSync(join(process.cwd(), ".pharos-change-contract-"));
+    const outsideFixture = mkdtempSync(join(tmpdir(), "pharos-change-contract-outside-"));
+    const outsideFile = join(outsideFixture, "outside.ts");
+    const linkPath = join(repositoryFixture, "outside-link.ts");
+
+    try {
+      writeFileSync(outsideFile, "export const outside = true;\n");
+      try {
+        symlinkSync(outsideFile, linkPath);
+      } catch {
+        skip();
+        return;
+      }
+
+      const result = runContractCli(["--file", linkPath]);
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain("error: explicit path resolves outside repository");
+    } finally {
+      rmSync(repositoryFixture, { force: true, recursive: true });
+      rmSync(outsideFixture, { force: true, recursive: true });
+    }
+  });
+
+  it("accepts an existing repository symlink that targets an in-repository file", ({ skip }) => {
+    const repositoryFixture = mkdtempSync(join(process.cwd(), ".pharos-change-contract-"));
+    const linkPath = join(repositoryFixture, "in-repo-link.tsx");
+    const targetPath = resolve(process.cwd(), "src/app/page.tsx");
+
+    try {
+      try {
+        symlinkSync(targetPath, linkPath);
+      } catch {
+        skip();
+        return;
+      }
+
+      const result = runContractCli(["--file", linkPath, "--json"]);
+
+      expect(result.status).toBe(0);
+      expect(JSON.parse(result.stdout).changedFiles).toEqual([
+        `${repositoryFixture.slice(process.cwd().length + 1).replaceAll("\\", "/")}/in-repo-link.tsx`,
+      ]);
+      expect(result.stderr).toBe("");
+    } finally {
+      rmSync(repositoryFixture, { force: true, recursive: true });
+    }
+  });
+
+  it("warns for missing planned files and suppresses it with --new-file", () => {
+    const plannedPath = "src/app/__planned-change-contract-file__.tsx";
+    const warning = runContractCli(["--file", plannedPath, "--json"]);
+    const suppressed = runContractCli(["--file", plannedPath, "--new-file", "--json"]);
+
+    expect(warning.status).toBe(0);
+    expect(warning.stderr.trim()).toBe(
+      `warning: ${plannedPath} does not exist (routing as a planned new file)`,
+    );
+    expect(suppressed.status).toBe(0);
+    expect(suppressed.stderr).toBe("");
+  });
+
+  it("lets --staged take precedence over an environment range and reports the source", () => {
+    const env = {
+      ...process.env,
+      PHAROS_CHANGE_CONTRACT_BASE_REF: "HEAD",
+      PHAROS_CHANGE_CONTRACT_HEAD_REF: "HEAD",
+    };
+    const range = runContractCli(["--json"], env);
+    const staged = runContractCli(["--staged", "--json"], env);
+    const explicit = runContractCli(["--file", "./src/app/page.tsx", "--staged", "--json"], env);
+
+    expect(JSON.parse(range.stdout).source).toBe("base/head range");
+    expect(JSON.parse(staged.stdout).source).toBe("staged index");
+    expect(staged.status).toBe(0);
+    expect(runContractCli(["--staged"], env).stdout).toContain("Source: staged index");
+    expect(JSON.parse(explicit.stdout).source).toBe("explicit files");
+  });
+});
+
 describe("Codex hook outputs", () => {
   it("injects concise startup context when there is no current diff", () => {
     const contract = classifyChangedFiles([]);
@@ -117,6 +256,30 @@ describe("Codex hook outputs", () => {
         hookEventName: "SessionStart",
       },
     });
+  });
+
+  it("emits no decision for an allowed Codex-shaped PreToolUse Bash payload", () => {
+    expect(
+      buildPreToolUseHookOutput({
+        hook_event_name: "PreToolUse",
+        tool_name: "Bash",
+        tool_input: { command: "git status" },
+      }),
+    ).toEqual({});
+  });
+
+  it("emits no decision for an allowed PermissionRequest", () => {
+    expect(
+      buildPermissionRequestHookOutput({
+        hook_event_name: "PermissionRequest",
+        tool_name: "Bash",
+        tool_input: { command: "git status" },
+      }),
+    ).toEqual({});
+  });
+
+  it("does not throw for empty hook stdin", () => {
+    expect(runHookCli("pre-tool-use")).toEqual({});
   });
 });
 
@@ -144,7 +307,7 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toEqual({ continue: true });
+    expect(output).toEqual({});
   });
 
   it("allows git pushes with repeated -C global options when only --no-verify is present", () => {
@@ -154,7 +317,7 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toEqual({ continue: true });
+    expect(output).toEqual({});
   });
 
   it("blocks git subcommands after git global flags", () => {
@@ -229,7 +392,7 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toEqual({ continue: true });
+    expect(output).toEqual({});
   });
 
   it("allows patch payloads that mention deploy commands", () => {
@@ -245,7 +408,7 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toEqual({ continue: true });
+    expect(output).toEqual({});
   });
 
   it("blocks deploy commands appended after apply_patch heredocs", () => {
@@ -351,7 +514,7 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toEqual({ continue: true });
+    expect(output).toEqual({});
   });
 
   it("allows help output for deploy-shaped commands", () => {
@@ -361,7 +524,7 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toEqual({ continue: true });
+    expect(output).toEqual({});
   });
 
   it("blocks direct env file writes", () => {
@@ -456,6 +619,7 @@ describe("repo Claude hook config", () => {
   it("wires only SessionStart and the PreToolUse guards", () => {
     const config = JSON.parse(readFileSync(resolve(process.cwd(), ".claude/settings.json"), "utf8"));
 
+    expect(config.hooks.SessionStart[0].matcher).toBe("startup|resume|clear|compact|fork");
     expect(config.hooks.SessionStart[0].hooks[0].command).toContain("--hook=session-start");
     expect(config.hooks.PreToolUse[0].hooks[0].command).toContain("--hook=pre-tool-use");
     expect(config.hooks.PreToolUse[0].hooks).toHaveLength(1);

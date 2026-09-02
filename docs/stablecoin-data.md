@@ -114,6 +114,8 @@ If the change affects page counts, feature coverage, reserve coverage, source fa
 
 `scripts/ci/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, duplicate IDs, absence of the retired legacy category shard files, `coins.generated.json` freshness, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
 
+- Authored default omission: base coin files omit `flags.pegCurrency`, `flags.yieldBearing`, `flags.rwa`, and `flags.navToken` when their values equal the schema defaults.
+
 Common admission fields:
 
 - `llamaId` / DefiLlama-backed assets

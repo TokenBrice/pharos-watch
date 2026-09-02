@@ -20,6 +20,8 @@ node --import tsx scripts/ci/pharos-change-contract.ts \
   --file docs/worker-and-api-limits.md
 ```
 
+`--file` accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > `--base-ref`/`--head-ref` flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree.
+
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
 - matched task families and risk

@@ -217,6 +217,21 @@ describe("hasDeployImpact", () => {
 });
 
 describe("classifyDeployChanges", () => {
+  it("distinguishes docs-only, mixed, and code-only changes for CI lanes", () => {
+    const cases = [
+      { changedFiles: ["README.md", "docs/testing.md"], docsChanged: true, docsOnly: true },
+      { changedFiles: ["docs/testing.md", "src/app/page.tsx"], docsChanged: true, docsOnly: false },
+      { changedFiles: ["src/app/page.tsx"], docsChanged: false, docsOnly: false },
+    ];
+
+    for (const testCase of cases) {
+      const result = classifyChangedFiles(testCase.changedFiles);
+
+      expect(result.docsChanged, testCase.changedFiles.join(", ")).toBe(testCase.docsChanged);
+      expect(result.docsOnly, testCase.changedFiles.join(", ")).toBe(testCase.docsOnly);
+    }
+  });
+
   it("marks enrolled critical source changes for the targeted coverage ratchet", () => {
     expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).criticalCoverageChanged).toBe(true);
     expect(classifyChangedFiles(["worker/src/lib/auth.test.ts"]).criticalCoverageChanged).toBe(false);

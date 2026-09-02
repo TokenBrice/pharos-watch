@@ -71,3 +71,5 @@ PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 ```
 
 The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is now reviewed by hand, and `AGENTS.md` cannot drift from `CLAUDE.md` because it is generated (`npm run check:generated-artifacts -- --only=agents-doc`).
+
+Codex hook matchers are narrowed to shell/write tools. `npm run agent:setup` reports whether the generated hooks are installed/current and whether each hook is enabled in Codex. Enabling is a one-time Codex-side step (`/hooks` or `enabled = true`); disabled or unrecorded state does not change setup's installation exit status. Codex hooks are per-checkout, so rerun the opt-in command in each worktree.

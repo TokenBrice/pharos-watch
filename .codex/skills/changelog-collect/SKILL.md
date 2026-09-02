@@ -27,7 +27,7 @@ Extended reference (edge cases, history, examples): read ./reference.md when nee
 If two ISO dates are provided, use them as `from` and `to`.
 
 Otherwise:
-- List `src/data/changelogs/*.ts` (exclude `index.ts`, `types.ts`, `__tests__/`).
+- List files in `src/data/changelogs/` (exclude `index.ts`, `types.ts`, `__tests__/`).
 - Pick the newest by filename; read its `dateRange.to`.
 - Set `from = previous_to + 1 day`, `to = today`.
 
@@ -133,14 +133,15 @@ Format the surviving commits as `CommitRef[]`:
 
 Order: newest first (matches `git log` default and existing entries).
 
-**Cap the list at 20 entries.** The changelog card renders at most 20 and shows
-"… and N more" from `stats.totalCommits`. Keep the newest 20 after filtering and
-drop the rest; git history is the archive.
+**Cap the manifest's `commits[]` at 20 entries.** The changelog card renders at
+most 20 and shows "… and N more" from `stats.totalCommits`. Keep the newest 20
+non-noise commits after filtering and drop the rest; git history is the archive.
+The prose summary and `stats.totalCommits` cover the whole selected range.
 
 #### 10. Self-check before writing
 
 Hard checks (must pass):
-- `commits.length === Math.min(stats.totalCommits, 20)` (the card renders `stats.totalCommits` as the count and the first 20 rows as the list).
+- `commits.length === Math.min(stats.totalCommits, 20)` (the card renders `stats.totalCommits` as the count and the newest 20 non-noise rows as the list).
 - Every `summary[i].tag` is one of the five enum values.
 - Every `summary[i].description.length <= 220`.
 - `headline.length <= 120`.
@@ -153,7 +154,9 @@ Soft checks (warn, don't block):
 - A cluster touches a methodology but has no `href`.
 - A coin count / adapter count / methodology version cited in the summary doesn't match the source of truth.
 
-`stats.totalCommits` reflects the **filtered** count (after step 3) and is the authoritative number; `commits[]` holds only the newest 20 of them.
+`stats.totalCommits` reflects the **filtered** count (after step 3) across the
+whole selected range and is the authoritative number; the manifest's
+`commits[]` holds only the newest 20 non-noise commits.
 
 #### 11. Write the entry file
 
@@ -173,7 +176,7 @@ export const entry: ChangelogEntry = {
   stats: { totalCommits: <N> },
   commits: [
     { hash: "<8-char>", message: "<first line>" },
-    // exhaustive, after noise filter
+    // newest 20 non-noise commits
   ],
 };
 ```

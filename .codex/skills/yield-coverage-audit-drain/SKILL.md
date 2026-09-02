@@ -21,7 +21,8 @@ current methodology docs.
    `src/`, or `shared/data/stablecoins/`.
 3. Inspect these source entrypoints before changing behavior:
    - `worker/src/cron/yield-coverage-audit.ts`
-   - `worker/src/cron/yield-config*.ts`
+   - `worker/src/cron/yield-sync/resolve.ts`
+   - `worker/src/lib/yield-config/yield-config.ts`
    - `worker/src/cron/yield-sync/resolve-helpers.ts`
    - `worker/src/cron/fetch-tbill-rate.ts` if benchmark sources change
    - `shared/types/status.ts` when queue payload shape changes

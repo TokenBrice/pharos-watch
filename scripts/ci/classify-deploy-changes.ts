@@ -38,6 +38,7 @@ interface DeployClassification {
   changedFiles: string[];
   criticalCoverageChanged: boolean;
   deployRequired: boolean;
+  docsChanged: boolean;
   docsOnly: boolean;
   pagesChanged: boolean;
   pagesDeployRequired: boolean;
@@ -88,6 +89,7 @@ export function classifyChangedFiles(
       (file) => CRITICAL_FILES.includes(file) || CRITICAL_COVERAGE_INFRA_PATHS.has(file),
     ),
     deployRequired: hasDeployImpact(normalizedFiles),
+    docsChanged: normalizedFiles.some((file) => hasOnlyInternalDocsImpact([file])),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
     pagesChanged,
     pagesDeployRequired,
@@ -114,6 +116,7 @@ export function classifyDeployChanges({
     changedFiles: [],
     criticalCoverageChanged: true,
     deployRequired: true,
+    docsChanged: false,
     docsOnly: false,
     pagesChanged: true,
     pagesDeployRequired: true,
@@ -155,6 +158,7 @@ function writeGithubOutputLine(key: string, value: string): void {
 export function emitGithubOutputs(classification: DeployClassification): void {
   writeGithubOutputLine("critical_coverage_changed", classification.criticalCoverageChanged ? "true" : "false");
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
+  writeGithubOutputLine("docs_changed", classification.docsChanged ? "true" : "false");
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
@@ -186,6 +190,7 @@ export function runCli(env: NodeJS.ProcessEnv = process.env): void {
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
   console.error(`[deploy-changes] worker_deploy_required=${classification.workerDeployRequired}`);
   console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);
+  console.error(`[deploy-changes] docs_changed=${classification.docsChanged}`);
   console.error(`[deploy-changes] docs_only=${classification.docsOnly}`);
 
   emitGithubOutputs(classification);

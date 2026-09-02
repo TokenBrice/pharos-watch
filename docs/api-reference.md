@@ -368,7 +368,7 @@ As of the May 2026 detail-page pass, the frontend hook `useChartAnnotations` (`s
 
 **Phase 1 (shipped May 2026):** the hook is wired through the consumer surface (`<ChartAnnotationDots>` + screen-reader-only legend) but returns an empty array. Charts render byte-identically to the pre-flag baseline; the flag-off path never fetches.
 
-**Phase 2 (planned):** align the hook's URL params to the handler's existing shape — `coin=<id>` + `since` / `until` in epoch ms — or extend the worker to accept chart-friendly aliases (`stablecoin`, `from`, `to`). Phase 2 will also wire `useApiQueryWithMeta`, map tape-event rows into `ChartAnnotation`, and clamp results to the rendered chart's `[fromMs, toMs]` window inside the memo so out-of-range markers cannot push the data domain.
+**Phase 2 (planned):** align the hook's URL params to the handler's existing shape — `coin=<id>` + `since` / `until` in epoch ms — or extend the worker to accept chart-friendly aliases (`stablecoin`, `from`, `to`). Phase 2 will also wire `createApiPollingQueryOptionsWithMeta`, map tape-event rows into `ChartAnnotation`, and clamp results to the rendered chart's `[fromMs, toMs]` window inside the memo so out-of-range markers cannot push the data domain.
 
 ### `GET /api/stablecoins`
 

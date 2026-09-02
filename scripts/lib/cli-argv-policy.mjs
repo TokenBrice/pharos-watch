@@ -22,6 +22,7 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
     strict("scripts/ci/check-dex-census-provider-drift.ts"),
+    strict("scripts/ci/check-doc-symbols.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/ci/open-automated-refresh-pr.ts"),
     strict("scripts/maintenance/diff-safety-score-v9-movers.ts"),

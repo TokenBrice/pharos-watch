@@ -1,6 +1,6 @@
 # Deployment Process
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Worktree hygiene · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
 
 ## Purpose
 
@@ -43,6 +43,22 @@ gh pr create --base main --head "$BRANCH_NAME"
 ```
 
 4. Merge only after the required `PR gate` status succeeds. The merge push triggers deployment.
+
+## Worktree hygiene
+
+Auto-isolated or linked worktrees are disposable only when clean and their branch is merged to `main` (or patch-equivalent: `git cherry main <branch>` shows only `-`). Never remove an unmerged branch on age alone.
+Exclude `.worktrees/` and `.claude/worktrees/` from repository-wide searches. Review output before removal; removal requires the clean-and-merged result or explicit owner approval.
+
+```bash
+git worktree list --porcelain
+git branch --merged main
+git worktree list --porcelain | awk '/^worktree /{print substr($0,10)}' | while IFS= read -r wt; do
+  [ "$wt" = "$PWD" ] && continue; branch=$(git -C "$wt" branch --show-current); clean=$(git -C "$wt" status --short)
+  if [ -n "$branch" ] && [ -z "$clean" ] && git merge-base --is-ancestor "$branch" main; then
+    printf 'eligible: %s (%s)\n' "$wt" "$branch"; else printf 'preserve/review: %s (%s)\n' "$wt" "${branch:-detached}"; fi
+done
+git worktree prune --dry-run
+```
 
 ## Repo Pre-Commit Hook
 
