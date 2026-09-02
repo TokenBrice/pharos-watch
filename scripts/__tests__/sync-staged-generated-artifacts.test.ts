@@ -254,4 +254,48 @@ describe("staged artifact sync", () => {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
+
+  it("restores an index-only staged output from the index after a later failure", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-staged-artifacts-"));
+    const firstOutput = "shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
+    const firstOutputPath = join(cwd, firstOutput);
+    const stagedFirstOutput = "staged output";
+    mkdirSync(join(cwd, "shared/data/safety-score-v9"), { recursive: true });
+    writeFileSync(firstOutputPath, stagedFirstOutput);
+    const execFile = vi.fn((_file: string, args: readonly string[]) => {
+      // Index-only change: porcelain `M ` (staged, working tree matches the index).
+      if (args[0] === "status") return args.at(-1) === firstOutput ? "M  output\n" : "";
+      if (args[0] === "checkout") writeFileSync(firstOutputPath, stagedFirstOutput);
+      return "";
+    });
+    const runCommand = vi.fn()
+      .mockImplementationOnce(() => {
+        writeFileSync(firstOutputPath, "mutated output");
+        return 0;
+      })
+      .mockImplementationOnce(() => 3);
+    const log = vi.fn();
+
+    try {
+      expect(() =>
+        syncStagedGeneratedArtifacts({
+          cwd,
+          stagedFiles: [
+            "shared/data/safety-score-v9/mechanism-measurements/example-shock-coverage.json",
+            "shared/lib/safety-score-v9/formula.ts",
+          ],
+          execFile: execFile as never,
+          runCommand,
+          log,
+        }),
+      ).toThrow(/exit code 3/);
+
+      expect(readFileSync(firstOutputPath, "utf8")).toBe(stagedFirstOutput);
+      expect(execFile).toHaveBeenCalledWith("git", ["checkout", "--", firstOutput], { cwd, encoding: "utf8" });
+      expect(log).not.toHaveBeenCalledWith(expect.stringContaining(firstOutput));
+      expect(execFile.mock.calls.some(([, args]) => args[0] === "add")).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 });
