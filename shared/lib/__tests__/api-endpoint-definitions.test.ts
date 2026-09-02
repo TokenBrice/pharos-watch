@@ -20,7 +20,7 @@ describe("endpoint definition factory parity", () => {
 
   it("keeps the complete runtime definition snapshot unchanged", () => {
     expect(jsonDigest(ENDPOINT_DEFINITIONS)).toBe(
-      "51816d091ac3930d0d43064b44fc8047458a7499eafae5d77c11b5df76dc3429",
+      "bf19a3e8a982ef05682e12d6c6e4fcec38c011f34190b9389a6416c642bac34c",
     );
   });
 

@@ -10,7 +10,7 @@ describe("check-doc-symbols", () => {
       return args.includes("--others")
         ? "scripts/new-source.ts\0docs/new-doc.md\0notes/new.txt\0"
         : "src/tracked-source.ts\0scripts/tracked-source.md\0";
-    });
+    }, () => true);
 
     expect(calls).toEqual([
       ["ls-files", "-z"],

@@ -290,6 +290,8 @@ export function collectCodePaths(
       encoding: "utf8",
       maxBuffer: 16 * 1024 * 1024,
     }),
+  // `git ls-files` still lists paths deleted in the working tree; rg cannot read those.
+  exists: (filePath: string) => boolean = (filePath) => existsSync(resolve(repoRoot, filePath)),
 ): string[] {
   const outputs = [
     listPaths(["ls-files", "-z"]),
@@ -298,8 +300,7 @@ export function collectCodePaths(
   return [...new Set(outputs.flatMap((output) => output.split("\0")))]
     .filter(Boolean)
     .filter((filePath) => CODE_EXTENSIONS.has(extname(filePath)))
-    // `git ls-files` still lists paths deleted in the working tree; rg cannot read those.
-    .filter((filePath) => existsSync(resolve(repoRoot, filePath)));
+    .filter(exists);
 }
 
 function findTrackedSourceHits(
