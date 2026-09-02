@@ -1,4 +1,5 @@
 export { isRecord } from "@shared/lib/type-guards";
+import { parseEpochSeconds } from "@shared/lib/epoch";
 import { coerceNonNegativeNumber } from "@shared/lib/type-guards";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { chunkArray } from "../collections";
@@ -65,16 +66,10 @@ export function normalizeAddressForKey(address: string): string {
 }
 
 export function parseObservedAt(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return Math.floor(value > 10_000_000_000 ? value / 1000 : value);
-  }
-  if (typeof value !== "string" || value.trim().length === 0) return null;
-  const numeric = Number(value);
-  if (Number.isFinite(numeric) && numeric > 0) {
-    return Math.floor(numeric > 10_000_000_000 ? numeric / 1000 : numeric);
-  }
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+  return parseEpochSeconds(value, {
+    numericTextPolicy: "any", millisecondsThreshold: 10_000_000_000,
+    millisecondsThresholdInclusive: false, floor: true, minExclusive: 0,
+  });
 }
 
 export { parsePositiveNumber };

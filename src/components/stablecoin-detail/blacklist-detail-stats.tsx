@@ -1,8 +1,7 @@
 "use client";
 
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { BlacklistMetricCardSkeletonGrid } from "@/components/blacklist-metric-card-skeleton-grid";
 import { formatCurrency } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
@@ -15,18 +14,10 @@ interface BlacklistDetailStatsProps {
 export function BlacklistDetailStats({ symbol, stats, isLoading }: BlacklistDetailStatsProps) {
   if (isLoading || !stats) {
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="pharos-card-shell">
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <BlacklistMetricCardSkeletonGrid
+        gridClassName="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5"
+        cardClassName="pharos-card-shell"
+      />
     );
   }
 

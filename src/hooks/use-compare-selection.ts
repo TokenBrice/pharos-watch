@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { isTimeRangeOption, type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useCallback, useMemo, useState } from "react";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { useUrlState } from "@/hooks/use-url-state";
 import { trackEvent } from "@/lib/analytics";
 import {
   COMPARE_COIN_OPTIONS,
@@ -10,70 +10,49 @@ import {
   resolveCompareSelectedIds,
 } from "@/lib/compare-config";
 import type { CoinOption } from "@/lib/compare-types";
+import type { UrlStateSchema } from "@/lib/url-state";
 
-function normalizeCompareRange(value: string | null): TimeRangeOption {
-  return value !== null && isTimeRangeOption(value) ? value : "all";
+interface CompareUrlState {
+  coins: string[];
+  range: TimeRangeOption;
 }
 
+const COMPARE_URL_STATE_SCHEMA: UrlStateSchema<CompareUrlState> = {
+  coins: {
+    kind: "enumList",
+    defaultValue: [],
+    allowedValues: COMPARE_COIN_OPTIONS.map((coin) => coin.id),
+    maxItems: MAX_COMPARE_COINS,
+    normalizeItem: (value) => resolveCompareSelectedIds(value)[0] ?? null,
+  },
+  range: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: ["7d", "30d", "90d", "1y", "all"],
+  },
+};
+
 export function useCompareSelection() {
-  const { searchParams, replaceParams } = useUrlFilters();
-
-  const selectedIds = useMemo(
-    () => resolveCompareSelectedIds(searchParams.get("coins")),
-    [searchParams],
-  );
-  const rawCoinsParam = searchParams.get("coins");
-
-  const range = normalizeCompareRange(searchParams.get("range"));
+  const { state, replaceState } = useUrlState(COMPARE_URL_STATE_SCHEMA, {
+    normalize: "coins",
+  });
+  const { coins: selectedIds, range } = state;
   const [flowHours, setFlowHours] = useState<24 | 168 | 720>(24);
-
-  useEffect(() => {
-    if (!rawCoinsParam) return;
-
-    const normalizedCoins = selectedIds.join(",");
-    if (normalizedCoins === rawCoinsParam) return;
-
-    replaceParams((params) => {
-      if (normalizedCoins) {
-        params.set("coins", normalizedCoins);
-      } else {
-        params.delete("coins");
-      }
-    });
-  }, [rawCoinsParam, replaceParams, selectedIds]);
 
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {
       trackEvent("time_range_changed", { page: "compare", range: newRange });
-      replaceParams((params) => {
-        if (newRange === "all") {
-          params.delete("range");
-        } else {
-          params.set("range", newRange);
-        }
-      });
+      replaceState({ coins: selectedIds, range: newRange });
     },
-    [replaceParams],
+    [replaceState, selectedIds],
   );
 
   const setSelectedIds = useCallback(
     (updater: (prev: string[]) => string[]) => {
       const next = updater(selectedIds).slice(0, MAX_COMPARE_COINS);
-      replaceParams((params) => {
-        if (next.length > 0) {
-          params.set("coins", next.join(","));
-        } else {
-          params.delete("coins");
-        }
-
-        if (range !== "all") {
-          params.set("range", range);
-        } else {
-          params.delete("range");
-        }
-      });
+      replaceState({ coins: next, range });
     },
-    [replaceParams, range, selectedIds],
+    [range, replaceState, selectedIds],
   );
 
   const selectedCoins = useMemo(
@@ -107,11 +86,8 @@ export function useCompareSelection() {
 
   const applyPreset = useCallback((coinIds: readonly string[], presetTitle: string) => {
     trackEvent("comparison_preset_selected", { preset: presetTitle });
-    replaceParams((params) => {
-      params.set("coins", coinIds.slice(0, MAX_COMPARE_COINS).join(","));
-      params.delete("range");
-    });
-  }, [replaceParams]);
+    replaceState({ coins: coinIds.slice(0, MAX_COMPARE_COINS), range: "all" });
+  }, [replaceState]);
 
   return {
     selectedIds,

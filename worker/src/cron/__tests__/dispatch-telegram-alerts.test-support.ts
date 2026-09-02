@@ -11,6 +11,10 @@ import {
   insertPendingSqlite,
   makeTelegramDeliveryResult,
 } from "./telegram-pending-queue.test-support";
+import {
+  insertTelegramSubscriber,
+  type TelegramSubscriberSeed,
+} from "./telegram-subscriber.test-support";
 
 const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
   peggedAssets: [
@@ -342,22 +346,7 @@ type AlertFamilySeed = "dews" | "depeg" | "safety" | "launch" | "reserve";
 
 type AlertFlags = Partial<Record<AlertFamilySeed, boolean>>;
 
-export interface DispatchSubscriberSeed {
-  chatId: string;
-  createdAt?: number;
-  lastActiveAt?: number;
-  preferenceGeneration?: number;
-  snoozeUntil?: number | null;
-  quietHoursEnabled?: boolean;
-  quietHoursStartUtc?: number | null;
-  quietHoursEndUtc?: number | null;
-  timezone?: string | null;
-  global?: AlertFlags;
-  direct?: AlertFlags;
-  globalDepegWorseningBpsStep?: number | null;
-  consecutiveBlockCount?: number;
-  consecutiveBlockFirstAt?: number | null;
-}
+export type DispatchSubscriberSeed = TelegramSubscriberSeed;
 
 export interface DispatchSubscriptionSeed {
   chatId: string;
@@ -514,46 +503,6 @@ function seedCacheRow(sqlite: DatabaseSync, key: string, value: unknown, updated
 
 function alertFlag(flags: AlertFlags | undefined, family: AlertFamilySeed): number {
   return flags?.[family] === true ? 1 : 0;
-}
-
-function seedSubscriber(sqlite: DatabaseSync, input: DispatchSubscriberSeed): void {
-  const current = nowSec();
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-       chat_id, created_at, last_active_at, preference_generation,
-       alert_snooze_until_ts, quiet_hours_enabled, quiet_hours_start_utc,
-       quiet_hours_end_utc, timezone, global_alert_dews, global_alert_depeg,
-       global_alert_safety, global_alert_launch, global_alert_reserve,
-       global_depeg_worsening_bps_step, consecutive_block_count,
-       consecutive_block_first_at, alert_dews, alert_depeg, alert_safety,
-       alert_launch, alert_reserve
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.chatId,
-      input.createdAt ?? current - 1,
-      input.lastActiveAt ?? current,
-      input.preferenceGeneration ?? 0,
-      input.snoozeUntil ?? null,
-      input.quietHoursEnabled === true ? 1 : 0,
-      input.quietHoursStartUtc ?? null,
-      input.quietHoursEndUtc ?? null,
-      input.timezone ?? null,
-      alertFlag(input.global, "dews"),
-      alertFlag(input.global, "depeg"),
-      alertFlag(input.global, "safety"),
-      alertFlag(input.global, "launch"),
-      alertFlag(input.global, "reserve"),
-      input.globalDepegWorseningBpsStep ?? null,
-      input.consecutiveBlockCount ?? 0,
-      input.consecutiveBlockFirstAt ?? null,
-      alertFlag(input.direct, "dews"),
-      alertFlag(input.direct, "depeg"),
-      alertFlag(input.direct, "safety"),
-      alertFlag(input.direct, "launch"),
-      alertFlag(input.direct, "reserve"),
-    );
 }
 
 function seedSubscription(sqlite: DatabaseSync, input: DispatchSubscriptionSeed): void {
@@ -783,7 +732,7 @@ function withDispatchOperationFaults(
 
 function seedDispatchFixture(sqlite: DatabaseSync, input: DispatchSeed): void {
   for (const [key, value] of Object.entries(input.cache ?? {})) seedCacheRow(sqlite, key, value);
-  for (const row of input.subscribers ?? []) seedSubscriber(sqlite, row);
+  for (const row of input.subscribers ?? []) insertTelegramSubscriber(sqlite, row);
   for (const row of input.subscriptions ?? []) seedSubscription(sqlite, row);
   for (const row of input.presets ?? []) seedPreset(sqlite, row);
   for (const row of input.dews ?? []) seedDews(sqlite, row);

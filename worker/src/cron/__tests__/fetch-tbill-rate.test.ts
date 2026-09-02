@@ -11,6 +11,7 @@ import {
   makeUnavailableTbillFetchRoutes,
   type BenchmarkFetchRoutes,
 } from "./rates-cron.test-support";
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -267,6 +268,7 @@ describe("fetchTbillRate", () => {
       isFallback: false,
       fallbackMode: null,
     });
+    expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
   });
 
   it("falls back to the ALFRED SONIA index when the FRED mirror is unreachable", async () => {

@@ -32,6 +32,77 @@ const HIGH_VOLUME_RETENTION_DELETE_LIMIT = 100_000;
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
 const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
 
+const SOURCE_EVENT_CHILD_TABLES = [
+  "telegram_alert_target_plan_items",
+  "telegram_alert_target_plans",
+  "telegram_alert_target_plan_pages",
+  "telegram_alert_planning_subscribers",
+  "telegram_alert_target_expiry_progress",
+  "telegram_alert_source_resolution_targets",
+  "telegram_alert_source_resolution_memberships",
+  "telegram_alert_source_resolution_pages",
+  "telegram_alert_job_target_items",
+  "telegram_alert_job_targets",
+  "telegram_alert_jobs",
+  "telegram_freeze_alert_targets",
+  "telegram_freeze_alert_events",
+] as const;
+
+const AUTHORITATIVE_TARGET_REPLAY_ELIGIBILITY_SQL = `AND target.final_delivery_state IN ('accepted', 'failed', 'cancelled', 'expired')
+AND target.effect_state NOT IN ('claimed', 'sending', 'execution_unknown')
+AND NOT EXISTS (
+  SELECT 1 FROM telegram_pending_alerts pending
+   WHERE pending.dedupe_key = target.pending_dedupe_key
+     AND pending.delivery_state IN ('pending', 'sending', 'execution_unknown')
+)`;
+
+function indentSqlFragment(sql: string, spaces: number): string {
+  const indent = " ".repeat(spaces);
+  return sql.split("\n").map((line) => `${indent}${line}`).join("\n");
+}
+
+function buildSourceEventChildAbsenceSql(includeQueueEvidence = false): string {
+  const tables: readonly string[] = includeQueueEvidence
+    ? [
+        ...SOURCE_EVENT_CHILD_TABLES.slice(0, -2),
+        "telegram_pending_alerts",
+        "telegram_alert_dead_letters",
+        ...SOURCE_EVENT_CHILD_TABLES.slice(-2),
+      ]
+    : SOURCE_EVENT_CHILD_TABLES;
+  return tables
+    .map((table) => `AND NOT EXISTS (SELECT 1 FROM ${table} child WHERE child.source_event_id = source.source_event_id)`)
+    .join("\n");
+}
+
+const SOURCE_EVENT_CHILD_ABSENCE_SQL = buildSourceEventChildAbsenceSql();
+
+type OrphanJobStatuses = readonly ["sent", "expired"] | readonly ["discovered", "queued"];
+
+function buildOrphanJobDeleteSql(statuses: OrphanJobStatuses): string {
+  const terminal = statuses[0] === "sent";
+  const reportName = terminal ? "legacy-terminal-jobs-retention" : "stale-unresolved-jobs-retention";
+  return `/* pharos:telegram:${reportName} */
+       DELETE FROM telegram_alert_jobs
+        WHERE created_at < ?
+          AND job_id IN (
+            SELECT job.job_id
+              FROM telegram_alert_jobs job
+             WHERE job.created_at < ?
+               AND job.status IN (${statuses.map((status) => `'${status}'`).join(", ")})
+               AND NOT EXISTS (
+                 SELECT 1 FROM telegram_alert_job_targets target
+                  WHERE target.job_id = job.job_id
+               )
+               AND NOT EXISTS (
+                 SELECT 1 FROM telegram_alert_source_events source
+                  WHERE source.source_event_id = job.source_event_id
+               )
+             ORDER BY job.created_at ASC, job.job_id ASC
+             LIMIT ?
+      )`;
+}
+
 interface TelegramRetentionCleanupOptions {
   monotonicNow?: () => number;
   processedUpdateTimeBudgetMs?: number;
@@ -222,25 +293,7 @@ async function pruneTelegramHighGrowthRetention(
 
     const legacyTerminalJobs = await deleteOlderThanCapped(
       db,
-      `/* pharos:telegram:legacy-terminal-jobs-retention */
-       DELETE FROM telegram_alert_jobs
-        WHERE created_at < ?
-          AND job_id IN (
-            SELECT job.job_id
-              FROM telegram_alert_jobs job
-             WHERE job.created_at < ?
-               AND job.status IN ('sent', 'expired')
-               AND NOT EXISTS (
-                 SELECT 1 FROM telegram_alert_job_targets target
-                  WHERE target.job_id = job.job_id
-               )
-               AND NOT EXISTS (
-                 SELECT 1 FROM telegram_alert_source_events source
-                  WHERE source.source_event_id = job.source_event_id
-               )
-             ORDER BY job.created_at ASC, job.job_id ASC
-             LIMIT ?
-      )`,
+      buildOrphanJobDeleteSql(["sent", "expired"]),
       terminalCutoff,
       { signal, totalLimit: highGrowthDeleteLimit },
     );
@@ -250,25 +303,7 @@ async function pruneTelegramHighGrowthRetention(
 
     const staleUnresolvedJobs = await deleteOlderThanCapped(
       db,
-      `/* pharos:telegram:stale-unresolved-jobs-retention */
-       DELETE FROM telegram_alert_jobs
-        WHERE created_at < ?
-          AND job_id IN (
-            SELECT job.job_id
-              FROM telegram_alert_jobs job
-             WHERE job.created_at < ?
-               AND job.status IN ('discovered', 'queued')
-               AND NOT EXISTS (
-                 SELECT 1 FROM telegram_alert_job_targets target
-                  WHERE target.job_id = job.job_id
-               )
-               AND NOT EXISTS (
-                 SELECT 1 FROM telegram_alert_source_events source
-                  WHERE source.source_event_id = job.source_event_id
-               )
-             ORDER BY job.created_at ASC, job.job_id ASC
-             LIMIT ?
-      )`,
+      buildOrphanJobDeleteSql(["discovered", "queued"]),
       unresolvedCutoff,
       { signal, totalLimit: highGrowthDeleteLimit },
     );
@@ -287,21 +322,7 @@ async function pruneTelegramHighGrowthRetention(
                    WHERE source.detected_at < ?
                      AND source.expires_at < ?
                      AND source.status IN ('resolving', 'planned', 'baseline_committed')
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_items child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plans child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_pages child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_planning_subscribers child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_expiry_progress child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_targets child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_memberships child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_pages child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_target_items child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_targets child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_jobs child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_pending_alerts child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_dead_letters child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_targets child WHERE child.source_event_id = source.source_event_id)
-                     AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_events child WHERE child.source_event_id = source.source_event_id)
+${indentSqlFragment(buildSourceEventChildAbsenceSql(true), 21)}
                    ORDER BY source.detected_at ASC, source.rowid ASC
                    LIMIT ?
                 )`,
@@ -604,13 +625,7 @@ export async function runTelegramRetentionCleanup(
          WHERE source.completed_at < ?
            AND source.status IN ('complete', 'expired')
            AND target.plan_generation IS NOT NULL
-           AND target.final_delivery_state IN ('accepted', 'failed', 'cancelled', 'expired')
-           AND target.effect_state NOT IN ('claimed', 'sending', 'execution_unknown')
-           AND NOT EXISTS (
-             SELECT 1 FROM telegram_pending_alerts pending
-              WHERE pending.dedupe_key = target.pending_dedupe_key
-                AND pending.delivery_state IN ('pending', 'sending', 'execution_unknown')
-           )
+${indentSqlFragment(AUTHORITATIVE_TARGET_REPLAY_ELIGIBILITY_SQL, 11)}
          ORDER BY source.completed_at ASC, source.source_event_id ASC, item.rowid ASC
          LIMIT ?
       )`,
@@ -631,13 +646,7 @@ export async function runTelegramRetentionCleanup(
          WHERE source.completed_at < ?
            AND source.status IN ('complete', 'expired')
            AND target.plan_generation IS NOT NULL
-           AND target.final_delivery_state IN ('accepted', 'failed', 'cancelled', 'expired')
-           AND target.effect_state NOT IN ('claimed', 'sending', 'execution_unknown')
-           AND NOT EXISTS (
-             SELECT 1 FROM telegram_pending_alerts pending
-              WHERE pending.dedupe_key = target.pending_dedupe_key
-                AND pending.delivery_state IN ('pending', 'sending', 'execution_unknown')
-           )
+${indentSqlFragment(AUTHORITATIVE_TARGET_REPLAY_ELIGIBILITY_SQL, 11)}
          ORDER BY source.completed_at ASC, source.source_event_id ASC, target.rowid ASC
          LIMIT ?
       )`,
@@ -713,19 +722,7 @@ export async function runTelegramRetentionCleanup(
             FROM telegram_alert_source_events source
            WHERE source.completed_at < ?
              AND source.status IN ('complete', 'expired')
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_items child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plans child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_pages child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_planning_subscribers child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_expiry_progress child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_targets child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_memberships child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_pages child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_target_items child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_targets child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_jobs child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_targets child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_events child WHERE child.source_event_id = source.source_event_id)
+${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
            ORDER BY source.completed_at ASC, source.rowid ASC
            LIMIT ?
         )`,
@@ -756,19 +753,7 @@ export async function runTelegramRetentionCleanup(
             FROM telegram_alert_source_events source
            WHERE source.detected_at < ?
              AND source.status IN ('complete', 'expired')
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_items child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plans child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_pages child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_planning_subscribers child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_expiry_progress child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_targets child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_memberships child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_pages child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_target_items child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_targets child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_alert_jobs child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_targets child WHERE child.source_event_id = source.source_event_id)
-             AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_events child WHERE child.source_event_id = source.source_event_id)
+${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
            ORDER BY source.detected_at ASC, source.rowid ASC
            LIMIT ?
         )`,

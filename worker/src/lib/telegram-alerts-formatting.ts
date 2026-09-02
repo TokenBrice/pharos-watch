@@ -242,6 +242,53 @@ export interface ConsolidatedAlerts {
   burst?: BurstSummaryAlert | null;
 }
 
+type AlertFamilyEvent =
+  | DewsChange
+  | DepegAlertPayload
+  | DepegResolved
+  | DepegWorsening
+  | SafetyChange
+  | LaunchAlert
+  | ReserveAlert
+  | FreezeAlert;
+
+interface AlertFamilyDescriptor {
+  getEvents: (alerts: ConsolidatedAlerts) => readonly AlertFamilyEvent[];
+  heading: string | ((events: readonly AlertFamilyEvent[]) => string);
+  format: (event: AlertFamilyEvent) => string;
+  severity: (event: AlertFamilyEvent) => number;
+  rankOrder: number;
+}
+
+function defineAlertFamily<T extends AlertFamilyEvent>(
+  getEvents: (alerts: ConsolidatedAlerts) => readonly T[],
+  heading: string | ((events: readonly T[]) => string),
+  format: (event: T) => string,
+  severity: (event: T) => number,
+  rankOrder: number,
+): AlertFamilyDescriptor {
+  return {
+    getEvents,
+    heading: typeof heading === "string" ? heading : (events) => heading(events as readonly T[]),
+    format: (event) => format(event as T),
+    severity: (event) => severity(event as T),
+    rankOrder,
+  };
+}
+
+const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
+  defineAlertFamily((alerts) => alerts.dews, "DEWS", formatDewsLine, (event) => THREAT_BAND_ORDER[event.newBand as keyof typeof THREAT_BAND_ORDER] ?? 0, 3),
+  defineAlertFamily((alerts) => alerts.depegTriggered, "Depeg Detected", formatDepegTriggeredLine, (event) => event.deviationBps, 0),
+  defineAlertFamily((alerts) => alerts.depegResolved, "Depeg Resolved", formatDepegResolvedLine, () => 0, 2),
+  defineAlertFamily((alerts) => alerts.depegWorsening ?? [], "Depeg Worsening", formatDepegWorseningLine, (event) => event.currentDeviationBps, 1),
+  defineAlertFamily((alerts) => alerts.safety, "Safety Grade Change", formatSafetyLine, (event) => {
+    return event.oldScore != null && event.newScore != null ? Math.max(0, event.oldScore - event.newScore) : 0;
+  }, 4),
+  defineAlertFamily((alerts) => alerts.launch, "Stablecoin Launched", formatLaunchLine, () => 0, 5),
+  defineAlertFamily((alerts) => alerts.reserve, "Reserve Drift", formatReserveLine, () => 0, 6),
+  defineAlertFamily((alerts) => alerts.freeze ?? [], freezeSectionHeader, formatFreezeLine, () => 0, 7),
+];
+
 /** C128: render a collapsed market-wide burst as a single summary line + watchlist deep link. */
 export function formatBurstSummaryLine(burst: BurstSummaryAlert): string {
   const coins = burst.coinCount === 1 ? "1 followed coin" : `${burst.coinCount} followed coins`;
@@ -256,31 +303,13 @@ export function formatBurstSummaryLine(burst: BurstSummaryAlert): string {
 export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   if (alerts.burst) return formatBurstSummaryLine(alerts.burst);
   const sections: string[] = [];
-  const depegWorsening = alerts.depegWorsening ?? [];
 
-  if (alerts.dews.length > 0) {
-    sections.push(`<b>DEWS</b>\n${alerts.dews.map(formatDewsLine).join("\n\n")}`);
-  }
-  if (alerts.depegTriggered.length > 0) {
-    sections.push(`<b>Depeg Detected</b>\n${alerts.depegTriggered.map(formatDepegTriggeredLine).join("\n\n")}`);
-  }
-  if (alerts.depegResolved.length > 0) {
-    sections.push(`<b>Depeg Resolved</b>\n${alerts.depegResolved.map(formatDepegResolvedLine).join("\n\n")}`);
-  }
-  if (depegWorsening.length > 0) {
-    sections.push(`<b>Depeg Worsening</b>\n${depegWorsening.map(formatDepegWorseningLine).join("\n\n")}`);
-  }
-  if (alerts.safety.length > 0) {
-    sections.push(`<b>Safety Grade Change</b>\n${alerts.safety.map(formatSafetyLine).join("\n\n")}`);
-  }
-  if (alerts.launch.length > 0) {
-    sections.push(`<b>Stablecoin Launched</b>\n${alerts.launch.map(formatLaunchLine).join("\n\n")}`);
-  }
-  if (alerts.reserve.length > 0) {
-    sections.push(`<b>Reserve Drift</b>\n${alerts.reserve.map(formatReserveLine).join("\n\n")}`);
-  }
-  if ((alerts.freeze?.length ?? 0) > 0) {
-    sections.push(`<b>${freezeSectionHeader(alerts.freeze!)}</b>\n${alerts.freeze!.map(formatFreezeLine).join("\n\n")}`);
+  for (const descriptor of ALERT_FAMILY_DESCRIPTORS) {
+    const events = descriptor.getEvents(alerts);
+    if (events.length > 0) {
+      const heading = typeof descriptor.heading === "string" ? descriptor.heading : descriptor.heading(events);
+      sections.push(`<b>${heading}</b>\n${events.map(descriptor.format).join("\n\n")}`);
+    }
   }
 
   const body = sections.join("\n\n");
@@ -324,19 +353,12 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
     byId.set(stablecoinId, { stablecoinId, symbol, severity });
   };
 
-  for (const e of alerts.depegTriggered) consider(e.stablecoinId, e.symbol, e.deviationBps);
-  for (const e of alerts.depegWorsening ?? []) consider(e.stablecoinId, e.symbol, e.currentDeviationBps);
-  for (const e of alerts.depegResolved) consider(e.stablecoinId, e.symbol, 0);
-  for (const e of alerts.dews) {
-    consider(e.stablecoinId, e.symbol, THREAT_BAND_ORDER[e.newBand as keyof typeof THREAT_BAND_ORDER] ?? 0);
+  const rankingDescriptors = [...ALERT_FAMILY_DESCRIPTORS].sort((a, b) => a.rankOrder - b.rankOrder);
+  for (const descriptor of rankingDescriptors) {
+    for (const event of descriptor.getEvents(alerts)) {
+      consider(event.stablecoinId, event.symbol, descriptor.severity(event));
+    }
   }
-  for (const e of alerts.safety) {
-    const drop = e.oldScore != null && e.newScore != null ? Math.max(0, e.oldScore - e.newScore) : 0;
-    consider(e.stablecoinId, e.symbol, drop);
-  }
-  for (const e of alerts.launch) consider(e.stablecoinId, e.symbol, 0);
-  for (const e of alerts.reserve) consider(e.stablecoinId, e.symbol, 0);
-  for (const e of alerts.freeze ?? []) consider(e.stablecoinId, e.symbol, 0);
 
   // Stable sort: severity desc, falling back to insertion order on ties.
   return [...byId.values()]
@@ -348,16 +370,9 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
 
 export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string | null {
   if (alerts.burst) return null;
-  const ids = [
-    ...alerts.dews.map((e) => e.stablecoinId),
-    ...alerts.depegTriggered.map((e) => e.stablecoinId),
-    ...alerts.depegResolved.map((e) => e.stablecoinId),
-    ...alerts.depegWorsening.map((e) => e.stablecoinId),
-    ...alerts.safety.map((e) => e.stablecoinId),
-    ...alerts.launch.map((e) => e.stablecoinId),
-    ...alerts.reserve.map((e) => e.stablecoinId),
-    ...(alerts.freeze ?? []).map((e) => e.stablecoinId),
-  ];
+  const ids = ALERT_FAMILY_DESCRIPTORS.flatMap((descriptor) =>
+    descriptor.getEvents(alerts).map((event) => event.stablecoinId)
+  );
   const unique = new Set(ids);
   return unique.size === 1 ? ids[0] ?? null : null;
 }

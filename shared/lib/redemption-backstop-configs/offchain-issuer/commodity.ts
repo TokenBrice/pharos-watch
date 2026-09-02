@@ -7,6 +7,10 @@ import {
   issuerBase,
   commodityIssuerBase,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_COVERAGE_EXPANSION_AT } from "./shared";
 
@@ -18,7 +22,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "1:1 physical gold or cash equivalent through Paxos Trust Company; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("Paxos Pax Gold", "https://www.paxos.com/pax-gold", ["route", "capacity"]),
+      sourceRefRouteCapacity("Paxos Pax Gold", "https://www.paxos.com/pax-gold"),
       sourceRef(
         "Paxos PAXG buy/sell/redeem",
         "https://help.paxos.com/hc/en-us/articles/360041903332-How-to-Buy-Sell-Redeem-PAX-Gold",
@@ -33,7 +37,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
     ),
     docs: [
-      sourceRef("Tether Gold FAQ", "https://gold.tether.to/faq", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRefFull("Tether Gold FAQ", "https://gold.tether.to/faq"),
       sourceRef("Tether Gold terms", "https://gold.tether.to/legal", ["route", "access"]),
     ],
   },
@@ -50,11 +54,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
         "access",
         "settlement",
       ]),
-      sourceRef("Kinka whitepaper", "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("Kinka whitepaper", "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"),
     ],
     notes: [
       "Modeled route is issuer/GM LLC exchange for physical gold through storage-company desks, not ordinary secondary-market liquidity.",
@@ -66,10 +66,9 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(25, "Matrixdock FAQ lists a 0.25% redemption fee"),
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "XAUm token features",
         "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features",
-        ["route", "capacity", "access"],
       ),
       sourceRef("XAUm FAQ", "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq", [
         "route",
@@ -90,14 +89,8 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "RWA.xyz primary-market terms list a 2% redemption fee; physical gold delivery can involve additional fabrication, shipping, or custody costs",
     ),
     docs: [
-      sourceRef("Streamex GLDY", "https://www.streamex.com/GLDY", ["route", "capacity", "access"]),
-      sourceRef("RWA.xyz GLDY", "https://app.rwa.xyz/assets/GLDY", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefRouteCapacityAccess("Streamex GLDY", "https://www.streamex.com/GLDY"),
+      sourceRefFull("RWA.xyz GLDY", "https://app.rwa.xyz/assets/GLDY"),
       sourceRef("Chainlink GLDY Reserves", "https://data.chain.link/feeds/base/base/gldy-reserves", ["capacity"]),
     ],
     notes: [
@@ -112,7 +105,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: undisclosedReviewedFee(
       "Gold DAO materials describe reverse swapping GLDT into GLD NFTs at the published gold-denomination ratio; public materials reviewed do not publish one fixed redemption fee",
     ),
-    docs: [sourceRef("GLDT website", "https://gldt.org/", ["route", "capacity", "fees", "access", "settlement"])],
+    docs: [sourceRefFull("GLDT website", "https://gldt.org/")],
     notes: [
       "Modeled route is GLDT's documented reverse-swap path into GLD NFT gold-denomination backing, not ordinary secondary-market liquidity.",
       "Physical gold custody and delivery remain upstream of the GLD NFT system, so Pharos keeps the route in the delayed commodity issuer family.",
@@ -125,16 +118,8 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "VNX platform supports sell/redemption and physical collection or delivery from one-kilogram gold bars; public materials reviewed do not expose one fixed VNXAU redemption fee",
     ),
     docs: [
-      sourceRef("VNX Gold executive summary", "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary", [
-        "route",
-        "capacity",
-        "access",
-      ]),
-      sourceRef("VNX Gold token details", "https://vnx.gitbook.io/vnx-platform/vnx-gold/token-details", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacityAccess("VNX Gold executive summary", "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"),
+      sourceRefRouteCapacityFees("VNX Gold token details", "https://vnx.gitbook.io/vnx-platform/vnx-gold/token-details"),
       sourceRef(
         "VNX Gold operations",
         "https://vnx.gitbook.io/vnx-platform/vnx-gold/operations-with-vnx-gold-on-vnx-platform",
@@ -157,17 +142,10 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "Matrixdock mint/redeem route is available for KYC users and follows the issuer's XAGm silver-per-token framework; public materials reviewed do not expose one global fixed XAGm redemption fee",
     ),
     docs: [
-      sourceRef("Matrixdock XAGm", "https://www.matrixdock.com/xagm", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("Matrixdock XAGm", "https://www.matrixdock.com/xagm"),
+      sourceRefRouteCapacityAccess(
         "Matrixdock XAGm announcement",
         "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain",
-        ["route", "capacity", "access"],
       ),
     ],
     notes: [
@@ -198,7 +176,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
         "fees",
         "access",
       ]),
-      sourceRef("Goldfish whitepaper", "https://goldfishgold.com/whitepaper", ["route", "capacity"]),
+      sourceRefRouteCapacity("Goldfish whitepaper", "https://goldfishgold.com/whitepaper"),
     ],
     notes: [
       "Modeled route is KYC-gated physical-gold redemption through the issuer app; the support FAQ (last updated 2026-06-17, re-read 2026-08-09) publishes a 250 g minimum conversion (8,818.49 GGBR), a 2%-3% processing and delivery fee, KYC verification, token burn on redemption, and fulfilment through regulated dealers including Monex.",
@@ -213,13 +191,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ),
     docs: [
       sourceRef("EUROe transparency", "https://www.euroe.com/transparency-and-regulation", ["capacity", "access"]),
-      sourceRef("Terms of Membrane Platform", "https://www.euroe.com/legal/terms-of-membrane-platform", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Terms of Membrane Platform", "https://www.euroe.com/legal/terms-of-membrane-platform"),
       sourceRef("Get EUROe", "https://www.euroe.com/get-euroe", ["route", "access", "settlement"]),
     ],
     notes: ["Modeled route is Membrane's account-gated EUR issue/redeem platform, not secondary-market euro liquidity"],

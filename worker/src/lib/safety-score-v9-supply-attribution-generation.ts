@@ -8,6 +8,7 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { z } from "zod";
+import { createCanonicalGenerationCodec } from "./canonical-generation-codec";
 import { SafetyScoreV9SupplyAttributionSchema } from "./report-cards-fixed-input";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -208,39 +209,30 @@ export type SafetyScoreV9SupplyAttributionGenerationPayload = z.infer<
   typeof SupplyAttributionGenerationPayloadSchema
 >;
 
-const SafetyScoreV9SupplyAttributionGenerationSchema =
-  SupplyAttributionGenerationPayloadSchema.extend({
-    generationId: GenerationIdSchema,
-  })
-    .strict()
-    .superRefine((generation, ctx) => {
-      const { generationId, ...payload } = generation;
-      if (
-        generationId !==
-        computeSafetyScoreV9SupplyAttributionGenerationId(payload)
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["generationId"],
-          message:
-            "Supply attribution generation ID does not match its canonical payload",
-        });
-      }
-      const bytes = new TextEncoder().encode(
-        stableJsonStringifyV1(generation),
-      ).byteLength;
-      if (bytes > SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES) {
-        ctx.addIssue({
-          code: "custom",
-          message:
-            `Supply attribution generation exceeds ` +
-            `${SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES} bytes`,
-        });
-      }
-    });
+const supplyAttributionGenerationCodec = createCanonicalGenerationCodec({
+  payloadSchema: SupplyAttributionGenerationPayloadSchema,
+  generationIdSchema: GenerationIdSchema,
+  generationIdPrefix: "safety-score-v9-supply-attribution:v1:",
+  digestPayload: (payload) => ({ domain: "safety-score-v9.supply-attribution-generation.v1", payload }),
+  mismatchMessage:
+    "Supply attribution generation ID does not match its canonical payload",
+  maxBytes: {
+    limit: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES,
+    schemaMessage: `Supply attribution generation exceeds ${SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES} bytes`,
+    inputMessage: "Supply attribution generation cache value is oversized",
+  },
+  parseString: (value) => {
+    const parsed = parseJson(value, { onFailure: () => undefined });
+    if (!parsed.ok) {
+      throw new Error(`Malformed supply attribution generation cache: ${parsed.message}`);
+    }
+    return parsed.value;
+  },
+  validateSerialization: true,
+});
 
 export type SafetyScoreV9SupplyAttributionGeneration = z.infer<
-  typeof SafetyScoreV9SupplyAttributionGenerationSchema
+  typeof supplyAttributionGenerationCodec.schema
 >;
 
 function exactStrings(
@@ -253,16 +245,8 @@ function exactStrings(
   );
 }
 
-export function computeSafetyScoreV9SupplyAttributionGenerationId(
-  payload: SafetyScoreV9SupplyAttributionGenerationPayload,
-): string {
-  return `safety-score-v9-supply-attribution:v1:${sha256Hex(
-    stableJsonStringifyV1({
-      domain: "safety-score-v9.supply-attribution-generation.v1",
-      payload,
-    }),
-  )}`;
-}
+export const computeSafetyScoreV9SupplyAttributionGenerationId =
+  supplyAttributionGenerationCodec.computeId;
 
 function journalRecordsByAsset(
   records: readonly SupplyAttributionJournalV1[],
@@ -433,42 +417,13 @@ export function createSafetyScoreV9SupplyAttributionGeneration(input: {
     attributionById: input.capture.attributionById,
     outcomesById,
   });
-  return SafetyScoreV9SupplyAttributionGenerationSchema.parse({
-    ...payload,
-    generationId:
-      computeSafetyScoreV9SupplyAttributionGenerationId(payload),
-  });
+  return supplyAttributionGenerationCodec.create(payload);
 }
 
-export function serializeSafetyScoreV9SupplyAttributionGeneration(
-  generation: SafetyScoreV9SupplyAttributionGeneration,
-): string {
-  return stableJsonStringifyV1(
-    SafetyScoreV9SupplyAttributionGenerationSchema.parse(generation),
-  );
-}
-
-export function parseSafetyScoreV9SupplyAttributionGeneration(
-  value: unknown,
-): SafetyScoreV9SupplyAttributionGeneration {
-  if (
-    typeof value === "string" &&
-    new TextEncoder().encode(value).byteLength >
-      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES
-  ) {
-    throw new Error("Supply attribution generation cache value is oversized");
-  }
-  const parsed =
-    typeof value === "string"
-      ? parseJson(value, { onFailure: () => undefined })
-      : { ok: true as const, value };
-  if (!parsed.ok) {
-    throw new Error(
-      `Malformed supply attribution generation cache: ${parsed.message}`,
-    );
-  }
-  return SafetyScoreV9SupplyAttributionGenerationSchema.parse(parsed.value);
-}
+export const serializeSafetyScoreV9SupplyAttributionGeneration =
+  supplyAttributionGenerationCodec.serialize;
+export const parseSafetyScoreV9SupplyAttributionGeneration =
+  supplyAttributionGenerationCodec.parse;
 
 export function nextSafetyScoreV9SupplyAttributionDueAtSec(
   generation: SafetyScoreV9SupplyAttributionGeneration,

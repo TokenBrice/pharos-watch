@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingRowList } from "@/components/page-loading-skeleton";
-import { PageLoadingRoute } from "@/app/page-loading-route";
+import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: filter strip + leaderboard table skeleton ~10 rows.
 const YIELD_SKELETON_ROW_COUNT = 10;
@@ -51,10 +51,7 @@ export function YieldContentLoadingState() {
   );
 }
 
-export default function Loading() {
-  return (
-    <PageLoadingRoute sectionWidth="w-32" titleWidth="w-72 sm:w-96">
-      <YieldContentLoadingState />
-    </PageLoadingRoute>
-  );
-}
+export default createPageLoadingRoute(YieldContentLoadingState, {
+  sectionWidth: "w-32",
+  titleWidth: "w-72 sm:w-96",
+});

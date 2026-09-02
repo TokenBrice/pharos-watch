@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1 } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function installFetch(implementation: (request: Request) => Response | Promise<Response>) {
@@ -182,25 +182,22 @@ import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from 
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
-function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "FROM blacklist_current_balances", rows: [] },
-    { match: "INSERT INTO blacklist_current_balances", rows: [] },
-    { match: "UPDATE blacklist_current_balances", rows: [] },
-    { match: "DELETE FROM blacklist_current_balances", rows: [] },
-    { match: "FROM blacklist_amount_repair_queue", rows: [] },
-    { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
-    { match: "blacklist-amount-repair-queue-", rows: [] },
-    { match: "blacklist-amount-recovery-evm-candidates", rows: [] },
-    { match: "UPDATE blacklist_events", rows: [] },
-    { match: "INSERT OR IGNORE INTO blacklist_events", rows: [] },
-    { match: "blacklist-summary-snapshot-write", rows: [] },
-    { match: "blacklist-gap-metrics-cache-write", rows: [] },
-  ]);
-}
+const mockD1 = createMockD1Preset([
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "FROM blacklist_current_balances", rows: [] },
+  { match: "INSERT INTO blacklist_current_balances", rows: [] },
+  { match: "UPDATE blacklist_current_balances", rows: [] },
+  { match: "DELETE FROM blacklist_current_balances", rows: [] },
+  { match: "FROM blacklist_amount_repair_queue", rows: [] },
+  { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
+  { match: "blacklist-amount-repair-queue-", rows: [] },
+  { match: "blacklist-amount-recovery-evm-candidates", rows: [] },
+  { match: "UPDATE blacklist_events", rows: [] },
+  { match: "INSERT OR IGNORE INTO blacklist_events", rows: [] },
+  { match: "blacklist-summary-snapshot-write", rows: [] },
+  { match: "blacklist-gap-metrics-cache-write", rows: [] },
+]);
 
 // --- Helpers ---
 

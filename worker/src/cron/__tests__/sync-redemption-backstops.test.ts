@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
 ];
 
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES]);
-}
+const mockD1 = createMockD1Preset(DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES);
 
 const loadStablecoinsCacheMock = vi.fn();
 const loadDexLiquiditySnapshotMock = vi.fn();

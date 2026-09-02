@@ -2,6 +2,7 @@ import type { UsdsStatusResponse } from "@shared/types";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -105,11 +106,11 @@ export async function syncUsdsStatus(
       event: "cache-fresh",
       message: "Cache still fresh; skipping",
     });
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
+    return createCronResult({ itemCount: 0, metadata: { reason: "cache-fresh" } });
   }
 
   if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN))) {
-    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "etherscan-circuit-open" }) };
+    return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: "etherscan-circuit-open" } });
   }
 
   const implementationAddress = await readImplementationSlot(etherscanApiKey, signal);
@@ -122,11 +123,11 @@ export async function syncUsdsStatus(
       event: "implementation-slot-unavailable",
       message: "Failed to read implementation slot",
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "implementation-slot-unavailable" }),
-    };
+      metadata: { reason: "implementation-slot-unavailable" },
+    });
   }
 
   let freezeCapabilityPresent = false;
@@ -142,11 +143,11 @@ export async function syncUsdsStatus(
         event: "freeze-probe-unavailable",
         message: "Probe failed; preserving cached status",
       });
-      return {
+      return createCronResult({
         status: "degraded",
         itemCount: 0,
-        metadata: JSON.stringify({ reason: "freeze-probe-failed", implementationAddress }),
-      };
+        metadata: { reason: "freeze-probe-failed", implementationAddress },
+      });
     }
     freezeCapabilityPresent = probeResult;
     logWorkerEvent({
@@ -181,15 +182,11 @@ export async function syncUsdsStatus(
       message: "Status payload validation failed",
       metadata: { issues: statusResult.error.issues },
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "status-payload-invalid",
-        implementationAddress,
-        freezeCapabilityPresent,
-      }),
-    };
+      metadata: { reason: "status-payload-invalid", implementationAddress, freezeCapabilityPresent },
+    });
   }
   const status: UsdsStatusResponse = statusResult.data;
 
@@ -205,15 +202,11 @@ export async function syncUsdsStatus(
       message: "Cache write failed",
       error: err,
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "cache-write-failed",
-        implementationAddress,
-        freezeCapabilityPresent,
-      }),
-    };
+      metadata: { reason: "cache-write-failed", implementationAddress, freezeCapabilityPresent },
+    });
   }
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
   logWorkerEvent({
@@ -223,15 +216,15 @@ export async function syncUsdsStatus(
     event: cacheResult.written ? "cache-updated" : "cache-update-skipped-newer",
     message: cacheResult.written ? "Cache updated" : "Cache update skipped; newer row exists",
   });
-  return {
+  return createCronResult({
     itemCount: cacheResult.written ? 1 : 0,
-    metadata: JSON.stringify({
+    metadata: {
       implementationAddress,
       freezeCapabilityPresent,
       cacheKey: CACHE_KEY,
       syncStartSec,
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
       casSkipped: cacheResult.skippedBecauseNewer,
-    }),
-  };
+    },
+  });
 }

@@ -78,6 +78,19 @@ import {
   validateDigestModelOutput,
 } from "../daily-digest/response";
 
+function expectExactWeeklyFinalMetadata(metadataText: string | undefined): void {
+  const metadata = JSON.parse(String(metadataText));
+  expect(metadataText).toBe(JSON.stringify({
+    summary: metadata.summary,
+    digestDate: metadata.digestDate,
+    scheduledAtSec: metadata.scheduledAtSec,
+    channels: metadata.channels,
+    llm: metadata.llm,
+    editorialStyleGate: metadata.editorialStyleGate,
+    wrapperEditorialAlerts: metadata.wrapperEditorialAlerts,
+  }));
+}
+
 const safetyContext = {
   status: "available" as const,
   expectedModel: "v8" as const,
@@ -815,6 +828,7 @@ describe("generateWeeklyRecap", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("telegram: failed:");
+    expectExactWeeklyFinalMetadata(result.metadata);
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
 

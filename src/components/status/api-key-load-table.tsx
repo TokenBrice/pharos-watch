@@ -1,23 +1,18 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { StatusPill } from "./severity-pill";
 import { AttributionBadge, AttributionPanel } from "./attribution-panel";
-import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { defineStatusColumns, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
 
-const API_KEY_LOAD_COLUMNS: readonly DataTableColumn[] = [
-  { id: "key", label: "Key", className: "pb-2 font-medium" },
-  { id: "class", label: "Class", className: "pb-2 font-medium" },
-  { id: "requests", label: "Requests", className: "pb-2 font-medium" },
-  { id: "keyed-share", label: "Keyed Share", className: "pb-2 font-medium" },
-  { id: "public-api-share", label: "Public API Share", className: "pb-2 font-medium" },
-  { id: "rate-limit", label: "Rate Limit", className: "pb-2 font-medium" },
-  { id: "status", label: "Status", className: "pb-2 font-medium" },
-];
+const API_KEY_LOAD_COLUMNS = defineStatusColumns([
+  ["key", "Key"], ["class", "Class"], ["requests", "Requests"], ["keyed-share", "Keyed Share"],
+  ["public-api-share", "Public API Share"], ["rate-limit", "Rate Limit"], ["status", "Status"],
+]);
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
   return trafficClass === "site"

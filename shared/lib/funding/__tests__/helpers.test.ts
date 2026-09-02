@@ -7,7 +7,7 @@ import {
   summarizeDonations,
   monthKey,
 } from "../helpers";
-import type { CostLineItem, Donation } from "../types";
+import type { CostLineItem, Donation } from "../schema";
 
 const COSTS: CostLineItem[] = [
   { label: "Ike", category: "team", usd_per_month: 1500 },

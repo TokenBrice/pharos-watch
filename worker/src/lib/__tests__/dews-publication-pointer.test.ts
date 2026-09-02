@@ -9,6 +9,9 @@ import {
   writeDewsPublishedGeneration,
 } from "../dews-publication-pointer";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { sha256Hex } from "@shared/lib/sha256";
+import { persistDewsResults } from "../dews/persistence";
+import type { DewsComputedRow } from "../dews/contracts";
 
 const nowSec = 1_778_400_000;
 const pointerKey = "dews:published-generation";
@@ -49,6 +52,33 @@ function openSqlitePublicationDb(): {
 }
 
 describe("DEWS publication pointer reader", () => {
+  it("preserves prepared SQL and binds across publication targets", async () => {
+    const stablecoinId = "usdt-tether";
+    const result = {
+      stablecoinId, score: 12, band: "CALM", signals: { supply: { value: 10, available: true, weight: 1 } },
+      amplifiers: { psi: 1, contagion: 1 }, baseScore: 12, finalScore: 12, availableWeight: 1,
+      effectiveWeights: { supply: 1 }, evidenceKinds: ["supply"], insufficientEvidenceReason: null, dataQualityScore: 1, topContributors: [],
+    } as unknown as DewsComputedRow;
+    const db = mockD1([
+      { match: "stress-history-daily-ids", rows: [{ stablecoin_id: stablecoinId }] },
+      { match: "publication-generation-count", rows: [{ cnt: 1 }], first: { cnt: 1 } },
+      { match: "stress-latest-generation-count", rows: [{ cnt: 1 }], first: { cnt: 1 } },
+    ], { allowUnmatched: true });
+    await persistDewsResults({ db, results: [result], eligibleIds: new Set([stablecoinId]), publishFreshnessSentinel: false, nowSec });
+    const reconcileDb = mockD1([
+      pointerMatch(pointerPayload(nowSec - 60), nowSec - 60),
+      { match: "INSERT INTO surface_publication_generations", rows: [] },
+    ]);
+    await reconcileDewsPublishedGenerationLedger(reconcileDb, nowSec);
+    const markers = ["publication-row-insert", "stress-latest-upsert", "INSERT INTO surface_publication_generations"];
+    const prepared = [...db.getHistory(), ...reconcileDb.getHistory()]
+      .filter(({ sql }) => markers.some((marker) => sql.includes(marker)));
+
+    expect(prepared.map(({ sql, binds }) => sha256Hex(JSON.stringify([sql, binds])))).toEqual([
+      "7f0dc83fca1c3bc1d43100a0e4fee545fe86cb465fb23d8a1017ff5ffb2b7c21", "49f53ee3c6b87944e00e28c23ad65b7de11eac6df39d7e69c37dcf05f9461d84", "3ea45d3e78172956d93f6465b6d6abbc8279500e692aa896dfa683f6f5e2ae79", "dbebc7d2bc105892c8b739f4c3c718d560f97d7474aac36f73c1c46a5efe2d93",
+    ]);
+  });
+
   it("returns ok for a valid published generation pointer", async () => {
     const db = mockD1([
       pointerMatch(pointerPayload(nowSec - 60), nowSec - 60),

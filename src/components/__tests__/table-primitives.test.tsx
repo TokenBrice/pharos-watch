@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 import {
   assertContentTableRowsMatchColumns,
   ContentTable,
-  ContentTableFrame,
   TableBody,
   TableCell,
   TableFrame,
@@ -62,13 +61,16 @@ describe("Pharos table primitives", () => {
     expect(screen.getByText("Footer")).toBeTruthy();
   });
 
-  it("renders a children-first content table frame preset", () => {
+  it("renders caption and label props through the base table frame", () => {
     render(
-      <ContentTableFrame
+      <TableFrame
         tableId="methodology-reference"
         caption="Methodology reference"
         captionClassName="sr-only"
         tableAriaLabel="Reference table"
+        chrome="content"
+        density="compact"
+        viewportProps={{ mobileScrollHint: false }}
       >
         <TableHeader>
           <TableRow>
@@ -80,7 +82,7 @@ describe("Pharos table primitives", () => {
             <TableCell>Safety</TableCell>
           </TableRow>
         </TableBody>
-      </ContentTableFrame>,
+      </TableFrame>,
     );
 
     const shell = screen.getByTestId("methodology-reference-table");

@@ -1,6 +1,7 @@
 import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 import perCoinClientAsset from "../../data/stablecoins/coins.client.generated.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
+import { buildStablecoinRegistryIndexes } from "./registry-indexes";
 import { isActiveStablecoinMeta } from "./status";
 
 /**
@@ -22,48 +23,29 @@ import { isActiveStablecoinMeta } from "./status";
  * tests keep the projection aligned with the full asset.
  */
 
-const CLIENT_COINS_BY_ID = new Map<string, StablecoinClientMeta>();
-for (const entry of perCoinClientAsset as StablecoinClientMeta[]) {
-  CLIENT_COINS_BY_ID.set(entry.id, entry);
-}
-
 const CANONICAL_ORDER = canonicalOrderAsset as readonly string[];
+const registry = buildStablecoinRegistryIndexes(perCoinClientAsset as StablecoinClientMeta[], {
+  canonicalOrder: CANONICAL_ORDER,
+  isActive: isActiveStablecoinMeta,
+  canonicalOrderErrorPrefix: "[client-registry] ",
+});
 
 /** Tracked stablecoins in canonical market-cap order (slim projection). */
-export const CLIENT_TRACKED_STABLECOINS: readonly StablecoinClientMeta[] = CANONICAL_ORDER.map(
-  (id) => {
-    const entry = CLIENT_COINS_BY_ID.get(id);
-    if (!entry) {
-      throw new Error(
-        `[client-registry] canonical-order.json references unknown stablecoin ID: ${id}`,
-      );
-    }
-    return entry;
-  },
-);
+export const CLIENT_TRACKED_STABLECOINS: readonly StablecoinClientMeta[] = registry.tracked.stablecoins;
 
 /** Map of stablecoin ID -> slim metadata. */
-export const CLIENT_TRACKED_META_BY_ID: ReadonlyMap<string, StablecoinClientMeta> = new Map(
-  CLIENT_TRACKED_STABLECOINS.map((entry) => [entry.id, entry] as const),
-);
+export const CLIENT_TRACKED_META_BY_ID: ReadonlyMap<string, StablecoinClientMeta> = registry.tracked.metaById;
 
 /** Set of all tracked stablecoin IDs, across every lifecycle state. */
-export const CLIENT_TRACKED_IDS: ReadonlySet<string> = new Set(
-  CLIENT_TRACKED_STABLECOINS.map((entry) => entry.id),
-);
+export const CLIENT_TRACKED_IDS: ReadonlySet<string> = registry.tracked.ids;
 
 /** Active stablecoins (excludes every non-active lifecycle state). */
-export const CLIENT_ACTIVE_STABLECOINS: readonly StablecoinClientMeta[] =
-  CLIENT_TRACKED_STABLECOINS.filter(isActiveStablecoinMeta);
+export const CLIENT_ACTIVE_STABLECOINS: readonly StablecoinClientMeta[] = registry.active.stablecoins;
 
 /** Set of active stablecoin IDs. */
-export const CLIENT_ACTIVE_IDS: ReadonlySet<string> = new Set(
-  CLIENT_ACTIVE_STABLECOINS.map((entry) => entry.id),
-);
+export const CLIENT_ACTIVE_IDS: ReadonlySet<string> = registry.active.ids;
 
 /** Map of active stablecoin ID -> slim metadata. */
-export const CLIENT_ACTIVE_META_BY_ID: ReadonlyMap<string, StablecoinClientMeta> = new Map(
-  CLIENT_ACTIVE_STABLECOINS.map((entry) => [entry.id, entry] as const),
-);
+export const CLIENT_ACTIVE_META_BY_ID: ReadonlyMap<string, StablecoinClientMeta> = registry.active.metaById;
 
 export type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";

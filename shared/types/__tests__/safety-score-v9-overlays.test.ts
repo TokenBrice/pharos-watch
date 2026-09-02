@@ -49,6 +49,7 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     };
     malformed.overlays[0] = { ...malformed.overlays[0], unexpectedPublishedField: true };
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse(malformed).success).toBe(false);
+    expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({ ...malformed, overlays: [{ ...mechanismOverlays.overlays[0], reviewedAt: "2026-02-31" }] }).success).toBe(false);
   });
 
   it("rejects transfer rows without a canonical deployment", () => {
@@ -67,6 +68,16 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     };
     malformed.overlays[0]!.eligibility.liveHistory.sourceIds = ["missing-source"];
     expect(SafetyScoreV9OperationalResilienceOverlayFileSchema.safeParse(malformed).success).toBe(false);
+  });
+
+  it.each([
+    [SafetyScoreV9MechanismReviewOverlayFileSchema, { ...mechanismOverlays, overlays: [...mechanismOverlays.overlays, mechanismOverlays.overlays[0]!] }, "overlays", "Duplicate overlay assetId"],
+    [SafetyScoreV9OperationalResilienceOverlayFileSchema, { ...operationalResilienceOverlays, overlays: [...operationalResilienceOverlays.overlays, operationalResilienceOverlays.overlays[0]!] }, "overlays", "Duplicate operational-resilience overlay assetId"],
+    [SafetyScoreV9ReviewedTransferFileSchema, { ...transferOverlays, reviews: [...transferOverlays.reviews, transferOverlays.reviews[0]!] }, "reviews", "Duplicate reviewed transfer assetId"],
+  ])("keeps duplicate asset issue paths and messages stable", (schema, input, path, message) => {
+    const result = schema.safeParse(input);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues).toEqual([{ code: "custom", path: [path], message }]);
   });
 
   it("never curates an unavailable assurance component the compiler already grades known from proofOfReserves.latestReport", () => {

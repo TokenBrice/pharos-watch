@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adaptThreeJaneUsd3Snapshot } from "../3jane-usd3";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const ONE = 1_000_000n;
 
@@ -65,7 +64,7 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
         creditPositionRaw: (60n * ONE).toString(),
       },
     });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("3jane-usd3") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("3jane-usd3", result);
   });
 
   it("surfaces shutdown state and keeps bounded recoverable liquidity degraded", () => {

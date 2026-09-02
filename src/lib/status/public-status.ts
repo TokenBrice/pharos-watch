@@ -3,6 +3,7 @@ import { getPublicMintBurnStatus, getStatusSeverity, type PublicStatusTone } fro
 import type { HealthResponse, StatusHealthValue } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { formatProseList } from "@shared/lib/format";
+import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
 
 export interface PublicCacheSummary {
   ratio: number | null;
@@ -166,9 +167,8 @@ export function getPublicDivergenceNotice(
   healthStatus: StatusHealthValue,
   probeStatus: StatusHealthValue,
 ): PublicDivergenceNotice {
-  const SEV = { healthy: 0, degraded: 1, stale: 2 } as const;
-  const h = SEV[healthStatus];
-  const p = SEV[probeStatus];
+  const h = STATUS_PRIORITY[healthStatus];
+  const p = STATUS_PRIORITY[probeStatus];
   if (h === p) return { kind: "in-sync" };
   if (h > 0 && p === 0) {
     return {

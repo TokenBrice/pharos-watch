@@ -78,7 +78,7 @@ function buildDeadStablecoinKey(coin: DeadStablecoin): string {
   return coin.id;
 }
 
-function wasDeadStablecoinPreviouslySeen(previousKeys: Set<string>, coin: DeadStablecoin): boolean {
+function wasDeadStablecoinPreviouslySeen(previousKeys: ReadonlySet<string>, coin: DeadStablecoin): boolean {
   if (previousKeys.has(coin.id)) {
     return true;
   }
@@ -195,6 +195,55 @@ async function applyCacheWrites(db: D1Database, writes: readonly TelegramDigestS
   }
 }
 
+async function prepareSetSnapshotAppendix<T>(
+  db: D1Database,
+  options: {
+    cacheKey: string;
+    snapshotPayload: string;
+    seedReasons: readonly [firstRun: string, invalid: string];
+    diff: (previousKeys: ReadonlySet<string>) => T;
+    hasAdditions: (additions: T) => boolean;
+    render: (additions: T) => {
+      appendixHtml: string;
+      successActions?: readonly TelegramDigestSuccessAction[];
+    } | Promise<{
+      appendixHtml: string;
+      successActions?: readonly TelegramDigestSuccessAction[];
+    }>;
+    applyMetadata: (additions: T) => void;
+  },
+  state: {
+    immediateWrites: TelegramDigestSuccessAction[];
+    postSuccessWrites: TelegramDigestSuccessAction[];
+    appendixSections: string[];
+    seededSnapshots: string[];
+  },
+): Promise<void> {
+  const cachedSnapshot = await getCache(db, options.cacheKey);
+  const previousKeys = cachedSnapshot ? parseSnapshotKeys(cachedSnapshot.value) : null;
+  if (!cachedSnapshot || !previousKeys) {
+    state.immediateWrites.push({ key: options.cacheKey, value: options.snapshotPayload });
+    state.seededSnapshots.push(options.seedReasons[cachedSnapshot ? 1 : 0]);
+    return;
+  }
+
+  const additions = options.diff(previousKeys);
+  if (!options.hasAdditions(additions)) {
+    if (cachedSnapshot.value !== options.snapshotPayload) {
+      state.immediateWrites.push({ key: options.cacheKey, value: options.snapshotPayload });
+    }
+    return;
+  }
+
+  const rendered = await options.render(additions);
+  state.appendixSections.push(rendered.appendixHtml);
+  options.applyMetadata(additions);
+  state.postSuccessWrites.push(
+    { key: options.cacheKey, value: options.snapshotPayload },
+    ...(rendered.successActions ?? []),
+  );
+}
+
 export async function queuePendingTrackedStablecoinAdditions(
   db: D1Database,
   previousAssetIds: Iterable<string>,
@@ -259,58 +308,42 @@ export async function prepareTelegramDigestAppendices(
     frozenSymbols: [],
     seededSnapshots: [],
   };
+  const snapshotAppendixState = {
+    immediateWrites,
+    postSuccessWrites,
+    appendixSections,
+    seededSnapshots: metadata.seededSnapshots,
+  };
 
-  const cemeterySnapshotPayload = buildCemeterySnapshotPayload();
-  const cachedCemeterySnapshot = await getCache(db, CEMETERY_SNAPSHOT_CACHE_KEY);
-
-  if (!cachedCemeterySnapshot) {
-    immediateWrites.push({
-      key: CEMETERY_SNAPSHOT_CACHE_KEY,
-      value: cemeterySnapshotPayload,
-    });
-    metadata.seededSnapshots.push("cemetery:first-run");
-  } else {
-    const previousCemeteryKeys = parseSnapshotKeys(cachedCemeterySnapshot.value);
-    if (!previousCemeteryKeys) {
-      immediateWrites.push({
-        key: CEMETERY_SNAPSHOT_CACHE_KEY,
-        value: cemeterySnapshotPayload,
-      });
-      metadata.seededSnapshots.push("cemetery:invalid-reseeded");
-    } else {
-      const newCemeteryCoins = DEAD_STABLECOINS.filter(
-        (coin) => !wasDeadStablecoinPreviouslySeen(previousCemeteryKeys, coin),
-      );
-
-      if (newCemeteryCoins.length === 0) {
-        if (cachedCemeterySnapshot.value !== cemeterySnapshotPayload) {
-          immediateWrites.push({
-            key: CEMETERY_SNAPSHOT_CACHE_KEY,
-            value: cemeterySnapshotPayload,
-          });
-        }
-      } else {
+  await prepareSetSnapshotAppendix(
+    db,
+    {
+      cacheKey: CEMETERY_SNAPSHOT_CACHE_KEY,
+      snapshotPayload: buildCemeterySnapshotPayload(),
+      seedReasons: ["cemetery:first-run", "cemetery:invalid-reseeded"],
+      diff: (previousKeys) => DEAD_STABLECOINS.filter(
+        (coin) => !wasDeadStablecoinPreviouslySeen(previousKeys, coin),
+      ),
+      hasAdditions: (coins) => coins.length > 0,
+      render: async (coins) => {
         const cachedFooterIndex = await getCache(db, CEMETERY_FOOTER_INDEX_CACHE_KEY);
         const footerIndex = parseFooterIndex(cachedFooterIndex?.value ?? null);
         const footer = CEMETERY_FOOTERS[footerIndex % CEMETERY_FOOTERS.length];
-
-        appendixSections.push(buildCemeteryAppendix(newCemeteryCoins, footer));
-        metadata.cemeteryDetected = newCemeteryCoins.length;
-        metadata.cemeterySymbols = newCemeteryCoins.map((coin) => coin.symbol);
-
-        postSuccessWrites.push(
-          {
-            key: CEMETERY_SNAPSHOT_CACHE_KEY,
-            value: cemeterySnapshotPayload,
-          },
-          {
+        return {
+          appendixHtml: buildCemeteryAppendix(coins, footer),
+          successActions: [{
             key: CEMETERY_FOOTER_INDEX_CACHE_KEY,
             value: String(footerIndex + 1),
-          },
-        );
-      }
-    }
-  }
+          }],
+        };
+      },
+      applyMetadata: (coins) => {
+        metadata.cemeteryDetected = coins.length;
+        metadata.cemeterySymbols = coins.map((coin) => coin.symbol);
+      },
+    },
+    snapshotAppendixState,
+  );
 
   const trackedSnapshotPayload = buildTrackedSnapshotPayload();
   const [cachedTrackedSnapshot, cachedTrackedPending] = await Promise.all([
@@ -397,46 +430,24 @@ export async function prepareTelegramDigestAppendices(
     }
   }
 
-  const frozenSnapshotPayload = buildFrozenSnapshotPayload();
-  const cachedFrozenSnapshot = await getCache(db, FROZEN_SNAPSHOT_CACHE_KEY);
-
-  if (!cachedFrozenSnapshot) {
-    immediateWrites.push({
-      key: FROZEN_SNAPSHOT_CACHE_KEY,
-      value: frozenSnapshotPayload,
-    });
-    metadata.seededSnapshots.push("frozen:first-run");
-  } else {
-    const previousFrozenKeys = parseSnapshotKeys(cachedFrozenSnapshot.value);
-    if (!previousFrozenKeys) {
-      immediateWrites.push({
-        key: FROZEN_SNAPSHOT_CACHE_KEY,
-        value: frozenSnapshotPayload,
-      });
-      metadata.seededSnapshots.push("frozen:invalid-reseeded");
-    } else {
-      const addedFrozen = diffFrozenIds(FROZEN_IDS, previousFrozenKeys);
-      if (addedFrozen.size === 0) {
-        if (cachedFrozenSnapshot.value !== frozenSnapshotPayload) {
-          immediateWrites.push({
-            key: FROZEN_SNAPSHOT_CACHE_KEY,
-            value: frozenSnapshotPayload,
-          });
-        }
-      } else {
-        appendixSections.push(buildFrozenAppendix(addedFrozen));
-        metadata.frozenDetected = addedFrozen.size;
-        metadata.frozenSymbols = [...addedFrozen]
+  await prepareSetSnapshotAppendix(
+    db,
+    {
+      cacheKey: FROZEN_SNAPSHOT_CACHE_KEY,
+      snapshotPayload: buildFrozenSnapshotPayload(),
+      seedReasons: ["frozen:first-run", "frozen:invalid-reseeded"],
+      diff: (previousKeys) => diffFrozenIds(FROZEN_IDS, previousKeys),
+      hasAdditions: (ids) => ids.size > 0,
+      render: (ids) => ({ appendixHtml: buildFrozenAppendix(ids) }),
+      applyMetadata: (ids) => {
+        metadata.frozenDetected = ids.size;
+        metadata.frozenSymbols = [...ids]
           .map((id) => FROZEN_META_BY_ID.get(id)?.symbol)
           .filter((symbol): symbol is string => typeof symbol === "string");
-
-        postSuccessWrites.push({
-          key: FROZEN_SNAPSHOT_CACHE_KEY,
-          value: frozenSnapshotPayload,
-        });
-      }
-    }
-  }
+      },
+    },
+    snapshotAppendixState,
+  );
 
   await applyCacheWrites(db, immediateWrites);
 

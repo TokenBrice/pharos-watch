@@ -86,12 +86,12 @@ describe("snapshotSupply", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(result.metadata).toBe(JSON.stringify({
       reason: "stablecoins_cache_before_slot",
       cacheUpdatedAt: staleForSlotUpdatedAt,
       requiredUpdatedAt: slotStartedAt,
       freshnessGateLabel: "daily0800Utc",
-    });
+    }));
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds.includes("snapshot-supply:last-write")
@@ -125,13 +125,13 @@ describe("snapshotSupply", () => {
 
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(0);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(result.metadata).toBe(JSON.stringify({
       reason: "already_written_today_before_freshness_gate",
       snapshotDate: todaySnapshotDate,
       cacheUpdatedAt,
       requiredUpdatedAt: slotStartedAt,
       freshnessGateLabel: "daily0800Utc",
-    });
+    }));
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 

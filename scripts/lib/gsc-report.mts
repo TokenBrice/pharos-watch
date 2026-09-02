@@ -139,6 +139,21 @@ export function uniqueHeaders(headers: readonly unknown[]): string[] {
   });
 }
 
+export function recordFromCsvRow(headers: readonly string[], row: readonly unknown[]): Record<string, string> {
+  return Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? "").trim()]));
+}
+
+export function findHeader(headers: readonly string[], candidates: readonly string[]): string {
+  const lookup = new Map(headers.map((header) => [normalizeHeaderName(header), header]));
+  for (const candidate of candidates) {
+    const header = lookup.get(normalizeHeaderName(candidate));
+    if (header) return header;
+  }
+  return "";
+}
+
+export const hasHeader = (headers: readonly string[], candidates: readonly string[]): boolean => findHeader(headers, candidates) !== "";
+
 export function isDigit(char: string): boolean {
   return char >= "0" && char <= "9";
 }
@@ -167,6 +182,11 @@ export function firstNumberToken(value: unknown): string {
     return token === "-" || token === "." || token === "-." ? "" : token;
   }
   return "";
+}
+
+export function parseCsvNumber(value: unknown): number | null {
+  const token = firstNumberToken(value); const parsed = Number(token);
+  return token && Number.isFinite(parsed) ? parsed : null;
 }
 
 export function parsePositiveNumber(value: unknown, optionName: string, { integer = false } = {}): number {

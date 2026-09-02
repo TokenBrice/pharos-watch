@@ -53,8 +53,8 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
       }),
     );
 
-    expect(accepted.journalId).toMatch(
-      /^supply-attribution-evidence:v1:[a-f0-9]{64}$/,
+    expect(accepted.journalId).toBe(
+      "supply-attribution-evidence:v1:9ae8937d6d507c1e7dd75a629d4f4e31803303181159dd4d154243a3a3f96836",
     );
     expect(rejected.journalId).not.toBe(accepted.journalId);
     expect(
@@ -62,6 +62,13 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
         "wm-m0": [rejected, accepted],
       })["wm-m0"],
     ).toEqual([accepted, rejected]);
+    expect(
+      JSON.stringify(
+        SupplyAttributionJournalByIdV1Schema.parse({ "wm-m0": [accepted] }),
+      ),
+    ).toBe(
+      '{"wm-m0":[{"schemaVersion":1,"lane":"supply-attribution","assetId":"wm-m0","attemptId":"supply-attribution:00000000-0000-4000-8000-000000000001","sourceId":"wm.reviewed-deployment-unit-partition.v1","sourceOriginClass":"onchain-observation","baseInputGenerationId":"report-cards-input:v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sourceGeneration":"report-cards:v8:fixture","registryFingerprint":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","routeInventoryDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","attemptCode":"supply-attribution.collector.attempted","admissionCode":"supply-attribution.admission.accepted","fallbackCode":"supply-attribution.fallback.not-used","attemptedAtSec":101,"completedAtSec":102,"scoringClockSec":100,"sourceObservedAtSec":99,"failedRouteId":null,"contentSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","journalId":"supply-attribution-evidence:v1:9ae8937d6d507c1e7dd75a629d4f4e31803303181159dd4d154243a3a3f96836"}]}'
+    );
   });
 
   it("parses immutable pre-diagnostic V1 rows without changing their IDs", () => {

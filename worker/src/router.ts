@@ -4,6 +4,7 @@ import {
   type EndpointDefinition,
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
+import { cloneResponse } from "@shared/lib/http-response";
 
 import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-response";
 import {
@@ -32,11 +33,7 @@ function addAdminGetNoStoreHeader(
 
 function stripHeadBody(request: Request | undefined, response: Response): Response {
   if (request?.method !== "HEAD") return response;
-  return new Response(null, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
+  return cloneResponse(response, { method: request.method });
 }
 
 function auditPersistenceFailureResponse(response: Response): Response {

@@ -11,25 +11,8 @@ import {
   strictestAlertTtlSec,
   type AlertsByChatEntry,
   type RoutedSubscriberAlert,
-  type SubscriberRow,
 } from "../dispatch-telegram-routing";
-
-function subscriber(overrides: Partial<SubscriberRow>): SubscriberRow {
-  return {
-    chat_id: "123",
-    last_active_at: 1_800_000_000,
-    dews_min_band: null,
-    safety_mode: null,
-    depeg_worsening_bps_step: null,
-    global_depeg_worsening_bps_step: null,
-    quiet_hours_enabled: 0,
-    quiet_hours_start_utc: null,
-    quiet_hours_end_utc: null,
-    timezone: null,
-    isGlobal: false,
-    ...overrides,
-  };
-}
+import { makeSubscriberRow as subscriber } from "./telegram-subscriber.test-support";
 
 function emptyAlerts(overrides: Partial<ConsolidatedAlerts> = {}): ConsolidatedAlerts {
   return {
@@ -71,6 +54,14 @@ const SAFETY_DOWNGRADE: SafetyChange = {
   newScore: 66,
 };
 
+const SUBSCRIBER_ROW_FIXTURE = {
+  chat_id: "123", last_active_at: 1_800_000_000,
+  dews_min_band: null, safety_mode: null,
+  depeg_worsening_bps_step: null, global_depeg_worsening_bps_step: null,
+  quiet_hours_enabled: 0, quiet_hours_start_utc: null,
+  quiet_hours_end_utc: null, timezone: null, isGlobal: false,
+};
+
 function alertsEntry(overrides: Partial<AlertsByChatEntry>): AlertsByChatEntry {
   return {
     lastActiveAt: 1_800_000_000,
@@ -104,6 +95,11 @@ function routedAlert(
 }
 
 describe("dispatch telegram routing helpers", () => {
+  it.each([
+    [{}, SUBSCRIBER_ROW_FIXTURE],
+    [{ chat_id: "42", isGlobal: true }, { ...SUBSCRIBER_ROW_FIXTURE, chat_id: "42", isGlobal: true }],
+  ])("builds canonical subscriber rows %#", (overrides, expected) => expect(subscriber(overrides)).toEqual(expected));
+
   it("fails closed when a planned alert has no alert types", () => {
     expect(() => strictestAlertTtlSec([])).toThrow("Telegram alert type list cannot be empty");
   });

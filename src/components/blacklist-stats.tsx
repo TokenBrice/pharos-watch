@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BlacklistMetricCardSkeletonGrid } from "@/components/blacklist-metric-card-skeleton-grid";
 import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-stat-card";
 import { cn } from "@/lib/utils";
 import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
@@ -61,18 +61,10 @@ export function BlacklistStats({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="rounded-xl">
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <BlacklistMetricCardSkeletonGrid
+        gridClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5"
+        cardClassName="rounded-xl"
+      />
     );
   }
 

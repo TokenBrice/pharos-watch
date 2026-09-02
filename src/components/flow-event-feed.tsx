@@ -11,7 +11,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { ExternalLink } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { EventFeedEmpty, EventFeedSkeleton } from "@/components/event-feed-state";
+import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
 import {
   formatCurrency,
   formatAddress,
@@ -199,18 +199,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
               <TableCell className="hidden sm:table-cell text-sm">
                 {chainName(evt.chainId)}
               </TableCell>
-              <TableCell className="text-center">
-                <a
-                  href={evt.explorerTxUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  aria-label="View transaction on block explorer"
-                >
-                  <span className="hidden md:inline">{formatAddress(evt.txHash)}</span>
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              </TableCell>
+              <EventTransactionCell txHash={evt.txHash} href={evt.explorerTxUrl} />
             </TableRow>
           );
         })}

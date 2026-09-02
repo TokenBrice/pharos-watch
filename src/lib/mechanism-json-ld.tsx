@@ -1,4 +1,5 @@
 import type { MechanismArchetype } from "@shared/types";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
   buildArchetypeArticleJsonLd,
@@ -10,14 +11,7 @@ import {
  * page. Emits the `DefinedTermSet` document covering every tracked archetype.
  */
 export function MechanismJsonLd() {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: safeJsonLd(buildDefinedTermSetJsonLd()),
-      }}
-    />
-  );
+  return <JsonLdScript json={safeJsonLd(buildDefinedTermSetJsonLd())} />;
 }
 
 /**
@@ -29,12 +23,5 @@ export function ArchetypeArticleJsonLd({
 }: {
   archetype: MechanismArchetype;
 }) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: safeJsonLd(buildArchetypeArticleJsonLd(archetype)),
-      }}
-    />
-  );
+  return <JsonLdScript json={safeJsonLd(buildArchetypeArticleJsonLd(archetype))} />;
 }

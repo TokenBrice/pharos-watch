@@ -23,6 +23,11 @@ const DEWS_TABLES = new Set([
   "stress_signals_latest",
 ]);
 
+const DEWS_GENERATION_ROW_TARGETS = {
+  latest: { sql: "/* pharos:dews:stress-latest-upsert */\n         INSERT OR REPLACE INTO stress_signals_latest\n           (stablecoin_id, computed_at, score, band, signals_json, updated_at)\n         VALUES (?, ?, ?, ?, ?, ?)", includeUpdatedAt: true },
+  publication: { sql: "/* pharos:dews:publication-row-insert */\n         INSERT OR REPLACE INTO stress_signal_publication_rows\n           (stablecoin_id, computed_at, score, band, signals_json)\n         VALUES (?, ?, ?, ?, ?)", includeUpdatedAt: false },
+} as const;
+
 /**
  * Compute the set of stablecoin ids whose stress-signal rows should be
  * deleted. Preserves rows for any currently eligible coin AND any frozen
@@ -245,54 +250,25 @@ export async function reconcileDailyDewsHistorySnapshot(
   };
 }
 
-async function upsertLatestStressSignalRows(
+async function writeDewsGenerationRows(
   db: D1Database,
+  target: keyof typeof DEWS_GENERATION_ROW_TARGETS,
   results: DewsComputedRow[],
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<void> {
   if (results.length === 0) return;
+  const spec = DEWS_GENERATION_ROW_TARGETS[target];
   const stmts = results.map((result) =>
     db
-      .prepare(
-        `/* pharos:dews:stress-latest-upsert */
-         INSERT OR REPLACE INTO stress_signals_latest
-           (stablecoin_id, computed_at, score, band, signals_json, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
+      .prepare(spec.sql)
       .bind(
         result.stablecoinId,
         nowSec,
         result.score,
         result.band,
         buildStressSignalsEnvelope(result),
-        nowSec,
-      ),
-  );
-  await batchExecute(db, stmts, { signal });
-}
-
-async function insertStressSignalPublicationRows(
-  db: D1Database,
-  results: DewsComputedRow[],
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<void> {
-  if (results.length === 0) return;
-  const stmts = results.map((result) =>
-    db
-      .prepare(
-        `/* pharos:dews:publication-row-insert */
-         INSERT OR REPLACE INTO stress_signal_publication_rows
-           (stablecoin_id, computed_at, score, band, signals_json)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        result.stablecoinId,
-        nowSec,
-        result.score,
-        result.band,
-        buildStressSignalsEnvelope(result),
+        ...(spec.includeUpdatedAt ? [nowSec] : []),
       ),
   );
   await batchExecute(db, stmts, { signal });
@@ -375,8 +351,8 @@ export async function persistDewsResults(params: {
     );
     await batchExecute(params.db, stmts, { signal: params.signal });
     throwIfAborted(params.signal);
-    await insertStressSignalPublicationRows(params.db, params.results, params.nowSec, params.signal);
-    await upsertLatestStressSignalRows(params.db, params.results, params.nowSec, params.signal);
+    await writeDewsGenerationRows(params.db, "publication", params.results, params.nowSec, params.signal);
+    await writeDewsGenerationRows(params.db, "latest", params.results, params.nowSec, params.signal);
   }
   const computedIds = new Set(params.results.map((result) => result.stablecoinId));
   const noCurrentSupplyIds = (params.noCurrentSupplyIds ?? []).filter(

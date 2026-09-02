@@ -14,9 +14,12 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 import { SNOOZE_SECONDS } from "../../lib/telegram-constants";
 import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import { requireGroupAdminForCallback } from "../telegram-webhook-auth";
-import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import {
+  createTelegramWebhookIntent,
+  type TelegramCallbackMutationContext,
+  type TelegramMutationContext,
+} from "../telegram-webhook-effect-fence";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
-import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
 
 export { SNOOZE_SECONDS };
 
@@ -168,15 +171,9 @@ export async function runCallbackMutation<TValid>(params: {
   /** Toast text when the D1 write throws. */
   failureText: string;
   answerCallback: (options?: { text?: string }) => Promise<void>;
-  beforeIrreversibleEffect: (kind: string) => Promise<void>;
-  markMutationApplied: () => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
   intentKind: string;
   intentPayload: (validated: TValid) => Record<string, unknown>;
-  wasMutationApplied?: boolean;
-}): Promise<void> {
+} & TelegramCallbackMutationContext): Promise<void> {
   const validated = params.validate();
   if (validated == null) {
     await params.answerCallback({
@@ -255,9 +252,8 @@ export async function runReadOnlyCoinCallback(params: {
   send: (id: string, isPrivateChat: boolean) => Promise<void>;
   ackText: string;
   answerCallback: (options?: { text?: string }) => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
   intentKind: string;
-}): Promise<void> {
+} & Pick<TelegramMutationContext, "planIntent">): Promise<void> {
   const { arg, parts } = params.parsed;
   if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
     await params.answerCallback({ text: "Action not recognized." });
@@ -284,21 +280,14 @@ export interface TelegramCallbackQuery {
  * and validates `parsed.action` against the allowlist before dispatch, so
  * handlers can rely on both being well-formed.
  */
-export interface CallbackContext {
+export interface CallbackContext extends TelegramCallbackMutationContext {
   db: D1Database;
   botToken: string;
   cb: TelegramCallbackQuery;
   chatId: string;
   recapRollout?: TelegramRecapRolloutPolicy;
   parsed: ParsedCallbackData<CallbackAction>;
-  beforeIrreversibleEffect: (kind: string) => Promise<void>;
   answerCallback: (options?: { text?: string }) => Promise<void>;
-  markMutationApplied: () => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
-  storedIntent?: TelegramWebhookOperationIntent | null;
-  wasMutationApplied?: boolean;
 }
 
 export type CallbackHandler = (ctx: CallbackContext) => Promise<void>;

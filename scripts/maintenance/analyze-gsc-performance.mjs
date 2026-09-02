@@ -5,11 +5,12 @@ import {
   appendGscReportSection,
   collectInputEntries,
   compareText,
-  firstNumberToken,
+  findHeader,
   formatGscUsage,
-  normalizeHeaderName,
   parseCsv,
+  parseCsvNumber,
   parsePositiveNumber,
+  recordFromCsvRow,
   runAsyncDirect,
   runGscCli,
   uniqueHeaders,
@@ -45,23 +46,6 @@ const DASHBOARD_PATHS = new Set([
   "/screener/",
 ]);
 
-function findHeader(headers, candidates) {
-  const lookup = new Map(headers.map((header) => [normalizeHeaderName(header), header]));
-  for (const candidate of candidates) {
-    const header = lookup.get(normalizeHeaderName(candidate));
-    if (header) return header;
-  }
-  return "";
-}
-
-function recordFromRow(headers, row) {
-  const record = {};
-  headers.forEach((header, index) => {
-    record[header] = String(row[index] ?? "").trim();
-  });
-  return record;
-}
-
 function findPerformanceTable(text) {
   const rows = parseCsv(text);
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
@@ -81,28 +65,21 @@ function findPerformanceTable(text) {
       positionHeader: findHeader(headers, POSITION_HEADERS),
       pageHeader,
       queryHeader,
-      records: rows.slice(rowIndex + 1).map((row) => recordFromRow(headers, row)),
+      records: rows.slice(rowIndex + 1).map((row) => recordFromCsvRow(headers, row)),
     };
   }
   return null;
 }
 
-function parseFiniteNumber(value) {
-  const token = firstNumberToken(value);
-  if (!token) return null;
-  const parsed = Number(token);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function parseCount(value) {
-  const parsed = parseFiniteNumber(value);
+  const parsed = parseCsvNumber(value);
   if (parsed === null) return null;
   return Math.max(0, Math.trunc(parsed));
 }
 
 function parseCtr(value) {
   const raw = String(value ?? "").trim();
-  const parsed = parseFiniteNumber(raw);
+  const parsed = parseCsvNumber(raw);
   if (parsed === null) return null;
   if (raw.includes("%") || parsed > 1) return parsed / 100;
   return parsed;
@@ -229,7 +206,7 @@ function parsePerformanceRows(entry, table) {
       clicks,
       impressions,
       ctr: table.ctrHeader ? parseCtr(record[table.ctrHeader]) : null,
-      position: table.positionHeader ? parseFiniteNumber(record[table.positionHeader]) : null,
+      position: table.positionHeader ? parseCsvNumber(record[table.positionHeader]) : null,
       page,
       query,
       sourceLabel: normalizeSourceLabel(entry.sourceLabel),

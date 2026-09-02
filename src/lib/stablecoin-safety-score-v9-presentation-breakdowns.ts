@@ -5,6 +5,7 @@ import type {
   SafetyScoreV9ExitBreakdown,
   SafetyScoreV9PillarAdjustment,
 } from "@shared/types";
+import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 
@@ -227,14 +228,6 @@ function backingGroups(
     ...groups,
     ...orphans.map(([key, rows]) => groupWithTail(key, null, null, null, rows)),
   ];
-}
-
-function compactUsd(value: number): string {
-  return value >= 1_000_000
-    ? `$${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}m`
-    : value >= 1_000
-      ? `$${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}k`
-      : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function fullUsd(value: number): string {

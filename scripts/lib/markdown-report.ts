@@ -1,7 +1,7 @@
 export type MarkdownAlignment = "left" | "right";
 export type MarkdownPipeStyle = "bare" | "wrapped";
 
-function markdownValue(value: unknown): string {
+export function markdownValue(value: unknown): string {
   if (value == null || value === "") return "";
   return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }

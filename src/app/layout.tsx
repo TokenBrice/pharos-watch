@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
@@ -143,10 +144,8 @@ export default function RootLayout({
             <FeedbackButton />
           </RouteChrome>
         </Providers>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd([
+        <JsonLdScript
+          json={safeJsonLd([
               {
                 "@context": "https://schema.org",
                 "@type": "WebSite",
@@ -187,8 +186,7 @@ export default function RootLayout({
                 },
                 creator: { "@id": `${SITE_URL}#person-tokenbrice` },
               },
-            ]),
-          }}
+            ])}
         />
       </body>
     </html>

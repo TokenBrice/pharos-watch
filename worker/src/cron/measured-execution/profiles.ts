@@ -2,6 +2,9 @@ import {
   DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
   DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredCapacityCurve,
+  projectDexMeasuredExecutionProfileToV2,
+  type DexExactQuoteAdapterId,
+  type DexExecutionProfileV2,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionPoolBindingProof,
   type DexMeasuredExecutionQuotePointProof,
@@ -14,6 +17,14 @@ import {
 } from "@shared/types/measured-execution";
 
 export const DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS = 15_000;
+
+export function projectProfileForAdapter(
+  profile: DexMeasuredExecutionProfile,
+  adapterId: DexExactQuoteAdapterId,
+): DexExecutionProfileV2 | null {
+  const projected = projectDexMeasuredExecutionProfileToV2(profile);
+  return projected.adapterId === adapterId ? projected : null;
+}
 
 export interface DexMeasuredRawQuotePoint extends DexMeasuredExecutionQuotePointProof {
   adapterMetadata?: Record<string, string | number | boolean>;

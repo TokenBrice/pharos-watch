@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
-import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases";
+import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,

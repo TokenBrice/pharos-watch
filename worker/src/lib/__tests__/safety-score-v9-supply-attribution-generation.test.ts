@@ -369,14 +369,17 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
 
   it("round-trips a complete content-addressed generation", () => {
     const generation = fixtures.acceptedGeneration;
+    const serialized = serializeSafetyScoreV9SupplyAttributionGeneration(generation);
     expect(
       parseSafetyScoreV9SupplyAttributionGeneration(
-        serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+        serialized,
       ),
     ).toEqual(generation);
-    expect(generation.generationId).toMatch(
-      /^safety-score-v9-supply-attribution:v1:[a-f0-9]{64}$/,
-    );
+    expect([generation.generationId, new TextEncoder().encode(serialized).byteLength, sha256Hex(serialized)]).toEqual([
+      "safety-score-v9-supply-attribution:v1:5afb101e42517678c37dec63023fcda11259f45a0f0f6f0441805e6549f5bf18",
+      3_867,
+      "332d17e8084c9976f16a83793e623dc10491f152ad57c45f389a8c04df40be96",
+    ]);
     expect(generation.expectedAssetIds).toEqual(["xaut-tether"]);
     expect(generation.observedAssetIds).toEqual(["xaut-tether"]);
   });
@@ -385,6 +388,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(() =>
       parseSafetyScoreV9SupplyAttributionGeneration("{"),
     ).toThrow("Malformed supply attribution generation cache");
+    expect(() => parseSafetyScoreV9SupplyAttributionGeneration(" ".repeat(128 * 1_024 + 1))).toThrow("Supply attribution generation cache value is oversized");
   });
 
   it("re-derives accepted raw observations against the current aggregate", () => {

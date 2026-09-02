@@ -16,6 +16,7 @@ import {
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 import type {
   DdrCanonicalIncident,
@@ -449,9 +450,9 @@ export async function computeAndStoreDepegResolverReview(
   const snapshot = await buildDepegResolverReviewSnapshot(db, Math.floor(Date.now() / 1000), signal, options);
   await writeDepegResolverReviewSnapshot(db, snapshot);
 
-  return {
+  return createCronResult({
     itemCount: snapshot._meta.reviewedEventCount,
-    metadata: JSON.stringify({
+    metadata: {
       assessedEvents: snapshot._meta.assessedEventCount,
       reviewedRows: snapshot._meta.reviewedEventCount,
       publicRows: snapshot.rows.length,
@@ -462,6 +463,6 @@ export async function computeAndStoreDepegResolverReview(
       assessmentRowsTruncated: snapshot._meta.assessmentRowsTruncated,
       incidentRowsTruncated: snapshot._meta.incidentRowsTruncated,
       publicRowsTruncated: snapshot._meta.publicRowsTruncated,
-    }),
-  };
+    },
+  });
 }

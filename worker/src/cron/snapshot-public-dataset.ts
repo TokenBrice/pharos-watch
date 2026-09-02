@@ -24,6 +24,7 @@ import {
 } from "../lib/public-dataset-snapshot-budget";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { sha256Hex } from "../lib/hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -51,6 +52,7 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9-publication-store";
+import { buildStablecoinsCacheFreshnessGateResult } from "../lib/supply-snapshot-completion";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -202,27 +204,6 @@ async function loadExistingSnapshot(db: D1Database, snapshotDate: string): Promi
     .first<ExistingSnapshotRow>();
 }
 
-function buildStablecoinsCacheBeforeSlotResult(
-  cacheUpdatedAt: number,
-  requiredUpdatedAt: number,
-  freshnessGateLabel?: string,
-  retry?: { attempts: number; firstCacheUpdatedAt: number },
-): CronResult {
-  return {
-    status: "degraded",
-    itemCount: 0,
-    metadata: JSON.stringify({
-      reason: "stablecoins_cache_before_slot",
-      cacheUpdatedAt,
-      requiredUpdatedAt,
-      freshnessGateLabel,
-      ...(retry && retry.attempts > 0
-        ? { retryAttempts: retry.attempts, firstCacheUpdatedAt: retry.firstCacheUpdatedAt }
-        : {}),
-    }),
-  };
-}
-
 function stablecoinsCachePredatesGate(
   updatedAt: number,
   options: SnapshotPublicDatasetOptions,
@@ -254,16 +235,16 @@ export async function snapshotPublicDataset(
   const existingSnapshot = await loadExistingSnapshot(db, snapshotDate);
   throwIfAborted(signal);
   if (existingSnapshot) {
-    return {
+    return createCronResult({
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         snapshotDate,
         skipped: "already_exists",
         contentHash: existingSnapshot.content_hash,
         byteSize: existingSnapshot.byte_size,
         createdAt: existingSnapshot.created_at,
-      }),
-    };
+      },
+    });
   }
 
   // --- 1. Stablecoins (canonical market cache; required) ---
@@ -271,14 +252,11 @@ export async function snapshotPublicDataset(
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Stablecoins cache unavailable: ${stablecoinsCache.kind}`);
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "stablecoins_cache_unavailable",
-        cacheKind: stablecoinsCache.kind,
-      }),
-    };
+      metadata: { reason: "stablecoins_cache_unavailable", cacheKind: stablecoinsCache.kind },
+    });
   }
   const firstStablecoinsCacheUpdatedAt = stablecoinsCache.updatedAt;
   let stablecoinsCacheRetryAttempts = 0;
@@ -293,40 +271,40 @@ export async function snapshotPublicDataset(
     stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
     throwIfAborted(signal);
     if (stablecoinsCache.kind !== "ok") {
-      return {
+      return createCronResult({
         status: "degraded",
         itemCount: 0,
-        metadata: JSON.stringify({
+        metadata: {
           reason: "stablecoins_cache_unavailable",
           cacheKind: stablecoinsCache.kind,
           retryAttempts: stablecoinsCacheRetryAttempts,
           firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt,
-        }),
-      };
+        },
+      });
     }
   }
   if (stablecoinsCachePredatesGate(stablecoinsCache.updatedAt, options)) {
-    return buildStablecoinsCacheBeforeSlotResult(
-      stablecoinsCache.updatedAt,
-      options.minStablecoinsCacheUpdatedAtSec,
-      options.freshnessGateLabel,
-      { attempts: stablecoinsCacheRetryAttempts, firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt },
-    );
+    return buildStablecoinsCacheFreshnessGateResult({
+      cacheUpdatedAt: stablecoinsCache.updatedAt,
+      requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
+      freshnessGateLabel: options.freshnessGateLabel,
+      retry: { attempts: stablecoinsCacheRetryAttempts, firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt },
+    });
   }
 
   // --- 2. Active Safety Score publication (required and identity-bound) ---
   const safetySource = await loadSnapshotSafetySource(db, signal);
   if (safetySource.kind === "error") {
     logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Active Safety Score unavailable: ${safetySource.reason}`);
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         reason: "active_safety_score_unavailable",
         sourceReason: safetySource.reason,
         updatedAt: safetySource.updatedAt,
-      }),
-    };
+      },
+    });
   }
   const { reportCards, identity: safetyScoreIdentity } = safetySource;
 
@@ -344,22 +322,18 @@ export async function snapshotPublicDataset(
     logWorkerEventArgs("handler", "warn", "[snapshot-public-dataset] PSI read failed:", err);
   }
   if (!psiRow) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "psi_snapshot_missing", expectedComputedAt: expectedPsiComputedAt }),
-    };
+      metadata: { reason: "psi_snapshot_missing", expectedComputedAt: expectedPsiComputedAt },
+    });
   }
   if (psiRow.computed_at !== expectedPsiComputedAt) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "psi_snapshot_stale",
-        expectedComputedAt: expectedPsiComputedAt,
-        actualComputedAt: psiRow.computed_at,
-      }),
-    };
+      metadata: { reason: "psi_snapshot_stale", expectedComputedAt: expectedPsiComputedAt, actualComputedAt: psiRow.computed_at },
+    });
   }
 
   // --- 4. DEWS stress signals (one completed publication generation) ---
@@ -470,21 +444,21 @@ export async function snapshotPublicDataset(
     rethrowIfAborted(err, signal);
     const safeMessage = stripSensitive(safeErrorMessage(err));
     recordCronFailure("snapshot-public-dataset", safeMessage, { metadata: { stage: "compress_failed" } });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "compress_failed", error: safeMessage }),
-    };
+      metadata: { reason: "compress_failed", error: safeMessage },
+    });
   }
 
   try {
     throwIfAborted(signal);
     const recheckedSafetySource = await loadSnapshotSafetySource(db, signal);
     if (!safetySourcesMatch(safetySource, recheckedSafetySource)) {
-      return {
+      return createCronResult({
         status: "degraded",
         itemCount: 0,
-        metadata: JSON.stringify({
+        metadata: {
           reason: "active_safety_score_changed_before_insert",
           expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
           observedPublicationGenerationId: recheckedSafetySource.kind === "ok"
@@ -493,8 +467,8 @@ export async function snapshotPublicDataset(
           sourceReason: recheckedSafetySource.kind === "error"
             ? recheckedSafetySource.reason
             : "identity-mismatch",
-        }),
-      };
+        },
+      });
     }
 
     const publicationFenceSql = `EXISTS (
@@ -536,39 +510,39 @@ export async function snapshotPublicDataset(
     if (result.meta.changes === 0) {
       const snapshotNowExists = await loadExistingSnapshot(db, snapshotDate);
       if (!snapshotNowExists) {
-        return {
+        return createCronResult({
           status: "degraded",
           itemCount: 0,
-          metadata: JSON.stringify({
+          metadata: {
             reason: "active_safety_score_changed_before_insert",
             expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
-          }),
-        };
+          },
+        });
       }
-      return {
+      return createCronResult({
         itemCount: 0,
-        metadata: JSON.stringify({
+        metadata: {
           snapshotDate,
           skipped: "already_exists",
           contentHash,
           byteSize,
           compressedSize: payloadGz.byteLength,
-        }),
-      };
+        },
+      });
     }
   } catch (err) {
     rethrowIfAborted(err, signal);
     recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "insert" } });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }),
-    };
+      metadata: { reason: "db_write_failed", error: String(err).slice(0, 200) },
+    });
   }
 
-  return {
+  return createCronResult({
     itemCount: 1,
-    metadata: JSON.stringify({
+    metadata: {
       snapshotDate,
       contentHash,
       byteSize,
@@ -585,6 +559,6 @@ export async function snapshotPublicDataset(
         : {}),
       dewsCount: stressRows.length,
       liquidityCount: dexRows.length,
-    }),
-  };
+    },
+  });
 }

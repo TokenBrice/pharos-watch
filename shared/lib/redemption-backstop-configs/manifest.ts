@@ -1,24 +1,20 @@
 import type { RedemptionRouteFamily } from "../../types";
 import type { RedemptionBackstopConfig } from "./shared";
-import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS, COLLATERAL_REDEEM_BACKSTOP_ENTRIES } from "./collateral-redeem";
-import { defineBackstopRegistry, type RedemptionBackstopRegistryEntry } from "./factory";
-import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, OFFCHAIN_ISSUER_BACKSTOP_ENTRIES } from "./offchain-issuer/index";
-import { PSM_AND_BASKET_BACKSTOP_CONFIGS, PSM_AND_BASKET_BACKSTOP_ENTRIES } from "./psm-and-basket";
-import { QUEUE_REDEEM_BACKSTOP_CONFIGS, QUEUE_REDEEM_BACKSTOP_ENTRIES } from "./queue-redeem";
-import {
-  STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
-  STABLECOIN_REDEEM_BACKSTOP_ENTRIES,
-} from "./stablecoin-redeem/configs";
+import { COLLATERAL_REDEEM_BACKSTOP_ENTRIES } from "./collateral-redeem";
+import { configsFromBackstopEntries, defineBackstopRegistry, type RedemptionBackstopRegistryEntry } from "./factory";
+import { OFFCHAIN_ISSUER_BACKSTOP_ENTRIES } from "./offchain-issuer/index";
+import { PSM_AND_BASKET_BACKSTOP_ENTRIES } from "./psm-and-basket";
+import { QUEUE_REDEEM_BACKSTOP_ENTRIES } from "./queue-redeem";
+import { STABLECOIN_REDEEM_BACKSTOP_ENTRIES } from "./stablecoin-redeem/configs";
 
 export interface RedemptionBackstopConfigManifestEntry {
   name: string;
   filePath: string;
-  configs: Record<string, RedemptionBackstopConfig>;
   /**
-   * The registry entries `configs` was built from, carrying the per-id override
-   * reasons and source file paths that the record itself cannot express.
+   * Canonical family state, including per-id override reasons and source paths.
    */
   entries: readonly RedemptionBackstopRegistryEntry[];
+  readonly configs: Record<string, RedemptionBackstopConfig>;
   allowedRouteFamilies: readonly RedemptionRouteFamily[];
   reviewerLane?: string;
 }
@@ -27,7 +23,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "offchain-issuer",
     filePath: "shared/lib/redemption-backstop-configs/offchain-issuer/index.ts",
-    configs: OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
+    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: OFFCHAIN_ISSUER_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["offchain-issuer"],
     reviewerLane: "issuer/legal redemption rails",
@@ -35,7 +31,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "psm-and-basket",
     filePath: "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-    configs: PSM_AND_BASKET_BACKSTOP_CONFIGS,
+    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: PSM_AND_BASKET_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["basket-redeem", "psm-swap"],
     reviewerLane: "onchain swap and basket rails",
@@ -43,7 +39,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "collateral-redeem",
     filePath: "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-    configs: COLLATERAL_REDEEM_BACKSTOP_CONFIGS,
+    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: COLLATERAL_REDEEM_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["collateral-redeem"],
     reviewerLane: "collateral redemption rails",
@@ -51,7 +47,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "queue-redeem",
     filePath: "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-    configs: QUEUE_REDEEM_BACKSTOP_CONFIGS,
+    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: QUEUE_REDEEM_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["queue-redeem"],
     reviewerLane: "queued redemption rails",
@@ -59,7 +55,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "stablecoin-redeem",
     filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-    configs: STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
+    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: STABLECOIN_REDEEM_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["stablecoin-redeem"],
     reviewerLane: "protocol stablecoin redemption rails",

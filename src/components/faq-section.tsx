@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 interface FaqSectionProps {
   items: readonly FaqItem[];
@@ -33,10 +34,7 @@ export function FaqSection({
         ))}
       </section>
       {includeJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(buildFaqJsonLd(items)) }}
-        />
+        <JsonLdScript json={safeJsonLd(buildFaqJsonLd(items))} />
       )}
     </>
   );

@@ -2,6 +2,7 @@ import {
   TELEGRAM_ADOPTION_CTA_PLACEMENTS,
   TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD,
 } from "@shared/lib/telegram-adoption-analytics";
+import { bufferReadableStream } from "@shared/lib/bounded-stream";
 import {
   hostnameOfSiteDataCallerHeader,
   isSiteDataAllowedUiHostname,
@@ -48,33 +49,8 @@ async function readBoundedJson(request: Request): Promise<unknown | null> {
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return null;
   if (!request.body) return null;
 
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-      totalBytes += value.byteLength;
-      if (totalBytes > MAX_BODY_BYTES) {
-        void reader.cancel().catch(() => undefined);
-        return null;
-      }
-      chunks.push(value);
-    }
-  } catch {
-    return null;
-  }
-
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  try {
+    const { bytes } = await bufferReadableStream(request.body, { maxBytes: MAX_BODY_BYTES });
     return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return null;

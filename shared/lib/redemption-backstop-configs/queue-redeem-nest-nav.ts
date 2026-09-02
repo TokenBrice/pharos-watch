@@ -3,7 +3,7 @@ import {
   cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   queueRedeemBase,
-  sourceRef,
+  sourceRefFull,
   undisclosedReviewedFee,
 } from "./shared";
 import { REVIEWED_STABLECOIN_AUDIT_AT } from "./review-dates";
@@ -23,13 +23,7 @@ const nestNavVaultBase: RedemptionBackstopConfig = {
   costModel: undisclosedReviewedFee(),
   reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
   docs: [
-    sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
-      "route",
-      "capacity",
-      "fees",
-      "access",
-      "settlement",
-    ]),
+    sourceRefFull("Nest available vaults", "https://docs.nest.credit/about/available-vaults"),
   ],
 };
 

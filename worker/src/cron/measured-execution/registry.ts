@@ -37,14 +37,14 @@ export interface DexExactQuoteAdapterRegistrationSlot {
 }
 
 const ADAPTER_IMPLEMENTATION_MODULES: Readonly<Record<DexExactQuoteAdapterId, string>> = {
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2]: "./adapters/quoter-v2",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4]: "./adapters/uniswap-v4",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2]: "./quoter-v2",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4]: "./uniswap-v4",
   [DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap]: "./curve-cryptoswap",
   [DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap]: "./curve-stableswap",
   [DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg]: "./curve-stableswap-ng",
   [DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite]: "./curve-composite",
   [DEX_EXACT_QUOTE_ADAPTER_IDS.evmV2]: "../dex-liquidity/execution-targets/evm-v2",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.solanaClmm]: "./solana-clmm/inventory",
+  [DEX_EXACT_QUOTE_ADAPTER_IDS.solanaClmm]: "../dex-liquidity/execution-target-registry",
 };
 
 /** One predeclared adapter slot per exact execution family. */

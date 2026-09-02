@@ -10,6 +10,7 @@ import {
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves-store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
@@ -101,12 +102,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     mode: "strict",
   });
   if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
-    return {
+    return createCronResult({
       status: "error",
-      metadata: JSON.stringify({
-        reason: `stablecoins-cache:${stablecoinsCache.reason}`,
-      }),
-    };
+      metadata: { reason: `stablecoins-cache:${stablecoinsCache.reason}` },
+    });
   }
 
   const configuredIds = getConfiguredRedemptionBackstopIds();
@@ -249,7 +248,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const hasBlockingUnresolved = failedIds.length > 0 || criticalUnresolvedCount > 0;
   const hasDegradedSyncSignal =
     hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale || hasNoActiveConfiguredRows;
-  const runMetadata: Record<string, unknown> = {
+  const runMetadata: CronMetadataRecord = {
     synced: snapshots.length,
     failed: failedIds.length,
     configured: configuredIds.length,
@@ -335,9 +334,9 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
         ? "degraded"
         : "ok";
 
-  return {
+  return createCronResult({
     status,
     itemCount: snapshots.length,
-    metadata: JSON.stringify(runMetadata),
-  };
+    metadata: runMetadata,
+  });
 }

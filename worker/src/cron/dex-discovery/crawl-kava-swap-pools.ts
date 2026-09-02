@@ -6,7 +6,7 @@ import {
 import type { ContractDeployment } from "@shared/types/core";
 import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
-import type { DexDeploymentProviderCheck } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
 
 const KAVA_SWAP_API_BASE = "https://api.data.kava.io";
 const KAVA_SWAP_PARAMS_PATH = "/kava/swap/v1beta1/params";
@@ -176,21 +176,6 @@ function fetchKavaSwapEndpoint(path: string, signal: AbortSignal) {
     timeoutMs: KAVA_SWAP_STAGE_TIMEOUT_MS,
   });
 }
-function makeProviderCheck(
-  target: ContractDeployment,
-  status: DexDeploymentProviderCheck["status"],
-  options?: { observedPoolCount?: number; retryable?: true },
-): DexDeploymentProviderCheck {
-  return {
-    chain: target.chain,
-    address: target.address,
-    provider: KAVA_SWAP_PROVIDER,
-    status,
-    ...(options?.observedPoolCount !== undefined ? { observedPoolCount: options.observedPoolCount } : {}),
-    ...(options?.retryable === true ? { retryable: true } : {}),
-  };
-}
-
 function stageKavaSwapPool(
   pool: KavaSwapPool,
   target: ContractDeployment,
@@ -245,13 +230,17 @@ export async function crawlKavaSwapPoolsStage(input: {
   if (paramsResult.kind === "failure") {
     return {
       providerChecks: targets.map((target) =>
-        makeProviderCheck(target, "failure", { retryable: paramsResult.retryable }),
+        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "failure", { retryable: paramsResult.retryable }),
       ),
     };
   }
   const params = parseKavaSwapParams(paramsResult.body);
   if (params == null) {
-    return { providerChecks: targets.map((target) => makeProviderCheck(target, "degraded")) };
+    return {
+      providerChecks: targets.map((target) =>
+        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "degraded"),
+      ),
+    };
   }
 
   if (input.context.timeExceeded()) return { providerChecks: [], stoppedEarly: true };
@@ -265,13 +254,17 @@ export async function crawlKavaSwapPoolsStage(input: {
   if (poolsResult.kind === "failure") {
     return {
       providerChecks: targets.map((target) =>
-        makeProviderCheck(target, "failure", { retryable: poolsResult.retryable }),
+        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "failure", { retryable: poolsResult.retryable }),
       ),
     };
   }
   const pools = parseKavaSwapPools(poolsResult.body);
   if (pools == null) {
-    return { providerChecks: targets.map((target) => makeProviderCheck(target, "degraded")) };
+    return {
+      providerChecks: targets.map((target) =>
+        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "degraded"),
+      ),
+    };
   }
 
   let observedPoolCount = 0;
@@ -284,7 +277,7 @@ export async function crawlKavaSwapPoolsStage(input: {
 
   return {
     providerChecks: targets.map((target) =>
-      makeProviderCheck(target, "success", { observedPoolCount }),
+      makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "success", { observedPoolCount }),
     ),
   };
 }

@@ -43,6 +43,17 @@ function makeCoin(id: string, symbol: string) {
   };
 }
 
+function renderShareActions() {
+  return renderHook(() => useCompareShareActions({
+    comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
+    logos: {},
+    pegRates: {},
+    radarCards: [],
+    axisOrder: [],
+    axisLabels: {},
+  }));
+}
+
 describe("useCompareShareActions", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -70,24 +81,21 @@ describe("useCompareShareActions", () => {
     vi.restoreAllMocks();
   });
 
-  it("clears pending toast timers on unmount", async () => {
+  it("revokes downloads synchronously and clears pending toast timers on unmount", async () => {
     const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
-    const { result, unmount } = renderHook(() =>
-      useCompareShareActions({
-        comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
-        logos: {},
-        pegRates: {},
-        radarCards: [],
-        axisOrder: [],
-        axisLabels: {},
-      }),
-    );
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const { result, unmount } = renderShareActions();
 
     await act(async () => {
       await result.current.handleTwitterShare();
     });
 
     expect(result.current.toast).toBe("Image copied! Paste it in your tweet (Ctrl+V)");
+
+    await act(async () => result.current.handleDownload());
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-compare");
 
     unmount();
 
@@ -101,16 +109,7 @@ describe("useCompareShareActions", () => {
     });
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
-    const { result } = renderHook(() =>
-      useCompareShareActions({
-        comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
-        logos: {},
-        pegRates: {},
-        radarCards: [],
-        axisOrder: [],
-        axisLabels: {},
-      }),
-    );
+    const { result } = renderShareActions();
 
     await act(async () => {
       await result.current.handleTwitterShare();
@@ -121,4 +120,5 @@ describe("useCompareShareActions", () => {
     // The Twitter intent still opens so the user can tweet without the image.
     expect(openSpy).toHaveBeenCalled();
   });
+
 });

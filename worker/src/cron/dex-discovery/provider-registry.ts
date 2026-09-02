@@ -1,25 +1,10 @@
 import {
   DEX_DISCOVERY_PROVIDER_REGISTRY,
   type DexDiscoveryProvider,
-  type DexDiscoveryProviderAdapter,
 } from "@shared/lib/dex-deployment-coverage";
-import { BTCUSD_PUBLIC_HTTPS_DISCOVERY_PROVIDER_SLOT } from "./providers/btcusd-public-https";
-import { SOROBAN_EXHAUSTIVE_DISCOVERY_PROVIDER_SLOT } from "./providers/soroban-exhaustive";
 
-const leafOverrides: Partial<Record<
-  DexDiscoveryProvider,
-  Pick<DexDiscoveryProviderAdapter, "lifecycle" | "supports">
->> = {
-  "soroban-exhaustive": SOROBAN_EXHAUSTIVE_DISCOVERY_PROVIDER_SLOT,
-  "btcusd-public-https": BTCUSD_PUBLIC_HTTPS_DISCOVERY_PROVIDER_SLOT,
-};
-
-/** Runtime view of the single shared descriptor registry plus leaf-owned activation slots. */
-export const DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY: readonly DexDiscoveryProviderAdapter[] =
-  DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => ({
-    ...provider,
-    ...(leafOverrides[provider.providerId] ?? {}),
-  }));
+/** Runtime view of the shared provider descriptor registry. */
+export const DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY = DEX_DISCOVERY_PROVIDER_REGISTRY;
 
 export function getRuntimeDexDiscoveryProviders(
   chain: string,

@@ -1,4 +1,4 @@
-import { defineRecordEntries, finalizeBackstopRegistry } from "../factory";
+import { configsFromBackstopEntries, defineRecordEntries, finalizeBackstopRegistry } from "../factory";
 import { BASE_OFFCHAIN_ISSUER_ENTRIES } from "./base-batches";
 import { COMMODITY_OFFCHAIN_CONFIGS } from "./commodity";
 import { COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS } from "./coverage-and-stablecoin-audit";
@@ -59,5 +59,5 @@ const FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
 );
 
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
-  FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.configs;
+  configsFromBackstopEntries(FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.entries);
 export const OFFCHAIN_ISSUER_BACKSTOP_ENTRIES = FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.entries;

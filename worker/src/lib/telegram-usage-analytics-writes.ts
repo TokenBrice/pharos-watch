@@ -158,47 +158,34 @@ function buildChatDeliveryDiagnosticsUpsert(
   },
 ): D1PreparedStatement {
   const failureClass = input.ok ? null : input.errorClass ?? "unknown";
-  if (input.mode === "reply") {
-    return db
-      .prepare(
-        `INSERT INTO telegram_chat_delivery_diagnostics (
-           chat_id, last_successful_delivery_at, last_successful_reply_at,
-           last_delivery_attempt_at, recent_failure_class, updated_at
-         )
-         VALUES (?, NULL, ?, ?, ?, ?)
-         ON CONFLICT(chat_id) DO UPDATE SET
-           last_successful_delivery_at = COALESCE(
-             excluded.last_successful_delivery_at,
-             telegram_chat_delivery_diagnostics.last_successful_delivery_at
-           ),
-           last_successful_reply_at = COALESCE(
-             excluded.last_successful_reply_at,
-             telegram_chat_delivery_diagnostics.last_successful_reply_at
-           ),
-           last_delivery_attempt_at = excluded.last_delivery_attempt_at,
-           recent_failure_class = excluded.recent_failure_class,
-           updated_at = excluded.updated_at`,
-      )
-      .bind(input.chatId, input.ok ? input.at : null, input.at, failureClass, input.at);
-  }
-
   return db
     .prepare(
       `INSERT INTO telegram_chat_delivery_diagnostics (
          chat_id, last_successful_delivery_at, last_successful_reply_at,
          last_delivery_attempt_at, recent_failure_class, updated_at
        )
-       VALUES (?, ?, NULL, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(chat_id) DO UPDATE SET
          last_successful_delivery_at = COALESCE(
            excluded.last_successful_delivery_at,
            telegram_chat_delivery_diagnostics.last_successful_delivery_at
          ),
+         last_successful_reply_at = COALESCE(
+           excluded.last_successful_reply_at,
+           telegram_chat_delivery_diagnostics.last_successful_reply_at
+         ),
          last_delivery_attempt_at = excluded.last_delivery_attempt_at,
          recent_failure_class = excluded.recent_failure_class,
          updated_at = excluded.updated_at`,
     )
-    .bind(input.chatId, input.ok ? input.at : null, input.at, failureClass, input.at);
+    .bind(
+      input.chatId,
+      input.mode === "delivery" && input.ok ? input.at : null,
+      input.mode === "reply" && input.ok ? input.at : null,
+      input.at,
+      failureClass,
+      input.at,
+    );
 }
 
 export async function recordTelegramReplyOutcome(

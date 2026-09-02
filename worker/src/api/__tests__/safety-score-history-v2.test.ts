@@ -150,12 +150,30 @@ describe("handleSafetyScoreHistoryV2", () => {
     );
 
     expect(response.status).toBe(200);
+    await expect(response.clone().text()).resolves.toBe('{"schemaVersion":2,"history":[]}');
     await expect(response.json()).resolves.toEqual({ schemaVersion: 2, history: [] });
     expect(response.headers.get("X-Data-Age")).toBe("0");
     expect(db.getHistory().find((entry) => entry.sql.includes("FROM safety_score_history_v2"))?.binds).toEqual([
       "usdc-circle",
       now - 365 * 86_400,
     ]);
+  });
+
+  it.each([
+    ["missing stablecoin", "", 400, '{"error":"Missing ?stablecoin= parameter"}'],
+    ["unknown stablecoin", "?stablecoin=unknown-fixture", 404, '{"error":"Unknown stablecoin"}'],
+    ["malformed days", "?stablecoin=usdc-circle&days=abc", 400, '{"error":"Invalid days: must be a number"}'],
+    ["out-of-range days", "?stablecoin=usdc-circle&days=99999", 400, '{"error":"Invalid days: must be between 1 and 3650"}'],
+  ])("preserves exact %s rejection bytes", async (_name, query, status, body) => {
+    const db = mockD1([], { requireMatch: true });
+    const response = await handleSafetyScoreHistoryV2(
+      db,
+      new URL(`https://x/api/safety-score-history-v2${query}`),
+    );
+
+    expect(response.status).toBe(status);
+    await expect(response.text()).resolves.toBe(body);
+    expect(db.getHistory()).toEqual([]);
   });
 
   registerStablecoinParameterContract({

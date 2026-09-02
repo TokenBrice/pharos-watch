@@ -28,9 +28,9 @@ import {
 } from "@shared/lib/supply";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
-  MatrixTable,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -297,13 +297,15 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
         </div>
       </div>
 
-      <MatrixTable
+      <TableFrame
         tableId="live-comparison-matrix"
         testId="live-comparison-matrix-table"
         role="region"
         aria-label="Stablecoin comparison matrix"
         tabIndex={0}
         tableAriaLabel="Stablecoin comparison matrix"
+        chrome="default"
+        density="compact"
       >
         <TableHeader>
           <TableRow>
@@ -331,7 +333,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
             <SectionRows key={section.key} section={section} coins={coins} />
           ))}
         </TableBody>
-      </MatrixTable>
+      </TableFrame>
     </div>
   );
 });

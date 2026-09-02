@@ -23,7 +23,11 @@ import {
   CONFIGURED_COINS,
   SYNC_ORDERED_CONFIGURED_COINS,
   type ConfiguredCoin,
+  type LiveReserveBreakerOutcome,
   type LiveReserveConfig,
+  type LiveReserveDeferredTailOutcome,
+  type LiveReservePhaseTimings,
+  type LiveReserveQueueCounts,
   LIVE_RESERVE_QUEUE_HASH,
 } from "./sync-live-reserves-shared";
 import { finalizeReserveSyncRun, type ReserveSyncAttemptFailureGroup } from "./sync-live-reserves-finalize";
@@ -33,7 +37,6 @@ import {
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
   type LiveReserveGlobalCursorOwner,
-  type LiveReserveCursorTailState,
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import {
@@ -52,28 +55,14 @@ import {
 } from "../lib/live-reserves-store";
 
 interface ReserveCoinQueueResult {
-  synced: number;
-  failed: number;
-  skipped: number;
-  circuitSkipped: number;
-  deferredSkipped: number;
+  counts: LiveReserveQueueCounts;
   warningMessages: string[];
   coinsWithErrors: string[];
   coinsWithWarnings: string[];
-  breakerKeys: Set<string>;
-  breakerOutcomes: Map<string, boolean>;
-  deferredCoins: number;
-  nextCursorStablecoinId: string | null;
-  cursorTailState: LiveReserveCursorTailState | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  cursorTailError: string | null;
-  runBudgetTruncationCount: number;
+  breaker: LiveReserveBreakerOutcome;
+  deferredTail: LiveReserveDeferredTailOutcome;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
-  attemptedCoins: number;
-  adapterPhaseMs: number;
-  d1PhaseMs: number;
+  phaseTimings: Pick<LiveReservePhaseTimings, "adapter" | "d1CoinPersistence">;
 }
 
 function createAbortableAttemptSignal(
@@ -498,19 +487,24 @@ async function runReserveCoinQueue(args: {
   globalCursorOwner: LiveReserveGlobalCursorOwner | null;
   telemetry: AdapterLatencyCollector;
 }): Promise<ReserveCoinQueueResult> {
-  let synced = 0;
-  let failed = 0;
-  let skipped = 0;
-  let circuitSkipped = 0;
-  let deferredSkipped = 0;
-  let deferredCoins = 0;
-  let nextCursorStablecoinId: string | null = null;
-  let cursorTailState: LiveReserveCursorTailState | null = null;
-  let cursorRecordedAt: number | null = null;
-  let cursorTailCompletedAt: number | null = null;
-  let cursorTailFailedAt: number | null = null;
-  let cursorTailError: string | null = null;
-  let runBudgetTruncationCount = 0;
+  const counts: LiveReserveQueueCounts = {
+    synced: 0,
+    failed: 0,
+    skipped: 0,
+    circuitSkipped: 0,
+    deferredSkipped: 0,
+    deferredCoins: 0,
+    attemptedCoins: 0,
+  };
+  let deferredTail: LiveReserveDeferredTailOutcome = {
+    nextCursorStablecoinId: null,
+    cursorTailState: null,
+    cursorRecordedAt: null,
+    cursorTailCompletedAt: null,
+    cursorTailFailedAt: null,
+    cursorTailError: null,
+    runBudgetTruncationCount: 0,
+  };
   const warningMessages: string[] = [];
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
@@ -519,9 +513,7 @@ async function runReserveCoinQueue(args: {
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
   const total = args.orderedCoins.length;
-  let attemptedCoins = 0;
-  let adapterPhaseMs = 0;
-  let d1PhaseMs = 0;
+  const phaseTimings = { adapter: 0, d1CoinPersistence: 0 };
   let lastProgressAtMs = 0;
   let lastProgressItemsDone = -1;
   let checkpointBoundaryAdvanced = false;
@@ -557,16 +549,10 @@ async function runReserveCoinQueue(args: {
       for (const key of deferred.additionalBreakerKeys) {
         breakerKeys.add(key);
       }
-      deferredCoins = deferred.deferredCoins;
-      nextCursorStablecoinId = deferred.nextCursorStablecoinId;
-      cursorTailState = deferred.cursorTailState;
-      cursorRecordedAt = deferred.cursorRecordedAt;
-      cursorTailCompletedAt = deferred.cursorTailCompletedAt;
-      cursorTailFailedAt = deferred.cursorTailFailedAt;
-      cursorTailError = deferred.cursorTailError;
-      runBudgetTruncationCount = deferred.runBudgetTruncationCount;
-      skipped += deferredCoins;
-      deferredSkipped += deferredCoins;
+      counts.deferredCoins = deferred.counts.deferredCoins;
+      deferredTail = deferred.deferredTail;
+      counts.skipped += counts.deferredCoins;
+      counts.deferredSkipped += counts.deferredCoins;
       break;
     }
 
@@ -584,9 +570,9 @@ async function runReserveCoinQueue(args: {
         message: `Syncing ${coin.id}`,
         itemsDone: globalIndex,
         itemsTotal: args.fullQueue.length,
-        synced,
-        failed,
-        skipped,
+        synced: counts.synced,
+        failed: counts.failed,
+        skipped: counts.skipped,
         currentCoinId: coin.id,
         currentAdapter: config.adapter,
         currentBreakerKey: breakerKey,
@@ -620,17 +606,17 @@ async function runReserveCoinQueue(args: {
           }
         : {}),
     });
-    attemptedCoins++;
-    adapterPhaseMs += result.adapterDurationMs;
-    d1PhaseMs += result.d1DurationMs;
+    counts.attemptedCoins++;
+    phaseTimings.adapter += result.adapterDurationMs;
+    phaseTimings.d1CoinPersistence += result.d1DurationMs;
 
     if (result.status === "synced") {
-      synced++;
+      counts.synced++;
     } else if (result.status === "skipped") {
-      skipped++;
-      circuitSkipped++;
+      counts.skipped++;
+      counts.circuitSkipped++;
     } else {
-      failed++;
+      counts.failed++;
       coinsWithErrors.push(coin.id);
       if (result.attemptFailureSummaries) {
         attemptFailureSummaries.push({
@@ -666,28 +652,14 @@ async function runReserveCoinQueue(args: {
   }
 
   return {
-    synced,
-    failed,
-    skipped,
-    circuitSkipped,
-    deferredSkipped,
+    counts,
     warningMessages,
     coinsWithErrors,
     coinsWithWarnings,
-    breakerKeys,
-    breakerOutcomes,
-    deferredCoins,
-    nextCursorStablecoinId,
-    cursorTailState,
-    cursorRecordedAt,
-    cursorTailCompletedAt,
-    cursorTailFailedAt,
-    cursorTailError,
-    runBudgetTruncationCount,
+    breaker: { breakerKeys, breakerOutcomes },
+    deferredTail,
     attemptFailureSummaries,
-    attemptedCoins,
-    adapterPhaseMs,
-    d1PhaseMs,
+    phaseTimings,
   };
 }
 
@@ -866,11 +838,14 @@ export async function syncLiveReserves(
     manageGlobalCursor,
     checkpointOwned: checkpoint != null,
     recoveryCursorOwner: recoveryCheckpointOwned ? checkpointCursorOwner : null,
-    setupPhaseMs,
-    queuePhaseMs: Date.now() - runStartedMs - setupPhaseMs,
+    ...queueResult,
+    phaseTimings: {
+      setup: setupPhaseMs,
+      queue: Date.now() - runStartedMs - setupPhaseMs,
+      ...queueResult.phaseTimings,
+    },
     cohortItemsDoneBeforeRun: Math.max(0, startIndex),
     adapterLatency: telemetry.finalize(),
     adapterTelemetryProgress: telemetry.progress(),
-    ...queueResult,
   });
 }

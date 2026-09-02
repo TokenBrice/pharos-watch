@@ -1,4 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
+import type { BackfillEvent } from "../backfill-depegs-extraction";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 import { fnv1aHash } from "../../lib/hash";
 
@@ -30,16 +31,11 @@ export interface BackfillRunInput {
   replayWindow: BackfillReplayWindow | null;
 }
 
-export function buildBackfillEventsFingerprint(events: Array<{
-  direction: string;
-  peakDeviationBps: number;
-  startedAt: number;
-  endedAt: number | null;
-  startPrice: number;
-  peakPrice: number;
-  recoveryPrice: number | null;
-  pegRef: number;
-}>): string {
+export type PersistedBackfillEvent = BackfillEvent & {
+  provenance?: BackfillEventProvenanceInput;
+};
+
+export function buildBackfillEventsFingerprint(events: BackfillEvent[]): string {
   return fnv1aHash(JSON.stringify(events.map((event) => ({
     direction: event.direction,
     peakDeviationBps: event.peakDeviationBps,

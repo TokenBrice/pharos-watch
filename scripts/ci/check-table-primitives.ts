@@ -26,17 +26,13 @@ const INVENTORY_PRIMITIVES = new Set([
   "ChartDataTable",
   "ContentTable",
   "DataTableShell",
-  "MatrixTable",
   "TableFrame",
   "TableSurface",
-  "VirtualTableFrame",
   "table",
 ]);
 const HINTED_PRIMITIVES = new Set([
   "DataTableShell",
-  "MatrixTable",
   "TableFrame",
-  "VirtualTableFrame",
 ]);
 const SWIPE_TEXT_RE = /\bswipe\b.*\b(table|columns?|horizontally|sideways)\b/i;
 

@@ -1,26 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
-import { LineChart, Line, ReferenceArea, ReferenceDot, ReferenceLine } from "recharts";
+import { Line, ReferenceArea, ReferenceDot, ReferenceLine } from "recharts";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
-import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { CHART_BLUE } from "@/lib/chart-colors";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
 import { formatChartDate } from "@shared/lib/format";
-import {
-  AnnotationDensityStrip,
-  ChartAnnotationLegend,
-  ChartAnnotationLines,
-} from "@/components/chart-primitives/annotations";
-import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { AnnotationDensityStrip } from "@/components/chart-primitives/annotations";
+import { DateTooltip, MonoYAxis } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
-import { ChartFigure } from "@/components/chart-primitives/figure";
-import { ChartCardShell } from "@/components/chart-primitives/shell";
-import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
+import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
+import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 
@@ -111,8 +104,6 @@ export function PegDeviationChart({
   cardClassName,
   embedded = false,
 }: PegDeviationChartProps) {
-  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
-
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
     const raw = data
@@ -124,33 +115,18 @@ export function PegDeviationChart({
     return raw;
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
-    externalRange: controlledRange,
-  });
-
-  // Stable chart margins (used by both Recharts and the crosshair overlay).
-  const margin = useMemo(
-    () => ({
-      top: 5,
-      right: 12,
-      bottom: range === "all" ? 32 : 20,
-      left: 5,
-    }),
-    [range],
-  );
+  const frame = useMarketDataChartFrame({ chartData, controlledRange, stablecoinId });
   const {
-    annotations,
-    handleMouseLeave,
-    handleMouseMove,
-    plotInsetBottom,
+    filteredData,
+    options,
     plotInsetLeft,
     plotInsetRight,
-    plotInsetTop,
-    sync,
+    range,
+    setRange,
     visibleData,
+    width,
     xDomain,
-    xTicks,
-  } = useMarketDataChartWindow({ filteredData, margin, range, stablecoinId });
+  } = frame;
 
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
   // `priceSmoothed` is plotted on top of the raw `price` line (which is dimmed).
@@ -206,8 +182,6 @@ export function PegDeviationChart({
   if (pegCurrency !== "USD") {
     return null;
   }
-
-  const chartHeightClass = CHART_HEIGHT;
 
   // Available plot-area width inside the chart's left axis + right margin.
   // Used by the density strip so its bars share the x-pixel domain.
@@ -278,50 +252,20 @@ export function PegDeviationChart({
       </div>
     ) : null;
 
-  const chartBody = (
-    <ChartFigure
-      data={visibleData}
+  const renderChart = () => (
+    <MarketDataChartFigure
+      cardClassName={cardClassName}
+      chartData={smoothedData}
       columns={PEG_TABLE_COLUMNS}
-      caption={(rows, truncated, total) =>
-        truncated
-          ? `Peg deviation history — most recent ${rows.length} of ${total} data points`
-          : `Peg deviation history — ${total} data points`
-      }
-      ariaLabel={`Peg deviation chart showing ${visibleData.length} data points`}
+      embedded={embedded}
       emptyMessage="No price history available"
-      heightClassName={chartHeightClass}
-      containerRef={chartContainerRef}
-      isReady={isChartReady}
-      crosshair={
-        sync
-          ? {
-              hoveredTs: sync.hoveredTs,
-              domain: xDomain,
-              plotInsetLeft,
-              plotInsetRight,
-              plotInsetTop,
-              plotInsetBottom,
-            }
-          : null
-      }
+      frame={frame}
+      header={header}
+      hideAnnotationLegend={hideAnnotationLegend}
+      label="Peg deviation"
       overlay={densityStrip}
-      renderChart={() => (
-        <LineChart
-          width={width}
-          height={height}
-          data={smoothedData}
-          margin={margin}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <TimeGrid />
-          <TimeXAxis
-            dataKey="ts"
-            ticks={xTicks}
-            interval={range === "all" ? 0 : "preserveStartEnd"}
-            tick={<MarketDataXTick range={range} />}
-            height={range === "all" ? 44 : 30}
-          />
+      variant="line"
+    >
           <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
 
           {/* Peg severity bands clip at the visible domain so they do not push the axis. */}
@@ -386,11 +330,7 @@ export function PegDeviationChart({
               ifOverflow="extendDomain"
             />
           ) : null}
-
-          <ChartAnnotationLines annotations={annotations} numbered />
-        </LineChart>
-      )}
-    />
+    </MarketDataChartFigure>
   );
 
   const header = (
@@ -424,12 +364,5 @@ export function PegDeviationChart({
     </div>
   );
 
-  const legend =
-    !hideAnnotationLegend && annotations.length > 0 ? (
-      <ChartAnnotationLegend annotations={annotations} numbered />
-    ) : null;
-
-  return (
-    <ChartCardShell embedded={embedded} className={cardClassName} header={header} body={chartBody} legend={legend} />
-  );
+  return renderChart();
 }

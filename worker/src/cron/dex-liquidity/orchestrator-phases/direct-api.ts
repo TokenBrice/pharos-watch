@@ -42,7 +42,7 @@ import {
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
-import { mergeDexPriceObservationMap } from "./price-obs";
+import { mergeDexPriceObservationMap } from "../subgraph-helpers";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";
@@ -105,8 +105,8 @@ export const DEX_POOL_SOURCE_REGISTRY: readonly DexPoolSourceRegistrationSlot[] 
   { slotId: "uniswap-v3-bsc-shadow", platform: "evm", lifecycle: "shadow", implementationModule: "../fetch-uniswap-v3-bsc" },
   { slotId: "velodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
   { slotId: "evm-v4", platform: "evm", lifecycle: "disabled", implementationModule: "../subgraph-source-families" },
-  { slotId: "soroban-exhaustive", platform: "soroban", lifecycle: "disabled", implementationModule: "../../dex-discovery/providers/soroban-exhaustive" },
-  { slotId: "btcusd-provider-investigation", platform: "offchain", lifecycle: "disabled", implementationModule: "../../dex-discovery/providers/btcusd-public-https" },
+  { slotId: "soroban-exhaustive", platform: "soroban", lifecycle: "disabled", implementationModule: "@shared/lib/dex-deployment-coverage" },
+  { slotId: "btcusd-provider-investigation", platform: "offchain", lifecycle: "disabled", implementationModule: "@shared/lib/dex-deployment-coverage" },
 ] as const;
 
 export interface DirectApiFetchPhaseEntry {

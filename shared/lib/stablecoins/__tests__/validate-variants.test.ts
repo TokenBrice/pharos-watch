@@ -1,39 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { MechanismArchetype, StablecoinMeta, VariantKind } from "../../../types";
 import { validateVariantRelationships } from "../validate-variants";
-import { makeStablecoinMeta } from "./test-support";
-
-interface CoinOverrides extends Partial<StablecoinMeta> {
-  id: string;
-}
-
-function makeCoin(overrides: CoinOverrides): StablecoinMeta {
-  return makeStablecoinMeta({
-    name: overrides.id,
-    symbol: overrides.id.toUpperCase(),
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    ...overrides,
-  });
-}
+import {
+  makeCatalogCoin as makeCoin,
+  NON_RWA_STABLECOIN_FLAGS,
+  YIELD_BEARING_NAV_STABLECOIN_FLAGS,
+} from "./test-support";
 
 function makeParent(id: string, archetype: MechanismArchetype | null): StablecoinMeta {
   return makeCoin({
     id,
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
+    flags: NON_RWA_STABLECOIN_FLAGS,
     ...(archetype != null ? { mechanismArchetype: archetype } : {}),
   });
 }
@@ -44,14 +21,7 @@ function makeChild(id: string, variantOf: string, overrides: Partial<StablecoinM
     variantOf,
     variantKind: "savings-passthrough" as VariantKind,
     pegReferenceId: variantOf,
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: true,
-      rwa: false,
-      navToken: true,
-    },
+    flags: YIELD_BEARING_NAV_STABLECOIN_FLAGS,
     ...overrides,
   });
 }

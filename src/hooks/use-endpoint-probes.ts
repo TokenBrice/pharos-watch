@@ -4,6 +4,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { RequestFailure, requestResponse } from "@/lib/request";
+import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
 import {
   getEndpointProbeDescriptors,
   getProbePaths,
@@ -66,12 +67,6 @@ function isSemanticStatus(value: unknown): value is NonNullable<EndpointProbeRes
   return value === "healthy" || value === "degraded" || value === "stale";
 }
 
-const SEMANTIC_STATUS_RANK: Record<NonNullable<EndpointProbeResult["semanticStatus"]>, number> = {
-  healthy: 0,
-  degraded: 1,
-  stale: 2,
-};
-
 function extractFreshnessWarningSemantics(response: Response): Partial<EndpointProbeResult> | null {
   const warning = typeof response.headers?.get === "function" ? response.headers.get("Warning") : null;
   if (!warning) return null;
@@ -108,8 +103,8 @@ function mergeSemanticFields(
 ): Partial<EndpointProbeResult> | undefined {
   if (!freshness?.semanticStatus) return primary;
   if (!primary?.semanticStatus) return freshness;
-  const primaryRank = SEMANTIC_STATUS_RANK[primary.semanticStatus];
-  const freshnessRank = SEMANTIC_STATUS_RANK[freshness.semanticStatus];
+  const primaryRank = STATUS_PRIORITY[primary.semanticStatus];
+  const freshnessRank = STATUS_PRIORITY[freshness.semanticStatus];
   if (freshnessRank > primaryRank) {
     return freshness;
   }

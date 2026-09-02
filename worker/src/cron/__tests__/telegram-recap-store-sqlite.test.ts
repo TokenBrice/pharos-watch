@@ -11,6 +11,7 @@ import {
   recordTelegramRecapSkip,
   setTelegramRecapPreference,
 } from "../../lib/telegram-recap-store";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;
 const dbs: DatabaseSync[] = [];
@@ -22,9 +23,12 @@ function setup(): { sqlite: DatabaseSync; db: D1Database } {
 }
 
 function subscriber(sqlite: DatabaseSync, chatId: string, generation = 0): void {
-  sqlite.prepare(`INSERT INTO telegram_subscribers
-    (chat_id, created_at, last_active_at, preference_generation)
-    VALUES (?, ?, ?, ?)`).run(chatId, NOW - 100, NOW - 10, generation);
+  insertTelegramSubscriber(sqlite, {
+    chatId,
+    createdAt: NOW - 100,
+    lastActiveAt: NOW - 10,
+    preferenceGeneration: generation,
+  });
 }
 
 function preferenceInput(chatId: string, generation = 0, nextDueAt: number | null = NOW - 1) {

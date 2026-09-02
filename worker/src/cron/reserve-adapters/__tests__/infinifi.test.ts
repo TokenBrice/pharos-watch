@@ -14,8 +14,7 @@ import {
   type InfiniFiProtocolData,
   type InfiniFiRateHistoryResponse,
 } from "../infinifi";
-import { validateAdapterOutput } from "../validate";
-import { getReserveAdapter } from "../index";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const RATE_HISTORY_CACHE_KEY =
   "json-get:https://example.com/api/protocol/rate-history/siUSD?daysAgo=7:6000:null";
@@ -491,7 +490,7 @@ describe("adaptInfiniFi", () => {
         },
       },
     });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("infinifi") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("infinifi", result);
   });
 
   it("degrades the route and prices the queue when redemptions are already enqueued", async () => {

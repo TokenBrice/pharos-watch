@@ -2,6 +2,7 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { getCache } from "../../lib/db-cache";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -55,16 +56,16 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
     });
     return {
       ok: false as const,
-      result: {
+      result: createCronResult({
         status: "degraded" as const,
         itemCount: 0,
-        metadata: JSON.stringify({
+        metadata: {
           writerPaused: true,
           pauseReason: writerPause.reason,
           pauseOperator: writerPause.operator,
           pausedAt: writerPause.pausedAt,
-        }),
-      },
+        },
+      }),
     };
   }
 

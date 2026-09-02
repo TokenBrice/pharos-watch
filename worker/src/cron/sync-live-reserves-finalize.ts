@@ -18,13 +18,16 @@ import {
 import {
   CONFIGURED_COINS,
   CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
+  type LiveReserveBreakerOutcome,
+  type LiveReserveDeferredTailOutcome,
+  type LiveReservePhaseTimings,
+  type LiveReserveQueueCounts,
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
 import {
   clearCursorStateIfComplete,
   retireRecoveryOwnedGlobalCursor,
   type LiveReserveGlobalCursorOwner,
-  type LiveReserveCursorTailState,
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
@@ -43,36 +46,20 @@ export interface FinalizeReserveSyncRunArgs {
   runStartedAt: number;
   runStartedMs: number;
   reportProgress?: CronProgressReporter;
-  synced: number;
-  failed: number;
-  skipped: number;
-  circuitSkipped: number;
-  deferredSkipped: number;
+  counts: LiveReserveQueueCounts;
   warningMessages: string[];
   coinsWithErrors: string[];
   coinsWithWarnings: string[];
-  breakerKeys: ReadonlySet<string>;
-  breakerOutcomes: ReadonlyMap<string, boolean>;
-  deferredCoins: number;
-  nextCursorStablecoinId: string | null;
-  cursorTailState: LiveReserveCursorTailState | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  cursorTailError: string | null;
-  runBudgetTruncationCount: number;
+  breaker: LiveReserveBreakerOutcome;
+  deferredTail: LiveReserveDeferredTailOutcome;
   loadedCursorState: LoadedLiveReserveCursorState | null;
   manageGlobalCursor: boolean;
   checkpointOwned: boolean;
   recoveryCursorOwner: LiveReserveGlobalCursorOwner | null;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
   budgetConfig: LiveReserveSyncBudgetConfig;
-  setupPhaseMs?: number;
-  queuePhaseMs?: number;
+  phaseTimings: LiveReservePhaseTimings;
   cohortItemsDoneBeforeRun?: number;
-  attemptedCoins?: number;
-  adapterPhaseMs?: number;
-  d1PhaseMs?: number;
   adapterLatency: AdapterLatencySummary;
   adapterTelemetryProgress: AdapterTelemetryProgress;
 }
@@ -159,9 +146,9 @@ async function recordBreakerOutcomesForRun(
   args: FinalizeReserveSyncRunArgs,
   budget: LiveReserveFinalizationBudget,
 ): Promise<void> {
-  const existingBreakerRecords = await loadBreakerRecordsForOutcomes(args.db, args.breakerOutcomes);
+  const existingBreakerRecords = await loadBreakerRecordsForOutcomes(args.db, args.breaker.breakerOutcomes);
   const candidates: Array<[string, boolean]> = [];
-  for (const [key, success] of args.breakerOutcomes) {
+  for (const [key, success] of args.breaker.breakerOutcomes) {
     if (shouldRecordBreakerOutcome(key, success, existingBreakerRecords)) {
       candidates.push([key, success]);
     } else {
@@ -234,7 +221,7 @@ async function persistCursorStateForRun(
     }
     if (!args.manageGlobalCursor) {
       const cursorRetiredByRecovery =
-        args.deferredCoins === 0
+        args.counts.deferredCoins === 0
         && args.recoveryCursorOwner != null
         && await retireRecoveryOwnedGlobalCursor(
           args.db,
@@ -250,8 +237,8 @@ async function persistCursorStateForRun(
     }
     await clearCursorStateIfComplete(
       args.db,
-      args.deferredCoins,
-      args.nextCursorStablecoinId,
+      args.counts.deferredCoins,
+      args.deferredTail.nextCursorStablecoinId,
       args.signal,
     );
     return {
@@ -269,12 +256,12 @@ async function persistCursorStateForRun(
       message:
         !args.manageGlobalCursor
           ? "Recovery could not compare-and-delete its source reserve cursor; a later normal run will retain or drain it."
-          : args.deferredCoins > 0
+          : args.counts.deferredCoins > 0
           ? "Live reserve cursor persistence failed; the next run may restart from the previous cursor."
           : "Live reserve cursor cleanup failed; status may show the previous deferred tail until cleanup succeeds.",
       metadata: {
-        deferredCoins: args.deferredCoins,
-        nextCursorStablecoinId: args.nextCursorStablecoinId,
+        deferredCoins: args.counts.deferredCoins,
+        nextCursorStablecoinId: args.deferredTail.nextCursorStablecoinId,
         error: cursorPersistError,
       },
     });
@@ -330,25 +317,22 @@ async function recordFinalizationWarning(
 }
 
 export function resolveReserveSyncRunStatus(
-  args: Pick<
-    FinalizeReserveSyncRunArgs,
-    "synced" | "failed" | "skipped" | "deferredSkipped" | "circuitSkipped" | "deferredCoins" | "total"
-  >,
+  args: Pick<FinalizeReserveSyncRunArgs, "counts" | "total">,
 ): CronResult["status"] {
-  if (args.synced === 0 && (args.failed > 0 || args.skipped > 0)) {
+  if (args.counts.synced === 0 && (args.counts.failed > 0 || args.counts.skipped > 0)) {
     // A run that synced nothing because the circuit breaker legitimately held
     // every candidate (no genuine failures, no budget-deferred tail) is healthy
     // recovery behavior, not an error. Surface it as "degraded" so alerting can
     // distinguish a quiet breaker from an all-adapters-failed run. "error" stays
     // reserved for real adapter/storage failures and the first-run-all-deferred
     // case (budget exhausted before anything could sync).
-    if (args.failed === 0 && args.deferredSkipped === 0 && args.circuitSkipped > 0) {
+    if (args.counts.failed === 0 && args.counts.deferredSkipped === 0 && args.counts.circuitSkipped > 0) {
       return "degraded";
     }
     return "error";
   }
-  if (args.deferredCoins > 0) return "degraded";
-  return (args.failed + args.skipped) > Math.ceil(args.total * 0.1) ? "degraded" : "ok";
+  if (args.counts.deferredCoins > 0) return "degraded";
+  return (args.counts.failed + args.counts.skipped) > Math.ceil(args.total * 0.1) ? "degraded" : "ok";
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
@@ -362,9 +346,9 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     itemsDone: args.total,
     itemsTotal: args.total,
     metadata: {
-      synced: args.synced,
-      failed: args.failed,
-      skipped: args.skipped,
+      synced: args.counts.synced,
+      failed: args.counts.failed,
+      skipped: args.counts.skipped,
       adapterTelemetryProgress: args.adapterTelemetryProgress,
     },
   });
@@ -454,25 +438,25 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   finalizationBudget.remainingMs = Math.max(0, finalizationBudget.deadlineMs - Date.now());
 
   return {
-    itemCount: args.synced,
+    itemCount: args.counts.synced,
     status: runStatus,
     metadata: JSON.stringify({
       structureVersion: 2,
-      synced: args.synced,
-      failed: args.failed,
-      skipped: args.skipped,
+      synced: args.counts.synced,
+      failed: args.counts.failed,
+      skipped: args.counts.skipped,
       total: args.total,
       warningCount: args.warningMessages.length,
-      runBudgetTruncated: args.deferredCoins > 0,
-      deferredCoins: args.deferredCoins,
-      nextCursorStablecoinId: args.nextCursorStablecoinId,
-      deferredAt: args.cursorRecordedAt,
-      cursorTailState: args.cursorTailState,
-      cursorTailError: args.cursorTailError,
-      cursorRecordedAt: args.cursorRecordedAt,
-      cursorTailCompletedAt: args.cursorTailCompletedAt,
-      cursorTailFailedAt: args.cursorTailFailedAt,
-      runBudgetTruncationCount: args.runBudgetTruncationCount,
+      runBudgetTruncated: args.counts.deferredCoins > 0,
+      deferredCoins: args.counts.deferredCoins,
+      nextCursorStablecoinId: args.deferredTail.nextCursorStablecoinId,
+      deferredAt: args.deferredTail.cursorRecordedAt,
+      cursorTailState: args.deferredTail.cursorTailState,
+      cursorTailError: args.deferredTail.cursorTailError,
+      cursorRecordedAt: args.deferredTail.cursorRecordedAt,
+      cursorTailCompletedAt: args.deferredTail.cursorTailCompletedAt,
+      cursorTailFailedAt: args.deferredTail.cursorTailFailedAt,
+      runBudgetTruncationCount: args.deferredTail.runBudgetTruncationCount,
       loadedCursorNextStablecoinId: args.loadedCursorState?.nextStablecoinId ?? null,
       loadedCursorTailState: args.loadedCursorState?.tailState ?? null,
       loadedCursorDeferredAt: args.loadedCursorState?.deferredAt ?? null,
@@ -485,23 +469,23 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       finalizationDeadlineMs: finalizationBudget.deadlineMs,
       finalizationRemainingMs: finalizationBudget.remainingMs,
       phaseTimingsMs: {
-        setup: args.setupPhaseMs ?? 0,
-        queue: args.queuePhaseMs ?? 0,
-        adapter: args.adapterPhaseMs ?? 0,
-        d1CoinPersistence: args.d1PhaseMs ?? 0,
+        setup: args.phaseTimings.setup,
+        queue: args.phaseTimings.queue,
+        adapter: args.phaseTimings.adapter,
+        d1CoinPersistence: args.phaseTimings.d1CoinPersistence,
         finalization: Date.now() - finalizationStartedMs,
       },
       adapterLatency: args.adapterLatency,
-      attemptedCoins: args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped,
+      attemptedCoins: args.counts.attemptedCoins,
       cohortItemsDoneBeforeRun: args.cohortItemsDoneBeforeRun ?? 0,
       cohortItemsDoneAfterRun:
         (args.cohortItemsDoneBeforeRun ?? 0)
-        + (args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped),
+        + args.counts.attemptedCoins,
       finalizationTailBudgetExhausted:
         finalizationBudget.breakerOutcomeBudgetExhausted
         || finalizationBudget.artifactCleanupSkipped
         || finalizationBudget.historyPruneSkipped,
-      breakerOutcomesTotal: args.breakerOutcomes.size,
+      breakerOutcomesTotal: args.breaker.breakerOutcomes.size,
       breakerOutcomesRecorded: finalizationBudget.breakerOutcomesRecorded,
       breakerOutcomeWriteFailures: finalizationBudget.breakerOutcomeWriteFailures,
       breakerOutcomesSkippedBudget: finalizationBudget.breakerOutcomesSkippedBudget,
@@ -514,7 +498,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       cursorRetiredByRecovery,
       cursorPreservedAfterError,
       ...(args.checkpointOwned
-        ? { childDisposition: args.deferredCoins > 0 ? "not_started" : "completed" }
+        ? { childDisposition: args.counts.deferredCoins > 0 ? "not_started" : "completed" }
         : {}),
       artifactCleanup,
       artifactCleanupWarningCount: artifactCleanupWarnings.length,
@@ -526,7 +510,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       ...(args.attemptFailureSummaries.length > 0 ? { attemptFailureSummaries: args.attemptFailureSummaries } : {}),
       ...(args.warningMessages.length > 0 ? { warnings: args.warningMessages } : {}),
       ...(historyPrune ? { historyPrune } : {}),
-      breakerKeys: Array.from(args.breakerKeys),
+      breakerKeys: Array.from(args.breaker.breakerKeys),
     }),
   };
 }

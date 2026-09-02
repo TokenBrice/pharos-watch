@@ -1,5 +1,6 @@
 import { getCacheUpdatedAt, setCacheMany } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
@@ -145,22 +146,22 @@ export async function prepareSafetyScoreV9Input(
 
   const stablecoinsReadiness = await waitForStablecoinsCacheReadiness(db, signal);
   if (stablecoinsReadiness.status === "pending") {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
       productivity: {
         productive: false,
         reason: "safety-score-v9-input-source-unavailable",
       },
-      metadata: JSON.stringify({
+      metadata: {
         stage: "stablecoins-cache-readiness",
         reason: "stablecoins-generation-pending",
         waitedMs: stablecoinsReadiness.waitedMs,
         cacheUpdatedAt: stablecoinsReadiness.cacheUpdatedAt,
         pendingStablecoinsStartedAt: stablecoinsReadiness.pendingStartedAt,
         pendingStablecoinsStage: stablecoinsReadiness.pendingStage,
-      }),
-    };
+      },
+    });
   }
 
   const capture = await buildNativeSafetyScoreV9Capture(db, {

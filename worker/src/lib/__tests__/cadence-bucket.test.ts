@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { describe, expect, it, vi } from "vitest";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   cadenceBucketFor,
   claimCadenceBucket,
   completeCadenceBucket,
   failCadenceBucket,
+  runCadenceBucketPublication,
 } from "../cadence-bucket";
 
 function marker(overrides: Partial<{
@@ -99,5 +100,36 @@ describe("cadence buckets", () => {
     if (claimResult.kind !== "claimed") return;
     await expect(failCadenceBucket(db, claimResult.claim, 1_025)).resolves.toBe(true);
     expect(db.getHistory().some((entry) => String(entry.binds[0]).includes('"state":"failed"'))).toBe(true);
+  });
+
+  it("preserves the publication lifecycle contract", async () => {
+    const cases: readonly { state?: "completed" | "claimed"; advanced?: boolean; changes?: number;
+      status?: "degraded"; metadata?: string; throws?: boolean; releaseError?: boolean }[] = [
+      { state: "completed", metadata: '{"reason":"cadence_bucket_completed","cadence":{"bucket":2,"observedBucket":2,"cadenceSec":1800}}' },
+      { state: "claimed", metadata: '{"reason":"cadence_bucket_in_progress","cadence":{"bucket":2,"observedBucket":2,"cadenceSec":1800}}' },
+      { advanced: true, changes: 1, metadata: '{"lastWriteAdvanced":true,"cadence":{"bucket":2,"cadenceSec":1800,"completed":true,"retryable":false}}' },
+      { advanced: false, changes: 1, status: "degraded", metadata: '{"lastWriteAdvanced":false,"cadence":{"bucket":2,"cadenceSec":1800,"completed":false,"retryable":true}}' },
+      { advanced: true, changes: 0, status: "degraded", metadata: '{"lastWriteAdvanced":true,"cadence":{"bucket":2,"cadenceSec":1800,"completed":false,"retryable":true}}' },
+      { throws: true, changes: 1 },
+      { throws: true, releaseError: true },
+    ];
+    for (const testCase of cases) {
+      const tables: MockTableConfig[] = [{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: testCase.state ? [{ key: "cadence:test", value: marker({ bucket: 2, state: testCase.state, claimedAt: 3_600 }), updated_at: 3_600 }] : [] }];
+      if (!testCase.state) tables.push({ match: "INSERT OR IGNORE INTO cache", rows: [], runMeta: { changes: 1 } }, { match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?", rows: [], ...(testCase.releaseError ? { throwError: new Error("release failed") } : { runMeta: { changes: testCase.changes } }) });
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const error = new Error("publication failed");
+      const run = runCadenceBucketPublication(mockD1(tables), {
+        key: "cadence:test", cadenceSec: 1_800, staleClaimAfterSec: 60, scheduledAtSec: 3_600, startedAtSec: 3_620,
+        job: "test-job", releaseFailureEvent: "test.release-failed", releaseFailureMessage: "release failed",
+        publication: async () => testCase.throws ? Promise.reject(error) : { itemCount: 1, metadata: JSON.stringify({ lastWriteAdvanced: testCase.advanced }) },
+      });
+      if (testCase.throws) await expect(run).rejects.toBe(error);
+      else {
+        const result = await run;
+        expect([result.status, result.metadata]).toEqual([testCase.status, testCase.metadata]);
+      }
+      expect(warning).toHaveBeenCalledTimes(testCase.releaseError ? 1 : 0);
+      warning.mockRestore();
+    }
   });
 });

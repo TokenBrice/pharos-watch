@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
+import type { ContractDeployment } from "@shared/types/core";
 
 /** Raw pool entry written to dex_pool_staging by the discovery cron. */
 export interface StagedPool {
@@ -56,6 +57,22 @@ export interface DexDeploymentProviderCheck {
   observedPoolCount?: number;
   /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */
   retryable?: boolean;
+}
+
+export function makeDexDeploymentProviderCheck(
+  target: Pick<ContractDeployment, "chain" | "address">,
+  provider: DexDeploymentProviderCheck["provider"],
+  status: DexDeploymentProviderCheck["status"],
+  extras?: Pick<DexDeploymentProviderCheck, "observedPoolCount" | "retryable">,
+): DexDeploymentProviderCheck {
+  return {
+    chain: target.chain,
+    address: target.address,
+    provider,
+    status,
+    ...(extras?.observedPoolCount !== undefined ? { observedPoolCount: extras.observedPoolCount } : {}),
+    ...(extras?.retryable === true ? { retryable: true } : {}),
+  };
 }
 
 /**

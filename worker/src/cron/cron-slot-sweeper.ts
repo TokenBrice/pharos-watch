@@ -1,6 +1,7 @@
 import { throwIfAborted } from "../lib/abort";
 import { sweepStaleScheduledSlotExecutions } from "../lib/scheduled-slot-fence";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 
 export async function runCronSlotSweeper(
   db: D1Database,
@@ -12,9 +13,9 @@ export async function runCronSlotSweeper(
   const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec, signal, reconcilerWorkerVersion });
   throwIfAborted(signal);
 
-  return {
+  return createCronResult({
     status: summary.slotsReconciled > 0 ? "degraded" : "ok",
     itemCount: summary.slotsReconciled,
-    metadata: JSON.stringify(summary),
-  };
+    metadata: { ...summary },
+  });
 }

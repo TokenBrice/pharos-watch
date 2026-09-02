@@ -1,23 +1,19 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import type { StatusResponse } from "@shared/types";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { StatusPill } from "./severity-pill";
+import { defineStatusColumns } from "./page-primitives";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
 
-const DATASET_FRESHNESS_COLUMNS: readonly DataTableColumn[] = [
-  { id: "domain", label: "Domain", className: "pb-2 font-medium" },
-  { id: "updated", label: "Updated", className: "pb-2 font-medium" },
-  { id: "age", label: "Age", className: "pb-2 font-medium" },
-  { id: "cadence", label: "Cadence", className: "pb-2 font-medium" },
-  { id: "grace-basis", label: "Grace Basis", className: "pb-2 font-medium" },
-  { id: "writers", label: "Writers", className: "pb-2 font-medium" },
-  { id: "band", label: "Band", className: "pb-2 font-medium" },
-];
+const DATASET_FRESHNESS_COLUMNS = defineStatusColumns([
+  ["domain", "Domain"], ["updated", "Updated"], ["age", "Age"], ["cadence", "Cadence"],
+  ["grace-basis", "Grace Basis"], ["writers", "Writers"], ["band", "Band"],
+]);
 
 const DATASET_META: Record<
   DatasetKey,

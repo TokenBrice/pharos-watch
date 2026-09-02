@@ -1,32 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import { AreaChart, Area, ReferenceDot } from "recharts";
+import { Area, ReferenceDot } from "recharts";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
-import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
-import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
-import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
-import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
+import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
-import {
-  ChartAreaGradient,
-  DateTooltip,
-  MonoYAxis,
-  TimeGrid,
-  TimeXAxis,
-  useSvgId,
-} from "@/components/chart-primitives/axes";
-import { ChartCardShell } from "@/components/chart-primitives/shell";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, useSvgId } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
-import { ChartFigure } from "@/components/chart-primitives/figure";
+import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
-import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
+import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
 
 const MCAP_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; mcap: number }>[] = [
   { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
@@ -64,7 +53,6 @@ export function McapChart({
   embedded = false,
 }: McapChartProps) {
   const mcapGradientId = useSvgId("mcap");
-  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
   const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);
 
@@ -79,27 +67,14 @@ export function McapChart({
       }));
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
-    externalRange: controlledRange,
-  });
-
-  // Stable margins so the crosshair overlay can position relative to the
-  // plot area without re-measuring.
-  const margin = useMemo(() => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }), [range]);
+  const frame = useMarketDataChartFrame({ chartData, controlledRange, stablecoinId });
   const {
-    annotations,
     brushedRange,
-    handleMouseLeave,
-    handleMouseMove,
-    plotInsetBottom,
-    plotInsetLeft,
-    plotInsetRight,
-    plotInsetTop,
-    sync,
+    options,
+    range,
+    setRange,
     visibleData,
-    xDomain,
-    xTicks,
-  } = useMarketDataChartWindow({ filteredData, margin, range, stablecoinId });
+  } = frame;
 
   // Log scale is allowed only on the unbrushed `all` view (multi-year, multi-OOM).
   // Linear stays the default for short ranges where log compresses the signal.
@@ -185,52 +160,23 @@ export function McapChart({
     </div>
   );
 
-  const chartBody = (
-    <ChartFigure
-      data={visibleData}
+  return (
+    <MarketDataChartFigure
+      cardClassName={cardClassName}
       columns={MCAP_TABLE_COLUMNS}
-      caption={(rows, truncated, total) =>
-        truncated
-          ? `Market cap history — most recent ${rows.length} of ${total} data points`
-          : `Market cap history — ${total} data points`
-      }
-      ariaLabel={`Market cap chart showing ${visibleData.length} data points`}
+      embedded={embedded}
       emptyMessage="No market cap data available"
-      heightClassName={CHART_HEIGHT}
-      containerRef={chartContainerRef}
-      isReady={isChartReady}
-      crosshair={
-        sync
-          ? {
-              hoveredTs: sync.hoveredTs,
-              domain: xDomain,
-              plotInsetLeft,
-              plotInsetRight,
-              plotInsetTop,
-              plotInsetBottom,
-            }
-          : null
+      frame={frame}
+      header={header}
+      hideAnnotationLegend={hideAnnotationLegend}
+      label="Market cap"
+      beforeAxes={
+        <defs>
+          <ChartAreaGradient id={mcapGradientId} color={CHART_BLUE} />
+        </defs>
       }
-      renderChart={() => (
-        <AreaChart
-          width={width}
-          height={height}
-          data={visibleData}
-          margin={margin}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <defs>
-            <ChartAreaGradient id={mcapGradientId} color={CHART_BLUE} />
-          </defs>
-          <TimeGrid />
-          <TimeXAxis
-            dataKey="ts"
-            ticks={xTicks}
-            interval={range === "all" ? 0 : "preserveStartEnd"}
-            tick={<MarketDataXTick range={range} />}
-            height={range === "all" ? 44 : 30}
-          />
+      variant="area"
+    >
           <MonoYAxis
             tickFormatter={(val: number) => formatCurrency(val)}
             domain={yDomain}
@@ -257,18 +203,6 @@ export function McapChart({
               ifOverflow="extendDomain"
             />
           ) : null}
-          <ChartAnnotationLines annotations={annotations} numbered />
-        </AreaChart>
-      )}
-    />
-  );
-
-  const legend =
-    !hideAnnotationLegend && annotations.length > 0 ? (
-      <ChartAnnotationLegend annotations={annotations} numbered />
-    ) : null;
-
-  return (
-    <ChartCardShell embedded={embedded} className={cardClassName} header={header} body={chartBody} legend={legend} />
+    </MarketDataChartFigure>
   );
 }

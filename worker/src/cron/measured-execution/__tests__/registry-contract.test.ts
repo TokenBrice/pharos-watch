@@ -5,7 +5,6 @@ import { DEX_EXECUTION_TARGET_FACTORY_REGISTRY } from "../../dex-liquidity/execu
 import {
   DEX_POOL_SOURCE_REGISTRY,
 } from "../../dex-liquidity/orchestrator-phases/direct-api";
-import { runSolanaClmmShadowLane } from "../solana-clmm/inventory";
 
 describe("Wave 0 registration fan-out", () => {
   it("gives every execution capability exactly one predeclared adapter slot", () => {
@@ -29,13 +28,17 @@ describe("Wave 0 registration fan-out", () => {
     expect(DEX_EXECUTION_TARGET_FACTORY_REGISTRY.every((entry) => entry.implementationModule.length > 0)).toBe(true);
   });
 
-  it("predeclares U2's isolated shadow hook as a no-op", async () => {
-    const baseResult = { status: "ok" as const, itemCount: 7 };
-    await expect(runSolanaClmmShadowLane({
-      db: {} as D1Database,
-      chainRpcs: new Map(),
-      baseResult,
-    })).resolves.toBe(baseResult);
+  it("retains U2's shadow metadata and null target factories", () => {
+    const slots = DEX_EXECUTION_TARGET_FACTORY_REGISTRY.filter((entry) => entry.platform === "solana");
+    expect(slots.map(({ slotId, lifecycle, profileIds, implementationModule }) => ({
+      slotId, lifecycle, profileIds, implementationModule,
+    }))).toEqual([
+      { slotId: "orca-whirlpool", lifecycle: "shadow", profileIds: ["orca-whirlpool-exact-v1"], implementationModule: "./execution-target-registry" },
+      { slotId: "raydium-clmm", lifecycle: "shadow", profileIds: ["raydium-clmm-exact-v1"], implementationModule: "./execution-target-registry" },
+    ]);
+    expect(slots.map((entry) => entry.build({} as never))).toEqual([null, null]);
+    expect(DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "solana-clmm"))
+      .toMatchObject({ platform: "solana", implementationModule: "../dex-liquidity/execution-target-registry" });
   });
 
   it("predeclares pool/source leaves needed by the fan-out", () => {
@@ -47,5 +50,12 @@ describe("Wave 0 registration fan-out", () => {
       "soroban-exhaustive",
       "btcusd-provider-investigation",
     ]));
+    expect(DEX_POOL_SOURCE_REGISTRY
+      .filter((entry) => entry.slotId === "soroban-exhaustive" || entry.slotId === "btcusd-provider-investigation")
+      .map(({ slotId, platform, lifecycle, implementationModule }) => [slotId, platform, lifecycle, implementationModule]))
+      .toEqual([
+        ["soroban-exhaustive", "soroban", "disabled", "@shared/lib/dex-deployment-coverage"],
+        ["btcusd-provider-investigation", "offchain", "disabled", "@shared/lib/dex-deployment-coverage"],
+      ]);
   });
 });

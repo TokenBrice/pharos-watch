@@ -1,35 +1,23 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
 import { buildTelegramRecapDedupeKey } from "../../lib/telegram-recap-store";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;
-const databases: DatabaseSync[] = [];
-
-function setup(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const migrationDirectory = process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration directory only.
-  for (const file of readdirSync(migrationDirectory).filter((entry) => entry.endsWith(".sql")).sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration replay only.
-    sqlite.exec(readFileSync(join(migrationDirectory, file), "utf8"));
-  }
-  databases.push(sqlite);
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
+const { open: setup, closeAll } = createLatestSchemaFixtureTracker();
 
 function insertSubscriber(sqlite: DatabaseSync, chatId: string, options: { globalDepeg?: boolean } = {}): void {
-  sqlite.prepare(`INSERT INTO telegram_subscribers
-    (chat_id, created_at, last_active_at, timezone, global_alert_depeg)
-    VALUES (?, ?, ?, 'Europe/Belgrade', ?)`)
-    .run(chatId, NOW - 100, NOW - 10, options.globalDepeg ? 1 : 0);
+  insertTelegramSubscriber(sqlite, {
+    chatId,
+    createdAt: NOW - 100,
+    lastActiveAt: NOW - 10,
+    timezone: "Europe/Belgrade",
+    global: { depeg: options.globalDepeg === true },
+  });
   sqlite.prepare(`INSERT INTO telegram_recap_preferences
     (chat_id, enabled, cadence, delivery_hour_local, next_due_at, created_at, updated_at)
     VALUES (?, 1, 'daily', 9, ?, ?, ?)`).run(chatId, NOW - 1, NOW - 100, NOW - 100);
@@ -60,7 +48,7 @@ function insertStablecoinsCache(sqlite: DatabaseSync): void {
   }), NOW);
 }
 
-afterEach(() => { while (databases.length > 0) databases.pop()?.close(); });
+afterEach(closeAll);
 
 describe("telegram personalized recap planner", () => {
   it("plans deterministic direct and explicit global recaps without network access", async () => {

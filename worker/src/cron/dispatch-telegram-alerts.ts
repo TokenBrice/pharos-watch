@@ -17,6 +17,7 @@ import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
+  summarizeTelegramDispatchEvents,
 } from "./dispatch-telegram-events";
 import {
   buildTelegramAlertSourceEvent,
@@ -249,30 +250,8 @@ async function dispatchTelegramAlertsImpl(
       getSymbol,
       signal,
     );
-    const {
-      dewsChanges,
-      depegTriggered,
-      depegResolved,
-      depegWorsening,
-      safetyChanges,
-      launchPromoted,
-      reservePromoted,
-      suppressedMethodologyChanges,
-      dewsIds,
-      depegIds,
-      safetyIds,
-      safetyScoreIdentity,
-      launchIds,
-      reserveIds,
-    } = dispatchEvents;
-    const eventCount =
-      dewsChanges.length +
-      depegTriggered.length +
-      depegResolved.length +
-      depegWorsening.length +
-      safetyChanges.length +
-      launchPromoted.length +
-      reservePromoted.length;
+    const eventSummary = summarizeTelegramDispatchEvents(dispatchEvents);
+    const eventCount = eventSummary.total;
 
     const requiresFullFanoutPath = eventCount > 0 || sourceEvent != null;
     if (!sourceEvent && requiresFullFanoutPath) {
@@ -295,15 +274,9 @@ async function dispatchTelegramAlertsImpl(
       metadata: {
         providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
         countTotals: {
-          dews: dewsChanges.length,
-          depegTriggered: depegTriggered.length,
-          depegResolved: depegResolved.length,
-          depegWorsening: depegWorsening.length,
-          safety: safetyChanges.length,
-          launch: launchPromoted.length,
-          reserve: reservePromoted.length,
+          ...eventSummary.transitionCounts,
           freezeObserved: freezeOutbox.observed,
-          suppressedMethodologyChanges,
+          suppressedMethodologyChanges: dispatchEvents.suppressedMethodologyChanges,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,
@@ -324,7 +297,7 @@ async function dispatchTelegramAlertsImpl(
         reserveSourceAssessment: snapshotState.reserveSourceAssessment,
         safetySourceAssessment,
         safetySnapshotNeedsSeed,
-        suppressedMethodologyChanges,
+        suppressedMethodologyChanges: dispatchEvents.suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
         pendingCapacityBefore,
         nowSec,
@@ -346,22 +319,7 @@ async function dispatchTelegramAlertsImpl(
       db,
       botToken,
       snapshotState,
-      events: {
-        dewsChanges,
-        depegTriggered,
-        depegResolved,
-        depegWorsening,
-        safetyChanges,
-        launchPromoted,
-        reservePromoted,
-        suppressedMethodologyChanges,
-        dewsIds,
-        depegIds,
-        safetyIds,
-        safetyScoreIdentity,
-        launchIds,
-        reserveIds,
-      },
+      events: dispatchEvents,
       sourceEvent,
       pendingCapacityBefore,
       suppressedSafetyChangesAtSeed,

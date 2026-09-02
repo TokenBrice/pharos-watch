@@ -87,6 +87,22 @@ describe("buildBlacklistActiveRecords", () => {
     expect(records[0]?.amountSource).toBe("current_balance");
   });
 
+  it("reports an unavailable amount when a Tron blacklist has no current snapshot", () => {
+    const records = buildBlacklistActiveRecords([makeEvent({
+      chainId: "tron",
+      chainName: "Tron",
+      amountNative: 1_000,
+      amountUsdAtEvent: 1_000,
+    })]);
+
+    expect(records[0]).toMatchObject({
+      frozenAmountNative: null,
+      frozenAmountUsd: null,
+      amountStatus: "provider_failed",
+      amountSource: "unavailable",
+    });
+  });
+
   it("prefers resolved current balance snapshots for active EVM blacklist records", () => {
     const events = [
       makeEvent({

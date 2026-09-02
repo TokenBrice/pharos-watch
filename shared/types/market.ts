@@ -9,11 +9,11 @@ import {
 } from "./core";
 import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
 import {
-  DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
-  ExitRouteObservationSchema,
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 export {
   BluechipRatingSchema,
@@ -52,7 +52,6 @@ export {
 } from "./exit-route";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
-const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const PriceSourceConfidenceProfileSchema = z.object({
   activeDexLanes: z.number().int().min(0),
   freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
@@ -97,7 +96,7 @@ const StablecoinDataRawSchema = z.object({
   chains: z.array(z.string()),
   contracts: z.array(ContractDeploymentSchema).optional(),
   frozen: z.boolean().optional(),
-  frozenAt: IsoDateSchema.optional(),
+  frozenAt: StrictIsoDateSchema.optional(),
 });
 
 export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
@@ -353,21 +352,6 @@ const DexPriceSourceSchema = z.object({
   tvl: z.number(),
 });
 
-function enforceDexExitRouteObservations(
-  observations: readonly z.infer<typeof ExitRouteObservationSchema>[] | null | undefined,
-  ctx: z.RefinementCtx,
-) {
-  (observations ?? []).forEach((observation, index) => {
-    if (!DexExitRouteObservationSchema.safeParse(observation).success) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exitRouteObservations", index],
-        message: "invalid DEX exit-route observation",
-      });
-    }
-  });
-}
-
 export const LiquidityEvidenceClassSchema = z.enum([
   "unobserved",
   "measured",
@@ -449,10 +433,9 @@ const DexLiquidityDataSchema = z
     lockedLiquidityPct: z.number().nullable(),
     methodologyVersion: z.string(),
     deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
-    exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservations: DexExitRouteObservationsSchema.nullable().optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  })
-  .superRefine((data, ctx) => enforceDexExitRouteObservations(data.exitRouteObservations, ctx));
+  });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
 export const DexLiquidityHistoryPointSchema = z
@@ -467,10 +450,9 @@ export const DexLiquidityHistoryPointSchema = z
     hasMeasuredLiquidityEvidence: z.boolean(),
     trendworthy: z.boolean(),
     methodologyVersion: z.string(),
-    exitRouteObservations: z.array(ExitRouteObservationSchema).optional(),
+    exitRouteObservations: DexExitRouteObservationsSchema.optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  })
-  .superRefine((data, ctx) => enforceDexExitRouteObservations(data.exitRouteObservations, ctx));
+  });
 export type DexLiquidityHistoryPoint = z.infer<typeof DexLiquidityHistoryPointSchema>;
 
 export const DexLiquidityHistoryResponseSchema = z.array(DexLiquidityHistoryPointSchema);

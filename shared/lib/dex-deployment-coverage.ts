@@ -36,9 +36,7 @@ export type DexDiscoveryCrawlerLeafId =
   | "tezos"
   | "icon-balanced"
   | "kava-swap"
-  | "cosmos"
-  | "soroban-exhaustive"
-  | "btcusd-public-https";
+  | "cosmos";
 
 export interface DexDiscoveryProviderAdapter {
   providerId: DexDiscoveryProvider;
@@ -48,7 +46,7 @@ export interface DexDiscoveryProviderAdapter {
   requestCostMs: number;
   executionOrder: number;
   timeoutMs: number;
-  crawlerLeaf: DexDiscoveryCrawlerLeafId;
+  crawlerLeaf?: DexDiscoveryCrawlerLeafId;
 }
 
 /**
@@ -411,12 +409,10 @@ export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapt
   {
     providerId: "soroban-exhaustive", lifecycle: "disabled", supports: () => false,
     scope: "exhaustive", requestCostMs: 0, executionOrder: 120, timeoutMs: 15_000,
-    crawlerLeaf: "soroban-exhaustive",
   },
   {
     providerId: "btcusd-public-https", lifecycle: "disabled", supports: () => false,
     scope: "supplemental", requestCostMs: 0, executionOrder: 130, timeoutMs: 15_000,
-    crawlerLeaf: "btcusd-public-https",
   },
 ] as const;
 

@@ -1,5 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { createJsonErrorResponse } from "@shared/lib/http-response";
+import { cloneResponse, createJsonErrorResponse } from "@shared/lib/http-response";
 
 /**
  * Shared proxy utilities for Cloudflare Pages Function handlers.
@@ -72,9 +72,8 @@ export function buildProxyResponse(
   if (!headers.has("Cache-Control") && options?.defaultCacheControl) {
     headers.set("Cache-Control", options.defaultCacheControl);
   }
-  return new Response(options?.method === "HEAD" ? null : upstreamRes.body, {
-    status: upstreamRes.status,
-    statusText: upstreamRes.statusText,
+  return cloneResponse(upstreamRes, {
+    method: options?.method,
     headers,
   });
 }

@@ -580,82 +580,92 @@ async function claimDuePendingRows(
 
 /** The Telegram send result enriched with the originating pending row's id/chat/attempts. */
 type PendingSendResult = { id: number; chatId: string; attempts: number } & BatchResult;
+type PendingOutcomeCounter =
+  | "sent"
+  | "executionUnknown"
+  | "blocked"
+  | "retryQueued"
+  | "droppedMaxAttemptsFallback"
+  | "droppedPermanentFailure";
+type AttemptDeadLetterReason = "blocked_disabled" | "permanent_failure" | "max_attempts";
 
-/**
- * Pure classification of a single send result into the mutually-exclusive
- * outcome that the drain loop should record. Side effects (DB writes, blocked-
- * chat cascade, global backoff) stay in the loop; this only decides the
- * outcome and the row updates to enqueue, so the exhaustive switch makes a
- * missing branch a type error rather than a silently dropped increment.
- */
-type PendingResultClassification =
-  | { kind: "sent" }
-  | { kind: "execution-unknown"; errorClass: string }
-  | { kind: "blocked"; errorClass: string }
-  | {
-      kind: "retry";
-      retryUpdate: Omit<PendingRetryUpdate, "owner" | "generation">;
-      targetErrorClass: string | null;
-      rateLimit: { retryAfterSec: number | null; notBeforeAt: number; scope: "chat" | "global" } | null;
-    }
-  | { kind: "dropped-max-attempts"; errorClass: string }
-  | { kind: "dropped-permanent"; errorClass: string };
-
-function classifyPendingSendResult(
-  result: PendingSendResult,
-  nowSec: number,
-): PendingResultClassification {
-  if (result.ok) {
-    return { kind: "sent" };
-  }
-  if (result.errorClass === "timeout" || result.errorClass === "network" || result.errorClass === "unknown") {
-    return { kind: "execution-unknown", errorClass: result.errorClass };
-  }
-  if (result.blocked) {
-    return { kind: "blocked", errorClass: result.errorClass ?? "blocked" };
-  }
-  if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
-    // Age-based retry: keep retrying inside the TTL window (enforced at SELECT time).
-    // The defensive PENDING_MAX_ATTEMPTS ceiling prevents a pathological row from looping
-    // forever with sub-second backoffs.
-    const isGlobalRateLimit = result.errorClass === "rate_limit" && result.rateLimitScope === "global";
-    const backoffNotBeforeAt = nowSec + pendingBackoffSec(result.attempts, result.retryAfterSec);
-    return {
-      kind: "retry",
-      retryUpdate: {
-        id: result.id,
-        retryAfterSec: result.retryAfterSec,
-        errorClass: result.errorClass,
-        notBeforeAt: isGlobalRateLimit ? null : backoffNotBeforeAt,
-      },
-      targetErrorClass: result.errorClass ?? null,
-      rateLimit: result.errorClass === "rate_limit"
-        ? {
-            retryAfterSec: result.retryAfterSec,
-            notBeforeAt: backoffNotBeforeAt,
-            scope: result.rateLimitScope === "global" ? "global" : "chat",
-          }
-        : null,
-    };
-  }
-  if (result.retryable) {
-    // Hit the defensive attempts ceiling while still retryable.
-    return { kind: "dropped-max-attempts", errorClass: result.errorClass ?? "max_attempts" };
-  }
-  // Non-retryable, non-blocked: classify as permanent failure (e.g. 400 bad_request, 401 auth_error).
-  return { kind: "dropped-permanent", errorClass: result.errorClass ?? "permanent_failure" };
+interface PendingOutcomeProjection {
+  kind: PendingOutcomeCounter;
+  row: PendingAlertRow;
+  claim: PendingDeliveryClaim | undefined;
+  at: number;
+  errorClass?: string | null;
+  targetStatus: TelegramAlertTargetStatusUpdate["status"] | null;
+  retryUpdate?: PendingRetryUpdate;
+  rateLimit?: { retryAfterSec: number | null; notBeforeAt: number; scope: "chat" | "global" };
+  deadLetter?: { row: DeadLetterPendingRow; reason: AttemptDeadLetterReason };
 }
 
-interface CheckpointedPendingWaveOutcome {
-  row: PendingAlertRow;
-  claim: PendingDeliveryClaim;
-  classification: PendingResultClassification;
-  completedAt: number;
+/** Project one result once; checkpointing and later side effects consume the same value. */
+function reducePendingOutcome(
+  result: PendingSendResult,
+  row: PendingAlertRow,
+  claim: PendingDeliveryClaim | undefined,
+  at: number,
+): PendingOutcomeProjection {
+  const base = { row, claim, at };
+  const terminal = (
+    kind: "blocked" | "droppedMaxAttemptsFallback" | "droppedPermanentFailure",
+    errorClass: string,
+    reason: AttemptDeadLetterReason,
+  ): PendingOutcomeProjection => ({
+    ...base,
+    kind,
+    errorClass,
+    targetStatus: "failed",
+    deadLetter: {
+      row: pendingDeadLetterSnapshot(row, claim, at, claim ? errorClass : result.errorClass ?? row.last_error_class),
+      reason,
+    },
+  });
+  if (result.ok) return { ...base, kind: "sent", targetStatus: "sent" };
+  if (result.errorClass === "timeout" || result.errorClass === "network" || result.errorClass === "unknown") {
+    return { ...base, kind: "executionUnknown", errorClass: result.errorClass, targetStatus: null };
+  }
+  if (result.blocked) {
+    return terminal("blocked", result.errorClass ?? "blocked", "blocked_disabled");
+  }
+  if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
+    const notBeforeAt = at + pendingBackoffSec(result.attempts, result.retryAfterSec);
+    const globalRateLimit = result.errorClass === "rate_limit" && result.rateLimitScope === "global";
+    return {
+      ...base,
+      kind: "retryQueued",
+      errorClass: result.errorClass ?? null,
+      targetStatus: "queued",
+      retryUpdate: claim
+        ? {
+          retryAfterSec: result.retryAfterSec,
+          errorClass: result.errorClass,
+          notBeforeAt: globalRateLimit ? null : notBeforeAt,
+          ...claim,
+        }
+        : undefined,
+      rateLimit: result.errorClass === "rate_limit"
+        ? {
+          retryAfterSec: result.retryAfterSec,
+          notBeforeAt,
+          scope: result.rateLimitScope === "global" ? "global" : "chat",
+        }
+        : undefined,
+    };
+  }
+  const maxAttempts = result.retryable;
+  return terminal(
+    maxAttempts ? "droppedMaxAttemptsFallback" : "droppedPermanentFailure",
+    result.errorClass ?? (maxAttempts ? "max_attempts" : "permanent_failure"),
+    maxAttempts ? "max_attempts" : "permanent_failure",
+  );
 }
 
 async function checkpointAttemptedPendingWave(
   db: D1Database,
-  outcomes: readonly CheckpointedPendingWaveOutcome[],
+  outcomes: readonly PendingOutcomeProjection[],
   completedAt: number,
 ): Promise<void> {
   const sentOutcomes: Array<{ claim: PendingDeliveryClaim; row: PendingAlertRow }> = [];
@@ -671,30 +681,21 @@ async function checkpointAttemptedPendingWave(
   let globalBackoffAt: number | null = null;
 
   for (const outcome of outcomes) {
-    const { classification, claim, row } = outcome;
-    switch (classification.kind) {
-      case "sent":
-        sentOutcomes.push({ claim, row });
-        break;
-      case "execution-unknown":
-        executionUnknownOutcomes.push({ claim, row, errorClass: classification.errorClass });
-        break;
-      case "retry":
-        retryUpdates.push({ ...classification.retryUpdate, ...claim });
-        break;
-      case "blocked":
-        blockedRows.push(pendingDeadLetterSnapshot(row, claim, completedAt, classification.errorClass));
-        break;
-      case "dropped-max-attempts":
-        maxAttemptRows.push(pendingDeadLetterSnapshot(row, claim, completedAt, classification.errorClass));
-        break;
-      case "dropped-permanent":
-        permanentRows.push(pendingDeadLetterSnapshot(row, claim, completedAt, classification.errorClass));
-        break;
+    if (outcome.kind === "sent") sentOutcomes.push({ claim: outcome.claim!, row: outcome.row });
+    if (outcome.kind === "executionUnknown") {
+      executionUnknownOutcomes.push({ claim: outcome.claim!, row: outcome.row, errorClass: outcome.errorClass ?? null });
     }
-
-    if (classification.kind === "retry" && classification.rateLimit?.scope === "global") {
-      globalBackoffAt = Math.max(globalBackoffAt ?? 0, classification.rateLimit.notBeforeAt);
+    if (outcome.retryUpdate) retryUpdates.push(outcome.retryUpdate);
+    if (outcome.deadLetter) {
+      const target = outcome.deadLetter.reason === "blocked_disabled"
+        ? blockedRows
+        : outcome.deadLetter.reason === "permanent_failure"
+          ? permanentRows
+          : maxAttemptRows;
+      target.push(outcome.deadLetter.row);
+    }
+    if (outcome.rateLimit?.scope === "global") {
+      globalBackoffAt = Math.max(globalBackoffAt ?? 0, outcome.rateLimit.notBeforeAt);
     }
   }
 
@@ -774,32 +775,36 @@ export async function drainPendingQueue(
     return emptyDrainResult();
   }
 
-  let attempted = 0;
-  let deferred = 0;
-  let blockedCleanedUp = 0;
-  let blockedCleanupFailed = 0;
+  const counters = {
+    attempted: 0,
+    deferred: 0,
+    sent: 0,
+    executionUnknown: 0,
+    blocked: 0,
+    retryQueued: 0,
+    droppedMaxAttemptsFallback: 0,
+    droppedPermanentFailure: 0,
+    blockedCleanedUp: 0,
+    blockedCleanupFailed: 0,
+  };
   const sentClaimsToDelete: Array<{ claim: PendingDeliveryClaim; row: PendingAlertRow }> = [];
   const blockedRowsToDelete: DeadLetterPendingRow[] = [];
   const permanentRowsToDelete: DeadLetterPendingRow[] = [];
   const preferenceRowsToDelete: DeadLetterPendingRow[] = [];
   const completedIds = new Set<number>();
   const deferUpdates: PendingDeferUpdate[] = [];
-  // Per-result outcome kinds, tallied in one pass after the send loop so each
-  // counter derives from exactly one source of truth.
-  const outcomeKinds: PendingResultClassification["kind"][] = [];
   let rateLimited = false;
   let rateLimitRetryAfterSec: number | null = null;
   let rateLimitNotBeforeAt: number | null = null;
   const deliveryDiagnostics: PendingDeliveryDiagnostic[] = [];
   const targetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [];
   const targetCancellations: TelegramAlertTargetCancellation[] = [];
-  const pendingById = new Map(pending.map((row) => [row.id, row] as const));
   const blockedChatsThisLoop = new Set<string>();
   const chatsToResetOnSuccess = new Set<string>();
   const disabledChatIds = new Set<string>();
   const migratedChatIds = new Map<string, string>();
   const sendingClaims = new Map<number, PendingDeliveryClaim>();
-  const checkpointedAttemptedOutcomes = new Map<number, CheckpointedPendingWaveOutcome>();
+  const checkpointedAttemptedOutcomes = new Map<number, PendingOutcomeProjection>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
     : null;
@@ -849,7 +854,7 @@ export async function drainPendingQueue(
       continue;
     }
     if (outcome.kind === "defer") {
-      deferred++;
+      counters.deferred++;
       deferUpdates.push({
         id: row.id,
         notBeforeAt: outcome.notBeforeAt,
@@ -860,7 +865,7 @@ export async function drainPendingQueue(
       continue;
     }
     if (isPendingRowSnoozed(row, nowSec)) {
-      deferred++;
+      counters.deferred++;
       deferUpdates.push({
         id: row.id,
         notBeforeAt: Math.max(row.alert_snooze_until_ts ?? 0, nowSec + DEFAULT_RETRY_DELAY_SEC),
@@ -954,7 +959,7 @@ export async function drainPendingQueue(
       },
       afterSendBatch: async (entries, results) => {
         const completedAt = Math.floor(Date.now() / 1000);
-        const waveOutcomes: CheckpointedPendingWaveOutcome[] = [];
+        const waveOutcomes: PendingOutcomeProjection[] = [];
         for (const [index, entry] of entries.entries()) {
           const scheduledResult = results[index];
           if (!scheduledResult || scheduledResult.attempted === false) continue;
@@ -969,12 +974,7 @@ export async function drainPendingQueue(
             chatId: entry.item.chatId,
             attempts: row.attempts,
           };
-          waveOutcomes.push({
-            row,
-            claim,
-            classification: classifyPendingSendResult(result, completedAt),
-            completedAt,
-          });
+          waveOutcomes.push(reducePendingOutcome(result, row, claim, completedAt));
         }
         await checkpointAttemptedPendingWave(db, waveOutcomes, completedAt);
         for (const outcome of waveOutcomes) {
@@ -1007,10 +1007,10 @@ export async function drainPendingQueue(
       chatId: sendable.chatId,
       attempts: sendable.row.attempts,
     };
-    const pendingRow = pendingById.get(result.id);
+    const pendingRow = sendable.row;
     const deliveryClaim = sendingClaims.get(result.id);
     const checkpointedOutcome = checkpointedAttemptedOutcomes.get(result.id);
-    const outcomeAt = checkpointedOutcome?.completedAt ?? Math.floor(Date.now() / 1000);
+    const outcomeAt = checkpointedOutcome?.at ?? Math.floor(Date.now() / 1000);
     if (result.errorClass === "chat_migrated" && result.migrateToChatId) {
       migratedChatIds.set(result.chatId, result.migrateToChatId);
     }
@@ -1024,7 +1024,7 @@ export async function drainPendingQueue(
         continue;
       }
       if (result.skippedReason === "pre_send") {
-        deferred++;
+        counters.deferred++;
         deferUpdates.push({
           id: result.id,
           notBeforeAt: nowSec + DEFAULT_RETRY_DELAY_SEC,
@@ -1038,7 +1038,7 @@ export async function drainPendingQueue(
         const notBeforeAt =
           predecessorRetryAtByChat.get(result.chatId) ??
           nowSec + pendingBackoffSec(result.attempts, result.retryAfterSec);
-        deferred++;
+        counters.deferred++;
         deferUpdates.push({ id: result.id, notBeforeAt, ...(deliveryClaim ? { deliveryClaim } : {}) });
         pushTargetStatus("queued", result.errorClass);
         completedIds.add(result.id);
@@ -1051,7 +1051,7 @@ export async function drainPendingQueue(
       if (!deliveryClaim) {
         throw new Error(`Telegram pending delivery claim missing after attempted send (${result.id})`);
       }
-      attempted++;
+      counters.attempted++;
       deliveryDiagnostics.push(
         result.ok
           ? { chatId: result.chatId, ok: true }
@@ -1059,80 +1059,41 @@ export async function drainPendingQueue(
       );
     }
 
-    const classification = checkpointedOutcome?.classification ?? classifyPendingSendResult(result, outcomeAt);
-    outcomeKinds.push(classification.kind);
+    const outcome = checkpointedOutcome ?? reducePendingOutcome(result, pendingRow, deliveryClaim, outcomeAt);
+    counters[outcome.kind]++;
     completedIds.add(result.id);
 
-    switch (classification.kind) {
-      case "sent": {
-        if (!deliveryClaim) throw new Error(`Telegram sent result lost delivery ownership (${result.id})`);
-        if (!pendingRow) throw new Error(`Telegram sent result lost pending row (${result.id})`);
-        sentClaimsToDelete.push({ claim: deliveryClaim, row: pendingRow });
-        pushTargetStatus("sent");
-        chatsToResetOnSuccess.add(result.chatId);
-        break;
+    if (outcome.targetStatus) pushTargetStatus(outcome.targetStatus, outcome.errorClass);
+    if (!checkpointedOutcome && outcome.deadLetter) {
+      const rows = outcome.deadLetter.reason === "blocked_disabled"
+        ? blockedRowsToDelete
+        : permanentRowsToDelete;
+      rows.push(outcome.deadLetter.row);
+    }
+    if (outcome.kind === "sent") {
+      sentClaimsToDelete.push({ claim: outcome.claim!, row: outcome.row });
+      chatsToResetOnSuccess.add(result.chatId);
+    }
+    if (outcome.kind === "blocked") {
+      const blockedCascade = await handleBlockedChat(db, result.chatId, outcomeAt, blockedChatsThisLoop);
+      if (blockedCascade.disabled) {
+        counters.blockedCleanedUp++;
+        disabledChatIds.add(result.chatId);
+      } else if (blockedCascade.failed) {
+        counters.blockedCleanupFailed++;
       }
-      case "execution-unknown": {
-        if (!deliveryClaim) throw new Error(`Telegram ambiguous result lost delivery ownership (${result.id})`);
-        if (!pendingRow) throw new Error(`Telegram ambiguous result lost pending row (${result.id})`);
-        break;
-      }
-      case "blocked": {
-        if (pendingRow && !checkpointedOutcome) blockedRowsToDelete.push(pendingDeadLetterSnapshot(
-          pendingRow,
-          deliveryClaim,
-          outcomeAt,
-          result.errorClass ?? pendingRow.last_error_class,
-        ));
-        pushTargetStatus("failed", classification.errorClass);
-        const blockedCascade = await handleBlockedChat(db, result.chatId, outcomeAt, blockedChatsThisLoop);
-        if (blockedCascade.disabled) {
-          blockedCleanedUp++;
-          disabledChatIds.add(result.chatId);
-        } else if (blockedCascade.failed) {
-          blockedCleanupFailed++;
-        }
-        break;
-      }
-      case "retry": {
-        if (!deliveryClaim) throw new Error(`Telegram retry result lost delivery ownership (${result.id})`);
-        pushTargetStatus("queued", classification.targetErrorClass);
-        if (classification.retryUpdate.notBeforeAt != null) {
-          predecessorRetryAtByChat.set(result.chatId, classification.retryUpdate.notBeforeAt);
-        }
-        if (classification.rateLimit) {
-          rateLimited = true;
-          rateLimitRetryAfterSec = classification.rateLimit.retryAfterSec;
-          rateLimitNotBeforeAt = Math.max(rateLimitNotBeforeAt ?? 0, classification.rateLimit.notBeforeAt);
-        }
-        break;
-      }
-      case "dropped-max-attempts": {
-        pushTargetStatus("failed", classification.errorClass);
-        break;
-      }
-      case "dropped-permanent": {
-        if (pendingRow && !checkpointedOutcome) permanentRowsToDelete.push(pendingDeadLetterSnapshot(
-          pendingRow,
-          deliveryClaim,
-          outcomeAt,
-          result.errorClass ?? pendingRow.last_error_class,
-        ));
-        pushTargetStatus("failed", classification.errorClass);
-        break;
-      }
+    }
+    if (outcome.retryUpdate?.notBeforeAt != null) {
+      predecessorRetryAtByChat.set(result.chatId, outcome.retryUpdate.notBeforeAt);
+    }
+    if (outcome.rateLimit) {
+      rateLimited = true;
+      rateLimitRetryAfterSec = outcome.rateLimit.retryAfterSec;
+      rateLimitNotBeforeAt = Math.max(rateLimitNotBeforeAt ?? 0, outcome.rateLimit.notBeforeAt);
     }
   }
 
-  // Single-pass tally: every counter derives from the recorded outcome kinds.
-  const sent = outcomeKinds.filter((kind) => kind === "sent").length;
-  const acceptedChats = new Set(sentClaimsToDelete.map(({ row }) => row.chat_id)).size;
-  const blocked = outcomeKinds.filter((kind) => kind === "blocked").length;
-  const retryQueued = outcomeKinds.filter((kind) => kind === "retry").length;
-  const executionUnknown = outcomeKinds.filter((kind) => kind === "execution-unknown").length;
-  const droppedMaxAttemptsFallback = outcomeKinds.filter((kind) => kind === "dropped-max-attempts").length;
-  const droppedPermanentFailure = outcomeKinds.filter((kind) => kind === "dropped-permanent").length;
-  const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure + preferenceRowsToDelete.length;
+  const dropped = counters.droppedMaxAttemptsFallback + counters.droppedPermanentFailure + preferenceRowsToDelete.length;
 
   await flushChatSuccessResets(db, chatsToResetOnSuccess);
   await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
@@ -1141,7 +1102,7 @@ export async function drainPendingQueue(
   for (const chatId of disabledChatIds) {
     const cleanup = await clearPendingAlertsForDisabledChat(db, chatId, nowSec, completedIds);
     if (cleanup.failed) {
-      blockedCleanupFailed++;
+      counters.blockedCleanupFailed++;
     }
   }
 
@@ -1165,18 +1126,18 @@ export async function drainPendingQueue(
   }
 
   return {
-    attempted,
-    sent,
-    acceptedChats,
-    blocked,
-    blockedCleanedUp,
-    blockedCleanupFailed,
-    retryQueued,
-    executionUnknown,
+    attempted: counters.attempted,
+    sent: counters.sent,
+    acceptedChats: chatsToResetOnSuccess.size,
+    blocked: counters.blocked,
+    blockedCleanedUp: counters.blockedCleanedUp,
+    blockedCleanupFailed: counters.blockedCleanupFailed,
+    retryQueued: counters.retryQueued,
+    executionUnknown: counters.executionUnknown,
     dropped,
-    droppedPermanentFailure,
-    droppedMaxAttemptsFallback,
-    deferred,
+    droppedPermanentFailure: counters.droppedPermanentFailure,
+    droppedMaxAttemptsFallback: counters.droppedMaxAttemptsFallback,
+    deferred: counters.deferred,
     rateLimited,
     retryAfterSec: rateLimitRetryAfterSec,
     notBeforeAt: rateLimitNotBeforeAt,

@@ -2,8 +2,12 @@ import {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
 } from "../lib/telegram-constants";
-import type { TelegramDispatchEvents } from "./dispatch-telegram-events";
-import type { FanoutSubscriptionInputs } from "./dispatch-telegram-alerts-fanout";
+import type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
+export type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
+import {
+  TELEGRAM_FANOUT_FAMILIES,
+  type FanoutSubscriptionInputs,
+} from "./dispatch-telegram-alerts-fanout";
 import { buildOverflowAwareSubscriberQueue } from "./dispatch-telegram-overflow";
 import {
   collapseBurstChats,
@@ -12,32 +16,13 @@ import {
   type PlannedSubscriberAlert,
   type RoutedSubscriberAlert,
   type AlertsByChatEntry,
-  type SubscriberRow,
 } from "./dispatch-telegram-routing";
-import {
-  meetsDepegStepThreshold,
-  meetsDewsThreshold,
-  shouldIncludeDepegWorsening,
-  shouldIncludeSafetyForSubscriber,
-} from "./dispatch-telegram-predicates";
 import {
   buildPerAlertTypeTargets,
   type PerAlertTypeTargets,
 } from "./dispatch-telegram-result";
 import { mergeSubscriberMaps } from "./dispatch-telegram-subscribers";
 import { removeHandledTelegramAlertItems } from "./telegram-alert-event-lineage";
-
-export type TelegramFanoutPlanEvents = Pick<
-  TelegramDispatchEvents,
-  | "dewsChanges"
-  | "depegTriggered"
-  | "depegResolved"
-  | "depegWorsening"
-  | "safetyChanges"
-  | "safetyScoreIdentity"
-  | "launchPromoted"
-  | "reservePromoted"
->;
 
 export interface PresetFanoutFailureSummary {
   presetQueryFailures: number;
@@ -62,9 +47,10 @@ export interface TelegramFanoutPlan {
 }
 
 export function summarizePresetFanoutFailures(
-  inputs: Pick<FanoutSubscriptionInputs, "presetDewsResult" | "presetDepegResult" | "presetSafetyResult">,
+  inputs: Pick<FanoutSubscriptionInputs, "preset">,
 ): PresetFanoutFailureSummary {
-  const presetResults = [inputs.presetDewsResult, inputs.presetDepegResult, inputs.presetSafetyResult];
+  const presetResults = TELEGRAM_FANOUT_FAMILIES.flatMap((spec) =>
+    spec.presetFamily == null ? [] : [inputs.preset[spec.presetFamily]]);
   const presetQueryFailures = presetResults.reduce(
     (count, result) => count + (
       result.kind === "query-failed"
@@ -122,90 +108,25 @@ export function buildTelegramAlertsByChat(
     collapseBursts = true,
   } = args;
 
-  const presetDewsSubs = inputs.presetDewsResult.kind === "ok" || inputs.presetDewsResult.kind === "partial"
-    ? inputs.presetDewsResult.rows
-    : new Map<string, SubscriberRow[]>();
-  const presetDepegSubs = inputs.presetDepegResult.kind === "ok" || inputs.presetDepegResult.kind === "partial"
-    ? inputs.presetDepegResult.rows
-    : new Map<string, SubscriberRow[]>();
-  const presetSafetySubs = inputs.presetSafetyResult.kind === "ok" || inputs.presetSafetyResult.kind === "partial"
-    ? inputs.presetSafetyResult.rows
-    : new Map<string, SubscriberRow[]>();
-  const dewsSubs = mergeSubscriberMaps(inputs.directDewsSubs, presetDewsSubs);
-  const depegSubs = mergeSubscriberMaps(inputs.directDepegSubs, presetDepegSubs);
-  const safetySubs = mergeSubscriberMaps(inputs.directSafetySubs, presetSafetySubs);
-
   const alertsByChat = new Map<string, AlertsByChatEntry>();
-  routeAlertEvents(
-    events.dewsChanges,
-    dewsSubs,
-    inputs.globalDewsSubs,
-    alertsByChat,
-    (alerts) => alerts.dews,
-    (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.dews,
-  );
-  routeAlertEvents(
-    events.depegTriggered,
-    depegSubs,
-    inputs.globalDepegSubs,
-    alertsByChat,
-    (alerts) => alerts.depegTriggered,
-    (sub, event) => meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step),
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.depeg,
-  );
-  routeAlertEvents(
-    events.depegResolved,
-    depegSubs,
-    inputs.globalDepegSubs,
-    alertsByChat,
-    (alerts) => alerts.depegResolved,
-    (sub, event) => meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step),
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.depeg,
-  );
-  routeAlertEvents(
-    events.depegWorsening,
-    depegSubs,
-    inputs.globalDepegSubs,
-    alertsByChat,
-    (alerts) => alerts.depegWorsening,
-    shouldIncludeDepegWorsening,
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.depeg,
-  );
-  routeAlertEvents(
-    events.safetyChanges,
-    safetySubs,
-    inputs.globalSafetySubs,
-    alertsByChat,
-    (alerts) => alerts.safety,
-    shouldIncludeSafetyForSubscriber,
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.safety,
-  );
-  routeAlertEvents(
-    events.launchPromoted,
-    inputs.launchSubs,
-    inputs.globalLaunchSubs,
-    alertsByChat,
-    (alerts) => alerts.launch,
-    undefined,
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.launch,
-  );
-  routeAlertEvents(
-    events.reservePromoted,
-    inputs.reserveSubs,
-    inputs.globalReserveSubs,
-    alertsByChat,
-    (alerts) => alerts.reserve,
-    undefined,
-    inputs.perCoinSnoozeMap,
-    inputs.perCoinExplicitlyOffMaps.reserve,
-  );
+  for (const family of TELEGRAM_FANOUT_FAMILIES) {
+    const presetResult = family.presetFamily == null ? null : inputs.preset[family.presetFamily];
+    const specificSubscribers = presetResult?.kind === "ok" || presetResult?.kind === "partial"
+      ? mergeSubscriberMaps(inputs.direct[family.family], presetResult.rows)
+      : inputs.direct[family.family];
+    for (const route of family.routes) {
+      routeAlertEvents(
+        events[route.eventKey],
+        specificSubscribers,
+        inputs.global[family.family],
+        alertsByChat,
+        (alerts) => alerts[route.alertKey],
+        route.shouldInclude,
+        inputs.perCoinSnoozeMap,
+        inputs.perCoinExplicitlyOffMaps[family.family],
+      );
+    }
+  }
 
   const handledItemsPruned = removeHandledTelegramAlertItems(alertsByChat, handledItemsByChat);
   const burstOutcome = collapseBursts

@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  DIGEST_SAFETY_MAP_TIERS,
+  getDigestSafetyMapCaptureIssues,
+  getDigestSafetyMapSummaryIssues,
+  isDigestSafetyMapUtcDate,
+  type DigestSafetyMapCapture,
+} from "./digest-safety-map-contract";
 import type { DepegDirection } from "./market";
 import {
   SafetyScorePublicationIdentitySchema,
@@ -8,6 +15,7 @@ import {
   type SafetyScoreV8PublicationIdentity,
   type SafetyScoreV9PublicationIdentity,
 } from "./safety-score-publication";
+export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "./digest-safety-map-contract";
 
 export const DigestSafetyContextSchema = z
   .discriminatedUnion("status", [
@@ -41,6 +49,43 @@ export const DigestSafetyContextSchema = z
   });
 export type DigestSafetyContext = z.output<typeof DigestSafetyContextSchema>;
 
+const DigestV9SafetyPillarSchema = z
+  .object({
+    score: z.number().nullable(),
+    evidenceLevel: z.string(),
+    freshness: z.string(),
+    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
+  })
+  .passthrough();
+
+const DigestV9SafetyCapSchema = z
+  .object({
+    kind: z.string(),
+    limit: z.number(),
+    reason: z.string(),
+    binding: z.boolean(),
+  })
+  .passthrough();
+
+export const DigestV9SafetyCoinSchema = z
+  .object({
+    symbol: z.string(),
+    grade: z.string(),
+    score: z.number().nullable(),
+    pillars: z
+      .object({
+        backing: DigestV9SafetyPillarSchema,
+        exit: DigestV9SafetyPillarSchema,
+        control: DigestV9SafetyPillarSchema,
+      })
+      .passthrough(),
+    reasonCodes: z.array(z.string()),
+    caps: z.array(DigestV9SafetyCapSchema),
+    bindingCap: DigestV9SafetyCapSchema.nullable(),
+  })
+  .passthrough();
+
+/** Normalized V8 digest coin after legacy snapshot defaults are applied. */
 export interface DigestV8SafetyCoin {
   symbol: string;
   grade: string;
@@ -49,33 +94,9 @@ export interface DigestV8SafetyCoin {
   liq: number | null;
 }
 
-export interface DigestV9SafetyPillar {
-  score: number | null;
-  evidenceLevel: string;
-  freshness: string;
-  reasons: { code: string; message: string }[];
-}
-
-export interface DigestV9SafetyCap {
-  kind: string;
-  limit: number;
-  reason: string;
-  binding: boolean;
-}
-
-export interface DigestV9SafetyCoin {
-  symbol: string;
-  grade: string;
-  score: number | null;
-  pillars: {
-    backing: DigestV9SafetyPillar;
-    exit: DigestV9SafetyPillar;
-    control: DigestV9SafetyPillar;
-  };
-  reasonCodes: string[];
-  caps: DigestV9SafetyCap[];
-  bindingCap: DigestV9SafetyCap | null;
-}
+export type DigestV9SafetyCoin = z.output<typeof DigestV9SafetyCoinSchema>;
+export type DigestV9SafetyPillar = DigestV9SafetyCoin["pillars"]["backing"];
+export type DigestV9SafetyCap = DigestV9SafetyCoin["caps"][number];
 
 export type DigestSafetyScores =
   | {
@@ -207,7 +228,7 @@ export interface DigestEditorialAudit {
 
 const DigestSafetyMapTierSchema = z
   .object({
-    tier: z.enum(["A", "B", "C", "D", "F"]),
+    tier: z.enum(DIGEST_SAFETY_MAP_TIERS),
     range: z.string().trim().min(1),
     count: z.number().int().nonnegative(),
     mcapUsd: z.number().nonnegative(),
@@ -229,10 +250,7 @@ const DigestSafetyMapTierSchema = z
 const DigestSafetyMapUtcDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00Z`);
-    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-  }, "Safety Map date must be a real UTC calendar day");
+  .refine(isDigestSafetyMapUtcDate, "Safety Map date must be a real UTC calendar day");
 
 export const DigestSafetyMapSummarySchema = z
   .object({
@@ -252,29 +270,8 @@ export const DigestSafetyMapSummarySchema = z
   })
   .strict()
   .superRefine((summary, ctx) => {
-    const expectedTiers = ["A", "B", "C", "D", "F"];
-    if (new Set(summary.tiers.map((tier) => tier.tier)).size !== expectedTiers.length) {
-      ctx.addIssue({ code: "custom", path: ["tiers"], message: "Safety Map tiers must be unique and complete" });
-    }
-    const tierCount = summary.tiers.reduce((sum, tier) => sum + tier.count, 0);
-    if (tierCount !== summary.gradedCount) {
-      ctx.addIssue({ code: "custom", path: ["gradedCount"], message: "Safety Map tier counts must equal gradedCount" });
-    }
-    const tierMcapUsd = summary.tiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
-    const mcapTolerance = Math.max(0.01, summary.totalMcapUsd * 1e-9);
-    if (Math.abs(tierMcapUsd - summary.totalMcapUsd) > mcapTolerance) {
-      ctx.addIssue({ code: "custom", path: ["totalMcapUsd"], message: "Safety Map tier supply must equal totalMcapUsd" });
-    }
-    for (let index = 0; index < summary.tiers.length; index++) {
-      const tier = summary.tiers[index];
-      const computedShare = summary.totalMcapUsd === 0 ? 0 : (tier.mcapUsd / summary.totalMcapUsd) * 100;
-      if (Math.abs(computedShare - tier.sharePct) > 0.11) {
-        ctx.addIssue({ code: "custom", path: ["tiers", index, "sharePct"], message: "Safety Map tier share must match tier supply" });
-      }
-    }
+    for (const issue of getDigestSafetyMapSummaryIssues(summary)) ctx.addIssue({ code: "custom", ...issue });
   });
-
-export type DigestSafetyMapSummary = z.output<typeof DigestSafetyMapSummarySchema>;
 
 export const DigestSafetyMapCaptureSchema = z
   .object({
@@ -294,32 +291,8 @@ export const DigestSafetyMapCaptureSchema = z
   })
   .strict()
   .superRefine((capture, ctx) => {
-    if (capture.manifest.mapSummary.date !== capture.manifest.date) {
-      ctx.addIssue({ code: "custom", path: ["manifest", "mapSummary", "date"], message: "Safety Map capture dates must match" });
-    }
-    if (capture.manifest.mapSummary.asOfSec !== capture.manifest.asOfSec) {
-      ctx.addIssue({ code: "custom", path: ["manifest", "mapSummary", "asOfSec"], message: "Safety Map capture timestamps must match" });
-    }
-    if (capture.freshness === "current" && capture.ageDays !== 0) {
-      ctx.addIssue({ code: "custom", path: ["ageDays"], message: "A current Safety Map capture must have ageDays 0" });
-    }
-    if (capture.freshness === "carried-forward" && capture.ageDays === 0) {
-      ctx.addIssue({ code: "custom", path: ["ageDays"], message: "A carried-forward Safety Map capture must have positive ageDays" });
-    }
-    try {
-      const imageUrl = new URL(capture.imageUrl);
-      if (
-        !imageUrl.pathname.endsWith("/safety-scores/map.png")
-        || imageUrl.searchParams.get("date") !== capture.manifest.date
-      ) {
-        ctx.addIssue({ code: "custom", path: ["imageUrl"], message: "Safety Map image URL must name the manifest date" });
-      }
-    } catch {
-      ctx.addIssue({ code: "custom", path: ["imageUrl"], message: "Safety Map image URL must be absolute" });
-    }
+    for (const issue of getDigestSafetyMapCaptureIssues(capture)) ctx.addIssue({ code: "custom", ...issue });
   });
-
-export type DigestSafetyMapCapture = z.output<typeof DigestSafetyMapCaptureSchema>;
 
 export interface DigestInputData {
   digestVersion?: number;
@@ -711,24 +684,6 @@ const DigestV9SafetyProvenanceSchema = SafetyScoreV9PublicationIdentitySchema.ex
   publishedAt: z.number().int().nonnegative(),
 });
 
-const DigestV9SafetyPillarSchema = z
-  .object({
-    score: z.number().nullable(),
-    evidenceLevel: z.string(),
-    freshness: z.string(),
-    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
-  })
-  .passthrough();
-
-const DigestV9SafetyCapSchema = z
-  .object({
-    kind: z.string(),
-    limit: z.number(),
-    reason: z.string(),
-    binding: z.boolean(),
-  })
-  .passthrough();
-
 const DigestV8SafetyScoresSnapshotSchema = z
   .object({
     model: z.literal("v8").optional(),
@@ -753,25 +708,7 @@ const DigestV8SafetyScoresSnapshotSchema = z
 const DigestV9SafetyScoresSnapshotSchema = z
   .object({
     model: z.literal("v9"),
-    mentionedCoins: z.array(
-      z
-        .object({
-          symbol: z.string(),
-          grade: z.string(),
-          score: z.number().nullable(),
-          pillars: z
-            .object({
-              backing: DigestV9SafetyPillarSchema,
-              exit: DigestV9SafetyPillarSchema,
-              control: DigestV9SafetyPillarSchema,
-            })
-            .passthrough(),
-          reasonCodes: z.array(z.string()),
-          caps: z.array(DigestV9SafetyCapSchema),
-          bindingCap: DigestV9SafetyCapSchema.nullable(),
-        })
-        .passthrough(),
-    ),
+    mentionedCoins: z.array(DigestV9SafetyCoinSchema),
     gradeDistribution: z.record(z.string(), z.number()),
     provenance: DigestV9SafetyProvenanceSchema,
   })

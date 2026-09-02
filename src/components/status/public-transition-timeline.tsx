@@ -1,10 +1,11 @@
 "use client";
 import type { PublicStatusHistoryWindow, PublicStatusTransition } from "@shared/types";
 import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
+import { defineStatusColumns } from "./page-primitives";
 
 const TYPE_LABELS: Record<string, string> = {
   degrade: "Degradation",
@@ -12,12 +13,9 @@ const TYPE_LABELS: Record<string, string> = {
   init: "Initialized",
 };
 
-const PUBLIC_TRANSITION_COLUMNS: readonly DataTableColumn[] = [
-  { id: "time", label: "Time", className: "pb-2 font-medium" },
-  { id: "transition", label: "Transition", className: "pb-2 font-medium" },
-  { id: "type", label: "Type", className: "pb-2 font-medium" },
-  { id: "reason", label: "Reason", className: "pb-2 font-medium" },
-];
+const PUBLIC_TRANSITION_COLUMNS = defineStatusColumns([
+  ["time", "Time"], ["transition", "Transition"], ["type", "Type"], ["reason", "Reason"],
+]);
 
 interface PublicTransitionTimelineProps {
   transitions: PublicStatusTransition[];

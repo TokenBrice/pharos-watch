@@ -8,9 +8,9 @@ import {
   buildContentSecurityPolicy,
   createCspNonce,
 } from "@shared/lib/site-csp";
+import { cloneResponse } from "@shared/lib/http-response";
 import { NOINDEX_HEADER_VALUE } from "./noindex";
 import { isHtmlResponse } from "./proxy-utils";
-import { cloneResponseWithPolicy } from "./response-policy";
 
 export interface InjectHtmlCspOptions {
   method: string;
@@ -41,7 +41,7 @@ export async function injectHtmlCsp(response: Response, options: InjectHtmlCspOp
   };
 
   if (options.method === "HEAD") {
-    return cloneResponseWithPolicy(response, {
+    return cloneResponse(response, {
       method: options.method,
       mutateHeaders,
     });
@@ -52,7 +52,7 @@ export async function injectHtmlCsp(response: Response, options: InjectHtmlCspOp
   // `response.text()` yields the decoded body, so any inherited upstream
   // Content-Encoding is now stale. Return decoded HTML and let Cloudflare's edge
   // compression handle the final transport encoding for Pages Functions.
-  return cloneResponseWithPolicy(response, {
+  return cloneResponse(response, {
     body: html,
     mutateHeaders: (headers) => {
       mutateHeaders(headers);

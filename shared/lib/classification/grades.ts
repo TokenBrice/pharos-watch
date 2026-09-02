@@ -1,4 +1,5 @@
 import type { ReportCardGrade, ReportCardGradeRange } from "../../types/report-card-grade";
+import { projectDescriptors } from "./descriptors";
 
 export interface ReportCardGradeRangeMetadata {
   barClassName: string;
@@ -131,11 +132,5 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
   },
 };
 
-export const GRADE_RADAR_COLORS: Record<ReportCardGradeRange, string> = {
-  A: REPORT_CARD_GRADE_RANGE_METADATA.A.radarColor,
-  B: REPORT_CARD_GRADE_RANGE_METADATA.B.radarColor,
-  C: REPORT_CARD_GRADE_RANGE_METADATA.C.radarColor,
-  D: REPORT_CARD_GRADE_RANGE_METADATA.D.radarColor,
-  F: REPORT_CARD_GRADE_RANGE_METADATA.F.radarColor,
-  NR: REPORT_CARD_GRADE_RANGE_METADATA.NR.radarColor,
-};
+export const GRADE_RADAR_COLORS: Record<ReportCardGradeRange, string> =
+  projectDescriptors(REPORT_CARD_GRADE_RANGE_METADATA, (metadata) => metadata.radarColor);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { ShareButton } from "@/components/share-button";
 import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
 import { DepegContentLoadingState } from "@/app/depeg/loading";
@@ -77,10 +78,7 @@ const route = createClientFeaturePage({
     },
     headerActions: <TelegramAlertsHeaderAction />,
     preface: (
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history")) }}
-      />
+      <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history"))} />
     ),
     leadParagraphs: [
       "A live incident board for stablecoin depegs: confirmed deviations, pending confirmations, and early stress warnings, with forecasts for how each incident should resolve.",

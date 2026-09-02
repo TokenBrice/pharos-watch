@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
@@ -155,9 +156,7 @@ async function gunzipToText(bytes: Uint8Array): Promise<string> {
   return await new Response(stream).text();
 }
 
-function getInsertBinds(db: MockD1Database): unknown[] | undefined {
-  return db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"))?.binds;
-}
+const getInsertBinds = (db: MockD1Database) => findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots")?.binds;
 
 function activeV9(updatedAt = NOW_SEC) {
   const snapshot = makeWorkerReportCardsV9Response({
@@ -202,7 +201,7 @@ describe("snapshotPublicDataset", () => {
     expect(result.itemCount).toBe(0);
     expect(result.metadata).toContain("stablecoins_cache_unavailable");
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"));
+    const insert = findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots");
     expect(insert).toBeUndefined();
   });
 
@@ -221,12 +220,12 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(result.metadata).toBe(JSON.stringify({
       reason: "stablecoins_cache_before_slot",
       cacheUpdatedAt: staleForSlotUpdatedAt,
       requiredUpdatedAt: NOW_SEC,
       freshnessGateLabel: "daily0800Utc",
-    });
+    }));
     expect(getInsertBinds(db)).toBeUndefined();
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);
   });
@@ -251,14 +250,14 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(result.metadata).toBe(JSON.stringify({
       reason: "stablecoins_cache_before_slot",
       cacheUpdatedAt: staleForSlotUpdatedAt,
       requiredUpdatedAt: NOW_SEC,
       freshnessGateLabel: "daily0800Utc",
       retryAttempts: 2,
       firstCacheUpdatedAt: staleForSlotUpdatedAt,
-    });
+    }));
     expect(db.getHistory().filter((entry) => entry.sql.includes("FROM cache WHERE key"))).toHaveLength(3);
     expect(getInsertBinds(db)).toBeUndefined();
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);
@@ -307,9 +306,7 @@ describe("snapshotPublicDataset", () => {
     expect(methodologyVersions).toHaveProperty("dews");
     expect(methodologyVersions).toHaveProperty("psi");
     expect(methodologyVersions).toHaveProperty("liquidityScore");
-    const insert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT OR IGNORE INTO public_snapshots")
-    );
+    const insert = findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots");
     expect(insert?.sql).toContain(
       "json_extract(value, '$.identity.publicationGenerationId')",
     );
@@ -418,9 +415,7 @@ describe("snapshotPublicDataset", () => {
       "usdt-tether",
     ]);
 
-    const insert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT OR IGNORE INTO public_snapshots")
-    );
+    const insert = findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots");
     expect(insert?.sql).toContain("json_extract(value, '$.identity.publicationGenerationId')");
     expect(insert?.binds.slice(-4)).toEqual([
       "report-cards:v9",

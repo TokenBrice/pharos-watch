@@ -9,7 +9,7 @@ import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/forma
 import { clampScore } from "@shared/lib/math";
 import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/types";
+import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
 import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
 

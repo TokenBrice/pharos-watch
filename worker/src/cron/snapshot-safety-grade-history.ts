@@ -1,6 +1,7 @@
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
@@ -74,24 +75,18 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       );
     }
     if (active.kind === "held") {
-      return {
+      return createCronResult({
         status: "degraded" as const,
         itemCount: 0,
-        metadata: JSON.stringify({
-          reason: active.reason,
-          historyWritesSkipped: true,
-        }),
-      };
+        metadata: { reason: active.reason, historyWritesSkipped: true },
+      });
     }
     if (!isSafetyScoreV9SnapshotFresh(active.snapshot, nowSec)) {
-      return {
+      return createCronResult({
         status: "degraded" as const,
         itemCount: 0,
-        metadata: JSON.stringify({
-          reason: "v9-publication-stale",
-          historyWritesSkipped: true,
-        }),
-      };
+        metadata: { reason: "v9-publication-stale", historyWritesSkipped: true },
+      });
     }
     identity = active.snapshot.safetyScoreIdentity;
     if (
@@ -130,11 +125,11 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     recordCronFailure("snapshot-safety-grade-history", err, {
       metadata: { stage: "loadActiveSafetyScoreSource" },
     });
-    return {
+    return createCronResult({
       status: "error" as const,
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "active-model-source-unavailable", error: String(err).slice(0, 200) }),
-    };
+      metadata: { reason: "active-model-source-unavailable", error: String(err).slice(0, 200) },
+    });
   }
   const methodologyVersion = identity.methodologyVersion;
 
@@ -288,10 +283,10 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY,
     );
   }
-  return {
+  return createCronResult({
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
     itemCount: seeded + changed + identityBoundaryBaselines,
-    metadata: JSON.stringify({
+    metadata: {
       snapshotDay,
       methodologyVersion,
       model: identity.model,
@@ -310,6 +305,6 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       suppressedIdentityTransitions,
       identityBoundaryBaselines,
       publicationOwner: "compute-safety-score-v9",
-    }),
-  };
+    },
+  });
 }

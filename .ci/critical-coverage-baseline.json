@@ -55,7 +55,6 @@
     "worker/src/cron/depeg-resolver/incident-state.ts": 97.1,
     "worker/src/cron/depeg-resolver/options.ts": 100,
     "worker/src/cron/depeg-resolver/persistence.ts": 100,
-    "worker/src/cron/depeg-resolver/pre-lock-incident-reaper.ts": 100,
     "worker/src/cron/depeg-resolver/public-projection.ts": 100,
     "worker/src/cron/depeg-resolver/publication.ts": 93.5,
     "worker/src/cron/depeg-resolver/storage-adapters.ts": 86.2,

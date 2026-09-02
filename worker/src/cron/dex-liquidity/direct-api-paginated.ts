@@ -9,9 +9,17 @@ import {
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { rethrowIfAborted } from "../../lib/abort";
 
-export interface PaginatedFetchOptions<TRow> {
+type PaginatedRequest = {
+  url: string;
+  init?: Omit<RequestInit, "headers" | "signal"> & { headers?: Record<string, string> };
+};
+
+type PaginatedRequestSource =
+  | { buildUrl: (page: number) => string; buildRequest?: never }
+  | { buildUrl?: never; buildRequest: (page: number) => PaginatedRequest };
+
+export type PaginatedFetchOptions<TRow> = PaginatedRequestSource & {
   source: string;
-  buildUrl: (page: number) => string;
   pageSize: number;
   startPage?: number;
   maxPages?: number;
@@ -28,7 +36,11 @@ export interface PaginatedFetchOptions<TRow> {
     successfulPages: number;
   }) => "stop" | void;
   extraHeaders?: Record<string, string>;
-}
+  pageContext?: (page: number) => string;
+  formatRequestError?: (page: number, message: string) => string;
+  formatResponseError?: (page: number, status: number) => string;
+  formatPaginationCapError?: (page: number, nextPage: number) => string;
+};
 
 export interface PaginatedFetchResult<TRow> {
   rows: TRow[];
@@ -45,6 +57,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
   const {
     source,
     buildUrl,
+    buildRequest,
     pageSize,
     startPage = 1,
     maxPages = DIRECT_API_DEFAULT_MAX_PAGES,
@@ -54,6 +67,11 @@ export async function runPaginatedDirectApiFetch<TRow>(
     mapRow,
     afterPage,
     extraHeaders,
+    pageContext = (page) => `${source} page ${page}`,
+    formatRequestError = (page, message) => `${source} page ${page} request failed: ${message}`,
+    formatResponseError = (page, status) => `${source} page ${page} returned ${status}`,
+    formatPaginationCapError = (page, next) =>
+      `${source} pagination cap reached at page ${page}; resumeFromPage=${next}`,
   } = opts;
 
   const rows: TRow[] = [];
@@ -65,29 +83,30 @@ export async function runPaginatedDirectApiFetch<TRow>(
 
   const lastPage = startPage + maxPages - 1;
   for (let page = startPage; page <= lastPage; page++) {
-    const url = buildUrl(page);
+    const request = buildRequest?.(page) ?? { url: buildUrl!(page) };
     nextPage = page;
 
     let res: Response;
     try {
-      res = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT, ...extraHeaders },
+      res = await fetch(request.url, {
+        ...request.init,
+        headers: { "User-Agent": USER_AGENT, ...extraHeaders, ...request.init?.headers },
         signal: buildDirectApiRequestSignal(signal, timeoutMs),
       });
     } catch (err) {
       rethrowIfAborted(err, signal);
       const message = toErrorMessage(err);
-      errors.push(`${source} page ${page} request failed: ${message}`);
+      errors.push(formatRequestError(page, message));
       break;
     }
 
     if (!res.ok) {
       await cancelUnsuccessfulResponseBodyQuietly(res);
-      errors.push(`${source} page ${page} returned ${res.status}`);
+      errors.push(formatResponseError(page, res.status));
       break;
     }
 
-    const parsed = await readDexApiJson(res, `${source} page ${page}`);
+    const parsed = await readDexApiJson(res, pageContext(page));
     if (!parsed.ok) {
       errors.push(parsed.error);
       break;
@@ -141,7 +160,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
 
     if (page === lastPage) {
       nextPage = page + 1;
-      errors.push(`${source} pagination cap reached at page ${page}; resumeFromPage=${nextPage}`);
+      errors.push(formatPaginationCapError(page, nextPage));
       break;
     }
   }

@@ -40,6 +40,7 @@ import {
   type AnthropicStreamResult,
 } from "./anthropic-stream";
 import { tryParseJson } from "../../lib/json-parse";
+import type { DigestCredentialDiagnostics, DigestPublicationOutcome } from "./publish";
 
 interface RequestDigestCopyOptions {
   db: D1Database;
@@ -142,6 +143,14 @@ export type DigestChannelDisposition =
   | "terminal-unsent"
   | "not-configured";
 
+export function hasNonDeliveringDisposition(
+  dispositions: Record<"twitter" | "telegram", DigestChannelDisposition>,
+): boolean {
+  return Object.values(dispositions).some(
+    (disposition) => disposition === "retryable" || disposition === "terminal-unsent",
+  );
+}
+
 /**
  * Worker-only scaffolding shared by the daily and weekly digest entrypoints.
  * It stays beside the Anthropic platform path because these helpers carry
@@ -168,6 +177,75 @@ export interface DigestLlmTelemetry {
   effort: DigestEffort;
   maxTokens: number;
   attempts: DigestLlmAttemptTelemetry[];
+}
+
+interface FinalizeDigestCronResultOptions {
+  reportProgress?: CronProgressReporter;
+  completionMessage: string;
+  progressCountTotals: Record<string, unknown>;
+  progressMetadata?: Record<string, unknown>;
+  summaryBeforeQuality: string;
+  summaryAfterQuality?: string;
+  metadataAfterSummary?: Record<string, unknown>;
+  publication: DigestPublicationOutcome;
+  credentialDiagnostics: DigestCredentialDiagnostics;
+  degradedReasons: readonly string[];
+  qualityIssues: readonly DigestValidationIssue[];
+  hasBlockingQualityIssues: boolean;
+  llmConfig: DigestLlmConfig;
+  digestCopy: Pick<RequestDigestCopyResult, "llmAttempts" | "editorialStyleGate">;
+  onQualityMetadata?: (qualityMetadata: string) => void;
+}
+
+export async function finalizeDigestCronResult(
+  options: FinalizeDigestCronResultOptions,
+): Promise<CronResult> {
+  const qualityMetadata = options.qualityIssues.length > 0
+    ? `, quality: ${options.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`).join("|")}`
+    : "";
+  await reportCronProgress(options.reportProgress, {
+    stage: "complete",
+    message: options.completionMessage,
+    providerFamily: "digest",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: options.progressCountTotals,
+      twitterStatus: options.publication.tweetStatus,
+      telegramStatus: options.publication.telegramStatus,
+      ...options.progressMetadata,
+      llmAttempts: options.digestCopy.llmAttempts,
+      editorialStyleGate: options.digestCopy.editorialStyleGate,
+    },
+  });
+  options.onQualityMetadata?.(qualityMetadata);
+  const channels = {
+    twitter: {
+      status: options.publication.tweetStatus,
+      disposition: options.publication.dispositions.twitter,
+      missingCredentialNames: options.credentialDiagnostics.twitterMissing ?? [],
+    },
+    telegram: {
+      status: options.publication.telegramStatus,
+      disposition: options.publication.dispositions.telegram,
+      missingCredentialNames: options.credentialDiagnostics.telegramMissing ?? [],
+    },
+  };
+  return {
+    itemCount: 1,
+    ...(options.degradedReasons.length > 0 || options.hasBlockingQualityIssues ||
+    hasNonDeliveringDisposition(options.publication.dispositions)
+      ? { status: "degraded" as const }
+      : {}),
+    metadata: JSON.stringify({
+      summary: `${options.summaryBeforeQuality}${qualityMetadata}${options.summaryAfterQuality ?? ""}`,
+      ...options.metadataAfterSummary,
+      channels,
+      llm: buildDigestLlmTelemetry(options.llmConfig, options.digestCopy.llmAttempts),
+      editorialStyleGate: options.digestCopy.editorialStyleGate,
+      wrapperEditorialAlerts: options.publication.wrapperEditorialAlerts,
+    }),
+  };
 }
 
 export async function reportDigestMissingApiKey(
@@ -295,7 +373,7 @@ export async function reportDigestGenerationComplete(
   });
 }
 
-export function buildDigestLlmTelemetry(
+function buildDigestLlmTelemetry(
   config: DigestLlmConfig,
   attempts: DigestLlmAttemptTelemetry[],
 ): DigestLlmTelemetry {

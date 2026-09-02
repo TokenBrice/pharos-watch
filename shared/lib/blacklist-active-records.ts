@@ -52,16 +52,6 @@ export interface BlacklistTrackedSummaryStats {
   trackedAmountGapCount: number;
 }
 
-function buildActiveRecordKey(event: Pick<BlacklistEvent, "stablecoin" | "chainId" | "address">): string {
-  return buildBlacklistRecordIdentityKey(event);
-}
-
-function hasScopedIdentity(
-  input: { configKey?: string | null; contractAddress?: string | null },
-): boolean {
-  return Boolean(input.configKey || input.contractAddress);
-}
-
 function buildBlacklistContractScopedKey(input: {
   stablecoin: BlacklistStablecoin;
   chainId: string;
@@ -69,7 +59,7 @@ function buildBlacklistContractScopedKey(input: {
   configKey?: string | null;
   contractAddress?: string | null;
 }): string | null {
-  if (!hasScopedIdentity(input)) return null;
+  if (!input.configKey && !input.contractAddress) return null;
   return buildBlacklistContractBalanceKey(
     input.stablecoin,
     input.chainId,
@@ -79,14 +69,6 @@ function buildBlacklistContractScopedKey(input: {
   );
 }
 
-function buildBlacklistLegacyIdentityKey(input: {
-  stablecoin: BlacklistStablecoin;
-  chainId: string;
-  address: string;
-}): string {
-  return buildBlacklistAddressCountKey(input.stablecoin, input.chainId, input.address);
-}
-
 export function buildBlacklistRecordIdentityKey(input: {
   stablecoin: BlacklistStablecoin;
   chainId: string;
@@ -94,7 +76,8 @@ export function buildBlacklistRecordIdentityKey(input: {
   configKey?: string | null;
   contractAddress?: string | null;
 }): string {
-  return buildBlacklistContractScopedKey(input) ?? buildBlacklistLegacyIdentityKey(input);
+  return buildBlacklistContractScopedKey(input)
+    ?? buildBlacklistAddressCountKey(input.stablecoin, input.chainId, input.address);
 }
 
 export function buildBlacklistIdentityLookupKeys(input: {
@@ -105,7 +88,7 @@ export function buildBlacklistIdentityLookupKeys(input: {
   contractAddress?: string | null;
 }): string[] {
   const scoped = buildBlacklistContractScopedKey(input);
-  const legacy = buildBlacklistLegacyIdentityKey(input);
+  const legacy = buildBlacklistAddressCountKey(input.stablecoin, input.chainId, input.address);
   return scoped && scoped !== legacy ? [scoped, legacy] : [legacy];
 }
 
@@ -181,7 +164,7 @@ export function buildBlacklistActiveRecords(
   const ordered = [...events].sort((a, b) => (a.timestamp === b.timestamp ? a.id.localeCompare(b.id) : a.timestamp - b.timestamp));
 
   for (const event of ordered) {
-    const key = buildActiveRecordKey(event);
+    const key = buildBlacklistRecordIdentityKey(event);
     if (event.eventType === "blacklist") {
       const amount = resolveBlacklistAmount(event, currentBalances);
       active.set(key, {

@@ -15,6 +15,20 @@ function request(body: unknown, headers: HeadersInit = {}): Request {
   });
 }
 
+function rawRequest(body: BodyInit | null, headers: HeadersInit = {}): Request {
+  return new Request("https://site-api.pharos.watch/api/telegram-adoption", {
+    method: "POST",
+    body,
+    headers: {
+      Origin: "https://pharos.watch",
+      "Content-Type": "application/json",
+      "X-Pharos-Telegram-Adoption-Client-Hash": "0123456789abcdef0123456789abcdef",
+      ...headers,
+    },
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
 function context(db: MockD1Database, req: Request): FullRouteContext {
   return {
     db,
@@ -89,6 +103,21 @@ describe("Telegram adoption Worker endpoint", () => {
       ).status,
     ).toBe(400);
     expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it.each([
+    ["missing body", () => rawRequest(null)],
+    ["malformed JSON", () => rawRequest("{")],
+    ["declared overflow", () => rawRequest("{}", { "Content-Length": "513" })],
+    ["streamed overflow", () => rawRequest(new Blob(["x".repeat(513)]).stream())],
+    ["reader failure", () => rawRequest(new ReadableStream({ pull() { throw new Error("read failed"); } }))],
+  ])("preserves the exact 400 response for %s", async (_name, makeRequest) => {
+    const result = await handleTelegramAdoption(context(quotaDb(), makeRequest()));
+    expect({ status: result.status, body: await result.text(), headers: Object.fromEntries(result.headers) }).toEqual({
+      status: 400,
+      body: "",
+      headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
+    });
   });
 
   it("rejects an exhausted per-client quota before consuming the global quota", async () => {

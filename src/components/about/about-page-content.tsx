@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { cn } from "@/lib/utils";
@@ -325,12 +326,7 @@ export function AboutPageContent() {
       title="About Pharos"
       leadParagraphs={leadParagraphs}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(ABOUT_PAGE_JSON_LD),
-          }}
-        />
+        <JsonLdScript json={safeJsonLd(ABOUT_PAGE_JSON_LD)} />
       }
     >
       <div className="space-y-8">

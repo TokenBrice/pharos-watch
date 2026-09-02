@@ -10,7 +10,7 @@ import {
   SupportCtas,
   YearEndHorizon,
 } from "../funding-page-sections";
-import type { CostLineItem, Donation } from "@shared/lib/funding/types";
+import type { CostLineItem, Donation } from "@shared/lib/funding/schema";
 
 
 const COSTS: CostLineItem[] = [

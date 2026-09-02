@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineBatch, defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
+import { configsFromBackstopEntries, defineBatch, defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "./factory";
 import {
   collateralRedeemBase,
   documentedBoundSupplyFull,
@@ -8,6 +8,10 @@ import {
   fixedFee,
   LIQUITY_STYLE_REDEMPTION_FEE,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
 } from "./shared";
 import {
   REVIEWED_DIRECT_REDEMPTION_AT,
@@ -25,10 +29,9 @@ const REVIEWED_HIVE_HBD_AT = REVIEWED_MAY_BATCH_AT;
 const REVIEWED_MENTO_LIVE_REDEMPTION_AT = "2026-07-09";
 const REVIEWED_REDEMPTION_OUTPUTS_AT = "2026-07-15";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
-const MENTO_BIPOOLMANAGER_DOC = sourceRef(
+const MENTO_BIPOOLMANAGER_DOC = sourceRefRouteCapacityFees(
   "Mento BiPoolManager smart-contract docs",
   "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager",
-  ["route", "capacity", "fees"],
 );
 const MENTO_V3_DOC = sourceRef("Mento V3 docs", "https://docs.mento.org/mento-v3", ["route"]);
 const MENTO_V3_FPMM_DOC = sourceRef("Mento V3 FPMM mechanics", "https://docs.mento.org/mento-v3/dive-deeper/fpmm", [
@@ -80,11 +83,7 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = defineLiveCollateral
     "formula",
   ),
   docs: [
-    sourceRef("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve", [
-      "route",
-      "capacity",
-      "access",
-    ]),
+    sourceRefRouteCapacityAccess("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"),
     sourceRef("Getting Mento stables on Celo", "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo", [
       "route",
       "fees",
@@ -158,10 +157,7 @@ const MENTO_ROUTE_CONFIGS = defineConfigFamily(
         "formula",
       ),
       docs: [
-        sourceRef("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve", [
-          "route",
-          "capacity",
-        ]),
+        sourceRefRouteCapacity("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"),
         sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
         MENTO_BIPOOLMANAGER_DOC,
         MENTO_V3_FPMM_DOC,
@@ -182,10 +178,7 @@ const MENTO_ROUTE_CONFIGS = defineConfigFamily(
         "formula",
       ),
       docs: [
-        sourceRef("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve", [
-          "route",
-          "capacity",
-        ]),
+        sourceRefRouteCapacity("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"),
         sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
         MENTO_BIPOOLMANAGER_DOC,
         MENTO_V3_FPMM_DOC,
@@ -256,12 +249,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       reviewedAt: "2026-03-22",
       docs: [
-        sourceRef("Liquity V2 redemption docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef("Liquity v2 repository", "https://github.com/liquity/bold", ["route", "capacity", "fees"]),
+        sourceRefRouteCapacityFees("Liquity V2 redemption docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation"),
+        sourceRefRouteCapacityFees("Liquity v2 repository", "https://github.com/liquity/bold"),
       ],
       notes: [
         "Fresh live reserve metadata reads Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
@@ -273,15 +262,13 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       reviewedAt: "2026-08-21",
       docs: [
-        sourceRef(
+        sourceRefFull(
           "Base Dollar redemption mechanics",
           "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md#bold-redemptions",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
-        sourceRef(
+        sourceRefRouteCapacity(
           "Base Dollar production deployment",
           "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json",
-          ["route", "capacity"],
         ),
         sourceRef(
           "Base Dollar CollateralRegistry",
@@ -299,11 +286,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       reviewedAt: "2026-03-22",
       docs: [
-        sourceRef("Liquity redemption docs", "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
+        sourceRefRouteCapacityFees("Liquity redemption docs", "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions"),
         sourceRef("Liquity v1 contract addresses", "https://docs.liquity.org/liquity-v1/documentation/resources", [
           "capacity",
         ]),
@@ -323,7 +306,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
       docs: [
-        sourceRef("Mezo MUSD overview", "https://mezo.org/docs/users/musd/", ["route", "capacity", "fees"]),
+        sourceRefRouteCapacityFees("Mezo MUSD overview", "https://mezo.org/docs/users/musd/"),
         sourceRef("Mezo MUSD redemption guide", "https://mezo.org/docs/developers/musd/musd-redemptions", [
           "route",
           "capacity",
@@ -339,10 +322,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
-        sourceRef(
+        sourceRefRouteCapacityFees(
           "Beraborrow NECT peg docs",
           "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg",
-          ["route", "capacity", "fees"],
         ),
       ],
       notes: [
@@ -354,7 +336,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
       docs: [
-        sourceRef("f(x) docs", "https://fxprotocol.gitbook.io/fx-docs", ["route", "capacity", "fees"]),
+        sourceRefRouteCapacityFees("f(x) docs", "https://fxprotocol.gitbook.io/fx-docs"),
         sourceRef("f(x) app", "https://fx.aladdin.club", ["capacity"]),
       ],
       notes: [
@@ -379,10 +361,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
-        sourceRef(
+        sourceRefFull(
           "Flare Enosys Loans launch update",
           "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
       ],
       notes: [
@@ -398,10 +379,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Alloy CMPVault MINT_OPENING_RETURN_FEE() returns 0xfa, which is 25 bps on the contract's 1e5 fee scale; docs identify this parameter as the return fee",
       ),
       docs: [
-        sourceRef("Alloy vault docs", "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults", [
-          "route",
-          "capacity",
-        ]),
+        sourceRefRouteCapacity("Alloy vault docs", "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults"),
         sourceRef(
           "Alloy aUSDT mint docs",
           "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt",
@@ -447,15 +425,10 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssets: ["asset:crvusd", "asset:frxusd"],
       costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
       docs: [
-        sourceRef("Resupply stability mechanics", "https://docs.resupply.fi/resupply-protocol/stability-mechanics", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef(
+        sourceRefRouteCapacityFees("Resupply stability mechanics", "https://docs.resupply.fi/resupply-protocol/stability-mechanics"),
+        sourceRefRouteCapacity(
           "Resupply collateralized debt positions",
           "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions",
-          ["route", "capacity"],
         ),
         sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
       ],
@@ -488,20 +461,17 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Parallelizer module: dynamic minting/burning fees adjust to correct peg deviations; depeg penalty applied proportionally",
       ),
       docs: [
-        sourceRef(
+        sourceRefRouteCapacityFees(
           "Parallelizer Module",
           "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module",
-          ["route", "capacity", "fees"],
         ),
-        sourceRef(
+        sourceRefRouteCapacity(
           "Parallelizer Module integration",
           "https://docs.parallel.best/developers-hub/parallel-v3/build-on-parallel/parallelizer-module-integration",
-          ["route", "capacity"],
         ),
-        sourceRef(
+        sourceRefRouteCapacity(
           "Parallel USDp implementation",
           "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation",
-          ["route", "capacity"],
         ),
       ],
       notes: [
@@ -516,10 +486,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Hylo V2 docs describe pool-specific dynamic redemption fees; the active production version and routable pool set could not be reconciled from public primary sources",
       ),
       docs: [
-        sourceRef("Hylo multi-asset architecture", "https://docs.hylo.so/protocol-overview/multi-asset-architecture", [
-          "route",
-          "capacity",
-        ]),
+        sourceRefRouteCapacity("Hylo multi-asset architecture", "https://docs.hylo.so/protocol-overview/multi-asset-architecture"),
         sourceRef(
           "Hylo dynamic collateral routing",
           "https://docs.hylo.so/protocol-overview/dynamic-collateral-routing",
@@ -539,7 +506,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Freedom Dollar materials describe protocol conversion between fUSD and ZANO at the target dollar value; public materials reviewed do not publish one fixed redemption fee",
       ),
       docs: [
-        sourceRef("Freedom Dollar overview", "https://www.freedomdollar.com/en", ["route", "capacity", "access"]),
+        sourceRefRouteCapacityAccess("Freedom Dollar overview", "https://www.freedomdollar.com/en"),
         sourceRef("Freedom Dollar mechanics", "https://www.freedomdollar.com/how-it-works", [
           "route",
           "capacity",
@@ -559,12 +526,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "formula",
       ),
       docs: [
-        sourceRef("River satUSD redemption docs", "https://docs.river.inc/products/editor/redemption", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
-        sourceRef("River FAQ", "https://docs.river.inc/intro/faq", ["route", "capacity"]),
+        sourceRefRouteCapacityFees("River satUSD redemption docs", "https://docs.river.inc/products/editor/redemption"),
+        sourceRefRouteCapacity("River FAQ", "https://docs.river.inc/intro/faq"),
         sourceRef(
           "Satoshi Protocol TroveManager source (pinned)",
           "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/TroveManager.sol",
@@ -587,10 +550,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ),
       docs: [
         sourceRef("DOC overview", "https://moneyonchain.com/doc-stablecoin/", ["route"]),
-        sourceRef(
+        sourceRefRouteCapacity(
           "Money On Chain main concepts",
           "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts",
-          ["route", "capacity"],
         ),
         sourceRef(
           "Redeeming DOCs",
@@ -612,7 +574,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "formula",
       ),
       docs: [
-        sourceRef("BIMA redeeming USBD", "https://docs.bima.money/redeeming-usbd", ["route", "capacity", "fees"]),
+        sourceRefRouteCapacityFees("BIMA redeeming USBD", "https://docs.bima.money/redeeming-usbd"),
         sourceRef("BIMA risk management + liquidations", "https://docs.bima.money/risk-management-+-liquidations", [
           "capacity",
         ]),
@@ -641,21 +603,16 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Verified StablecoinBridge source burns dEURO and transfers the decimal-converted underlying amount 1:1 with no fee deduction",
       ),
       docs: [
-        sourceRef("dEURO contract registry", "https://docs.deuro.com/smart-contracts", [
-          "route",
-          "capacity",
-          "access",
-        ]),
+        sourceRefRouteCapacityAccess("dEURO contract registry", "https://docs.deuro.com/smart-contracts"),
         sourceRef("dEURO stablecoin bridges", "https://docs.deuro.com/swap", [
           "route",
           "capacity",
           "fees",
           "settlement",
         ]),
-        sourceRef(
+        sourceRefFull(
           "dEURO StablecoinBridge source",
           "https://github.com/d-EURO/smartContracts/blob/develop/contracts/StablecoinBridge.sol",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
         sourceRef(
           "Verified EURC StablecoinBridge deployment",
@@ -686,7 +643,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ),
       docs: [
         sourceRef("Yamato Protocol", "https://yamato.jp/", ["route"]),
-        sourceRef("Yamato docs", "https://yamato-protocol.gitbook.io/docs/", ["route", "capacity", "fees"]),
+        sourceRefRouteCapacityFees("Yamato docs", "https://yamato-protocol.gitbook.io/docs/"),
       ],
       notes: [
         "On-chain redemption redeems 1 CJPY for 1 JPY worth of ETH from the riskiest pledge, providing a permissionless hard floor",
@@ -731,10 +688,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs",
       ),
       docs: [
-        sourceRef(
+        sourceRefRouteCapacity(
           "Frax Price Index overview",
           "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
-          ["route", "capacity"],
         ),
         sourceRef("Frax website", "https://frax.com/", ["route"]),
       ],
@@ -764,11 +720,10 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Djed app/docs describe burning DJED against ADA reserves subject to reserve-ratio rules; public materials reviewed do not publish one global fixed redemption fee",
       ),
       docs: [
-        sourceRef("Djed app", "https://app.djed.xyz/", ["route", "capacity", "fees", "access", "settlement"]),
-        sourceRef(
+        sourceRefFull("Djed app", "https://app.djed.xyz/"),
+        sourceRefFull(
           "Djed mainnet announcement",
           "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
       ],
       notes: [
@@ -785,11 +740,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Zephyr's consensus RingCT verification deducts a fixed 0.1% conversion fee from the ZSD/ZEPH exchange rate on every REDEEM_STABLE conversion",
       ),
       docs: [
-        sourceRef("Zephyr repository overview", "https://github.com/ZephyrProtocol/zephyr", [
-          "route",
-          "capacity",
-          "fees",
-        ]),
+        sourceRefRouteCapacityFees("Zephyr repository overview", "https://github.com/ZephyrProtocol/zephyr"),
         sourceRef(
           "Zephyr RingCT conversion-fee source (pinned)",
           "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/ringct/rctSigs.cpp",
@@ -818,10 +769,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "SMARDEX docs describe USDN burn/redemption for underlying vault value, with oracle validation and imbalance restrictions rather than one fixed redemption fee",
       ),
       docs: [
-        sourceRef(
+        sourceRefFull(
           "SMARDEX USDN protocol",
           "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
       ],
       notes: [
@@ -837,10 +787,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       routeStatus: "open",
       docs: [
         sourceRef("HLiquity overview", "https://docs.hliquity.org/overview/overview", ["route", "access"]),
-        sourceRef(
+        sourceRefFull(
           "HLiquity redemptions and HCHF price stability",
           "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
         sourceRef("HLiquity borrowing", "https://docs.hliquity.org/deep-dive/borrowing", ["capacity", "route"]),
         sourceRef("HLiquity Stability Pool and liquidations", "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations", [
@@ -959,5 +908,5 @@ const FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
 );
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
-  FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.configs;
+  configsFromBackstopEntries(FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.entries);
 export const COLLATERAL_REDEEM_BACKSTOP_ENTRIES = FINALIZED_COLLATERAL_REDEEM_BACKSTOP_REGISTRY.entries;

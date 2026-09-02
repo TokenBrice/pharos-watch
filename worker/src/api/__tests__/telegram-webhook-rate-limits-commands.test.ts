@@ -334,8 +334,8 @@ describe("handleTelegramWebhook", () => {
       .getHistory()
       .find((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
     expect(diagnosticInsert).toBeDefined();
-    expect(diagnosticInsert!.sql).toContain("VALUES (?, NULL, ?, ?, ?, ?)");
-    expect(diagnosticInsert!.binds).toEqual(["123", 1_700_000_000, 1_700_000_000, null, 1_700_000_000]);
+    expect(diagnosticInsert!.sql).toContain("VALUES (?, ?, ?, ?, ?, ?)");
+    expect(diagnosticInsert!.binds).toEqual(["123", null, 1_700_000_000, 1_700_000_000, null, 1_700_000_000]);
     nowSpy.mockRestore();
   });
 

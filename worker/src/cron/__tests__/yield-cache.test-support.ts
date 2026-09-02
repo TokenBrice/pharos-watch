@@ -1,3 +1,6 @@
+import { buildDlStablecoinPoolsCache, buildYieldSupplementalFamilyCache } from "../yield-sync/cache";
+import type { ResolvedYieldCandidate } from "../yield-sync/types";
+
 export type CacheRow = {
   value: string;
   updatedAt: number;
@@ -33,6 +36,20 @@ export function cacheRow(value: string | unknown, updatedAt: number): CacheRow {
     value: serialized ?? String(value),
     updatedAt,
   };
+}
+
+export function dlPoolsCacheRow(
+  pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
+  updatedAt: number,
+) {
+  return cacheRow(buildDlStablecoinPoolsCache(pools, updatedAt), updatedAt);
+}
+
+export function supplementalFamilyCacheRow(
+  candidates: ResolvedYieldCandidate[],
+  updatedAt: number,
+) {
+  return cacheRow(buildYieldSupplementalFamilyCache(candidates, updatedAt), updatedAt);
 }
 
 async function resolveFixture(

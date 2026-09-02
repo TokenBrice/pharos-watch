@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { formatDexPricingAuditUsd as formatUsd } from "@shared/lib/format";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
@@ -489,14 +490,6 @@ function normalizeCurveCandidates(payload: unknown): CurvePoolCandidate[] {
       routeType: stringValue(row.routeType ?? row.route_type) as CurvePoolCandidate["routeType"] ?? "direct",
     }];
   });
-}
-
-function formatUsd(value: number): string {
-  if (!Number.isFinite(value)) return "$0";
-  if (Math.abs(value) >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
-  if (Math.abs(value) >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(value) >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(0)}`;
 }
 
 export function renderDexPricingSourceGapMarkdown(audit: DexPricingSourceGapAudit): string {

@@ -1,4 +1,5 @@
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import { forgetSubscriber } from "../lib/telegram-subscriber-lifecycle";
@@ -115,15 +116,11 @@ export async function runTelegramInactiveCleanup(
   const lastRunRow = await getCache(db, CACHE_LAST_RUN_KEY);
   const lastRunSec = lastRunRow ? (Number.isFinite(Number(lastRunRow.value)) ? Number(lastRunRow.value) : null) : null;
   if (lastRunSec != null && now - lastRunSec < RUN_INTERVAL_SEC) {
-    return {
+    return createCronResult({
       status: "ok",
       itemCount: 0,
-      metadata: JSON.stringify({
-        skipped: "cache-guard",
-        lastRunSec,
-        nextEligibleSec: lastRunSec + RUN_INTERVAL_SEC,
-      }),
-    };
+      metadata: { skipped: "cache-guard", lastRunSec, nextEligibleSec: lastRunSec + RUN_INTERVAL_SEC },
+    });
   }
   throwIfAborted(signal);
 
@@ -144,13 +141,9 @@ export async function runTelegramInactiveCleanup(
 
   await setCache(db, CACHE_LAST_RUN_KEY, String(now));
 
-  return {
+  return createCronResult({
     status: "ok",
     itemCount: deleted,
-    metadata: JSON.stringify({
-      cutoffSec,
-      deleted,
-      cappedAtLimit: deleted >= MAX_DELETIONS_PER_RUN,
-    }),
-  };
+    metadata: { cutoffSec, deleted, cappedAtLimit: deleted >= MAX_DELETIONS_PER_RUN },
+  });
 }

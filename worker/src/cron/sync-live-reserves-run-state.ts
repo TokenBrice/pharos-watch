@@ -4,15 +4,19 @@ import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../lib/operational-cache-keys";
-import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
+import {
+  breakerKeyForConfig,
+  type ConfiguredCoin,
+  type LiveReserveCursorTailState,
+  type LiveReserveDeferredTailOutcome,
+  type LiveReserveQueueCounts,
+} from "./sync-live-reserves-shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncRecordDeferredStatement,
 } from "../lib/live-reserves-store-statements";
 import { logCronEvent } from "../lib/cron-logger";
-
-export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";
 
 export interface LiveReserveGlobalCursorOwner {
   scheduleKey: string;
@@ -52,14 +56,8 @@ export interface LoadedLiveReserveCursorState {
 }
 
 export interface RecordDeferredTailResult {
-  deferredCoins: number;
-  nextCursorStablecoinId: string | null;
-  cursorTailState: LiveReserveCursorTailState | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  cursorTailError: string | null;
-  runBudgetTruncationCount: number;
+  counts: Pick<LiveReserveQueueCounts, "deferredCoins">;
+  deferredTail: LiveReserveDeferredTailOutcome;
   /** Breaker keys for the deferred coins; merge into the run's breaker-key set. */
   additionalBreakerKeys: Set<string>;
 }
@@ -269,11 +267,15 @@ export async function recordDeferredTail(
     }
   }
 
-  let cursorTailState: LiveReserveCursorTailState | null = null;
-  let cursorRecordedAt: number | null = null;
-  let cursorTailCompletedAt: number | null = null;
-  const cursorTailFailedAt: number | null = null;
-  const cursorTailError: string | null = null;
+  const deferredTail: LiveReserveDeferredTailOutcome = {
+    nextCursorStablecoinId,
+    cursorTailState: null,
+    cursorRecordedAt: null,
+    cursorTailCompletedAt: null,
+    cursorTailFailedAt: null,
+    cursorTailError: null,
+    runBudgetTruncationCount,
+  };
   if (cursorBaseState) {
     const completedAt = Math.floor(Date.now() / 1000);
     await writeLiveReserveCursorState(
@@ -286,20 +288,14 @@ export async function recordDeferredTail(
       completedAt,
       signal,
     );
-    cursorTailState = "complete";
-    cursorRecordedAt = cursorBaseState.cursorRecordedAt;
-    cursorTailCompletedAt = completedAt;
+    deferredTail.cursorTailState = "complete";
+    deferredTail.cursorRecordedAt = cursorBaseState.cursorRecordedAt;
+    deferredTail.cursorTailCompletedAt = completedAt;
   }
 
   return {
-    deferredCoins,
-    nextCursorStablecoinId,
-    cursorTailState,
-    cursorRecordedAt,
-    cursorTailCompletedAt,
-    cursorTailFailedAt,
-    cursorTailError,
-    runBudgetTruncationCount,
+    counts: { deferredCoins },
+    deferredTail,
     additionalBreakerKeys,
   };
 }

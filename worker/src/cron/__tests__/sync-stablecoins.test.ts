@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import { defaultSyncRoutes } from "./sync-stablecoins.test-support";
@@ -273,9 +273,7 @@ const DEFAULT_STABLECOINS_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
 ];
 
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_STABLECOINS_D1_TABLES]);
-}
+const mockD1 = createMockD1Preset(DEFAULT_STABLECOINS_D1_TABLES);
 
 // --- Helpers ---
 

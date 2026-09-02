@@ -1,22 +1,19 @@
 import type { CircuitRecord } from "@shared/types";
-import { type DataTableColumn } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { PublicSignalCard } from "./public-signal-card";
 import { PrioritySplitTable } from "./priority-split-table";
+import { defineStatusColumns } from "./page-primitives";
 
 interface CircuitBreakerTableProps {
   circuits: Record<string, CircuitRecord> | undefined;
 }
 
-const CIRCUIT_BREAKER_COLUMNS: readonly DataTableColumn[] = [
-  { id: "name", label: "Name", className: "pb-2 font-medium" },
-  { id: "state", label: "State", className: "pb-2 font-medium" },
-  { id: "failures", label: "Failures", className: "pb-2 font-medium" },
-  { id: "last-failure", label: "Last Failure", className: "pb-2 font-medium" },
-  { id: "last-success", label: "Last Success", className: "pb-2 font-medium" },
-];
+const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
+  ["name", "Name"], ["state", "State"], ["failures", "Failures"],
+  ["last-failure", "Last Failure"], ["last-success", "Last Success"],
+]);
 
 export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
   if (!circuits || Object.keys(circuits).length === 0) {

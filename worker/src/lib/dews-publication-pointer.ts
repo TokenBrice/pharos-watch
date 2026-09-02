@@ -88,53 +88,23 @@ function prepareDewsPublicationLedgerUpsert(
     computedAt: number;
     expectedRowCount: number | null;
     stablecoinIdsDigest: string | null;
+    pointerValue?: string;
   },
 ): D1PreparedStatement {
-  return db.prepare(
-    `INSERT INTO surface_publication_generations (
-       surface, generation_id, started_at, validated_at, published_at, state,
-       candidate_rows, published_rows, expected_rows, validation_summary_json,
-       artifact_checksum, artifact_cache_key
-     ) VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?)
-     ${UPSERT_DEWS_PUBLICATION_LEDGER_SQL}`,
-  ).bind(
-    DEWS_PUBLICATION_SURFACE,
-    dewsGenerationId(publication.computedAt),
-    publication.computedAt,
-    publication.computedAt,
-    publication.computedAt,
-    publication.expectedRowCount,
-    publication.expectedRowCount,
-    publication.expectedRowCount,
-    buildDewsPublicationValidationSummary(
-      publication.expectedRowCount,
-      publication.stablecoinIdsDigest,
-    ),
-    publication.stablecoinIdsDigest,
-    DEWS_PUBLICATION_POINTER_CACHE_KEY,
-  );
-}
-
-function prepareGatedDewsPublicationLedgerUpsert(
-  db: D1Database,
-  publication: {
-    computedAt: number;
-    expectedRowCount: number;
-    stablecoinIdsDigest: string;
-    pointerValue: string;
-  },
-): D1PreparedStatement {
-  return db.prepare(
-    `INSERT INTO surface_publication_generations (
-       surface, generation_id, started_at, validated_at, published_at, state,
-       candidate_rows, published_rows, expected_rows, validation_summary_json,
-       artifact_checksum, artifact_cache_key
-     )
+  const gate = publication.pointerValue == null
+    ? ` VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?)`
+    : `
      SELECT ?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?
       WHERE EXISTS (
         SELECT 1 FROM cache
          WHERE key = ? AND updated_at = ? AND value = ?
-      )
+      )`;
+  return db.prepare(
+    `INSERT INTO surface_publication_generations (
+       surface, generation_id, started_at, validated_at, published_at, state,
+       candidate_rows, published_rows, expected_rows, validation_summary_json,
+       artifact_checksum, artifact_cache_key
+     )${gate}
      ${UPSERT_DEWS_PUBLICATION_LEDGER_SQL}`,
   ).bind(
     DEWS_PUBLICATION_SURFACE,
@@ -151,9 +121,9 @@ function prepareGatedDewsPublicationLedgerUpsert(
     ),
     publication.stablecoinIdsDigest,
     DEWS_PUBLICATION_POINTER_CACHE_KEY,
-    DEWS_PUBLICATION_POINTER_CACHE_KEY,
-    publication.computedAt,
-    publication.pointerValue,
+    ...(publication.pointerValue == null
+      ? []
+      : [DEWS_PUBLICATION_POINTER_CACHE_KEY, publication.computedAt, publication.pointerValue]),
   );
 }
 
@@ -273,7 +243,7 @@ export async function writeDewsPublishedGeneration(
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
          WHERE cache.updated_at <= excluded.updated_at`,
       ).bind(DEWS_PUBLICATION_POINTER_CACHE_KEY, pointerValue, updatedAt),
-      prepareGatedDewsPublicationLedgerUpsert(db, {
+      prepareDewsPublicationLedgerUpsert(db, {
         computedAt: updatedAt,
         expectedRowCount: payload.expectedRowCount,
         stablecoinIdsDigest: payload.stablecoinIdsDigest,

@@ -2,28 +2,22 @@ import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/sta
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { type DataTableColumn } from "@/components/data-table-shell";
 import { PrioritySplitTable } from "./priority-split-table";
 import { TableCell, TableRow } from "@/components/table";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+import { defineStatusColumns } from "./page-primitives";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
 }
 
-const CACHE_FRESHNESS_COLUMNS: readonly DataTableColumn[] = [
-  { id: "lane", label: "Lane", className: "pb-2 font-medium" },
-  { id: "provider", label: "Provider", className: "pb-2 font-medium" },
-  { id: "producer", label: "Producer", className: "pb-2 font-medium" },
-  { id: "cache", label: "Cache", className: "pb-2 font-medium" },
-  { id: "endpoint-basis", label: "Endpoint Basis", className: "pb-2 font-medium" },
-  { id: "source", label: "Source", className: "pb-2 font-medium" },
-  { id: "mode", label: "Mode", className: "pb-2 font-medium" },
-  { id: "band", label: "Band", className: "pb-2 font-medium" },
-  { id: "note", label: "Actionable Note", className: "pb-2 font-medium" },
-];
+const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
+  ["lane", "Lane"], ["provider", "Provider"], ["producer", "Producer"], ["cache", "Cache"],
+  ["endpoint-basis", "Endpoint Basis"], ["source", "Source"], ["mode", "Mode"], ["band", "Band"],
+  ["note", "Actionable Note"],
+]);
 
 export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   const sorted = Object.entries(caches).sort(([, a], [, b]) => {

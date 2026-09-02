@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
+import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/types/digest-safety-map-contract";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
@@ -46,157 +47,6 @@ function SnapshotUnavailable() {
   );
 }
 
-type StoredSafetyMapTier = {
-  tier: "A" | "B" | "C" | "D" | "F";
-  count: number;
-  mcapUsd: number;
-  sharePct: number;
-};
-
-type StoredSafetyMap = {
-  imageUrl: string;
-  freshness: "current" | "carried-forward";
-  ageDays: number | null;
-  manifest: {
-    date: string;
-    mapSummary: {
-      date: string;
-      asOfSec: number;
-      methodologyVersion: string;
-      gradedCount: number;
-      notRatedCount: number;
-      totalMcapUsd: number;
-      tiers: StoredSafetyMapTier[];
-    };
-  };
-};
-
-const SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isNonNegativeFinite(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
-
-function isUtcDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
-
-function parseStoredSafetyMap(inputData: DigestSnapshotInputData): StoredSafetyMap | null {
-  const input = isRecord(inputData) ? inputData : null;
-  const rawMap = input?.safetyMap;
-  if (!isRecord(rawMap)) return null;
-
-  const manifest = isRecord(rawMap.manifest) ? rawMap.manifest : null;
-  const date = manifest?.date;
-  const imageUrl = rawMap.imageUrl;
-  const freshness = rawMap.freshness;
-  const ageDays = rawMap.ageDays;
-  if (
-    !isUtcDate(date)
-    || typeof imageUrl !== "string"
-    || imageUrl.trim().length === 0
-    || (freshness !== "current" && freshness !== "carried-forward")
-    || (ageDays !== undefined && (!isNonNegativeFinite(ageDays) || !Number.isInteger(ageDays)))
-  ) {
-    return null;
-  }
-
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(imageUrl, "https://pharos.watch");
-  } catch {
-    return null;
-  }
-  if (
-    !parsedUrl.pathname.endsWith("/safety-scores/map.png")
-    || parsedUrl.searchParams.get("date") !== date
-    || parsedUrl.searchParams.get("date") === "latest"
-  ) {
-    return null;
-  }
-
-  const rawSummary = manifest?.mapSummary ?? rawMap.mapSummary ?? rawMap.summary;
-  if (!isRecord(rawSummary)) return null;
-  const summaryDate = rawSummary.date;
-  const asOfSec = rawSummary.asOfSec;
-  const methodologyVersion = rawSummary.methodologyVersion;
-  const gradedCount = rawSummary.gradedCount;
-  const notRatedCount = rawSummary.notRatedCount;
-  const totalMcapUsd = rawSummary.totalMcapUsd;
-  const rawTiers = rawSummary.tiers;
-  if (
-    !isUtcDate(summaryDate)
-    || summaryDate !== date
-    || !isNonNegativeFinite(asOfSec)
-    || !Number.isInteger(asOfSec)
-    || typeof methodologyVersion !== "string"
-    || methodologyVersion.trim().length === 0
-    || !isNonNegativeFinite(gradedCount)
-    || !Number.isInteger(gradedCount)
-    || !isNonNegativeFinite(notRatedCount)
-    || !Number.isInteger(notRatedCount)
-    || !isNonNegativeFinite(totalMcapUsd)
-    || totalMcapUsd <= 0
-    || !Array.isArray(rawTiers)
-    || rawTiers.length !== SAFETY_MAP_TIERS.length
-  ) {
-    return null;
-  }
-
-  const seen = new Set<StoredSafetyMapTier["tier"]>();
-  const tiers: StoredSafetyMapTier[] = [];
-  for (const rawTier of rawTiers) {
-    if (!isRecord(rawTier)) return null;
-    const tier = rawTier.tier;
-    const count = rawTier.count;
-    const mcapUsd = rawTier.mcapUsd;
-    const sharePct = rawTier.sharePct;
-    if (
-      typeof tier !== "string"
-      || !SAFETY_MAP_TIERS.includes(tier as StoredSafetyMapTier["tier"])
-      || seen.has(tier as StoredSafetyMapTier["tier"])
-      || !isNonNegativeFinite(count)
-      || !Number.isInteger(count)
-      || !isNonNegativeFinite(mcapUsd)
-      || !isNonNegativeFinite(sharePct)
-      || sharePct > 100
-    ) {
-      return null;
-    }
-    seen.add(tier as StoredSafetyMapTier["tier"]);
-    tiers.push({ tier: tier as StoredSafetyMapTier["tier"], count, mcapUsd, sharePct });
-  }
-  if (!SAFETY_MAP_TIERS.every((tier) => seen.has(tier))) return null;
-  if (tiers.reduce((sum, tier) => sum + tier.count, 0) !== gradedCount) return null;
-  const mcapTolerance = Math.max(0.01, totalMcapUsd * 1e-9);
-  if (Math.abs(tiers.reduce((sum, tier) => sum + tier.mcapUsd, 0) - totalMcapUsd) > mcapTolerance) return null;
-  if (tiers.some((tier) => Math.abs((tier.mcapUsd / totalMcapUsd) * 100 - tier.sharePct) > 0.11)) return null;
-
-  return {
-    imageUrl,
-    freshness,
-    ageDays: typeof ageDays === "number" ? ageDays : null,
-    manifest: {
-      date,
-      mapSummary: {
-        date: summaryDate,
-        asOfSec,
-        methodologyVersion,
-        gradedCount,
-        notRatedCount,
-        totalMcapUsd,
-        tiers,
-      },
-    },
-  };
-}
-
 function SafetyMapUnavailable() {
   return (
     <div className="pharos-card-shell p-4 sm:p-5">
@@ -219,7 +69,7 @@ function SafetyMapUnavailable() {
 }
 
 function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData }) {
-  const map = parseStoredSafetyMap(inputData);
+  const map = parseDigestSafetyMapCapture(inputData.safetyMap, "archive-compatible");
   const { unavailable, checkAlreadyFailed, onError } = useImageUnavailable();
   if (!map) return null;
   if (unavailable) return <SafetyMapUnavailable />;

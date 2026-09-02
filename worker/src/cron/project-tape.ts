@@ -18,6 +18,7 @@
  * outbound fetches), so it adds zero connection budget to the trigger.
  */
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";
 import { throwIfAborted } from "../lib/abort";
 
@@ -72,9 +73,9 @@ export async function projectTape(
   }
 
   const hasFailure = Object.values(perClass).some((projected) => projected === -1);
-  return {
+  return createCronResult({
     status: hasFailure ? "degraded" : "ok",
     itemCount: total,
-    metadata: JSON.stringify({ perClass, watermarkAdvanced: advancedAny }),
-  };
+    metadata: { perClass, watermarkAdvanced: advancedAny },
+  });
 }

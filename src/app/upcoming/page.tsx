@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CalloutBanner } from "@/components/callout-banner";
 import { CopyButton } from "@/components/copy-button";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -60,10 +61,8 @@ export default function UpcomingPage() {
       path="/upcoming/"
       title="Upcoming Stablecoins"
       preface={(
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(
+        <JsonLdScript
+          json={safeJsonLd(
               buildCollectionItemListJsonLd({
                 url: `${SITE_URL}/upcoming/`,
                 name: "Upcoming Stablecoins",
@@ -81,8 +80,7 @@ export default function UpcomingPage() {
                   };
                 }),
               }),
-            ),
-          }}
+            )}
         />
       )}
       leadParagraphs={[

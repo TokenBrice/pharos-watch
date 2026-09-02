@@ -14,7 +14,7 @@ import { normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
-import type { DexDeploymentProviderCheck } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
 
 export interface CoinGeckoPoolsStageResult {
   priceObservationTargets: Set<string>;
@@ -167,10 +167,13 @@ export async function crawlCoinGeckoPoolsStage({
       const classification = classifyCoinGeckoResult(result);
       await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
       providerChecks.push({
-        chain,
-        address,
-        provider: "coingecko",
-        ...classification,
+        ...makeDexDeploymentProviderCheck(
+          { chain, address },
+          "coingecko",
+          classification.status,
+          { retryable: classification.retryable },
+        ),
+        ...(classification.error ? { error: classification.error } : {}),
       });
 
       for (const pool of result.pools) {
@@ -246,10 +249,13 @@ export async function crawlCoinGeckoPoolsStage({
       logWorkerEventArgs("handler", "warn", `[dex-discovery] cg_onchain error for ${chain}:${address}`, err);
       const classification = classifyCoinGeckoThrownError(err);
       providerChecks.push({
-        chain,
-        address,
-        provider: "coingecko",
-        ...classification,
+        ...makeDexDeploymentProviderCheck(
+          { chain, address },
+          "coingecko",
+          classification.status,
+          { retryable: classification.retryable },
+        ),
+        ...(classification.error ? { error: classification.error } : {}),
       });
       await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
     }

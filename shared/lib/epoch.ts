@@ -42,3 +42,12 @@ export function parseEpoch(value: unknown, options: EpochParserOptions): EpochPa
     ? { kind: "seconds", seconds: parsedMs / 1000 }
     : { kind: "invalid" };
 }
+
+export function parseEpochSeconds(
+  value: unknown, options: EpochParserOptions & { floor: boolean; minExclusive?: number },
+): number | null {
+  const parsed = parseEpoch(value, options);
+  if (parsed.kind !== "seconds") return null;
+  const seconds = options.floor ? Math.floor(parsed.seconds) : parsed.seconds;
+  return options.minExclusive == null || seconds > options.minExclusive ? seconds : null;
+}

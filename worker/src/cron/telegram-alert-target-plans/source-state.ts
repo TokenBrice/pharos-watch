@@ -17,6 +17,79 @@ interface TargetPlanningSourceRow {
   planning_cursor_chat_id: string | null;
 }
 
+type TargetExpiryKey = "subscribers" | "pages" | "plans" | "targets";
+
+interface TargetExpiryStep {
+  key: TargetExpiryKey;
+  table: string;
+  setSql: string;
+  setBinds: (nowSec: number, reason: string) => Array<string | number>;
+  predicate: string;
+  orderBy: string;
+}
+
+const TARGET_EXPIRY_STEPS = [
+  {
+    key: "targets",
+    table: "telegram_alert_job_targets",
+    setSql: `SET status = 'expired', final_delivery_state = 'expired',
+              final_delivery_at = COALESCE(final_delivery_at, ?),
+              final_delivery_error = COALESCE(final_delivery_error, ?),
+              error_class = COALESCE(error_class, ?)`,
+    setBinds: (nowSec, reason) => [nowSec, reason, reason],
+    predicate: "status = 'planned'",
+    orderBy: "plan_ordinal, target_ordinal, target_key",
+  },
+  {
+    key: "subscribers",
+    table: "telegram_alert_planning_subscribers",
+    setSql: "SET planning_outcome = 'expired', planned_at = ?",
+    setBinds: (nowSec) => [nowSec],
+    predicate: "planning_outcome = 'pending'",
+    orderBy: "chat_id",
+  },
+  {
+    key: "pages",
+    table: "telegram_alert_target_plan_pages",
+    setSql: `SET status = 'expired', updated_at = ?, completed_at = COALESCE(completed_at, ?),
+                last_error_class = COALESCE(last_error_class, 'target_plan_source_expired')`,
+    setBinds: (nowSec) => [nowSec, nowSec],
+    predicate: "status IN ('pending', 'materializing')",
+    orderBy: "page_index",
+  },
+  {
+    key: "plans",
+    table: "telegram_alert_target_plans",
+    setSql: "SET status = 'expired', updated_at = ?",
+    setBinds: (nowSec) => [nowSec],
+    predicate: "status <> 'expired'",
+    orderBy: "plan_ordinal",
+  },
+] as const satisfies readonly TargetExpiryStep[];
+
+const TARGET_EXPIRY_PROGRESS_STEPS = [
+  TARGET_EXPIRY_STEPS[1],
+  TARGET_EXPIRY_STEPS[2],
+  TARGET_EXPIRY_STEPS[3],
+  TARGET_EXPIRY_STEPS[0],
+] as const;
+
+function buildTargetExpiryUpdateSql(step: TargetExpiryStep): string {
+  return `UPDATE ${step.table}
+          ${step.setSql}
+        WHERE rowid IN (
+          SELECT rowid FROM ${step.table}
+           WHERE source_event_id = ? AND plan_generation = ? AND ${step.predicate}
+           ORDER BY ${step.orderBy} LIMIT ?
+        )`;
+}
+
+function buildTargetExpiryRemainingSql(step: TargetExpiryStep): string {
+  // SAFETY: `step` is one of the TARGET_EXPIRY_STEPS `as const` descriptors above; table/predicate are literals.
+  return `SELECT COUNT(*) FROM ${step.table}
+           WHERE source_event_id = ? AND plan_generation = ? AND ${step.predicate}`;
+}
+
 function createTargetPlanOwner(): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (!cryptoObj?.randomUUID) {
@@ -186,98 +259,35 @@ export async function expireTelegramTargetPlanSource(
     .run();
 
   let remainingBudget = boundedBudget;
-  const targetResult = await db
-    .prepare(
-      `UPDATE telegram_alert_job_targets
-          SET status = 'expired', final_delivery_state = 'expired',
-              final_delivery_at = COALESCE(final_delivery_at, ?),
-              final_delivery_error = COALESCE(final_delivery_error, ?),
-              error_class = COALESCE(error_class, ?)
-        WHERE rowid IN (
-          SELECT rowid FROM telegram_alert_job_targets
-           WHERE source_event_id = ? AND plan_generation = ? AND status = 'planned'
-           ORDER BY plan_ordinal, target_ordinal, target_key LIMIT ?
-        )`,
-    )
-    .bind(nowSec, boundedReason, boundedReason, sourceEventId, generation, remainingBudget)
-    .run();
-  const processedTargets = Number(targetResult.meta?.changes ?? 0);
-  remainingBudget -= processedTargets;
-
-  const subscriberResult = remainingBudget > 0
-    ? await db
-      .prepare(
-        `UPDATE telegram_alert_planning_subscribers
-            SET planning_outcome = 'expired', planned_at = ?
-          WHERE rowid IN (
-            SELECT rowid FROM telegram_alert_planning_subscribers
-             WHERE source_event_id = ? AND plan_generation = ? AND planning_outcome = 'pending'
-             ORDER BY chat_id LIMIT ?
-          )`,
+  const processed: Record<TargetExpiryKey, number> = {
+    subscribers: 0,
+    pages: 0,
+    plans: 0,
+    targets: 0,
+  };
+  for (const step of TARGET_EXPIRY_STEPS) {
+    if (remainingBudget <= 0) break;
+    const result = await db
+      .prepare(buildTargetExpiryUpdateSql(step))
+      .bind(
+        ...step.setBinds(nowSec, boundedReason),
+        sourceEventId,
+        generation,
+        remainingBudget,
       )
-      .bind(nowSec, sourceEventId, generation, remainingBudget)
-      .run()
-    : null;
-  const processedSubscribers = Number(subscriberResult?.meta?.changes ?? 0);
-  remainingBudget -= processedSubscribers;
+      .run();
+    processed[step.key] = Number(result.meta?.changes ?? 0);
+    remainingBudget -= processed[step.key];
+  }
 
-  const pageResult = remainingBudget > 0
-    ? await db
-      .prepare(
-        `UPDATE telegram_alert_target_plan_pages
-            SET status = 'expired', updated_at = ?, completed_at = COALESCE(completed_at, ?),
-                last_error_class = COALESCE(last_error_class, 'target_plan_source_expired')
-          WHERE rowid IN (
-            SELECT rowid FROM telegram_alert_target_plan_pages
-             WHERE source_event_id = ? AND plan_generation = ?
-               AND status IN ('pending', 'materializing')
-             ORDER BY page_index LIMIT ?
-          )`,
-      )
-      .bind(nowSec, nowSec, sourceEventId, generation, remainingBudget)
-      .run()
-    : null;
-  const processedPages = Number(pageResult?.meta?.changes ?? 0);
-  remainingBudget -= processedPages;
-
-  const planResult = remainingBudget > 0
-    ? await db
-      .prepare(
-        `UPDATE telegram_alert_target_plans
-            SET status = 'expired', updated_at = ?
-          WHERE rowid IN (
-            SELECT rowid FROM telegram_alert_target_plans
-             WHERE source_event_id = ? AND plan_generation = ? AND status <> 'expired'
-             ORDER BY plan_ordinal LIMIT ?
-          )`,
-      )
-      .bind(nowSec, sourceEventId, generation, remainingBudget)
-      .run()
-    : null;
-  const processedPlans = Number(planResult?.meta?.changes ?? 0);
   const remainingRow = await db
     .prepare(
       `SELECT
-         (SELECT COUNT(*) FROM telegram_alert_planning_subscribers
-           WHERE source_event_id = ? AND plan_generation = ? AND planning_outcome = 'pending') AS subscribers,
-         (SELECT COUNT(*) FROM telegram_alert_target_plan_pages
-           WHERE source_event_id = ? AND plan_generation = ?
-             AND status IN ('pending', 'materializing')) AS pages,
-         (SELECT COUNT(*) FROM telegram_alert_target_plans
-           WHERE source_event_id = ? AND plan_generation = ? AND status <> 'expired') AS plans,
-         (SELECT COUNT(*) FROM telegram_alert_job_targets
-           WHERE source_event_id = ? AND plan_generation = ? AND status = 'planned') AS targets`,
+${TARGET_EXPIRY_PROGRESS_STEPS.map((step, index) =>
+  `         (${buildTargetExpiryRemainingSql(step)}) AS ${step.key}${index === TARGET_EXPIRY_PROGRESS_STEPS.length - 1 ? "" : ","}`,
+).join("\n")}`,
     )
-    .bind(
-      sourceEventId,
-      generation,
-      sourceEventId,
-      generation,
-      sourceEventId,
-      generation,
-      sourceEventId,
-      generation,
-    )
+    .bind(...TARGET_EXPIRY_PROGRESS_STEPS.flatMap(() => [sourceEventId, generation]))
     .first<{ subscribers: number; pages: number; plans: number; targets: number }>();
   const remaining = {
     subscribers: Number(remainingRow?.subscribers ?? 0),
@@ -301,10 +311,10 @@ export async function expireTelegramTargetPlanSource(
     )
     .bind(
       complete ? 1 : 0,
-      processedSubscribers,
-      processedPages,
-      processedPlans,
-      processedTargets,
+      processed.subscribers,
+      processed.pages,
+      processed.plans,
+      processed.targets,
       remaining.subscribers,
       remaining.pages,
       remaining.plans,
@@ -322,7 +332,7 @@ export async function expireTelegramTargetPlanSource(
     .all<{ job_id: string }>();
   await reconcileTelegramAlertJobCounters(db, (jobs.results ?? []).map((row) => row.job_id), nowSec);
   return {
-    processed: processedTargets + processedSubscribers + processedPages + processedPlans,
+    processed: TARGET_EXPIRY_STEPS.reduce((total, step) => total + processed[step.key], 0),
     complete,
     remaining,
   };

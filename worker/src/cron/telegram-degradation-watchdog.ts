@@ -4,6 +4,7 @@ import {
 } from "../lib/alert-safety-source-cache";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
@@ -37,13 +38,13 @@ export const WATCHDOG_KEYS = {
   zeroSendStreak: "telegram:degradation:zero-send-streak",
 } as const;
 
-interface WatchdogOutcome {
+type WatchdogOutcome = {
   triggered: boolean;
   recovered: boolean;
   detail: string | null;
-}
+};
 
-interface WatchdogResult {
+type WatchdogResult = {
   pendingBacklog: WatchdogOutcome & {
     availability: "available" | "unknown";
     count: number | null;
@@ -69,7 +70,7 @@ interface WatchdogResult {
     evaluated: boolean;
     runIdentity: string | null;
   };
-}
+};
 
 export interface TelegramDegradationWatchdogOptions {
   pendingCapacitySnapshot?: TelegramPendingCapacitySnapshot | null;
@@ -386,8 +387,8 @@ export async function runTelegramDegradationWatchdog(
     safetySource.triggered ||
     zeroSend.triggered;
 
-  return {
+  return createCronResult({
     status: degraded ? "degraded" : "ok",
-    metadata: JSON.stringify(result),
-  };
+    metadata: result,
+  });
 }

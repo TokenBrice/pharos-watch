@@ -23,6 +23,8 @@ export interface DexExecutionTargetFactoryInput {
 
 export type DexExecutionTargetFactoryOutput = Partial<PoolExecutionCapability>;
 
+const disabledTargetFactory = (_input: DexExecutionTargetFactoryInput): null => null;
+
 /**
  * Frozen target-factory slots. The paths are leaf ownership boundaries, not a
  * dynamic-import mechanism; Worker bundling remains statically analyzable.
@@ -53,16 +55,16 @@ export const DEX_EXECUTION_TARGET_FACTORY_REGISTRY: readonly DexExecutionTargetF
     platform: "solana",
     lifecycle: "shadow",
     profileIds: ["orca-whirlpool-exact-v1"],
-    implementationModule: "../measured-execution/solana-clmm/orca",
-    build: buildOrcaWhirlpoolRegisteredExecutionTarget,
+    implementationModule: "./execution-target-registry",
+    build: disabledTargetFactory,
   },
   {
     slotId: "raydium-clmm",
     platform: "solana",
     lifecycle: "shadow",
     profileIds: ["raydium-clmm-exact-v1"],
-    implementationModule: "../measured-execution/solana-clmm/raydium",
-    build: buildRaydiumClmmRegisteredExecutionTarget,
+    implementationModule: "./execution-target-registry",
+    build: disabledTargetFactory,
   },
   {
     slotId: "evm-v2",
@@ -102,5 +104,3 @@ import type {
 import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quoter-v2";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import { buildEvmV2RegisteredExecutionTarget } from "./execution-targets/evm-v2";
-import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "../measured-execution/solana-clmm/orca";
-import { buildRaydiumClmmRegisteredExecutionTarget } from "../measured-execution/solana-clmm/raydium";

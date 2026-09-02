@@ -4,6 +4,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import type { CaseStudy } from "@/lib/case-studies/types";
 import {
@@ -101,14 +102,7 @@ function buildCaseStudyListJsonLd(
 }
 
 export function CaseStudyArticleJsonLd({ study }: { study: CaseStudy }) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: safeJsonLd(buildCaseStudyArticleJsonLd(study)),
-      }}
-    />
-  );
+  return <JsonLdScript json={safeJsonLd(buildCaseStudyArticleJsonLd(study))} />;
 }
 
 export function CaseStudyListJsonLd({
@@ -116,12 +110,5 @@ export function CaseStudyListJsonLd({
 }: {
   studies: readonly CaseStudy[];
 }) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: safeJsonLd(buildCaseStudyListJsonLd(studies)),
-      }}
-    />
-  );
+  return <JsonLdScript json={safeJsonLd(buildCaseStudyListJsonLd(studies))} />;
 }

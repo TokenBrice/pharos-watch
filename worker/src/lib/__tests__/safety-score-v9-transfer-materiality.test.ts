@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { sha256Hex } from "@shared/lib/sha256";
 import {
   resolveSafetyScoreV9ReviewedTransferFact,
   SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS,
@@ -8,6 +9,8 @@ import {
 import { safetyScoreV9ChainSupplySourcePayload } from "../safety-score-v9-supply-attribution";
 import {
   createSafetyScoreV9TransferMaterialityGeneration,
+  parseSafetyScoreV9TransferMaterialityGeneration,
+  serializeSafetyScoreV9TransferMaterialityGeneration,
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS,
   transferMaterialScopeFromOnchainGeneration,
   type SafetyScoreV9TransferMaterialityObservation,
@@ -71,6 +74,16 @@ function resolve(rows = [observation()], capturedAtSec = CLOCK_SEC - 60) {
 }
 
 describe("Safety Score V9 transfer deployment materiality", () => {
+  it("pins the canonical generation envelope and native malformed-JSON error", () => {
+    const value = generation();
+    const serialized = serializeSafetyScoreV9TransferMaterialityGeneration(value);
+    expect([value.generationId, new TextEncoder().encode(serialized).byteLength, sha256Hex(serialized)]).toEqual([
+      "safety-score-v9-transfer-materiality:v1:60edd6c103e8a7e46e75d787959a8145a1e6c4643be6062cdc752ccda702c219",
+      682,
+      "053585e6e69835afbc80b9d070c568918c9646818688f881346cd804eff43c43",
+    ]);
+    expect(() => parseSafetyScoreV9TransferMaterialityGeneration("{")).toThrow(SyntaxError);
+  });
   it("pins the approved cohort to exactly 41 assets", () => {
     expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(41);
     expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("sfrxusd-frax");

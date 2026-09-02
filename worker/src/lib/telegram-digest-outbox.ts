@@ -3,7 +3,13 @@ import { executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseJson } from "./json-parse";
-import { buildTelegramMessage, sendPhotoToChat, sendToChat, type TelegramCreds } from "./telegram";
+import {
+  buildTelegramMessage,
+  sendPhotoToChat,
+  sendToChat,
+  type SendToChatResult,
+  type TelegramCreds,
+} from "./telegram";
 import { splitMessage } from "./telegram-alerts";
 import type { TelegramDigestSuccessAction } from "./telegram-digest-appendices";
 import {
@@ -721,6 +727,41 @@ function buildDeliveryResult(
   };
 }
 
+async function transitionFailedDigestSend(
+  db: D1Database,
+  claim: TelegramDigestOutboxClaim,
+  completedAt: number,
+  result: SendToChatResult,
+  chunksSent: number,
+  nextChunkIndex: number,
+): Promise<TelegramDigestDeliveryResult> {
+  const errorClass = result.errorClass ?? "unknown";
+  let state: "execution_unknown" | "pending" | "failed_permanent";
+  if (result.statusCode == null) {
+    await markExecutionUnknown(db, claim, completedAt, errorClass, null);
+    state = "execution_unknown";
+  } else if (result.retryable) {
+    await returnToPending(
+      db,
+      claim,
+      completedAt,
+      errorClass,
+      result.statusCode,
+      result.retryAfterSec,
+    );
+    state = "pending";
+  } else {
+    await markPermanentFailure(db, claim, completedAt, errorClass, result.statusCode);
+    state = "failed_permanent";
+  }
+  return buildDeliveryResult(claim, state, state, {
+    chunksSent,
+    nextChunkIndex,
+    errorClass,
+    retryAfterSec: state === "pending" ? result.retryAfterSec : null,
+  });
+}
+
 export async function deliverTelegramDigestEdition(
   db: D1Database,
   creds: TelegramCreds,
@@ -828,37 +869,7 @@ export async function deliverTelegramDigestEdition(
     if (photoResult.ok) {
       await advanceAcceptedMedia(db, claim, completedAt);
     } else {
-      const errorClass = photoResult.errorClass ?? "unknown";
-      if (photoResult.statusCode == null) {
-        await markExecutionUnknown(db, claim, completedAt, errorClass, null);
-        return buildDeliveryResult(claim, "execution_unknown", "execution_unknown", {
-          chunksSent: 0,
-          nextChunkIndex: claim.row.next_chunk_index,
-          errorClass,
-        });
-      }
-      if (photoResult.retryable) {
-        await returnToPending(
-          db,
-          claim,
-          completedAt,
-          errorClass,
-          photoResult.statusCode,
-          photoResult.retryAfterSec,
-        );
-        return buildDeliveryResult(claim, "pending", "pending", {
-          chunksSent: 0,
-          nextChunkIndex: claim.row.next_chunk_index,
-          errorClass,
-          retryAfterSec: photoResult.retryAfterSec,
-        });
-      }
-      await markPermanentFailure(db, claim, completedAt, errorClass, photoResult.statusCode);
-      return buildDeliveryResult(claim, "failed_permanent", "failed_permanent", {
-        chunksSent: 0,
-        nextChunkIndex: claim.row.next_chunk_index,
-        errorClass,
-      });
+      return transitionFailedDigestSend(db, claim, completedAt, photoResult, 0, claim.row.next_chunk_index);
     }
   }
 
@@ -879,37 +890,7 @@ export async function deliverTelegramDigestEdition(
       continue;
     }
 
-    const errorClass = result.errorClass ?? "unknown";
-    if (result.statusCode == null) {
-      await markExecutionUnknown(db, claim, completedAt, errorClass, null);
-      return buildDeliveryResult(claim, "execution_unknown", "execution_unknown", {
-        chunksSent,
-        nextChunkIndex: chunkIndex,
-        errorClass,
-      });
-    }
-    if (result.retryable) {
-      await returnToPending(
-        db,
-        claim,
-        completedAt,
-        errorClass,
-        result.statusCode,
-        result.retryAfterSec,
-      );
-      return buildDeliveryResult(claim, "pending", "pending", {
-        chunksSent,
-        nextChunkIndex: chunkIndex,
-        errorClass,
-        retryAfterSec: result.retryAfterSec,
-      });
-    }
-    await markPermanentFailure(db, claim, completedAt, errorClass, result.statusCode);
-    return buildDeliveryResult(claim, "failed_permanent", "failed_permanent", {
-      chunksSent,
-      nextChunkIndex: chunkIndex,
-      errorClass,
-    });
+    return transitionFailedDigestSend(db, claim, completedAt, result, chunksSent, chunkIndex);
   }
 
   const completedAt = Math.floor(Date.now() / 1000);

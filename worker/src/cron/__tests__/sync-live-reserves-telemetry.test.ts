@@ -125,6 +125,56 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     ))).toBe(true);
   });
 
+  it("releases limiter capacity after resolved, rejected, and synchronously thrown I/O", async () => {
+    let exercised = false;
+    const observedErrors: string[] = [];
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => {
+      const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+      return {
+        key: adapterKey,
+        sourceModel: definition.sourceModel,
+        evidenceClass: definition.evidenceClass,
+        sharedSourceMode: definition.sharedSourceMode,
+        validation: "validation" in definition ? definition.validation : undefined,
+        fetch: async (
+          _coin: unknown,
+          _config: unknown,
+          _signal: AbortSignal,
+          ctx?: AdapterContext,
+        ) => {
+          if (!exercised) {
+            exercised = true;
+            await ctx!.ioLimiter!.run("resolved", async () => undefined);
+            for (const [label, factory] of [
+              ["rejected", async () => { throw new Error("async I/O failed"); }],
+              ["thrown", () => { throw new Error("sync I/O failed"); }],
+            ] as const) {
+              try {
+                await ctx!.ioLimiter!.run(label, factory);
+              } catch (error) {
+                observedErrors.push((error as Error).message);
+              }
+            }
+          }
+          return {
+            slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+            metadata: { freshnessMode: "not-applicable" as const },
+          };
+        },
+      };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const result = await syncLiveReserves(mockLiveReserveD1(), new AbortController().signal, {});
+
+    expect(observedErrors).toEqual(["async I/O failed", "sync I/O failed"]);
+    expect(metadataOf(result).adapterLatency.total).toMatchObject({
+      ioCallCount: 3,
+      waveCount: 3,
+      errorCount: 0,
+    });
+  });
+
   it("observes preloaded, reordered, rejected, and cleared request-cache promises", async () => {
     const backing = new Map<string, Promise<unknown>>([["preloaded", Promise.resolve(true)]]);
     let exerciseCache = true;

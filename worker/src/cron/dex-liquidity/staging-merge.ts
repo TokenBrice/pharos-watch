@@ -11,7 +11,7 @@ import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
-import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases";
+import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs } from "./types";

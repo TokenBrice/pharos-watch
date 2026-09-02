@@ -14,6 +14,7 @@ import {
   MethodologyDetails,
   MethodologyDiagramFlow,
   MethodologyFacts,
+  MethodologyPreconditions,
   MethodologySectionShell,
   WorkedExample,
 } from "../methodology-shared";
@@ -152,19 +153,16 @@ export function PricingPipelineMethodologySection() {
             { label: "Output", value: "Price + confidence tag per asset" },
           ]}
         />
-        <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-          <MethodologyFacts
-            facts={[
-              { label: "Minimum data", value: "At least 1 source must return a price; consensus requires 2+ for high confidence" },
-              { label: "Circuit breakers", value: "Most live upstream families are breaker-gated: opens after 3 failures, probes every 30 min" },
-              {
-                label: "Failure behavior",
-                value: "Degraded sources are excluded from consensus; enrichment pipeline fills remaining gaps; stale cache used as last resort",
-              },
-            ]}
-          />
-        </div>
+        <MethodologyPreconditions
+          facts={[
+            { label: "Minimum data", value: "At least 1 source must return a price; consensus requires 2+ for high confidence" },
+            { label: "Circuit breakers", value: "Most live upstream families are breaker-gated: opens after 3 failures, probes every 30 min" },
+            {
+              label: "Failure behavior",
+              value: "Degraded sources are excluded from consensus; enrichment pipeline fills remaining gaps; stale cache used as last resort",
+            },
+          ]}
+        />
         <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
           <p className="pharos-numeric">
             Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Binance=1.0001 (w2),

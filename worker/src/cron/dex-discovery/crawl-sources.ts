@@ -24,8 +24,6 @@ import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from ".
 import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
 import { DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY } from "./provider-registry";
 import type { DexDiscoveryCrawlerLeafId } from "@shared/lib/dex-deployment-coverage";
-import { SOROBAN_EXHAUSTIVE_DISCOVERY_PROVIDER_SLOT } from "./providers/soroban-exhaustive";
-import { BTCUSD_PUBLIC_HTTPS_DISCOVERY_PROVIDER_SLOT } from "./providers/btcusd-public-https";
 
 export interface CrawlResult {
   pools: StagedPool[];
@@ -132,14 +130,12 @@ export async function crawlCoin(
     "icon-balanced": () => crawlIconBalancedPoolsStage({ coinTargets, context }),
     "kava-swap": () => crawlKavaSwapPoolsStage({ coinTargets, context }),
     cosmos: () => crawlCosmosPoolsStage({ coinTargets, context }),
-    "soroban-exhaustive": () => SOROBAN_EXHAUSTIVE_DISCOVERY_PROVIDER_SLOT.crawl({ coinTargets, context }),
-    "btcusd-public-https": () => BTCUSD_PUBLIC_HTTPS_DISCOVERY_PROVIDER_SLOT.crawl({ coinTargets, context }),
   };
   const executionLeaves = [...new Set(
     DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY
       .filter((provider) => provider.lifecycle === "active")
       .sort((left, right) => left.executionOrder - right.executionOrder)
-      .map((provider) => provider.crawlerLeaf),
+      .flatMap((provider) => provider.crawlerLeaf ? [provider.crawlerLeaf] : []),
   )];
   let unresolvedChains: string[] = [];
   for (const leaf of executionLeaves) {

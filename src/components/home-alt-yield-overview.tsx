@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { SquareArrowRight } from "lucide-react";
 
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
@@ -71,19 +71,11 @@ function OverviewHeader({ coveredCount }: { coveredCount: number | null }): Reac
               <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
             </>
           )}
-          <Link
+          <HomeAltTrackerLink
             href="/yield/"
             prefetch={false}
-            aria-label="Open yield tracker"
-            className="pharos-focus-ring group inline-flex min-h-7 items-center gap-1.5 rounded-[4px] border border-border/70 bg-muted/30 px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60 sm:min-h-8 sm:rounded-md sm:px-3 sm:py-1.5 sm:text-[13px]"
-          >
-            Tracker
-            <SquareArrowRight
-              aria-hidden="true"
-              className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground sm:h-3.5 sm:w-3.5"
-              strokeWidth={2}
-            />
-          </Link>
+            ariaLabel="Open yield tracker"
+          />
         </div>
       </div>
       <p className="text-[10px] leading-snug text-muted-foreground sm:text-sm">

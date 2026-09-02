@@ -73,8 +73,7 @@ function dailyQuotaDate(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
-async function isPostRateLimited(request: Request, env: SelectorSnapshotEnv): Promise<boolean> {
-  const key = await getClientIpHash(request, env);
+function isPostRateLimited(key: string | null): boolean {
   if (!key) return false;
   const now = Date.now();
   const cutoff = now - POST_RATE_LIMIT_WINDOW_MS;
@@ -93,8 +92,7 @@ async function isPostRateLimited(request: Request, env: SelectorSnapshotEnv): Pr
   return false;
 }
 
-async function consumeDailyPostQuota(env: SelectorSnapshotEnv, request: Request): Promise<Response | null> {
-  const ipHash = await getClientIpHash(request, env);
+async function consumeDailyPostQuota(env: SelectorSnapshotEnv, ipHash: string | null): Promise<Response | null> {
   if (!ipHash) return null;
   if (!env.DB) return jsonError(503, "Snapshot quota store is not configured");
 
@@ -205,7 +203,8 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return jsonError(500, "Snapshot write limiter is not configured");
   }
 
-  if (await isPostRateLimited(request, env)) {
+  const ipHash = await getClientIpHash(request, env);
+  if (isPostRateLimited(ipHash)) {
     return jsonError(429, "Too many snapshot writes; retry later", { "Retry-After": "60" });
   }
 
@@ -224,7 +223,7 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return responseForValidationFailure(inputValidation.error);
   }
 
-  const quotaRejected = await consumeDailyPostQuota(env, request);
+  const quotaRejected = await consumeDailyPostQuota(env, ipHash);
   if (quotaRejected) return quotaRejected;
 
   let snapshot: Awaited<ReturnType<typeof recomputeVerifiedSelectorSnapshot>>;

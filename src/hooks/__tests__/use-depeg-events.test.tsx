@@ -9,6 +9,8 @@ const { useInfiniteQueryMock, apiFetchWithMetaMock } = vi.hoisted(() => ({
 
 vi.mock("@tanstack/react-query", () => ({
   infiniteQueryOptions: (options: unknown) => options,
+  keepPreviousData: Symbol("keepPreviousData"),
+  useQuery: vi.fn(),
   useInfiniteQuery: useInfiniteQueryMock,
 }));
 

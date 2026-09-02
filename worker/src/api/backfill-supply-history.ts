@@ -355,17 +355,114 @@ async function fetchHistoricalAdjustedSupplyRaw(input: {
   return computeExcludedBalanceAdjustedSupplyRaw(totalSupplyRaw, excludedBalancesRaw);
 }
 
+interface HistoricalEvmSupplyOptions {
+  priceSeries?: TimestampedRatePoint[];
+  parPrice?: number | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
+  window?: SupplyBackfillWindow;
+  signal?: AbortSignal;
+}
+
+async function runHistoricalEvmSupplyDays(
+  db: D1Database,
+  stablecoinId: string,
+  contract: ContractDeployment,
+  decimals: number,
+  range: { startDay: number; endDay: number },
+  options: HistoricalEvmSupplyOptions,
+  includeSnapshotDate: (snapshotDate: number) => boolean,
+  loadRawSupply?: (blockNumber: number) => Promise<bigint | null>,
+): Promise<{
+  stmts: D1PreparedStatement[];
+  blockMisses: number;
+  supplyMisses: number;
+  priceMisses: number;
+}> {
+  const priceSeries = options.priceSeries ?? [];
+  const firstPrice = priceSeries[0];
+  const lastPrice = priceSeries[priceSeries.length - 1];
+
+  function findHistoricalPrice(snapshotDate: number): number | null {
+    if (!firstPrice || !lastPrice || snapshotDate < firstPrice.timestamp || snapshotDate > lastPrice.timestamp) {
+      return null;
+    }
+    const exact = priceSeries.find((point) => point.timestamp === snapshotDate);
+    if (exact) return exact.rate;
+    const interpolated = interpolateRateAtTimestamp(priceSeries, snapshotDate);
+    return interpolated && interpolated > 0 ? interpolated : null;
+  }
+
+  const blockSearchCache = getBlockSearchCacheForChain(options.blockSearchCachesByChain, contract.chain);
+  const stmts: D1PreparedStatement[] = [];
+  let blockMisses = 0;
+  let supplyMisses = 0;
+  let priceMisses = 0;
+  const rpcOptions = {
+    chainRpcs: options.chainRpcs,
+    extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
+    timeoutMs: 15_000,
+    signal: options.signal,
+  };
+
+  for (let snapshotDate = range.startDay; snapshotDate <= range.endDay; snapshotDate += DAY_SECONDS) {
+    throwIfAborted(options.signal);
+    if (!includeSnapshotDate(snapshotDate)) continue;
+
+    const price = findHistoricalPrice(snapshotDate) ?? options.parPrice ?? null;
+    if (price == null) {
+      priceMisses += 1;
+      continue;
+    }
+
+    const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
+    const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(
+      contract.chain,
+      targetTimestamp,
+      blockSearchCache,
+      rpcOptions,
+    );
+    if (blockNumber == null) {
+      blockMisses += 1;
+      continue;
+    }
+
+    const raw = loadRawSupply
+      ? await loadRawSupply(blockNumber)
+      : await fetchEvmUint256AtBlock(
+          contract.chain,
+          contract.address,
+          TOTAL_SUPPLY_SELECTOR,
+          blockNumber,
+          rpcOptions,
+        );
+    if (raw == null || raw <= 0n) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    const supply = rawTokenAmountToNumber(raw, decimals);
+    if (supply == null) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    const circulatingUsd = supply * price;
+    if (!Number.isFinite(circulatingUsd) || circulatingUsd <= 0) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    pushSupplyUpsert(stmts, db, stablecoinId, snapshotDate, circulatingUsd, price);
+  }
+
+  return { stmts, blockMisses, supplyMisses, priceMisses };
+}
+
 async function backfillHistoricalOnChainSupply(
   db: D1Database,
   meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
-  options: {
-    chainRpcs?: Map<string, ChainRpcConfig>;
-    blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
-    priceSeries?: TimestampedRatePoint[];
-    parPrice?: number | null;
-    window?: SupplyBackfillWindow;
-    signal?: AbortSignal;
-  },
+  options: HistoricalEvmSupplyOptions,
 ): Promise<{ rows: number; error?: string; skippedDays?: number } | null> {
   const exclusionConfig = getOnChainSupplyExclusionConfig(meta.id);
   if (!exclusionConfig?.historicalBackfillStartDay) return null;
@@ -392,79 +489,22 @@ async function backfillHistoricalOnChainSupply(
     return { rows: 0, error: "historical on-chain supply backfill requires contract decimals" };
   }
 
-  const priceSeries = options.priceSeries ?? [];
-  const firstPrice = priceSeries[0];
-  const lastPrice = priceSeries[priceSeries.length - 1];
-
-  function findHistoricalPrice(snapshotDate: number): number | null {
-    if (!firstPrice || !lastPrice || snapshotDate < firstPrice.timestamp || snapshotDate > lastPrice.timestamp) {
-      return null;
-    }
-    const exact = priceSeries.find((point) => point.timestamp === snapshotDate);
-    if (exact) return exact.rate;
-    const interpolated = interpolateRateAtTimestamp(priceSeries, snapshotDate);
-    return interpolated && interpolated > 0 ? interpolated : null;
-  }
-
-  const blockSearchCache = getBlockSearchCacheForChain(options.blockSearchCachesByChain, contract.chain);
-  const stmts: D1PreparedStatement[] = [];
-  let blockMisses = 0;
-  let supplyMisses = 0;
-  let priceMisses = 0;
-
-  for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
-    throwIfAborted(options.signal);
-    if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
-
-    const price = findHistoricalPrice(snapshotDate) ?? options.parPrice ?? null;
-    if (price == null) {
-      priceMisses += 1;
-      continue;
-    }
-
-    const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
-    const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(
-      contract.chain,
-      targetTimestamp,
-      blockSearchCache,
-      {
-        chainRpcs: options.chainRpcs,
-        extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
-        timeoutMs: 15_000,
-        signal: options.signal,
-      },
-    );
-    if (blockNumber == null) {
-      blockMisses += 1;
-      continue;
-    }
-
-    const adjustedRaw = await fetchHistoricalAdjustedSupplyRaw({
+  const { stmts, blockMisses, supplyMisses, priceMisses } = await runHistoricalEvmSupplyDays(
+    db,
+    meta.id,
+    contract,
+    decimals,
+    { startDay, endDay },
+    options,
+    (snapshotDate) => isWithinBackfillWindow(snapshotDate, options.window),
+    (blockNumber) => fetchHistoricalAdjustedSupplyRaw({
       contract,
       holderAddresses: exclusionConfig.holderAddresses,
       blockNumber,
       chainRpcs: options.chainRpcs,
       signal: options.signal,
-    });
-    if (adjustedRaw == null) {
-      supplyMisses += 1;
-      continue;
-    }
-
-    const supply = rawTokenAmountToNumber(adjustedRaw, decimals);
-    if (supply == null) {
-      supplyMisses += 1;
-      continue;
-    }
-
-    const circulatingUsd = supply * price;
-    if (!Number.isFinite(circulatingUsd) || circulatingUsd <= 0) {
-      supplyMisses += 1;
-      continue;
-    }
-
-    pushSupplyUpsert(stmts, db, meta.id, snapshotDate, circulatingUsd, price);
-  }
+    }),
+  );
 
   if (stmts.length === 0) {
     if (priceMisses > 0) {
@@ -491,15 +531,9 @@ async function backfillHistoricalOnChainSupply(
 async function backfillHistoricalTotalSupply(
   db: D1Database,
   meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
-  options: {
-    chainRpcs?: Map<string, ChainRpcConfig>;
-    blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
-    priceSeries?: TimestampedRatePoint[];
+  options: HistoricalEvmSupplyOptions & {
     requirePrice: boolean;
-    parPrice?: number | null;
     skipSnapshotDates?: ReadonlySet<number>;
-    window?: SupplyBackfillWindow;
-    signal?: AbortSignal;
   },
 ): Promise<{ rows: number; error?: string; skippedDays?: number }> {
   if (meta.flags.pegCurrency !== "USD" && !options.requirePrice) {
@@ -531,79 +565,16 @@ async function backfillHistoricalTotalSupply(
     return { rows: 0, error: "no completed UTC days in historical totalSupply backfill window" };
   }
 
-  function findHistoricalPrice(snapshotDate: number): number | null {
-    if (priceSeries.length === 0) return null;
-    const first = priceSeries[0];
-    const last = priceSeries[priceSeries.length - 1];
-    if (snapshotDate < first.timestamp || snapshotDate > last.timestamp) return null;
-    const exact = priceSeries.find((point) => point.timestamp === snapshotDate);
-    if (exact) return exact.rate;
-    const interpolated = interpolateRateAtTimestamp(priceSeries, snapshotDate);
-    return interpolated && interpolated > 0 ? interpolated : null;
-  }
-
-  const blockSearchCache = getBlockSearchCacheForChain(options.blockSearchCachesByChain, contract.chain);
-  const stmts: D1PreparedStatement[] = [];
-  let blockMisses = 0;
-  let supplyMisses = 0;
-  let priceMisses = 0;
-
-  const rpcOptions = {
-    chainRpcs: options.chainRpcs,
-    extraRpcUrls: getPublicFallbackRpcUrls(contract.chain),
-    timeoutMs: 15_000,
-    signal: options.signal,
-  };
-
-  for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
-    throwIfAborted(options.signal);
-    if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
-    if (options.skipSnapshotDates?.has(snapshotDate)) continue;
-
-    const price = findHistoricalPrice(snapshotDate) ?? options.parPrice ?? null;
-    if (price == null) {
-      priceMisses += 1;
-      continue;
-    }
-
-    const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
-    const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(
-      contract.chain,
-      targetTimestamp,
-      blockSearchCache,
-      rpcOptions,
-    );
-    if (blockNumber == null) {
-      blockMisses += 1;
-      continue;
-    }
-
-    const raw = await fetchEvmUint256AtBlock(
-      contract.chain,
-      contract.address,
-      TOTAL_SUPPLY_SELECTOR,
-      blockNumber,
-      rpcOptions,
-    );
-    if (raw == null || raw <= 0n) {
-      supplyMisses += 1;
-      continue;
-    }
-
-    const supply = rawTokenAmountToNumber(raw, decimals);
-    if (supply == null) {
-      supplyMisses += 1;
-      continue;
-    }
-
-    const circulatingUsd = supply * price;
-    if (!Number.isFinite(circulatingUsd) || circulatingUsd <= 0) {
-      supplyMisses += 1;
-      continue;
-    }
-
-    pushSupplyUpsert(stmts, db, meta.id, snapshotDate, circulatingUsd, price);
-  }
+  const { stmts, blockMisses, supplyMisses, priceMisses } = await runHistoricalEvmSupplyDays(
+    db,
+    meta.id,
+    contract,
+    decimals,
+    { startDay, endDay },
+    options,
+    (snapshotDate) =>
+      isWithinBackfillWindow(snapshotDate, options.window) && !options.skipSnapshotDates?.has(snapshotDate),
+  );
 
   if (stmts.length === 0) {
     if (priceMisses > 0) {

@@ -1,6 +1,8 @@
 import { buildInClause } from "../lib/db";
 import {
   loadFanoutSubscriptionInputs,
+  TELEGRAM_FANOUT_FAMILIES,
+  type AlertStablecoinIds,
   type FanoutLoaderFamily,
   type FanoutSubscriptionInputs,
 } from "./dispatch-telegram-alerts-fanout";
@@ -55,13 +57,7 @@ export interface TelegramAuthoritativePlanningContext {
   sourceEventId: string;
   nowSec: number;
   events: TelegramFanoutPlanEvents;
-  stablecoinIds: {
-    dewsIds: string[];
-    depegIds: string[];
-    safetyIds: string[];
-    launchIds: string[];
-    reserveIds: string[];
-  };
+  stablecoinIds: AlertStablecoinIds;
 }
 
 async function loadPageFanoutInputs(
@@ -99,7 +95,7 @@ async function loadPageFanoutInputs(
     { chatIds, onLoaderTiming: recordLoaderTiming },
   );
   telemetry.fanoutInputLoadMs += Math.max(0, Date.now() - startedAtMs);
-  const presetResults = [inputs.presetDewsResult, inputs.presetDepegResult, inputs.presetSafetyResult];
+  const presetResults = Object.values(inputs.preset);
   if (presetResults.some((result) => result.kind !== "ok")) {
     throw new Error("Telegram source-scoped preset page could not be loaded completely");
   }
@@ -184,13 +180,12 @@ async function loadCandidateSubscriberPage(
   telemetry: TelegramAuthoritativePlanningTelemetry,
 ): Promise<Array<Omit<TelegramPlanningSubscriber, "initiallyEligible">>> {
   if (claim.highWaterChatId == null) return [];
-  const familySpecs = [
-    { ids: context.stablecoinIds.dewsIds, direct: "alert_dews", global: "global_alert_dews", preset: "dews" },
-    { ids: context.stablecoinIds.depegIds, direct: "alert_depeg", global: "global_alert_depeg", preset: "depeg" },
-    { ids: context.stablecoinIds.safetyIds, direct: "alert_safety", global: "global_alert_safety", preset: "safety" },
-    { ids: context.stablecoinIds.launchIds, direct: "alert_launch", global: "global_alert_launch", preset: null },
-    { ids: context.stablecoinIds.reserveIds, direct: "alert_reserve", global: "global_alert_reserve", preset: null },
-  ].filter((spec) => spec.ids.length > 0);
+  const familySpecs = TELEGRAM_FANOUT_FAMILIES.map((spec) => ({
+    ids: context.stablecoinIds[spec.idsKey],
+    direct: spec.directColumn,
+    global: spec.globalColumn,
+    preset: spec.presetFamily,
+  })).filter((spec) => spec.ids.length > 0);
   if (familySpecs.length === 0) return [];
 
   const globalPredicate = familySpecs.map((spec) => `subscriber.${spec.global} = 1`).join(" OR ");

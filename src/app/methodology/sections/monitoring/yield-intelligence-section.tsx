@@ -5,10 +5,11 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import {
   MethodologyDetails,
-  MethodologyDiagramArrow,
-  MethodologyDiagramCard,
   MethodologyFacts,
+  MethodologyPreconditions,
   MethodologySectionShell,
+  ResponsiveMethodologyPipeline,
+  type ResponsiveMethodologyPipelineProps,
   WorkedExample,
 } from "../../methodology-shared";
 import { YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
@@ -16,6 +17,45 @@ import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yie
 
 const YIELD_OVERVIEW_PARAGRAPH =
   "Pharos tracks native stablecoin yield plus reviewed lending and structured opportunities, then computes a risk-adjusted ranking through the Pharos Yield Score (PYS). Core rankings publish hourly; slower supplemental families refresh every four hours. Source resolution is identity-first and confidence-weighted, preserves valid alternatives, and keeps quarantined or pre-launch coverage visible without admitting it to the live leaderboard. Published external opportunities must pass source-quality, size, measured venue-TVL, benchmark-freshness, and exposure-identity gates. Opportunity-level risk can affect PYS for that market, but it never rewrites the underlying stablecoin's Safety Score. The typed adapter, allowlist, exact-pool, source-risk, and lifecycle registries own the changing venue and asset inventories.";
+
+const YIELD_PIPELINE = {
+  desktop: {
+    wrapperClassName: "hidden md:flex items-stretch gap-4",
+    arrow: { className: "flex items-center text-xl font-bold text-muted-foreground", symbol: "→", ariaHidden: true },
+    stages: [
+      { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
+          { className: "flex-1", title: "Tier 1", subtitle: "Direct on-chain reads" },
+          { className: "flex-1", title: "Tier 2", subtitle: "Curated pools + protocol APIs" },
+          { className: "flex-1", title: "Tier 3 / 4", subtitle: "Price- or rate-derived fallback" },
+        ] },
+      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: "APY + 25% benchmark spread" }] },
+      { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
+          { className: "flex-1", title: "Row Utility", subtitle: "Effective yield ÷ source risk" },
+          { className: "flex-1", title: "Yield Efficiency", subtitle: "Row utility ÷ curved safety penalty" },
+          { className: "flex-1", title: "Sustainability", subtitle: "penalises high variance" },
+        ] },
+      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "PYS Score", subtitle: "0–100" }] },
+    ],
+  },
+  mobile: {
+    wrapperClassName: "flex flex-col items-center gap-3 md:hidden",
+    arrow: { className: "text-xl font-bold text-muted-foreground", symbol: "↓", ariaHidden: true },
+    stages: [
+      { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
+          { title: "Tier 1", titleClassName: "text-xs text-foreground font-medium", subtitle: "On-chain reads", subtitleClassName: "text-xs text-muted-foreground" },
+          { title: "Tier 2", titleClassName: "text-xs text-foreground font-medium", subtitle: "Curated venues", subtitleClassName: "text-xs text-muted-foreground" },
+          { title: "Tier 3 / 4", titleClassName: "text-xs text-foreground font-medium", subtitle: "Fallbacks", subtitleClassName: "text-xs text-muted-foreground" },
+        ] },
+      { cards: [{ className: "w-full", title: "Effective Yield", subtitle: "APY + 25% benchmark spread" }] },
+      { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
+          { title: "Row Utility", titleClassName: "text-xs text-foreground font-medium", subtitle: "yield ÷ source risk", subtitleClassName: "text-xs text-muted-foreground" },
+          { title: "Efficiency", titleClassName: "text-xs text-foreground font-medium", subtitle: "utility ÷ safety", subtitleClassName: "text-xs text-muted-foreground" },
+          { title: "Sustainability", titleClassName: "text-xs text-foreground font-medium", subtitle: "penalises variance", subtitleClassName: "text-xs text-muted-foreground" },
+        ] },
+      { cards: [{ className: "w-full", title: "PYS Score", subtitle: "0–100" }] },
+    ],
+  },
+} satisfies ResponsiveMethodologyPipelineProps;
 
 export function YieldIntelligenceMethodologySection() {
   return (
@@ -42,10 +82,8 @@ export function YieldIntelligenceMethodologySection() {
                   { label: "Output", value: "PYS (0-100)" },
                 ]}
               />
-              <div className="space-y-2">
-                <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-                <MethodologyFacts
-                  facts={[
+              <MethodologyPreconditions
+                facts={[
                     {
                       label: "Minimum data",
                       value:
@@ -61,9 +99,8 @@ export function YieldIntelligenceMethodologySection() {
                       value:
                         "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive. Expired source or benchmark evidence remains visible with PYS NR rather than an exact score. A fresh row with 40 / NR fallback safety or incomplete external-opportunity evidence retains an explicitly estimated PYS and warning; missing source-risk penalty resolves to neutral 1",
                     },
-                  ]}
-                />
-              </div>
+                ]}
+              />
               <div className="space-y-2">
                 <h3 className="text-foreground font-medium">Adapter manifest</h3>
                 <p>
@@ -94,46 +131,7 @@ export function YieldIntelligenceMethodologySection() {
                 </p>
               </WorkedExample>
               <MethodologyDetails summary="Technical details: APY source resolution, confidence arbitration, PYS formula, NAV handling, and limits">
-                {/* Yield pipeline diagram — desktop: horizontal */}
-                <div className="hidden md:flex items-stretch gap-4">
-                  {/* Three tiers */}
-                  <div className="flex flex-col gap-2 flex-1">
-                    <MethodologyDiagramCard className="flex-1" title="Tier 1" subtitle="Direct on-chain reads" />
-                    <MethodologyDiagramCard className="flex-1" title="Tier 2" subtitle="Curated pools + protocol APIs" />
-                    <MethodologyDiagramCard className="flex-1" title="Tier 3 / 4" subtitle="Price- or rate-derived fallback" />
-                  </div>
-                  <MethodologyDiagramArrow direction="right" />
-                  {/* APY */}
-                  <MethodologyDiagramCard className="w-32 flex flex-shrink-0 flex-col justify-center" title="Effective Yield" subtitle="APY + 25% benchmark spread" />
-                  <MethodologyDiagramArrow direction="right" />
-                  {/* Formula components */}
-                  <div className="flex flex-col gap-2 flex-1">
-                    <MethodologyDiagramCard className="flex-1" title="Row Utility" subtitle="Effective yield ÷ source risk" />
-                    <MethodologyDiagramCard className="flex-1" title="Yield Efficiency" subtitle="Row utility ÷ curved safety penalty" />
-                    <MethodologyDiagramCard className="flex-1" title="Sustainability" subtitle="penalises high variance" />
-                  </div>
-                  <MethodologyDiagramArrow direction="right" />
-                  {/* PYS */}
-                  <MethodologyDiagramCard className="w-32 flex flex-shrink-0 flex-col justify-center" title="PYS Score" subtitle="0–100" />
-                </div>
-                {/* Yield pipeline diagram — mobile: vertical */}
-                <div className="flex flex-col items-center gap-3 md:hidden">
-                  <div className="grid grid-cols-3 gap-2 w-full">
-                    <MethodologyDiagramCard title="Tier 1" titleClassName="text-xs text-foreground font-medium" subtitle="On-chain reads" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Tier 2" titleClassName="text-xs text-foreground font-medium" subtitle="Curated venues" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Tier 3 / 4" titleClassName="text-xs text-foreground font-medium" subtitle="Fallbacks" subtitleClassName="text-xs text-muted-foreground" />
-                  </div>
-                  <MethodologyDiagramArrow />
-                  <MethodologyDiagramCard className="w-full" title="Effective Yield" subtitle="APY + 25% benchmark spread" />
-                  <MethodologyDiagramArrow />
-                  <div className="grid grid-cols-3 gap-2 w-full">
-                    <MethodologyDiagramCard title="Row Utility" titleClassName="text-xs text-foreground font-medium" subtitle="yield ÷ source risk" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Efficiency" titleClassName="text-xs text-foreground font-medium" subtitle="utility ÷ safety" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Sustainability" titleClassName="text-xs text-foreground font-medium" subtitle="penalises variance" subtitleClassName="text-xs text-muted-foreground" />
-                  </div>
-                  <MethodologyDiagramArrow />
-                  <MethodologyDiagramCard className="w-full" title="PYS Score" subtitle="0–100" />
-                </div>
+                <ResponsiveMethodologyPipeline {...YIELD_PIPELINE} />
                 {/* APY Resolution tiers */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">APY Resolution and Source Arbitration</h3>

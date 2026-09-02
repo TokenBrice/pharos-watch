@@ -197,9 +197,9 @@ vi.mock("../dex-liquidity/scoring-stage", async () => {
   };
 });
 
-vi.mock("../dex-liquidity/challenger-persistence", async () => {
-  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-persistence")>(
-    "../dex-liquidity/challenger-persistence",
+vi.mock("../dex-liquidity/challenger-publish", async () => {
+  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-publish")>(
+    "../dex-liquidity/challenger-publish",
   );
   return {
     ...actual,

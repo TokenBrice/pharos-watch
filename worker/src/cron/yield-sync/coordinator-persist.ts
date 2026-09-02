@@ -17,6 +17,7 @@ import {
 } from "./publication";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 
@@ -129,18 +130,18 @@ export async function publishYieldCoordinatorResults(params: {
     });
     return {
       ok: false,
-      result: {
+      result: createCronResult({
         status: "degraded",
         itemCount: params.resolvedCount,
-        metadata: JSON.stringify({
+        metadata: {
           reason: "yield-rankings-preflight-failed",
           publishFailure: previewPublishability.reason ?? "schema-validation-failed",
           validationFailures: previewPublishability.validationFailures,
           rowsRejected: params.rowsRejected,
           divergenceFlags: params.divergenceFlags,
           sourceSwitches: params.sourceSwitches,
-        }),
-      },
+        },
+      }),
     };
   }
 
@@ -178,18 +179,18 @@ export async function publishYieldCoordinatorResults(params: {
     });
     return {
       ok: false,
-      result: {
+      result: createCronResult({
         status: "degraded",
         itemCount: params.resolvedCount,
-        metadata: JSON.stringify({
+        metadata: {
           reason: "yield-publication-transaction-failed",
           publishFailure: reason,
           validationFailures: 0,
           rowsRejected: params.rowsRejected,
           divergenceFlags: params.divergenceFlags,
           sourceSwitches: params.sourceSwitches,
-        }),
-      },
+        },
+      }),
     };
   }
   if (!publicationWrite.ok) {

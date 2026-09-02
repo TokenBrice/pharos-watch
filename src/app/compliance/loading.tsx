@@ -1,6 +1,6 @@
 import { PageLoadingRowList } from "@/components/page-loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageLoadingRoute } from "@/app/page-loading-route";
+import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 const COMPLIANCE_SKELETON_ROW_COUNT = 10;
 
@@ -34,10 +34,7 @@ export function ComplianceContentLoadingState() {
   );
 }
 
-export default function Loading() {
-  return (
-    <PageLoadingRoute sectionWidth="w-24" titleWidth="w-64 sm:w-80">
-      <ComplianceContentLoadingState />
-    </PageLoadingRoute>
-  );
-}
+export default createPageLoadingRoute(ComplianceContentLoadingState, {
+  sectionWidth: "w-24",
+  titleWidth: "w-64 sm:w-80",
+});

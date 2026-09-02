@@ -15,6 +15,7 @@ import {
 } from "../lib/flight-to-quality-classification";
 import { buildInClause } from "../lib/db";
 import { isRecord } from "@shared/lib/type-guards";
+import { cloneResponse } from "@shared/lib/http-response";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
@@ -286,12 +287,9 @@ async function reconcileCachedAggregateSafetyResponse(
     },
     ...(isRecord(sync) ? { sync } : {}),
   };
-  const headers = new Headers(fallback.headers);
-  headers.append("Warning", `199 - "${warning}"`);
-  return new Response(JSON.stringify(degraded), {
-    status: fallback.status,
-    statusText: fallback.statusText,
-    headers,
+  return cloneResponse(fallback, {
+    body: JSON.stringify(degraded),
+    mutateHeaders: (headers) => headers.append("Warning", `199 - "${warning}"`),
   });
 }
 

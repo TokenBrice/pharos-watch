@@ -15,6 +15,7 @@ import {
 import type { PendingAlertRow } from "../telegram-pending/types";
 import { emptyAlerts, expandSubscriberChunks } from "../dispatch-telegram-routing";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;
 const CHAT_ID = "42";
@@ -35,17 +36,14 @@ function insertSubscriber(options: {
   chatSnoozeUntil?: number | null;
   globalDews?: number;
 } = {}): void {
-  sqlite.prepare(
-    `INSERT INTO telegram_subscribers (
-       chat_id, created_at, last_active_at, preference_generation,
-       alert_snooze_until_ts, global_alert_dews
-     ) VALUES (?, 0, 0, ?, ?, ?)`,
-  ).run(
-    CHAT_ID,
-    options.generation ?? 1,
-    options.chatSnoozeUntil ?? null,
-    options.globalDews ?? 0,
-  );
+  insertTelegramSubscriber(sqlite, {
+    chatId: CHAT_ID,
+    createdAt: 0,
+    lastActiveAt: 0,
+    preferenceGeneration: options.generation ?? 1,
+    snoozeUntil: options.chatSnoozeUntil,
+    global: { dews: options.globalDews === 1 },
+  });
 }
 
 function insertDirect(options: {

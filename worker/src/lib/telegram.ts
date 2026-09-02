@@ -221,11 +221,9 @@ async function sendTelegramPayload(
     const signal = callerSignal
       ? AbortSignal.any([callerSignal, AbortSignal.timeout(10_000)])
       : AbortSignal.timeout(10_000);
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    const res = await postTelegramBotApi(botToken, method, payload, {
       signal,
+      timeoutMs: 10_000,
     });
 
     if (!res.ok) {
@@ -378,18 +376,8 @@ export interface BatchMessage {
   safetyScoreIdentity?: import("@shared/types/safety-score-publication").SafetyScorePublicationIdentity;
 }
 
-export interface BatchResult {
+export interface BatchResult extends SendToChatResult {
   chatId: string;
-  ok: boolean;
-  blocked: boolean;
-  retryable: boolean;
-  permanentFailure: boolean;
-  statusCode: number | null;
-  errorClass: TelegramSendErrorClass | null;
-  delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
-  retryAfterSec: number | null;
-  rateLimitScope?: "chat" | "global";
-  migrateToChatId?: string;
   attempted?: boolean;
   skippedReason?:
     | "predecessor_failure"

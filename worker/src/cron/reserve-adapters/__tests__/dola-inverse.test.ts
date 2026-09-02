@@ -26,8 +26,7 @@ import {
   listUnexpectedDolaAssets,
   type FirmMarket,
 } from "../dola-inverse";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
   return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, borrowPaused: false };
@@ -262,7 +261,7 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.sourceTimestamp).toBe(12345);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("normalizes millisecond API timestamps before validation", () => {
@@ -274,7 +273,7 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.timestamp).toBe(1_776_330_494);
     expect(result.metadata?.sourceTimestamp).toBe(1_776_330_494);
     expect(result.metadata?.freshnessMode).toBe("verified");
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("assigns correct risk levels to each bucket", () => {
@@ -322,7 +321,7 @@ describe("adaptFirmMarkets", () => {
       }),
     ]));
     expect(result.slices.find((slice) => slice.name === "toString collateral")).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 });
 
@@ -348,7 +347,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
     expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
     expect(result.metadata?.redemption?.routeStatusSource).toBeUndefined();
     expect(result.metadata?.redemption?.routeStatusReason).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("reports the route open and binds capacity to the lower of supply() and vault maxWithdraw()", async () => {
@@ -366,7 +365,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
     expect(result.metadata?.redemption?.sourceUrls).toContain(
       "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module",
     );
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("binds capacity to the vault leg when the sUSDS vault cannot pay out the full accounted supply", async () => {
@@ -385,7 +384,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
     expect(result.warnings ?? []).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "dola-psm-unreadable", effect: "info" })]),
     );
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("withholds the whole redemption block when supply() cannot be read", async () => {
@@ -404,7 +403,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
 
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 5_000, routeStatus: "open" });
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("dola-inverse", result);
   });
 
   it("rejects a sellFeeBps() reading outside the contract's own bps denominator", async () => {

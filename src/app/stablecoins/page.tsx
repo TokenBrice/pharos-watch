@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
@@ -82,10 +83,8 @@ export default function StablecoinsHubPage() {
         </>,
       ]}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd([
+        <JsonLdScript
+          json={safeJsonLd([
               ...buildCollectionItemListJsonLd({
                 url: `${SITE_URL}/stablecoins/`,
                 name: "Stablecoin Taxonomies",
@@ -96,8 +95,7 @@ export default function StablecoinsHubPage() {
                 })),
               }),
               buildPublicDatasetMirrorJsonLd("top-stablecoins"),
-            ]),
-          }}
+            ])}
         />
       }
     >

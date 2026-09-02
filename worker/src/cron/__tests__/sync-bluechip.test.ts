@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
@@ -24,19 +24,12 @@ vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
 
 import { syncBluechip } from "../sync-bluechip";
 
-function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT INTO cache", rows: [] },
-  ]);
-}
+const mockD1 = createMockD1Preset([
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "INSERT INTO cache", rows: [] },
+]);
 
-function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
-  return db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "bluechip-ratings");
-}
+const getCacheInsert = (db: MockD1Database) => findD1HistoryEntry(db, "INSERT INTO cache", [0, "bluechip-ratings"]);
 
 describe("syncBluechip", () => {
   beforeEach(() => {
