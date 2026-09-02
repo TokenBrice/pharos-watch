@@ -348,7 +348,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
+    autoStage: false,
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],

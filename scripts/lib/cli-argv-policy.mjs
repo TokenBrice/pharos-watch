@@ -40,6 +40,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/refresh-pages-release-data.ts"),
     strict("scripts/maintenance/register-telegram.ts"),
     strict("scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts"),
+    strict("scripts/maintenance/sync-agent-skills.mjs"),
     strict("scripts/maintenance/sync-depeg-events.ts"),
     strict("scripts/maintenance/sync-digests.ts"),
     strict("scripts/maintenance/wait-pages-release-marker.ts"),
