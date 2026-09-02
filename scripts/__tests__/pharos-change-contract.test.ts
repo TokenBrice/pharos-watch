@@ -22,13 +22,23 @@ function requireBlockingReason(output: unknown): string {
   return output.reason;
 }
 
-function runHookCli(hook: "pre-tool-use" | "permission-request", input = ""): unknown {
-  return JSON.parse(
-    execFileSync(process.execPath, ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), `--hook=${hook}`], {
-      encoding: "utf8",
-      input,
-    }),
+type HookMode = "pre-tool-use" | "permission-request" | "session-start";
+
+function runHookCliProcess(hook: HookMode, input = "") {
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), `--hook=${hook}`],
+    { cwd: process.cwd(), encoding: "utf8", input },
   );
+  return {
+    ...result,
+    stderr: String(result.stderr ?? ""),
+    stdout: String(result.stdout ?? ""),
+  };
+}
+
+function runHookCli(hook: HookMode, input = ""): unknown {
+  return JSON.parse(runHookCliProcess(hook, input).stdout);
 }
 
 function runContractCli(args: readonly string[], env: NodeJS.ProcessEnv = process.env) {
@@ -44,6 +54,21 @@ function runContractCli(args: readonly string[], env: NodeJS.ProcessEnv = proces
   };
 }
 
+function docKeys(contract: { docs: Array<{ anchor?: string; path: string }> }): string[] {
+  return contract.docs.map((doc) => doc.anchor ? `${doc.path}#${doc.anchor}` : doc.path);
+}
+
+function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "pharos-change-contract-sql-"));
+  const sqlPath = join(fixtureRoot, "query.sql");
+  writeFileSync(sqlPath, sql);
+  try {
+    return callback(sqlPath);
+  } finally {
+    rmSync(fixtureRoot, { force: true, recursive: true });
+  }
+}
+
 describe("normalizeChangedFiles", () => {
   it("normalizes path separators, blanks, and duplicates", () => {
     expect(normalizeChangedFiles(["worker\\src\\cron\\sync.ts", "", "worker/src/cron/sync.ts"])).toEqual([
@@ -56,8 +81,8 @@ describe("classifyChangedFiles", () => {
   it("routes stablecoin registry changes to data docs and checks", () => {
     const contract = classifyChangedFiles(["shared/data/stablecoins/coins/example-usd.json"]);
 
-    expect(contract.families.map((family: { id: string }) => family.id)).toContain("stablecoin-registry");
-    expect(contract.docsToRead).toContain("docs/stablecoin-data.md");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("stablecoin-registry");
+    expect(docKeys(contract)).toContain("docs/stablecoin-data.md");
     expect(contract.checks).toContain("npm run check:stablecoin-data");
     // The family's supply-override hard rule must reach the contract. Its exact
     // wording is owner-editable in docs/doc-ownership.json (it was reworded by
@@ -70,39 +95,39 @@ describe("classifyChangedFiles", () => {
   it("routes scheduled Worker changes to cron docs and guardrails", () => {
     const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
 
-    expect(contract.families.map((family: { id: string }) => family.id)).toContain("worker-cron");
-    expect(contract.docsToRead).toContain("docs/worker-and-api-limits.md");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("worker-cron");
+    expect(contract.background.map((doc) => doc.path)).toContain("docs/worker-and-api-limits.md");
     expect(contract.checks).toContain("npm run check:cron-sync");
     expect(contract.checks).toContain("npm run check:cron-connections");
-    expect(contract.hardRules).toContain("Cron jobs share Cloudflare's per-trigger 6-connection pool.");
+    expect(contract.hardRules.some((rule: string) => /six-connection trigger budget/.test(rule))).toBe(true);
   });
 
   it("routes blog publishing changes to the editorial process and its focused suites", () => {
     const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
 
-    expect(contract.families.map((family: { id: string }) => family.id)).toContain("editorial-publishing");
-    expect(contract.docsToRead).toContain("docs/process/blog-publishing.md");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("editorial-publishing");
+    expect(docKeys(contract)).toContain("docs/process/blog-publishing.md");
     expect(contract.checks).toContain(
       "npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts",
     );
   });
 
-  it("routes Telegram auth and delivery changes to Telegram contracts and runbooks", () => {
+  it("routes Telegram delivery changes to the dispatch contract and runbooks", () => {
     const contract = classifyChangedFiles([
       "worker/src/lib/telegram-mini-app-auth.ts",
       "shared/lib/telegram-delivery-policy.ts",
     ]);
 
-    expect(contract.families.map((family: { id: string }) => family.id)).toContain("telegram");
-    expect(contract.docsToRead).toContain("docs/telegram-mini-app.md");
-    expect(contract.docsToRead).toContain("docs/telegram-alerts.md");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("telegram-dispatch");
+    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch-cron");
+    expect(docKeys(contract)).not.toContain("docs/telegram-mini-app.md");
   });
 
   it("routes feedback verification changes to the feedback contract", () => {
     const contract = classifyChangedFiles(["worker/src/api/feedback/verification.ts"]);
 
-    expect(contract.families.map((family: { id: string }) => family.id)).toContain("feedback");
-    expect(contract.docsToRead).toContain("docs/feedback-pipeline.md");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("feedback");
+    expect(docKeys(contract)).toContain("docs/feedback-pipeline.md");
   });
 
   it("routes repo-local agent config changes to agent process guidance", () => {
@@ -112,9 +137,9 @@ describe("classifyChangedFiles", () => {
       "scripts/ci/pharos-change-contract.ts",
     ]);
 
-    expect(contract.families.map((family: { id: string }) => family.id)).toContain("agent-hooks-process");
-    expect(contract.docsToRead).toContain("docs/process/agent-artifacts.md");
-    expect(contract.checks).toContain("focused hook/script tests");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("agent-hooks-process");
+    expect(docKeys(contract)).toContain("docs/process/agent-artifacts.md");
+    expect(contract.checks).toContain("npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts");
   });
 });
 
@@ -126,7 +151,149 @@ describe("formatContract", () => {
     expect(text).toContain("D1 schema or migration");
     expect(text).toContain("npm run check:migrations");
     expect(text).toContain("D1 migrations are applied before the new Worker is live");
+    expect(text).toContain("Scoped context:\n- worker/migrations/AGENTS.md\n- worker/AGENTS.md");
+    expect(text).toContain("Also relevant:");
     expect(text).toContain("Deploy impact:");
+  });
+
+  it("adds the planned-file next step only for working-tree output", () => {
+    const explicit = formatContract(classifyChangedFiles(["src/app/page.tsx"]));
+    const workingTree = formatContract({
+      ...classifyChangedFiles(["src/app/page.tsx"]),
+      source: "working tree",
+    });
+
+    expect(explicit).not.toContain("Next: npm run agent:route -- --file <path> for planned files");
+    expect(workingTree).toMatch(/Next: npm run agent:route -- --file <path> for planned files$/);
+  });
+});
+
+describe("representative --file routing", () => {
+  function route(file: string) {
+    const result = runContractCli(["--file", file, "--json"]);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    return JSON.parse(result.stdout) as {
+      background: Array<{ anchor?: string; path: string }>;
+      checks: string[];
+      docs: Array<{ anchor?: string; path: string }>;
+      hints: string[];
+      mappings: Array<{ id: string }>;
+      scopedContext: string[];
+    };
+  }
+
+  it("routes a screener component to the exact screener contract", () => {
+    const contract = route("src/components/screener/screener-table.tsx");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("screener");
+    expect(docKeys(contract)).toContain("docs/screener-page.md");
+    expect(contract.checks).toContain("npm run typecheck");
+  });
+
+  it("routes the yield cron to yield engineering and operations docs", () => {
+    const contract = route("worker/src/cron/yield-coverage-audit.ts");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("yield-cron");
+    expect(docKeys(contract).slice(0, 2)).toEqual([
+      "docs/yield-intelligence.md#engineering-contract",
+      "docs/yield-intelligence-operations.md",
+    ]);
+    expect(contract.scopedContext.slice(0, 2)).toEqual([
+      "worker/src/cron/AGENTS.md",
+      "worker/AGENTS.md",
+    ]);
+    expect(contract.checks).toContain("npm run check:cron-sync");
+    expect(docKeys(contract)).not.toContain("docs/methodology-page.md");
+  });
+
+  it("routes a coin record to the addition procedure and scoped context", () => {
+    const contract = route("shared/data/stablecoins/coins/usdc-circle.json");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("stablecoin-registry");
+    expect(docKeys(contract)).toContain("docs/process/adding-a-stablecoin.md#source-of-truth");
+    expect(contract.scopedContext).toEqual([
+      "shared/data/stablecoins/AGENTS.md",
+      "shared/AGENTS.md",
+    ]);
+    expect(contract.checks).toContain("npm run check:stablecoin-data");
+  });
+
+  it("routes the digest safety-map type contract to both anchored owners", () => {
+    const contract = route("shared/types/digest-safety-map-contract.ts");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("digest-safety-map");
+    expect(docKeys(contract)).toContain("docs/digest-pipeline.md#generation");
+    expect(docKeys(contract)).toContain("docs/safety-score-map.md#digest-map-pairing-bounded-carry-forward");
+    expect(contract.checks).toContain("npm run check:cron-sync");
+  });
+
+  it("routes the homepage entrypoint to the homepage contract", () => {
+    const contract = route("src/app/page.tsx");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("homepage");
+    expect(docKeys(contract)).toContain("docs/homepage.md");
+    expect(contract.checks).toContain("npm run build");
+  });
+
+  it("routes Next configuration to frontend and Pages hosting owners", () => {
+    const contract = route("next.config.ts");
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(
+      expect.arrayContaining(["frontend-routes", "pages-functions-hosting"]),
+    );
+    expect(docKeys(contract)).toContain("docs/operator-origin-access.md#pages-functions-proxy");
+    expect(contract.checks).toEqual(expect.arrayContaining(["npm run build", "npm run check:env-contract"]));
+  });
+
+  it("routes Telegram API ingress without loading dispatch or Mini App docs", () => {
+    const contract = route("worker/src/api/telegram-webhook.ts");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram-api");
+    expect(docKeys(contract)).toContain("docs/telegram-architecture.md#1-ingress");
+    expect(docKeys(contract)).not.toContain("docs/telegram-alerts.md#dispatch-cron");
+    expect(docKeys(contract)).not.toContain("docs/telegram-mini-app.md");
+    expect(contract.checks).toContain("npm run test:critical-contracts");
+  });
+
+  it("keeps dynamic guidance out of Read first", () => {
+    const result = runContractCli(["--file", "worker/src/cron/sync-yield-data.ts"]);
+    expect(result.stdout).toContain("Read first:");
+    expect(result.stdout).not.toContain("specific methodology doc");
+    expect(result.stdout).not.toContain("matching entries under");
+    expect(result.stdout).not.toContain("matched route-specific doc");
+  });
+
+  it.each([
+    "shared/data/stablecoins/coins/usdc-circle.json",
+    "worker/src/api/feedback/verification.ts",
+    "shared/data/safety-score-v9/historical-fixtures-v1.json",
+  ])("keeps one source path to at most six Read first entries: %s", (file) => {
+    expect(route(file).docs.length).toBeLessThanOrEqual(6);
+  });
+
+  it("keeps every tracked source path to at most six Read first entries", () => {
+    const sourceRoots = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
+    const trackedSources = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+      .split("\0")
+      .filter((file) => file && sourceRoots.some((root) => file.startsWith(root)));
+    const overLimit = trackedSources
+      .map((file) => ({ count: classifyChangedFiles([file]).docs.length, file }))
+      .filter(({ count }) => count > 6);
+
+    expect(overLimit).toEqual([]);
+  }, 15_000);
+});
+
+describe("scoped AGENTS.md discovery", () => {
+  it.each([
+    ["src/AGENTS.md", ["src/AGENTS.md"]],
+    ["src/app/page.tsx", ["src/app/AGENTS.md", "src/AGENTS.md"]],
+    ["src/components/screener/screener-table.tsx", ["src/components/AGENTS.md", "src/AGENTS.md"]],
+    ["shared/AGENTS.md", ["shared/AGENTS.md"]],
+    ["shared/data/stablecoins/coins/usdc-circle.json", ["shared/data/stablecoins/AGENTS.md", "shared/AGENTS.md"]],
+    ["shared/data/safety-score-v9/historical-fixtures-v1.json", ["shared/data/safety-score-v9/AGENTS.md", "shared/AGENTS.md"]],
+    ["worker/AGENTS.md", ["worker/AGENTS.md"]],
+    ["worker/src/cron/yield-coverage-audit.ts", ["worker/src/cron/AGENTS.md", "worker/AGENTS.md"]],
+    ["worker/migrations/0001_initial.sql", ["worker/migrations/AGENTS.md", "worker/AGENTS.md"]],
+    ["functions/_middleware.ts", ["functions/AGENTS.md"]],
+    ["scripts/ci/pharos-change-contract.ts", ["scripts/AGENTS.md"]],
+    [".github/workflows/pull-request-checks.yml", [".github/workflows/AGENTS.md"]],
+  ])("discovers nearest context for %s", (file, expected) => {
+    expect(classifyChangedFiles([file]).scopedContext).toEqual(expected);
   });
 });
 
@@ -141,7 +308,7 @@ describe("CLI path and source selection", () => {
     expect(dotSlash.status).toBe(0);
     expect(absoluteContract.changedFiles).toEqual(["src/app/page.tsx"]);
     expect(dotSlashContract.changedFiles).toEqual(absoluteContract.changedFiles);
-    expect(dotSlashContract.families).toEqual(absoluteContract.families);
+    expect(dotSlashContract.mappings).toEqual(absoluteContract.mappings);
   });
 
   it("rejects explicit paths outside the repository with exit 2", () => {
@@ -247,15 +414,52 @@ describe("CLI path and source selection", () => {
 });
 
 describe("Codex hook outputs", () => {
-  it("injects concise startup context when there is no current diff", () => {
+  it("emits the compact two-line startup context for an empty tree", () => {
     const contract = classifyChangedFiles([]);
+    const context = buildSessionStartContext(contract);
 
-    expect(buildSessionStartContext(contract)).toContain("docs/agent-task-router.md");
+    expect(context.split("\n")).toEqual([
+      "Pharos change contract — explicit files (0 files) — deploy: pages=n, worker=n",
+      "Route a planned path: npm run agent:route -- --file <path>",
+    ]);
     expect(buildSessionStartHookOutput(contract)).toMatchObject({
       hookSpecificOutput: {
         hookEventName: "SessionStart",
       },
     });
+  });
+
+  it("emits bounded read, scoped-context, and focused-check lines for a routed file", () => {
+    const context = buildSessionStartContext(classifyChangedFiles(["src/app/page.tsx"]));
+
+    expect(context.split("\n")).toEqual([
+      "Pharos change contract — explicit files (1 files) — deploy: pages=y, worker=n",
+      "Read first: docs/homepage.md, docs/agent-task-router.md, docs/architecture.md",
+      "Scoped context: src/app/AGENTS.md, src/AGENTS.md",
+      "Focused checks: npm run build, npm run seo:check, npx vitest run src/lib/__tests__/homepage-hero-snapshot.test.ts src/lib/__tests__/homepage-cohort-config.test.ts, npx vitest run src",
+      "Route a planned path: npm run agent:route -- --file <path>",
+    ]);
+    expect(context).not.toContain("Hints:");
+    expect(context).not.toContain("Core rules:");
+  });
+
+  it("keeps specific yield docs ahead of fallback docs at the four-doc cap", () => {
+    const context = buildSessionStartContext(
+      classifyChangedFiles(["worker/src/cron/yield-coverage-audit.ts"]),
+    );
+
+    expect(context).toContain(
+      "Read first: docs/yield-intelligence.md#engineering-contract, docs/yield-intelligence-operations.md, docs/agent-task-router.md, docs/process/cron-trigger-policy.md",
+    );
+    expect(context).not.toContain("Read first: docs/worker-infrastructure.md");
+  });
+
+  it("reads the agent:route alias from package.json", () => {
+    const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(packageJson.scripts["agent:route"]).toBe("node --import tsx scripts/ci/pharos-change-contract.ts");
   });
 
   it("emits no decision for an allowed Codex-shaped PreToolUse Bash payload", () => {
@@ -365,7 +569,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
+    expect(requireBlockingReason(output)).toBe("opaque shell construct around a guarded command; run it directly");
   });
 
   it("blocks remote D1 mutation commands", () => {
@@ -600,6 +804,365 @@ describe("hard-block hook outputs", () => {
         },
       },
     });
+  });
+});
+
+describe("W2.7 opaque shell guards", () => {
+  const blockedOpaqueCommands = [
+    ["command substitution", "echo $(git reset --hard HEAD)"],
+    ["backticks", "echo `git clean -fd`"],
+    ["eval", "eval 'wrangler d1 execute stablecoin-db --remote --command \"delete from cache\"'"],
+    ["sh -c", "sh -c 'git reset --hard HEAD'"],
+    ["bash -c", "bash -c 'wrangler deploy'"],
+    ["zsh -c", "zsh -c 'worker/migrations/0240_guard.sql'"],
+    ["pipe to sh", "printf guarded | sh -c 'git clean -fd'"],
+    ["background separator", "echo ready & wrangler deploy"],
+    ["xargs sh", "printf guarded | xargs sh -c 'git reset --hard HEAD'"],
+  ] as const;
+
+  it.each(blockedOpaqueCommands)("blocks a guarded %s construct", (_label, command) => {
+    const output = buildPreToolUseHookOutput({ tool_input: { command } });
+
+    expect(requireBlockingReason(output)).toBe("opaque shell construct around a guarded command; run it directly");
+  });
+
+  const allowedOpaqueCommands = [
+    ["command substitution", "echo $(git rev-parse HEAD)"],
+    ["backticks", "echo `git status --short`"],
+    ["eval", "eval 'git status --short'"],
+    ["sh -c", "sh -c 'git status --short'"],
+    ["bash -c", "bash -c 'git status --short'"],
+    ["zsh -c", "zsh -c 'git status --short'"],
+    ["pipe to sh", "printf status | sh"],
+    ["background separator", "git status --short & echo done"],
+    ["xargs sh", "printf status | xargs sh"],
+    ["background keyword argument", "echo ready & echo deploy"],
+    ["URL keyword argument", "curl https://x/deploy &"],
+    ["quoted keyword argument", "echo \"git reset --hard\" > notes.txt"],
+    ["unrelated git subcommand", "git log --oneline & sleep 1"],
+  ] as const;
+
+  it.each(allowedOpaqueCommands)("allows an unguarded %s construct", (_label, command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
+});
+
+describe("W2.7 shell indirection guards", () => {
+  const blockedIndirectionCommands = [
+    "sh -c 'git \"$@\"' sh reset --hard",
+    "g=git; $g reset --hard",
+    "${GIT:-git} reset --hard",
+    "command git reset --hard",
+    "env git reset --hard",
+    "exec git reset --hard",
+    "nice git reset --hard",
+    "nohup git reset --hard",
+    "time git reset --hard",
+  ] as const;
+
+  it.each(blockedIndirectionCommands)("blocks %s", (command) => {
+    const output = buildPreToolUseHookOutput({ tool_input: { command } });
+
+    expect(requireBlockingReason(output)).toMatch(/(?:git reset --hard|unresolved shell indirection|opaque shell construct)/);
+  });
+
+  const allowedIndirectionCommands = [
+    "g=git; $g status --short",
+    "${GIT:-git} status --short",
+    "command git status --short",
+    "env GIT=git git status --short",
+    "exec git status --short",
+    "nice git status --short",
+    "nohup git status --short",
+    "time git status --short",
+    "sh -c 'git \"$@\"' sh status --short",
+  ] as const;
+
+  it.each(allowedIndirectionCommands)("allows an unguarded %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
+});
+
+describe("W2.7 deploy wrappers and previews", () => {
+  const blockedDeployWrappers = [
+    "pnpm run deploy",
+    "pnpm deploy",
+    "yarn deploy",
+    "bun run deploy",
+    "bunx wrangler deploy",
+    "npm exec wrangler deploy",
+    "npx wrangler versions deploy",
+    "pnpm exec wrangler deploy",
+    "pnpm dlx wrangler deploy",
+    "npm --silent run deploy",
+    "npm run --silent deploy",
+    "npm -w worker run deploy",
+    "yarn workspace worker deploy",
+  ] as const;
+
+  it.each(blockedDeployWrappers)("blocks %s", (command) => {
+    const output = buildPreToolUseHookOutput({ tool_input: { command } });
+
+    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
+  });
+
+  it.each([
+    "pnpm run test",
+    "yarn test",
+    "bun run test",
+    "npm exec eslint .",
+    "pnpm -w worker run test",
+    "npm -w worker run test",
+    "yarn workspace worker test",
+    "bun -C worker run test",
+    "pnpm exec wrangler --help",
+    "npm x wrangler --help",
+  ] as const)(
+    "allows a non-deploy package wrapper: %s",
+    (command) => {
+      expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    },
+  );
+
+  const allowedPreviewCommands = [
+    "git clean -fd --dry-run",
+    "git clean -fd -n",
+    "git clean -fdx --dry-run",
+    "wrangler deploy --dry-run",
+    "wrangler pages deploy --dry-run",
+    "wrangler pages deploy --branch preview --dry-run",
+    "wrangler deploy --help",
+    "wrangler pages deploy -h",
+  ] as const;
+
+  it.each(allowedPreviewCommands)("allows the safe preview %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
+
+  it("keeps Pages branch deployment blocked without a dry-run", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: { command: "wrangler pages deploy --branch preview" },
+    });
+
+    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
+  });
+});
+
+describe("W2.7 remote D1 SQL policy", () => {
+  const allowedReadOnlyCommands = [
+    "npx wrangler d1 execute stablecoin-db --remote --command \"select 1\"",
+    "npx wrangler d1 execute stablecoin-db --remote --command \"select 'update delete drop' from prices\"",
+    `npx wrangler d1 execute stablecoin-db --remote --command "-- update
+SELECT 1"`,
+    `npx wrangler d1 execute stablecoin-db --remote --command "/* delete; drop */
+SELECT 1"`,
+    "npx wrangler d1 execute stablecoin-db --remote --command \"EXPLAIN UPDATE prices SET value = 1\"",
+    "npx wrangler d1 execute stablecoin-db --remote --command \"PRAGMA table_info('prices')\"",
+    "npx wrangler d1 execute stablecoin-db --remote --command \"WITH rows AS (SELECT 1) SELECT * FROM rows\"",
+    "npx wrangler d1 execute stablecoin-db --remote --command \"SELECT 1; EXPLAIN QUERY PLAN SELECT 1\"",
+  ] as const;
+
+  it.each(allowedReadOnlyCommands)("allows read-only remote D1 SQL: %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
+
+  const blockedMutationCommands = [
+    "INSERT INTO prices (value) VALUES (1)",
+    "UPDATE prices SET value = 1",
+    "DELETE FROM prices",
+    "DROP TABLE prices",
+    "ALTER TABLE prices ADD COLUMN note TEXT",
+    "CREATE TABLE prices_copy (value INTEGER)",
+    "TRUNCATE prices",
+    "REPLACE INTO prices (id, value) VALUES (1, 1)",
+    "PRAGMA foreign_keys = ON",
+    "SELECT 1; DELETE FROM prices",
+    "WITH rows AS (SELECT 1) DELETE FROM prices WHERE id IN (SELECT * FROM rows)",
+    "-- comment mentioning SELECT\nUPDATE prices SET value = 1",
+  ] as const;
+
+  it.each(blockedMutationCommands)("blocks mutating remote D1 SQL: %s", (sql) => {
+    const command = `npx wrangler d1 execute stablecoin-db --remote --command ${JSON.stringify(sql)}`;
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+      "Remote D1 mutation commands",
+    );
+  });
+
+  it("parses an existing remote D1 SQL file statement by statement", () => {
+    withSqlFixture("-- delete\nSELECT 'update';", (sqlPath) => {
+      const command = `npx wrangler d1 execute stablecoin-db --remote --file ${JSON.stringify(sqlPath)}`;
+      expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    });
+
+    withSqlFixture("SELECT 1; DROP TABLE prices;", (sqlPath) => {
+      const command = `npx wrangler d1 execute stablecoin-db --remote --file ${JSON.stringify(sqlPath)}`;
+      expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+        "Remote D1 mutation commands",
+      );
+    });
+  });
+
+  it("blocks a remote D1 SQL file that cannot be inspected locally", () => {
+    const missingRoot = mkdtempSync(join(tmpdir(), "pharos-change-contract-missing-sql-"));
+    const missingPath = join(missingRoot, "missing.sql");
+    rmSync(missingRoot, { force: true, recursive: true });
+    const command = `npx wrangler d1 execute stablecoin-db --remote --file ${JSON.stringify(missingPath)}`;
+
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+      "Remote D1 mutation commands",
+    );
+  });
+});
+
+describe("W2.7 protected command writes", () => {
+  const blockedWrites = [
+    ["rm", "rm -rf out/"],
+    ["mv", "mv source .env.local"],
+    ["cp destination", "cp source worker/dist/index.js"],
+    ["touch", "touch worker/.dev.vars"],
+    ["sed -i", "sed -i 's/x/y/' .git/config"],
+    ["perl -i", "perl -i -pe 's/x/y/' .envrc"],
+    ["truncate", "truncate -s 0 out/cache.bin"],
+    [">|", "printf value >| .env.local"],
+  ] as const;
+
+  it.each(blockedWrites)("blocks protected %s writes", (_label, command) => {
+    const output = buildPreToolUseHookOutput({ tool_input: { command } });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: { permissionDecision: "deny" },
+    });
+    expect(requireBlockingReason(output)).toMatch(/Direct writes to/);
+  });
+
+  const allowedWrites = [
+    ["rm", "rm -rf agents/tmp"],
+    ["mv", "mv source agents/tmp"],
+    ["cp source", "cp .env.local agents/env-copy"],
+    ["touch", "touch agents/marker"],
+    ["sed -i", "sed -i 's/x/y/' agents/file.txt"],
+    ["perl -i", "perl -i -pe 's/x/y/' agents/file.txt"],
+    ["truncate", "truncate -s 0 agents/file.bin"],
+    [">|", "printf value >| agents/file.txt"],
+  ] as const;
+
+  it.each(allowedWrites)("allows non-protected %s writes", (_label, command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
+});
+
+describe("W2.7 Python and Node one-line writes", () => {
+  const blockedInlineWrites = [
+    "python -c 'open(\".env.local\", \"w\").write(\"x\")'",
+    "python3 -c 'open(\"worker/dist/index.js\", \"wb\").write(b\"x\")'",
+    "node -e 'fs.writeFileSync(\"out/index.html\", data)'",
+    "node --eval 'writeFile(\"worker/.dev.vars\", data)'",
+  ] as const;
+
+  it.each(blockedInlineWrites)("blocks an inline write to a protected path: %s", (command) => {
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toMatch(
+      /Direct writes to/,
+    );
+  });
+
+  const allowedInlineCommands = [
+    "python -c 'open(\".env.local\", \"r\").read()'",
+    "python -c 'print(\".env.local\")'",
+    "node -e 'console.log(\"out/index.html\")'",
+    "node -e 'fs.writeFileSync(\"agents/index.html\", data)'",
+  ] as const;
+
+  it.each(allowedInlineCommands)("allows a non-writing or non-protected inline command: %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
+});
+
+describe("W2.7 malformed hook payloads", () => {
+  const hookModes = ["pre-tool-use", "permission-request", "session-start"] as const;
+  const diagnostic = "pharos-change-contract: empty or malformed hook payload; no policy applied";
+
+  it.each(hookModes)("returns no decision and logs for empty %s stdin", (hook) => {
+    const result = runHookCliProcess(hook);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe("{}");
+    expect(result.stderr.trim()).toBe(diagnostic);
+  });
+
+  it.each(hookModes)("returns no decision and logs for malformed %s stdin", (hook) => {
+    const result = runHookCliProcess(hook, "{not-json");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe("{}");
+    expect(result.stderr.trim()).toBe(diagnostic);
+  });
+
+  it("does not log for a valid empty hook object", () => {
+    const result = runHookCliProcess("pre-tool-use", "{}");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe("{}");
+    expect(result.stderr).toBe("");
+  });
+});
+
+describe("W2.7 PermissionRequest parity", () => {
+  it.each([
+    ["git reset", "git reset --hard HEAD"],
+    ["git clean", "git clean -fd"],
+    ["protected command write", "rm .env.local"],
+  ] as const)("denies %s through the full PreToolUse policy", (_label, command) => {
+    const output = buildPermissionRequestHookOutput({ tool_input: { command } });
+
+    expect(output).toMatchObject({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny" },
+      },
+    });
+  });
+
+  it("denies unsafe migration SQL through PermissionRequest", () => {
+    const output = buildPermissionRequestHookOutput({
+      tool_input: {
+        file_path: "worker/migrations/9999_permission.sql",
+        content: "DROP TABLE stablecoin_snapshots;",
+      },
+    });
+
+    expect(output).toMatchObject({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny" },
+      },
+    });
+  });
+
+  it("denies opaque guarded commands through PermissionRequest", () => {
+    const output = buildPermissionRequestHookOutput({
+      tool_input: { command: "echo $(git reset --hard HEAD)" },
+    });
+
+    expect(output).toMatchObject({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny", message: "opaque shell construct around a guarded command; run it directly" },
+      },
+    });
+  });
+
+  it("keeps safe previews and read-only D1 requests allowed", () => {
+    expect(
+      buildPermissionRequestHookOutput({
+        tool_input: { command: "git clean -fd --dry-run" },
+      }),
+    ).toEqual({});
+    expect(
+      buildPermissionRequestHookOutput({
+        tool_input: { command: "npx wrangler d1 execute stablecoin-db --remote --command 'select 1'" },
+      }),
+    ).toEqual({});
   });
 });
 
