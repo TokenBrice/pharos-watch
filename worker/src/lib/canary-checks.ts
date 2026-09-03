@@ -65,12 +65,14 @@ interface DexPublishedGenerationRow {
   generation_id: string;
   current_row_count: number | null;
   expected_row_count: number | null;
+  metadata_json: string | null;
   published_at: number | null;
 }
 
 interface DexGlobalRow {
-  current_rows: number | null;
-  global_rows: number | null;
+  current_row_count: number | null;
+  expected_row_count: number | null;
+  metadata_json: string | null;
 }
 
 interface BlacklistNullIdentitySummaryRow {
@@ -118,8 +120,8 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
 
 const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
 const MAX_CANARY_ERROR_CHARS = 800;
+export const WORKER_CANARY_RUN_RETENTION_SEC = 14 * 24 * 3600;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
-export const WORKER_CANARY_RUN_RETENTION_SEC = 90 * 24 * 3600;
 const PSI_MAX_AGE_SEC = 4 * 3600;
 const DEWS_MAX_AGE_SEC = 4 * 3600;
 const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
@@ -209,12 +211,18 @@ async function loadDexCurrentSummary(db: D1Database): Promise<DexCurrentSummaryR
   return (await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT
-           COUNT(*) AS row_count,
-           SUM(CASE WHEN publication_generation_id IS NOT NULL AND publication_state != 'published' THEN 1 ELSE 0 END) AS unpublished_rows,
-           COUNT(DISTINCT publication_generation_id) AS generation_count,
-           MAX(updated_at) AS latest_updated_at
-         FROM dex_liquidity`,
+        `SELECT /* canary-dex-current-summary */
+           COALESCE((
+             SELECT current_row_count
+               FROM dex_liquidity_publication_generations
+              WHERE state = 'published'
+              ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+              LIMIT 1
+           ), 0) AS row_count,
+           COALESCE(SUM(CASE WHEN state = 'staged' THEN written_row_count ELSE 0 END), 0) AS unpublished_rows,
+           SUM(CASE WHEN state = 'published' THEN 1 ELSE 0 END) AS generation_count,
+           MAX(CASE WHEN state = 'published' THEN COALESCE(published_at, started_at) END) AS latest_updated_at
+         FROM dex_liquidity_publication_generations`,
       )
       .first<DexCurrentSummaryRow>(),
   )) ?? { row_count: 0, unpublished_rows: 0, generation_count: 0, latest_updated_at: null };
@@ -224,11 +232,12 @@ async function loadLatestPublishedDexGeneration(db: D1Database): Promise<DexPubl
   return runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT generation_id, current_row_count, expected_row_count, published_at
-           FROM dex_liquidity_publication_generations
-          WHERE state = 'published'
-          ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
-          LIMIT 1`,
+        `SELECT /* canary-dex-latest-published-generation */
+           generation_id, current_row_count, expected_row_count, metadata_json, published_at
+         FROM dex_liquidity_publication_generations
+        WHERE state = 'published'
+        ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+        LIMIT 1`,
       )
       .first<DexPublishedGenerationRow>(),
   );
@@ -241,13 +250,14 @@ async function loadDexLatestGenerationCurrentSummary(
   return (await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT
-           SUM(CASE WHEN publication_generation_id = ? AND publication_state = 'published' THEN 1 ELSE 0 END) AS latest_generation_rows,
-           SUM(CASE WHEN publication_generation_id IS NULL THEN 1 ELSE 0 END) AS retained_legacy_rows,
-           SUM(CASE WHEN publication_generation_id IS NOT NULL AND publication_generation_id != ? AND publication_state = 'published' THEN 1 ELSE 0 END) AS retained_older_published_rows
-         FROM dex_liquidity`,
+        `SELECT /* canary-dex-latest-generation-summary */
+           COALESCE(current_row_count, 0) AS latest_generation_rows,
+           0 AS retained_legacy_rows,
+           0 AS retained_older_published_rows
+         FROM dex_liquidity_publication_generations
+         WHERE generation_id = ?`,
       )
-      .bind(generationId, generationId)
+      .bind(generationId)
       .first<DexLatestGenerationSummaryRow>(),
   )) ?? { latest_generation_rows: 0, retained_legacy_rows: 0, retained_older_published_rows: 0 };
 }
@@ -306,19 +316,29 @@ async function checkDexCurrentPublication(db: D1Database) {
 
 async function checkDexGlobalRow(db: D1Database) {
   try {
-    const row = (await runWithOverloadRetry(() =>
+    const row = await runWithOverloadRetry(() =>
       db
         .prepare(
-          `SELECT
-             COUNT(*) AS current_rows,
-             SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows
-           FROM dex_liquidity
-           WHERE publication_generation_id IS NULL OR publication_state = 'published'`,
+          `SELECT /* canary-dex-global-row */
+             current_row_count,
+             expected_row_count,
+             metadata_json
+           FROM dex_liquidity_publication_generations
+          WHERE state = 'published'
+          ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+          LIMIT 1`,
         )
         .first<DexGlobalRow>(),
-    )) ?? { current_rows: 0, global_rows: 0 };
-    const currentRows = Number(row.current_rows ?? 0);
-    const globalRows = Number(row.global_rows ?? 0);
+    );
+    const currentRows = Number(row?.current_row_count ?? 0);
+    const expectedRows = Number(row?.expected_row_count ?? currentRows);
+    const generationMetadata = parseObjectMetadata(row?.metadata_json);
+    const activeRows =
+      typeof generationMetadata?.activeStablecoinCount === "number" &&
+      Number.isFinite(generationMetadata.activeStablecoinCount)
+        ? generationMetadata.activeStablecoinCount
+        : Math.max(0, expectedRows - 1);
+    const globalRows = currentRows > 0 ? currentRows - activeRows : 0;
     const metadata = { currentRows, globalRows };
     if (currentRows === 0) {
       return skippedResult("dex_liquidity has no published current rows", metadata);

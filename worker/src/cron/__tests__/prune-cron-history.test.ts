@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { WORKER_CANARY_RUN_RETENTION_SEC } from "../../lib/canary-checks";
 
 function createTestDb() {
   const { sqlite } = createLatestSchemaSqlite();
@@ -19,7 +20,6 @@ function select<T>(sqlite: import("node:sqlite").DatabaseSync, sql: string): T[]
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
 const TWO_DAYS_SEC = 2 * 24 * 60 * 60;
 const TWO_WEEKS_SEC = 14 * 24 * 60 * 60;
-const NINETY_DAYS_SEC = 90 * 24 * 60 * 60;
 
 function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
@@ -119,10 +119,10 @@ describe("runPruneCronHistory", () => {
     expect(metadata.repairTasksDeleted).toBe(1);
   });
 
-  it("removes worker_canary_runs older than 90 days and keeps newer rows", async () => {
+  it("removes worker_canary_runs older than 14 days and keeps newer rows", async () => {
     const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - NINETY_DAYS_SEC - 3600);
+    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - WORKER_CANARY_RUN_RETENTION_SEC - 3600);
     insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "new", "test", "new", "ok", "info", now - 3600);
 
     const result = await runPruneCronHistory(db);
@@ -156,7 +156,7 @@ describe("runPruneCronHistory", () => {
     const now = Math.floor(Date.now() / 1000);
     insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 1, 1, "ok");
     insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "closed", "test", "closed", "closed", now, now - ONE_WEEK_SEC - 1);
-    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - NINETY_DAYS_SEC - 1);
+    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - WORKER_CANARY_RUN_RETENTION_SEC - 1);
     const checkpoint = "INSERT INTO worker_scheduled_checkpoints (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     insert(sqlite, checkpoint, "test", now, "completed", 1, "completed", "hash", "completed", now, now - TWO_WEEKS_SEC - 1);
     insert(sqlite, "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)", toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "test", now, now);
@@ -190,7 +190,7 @@ describe("runPruneCronHistory", () => {
     expect(metadata.slotExecutionsDeleted).toBe(1);
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
-    expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - NINETY_DAYS_SEC, -2);
+    expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - WORKER_CANARY_RUN_RETENTION_SEC, -2);
     expect(metadata.cutoffRecoveryCheckpointsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
     expect(metadata.cutoffSelectorSnapshotDailyQuotaDate).toBe(toUtcDateString(now - TWO_DAYS_SEC));
     expect(metadata.cutoffBlockTimestampCacheSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
