@@ -35,10 +35,6 @@ export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {
 
 /** Exports whose only consumers are invisible to the static scan. */
 export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
-  "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_LIST_FIELDS":
-    "scripts/build-data/build-client-registry.mjs resolves the export by name string to generate the list projection, never through an import.",
-  "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_DETAIL_FIELDS":
-    "scripts/build-data/build-client-registry.mjs resolves the export by name string to generate the detail projections, never through an import.",
   "src/components/chart-primitives/data-table.tsx::ChartDataTable":
     "scripts/ci/check-table-primitives.ts matches the exported component name as a string, not through an import.",
   "shared/lib/telegram-mini-app-contract.ts::TelegramDewsBand":
