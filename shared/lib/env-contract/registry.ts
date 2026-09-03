@@ -181,25 +181,7 @@ export const ENV_BINDINGS = [
   {
     key: "ALCHEMY_API_KEY",
     valueType: "string",
-    description: "Alchemy credential used for primary chain RPC endpoints and, when enabled, Alchemy Prices API address-price augmentation.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "MORALIS_API_KEY",
-    valueType: "string",
-    description: "Moralis credential used for optional exact-address token-price augmentation.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "BIRDEYE_API_KEY",
-    valueType: "string",
-    description: "Birdeye credential used for optional targeted Solana exact-address token-price augmentation.",
+    description: "Alchemy credential used for primary chain RPC endpoints.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -208,7 +190,7 @@ export const ENV_BINDINGS = [
   {
     key: "ADDRESS_PRICE_PROVIDERS_ENABLED",
     valueType: "string",
-    description: "Optional comma-separated allowlist for exact-address price providers. Production enables only the authenticated CoinGecko Onchain exact-address lane; the public GeckoTerminal corroboration pass remains excluded from the inline quarter-hour invocation for Worker heap safety. Unset auto-enables DexPaprika plus configured key-backed providers, and `dexscreener-address` remains explicit opt-in for the Cloudflare/WAF-protected public lane.",
+    description: "Optional exact-address price-provider allowlist for the hourly corroboration step. Only `coingecko-onchain-address` is available, and an unset value enables no provider.",
     example: {
       section: "workerOptional",
       value: "coingecko-onchain-address",

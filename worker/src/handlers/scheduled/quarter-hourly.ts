@@ -15,6 +15,10 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * after DEX publication), not in this quarter-hourly slot.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
+import {
+  isPriceCorroborationSlot,
+  runPriceCorroboration,
+} from "../../cron/sync-stablecoins/price-corroboration";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
@@ -54,13 +58,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
         chainRpcs: runtime.chainRpcs,
         reportProgress,
         jupiterApiKey: runtime.env.JUPITER_API_KEY,
-        addressPriceProvider: {
-          enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
-          alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
-          moralisApiKey: runtime.env.MORALIS_API_KEY,
-          birdeyeApiKey: runtime.env.BIRDEYE_API_KEY,
-          cgApiKey: runtime.coingeckoApiKey,
-        },
       },
     ),
   );
@@ -68,6 +65,34 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   const stablecoinsResult = stablecoinsOutcome.result;
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
   const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
+  if (stablecoinsCacheSafe && isPriceCorroborationSlot(runtime.slotStartedAt)) {
+    try {
+      const corroboration = await runPriceCorroboration({
+        db: runtime.db,
+        syncStartSec: runtime.slotStartedAt,
+        signal: runtime.slotSignal,
+        cmcApiKey: runtime.env.CMC_API_KEY,
+        jupiterApiKey: runtime.env.JUPITER_API_KEY,
+        coingeckoApiKey: runtime.coingeckoApiKey,
+        addressProvider: {
+          enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
+          cgApiKey: runtime.coingeckoApiKey,
+        },
+      });
+      logWorkerEventArgs(
+        "handler",
+        "info",
+        `[price-corroboration] refreshed ${corroboration.cacheEntriesWritten}/${corroboration.cohortSize} low-depth price-cache rows`,
+      );
+    } catch (error) {
+      logWorkerEventArgs(
+        "handler",
+        "warn",
+        "[price-corroboration] hourly best-effort step failed after stablecoin publication:",
+        error,
+      );
+    }
+  }
   if (stablecoinsResult && !stablecoinsCacheSafe) {
     logWorkerEventArgs("handler", "warn", "[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
   }

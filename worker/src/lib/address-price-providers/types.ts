@@ -3,20 +3,12 @@ import type {
   PricingProviderAttemptDiagnostic,
   PricingProviderRejectionReason,
 } from "../pricing-provider-diagnostics";
+import type { PricingSourceKey } from "@shared/lib/pricing-source-registry";
 
-export type AddressPriceProviderKey =
-  | "alchemy-address"
-  | "moralis-address"
-  | "dexscreener-address"
-  | "dexpaprika-address"
-  | "coingecko-onchain-address"
-  | "birdeye-address";
+export type AddressPriceProviderKey = "coingecko-onchain-address";
 
 export interface AddressPriceProviderRuntimeConfig {
   enabledProviders?: string | null;
-  alchemyApiKey?: string | null;
-  moralisApiKey?: string | null;
-  birdeyeApiKey?: string | null;
   cgApiKey?: string | null;
 }
 
@@ -54,7 +46,7 @@ export interface AddressPriceTarget {
 
 export interface AddressPriceQuote {
   stablecoinId: string;
-  source: AddressPriceProviderKey;
+  source: PricingSourceKey;
   chain: string;
   address: string;
   priceUsd: number;

@@ -110,11 +110,6 @@ export function groupTargetsByProviderChain(targets: AddressPriceTarget[]): Map<
   return grouped;
 }
 
-export function getTokenAddressFromRecord(record: Record<string, unknown>): string | null {
-  const value = record.address ?? record.tokenAddress ?? record.token_address;
-  return typeof value === "string" && value.trim() ? normalizeAddressForKey(value) : null;
-}
-
 export async function fetchProviderJson(params: {
   provider: AddressPriceProviderKey;
   url: string;
@@ -204,43 +199,6 @@ export async function fetchProviderJson(params: {
   }
 }
 
-export function emptyProviderResult(
-  provider: AddressPriceProviderKey,
-  targetsOrCandidateCount: readonly AddressPriceTarget[] | number,
-  reason: PricingProviderRejectionReason,
-): AddressPriceProviderRunResult {
-  const targets = Array.isArray(targetsOrCandidateCount) ? targetsOrCandidateCount : [];
-  const candidateCount = typeof targetsOrCandidateCount === "number" ? targetsOrCandidateCount : targets.length;
-  return {
-    quotes: [],
-    diagnostics: [{
-      source: provider as PricingProviderDiagnosticSource,
-      stage: "primary",
-      endpoint: provider,
-      status: null,
-      ok: false,
-      success: false,
-      candidateCount,
-      rejectionReasonCounts: { [reason]: candidateCount },
-      ...(targets.length > 0 ? {
-        assetAttempts: targets.slice(0, 100).map((target) => createPricingAssetAttempt({
-          assetId: target.stablecoinId,
-          adapter: provider,
-          chain: target.chain,
-          target: target.address,
-          state: "skipped",
-          skipReason: "missing-provider",
-          rejectionClass: reason,
-          candidateAt: Math.floor(Date.now() / 1000),
-        })),
-      } : {}),
-    }],
-    rejectedTargets: { [reason]: candidateCount },
-    successfulRequests: 0,
-    attemptedRequests: 0,
-  };
-}
-
 function finalizeAddressPriceDiagnosticAttempts(
   diagnostic: PricingProviderAttemptDiagnostic,
   quotes: readonly AddressPriceQuote[],
@@ -284,7 +242,7 @@ function finalizeAddressPriceDiagnosticAttempts(
   };
 }
 
-export function buildSkippedAddressPriceAttempts(
+function buildSkippedAddressPriceAttempts(
   provider: AddressPriceProviderKey,
   targets: readonly AddressPriceTarget[],
   skipReason: "budget" | "deadline" | "negative-cache" | "provider-suppressed" | "request-cap",

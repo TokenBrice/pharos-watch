@@ -407,19 +407,9 @@ describe("syncStablecoins", () => {
       undefined,
       expect.objectContaining({
         previousAssetsById: expect.any(Map),
-        addressProvider: undefined,
       }),
     );
-    expect(enrichMissingPrices).toHaveBeenCalledWith(
-      expect.any(Array),
-      undefined,
-      db,
-      undefined,
-      undefined,
-      undefined,
-      expect.any(Function),
-      expect.any(Map),
-    );
+    expect(enrichMissingPrices).not.toHaveBeenCalled();
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined, expect.any(Object));
     expect(confirmPendingDepegs).toHaveBeenCalledWith(
       db,
@@ -432,8 +422,6 @@ describe("syncStablecoins", () => {
     );
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(primaryPriceAssets).toHaveLength(60);
-    const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
-    expect(enrichmentAssets).toHaveLength(60);
   });
 
   it("does not claim publication or run downstream depeg stages when stablecoins CAS skips", async () => {
@@ -463,22 +451,14 @@ describe("syncStablecoins", () => {
     expect(confirmPendingDepegs).not.toHaveBeenCalled();
   });
 
-  it("keeps the optional live GT probe out of the critical publication path", async () => {
+  it("keeps fallback enrichment out of the critical publication path", async () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
-    const order: string[] = [];
-
-    vi.mocked(enrichMissingPrices).mockImplementationOnce(async () => {
-      order.push("enrich");
-      return {
-        totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
-      };
-    });
     mockFetchWithRetry(defaultSyncRoutes(dlData));
 
     await syncStablecoins(db);
 
-    expect(order).toEqual(["enrich"]);
+    expect(enrichMissingPrices).not.toHaveBeenCalled();
   });
 
   it("persists the inline GT isolation decision into sync metadata", async () => {
@@ -658,7 +638,7 @@ describe("syncStablecoins", () => {
     });
   });
 
-  it("rehydrates a replay-safe cached price when a same-run rejection leaves the asset missing", async () => {
+  it("rehydrates a replay-safe cached price when primary publication leaves the asset missing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -697,37 +677,11 @@ describe("syncStablecoins", () => {
       name: "Tether",
       symbol: "USDT",
       geckoId: "tether",
-      price: 0.24,
-      priceSource: "defillama",
-      priceConfidence: "single-source",
+      price: null,
+      priceSource: undefined,
+      priceConfidence: null,
       circulating: { peggedUSD: 100_000_000 },
     } as unknown as (typeof dlData.peggedAssets)[0];
-
-    vi.mocked(enrichMissingPrices).mockImplementationOnce(async (assets) => {
-      const target = assets.find((asset) => asset.id === "usdt-tether");
-      if (target) {
-        target.price = null;
-        target.priceSource = undefined;
-        target.priceConfidence = null;
-        target.priceUpdatedAt = null;
-        target.priceObservedAt = null;
-        target.priceSyncedAt = null;
-        target.consensusSources = [];
-        target.agreeSources = [];
-      }
-
-      return {
-        totalMissing: 1,
-        pass1: 0,
-        pass1b: 0,
-        passCmc: 0,
-        passJupiter: 0,
-        passDex: 0,
-        passCgLowVolume: 0,
-        finalMissing: 1,
-        failedPasses: [],
-      };
-    });
 
     mockFetchWithRetry(defaultSyncRoutes(dlData));
 

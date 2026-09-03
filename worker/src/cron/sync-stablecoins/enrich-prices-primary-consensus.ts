@@ -154,7 +154,7 @@ export function buildPrimaryConsensusResults(params: {
   }
 }
 
-export function logDexPriceSourceLoadTelemetry(telemetry: DexPriceSourceLoadTelemetry | undefined): void {
+function logDexPriceSourceLoadTelemetry(telemetry: DexPriceSourceLoadTelemetry | undefined): void {
   if (!telemetry) return;
   for (const row of telemetry.staleRows) {
     logWorkerEventArgs("handler", "info",

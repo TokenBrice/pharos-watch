@@ -32,8 +32,6 @@ export interface Env {
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;
   ALCHEMY_API_KEY?: string;
-  MORALIS_API_KEY?: string;
-  BIRDEYE_API_KEY?: string;
   ADDRESS_PRICE_PROVIDERS_ENABLED?: string;
   GRAPH_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;

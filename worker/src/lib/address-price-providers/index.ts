@@ -1,17 +1,11 @@
 import {
-  ALCHEMY_CHAIN_MAP,
-  BIRDEYE_CHAIN_MAP,
   CG_CHAIN_MAP,
-  DEXPAPRIKA_CHAIN_MAP,
-  DS_CHAIN_MAP,
-  MORALIS_CHAIN_MAP,
   resolveChainId,
 } from "@shared/lib/chains";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { CIRCUIT_SOURCE } from "../constants";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
@@ -21,12 +15,7 @@ import {
   buildNoCandidatesDiagnostic,
   buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
-import { runAlchemyAddressProvider } from "./alchemy";
-import { runBirdeyeAddressProvider } from "./birdeye";
 import { runCoingeckoOnchainAddressProvider } from "./coingecko-onchain";
-import { runDexPaprikaAddressProvider } from "./dexpaprika";
-import { runDexScreenerAddressProvider } from "./dexscreener";
-import { runMoralisAddressProvider } from "./moralis";
 import {
   ADDRESS_PROVIDER_RUN_BUDGET_MS,
   hasValue,
@@ -60,50 +49,19 @@ export type {
 } from "./types";
 
 const ALL_ADDRESS_PROVIDERS: readonly AddressPriceProviderKey[] = [
-  "dexscreener-address",
-  "dexpaprika-address",
   "coingecko-onchain-address",
-  "alchemy-address",
-  "moralis-address",
-  "birdeye-address",
 ];
-
-const NO_KEY_ADDRESS_PROVIDERS = new Set<AddressPriceProviderKey>([
-  "dexpaprika-address",
-]);
 
 const NEXT_PRICE_GENERATION_SEC = 15 * 60;
 
-export const ADDRESS_PROVIDER_CIRCUIT_SOURCE: Record<AddressPriceProviderKey, string> = {
-  "alchemy-address": CIRCUIT_SOURCE.ALCHEMY_PRICES,
-  "moralis-address": CIRCUIT_SOURCE.MORALIS_PRICES,
-  "dexscreener-address": CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES,
-  "dexpaprika-address": CIRCUIT_SOURCE.DEXPAPRIKA_PRICES,
-  "coingecko-onchain-address": CIRCUIT_SOURCE.CG_ONCHAIN,
-  "birdeye-address": CIRCUIT_SOURCE.BIRDEYE_PRICES,
-};
-
 const PROVIDER_CHAIN_MAPS: Record<AddressPriceProviderKey, Record<string, string>> = {
-  "alchemy-address": ALCHEMY_CHAIN_MAP,
-  "moralis-address": MORALIS_CHAIN_MAP,
-  "dexscreener-address": DS_CHAIN_MAP,
-  "dexpaprika-address": DEXPAPRIKA_CHAIN_MAP,
   "coingecko-onchain-address": CG_CHAIN_MAP,
-  "birdeye-address": BIRDEYE_CHAIN_MAP,
 };
 
 function hasProviderCredential(provider: AddressPriceProviderKey, config: AddressPriceProviderRuntimeConfig): boolean {
   switch (provider) {
-    case "alchemy-address":
-      return hasValue(config.alchemyApiKey);
-    case "moralis-address":
-      return hasValue(config.moralisApiKey);
-    case "birdeye-address":
-      return hasValue(config.birdeyeApiKey);
     case "coingecko-onchain-address":
       return hasValue(config.cgApiKey);
-    default:
-      return true;
   }
 }
 
@@ -123,13 +81,7 @@ export function resolveEnabledAddressPriceProviders(
 
   const requested = configured
     ? configured.split(",").map((part) => part.trim()).filter(Boolean)
-    : [
-        ...NO_KEY_ADDRESS_PROVIDERS,
-        ...(hasValue(config.cgApiKey) ? ["coingecko-onchain-address" as const] : []),
-        ...(hasValue(config.alchemyApiKey) ? ["alchemy-address" as const] : []),
-        ...(hasValue(config.moralisApiKey) ? ["moralis-address" as const] : []),
-        ...(hasValue(config.birdeyeApiKey) ? ["birdeye-address" as const] : []),
-      ];
+    : [];
 
   const seen = new Set<AddressPriceProviderKey>();
   for (const value of requested) {
@@ -315,7 +267,7 @@ function getAddressPriceTargetPriority(target: AddressPriceTarget): number {
   return 5;
 }
 
-export function rotateAddressPriceTargets(
+function rotateAddressPriceTargets(
   targets: readonly AddressPriceTarget[],
   cursor: number,
 ): AddressPriceTarget[] {
@@ -332,7 +284,7 @@ export function rotateAddressPriceTargets(
     .flatMap(([, cohort]) => rotateTargets(cohort, cursor));
 }
 
-export function resolveAddressProviderCursorAdvance(
+function resolveAddressProviderCursorAdvance(
   targets: readonly AddressPriceTarget[],
   result: AddressPriceProviderRunResult,
 ): number {
@@ -386,7 +338,6 @@ export function buildAddressPriceTargetsByProvider(params: {
       for (const deployment of deployments) {
         const chain = resolveChainId(deployment.chain);
         if (!chain) continue;
-        if (provider === "birdeye-address" && chain !== "solana") continue;
         const providerChainId = chainMap[chain];
         if (!providerChainId) continue;
         const address = normalizeAddressForKey(deployment.address);
@@ -430,21 +381,8 @@ async function runAddressProvider(params: {
   db?: D1Database;
 }): Promise<AddressPriceProviderRunResult> {
   switch (params.provider) {
-    case "dexscreener-address":
-      return runDexScreenerAddressProvider(params.targets, params.signal, params.nowSec, params.deadlineMs);
-    case "dexpaprika-address":
-      return runDexPaprikaAddressProvider(params.targets, params.signal, params.deadlineMs, {
-        db: params.db,
-        nowSec: params.nowSec,
-      });
     case "coingecko-onchain-address":
       return runCoingeckoOnchainAddressProvider(params.targets, params.config.cgApiKey ?? null, params.signal, params.nowSec, params.deadlineMs);
-    case "alchemy-address":
-      return runAlchemyAddressProvider(params.targets, params.config, params.signal, params.deadlineMs);
-    case "moralis-address":
-      return runMoralisAddressProvider(params.targets, params.config, params.signal, params.nowSec, params.deadlineMs);
-    case "birdeye-address":
-      return runBirdeyeAddressProvider(params.targets, params.config, params.signal, params.deadlineMs);
   }
 }
 

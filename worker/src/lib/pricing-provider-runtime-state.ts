@@ -118,59 +118,6 @@ export async function recordProviderEnvironmentAvailable(
   }
 }
 
-export async function suppressProviderUntil(
-  db: D1Database,
-  providerId: string,
-  status: number,
-  nowSec: number,
-  nextProbeAt: number,
-): Promise<void> {
-  return recordProviderBlockedUntil(db, providerId, status, nowSec, Math.max(nowSec + 1, nextProbeAt));
-}
-
-export async function readProviderNegativeCache(
-  db: D1Database | undefined,
-  providerId: string,
-  nowSec: number,
-): Promise<Set<string>> {
-  if (!db) return new Set();
-  try {
-    const rows = await db.prepare(
-      `SELECT target_key
-         FROM pricing_provider_negative_cache
-        WHERE provider_id = ? AND expires_at > ?`,
-    ).bind(providerId, nowSec).all<{ target_key: string }>();
-    return new Set((rows.results ?? []).map((row) => row.target_key));
-  } catch (error) {
-    tolerateStateTableError(error);
-    return new Set();
-  }
-}
-
-export async function writeProviderNegativeCache(
-  db: D1Database | undefined,
-  providerId: string,
-  targetKey: string,
-  status: number,
-  nowSec: number,
-  ttlSec: number,
-): Promise<void> {
-  if (!db) return;
-  try {
-    await db.prepare(
-      `INSERT INTO pricing_provider_negative_cache
-         (provider_id, target_key, status, first_observed_at, last_observed_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(provider_id, target_key) DO UPDATE SET
-         status = excluded.status,
-         last_observed_at = excluded.last_observed_at,
-         expires_at = excluded.expires_at`,
-    ).bind(providerId, targetKey, status, nowSec, nowSec, nowSec + Math.max(1, ttlSec)).run();
-  } catch (error) {
-    tolerateStateTableError(error);
-  }
-}
-
 export async function readProviderTargetCursor(
   db: D1Database | undefined,
   providerId: string,

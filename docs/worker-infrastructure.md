@@ -124,10 +124,8 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `ETHERSCAN_API_KEY` | `string` | optional | - | - | Etherscan API credential used by blacklist sync and USDS status reads. |
 | `TRONGRID_API_KEY` | `string` | optional | - | - | TronGrid API credential used by Tron blacklist sync and Tron live-reserve reads. |
 | `DRPC_API_KEY` | `string` | optional | - | - | dRPC credential used for L2 archive-node balance lookups. |
-| `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints and, when enabled, Alchemy Prices API address-price augmentation. |
-| `MORALIS_API_KEY` | `string` | optional | - | - | Moralis credential used for optional exact-address token-price augmentation. |
-| `BIRDEYE_API_KEY` | `string` | optional | - | - | Birdeye credential used for optional targeted Solana exact-address token-price augmentation. |
-| `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional comma-separated allowlist for exact-address price providers. Production enables only the authenticated CoinGecko Onchain exact-address lane; the public GeckoTerminal corroboration pass remains excluded from the inline quarter-hour invocation for Worker heap safety. Unset auto-enables DexPaprika plus configured key-backed providers, and `dexscreener-address` remains explicit opt-in for the Cloudflare/WAF-protected public lane. |
+| `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints. |
+| `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional exact-address price-provider allowlist for the hourly corroboration step. Only `coingecko-onchain-address` is available, and an unset value enables no provider. |
 | `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |
 | `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
 | `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
