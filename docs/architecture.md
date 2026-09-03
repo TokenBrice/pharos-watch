@@ -179,6 +179,8 @@ The worker codebase deliberately uses `!= null` (loose equality) as the standard
 
 `eslint.config.mjs` enforces the worker/frontend/shared import boundary through its `no-restricted-imports` and `pharos/worker-import-boundaries` rules. The only named non-test waiver is `frozen-invariants-lifecycle-registry-check` for `scripts/ci/check-frozen-invariants.ts`, which imports worker and frontend registries to prove frozen stablecoin IDs were removed from lifecycle surfaces. Keep that waiver documented in the script header and in `docs/process/boundary-waivers.md`; new cross-layer checks should move runtime-neutral metadata into `shared/` instead of expanding the waiver set.
 
+The metafile reachability checker complements direct-import linting with policies over complete bundle graphs: every loader in `worker/src/handlers/scheduled.ts` must avoid React/DOM-only shared modules, the memory-sensitive mint/burn and Telegram lanes must avoid the full stablecoin registry, Pages Functions must not reach `worker/src/`, and `use client` bundles must avoid the fat registry and direct detail projections. The policy rows live in `scripts/lib/runtime-reachability-policies.mts`; the older client import traversal remains in parallel for one green CI cycle before deletion. Worker TypeScript now starts from Worker and Worker-script entrypoints, so imported shared files are included transitively instead of compiling every unrelated `shared/**` source and test.
+
 ---
 
 ## TypeScript Target Constraints

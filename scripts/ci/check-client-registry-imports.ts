@@ -22,6 +22,8 @@ const FAT_REGISTRY_IMPORTS = new Set([
 ]);
 const DETAIL_PROJECTION_PREFIX = "@shared/data/stablecoins/coins.client.detail/";
 
+// Scheduled for deletion after the metafile reachability checker completes one parallel-green CI cycle.
+
 interface ClientModuleInfo {
   source: string;
   imports: string[];
