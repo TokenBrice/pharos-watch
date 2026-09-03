@@ -107,6 +107,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "build",
       "Uploads mechanism-measurement capture bodies to the R2 archive bucket and writes local summaries; no production runtime state.",
     ),
+    exempt("scripts/lib/og-static-runner.mts", "build"),
     exempt(
       "scripts/lib/source-files.mts",
       "read-only",
@@ -128,9 +129,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/build-ai-summary-staleness-candidates.ts", "build"),
     exempt("scripts/maintenance/build-annotation-candidates.ts", "build"),
     exempt("scripts/maintenance/build-l2beat-bridge-route-candidates.ts", "build"),
-    exempt("scripts/maintenance/build-og-case-studies.ts", "build"),
-    exempt("scripts/maintenance/build-og-editorial.mjs", "build"),
-    exempt("scripts/maintenance/build-og-learn-images.ts", "build"),
     exempt("scripts/maintenance/build-safety-score-map.ts", "build"),
     exempt("scripts/maintenance/build-world-map-svg.ts", "build"),
     exempt("scripts/maintenance/capture-d1-insights.mjs", "build"),

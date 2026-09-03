@@ -19,37 +19,14 @@ import { mechanismDiagramFor } from "../../src/components/stablecoin-detail/mech
 import type { MechanismArchetype } from "@shared/types";
 import { MECHANISM_EXPLAINER_ENTRIES } from "../../src/lib/mechanism-explainer-registry";
 import { escapeXml } from "../lib/og-svg.mts";
-import { inspectPublishedOgRoster, writeOgSourceRoster } from "../lib/og-image-checks.mts";
+import { runOgStaticCli, runOgStaticMain } from "../lib/og-static-runner.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
-const CHECK_MODE = process.argv.includes("--check");
-
 const OUT_DIR = resolve(REPO_ROOT, "agents/og-learn-staging");
-
-function checkPublishedPngs(): void {
-  const { missing, empty } = inspectPublishedOgRoster(
-    MECHANISM_EXPLAINER_ENTRIES.map((entry) => ({ ...entry, file: entry.ogFilename })),
-    resolve(REPO_ROOT, "public"),
-  );
-
-  if (missing.length > 0 || empty.length > 0) {
-    if (missing.length > 0) {
-      console.error(`Missing mechanism OG PNG(s): ${missing.map((file) => `public/${file}`).join(", ")}`);
-    }
-    if (empty.length > 0) {
-      console.error(`Empty mechanism OG PNG(s): ${empty.map((file) => `public/${file}`).join(", ")}`);
-    }
-    process.exit(1);
-  }
-
-  console.log(`Mechanism OG PNG check passed (${MECHANISM_EXPLAINER_ENTRIES.length} file(s)).`);
-}
-
-if (CHECK_MODE) {
-  checkPublishedPngs();
-  process.exit(0);
-}
+const PUBLIC = resolve(REPO_ROOT, "public");
+const STAGING = resolve(REPO_ROOT, "agents/og-static-staging/learn");
+const SIGNATURE_PATH = resolve(REPO_ROOT, "scripts/maintenance/state/og-learn-signatures.json");
 
 // Light product-shell substitutions. var() doesn't resolve in standalone SVG.
 const TOKEN_MAP: Record<string, string> = {
@@ -123,14 +100,29 @@ function buildOgSvg(slug: MechanismArchetype, title: string): string {
 `;
 }
 
-const written = writeOgSourceRoster({
-  roster: MECHANISM_EXPLAINER_ENTRIES.map((entry) => ({ ...entry, file: entry.ogFilename })),
-  stagingDir: OUT_DIR,
-  render: (entry) => ({
-    file: entry.ogFilename.replace(/\.png$/, ".svg"),
-    contents: buildOgSvg(entry.slug, entry.title),
-  }),
-});
-for (const out of written) {
-  console.log(`Wrote ${out}`);
+const renderInputs = MECHANISM_EXPLAINER_ENTRIES.map((entry) => ({
+  file: entry.ogFilename,
+  svg: buildOgSvg(entry.slug, entry.title),
+  signature: {
+    slug: entry.slug,
+    title: entry.title,
+  },
+}));
+
+export async function main(): Promise<void> {
+  await runOgStaticCli({
+    repoRoot: REPO_ROOT,
+    family: "Mechanism",
+    generatedBy: "scripts/maintenance/build-og-learn-images.ts",
+    includePngHashes: false,
+    publicDir: PUBLIC,
+    refreshCommand: "tsx scripts/maintenance/build-og-learn-images.ts",
+    roster: renderInputs,
+    signaturePath: SIGNATURE_PATH,
+    sourceDir: OUT_DIR,
+    stagingDir: STAGING,
+    settleMs: 400,
+  });
 }
+
+runOgStaticMain(import.meta.url, main);

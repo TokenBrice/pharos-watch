@@ -54,4 +54,32 @@ describe("OG screenshot capture", () => {
     expect(script).toContain("if (failures.length > 0) {");
     expect(script).toContain("process.exitCode = 1;");
   });
+
+  it("keeps retired screenshots out of the capture roster", () => {
+    const script = readFileSync(resolve(process.cwd(), "scripts/maintenance/screenshot-og.mjs"), "utf8");
+    for (const file of [
+      "about",
+      "cemetery",
+      "depeg",
+      "learn-mechanisms",
+      "safety-scores",
+      "stability-index",
+      "digest",
+      "methodology",
+    ].map((name) => `og-${name}.png`)) {
+      expect(script).not.toContain(file);
+    }
+  });
+
+  it("routes all static SVG families through the shared runner", () => {
+    for (const file of [
+      "build-og-editorial.mjs",
+      "build-og-learn-images.ts",
+      "build-og-case-studies.ts",
+    ]) {
+      const script = readFileSync(resolve(process.cwd(), "scripts/maintenance", file), "utf8");
+      expect(script).toContain("runOgStaticBuild");
+      expect(script).not.toContain('from "playwright"');
+    }
+  });
 });
