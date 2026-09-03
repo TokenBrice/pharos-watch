@@ -32,7 +32,6 @@
 /public/openapi.json
 /public/postman/pharos-api.postman_collection.json
 /public/postman/pharos-api.postman_environment.json
-/shared/data/stablecoins/coins.client.generated.json
 /shared/data/stablecoins/coins.compliance.generated.json
 /shared/data/stablecoins/coins.client.list.generated.json
 /shared/data/stablecoins/coins.client.detail/

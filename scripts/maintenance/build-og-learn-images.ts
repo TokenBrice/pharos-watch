@@ -69,7 +69,7 @@ function buildOgSvg(slug: MechanismArchetype, title: string): string {
   const diagramH = (diagramW * viewBoxH) / 600;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 628" width="1200" height="628" font-family="ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 628" width="1200" height="628" font-family="'GeistMono', ui-monospace, monospace">
   <rect width="1200" height="628" fill="#f8f8fa" />
 
   <!-- top hairline -->
@@ -81,7 +81,7 @@ function buildOgSvg(slug: MechanismArchetype, title: string): string {
   </text>
 
   <!-- archetype title -->
-  <text x="100" y="200" font-size="56" font-weight="800" fill="#171719" letter-spacing="0">
+  <text x="100" y="200" font-family="'Newsreader', Georgia, serif" font-size="56" font-weight="700" fill="#171719" letter-spacing="0">
     ${escapeXml(title)}
   </text>
 

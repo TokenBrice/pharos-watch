@@ -100,6 +100,8 @@ npm run check:generated-artifacts -- --only=og-learn
 
 The build writes the generated SVG sources to `agents/og-learn-staging/` and rasterizes them into the committed PNG roster. `--check` regenerates each source, verifies the source and local-font hashes, and compares the rendered PNG with the committed asset; it is not an existence-only check.
 
+Mechanism cards set their text in the repo fonts the runner loads (`Newsreader` for the title, `GeistMono` elsewhere), never a `system-ui` stack: with system fonts the Linux CI raster differs from a macOS raster by ~5% of pixels, beyond the drift tolerance, so the pixel check could only ever pass on the machine that rendered the asset.
+
 ### When to renew
 
 - After a mechanism diagram update (any change under `src/components/stablecoin-detail/mechanism-diagrams/`).
