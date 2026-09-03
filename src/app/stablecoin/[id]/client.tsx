@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -96,20 +96,41 @@ export default function StablecoinDetailClient({
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState("overview");
+  const [interactionStarted, setInteractionStarted] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const { ref: overviewGateRef, near: overviewNear } = useNearViewport<HTMLDivElement>("600px");
   const { ref: activityGateRef, near: activityNear } = useNearViewport<HTMLDivElement>("600px");
   const { ref: historyGateRef, near: historyNear } = useNearViewport<HTMLDivElement>("600px");
-  const activityOrHistoryNear = activityNear || historyNear;
+  useEffect(() => {
+    if (interactionStarted) return;
+    const activate = () => setInteractionStarted(true);
+    window.addEventListener("scroll", activate, { once: true, passive: true });
+    window.addEventListener("pointerdown", activate, { once: true, passive: true });
+    window.addEventListener("keydown", activate, { once: true });
+    return () => {
+      window.removeEventListener("scroll", activate);
+      window.removeEventListener("pointerdown", activate);
+      window.removeEventListener("keydown", activate);
+    };
+  }, [interactionStarted]);
+  const overviewActive = interactionStarted && overviewNear;
+  const activityActive = interactionStarted && activityNear;
+  const historyActive = interactionStarted && historyNear;
+  const activityOrHistoryActive = activityActive || historyActive;
   const viewModel = useStablecoinDetailViewModel({
     id,
     coin,
     summary,
     logoSrc,
     supplementalQueryControls: {
-      flows: overviewNear || activityOrHistoryNear,
-      blacklist: activityOrHistoryNear,
-      reserves: overviewNear,
+      liquidity: overviewActive || activityActive,
+      reportCards: overviewActive,
+      redemption: overviewActive || activityActive,
+      yield: activityActive,
+      stress: overviewActive,
+      flows: overviewActive || activityOrHistoryActive,
+      blacklist: activityOrHistoryActive,
+      reserves: overviewActive,
     },
   });
 

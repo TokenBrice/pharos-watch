@@ -3,6 +3,7 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
 
 const mocks = vi.hoisted(() => ({
   buildStablecoinDetailViewModel: vi.fn(),
@@ -11,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   usePegSummary: vi.fn(),
   useDexLiquidity: vi.fn(),
   useReportCardsV9: vi.fn(),
-  useRedemptionBackstops: vi.fn(),
+  useRegisteredApiQuery: vi.fn(),
   useYieldRankings: vi.fn(),
   useStressSignals: vi.fn(),
   useMintBurnFlows: vi.fn(),
@@ -42,7 +43,7 @@ vi.mock("../use-stablecoins", () => ({
 vi.mock("../api-hooks", () => ({
   useDexLiquidity: mocks.useDexLiquidity,
   usePegSummary: mocks.usePegSummary,
-  useRedemptionBackstops: mocks.useRedemptionBackstops,
+  useRegisteredApiQuery: mocks.useRegisteredApiQuery,
   useReportCardsV9: mocks.useReportCardsV9,
   useStressSignals: mocks.useStressSignals,
   useYieldRankings: mocks.useYieldRankings,
@@ -118,7 +119,7 @@ function installQueryMocks() {
     refetch: mocks.refetchReportCards,
     meta: null,
   });
-  mocks.useRedemptionBackstops.mockReturnValue({
+  mocks.useRegisteredApiQuery.mockReturnValue({
     data: undefined,
     dataUpdatedAt: 0,
     error: null,
@@ -170,7 +171,7 @@ describe("useStablecoinDetailViewModel", () => {
     installQueryMocks();
   });
 
-  it("keeps core and hero queries eager while disabling supplemental queries", () => {
+  it("keeps only price, peg, and supply eager while disabling below-fold queries", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
 
     renderHook(() =>
@@ -178,22 +179,21 @@ describe("useStablecoinDetailViewModel", () => {
         id: coin.id,
         coin,
         summary: null,
-        supplementalQueryControls: {
-          flows: false,
-          blacklist: false,
-          reserves: false,
-        },
+        supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
       }),
     );
 
     expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id);
     expect(mocks.useStablecoins).toHaveBeenCalled();
     expect(mocks.usePegSummary).toHaveBeenCalled();
-    expect(mocks.useDexLiquidity).toHaveBeenCalled();
-    expect(mocks.useReportCardsV9).toHaveBeenCalled();
-    expect(mocks.useRedemptionBackstops).toHaveBeenCalled();
-    expect(mocks.useYieldRankings).toHaveBeenCalled();
-    expect(mocks.useStressSignals).toHaveBeenCalled();
+    expect(mocks.useDexLiquidity).toHaveBeenCalledWith({ enabled: false });
+    expect(mocks.useReportCardsV9).toHaveBeenCalledWith({ enabled: false });
+    expect(mocks.useRegisteredApiQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["redemption-backstops"] }),
+      { enabled: false },
+    );
+    expect(mocks.useYieldRankings).toHaveBeenCalledWith({ enabled: false });
+    expect(mocks.useStressSignals).toHaveBeenCalledWith({ enabled: false });
     expect(mocks.useMintBurnFlows).toHaveBeenCalledWith(24, { enabled: false });
     expect(mocks.useBlacklistSummary).toHaveBeenCalledWith({ enabled: false });
     expect(mocks.useStablecoinReserves).toHaveBeenCalledWith(coin.id, false);
@@ -326,14 +326,29 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.useBlacklistSummary).toHaveBeenCalledWith({ enabled: false });
   });
 
-  it("excludes disabled supplemental queries from retry-all", async () => {
+  it("retries only failed enabled lanes", async () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    mocks.usePegSummary.mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: new Error("peg failed"),
+      refetch: mocks.refetchPeg,
+      meta: null,
+    });
+    mocks.useReportCardsV9.mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: new Error("report cards failed"),
+      refetch: mocks.refetchReportCards,
+      meta: null,
+    });
     const { result } = renderHook(() =>
       useStablecoinDetailViewModel({
         id: coin.id,
         coin,
         summary: null,
         supplementalQueryControls: {
+          reportCards: false,
           flows: false,
           blacklist: false,
           reserves: false,
@@ -343,14 +358,14 @@ describe("useStablecoinDetailViewModel", () => {
 
     await result.current.handleRetryAll();
 
-    expect(mocks.refetchSupply).toHaveBeenCalled();
-    expect(mocks.refetchList).toHaveBeenCalled();
+    expect(mocks.refetchSupply).not.toHaveBeenCalled();
+    expect(mocks.refetchList).not.toHaveBeenCalled();
     expect(mocks.refetchPeg).toHaveBeenCalled();
-    expect(mocks.refetchLiquidity).toHaveBeenCalled();
-    expect(mocks.refetchReportCards).toHaveBeenCalled();
-    expect(mocks.refetchRedemptionBackstops).toHaveBeenCalled();
-    expect(mocks.refetchYieldRankings).toHaveBeenCalled();
-    expect(mocks.refetchStressSignals).toHaveBeenCalled();
+    expect(mocks.refetchLiquidity).not.toHaveBeenCalled();
+    expect(mocks.refetchReportCards).not.toHaveBeenCalled();
+    expect(mocks.refetchRedemptionBackstops).not.toHaveBeenCalled();
+    expect(mocks.refetchYieldRankings).not.toHaveBeenCalled();
+    expect(mocks.refetchStressSignals).not.toHaveBeenCalled();
     expect(mocks.refetchFlows).not.toHaveBeenCalled();
     expect(mocks.refetchBlacklist).not.toHaveBeenCalled();
     expect(mocks.refetchReserves).not.toHaveBeenCalled();
@@ -358,6 +373,24 @@ describe("useStablecoinDetailViewModel", () => {
 
   it("includes enabled supplemental queries in retry-all", async () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    mocks.useMintBurnFlows.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("flows failed"),
+      refetch: mocks.refetchFlows,
+    });
+    mocks.useBlacklistSummary.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("blacklist failed"),
+      refetch: mocks.refetchBlacklist,
+    });
+    mocks.useStablecoinReserves.mockReturnValue({
+      reserveResult: null,
+      error: new Error("reserves failed"),
+      refetch: mocks.refetchReserves,
+      isFetching: false,
+    });
     const { result } = renderHook(() =>
       useStablecoinDetailViewModel({
         id: coin.id,
