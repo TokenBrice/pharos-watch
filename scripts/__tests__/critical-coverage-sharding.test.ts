@@ -4,6 +4,7 @@ import {
   CRITICAL_TEST_FILES,
   buildCriticalCoverageArgs,
   buildCriticalCoverageMergeArgs,
+  countCriticalCoverageShards,
 } from "../lib/critical-test-files.mts";
 
 describe("critical coverage sharding", () => {
@@ -29,6 +30,14 @@ describe("critical coverage sharding", () => {
     expect(args).toContain(`--coverage.include=${source}`);
     expect(selectedTests).toContain("worker/src/lib/__tests__/auth.test.ts");
     expect(selectedTests.length).toBeLessThan(CRITICAL_TEST_FILES.length);
+  });
+
+  it("caps the PR shard count at the number of selected owner tests", () => {
+    const source = "worker/src/lib/auth.ts";
+    const ownership = new Map([[source, ["worker/src/lib/__tests__/auth.test.ts"]]]);
+
+    expect(countCriticalCoverageShards({ changedFiles: [source], criticalFiles: [source], ownership })).toBe(1);
+    expect(countCriticalCoverageShards({ criticalFiles: [source], ownership }, 1)).toBe(1);
   });
 
   it("merges blobs with the same coverage scope before the ratchet runs", () => {

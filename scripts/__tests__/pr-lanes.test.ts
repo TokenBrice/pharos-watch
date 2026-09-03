@@ -28,14 +28,18 @@ describe("PR lane manifest", () => {
     expect(WORKFLOW).not.toContain("npm run test:pr");
   });
 
-  it("generates four test and coverage shards for a critical mixed PR", () => {
+  it("generates four test shards and the selected number of coverage shards", () => {
     const matrix = buildPrWorkflowMatrix({
       criticalCoverageChanged: true,
+      criticalCoverageShards: 2,
       docsChanged: true,
       docsOnly: false,
     }).include;
     expect(matrix.filter((entry) => entry.lane === "tests")).toHaveLength(4);
-    expect(matrix.filter((entry) => entry.lane === "critical-coverage-shards")).toHaveLength(4);
+    expect(matrix.filter((entry) => entry.lane === "critical-coverage-shards")).toEqual([
+      { lane: "critical-coverage-shards", shard: 1, shardCount: 2, timeout: 15 },
+      { lane: "critical-coverage-shards", shard: 2, shardCount: 2, timeout: 15 },
+    ]);
     expect(matrix.map((entry) => entry.lane)).toContain("static");
     expect(matrix.map((entry) => entry.lane)).toContain("docs");
     expect(matrix.every((entry) => entry.timeout <= 20)).toBe(true);
@@ -44,6 +48,7 @@ describe("PR lane manifest", () => {
   it("keeps docs-only PRs out of code lanes", () => {
     expect(buildPrWorkflowMatrix({
       criticalCoverageChanged: false,
+      criticalCoverageShards: 0,
       docsChanged: true,
       docsOnly: true,
     })).toEqual({ include: [{ lane: "docs", timeout: 15 }] });
@@ -60,6 +65,10 @@ describe("PR lane manifest", () => {
     expect(buildPrLaneCommandArgs(tests, { base: "base" })).toEqual([
       "run", "test:pr", "--", "--base=base",
     ]);
+    expect(buildPrLaneCommandArgs(getPrLane("critical-coverage-shards").commands[0], {
+      shard: 2,
+      shardCount: 3,
+    })).toEqual(["run", "coverage:critical:shard", "--", "--shard=2/3"]);
     // npm swallows bare `--base=` flags; the separator is what delivers them.
     expect(buildPrLaneCommandArgs(getPrLane("static").commands[0], { base: "base", head: "HEAD" })).toEqual([
       "run", "check:pr:static", "--", "--base=base", "--head=HEAD",

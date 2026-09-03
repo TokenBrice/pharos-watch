@@ -25,6 +25,7 @@ export interface PrLaneCommandDefinition {
 
 export interface PrLaneSelection {
   criticalCoverageChanged: boolean;
+  criticalCoverageShards: number;
   docsChanged: boolean;
   docsOnly: boolean;
 }
@@ -34,6 +35,7 @@ export interface PrLaneCommandContext {
   forwardedTestArgs?: readonly string[];
   head?: string;
   shard?: number;
+  shardCount?: number;
 }
 
 export const PR_LANES: readonly PrLaneDefinition[] = [
@@ -117,7 +119,8 @@ export function buildPrLaneCommandArgs(
       break;
     case "critical-coverage-shard":
       if (!context.shard) throw new Error("Critical coverage shards require a shard number");
-      args.push(`--shard=${context.shard}/4`);
+      if (!context.shardCount) throw new Error("Critical coverage shards require a shard count");
+      args.push(`--shard=${context.shard}/${context.shardCount}`);
       break;
     case "pr-static":
       if (context.base) args.push(`--base=${context.base}`);

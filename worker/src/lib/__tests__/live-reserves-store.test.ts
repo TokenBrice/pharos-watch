@@ -877,6 +877,7 @@ describe("live-reserves-store", () => {
         match: "FROM worker_scheduled_checkpoints",
         rows: [],
         first: {
+          state: "running",
           next_item_key: "coin-tail",
           items_done: 0,
           items_total: 12,
@@ -896,6 +897,32 @@ describe("live-reserves-store", () => {
     expect(overview.cursorTailFailedAt).toBeNull();
     expect(overview.cursorTailCompletedAt).toBeNull();
     expect(overview.runBudgetTruncationCount).toBe(1);
+  });
+
+  it("ignores stale pending pointers when the latest checkpoint is terminal", async () => {
+    const db = mockD1([
+      {
+        match: "FROM worker_scheduled_checkpoints",
+        rows: [],
+        first: {
+          state: "completed",
+          next_item_key: null,
+          items_done: 267,
+          items_total: 267,
+          updated_at: 10_000,
+        },
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, 10_100);
+
+    expect(overview.runBudgetTruncated).toBe(false);
+    expect(overview.nextCursorStablecoinId).toBeNull();
+    expect(overview.cursorRecordedAt).toBeNull();
+    expect(overview.runBudgetTruncationCount).toBe(0);
+    const checkpointQuery = db.getHistory().find((entry) => entry.sql.includes("FROM worker_scheduled_checkpoints"));
+    expect(checkpointQuery?.sql).not.toContain("state IN");
+    expect(checkpointQuery?.sql).toContain("ORDER BY slot_started_at DESC, attempt_no DESC");
   });
 
   it("detects authoritative reserve snapshots missing history rows", async () => {

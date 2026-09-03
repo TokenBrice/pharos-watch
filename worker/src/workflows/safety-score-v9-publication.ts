@@ -411,18 +411,36 @@ export function safetyScoreV9WorkflowInstanceId(
   if (!Number.isInteger(slotStartedAt) || slotStartedAt < 0) {
     throw new Error("Safety Score V9 Workflow slot must be epoch seconds");
   }
-  return `v9-publication:${slotStartedAt}`;
+  return `v9-publication-${slotStartedAt}`;
 }
 
 export function safetyScoreV9WorkflowSlotStartedAt(
   instanceId: string,
 ): number {
-  const match = /^v9-publication:(\d+)$/u.exec(instanceId);
+  const match = /^v9-publication-(\d+)$/u.exec(instanceId);
   const slotStartedAt = match === null ? Number.NaN : Number(match[1]);
   if (!Number.isSafeInteger(slotStartedAt) || slotStartedAt < 0) {
-    throw new Error("Safety Score V9 Workflow instance id is invalid");
+    throw new Error(
+      `Safety Score V9 Workflow instance id is invalid: ${JSON.stringify(instanceId)}`,
+    );
   }
   return slotStartedAt;
+}
+
+/**
+ * The trigger sends the slot in `params`; that is the authoritative input.
+ * Older instances created before that change carry it only in their id, so the
+ * id remains a fallback rather than the primary source.
+ */
+export function resolveSafetyScoreV9WorkflowSlot(
+  event: Readonly<WorkflowEvent<unknown>>,
+): number {
+  const payload = event.payload as { slotStartedAt?: unknown } | null | undefined;
+  const fromPayload = payload?.slotStartedAt;
+  if (Number.isSafeInteger(fromPayload) && (fromPayload as number) >= 0) {
+    return fromPayload as number;
+  }
+  return safetyScoreV9WorkflowSlotStartedAt(String(event.instanceId));
 }
 
 export async function runSafetyScoreV9PublicationWorkflow(
@@ -430,8 +448,11 @@ export async function runSafetyScoreV9PublicationWorkflow(
   event: Readonly<WorkflowEvent<unknown>>,
   step: WorkflowStep,
 ): Promise<SafetyScoreV9WorkflowResult> {
-  const instanceId = event.instanceId;
-  const slotStartedAt = safetyScoreV9WorkflowSlotStartedAt(instanceId);
+  const slotStartedAt = resolveSafetyScoreV9WorkflowSlot(event);
+  // Derived, never read back from the runtime event: this id keys the terminal
+  // idempotency row, so an absent event field must not collapse slots onto a
+  // literal "undefined".
+  const instanceId = safetyScoreV9WorkflowInstanceId(slotStartedAt);
   const startedAtMs = event.timestamp.getTime();
 
   try {

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.215",
+    title: "Scoped M0 inheritance and VUSD retained-DEX recovery",
+    date: "2026-09-03",
+    effectiveAt: 1788393600,
+    summary:
+      "M and its USDN child can reuse a genuinely single-source replay-safe wM mark, while VUSD can publish its reviewed liquid retained-DEX aggregate without weakening global depeg trust.",
+    impact: [
+      "`m-m0` may inherit a fresh replay-safe `wm-m0` parent only when the parent itself reports single-source confidence; the result preserves the parent source and single-source provenance, and the existing same-run chain can then repair `usdn-noble`",
+      "A high-confidence wM composite padded by a non-replay-safe address source remains ineligible for M inheritance, and cached, stale, fallback, low-confidence, or provenance-less parent marks remain rejected",
+      "`vusd-virtue` alone may admit a fresh retained DEX aggregate with at least $250K TVL as the existing soft `dex-promoted` primary-publication voice; unreviewed assets retain the $1M aggregate floor",
+      "The global $1M depeg-trust floor, exact-address provider liquidity floor, DEX freshness checks, and severe-downside corroboration gate are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.214",
     title: "Canonical sUSDS and sUSDe vault NAV coverage",
     date: "2026-09-01",
