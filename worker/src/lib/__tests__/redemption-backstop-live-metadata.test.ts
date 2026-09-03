@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 import type { ReserveSyncStateRecord } from "../live-reserves/store";
 import { parseReserveCompositionRow } from "../live-reserves/store-row-decoding";
-import { liveSnapshot } from "./redemption-backstop-sources.test-support";
+import { dusdOpenQueueMetadata, liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const now = 1_780_000_000;
 
@@ -106,35 +106,21 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.v9OutputValuation).toEqual(outputValuation);
   });
 
-  it("accepts DUSD live queue capacity without scoring the minimum finalization delay", () => {
+  it("preserves DUSD's unproven settlement bound without scoring the minimum finalization delay", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "dusd-dialectic",
-      snapshot("dusd-dialectic", {
-        freshnessMode: "verified",
-        sourceTimestamp: now - 60,
-        redemption: {
-          capacityUsd: 0,
-          capacityKind: "live-queue",
-          freshnessKind: "same-run-onchain",
-          queueDepthUsd: 3_104.889979,
-          holderEligibility: "issuer-discretionary",
-          routeStatus: "open",
-          routeStatusSource: "onchain",
-        },
-        redemptionQueue: {
-          minimumFinalizationDelaySec: 43_200,
-        },
-      }),
+      snapshot("dusd-dialectic", dusdOpenQueueMetadata(now + 60)),
       now,
     );
 
     expect(metadata.canUseCapacity).toBe(true);
     expect(metadata.capacityConfidence).toBe("live-proxy");
     expect(metadata.immediateRedeemableUsd).toBe(0);
+    expect(metadata.settlementBoundUnproven).toBe(true);
     expect(metadata.capacityKind).toBe("live-queue");
     expect(metadata.queueDepthUsd).toBe(3_104.889979);
     expect(metadata.settlementDelaySec).toBeNull();
-    expect(metadata.liveHolderEligibility).toBe("issuer-discretionary");
+    expect(metadata.liveHolderEligibility).toBe("any-holder");
     expect(metadata.routeStatus).toBe("open");
     expect(metadata.routeStatusSource).toBe("onchain");
   });

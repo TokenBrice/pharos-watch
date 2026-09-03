@@ -398,6 +398,7 @@ describe("HeroCard", () => {
     });
 
     expect(html).toContain("NAV token — no fixed peg");
+    expect(html).toContain("USD NAV");
     expect(html).not.toContain("+350 bps");
     expect(html).not.toContain("+350 BPS");
     expect(html).not.toContain("peg-gauge:350");

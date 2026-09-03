@@ -165,15 +165,15 @@
     },
     {
       "assetId": "dusd-dialectic",
-      "reviewedAt": "2026-07-29",
-      "reviewer": "OpenAI Codex DUSD evidence closure",
+      "reviewedAt": "2026-09-03",
+      "reviewer": "OpenAI Codex DUSD listing correction",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Blockscout verifies the direct MachineShare deployment. It inherits OpenZeppelin ERC-20 transfer and transferFrom without override, pause, blacklist, allowlist, seizure, or transfer hook. The owner/Machine can mint and can burn its own balance or a holder balance only when the Machine itself is the caller; it cannot bypass holder authorization to transfer DUSD. The separate AsyncRedeemer whitelist gates entry to and claims from the redemption queue, not ERC-20 transfers.",
+          "evidence": "Blockscout verifies the direct MachineShare deployment. It inherits OpenZeppelin ERC-20 transfer and transferFrom without override, pause, blacklist, allowlist, seizure, or transfer hook. The owner/Machine can mint and can burn its own balance or a holder balance only when the Machine itself is the caller; it cannot bypass holder authorization to transfer DUSD. At Ethereum block 25899375 the separate DirectDepositor and AsyncRedeemer whitelists were disabled while their sanctions checks were enabled. Those route-level controls do not affect ordinary ERC-20 transfers, and the Risk Manager can re-enable either whitelist.",
           "sources": [
             {
               "label": "Blockscout verified DUSD MachineShare source",
@@ -182,6 +182,14 @@
             {
               "label": "DUSD share token on Etherscan",
               "url": "https://etherscan.io/address/0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+            },
+            {
+              "label": "Risk Manager transaction disabling the DUSD route whitelists",
+              "url": "https://etherscan.io/tx/0xce35aa978654e799969076baf9025e6dff67b5d2467a1603bfe9acb16902c286"
+            },
+            {
+              "label": "Ethereum PublicNode fixed-block route-state reads",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }

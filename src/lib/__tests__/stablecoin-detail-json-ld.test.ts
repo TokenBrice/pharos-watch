@@ -77,6 +77,14 @@ describe("buildStablecoinDatasetJsonLd", () => {
     });
   });
 
+  it("uses NAV-aware descriptions for yield-bearing strategy shares", () => {
+    const coin = TRACKED_META_BY_ID.get("dusd-dialectic")!;
+    const jsonLd = buildStablecoinDatasetJsonLd(coin);
+
+    expect(jsonLd.description).toContain("yield-bearing token with USDC-denominated NAV");
+    expect(jsonLd.description).not.toContain("pegged to US Dollar");
+  });
+
   it("omits dateModified unless an explicit source date is provided", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const withoutDate = buildStablecoinDatasetJsonLd(coin);

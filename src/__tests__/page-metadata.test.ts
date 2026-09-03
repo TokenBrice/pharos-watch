@@ -26,6 +26,15 @@ describe("page metadata helpers", () => {
     expect(buildStablecoinDetailDescription(nect!)).toContain("Issuer can freeze addresses");
   });
 
+  it("describes NAV tokens as NAV claims rather than fixed-dollar pegs", () => {
+    const dusd = TRACKED_META_BY_ID.get("dusd-dialectic");
+
+    expect(dusd).toBeDefined();
+    const description = buildStablecoinDetailDescription(dusd!);
+    expect(description).toContain("yield-bearing token with USDC-denominated NAV");
+    expect(description).not.toContain("pegged to US Dollar");
+  });
+
   it("uses pre-launch tracker wording before live stablecoin data exists", () => {
     const preLaunch = TRACKED_META_BY_ID.get("krw-imbank");
 

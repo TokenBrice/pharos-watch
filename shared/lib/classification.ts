@@ -1,7 +1,8 @@
-import type { GovernanceType } from "../types";
+import type { GovernanceType, PegCurrency } from "../types";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
+import { PEG_LABELS_SHORT } from "./classification/pegs";
 
 export * from "./classification/domain";
 export * from "./classification/pegs";
@@ -16,6 +17,22 @@ export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
 export { PEG_TAXONOMY } from "./peg-taxonomy";
+
+export function getProfilePegLabel(
+  flags: { pegCurrency: PegCurrency; navToken: boolean },
+  navReferenceSymbol?: string,
+): string {
+  const pegLabel = PEG_LABELS_SHORT[flags.pegCurrency] ?? flags.pegCurrency;
+  return flags.navToken ? `${navReferenceSymbol ?? pegLabel}-denominated NAV` : pegLabel;
+}
+
+export function getHeroPegLabel(
+  flags: { pegCurrency: PegCurrency; navToken: boolean },
+  navReferenceSymbol?: string,
+): string {
+  const pegLabel = PEG_HERO_CHIP_LABELS[flags.pegCurrency] ?? flags.pegCurrency;
+  return flags.navToken ? `${navReferenceSymbol ?? flags.pegCurrency} NAV` : pegLabel;
+}
 
 export const HERO_CHIP_BACKING_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.badgeLabel);
 

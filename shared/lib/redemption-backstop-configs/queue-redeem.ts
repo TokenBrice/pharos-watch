@@ -132,7 +132,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   }),
   "dusd-dialectic": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
-    accessModel: "whitelisted-onchain",
+    accessModel: "permissionless-onchain",
     holderEligibility: "issuer-discretionary",
     settlementModel: "queued",
     executionModel: "opaque",
@@ -144,7 +144,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: fixedFee(0, "The reviewed standard AsyncRedeemer implementation does not charge a DUSD redemption fee"),
     routeStatus: "open",
     routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-07-30",
+    reviewedAt: "2026-09-03",
     docs: [
       sourceRef("Makina Machine lifecycle", "https://docs.makina.finance/concepts/architecture/lifecycle", [
         "route",
@@ -158,8 +158,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ]),
       sourceRefRouteCapacity("Makina DUSD strategy", "https://makina.finance/strategy/dusd"),
       sourceRef(
-        "DUSD AsyncRedeemer verified source",
-        "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract",
+        "DUSD AsyncRedeemer sanctions-check implementation",
+        "https://eth.blockscout.com/address/0x49c4762ab838f2e5d8252b69b90a1e8587a74511?tab=contract",
         ["route", "fees", "access", "settlement"],
       ),
       sourceRef("DUSD Machine Terms", "https://makina.finance/MeccanicoToS.pdf", [
@@ -169,11 +169,12 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ]),
     ],
     notes: [
-      "The reviewed AsyncRedeemer implementation currently advances sequential request IDs and charges no redemption fee, but the Machine Terms provide no contractual queue priority and no perpetual zero-fee covenant.",
+      "At Ethereum block 25899375 the DirectDepositor and AsyncRedeemer whitelists were disabled and both sanctions checks were enabled. The current on-chain route is permissionless for addresses that pass those checks, while the Risk Manager retains authority to re-enable either whitelist.",
+      "The reviewed AsyncRedeemer sanctions-check implementation advances sequential request IDs and charges no redemption fee, but the Machine Terms provide no contractual queue priority and no perpetual zero-fee covenant.",
       "A DUSD buyback request is not a contractual redemption right, may remain unfilled indefinitely, and has only a 12-hour minimum finalization delay rather than a maximum settlement SLA.",
-      "Verified-User admission, suspension, and revocation are discretionary and have no promised appeal SLA. U.S. persons and other Prohibited Persons or Jurisdictions are ineligible, and EU/EEA-originating transactions may be refused.",
+      "The access model records the currently executable contract path. Holder eligibility remains issuer-discretionary because the published Machine Terms retain Verified-User admission, suspension, and revocation, with no promised appeal SLA. U.S. persons and other Prohibited Persons or Jurisdictions are ineligible, and EU/EEA-originating transactions may be refused.",
       "Settlement is available only in Ethereum USDC after the operator frees accounting-token liquidity; there is no committed alternate settlement asset, and the operator may cease the Machine without notice.",
-      "Fresh Makina route telemetry computes usable queue capacity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). If that same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
+      "Fresh Makina route telemetry computes currently available queue liquidity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). Because finalization is operator-batched and has no proven maximum completion bound, an open route is published as unproven settlement capacity rather than a measured zero-capacity exit. If the same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
     ],
   }),
   "acred-apollo-securitize": defineReviewedQueueRedeemConfig(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT, {

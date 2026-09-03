@@ -113,7 +113,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(dusd).toMatchObject({
       routeFamily: "queue-redeem",
       outputAssets: ["usdc-circle"],
-      accessModel: "whitelisted-onchain",
+      accessModel: "permissionless-onchain",
       holderEligibility: "issuer-discretionary",
       settlementModel: "queued",
       executionModel: "opaque",
@@ -125,10 +125,10 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
       routeStatus: "open",
       routeExitCorrelation: "same-protocol-liquidity",
-      reviewedAt: "2026-07-30",
+      reviewedAt: "2026-09-03",
     });
     expect(dusd?.capacityModel).not.toMatchObject({ fallbackRatio: expect.any(Number) });
-    expect(dusd?.docs?.find((source) => source.label === "DUSD AsyncRedeemer verified source")).toMatchObject({
+    expect(dusd?.docs?.find((source) => source.label === "DUSD AsyncRedeemer sanctions-check implementation")).toMatchObject({
       supports: expect.arrayContaining(["fees"]),
     });
     expect(dusd?.docs?.find((source) => source.label === "DUSD Machine Terms")?.supports).not.toContain("fees");

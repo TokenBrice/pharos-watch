@@ -68,6 +68,20 @@ const summary: StablecoinAiSummary = {
 
 describe("StablecoinDetailSeoContent", () => {
 
+  it("labels NAV tokens by their denominated NAV rather than a fixed peg", () => {
+    const navCoin: StablecoinMeta = {
+      ...coin,
+      id: "test-nav-dollar",
+      name: "Test NAV Dollar",
+      symbol: "nTSTD",
+      flags: { ...coin.flags, yieldBearing: true, navToken: true },
+    };
+
+    const { container } = render(<StablecoinDetailSeoContent coin={navCoin} />);
+    expect(container.textContent).toContain("peg US Dollar-denominated NAV");
+    expect(container.textContent).toContain("yield-bearing token with US Dollar-denominated NAV");
+  });
+
   it("renders one hidden h1 plus a visible static profile with taxonomy links and facts", () => {
     const { container } = render(<StablecoinDetailSeoContent coin={coin} summary={summary} />);
 

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES } from "@shared/lib/classification";
+import {
+  BACKING_LABELS,
+  GOVERNANCE_LABELS,
+  POR_BADGE_STYLES,
+  getProfilePegLabel,
+} from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -166,7 +171,10 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
 function buildProfileSentence(coin: StablecoinMeta): string {
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const pegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
 
   return `${coin.name} (${coin.symbol}) static profile: governance model ${governanceLabel}; backing model ${backingLabel}; peg ${pegLabel}.`;
 }
@@ -257,17 +265,26 @@ function buildAlertCommand(coin: StablecoinMeta): string {
  * release) for the safety-grade tier. No editorial claims beyond those sources.
  */
 export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const pegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
 
   const identityAnswer = [
     coin.oneLiner
       ? normalizeWhitespace(stripTermMarkup(coin.oneLiner))
-      : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
+      : coin.flags.navToken
+        ? `${coin.name} (${coin.symbol}) is a ${backingLabel} yield-bearing token with ${pegLabel} and a ${governanceLabel} governance model.`
+        : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
     coin.pegMechanism
-      ? `The static profile records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
-      : `Its peg target is ${pegLabel}.`,
+      ? coin.flags.navToken
+        ? `The static profile records its ${pegLabel} accounting mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+        : `The static profile records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+      : coin.flags.navToken
+        ? `Its accounting reference is ${pegLabel}.`
+        : `Its peg target is ${pegLabel}.`,
   ].join(" ");
 
   const backingAnswer = [
@@ -332,7 +349,10 @@ export function StablecoinDetailSeoContent({
   summary = null,
 }: StablecoinDetailSeoContentProps) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const pegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const summaryUpdatedAt = summary?.updatedAt ? formatAiSummaryDate(summary.updatedAt) : null;

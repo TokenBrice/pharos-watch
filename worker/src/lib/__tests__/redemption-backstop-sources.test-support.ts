@@ -45,6 +45,26 @@ export function snapshot(
   return liveSnapshot(stablecoinId, metadata, overrides);
 }
 
+export function dusdOpenQueueMetadata(nowSec: number): Record<string, unknown> {
+  return {
+    freshnessMode: "verified",
+    sourceTimestamp: nowSec - 120,
+    redemption: {
+      capacityUsd: 0,
+      settlementBoundUnproven: true,
+      capacityKind: "live-queue",
+      freshnessKind: "same-run-onchain",
+      queueDepthUsd: 3_104.889979,
+      holderEligibility: "any-holder",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    },
+    redemptionQueue: {
+      minimumFinalizationDelaySec: 43_200,
+    },
+  };
+}
+
 export function severeMarketEvidence(
   overrides: Partial<RedemptionRouteAvailability> = {},
 ): RedemptionRouteAvailability {
