@@ -1,0 +1,15 @@
+{
+  "mechanism": "said-gaib",
+  "date": "2026-07-27-docs-capture",
+  "sha256": "cee5a951bbaf46e5590a2a1dccb8d6ce70eff7f7b97ef92d3188a28393f5aed8",
+  "bytes": 3059,
+  "r2Key": "captures/said-gaib/2026-07-27-docs-capture.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "said-gaib",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/said-gaib/2026-07-27-docs-capture.json",
+    "capturedAt": "2026-07-28 re-open docs.gaib.ai sAID + AID product pages (ERC-4626 sAID; monthly NAV update first day of month; AI infra financings + T-bill/stable buffer; monthly withdrawal cohort T+2 months settle)"
+  }
+}

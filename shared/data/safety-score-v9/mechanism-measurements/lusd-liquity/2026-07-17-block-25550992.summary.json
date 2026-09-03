@@ -1,0 +1,25 @@
+{
+  "mechanism": "lusd-liquity",
+  "date": "2026-07-17-block-25550992",
+  "sha256": "8b4bb63f5cb568d2fbd9ed8832c7ab9265dd86eaf1e7a536fefcb01a82776b28",
+  "bytes": 8715,
+  "r2Key": "captures/lusd-liquity/2026-07-17-block-25550992.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "lusd-liquity",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-07-17-block-25550992.json",
+    "chain": {
+      "key": "ethereum",
+      "evmChainId": 1
+    },
+    "block": {
+      "number": 25550992,
+      "hash": "0x1df0588f9056c3b521c7f34d5ecf2304edc94110d932771337522d03c416d7bc",
+      "timestampUnix": 1784274263,
+      "timestampIso": "2026-07-17T07:44:23.000Z",
+      "selection": "finalized"
+    }
+  }
+}

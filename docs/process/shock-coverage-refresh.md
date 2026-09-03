@@ -55,7 +55,8 @@ npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bd-basedollar
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts
-node --import tsx scripts/ci/check-shock-coverage-freshness.ts
+node --import tsx scripts/lib/mechanism-measurement/upload.ts
+npx tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts
 ```
 
 Measuring the same head block twice is idempotent: the measure script keeps the existing journal and verifies the new measurement matches it, rather than overwriting.
@@ -65,6 +66,22 @@ To byte-replay a single journal on demand:
 ```bash
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --replay <journal-path>
 ```
+
+
+## Capture storage and expiry
+
+The workflow uploads each raw JSON journal as gzip to the Cloudflare R2 bucket
+`pharos-measurements` under `captures/<mechanism>/<date>.json.gz`. Objects under
+`captures/` have a 180-day lifecycle. Git retains one compact
+`<date>.summary.json` per capture with the SHA-256, byte count, R2 key, and all
+fields required by the registry and attestations; raw bodies are not committed.
+
+The latest shock capture selected by the evaluation-build manifest is also
+written under the no-lifecycle `pinned/<mechanism>/<date>.json.gz` prefix.
+Replay resolves a local cache first, then `pinned/`, then `captures/`, and
+verifies the decompressed SHA-256 before caching. If neither R2 object exists,
+the exact failure is `capture <sha256> expired: non-replayable`; the workflow
+must fail closed rather than regenerate or silently skip the evidence.
 
 ## Related
 

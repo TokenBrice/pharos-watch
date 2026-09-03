@@ -1,0 +1,25 @@
+{
+  "mechanism": "feusd-felix",
+  "date": "2026-07-14-block-40474622",
+  "sha256": "e00518195c20735ffcc1fbc038b0ba834a1982cfe95a7c962e155bdc435ed9a9",
+  "bytes": 20085,
+  "r2Key": "captures/feusd-felix/2026-07-14-block-40474622.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "feusd-felix",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/feusd-felix/2026-07-14-block-40474622.json",
+    "chain": {
+      "key": "hyperevm",
+      "evmChainId": 999
+    },
+    "block": {
+      "number": 40474622,
+      "hash": "0xcc8adf072ea82f3ce65131471d197735dd855f4ba1997a5118d9debad706a012",
+      "timestampUnix": 1784066851,
+      "timestampIso": "2026-07-14T22:07:31.000Z",
+      "selection": "finalized"
+    }
+  }
+}

@@ -1,8 +1,13 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
+import {
+  CAPTURE_SUMMARY_SUFFIX,
+  MECHANISM_MEASUREMENT_ROOT,
+  parseMechanismCaptureSummary,
+} from "../lib/mechanism-measurement/capture-summary";
 
 export const V9_EVALUATION_BUILD_DIGEST_DOMAIN = "safety-score-v9.evaluation-build.v1";
 
@@ -195,7 +200,6 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
   "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
 ] as const;
-
 export const V9_EVALUATION_BUILD_SOURCE_PATHS = [
   ...V9_SCORE_EVALUATOR_SOURCE_PATHS,
   ...V9_FACT_PRODUCER_SOURCE_PATHS,
@@ -206,10 +210,16 @@ export interface V9EvaluationBuildManifestFile {
   sha256: string;
 }
 
+export interface V9EvaluationBuildManifestCapture {
+  sha256: string;
+  r2Key: string;
+}
+
 export interface V9EvaluationBuildManifest {
   schemaVersion: 1;
   domain: typeof V9_EVALUATION_BUILD_DIGEST_DOMAIN;
   files: V9EvaluationBuildManifestFile[];
+  captures?: V9EvaluationBuildManifestCapture[];
   digest: string;
 }
 
@@ -226,15 +236,49 @@ export function collectV9EvaluationBuildSourcePaths(root = REPO_ROOT): string[] 
   return sorted;
 }
 
+export function collectV9EvaluationBuildCaptureRefs(root = REPO_ROOT): V9EvaluationBuildManifestCapture[] {
+  const measurementRoot = resolve(root, MECHANISM_MEASUREMENT_ROOT);
+  if (!existsSync(measurementRoot)) return [];
+  const latestByMechanism = new Map<string, { timestampUnix: number; ref: V9EvaluationBuildManifestCapture }>();
+  const visit = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(path);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.endsWith(CAPTURE_SUMMARY_SUFFIX)) continue;
+      const captureSummary = parseMechanismCaptureSummary(JSON.parse(readFileSync(path, "utf8")), path);
+      const summary = captureSummary.summary;
+      if (summary.kind !== "cdp-shock-coverage-measurement") continue;
+      if (!("block" in summary) || !summary.block || typeof summary.block !== "object") continue;
+      if (!("timestampUnix" in summary.block) || typeof summary.block.timestampUnix !== "number") continue;
+      const current = latestByMechanism.get(captureSummary.mechanism);
+      if (!current || summary.block.timestampUnix > current.timestampUnix) {
+        latestByMechanism.set(captureSummary.mechanism, {
+          timestampUnix: summary.block.timestampUnix,
+          ref: { sha256: captureSummary.sha256, r2Key: captureSummary.r2Key },
+        });
+      }
+    }
+  };
+  visit(measurementRoot);
+  return [...latestByMechanism.values()]
+    .map((entry) => entry.ref)
+    .sort((left, right) => left.r2Key.localeCompare(right.r2Key));
+}
+
 export function buildV9EvaluationBuildManifest(root = REPO_ROOT): V9EvaluationBuildManifest {
   const files = collectV9EvaluationBuildSourcePaths(root).map((path) => ({
     path,
     sha256: sha256(readFileSync(resolve(root, path))),
   }));
+  const captures = collectV9EvaluationBuildCaptureRefs(root);
   const payload: Omit<V9EvaluationBuildManifest, "digest"> = {
     schemaVersion: 1,
     domain: V9_EVALUATION_BUILD_DIGEST_DOMAIN,
     files,
+    ...(captures.length > 0 ? { captures } : {}),
   };
   return { ...payload, digest: sha256(JSON.stringify(payload)) };
 }

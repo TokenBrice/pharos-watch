@@ -1,0 +1,14 @@
+{
+  "mechanism": "fusd-freedom-dollar",
+  "date": "2026-07-27-reserve-panel-zano-3790223",
+  "sha256": "a3863303805f738ed80fae73f81c4c78e751320b9cfd14af5730dd74448a1422",
+  "bytes": 2577,
+  "r2Key": "captures/fusd-freedom-dollar/2026-07-27-reserve-panel-zano-3790223.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "fusd-freedom-dollar",
+    "archetype": "algorithmic",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/fusd-freedom-dollar/2026-07-27-reserve-panel-zano-3790223.json",
+    "capturedAt": "2026-07-27T22:56:51.000Z"
+  }
+}

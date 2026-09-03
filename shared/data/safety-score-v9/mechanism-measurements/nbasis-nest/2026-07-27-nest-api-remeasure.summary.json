@@ -1,0 +1,15 @@
+{
+  "mechanism": "nbasis-nest",
+  "date": "2026-07-27-nest-api-remeasure",
+  "sha256": "229f7d58f4eaa677523baf78f8e1532fe498738167faf184d1e17f66541c1584",
+  "bytes": 4612,
+  "r2Key": "captures/nbasis-nest/2026-07-27-nest-api-remeasure.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "nbasis-nest",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/nbasis-nest/2026-07-27-nest-api-remeasure.json",
+    "capturedAt": "Nest API nest-basis-vault price NAV $26,361,435.37 price 1.065991 supply 24,729,510.26; positions USCC ~$22,703,682 (slug superstate-uscc) USTB ~$1,412,092 (superstate-ustb) liquid ~$46,446; eth getRate accountant 0x5127…=1065991; lastPriceUpdate eth updatedAt 1784941939 (2026-07-25 — stale vs other vaults)"
+  }
+}

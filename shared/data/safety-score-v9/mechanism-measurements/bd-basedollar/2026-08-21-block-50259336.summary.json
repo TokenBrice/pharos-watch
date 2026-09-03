@@ -1,0 +1,25 @@
+{
+  "mechanism": "bd-basedollar",
+  "date": "2026-08-21-block-50259336",
+  "sha256": "51034ce7d1cbcc26742c6ff0f1400b0ff18bbde526bf62384f198ffb815e77a3",
+  "bytes": 24133,
+  "r2Key": "captures/bd-basedollar/2026-08-21-block-50259336.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "bd-basedollar",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336.json",
+    "chain": {
+      "key": "base",
+      "evmChainId": 8453
+    },
+    "block": {
+      "number": 50259336,
+      "hash": "0x9e54319051dbecd58a82b33818b1ba3e3b719d67c5cb369433d09cfc48afdc33",
+      "timestampUnix": 1787308019,
+      "timestampIso": "2026-08-21T10:26:59.000Z",
+      "selection": "operator-pinned"
+    }
+  }
+}

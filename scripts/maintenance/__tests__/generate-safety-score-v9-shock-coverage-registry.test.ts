@@ -1,14 +1,13 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ShockCoverageEvidenceV1Schema } from "../../lib/mechanism-measurement/shock-schema";
 import {
   SHOCK_COVERAGE_REGISTRY_PATH,
   SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH,
   buildShockCoverageMeasurementRegistry,
+  collectShockCoverageCaptureSources,
   collectShockCoverageJournalPaths,
   renderShockCoverageMeasurementRegistry,
 } from "../generate-safety-score-v9-shock-coverage-registry";
@@ -58,20 +57,28 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
         .map((measurement) => [measurement.assetId, measurement.block.timestampUnix, measurement.journalPath]),
     );
 
+    const sourceByJournalPath = new Map(
+      collectShockCoverageCaptureSources(REPO_ROOT).map((source) => [String(source.summary.summary.journalPath), source]),
+    );
     for (const measurement of registry.measurements) {
-      const rawBytes = readFileSync(resolve(REPO_ROOT, measurement.journalPath));
-      const journal = ShockCoverageEvidenceV1Schema.parse(JSON.parse(rawBytes.toString("utf8")));
+      const source = sourceByJournalPath.get(measurement.journalPath);
+      if (!source) throw new Error(`Missing summary for ${measurement.journalPath}`);
+      const summary = source.summary.summary;
+      if (!summary || typeof summary !== "object") throw new Error(`Invalid summary for ${measurement.journalPath}`);
 
-      expect(measurement.journalSha256).toBe(createHash("sha256").update(rawBytes).digest("hex"));
-      expect(measurement.assetId).toBe(journal.assetId);
-      expect(measurement.archetype).toBe(journal.archetype);
-      expect(measurement.family).toBe(journal.family);
-      expect(measurement.applicability).toBe(journal.applicability.state);
-      expect(measurement.failureReason).toBe(journal.applicability.failureReason);
-      expect(measurement.applicability).toBe(journal.measuredFacts.applicability);
-      expect(measurement.failureReason).toBe(journal.measuredFacts.failureReason);
-      expect(measurement.complete).toBe(journal.completeness.complete);
-      expect(measurement.blockers).toEqual(journal.completeness.blockers);
+      expect(measurement.journalSha256).toBe(source.summary.sha256);
+      expect(summary).toMatchObject({
+        assetId: measurement.assetId,
+        archetype: measurement.archetype,
+        family: measurement.family,
+        applicability: { state: measurement.applicability, failureReason: measurement.failureReason },
+        completeness: { complete: measurement.complete, blockers: measurement.blockers },
+        measuredFacts: { applicability: measurement.applicability, failureReason: measurement.failureReason },
+        block: measurement.block,
+        sourcePin: measurement.sourcePin,
+        shockPolicy: measurement.shockPolicy,
+        codePins: measurement.codePins,
+      });
       expect(measurement.exactReplayPassed).toBe(true);
       const attestation = attestationByKey.get(`${measurement.journalPath}@${measurement.journalSha256}`);
       if (!attestation) throw new Error(`Missing committed attestation for ${measurement.journalPath}`);
@@ -79,31 +86,13 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
       expect(measurement.replayVerification).toMatchObject({
         attestedAt: attestation.attestedAt,
         mode: "offline-byte-identical",
-        callsConsumed: journal.calls.length,
-        codePinsConsumed: journal.codePins.length,
+        callsConsumed: summary.callsConsumed,
+        codePinsConsumed: summary.codePinsConsumed,
       });
-      expect(measurement.block).toEqual({
-        number: journal.block.number,
-        hash: journal.block.hash,
-        timestampUnix: journal.block.timestampUnix,
-        timestampIso: journal.block.timestampIso,
-      });
-      expect(measurement.sourcePin).toEqual(journal.sourcePin);
-      expect(measurement.shockPolicy).toEqual(journal.shockPolicy);
-      expect(measurement.measuredFacts).toEqual(journal.measuredFacts);
-      expect(measurement.codePins).toEqual(
-        journal.codePins.map(({ name, address, role, codeHash }) => ({
-          name,
-          address,
-          role,
-          codeHash,
-        })),
-      );
       expect(measurement).not.toHaveProperty("calls");
       expect(measurement).not.toHaveProperty("positions");
       expect(measurement.codePins.every((pin) => !("bytecode" in pin))).toBe(true);
     }
-
     const capture9 = registry.measurements.filter((measurement) => measurement.block.timestampUnix === 1784225939);
     const july17 = registry.measurements.filter((measurement) => measurement.block.timestampUnix === 1784279255);
     expect(capture9.map((measurement) => measurement.assetId)).toEqual(["bold-liquity", "lusd-liquity"]);

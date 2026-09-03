@@ -1,0 +1,17 @@
+{
+  "mechanism": "usde-ethena",
+  "date": "2026-07-22T23-00-16.554Z-3d3a557a8065-protocol-api",
+  "sha256": "43801fb1e1fa7c1a590e5f9772d76976710fb987d0108c5a84d9b899e4eee6bb",
+  "bytes": 48339,
+  "r2Key": "captures/usde-ethena/2026-07-22T23-00-16.554Z-3d3a557a8065-protocol-api.json.gz",
+  "summary": {
+    "schemaVersion": 2,
+    "kind": "protocol-api-mechanism-measurement",
+    "assetId": "usde-ethena",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usde-ethena/2026-07-22T23-00-16.554Z-3d3a557a8065-protocol-api.json",
+    "capturedAt": "2026-07-22T23:21:53.164Z",
+    "snapshotId": "3d3a557a80658448fe06a3944d7037726d87dadf8905930e8663fceb2550416d",
+    "snapshotObservedAt": "2026-07-22T23:00:16.554Z"
+  }
+}

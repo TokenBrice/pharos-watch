@@ -1,0 +1,25 @@
+{
+  "mechanism": "cdp-enosys",
+  "date": "2026-07-15-block-65110774",
+  "sha256": "65d7398de53f0aa3ceef25edcdd9f1155351673da2105789767026cc379f5234",
+  "bytes": 21955,
+  "r2Key": "captures/cdp-enosys/2026-07-15-block-65110774.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "cdp-enosys",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/cdp-enosys/2026-07-15-block-65110774.json",
+    "chain": {
+      "key": "flare",
+      "evmChainId": 14
+    },
+    "block": {
+      "number": 65110774,
+      "hash": "0x5aa035db9d5e6d5c1242b318a76fd81be07524c405bbf5e41abc01718b009ba4",
+      "timestampUnix": 1784105309,
+      "timestampIso": "2026-07-15T08:48:29.000Z",
+      "selection": "finalized"
+    }
+  }
+}

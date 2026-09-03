@@ -589,7 +589,21 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "64e2aec394eea84b52124156b1ffebf7b9386c6e001a744fc3ce24888299e782"
+  "captures": [
+    {
+      "sha256": "a6c6f4b8e0aa901f3f392d42d411cf7129cbefabc7af15e39bc6522d64c95367",
+      "r2Key": "captures/bd-basedollar/2026-09-01-block-50731186-shock-coverage.json.gz"
+    },
+    {
+      "sha256": "0262dc64ef48debbddcf9ebf9effd496fe9e8956cda44541bf24bae729c5fe0d",
+      "r2Key": "captures/bold-liquity/2026-09-01-block-25881271-shock-coverage.json.gz"
+    },
+    {
+      "sha256": "59be2b2ffca3ef56d18264a90a75696431dc0dea216f6383bf49c2e4122cd08a",
+      "r2Key": "captures/lusd-liquity/2026-09-01-block-25881271-shock-coverage.json.gz"
+    }
+  ],
+  "digest": "ba15a69f99f0ebea9b2ddb809222a1ed6456cecdae7cc54b0d92c71bb7936672"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

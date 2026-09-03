@@ -1,0 +1,15 @@
+{
+  "mechanism": "reusd-resupply",
+  "date": "2026-07-27-block-25627260",
+  "sha256": "734369375679d58aff6b42429ca02412ed4e51ffa231b57b795b69959e8c5ce3",
+  "bytes": 4778,
+  "r2Key": "captures/reusd-resupply/2026-07-27-block-25627260.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "reusd-resupply",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-27-block-25627260.json",
+    "capturedAt": "ethereum finalized block 25627260 hash 0xe4256d655597cf47800fdcc665ddb4d92f4daf19572401088d7f5591dc51c161 timestamp 2026-07-27T22:53:11Z; Registry 0x10101010E0C3171D894B71B3400668aF311e7D94 getAllPairAddresses + per-pair getPairAccounting/collateral convertToAssets; InsurancePool reUSD balanceOf"
+  }
+}

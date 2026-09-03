@@ -1,0 +1,14 @@
+{
+  "mechanism": "stcusd-cap",
+  "date": "2026-07-27-dashboard-and-wrapper",
+  "sha256": "7f8718f6ba6a60b5caa2d45e25f4005364c00f8a388d0d76fc8a13b80996c44b",
+  "bytes": 5095,
+  "r2Key": "captures/stcusd-cap/2026-07-27-dashboard-and-wrapper.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "stcusd-cap",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/stcusd-cap/2026-07-27-dashboard-and-wrapper.json",
+    "capturedAt": "2026-07-27T23:02:07Z"
+  }
+}

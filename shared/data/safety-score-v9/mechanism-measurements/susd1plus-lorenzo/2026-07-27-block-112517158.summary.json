@@ -1,0 +1,15 @@
+{
+  "mechanism": "susd1plus-lorenzo",
+  "date": "2026-07-27-block-112517158",
+  "sha256": "666b9578708101a466eda78fbc90997f3137561d7e4b3db35691217cd5179a1e",
+  "bytes": 7511,
+  "r2Key": "captures/susd1plus-lorenzo/2026-07-27-block-112517158.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "susd1plus-lorenzo",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/susd1plus-lorenzo/2026-07-27-block-112517158.json",
+    "capturedAt": "2026-07-27T22:51:15Z: BSC block 112517158 totalSupply()=83796473.74665007 sUSD1+ on 0x4f2760b32720f013e900dc92f65480137391199b (bsc-dataseed.binance.org); OTF vault detail unit_nav=1.03225675 TVL≈86499611.77; GraphQL aggregatedTVL unitNav=1.032257 readableTotalTVL=86499611.77 @ 2026-07-27T22:51:14.728Z; GraphQL detailedTVL grandTotal≈1344758.94 @ 2026-07-27T22:51:15.740Z (≈1.55% of aggregated TVL; Binance BinQuant_Lorenzo futures=0.00; Bybit BinQuant API key invalid)"
+  }
+}
