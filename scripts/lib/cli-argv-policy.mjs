@@ -67,6 +67,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
   exemptions: Object.freeze([
     exempt("scripts/build-data/build-client-registry.mjs", "build"),
     exempt("scripts/build-data/generate-stablecoin-client-projections.ts", "build"),
+    exempt("scripts/ci/check-client-registry-imports.ts", "read-only"),
     exempt("scripts/ci/check-clone-ratchet.ts", "build"),
     exempt("scripts/ci/check-cloudflare-account-state-drift.mjs", "read-only"),
     exempt("scripts/ci/check-critical-coverage.ts", "test"),
@@ -101,6 +102,11 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/sync-staged-generated-artifacts.mts", "build"),
     exempt("scripts/ci/verify-dependency-audit.ts", "read-only"),
     exempt("scripts/lib/coverage-audit-cli.ts", "build"),
+    exempt(
+      "scripts/lib/mechanism-measurement/upload.ts",
+      "build",
+      "Uploads mechanism-measurement capture bodies to the R2 archive bucket and writes local summaries; no production runtime state.",
+    ),
     exempt(
       "scripts/lib/source-files.mts",
       "read-only",
@@ -170,6 +176,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "Deterministic counterfactual analysis reads a local replay and only writes an optional local report.",
     ),
     exempt("scripts/maintenance/report-build-size.mjs", "read-only"),
+    exempt("scripts/maintenance/report-telegram-adoption.ts", "read-only"),
     exempt("scripts/maintenance/run-all-tests.ts", "test"),
     exempt("scripts/maintenance/run-bootstrap-rehearsal.ts", "test"),
     exempt("scripts/maintenance/run-coverage-audit.ts", "read-only"),
@@ -193,7 +200,5 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/summarize-safety-score-v9-replay.ts", "read-only"),
     exempt("scripts/maintenance/watch-worker-cron.mjs", "read-only"),
     exempt("scripts/maintenance/weekly-curation-digest.mjs", "build"),
-    exempt("worker/digest-difficulty-rank.ts", "read-only"),
-    exempt("worker/digest-model-trial.ts", "test"),
   ]),
 });
