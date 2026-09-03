@@ -48,3 +48,28 @@ When proposing a new cron job:
 
 - `npm run check:cron-connections` (canonical path: `scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; fails when any trigger is at or above `6/6`, a third `5/6` slot is introduced, or the reviewed fetch-capable-entry count grows.
 - `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps `worker/wrangler.toml` cron expressions aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, and rejects growth beyond the reviewed physical-trigger count in `CRON_GROWTH_HEADROOM_POLICY`.
+
+## Workflow and Queue Review Outcome (ADR-26)
+
+The 2026-09-03 execution-substrate spike reviewed Workflows against Pharos' six scheduling invariants: exactly-once slot identity and takeover, the 15-minute Cron wall-clock contract with its 60-second controlled-error reserve, retry behavior under the six-fetch budget, replay-safe D1 writes, a terminal `cron_runs` row/status oracle, and Paid-plan cost. A Workflow ID of `<lane>:<slotStartedAt>` is a useful duplicate-create key but is unique only within one Workflow; it does not claim or take over `cron_slot_executions`, coordinate `cron_leases`, or make `restart()` exactly-once. Workflows do not emit `cron_runs` rows automatically, and their automatic retries repeat the callback unless each write is idempotent.
+
+The available remote-D1 `cron_runs` sample for the requested 14-day lower-bound query (retained rows span 2026-08-27 through 2026-09-03) measured p95 durations of V9 48.9 s, DEX stage 156.8 s, CL exit depth 99.5 s, live reserves 496.3 s, DDR 27.0 s, and the daily-digest intent proxy 11.4 s. D1 metadata/error text contained zero explicit `exceededMemory` or exceeded-CPU markers for every reviewed lane; Cloudflare invocation analytics is required for platform resource outcomes. Exact SQL and output are in [`adr-24-measurements.md`](../../agents/2026-09-03-holistic-review/adr-24-measurements.md), with the full parity record in [ADR-26](../architecture.md#architectural-decision-records).
+
+**Disposition:** no authoritative lane cutover is approved by this spike. Run only the V9 one-week shadow first (Cron remains authoritative, no fence deletion), then require byte-identical output, replay-safe writes, a terminal `cron_runs` row, and a stable status oracle before any production Workflow cutover. Live reserves stays Cron-native while its one-pointer/write-diet work proceeds independently. The lower-complexity fallback is a request-ID-deduped Queue message for digest intent; merge DDR back into `quarterHourly` only after the planned heap reduction proves safe.
+
+### Conditional expression-retirement table
+
+The table is a review plan, not permission to remove an expression now. A row may retire only after its condition is observed in production and the schedule-sync and connection checks pass. Retirement removes physical aliases, not logical freshness slots.
+
+| Logical lane | Current physical expression(s) | Conditional after-review disposition | Net change |
+| --- | --- | --- | ---: |
+| `v9PublicationOffset` | `22,52 * * * *` (2) | Retire both only after the V9 shadow/cutover gate and terminal-row proof; no retirement approved yet. | −2 |
+| `halfHourlyOffset` + `halfHourlyMeasuredExecution` | `10 * * * *` + `5,35 * * * *` (2) | Retire the measured-execution aliases and retain one hourly trigger only after the reduced DEX/CL Workflow scope proves six-fetch compliance and replay safety. | −1 |
+| `fiveMinuteReserveRecovery` | `1,6,…,56 * * * *` (1) | Retain; this is the independent recovery path for reserve failures and is not a Workflow candidate. | 0 |
+| `depegResolverOffset` | `13,28,43,58 * * * *` (4) | Retire only after DDR write replay and status-oracle shadow proof; if the gate stays closed, merge it back into `quarterHourly` after the planned 0.2/2.x heap reduction. | −4 |
+| `digestTriggerPoll` | `*/5 * * * *` (1) | Retire after a request-ID-deduped Queue consumer is production-observed; do not replace this poll with a Workflow. | −1 |
+| Heavy cron lanes (`quarterHourly`, V9 supply attribution, status self-check, mint/burn, charts) | 18 expressions | Retain; they remain the measured native execution substrate in this review. | 0 |
+| Unaffected lanes | 12 expressions | Retain; no Workflows evidence or change is part of this review. | 0 |
+| **Reviewed topology** | **40 expressions** | **Conditional total after V9, DEX/CL, DDR, and digest gates: 32; if only the independent reserve cleanup lands: 40.** | **−8 / 0** |
+
+This table does not authorize a new trigger. Any future retirement or migration must update the single schedule metadata source, preserve logical slot identity, and rerun `npm run check:cron-sync` and `npm run check:cron-connections`.
