@@ -29,6 +29,7 @@
     "worker/src/api/health.ts": 100,
     "worker/src/cron/sync-stablecoins.ts": 97.3,
     "worker/src/cron/sync-stablecoins/enrich-prices.ts": 100,
+    "worker/src/cron/sync-stablecoins/price-corroboration.ts": 72.9,
     "worker/src/cron/sync-stablecoins/pricing.ts": 88.5,
     "worker/src/cron/detect-depegs.ts": 100,
     "worker/src/cron/confirm-pending-depegs.ts": 94.9,

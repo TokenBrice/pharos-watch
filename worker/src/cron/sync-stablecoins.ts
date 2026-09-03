@@ -90,6 +90,7 @@ export async function syncStablecoins(
     signal,
     coingeckoApiKey,
     chainRpcs,
+    binanceSession,
     reportProgress,
     nativePegSession,
   });

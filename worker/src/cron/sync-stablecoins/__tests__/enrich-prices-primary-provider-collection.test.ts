@@ -1,26 +1,22 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
-import { fetchCoingeckoSimplePrices } from "../../../lib/coingecko-simple-price";
-import {
-  buildPrimaryPricePlan,
-  collectPrimaryProviderQuotes,
-} from "../enrich-prices-primary-provider-collection";
+import { buildPrimaryPricePlan } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset } from "../enrich-prices-shared";
 
 vi.mock("../../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
+  shouldAttemptFetch: vi.fn(async () => false),
   recordOutcome: vi.fn(async () => {}),
+  recoverBreakerOnNoCandidate: vi.fn(async () => {}),
 }));
 
-vi.mock("../../../lib/coingecko-simple-price", () => ({
-  fetchCoingeckoSimplePrices: vi.fn(async () => ({
-    kind: "ok",
-    value: new Map([[
-      "test-usd",
-      { price: 1, observedAt: 1_800_000_000, observedAtMode: "upstream" },
-    ]]),
+vi.mock("../../../lib/depeg-helpers", () => ({
+  createDexPriceSourceLoadTelemetry: vi.fn(() => ({
+    staleRows: [],
+    malformedRows: [],
   })),
+  loadDexPriceRows: vi.fn(async () => new Map()),
+  loadDexPriceSources: vi.fn(async () => new Map()),
 }));
 
 const TEST_ASSET: PeggedAsset = {
@@ -34,34 +30,39 @@ const TEST_ASSET: PeggedAsset = {
 describe("critical publication provider collection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
   });
 
-  it("checks only the CoinGecko circuit and admits only known DL/CG assets", async () => {
-    const dlPrices = new Map([["dl-only", 1]]);
-    const plan = await buildPrimaryPricePlan([
-      TEST_ASSET,
-      { id: "dl-only", name: "DL", symbol: "DL", pegType: "peggedUSD" },
-      { id: "unknown", name: "Unknown", symbol: "UNK", pegType: "peggedUSD" },
-    ], {} as D1Database, dlPrices);
-
-    expect(plan.candidates.map((asset) => asset.id)).toEqual(["test-usd", "dl-only"]);
-    expect(shouldAttemptFetch).toHaveBeenCalledTimes(1);
-    expect(shouldAttemptFetch).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_PRICES);
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("reduces the fixture's live primary fetch lanes from nine to one", async () => {
-    const legacyFixtureFetchLanes = 9;
+  it("keeps all nine primary provider circuits in the 15-minute plan", async () => {
+    await buildPrimaryPricePlan([TEST_ASSET], {} as D1Database);
+
+    expect(shouldAttemptFetch).toHaveBeenCalledTimes(9);
+    expect(vi.mocked(shouldAttemptFetch).mock.calls.map(([, source]) => source)).toEqual([
+      CIRCUIT_SOURCE.CG_PRICES,
+      CIRCUIT_SOURCE.CG_TICKER,
+      CIRCUIT_SOURCE.BINANCE_PRICES,
+      CIRCUIT_SOURCE.KRAKEN_PRICES,
+      CIRCUIT_SOURCE.BITSTAMP_PRICES,
+      CIRCUIT_SOURCE.COINBASE_PRICES,
+      CIRCUIT_SOURCE.REDSTONE_PRICES,
+      CIRCUIT_SOURCE.CURVE_ONCHAIN,
+      CIRCUIT_SOURCE.CURVE_ORACLE,
+    ]);
+  });
+
+  it("does not report every primary circuit open when the ticker lane is available", async () => {
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.CG_TICKER);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const plan = await buildPrimaryPricePlan([TEST_ASSET], {} as D1Database);
-    const result = await collectPrimaryProviderQuotes({
-      plan,
-      db: {} as D1Database,
-      coingeckoApiKey: "cg-key",
-    });
 
-    expect(legacyFixtureFetchLanes).toBe(9);
-    expect(fetchCoingeckoSimplePrices).toHaveBeenCalledTimes(1);
-    expect(result.quoteMaps.cgPrices.get("test-usd")).toBe(1);
-    expect(result.providerDiagnostics).toEqual([]);
+    expect(plan.sourceAllowed.cgTicker).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("All live primary fetch circuits are open"),
+    );
   });
 });

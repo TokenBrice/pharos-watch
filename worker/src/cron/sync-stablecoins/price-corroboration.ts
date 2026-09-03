@@ -178,7 +178,6 @@ export async function runPriceCorroboration(params: {
       config: params.addressProvider,
       signal: params.signal,
       nowSec: params.syncStartSec,
-      db: params.db,
     });
     addressQuotes = result.quotesByStablecoinId;
     providerDiagnosticCount = result.diagnostics.length;

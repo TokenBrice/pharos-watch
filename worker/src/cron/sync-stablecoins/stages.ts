@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
@@ -156,6 +157,7 @@ interface StablecoinsPricingStageOptions {
   validationReferences: Awaited<ReturnType<typeof loadFreshFxRates>>["validationReferences"];
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  binanceSession?: BinanceFetchSession;
   nativePegSession?: NativePegQuoteSession;
 }
 
@@ -219,6 +221,7 @@ export async function runStablecoinsPricingStage(
     {
       previousAssetsById: options.previousAssetsById,
       previousMissingGenerationsById: options.previousMissingGenerationsById,
+      binanceSession: options.binanceSession,
     },
   );
   const primaryPricedCount = options.assets.length - options.assets.filter(hasMissingPrice).length;

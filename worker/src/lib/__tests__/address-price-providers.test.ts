@@ -2,11 +2,33 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   buildAddressPriceTargetsByProvider,
+  collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
   resolveFallbackChain,
 } from "../address-price-providers";
 import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
 import type { AddressPriceTarget } from "../address-price-providers";
+
+const LIVE_PROVIDER = "coingecko-onchain-address" as const;
+
+function makeTarget(overrides: Partial<AddressPriceTarget> = {}): AddressPriceTarget {
+  return {
+    stablecoinId: "fixture-usd",
+    symbol: "FUSD",
+    chain: "base",
+    providerChainId: "base",
+    address: "0x0000000000000000000000000000000000000001",
+    origin: "contracts",
+    previousSourceDepth: 1,
+    previousMissingGenerations: 0,
+    alertEligibleMissingPrice: false,
+    recentlyMissingPrice: false,
+    missingPrice: false,
+    expiresBeforeNextGeneration: false,
+    circulatingUsd: 1_000_000,
+    ...overrides,
+  };
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -71,22 +93,86 @@ describe("address price providers", () => {
     expect(resolveFallbackChain("So11111111111111111111111111111111111111112")).toBe("solana");
   });
 
+  it("builds targets from explicit chain hints and bare Solana addresses", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: [LIVE_PROVIDER],
+      assets: [
+        {
+          id: "chain-hint",
+          symbol: "CHAIN",
+          address: "0x0000000000000000000000000000000000000003",
+          chains: ["Base"],
+        },
+        {
+          id: "bare-solana",
+          symbol: "SOL",
+          address: "So11111111111111111111111111111111111111112",
+        },
+      ],
+    }).get(LIVE_PROVIDER);
+
+    expect(targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stablecoinId: "chain-hint", chain: "base", providerChainId: "base" }),
+      expect.objectContaining({ stablecoinId: "bare-solana", chain: "solana", providerChainId: "solana" }),
+    ]));
+  });
+
+  it("reports the live provider's empty and circuit-blocked branches", async () => {
+    const empty = await collectAddressPriceProviderQuotes({
+      targetsByProvider: new Map(),
+      providers: [LIVE_PROVIDER],
+      sourceAllowed: { [LIVE_PROVIDER]: true },
+      config: { cgApiKey: "cg" },
+      nowSec: 1_800_000_000,
+    });
+    expect(empty.providerOutcomes.get(LIVE_PROVIDER)).toBe("success");
+    expect(empty.diagnostics[0]?.stage).toBe("no-candidates");
+
+    const blocked = await collectAddressPriceProviderQuotes({
+      targetsByProvider: new Map([[LIVE_PROVIDER, [makeTarget()]]]),
+      providers: [LIVE_PROVIDER],
+      sourceAllowed: { [LIVE_PROVIDER]: false },
+      config: { cgApiKey: "cg" },
+      nowSec: 1_800_000_000,
+    });
+    expect(blocked.providerOutcomes.get(LIVE_PROVIDER)).toBe("neutral");
+    expect(blocked.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({
+      state: "skipped",
+      skipReason: "circuit-open",
+    });
+  });
+
+  it("collects successful quotes through the live single-provider path", async () => {
+    const target = makeTarget();
+    mockFetch([{
+      match: () => true,
+      respond: () => Response.json({
+        data: [{
+          attributes: {
+            address: target.address,
+            price_usd: "1.001",
+            total_reserve_in_usd: "75000",
+          },
+        }],
+      }),
+    }]);
+
+    const result = await collectAddressPriceProviderQuotes({
+      targetsByProvider: new Map([[LIVE_PROVIDER, [target]]]),
+      providers: [LIVE_PROVIDER],
+      sourceAllowed: { [LIVE_PROVIDER]: true },
+      config: { cgApiKey: "cg" },
+      nowSec: 1_800_000_000,
+    });
+
+    expect(result.providerOutcomes.get(LIVE_PROVIDER)).toBe("success");
+    expect(result.quotesByStablecoinId.get(target.stablecoinId)).toEqual([
+      expect.objectContaining({ source: LIVE_PROVIDER, priceUsd: 1.001 }),
+    ]);
+  });
+
   it("fetches the retained exact-address provider with local-fetch provenance", async () => {
-    const target: AddressPriceTarget = {
-      stablecoinId: "fixture-usd",
-      symbol: "FUSD",
-      chain: "base",
-      providerChainId: "base",
-      address: "0x0000000000000000000000000000000000000001",
-      origin: "contracts",
-      previousSourceDepth: 1,
-      previousMissingGenerations: 0,
-      alertEligibleMissingPrice: false,
-      recentlyMissingPrice: false,
-      missingPrice: false,
-      expiresBeforeNextGeneration: false,
-      circulatingUsd: 1_000_000,
-    };
+    const target = makeTarget();
     const fetchMock = mockFetch([{
       match: () => true,
       respond: () => Response.json({

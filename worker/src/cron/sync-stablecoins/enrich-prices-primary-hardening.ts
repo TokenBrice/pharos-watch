@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isPoolChallengeEligibleConsensus } from "@shared/lib/pricing-source-policy";
@@ -8,9 +9,16 @@ import {
   isSevereFixedPegDownside,
   validatePriceCandidate,
 } from "../../lib/price-validation";
-import { POOL_CHALLENGE_HIGH_TVL_USD, getDepegThresholdBps } from "../../lib/constants";
+import {
+  DEX_FRESHNESS_SEC,
+  POOL_CHALLENGE_HIGH_TVL_USD,
+  POOL_CHALLENGE_MIN_TVL,
+  getDepegThresholdBps,
+} from "../../lib/constants";
+import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
-import type { PrimaryPriceResult } from "./enrich-prices-shared";
+import type { ValidationContextResolver } from "./pricing";
+import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";
 
 /**
@@ -34,6 +42,46 @@ export function applyListAggregatorDowngrade(
     result.confidence = "single-source";
     stats.high--;
     stats.singleSource++;
+  }
+}
+
+export async function applyPrimaryPostConsensusHardening(params: {
+  db: D1Database;
+  candidates: PeggedAsset[];
+  results: Map<string, PrimaryPriceResult>;
+  stats: PriceValidationStats;
+  nowSec: number;
+  references?: PriceValidationReferences;
+  validationContexts?: ValidationContextResolver;
+}): Promise<void> {
+  applyListAggregatorDowngrade(params.results, params.stats);
+
+  const poolChallengers = await loadDexPoolChallengers(
+    params.db,
+    POOL_CHALLENGE_MIN_TVL,
+    DEX_FRESHNESS_SEC,
+    params.nowSec,
+  );
+  const assetPegTypes = new Map(params.candidates.map((asset) => [asset.id, asset.pegType]));
+  const navTokenAssetIds = new Set(
+    params.candidates.filter((asset) => asset.navToken).map((asset) => asset.id),
+  );
+  const challengeValidationContexts = params.validationContexts
+    ? new Map(
+        params.candidates.map((asset) => [asset.id, params.validationContexts!.get(asset)]),
+      )
+    : undefined;
+  const poolChallengeDowngrades = applyPoolChallenge(
+    params.results,
+    poolChallengers,
+    assetPegTypes,
+    params.stats,
+    params.references,
+    navTokenAssetIds,
+    challengeValidationContexts,
+  );
+  if (poolChallengeDowngrades > 0) {
+    logWorkerEventArgs("handler", "info", `[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
   }
 }
 

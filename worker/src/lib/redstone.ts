@@ -39,6 +39,10 @@ const REDSTONE_META_TO_API_SYMBOL = new Map<string, string>(
 const REDSTONE_META_TO_ENTRY = new Map<string, (typeof REDSTONE_SYMBOL_CONFIG)[number]>(
   REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.metaSymbol, entry] as const),
 );
+const REDSTONE_STABLECOIN_ID_TO_META_SYMBOL = new Map<string, string>(
+  REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.stablecoinId, entry.metaSymbol] as const),
+);
+
 export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = REDSTONE_SYMBOL_CONFIG.map((entry) => entry.metaSymbol) as readonly string[];
 export const REDSTONE_TRACKED_STABLECOIN_IDS = REDSTONE_SYMBOL_CONFIG.map((entry) => entry.stablecoinId) as readonly string[];
 
@@ -47,6 +51,10 @@ function toApiSymbol(metaSymbol: string): string {
 }
 
 const REDSTONE_TRACKED_SYMBOL_SET = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
+
+export function getRedstoneMetaSymbolForStablecoinId(stablecoinId: string): string | undefined {
+  return REDSTONE_STABLECOIN_ID_TO_META_SYMBOL.get(stablecoinId);
+}
 
 function normalizeSymbols(symbols: string[]): string[] {
   const deduped = new Set<string>();

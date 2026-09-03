@@ -21,6 +21,11 @@ export interface CgTickerConfig {
   exchangeId?: string;
 }
 
+export const CG_TICKER_COINS: CgTickerConfig[] = [
+  { stablecoinId: "kau-kinesis", geckoId: "kinesis-gold", targetCurrency: "USD", exchangeId: "kinesis_money" },
+  { stablecoinId: "kag-kinesis", geckoId: "kinesis-silver", targetCurrency: "USD", exchangeId: "kinesis_money" },
+];
+
 interface CgTickerEntry {
   base: string;
   target: string;

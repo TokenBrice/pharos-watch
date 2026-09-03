@@ -12,7 +12,7 @@ Supply fallback behavior is owned by [Supply Snapshot: Supply Pipeline](./supply
 
 Pharos separates critical publication from best-effort corroboration:
 
-1. **15-minute publication** uses DefiLlama intake quotes, CoinGecko simple prices, and registered authoritative overrides.
+1. **15-minute publication** runs the full primary consensus: DefiLlama and CoinGecko, the curated CoinGecko ticker and CEX lanes, RedStone, Curve on-chain/oracle, reserve NAV telemetry, promoted DEX observations, and the post-consensus pool challenge. Registered authoritative overrides then run before publication.
 2. **Hourly corroboration** runs `enrichMissingPrices()` and the explicitly enabled exact-address provider against only the latest missing or low-depth rows, then stages provenance in `price_cache` for a later publication to revalidate.
 
 The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, optional `priceSourceConfidenceProfile`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
@@ -40,18 +40,27 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Primary Consensus
 
-`fetchPrimaryPrices()` keeps the critical 15-minute publication path to the DefiLlama list observation already loaded during intake plus one CoinGecko `/simple/price` fetch surface. Registered authoritative protocol/NAV overrides run immediately afterward and may replace the selected market price. Fallback and exact-address corroboration are not publication blockers.
+`fetchPrimaryPrices()` keeps the established depeg-protective consensus in the critical 15-minute publication path. It combines DefiLlama intake observations with CoinGecko, curated exchange tickers, RedStone, Curve, reserve NAV telemetry, and promoted DEX observations, then applies the pool challenge. Registered authoritative protocol/NAV overrides run afterward and may replace the selected market price. Only the five missing-price fallback passes and exact-address providers are detached to hourly corroboration.
 
 ### Source Weights
 
 | Source | Weight | Module / Origin | Cadence and role |
 | --- | ---: | --- | --- |
 | CoinGecko `/simple/price` | 2 | `worker/src/lib/coingecko-simple-price.ts` | One live primary fetch surface per 15-minute publication; uses upstream `last_updated_at` when available and rejects stale rows. |
+| CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Curated exchange-ticker corroboration for the tracked Kinesis assets. |
 | DefiLlama stablecoins list | 1 | Typed quote from the intake response | Local primary input on every 15-minute publication; no second request. |
-| Authoritative protocol/NAV overrides | authoritative replacement | `worker/src/lib/authoritative-price-sources/` | Bounded route registry evaluated after DL/CG consensus for assets with a registered known source. |
+| Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input retained in 15-minute consensus. |
+| Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping. |
+| Bitstamp spot | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue. |
+| Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input. |
+| RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh exact-case oracle symbols with venue-agreement gating and solo retry recovery. |
+| Curve on-chain and crvUSD oracle | 3 | `worker/src/lib/curve-onchain.ts` | Configured pool routes plus the crvUSD PriceAggregator oracle. |
+| Chainlink/Superstate reserve NAV telemetry | 3 | `reserve_composition` | Matched fresh reserve snapshots, with fresh/static FX conversion for non-USD NAVs. |
+| Promoted DEX protocol lanes | 2–3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol observations from `dex_prices`; the aggregate is withheld when a corroborated protocol lane is admitted. |
+| Authoritative protocol/NAV overrides | authoritative replacement | `worker/src/lib/authoritative-price-sources/` | Bounded route registry evaluated after primary consensus for assets with a registered known source. |
 | CoinGecko Onchain exact-address | provenance weight 1 | `worker/src/lib/address-price-providers/coingecko-onchain.ts` | Hourly corroboration only, limited to the prior publication's missing or fewer-than-three-source rows; never blocks the 15-minute publication. |
 
-The former primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry, and inline exact-address fetch lanes no longer run inside `sync-stablecoins` publication. Their source keys remain renderable for historical provenance. DexScreener-address, DexPaprika-address, Alchemy-address, Moralis-address, and Birdeye-address adapters were removed; CoinGecko Onchain is the only retained exact-address adapter.
+The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry, and pool-challenge lanes remain part of `sync-stablecoins` publication because they protect depeg detection. Inline exact-address transport does not. DexScreener-address, DexPaprika-address, Alchemy-address, Moralis-address, and Birdeye-address adapters were removed; CoinGecko Onchain is the only retained exact-address adapter and is disabled unless explicitly allowlisted.
 
 Pyth Hermes was retired from live primary consensus on 2026-08-26 after Pyth's API-key mandate made the free tier unavailable for API access. New runs do not request the Pyth lane and stablecoin metadata no longer carries `pythFeedId`; the pricing registry retains the retired `pyth` key only so historical price provenance remains renderable.
 
@@ -113,9 +122,9 @@ lineage, and promoted DEX protocol lanes count by protocol. A CoinGecko plus Def
 correlated list-aggregator evidence and cannot publish a severe downside price unless a separate hard or non-list family
 also corroborates it.
 
-### Retired Publication Pool Challenge
+### Publication Pool Challenge
 
-The pool-challenge helper remains covered by its historical regression tests, but `sync-stablecoins` no longer invokes it after primary consensus. Current DEX and fallback observations reach the hourly corroboration path instead and cannot replace a price during the critical publication. The remainder of this section documents the retained helper's last behavior for recovery or future reviewed reuse; it is not part of the active 15-minute pipeline.
+`sync-stablecoins` invokes the pool challenge after primary consensus on every 15-minute publication. It remains a critical depeg safeguard: current published challenger pools can downgrade a weak soft-source result or replace it when the independent-protocol rules below are satisfied. The hourly fallback/address corroboration phase does not replace this check.
 
 After consensus, weak soft-source results where the selected/agreeing source cluster is **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `curve-dex`, `uniswap-v3-dex`, `uniswap-v4-dex`, `raydium-dex`, `orca-dex`, `meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) as long as the selected cluster does not include an exempt hard source. Non-selected hard candidates do not by themselves exempt the selected soft result, but they can corroborate the narrow high-TVL replacement exception below. NAV tokens are excluded from the pool challenge entirely: their fair value is their published NAV and the peg-aware divergence threshold does not map to a meaningful DEX-liquidity check, so diverging pools cannot downgrade or replace a NAV price. The standard divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). High-TVL replacement paths use the peg depeg threshold as their result-vs-pool trigger when the soft result is still inside that same threshold. If ANY qualifying protocol median diverges from the weak result beyond the applicable threshold:
 
@@ -149,7 +158,7 @@ This catches cases where multiple aggregators or DEX-derived bridge sources agre
 
 ## Provider-Specific Normalization
 
-Several provider implementations retained for auxiliary callers, historical replay, or reviewed future reuse still need normalization before their prices can safely enter consensus. Only the CoinGecko and DefiLlama rules below apply to the active 15-minute `sync-stablecoins` consensus; the exact-address rule applies to hourly corroboration.
+Primary provider implementations are normalized before their prices can enter the active 15-minute `sync-stablecoins` consensus. The exact-address rule applies only to hourly corroboration.
 
 - **Source freshness gate:** primary candidate admission runs every timestamped source through a registry-backed freshness check before the source can enter consensus. The gate enforces each source's `maxTrustedAgeSec`, required observed-at metadata, default observed-at mode, and a 10-minute future-skew ceiling. This is the final shared admission check on top of provider-local stale filtering.
 - **CoinGecko simple-price freshness:** `/simple/price` requests `last_updated_at`; when CoinGecko supplies it, rows older than the source trust window are rejected before consensus instead of being stamped as fresh local fetches. If the field is absent despite the request, the row can still enter as local-fetch provenance for backwards compatibility with partial responses.
@@ -357,7 +366,7 @@ The DefiLlama `/coins` contract-address fallback, supplemental CoinGecko-id mirr
 
 Tracked DefiLlama rows that collapse to zero supply are repaired before pricing when the row has no usable chart-history repair or its chart-history value is below the tracked repair floor. The repair remains scoped to source-reviewed deployments for CADD and the Mento JPY/ZAR/XOF stables, reads every configured chain successfully before publishing, converts total supply through the current fresh/static FX reference, and tags the result `supplySource = "onchain-total-supply"`. The same fail-closed source tag covers Movement USDCx only after its pinned-ledger fungible-asset supply and resource decimals reconcile to Circle's Ethereum xReserve balance for domain `10005` within one basis point; either provider failing or a wider mismatch leaves the supply unresolved.
 
-Operationally, the 15-minute lane publishes after DefiLlama/CoinGecko consensus, authoritative overrides, validation, and replay-cache continuity. It does not wait on the five fallback passes or exact-address transport. The hourly phase runs afterward in the same trigger invocation and is best effort. Protocol overrides remain under their bounded wall-clock budget with per-candidate fairness caps. Within the hourly cohort, missing rows precede low-depth priced rows, while provider cursors rotate only inside a priority cohort.
+Operationally, the 15-minute lane publishes after the full primary consensus, pool challenge, authoritative overrides, validation, and replay-cache continuity. It does not wait on the five fallback passes or exact-address transport. The hourly phase runs afterward in the same trigger invocation and is best effort. Protocol overrides remain under their bounded wall-clock budget with per-candidate fairness caps. Within the hourly cohort, missing rows precede low-depth priced rows, while provider cursors rotate only inside a priority cohort.
 
 Critical `sync-stablecoins` metadata contains only publication-path provider diagnostics. Hourly corroboration logs aggregate cohort, cache-write, and provider-diagnostic counts separately so a corroboration failure cannot degrade the publication status.
 
