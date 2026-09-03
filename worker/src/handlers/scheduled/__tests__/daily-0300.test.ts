@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   runPruneDetailCache: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
-  runCronSentinel: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
+  runDailyCronSentinel: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
 }));
 
 vi.mock("../../../cron/prune-status-probe-runs", () => ({
@@ -24,7 +24,7 @@ vi.mock("../../../cron/telegram-inactive-cleanup", () => ({
 vi.mock("../../../cron/telegram-retention-cleanup", () => ({
   runTelegramRetentionCleanup: mocks.runTelegramRetentionCleanup,
 }));
-vi.mock("../../../cron/cron-sentinel", () => ({ runCronSentinel: mocks.runCronSentinel }));
+vi.mock("../../../cron/cron-sentinel-daily", () => ({ runDailyCronSentinel: mocks.runDailyCronSentinel }));
 
 import { runDaily0300Slot } from "../daily-0300";
 
@@ -55,8 +55,7 @@ describe("daily 03:00 scheduling", () => {
 
     expect(order).toEqual(flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.daily0300Utc));
     expect(order[0]).toBe("cron-sentinel");
-    expect(mocks.runCronSentinel).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      mode: "daily",
+    expect(mocks.runDailyCronSentinel).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       repairRunnerEnabled: true,
     }));
   });

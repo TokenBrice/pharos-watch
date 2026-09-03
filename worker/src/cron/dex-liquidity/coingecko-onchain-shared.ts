@@ -3,7 +3,7 @@ import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import type { CgPool, CgPoolAttributes } from "../../lib/coingecko-onchain";
 import { parseCgPoolVolume } from "../../lib/coingecko-onchain";
 import type { ParsedPool } from "./crawl-helpers";
-import { getGtDexQuality } from "./pool-helpers";
+import { getGtDexQuality } from "./pool-normalization";
 
 export interface CgPoolClassification {
   qualityMultiplier: number;

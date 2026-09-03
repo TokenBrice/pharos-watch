@@ -10,6 +10,10 @@ const mockD1 = makeSupplySnapshotDb;
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
   WORKER_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle"]),
+  WORKER_ACTIVE_STABLECOINS: [
+    { id: "usdt-tether", symbol: "USDT" },
+    { id: "usdc-circle", symbol: "USDC" },
+  ],
 }));
 
 vi.mock("@shared/lib/shadow-stablecoins", () => ({

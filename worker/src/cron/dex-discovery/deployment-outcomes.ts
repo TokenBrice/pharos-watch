@@ -10,7 +10,7 @@ import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { batchExecute } from "../../lib/db";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
@@ -157,7 +157,7 @@ export function classifyDexDeploymentOutcomes(params: {
 }
 
 export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDeploymentOutcomeWrite[] {
-  return ACTIVE_STABLECOINS.flatMap((meta) =>
+  return WORKER_ACTIVE_STABLECOINS.flatMap((meta) =>
     [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]
       .filter((deployment) => getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)
       .map((deployment) => ({

@@ -6,7 +6,7 @@ import { DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { dsRateLimit, fetchDsTokenPairsWithStatus } from "../../lib/dexscreener";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
+import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { getChainAwareDsTrackedTokenPriceUsd } from "../dex-liquidity/crawl-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";

@@ -54,6 +54,21 @@ describe("runtime reachability policies", () => {
     ]);
   });
 
+  it("rejects the full registry from memory-constrained cron lanes", async () => {
+    const root = makeRoot();
+    writeText(root, "worker/src/handlers/scheduled/hourly-blacklist.ts", 'import { coins } from "@shared/lib/stablecoins/registry";\nexport { coins };\n');
+    writeText(root, "worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/handlers/scheduled/daily-0300.ts", "export const ok = true;\n");
+    writeText(root, "shared/lib/stablecoins/registry.ts", "export const coins = [];\n");
+
+    const result = await checkRuntimeReachabilityPolicy(policy("memory-constrained-cron"), root);
+    expect(result.violations).toContainEqual({
+      entrypoint: "worker/src/handlers/scheduled/hourly-blacklist.ts",
+      forbidden: "shared/lib/stablecoins/registry.ts",
+      kind: "reachable",
+    });
+  });
+
   it("rejects the fat stablecoin registry from a client bundle", async () => {
     const root = makeRoot();
     writeText(root, "src/client.tsx", '"use client";\nimport { coins } from "@shared/lib/stablecoins/registry";\nexport { coins };\n');

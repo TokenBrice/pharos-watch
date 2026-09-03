@@ -21,7 +21,11 @@ export interface WorkerRuntimeStablecoinMeta {
   id: string;
   symbol: string;
   name: string;
+  geckoId?: string;
   pegCurrency: PegCurrency;
+  governance: string;
+  navToken?: boolean;
+  commodityOunces?: number;
   status?: StablecoinStatus;
   contracts?: WorkerRuntimeContractDeployment[];
   tradedContracts?: WorkerRuntimeContractDeployment[];

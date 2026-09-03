@@ -6,7 +6,7 @@ import { RATE_LIMITS } from "../../lib/rate-limit";
 import { crawlTokenPools, createCrawlStats, type CrawlToken } from "../dex-liquidity/crawl-helpers";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
 import type { GtNewPool, GtPool, DexPriceObs } from "../dex-liquidity/types";
-import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
+import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";

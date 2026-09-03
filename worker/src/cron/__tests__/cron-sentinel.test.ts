@@ -19,6 +19,7 @@ vi.mock("../dex-exit-route-turnover-watchdog", () => ({ runDexExitRouteTurnoverW
 vi.mock("../reserve-post-sync-watchdog", () => ({ runReservePostSyncWatchdog: mocks.reserve }));
 
 import { runCronSentinel } from "../cron-sentinel";
+import { runDailyCronSentinel } from "../cron-sentinel-daily";
 
 describe("runCronSentinel", () => {
   beforeEach(() => {
@@ -50,6 +51,24 @@ describe("runCronSentinel", () => {
       nowSec: 456,
       signal,
       enabled: undefined,
+    });
+  });
+
+  it("runs the same daily sources through the memory-isolated entrypoint", async () => {
+    const signal = new AbortController().signal;
+    const result = await runDailyCronSentinel({} as D1Database, {
+      nowSec: 789,
+      repairRunnerEnabled: true,
+      signal,
+    });
+
+    expect(result.status).toBe("ok");
+    expect(mocks.growth).toHaveBeenCalledTimes(1);
+    expect(mocks.duration).toHaveBeenCalledTimes(1);
+    expect(mocks.repair).toHaveBeenCalledWith(expect.anything(), {
+      nowSec: 789,
+      signal,
+      enabled: true,
     });
   });
 

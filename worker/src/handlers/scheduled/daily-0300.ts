@@ -4,7 +4,7 @@ import { runPruneCronHistory } from "../../cron/prune-cron-history";
 import { runPruneDetailCache } from "../../cron/prune-detail-cache";
 import { runTelegramInactiveCleanup } from "../../cron/telegram-inactive-cleanup";
 import { runTelegramRetentionCleanup } from "../../cron/telegram-retention-cleanup";
-import { runCronSentinel } from "../../cron/cron-sentinel";
+import { runDailyCronSentinel } from "../../cron/cron-sentinel-daily";
 import { resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
@@ -30,8 +30,7 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
     mode: "serial",
     label: "retention-and-telegram-housekeeping",
     implementations: {
-      "cron-sentinel": (signal) => runCronSentinel(runtime.db, {
-        mode: "daily",
+      "cron-sentinel": (signal) => runDailyCronSentinel(runtime.db, {
         nowSec: Math.floor(Date.now() / 1_000),
         repairRunnerEnabled: ddrRepairTaskRunner.enabled,
         signal,

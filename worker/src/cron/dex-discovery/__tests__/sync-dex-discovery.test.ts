@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
-vi.mock("@shared/lib/stablecoins/registry", () => {
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
     {
       id: "coin-a",
@@ -13,12 +13,12 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       contracts: [{ chain: "ethereum", address: "0xbbb", decimals: 18 }],
     },
   ];
-  return mockRegistry({ stablecoins });
+  const registry = mockRegistry({ stablecoins });
+  return {
+    WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
+    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+  };
 });
-
-vi.mock("../../dex-liquidity/pool-helpers", () => ({
-  getTrackedContracts: vi.fn((coin: { contracts?: unknown[] }) => coin.contracts ?? []),
-}));
 
 vi.mock("../../../lib/price-validation", () => ({
   loadPriceValidationReferences: vi.fn(async () => undefined),

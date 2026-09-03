@@ -10,7 +10,7 @@ import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/con
 import { fetchCgTokenPoolsWithStatus } from "../../lib/coingecko-onchain";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
-import { normalizeProtocol } from "../dex-liquidity/pool-helpers";
+import { normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";

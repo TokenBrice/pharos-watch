@@ -1,10 +1,9 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
-import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DiscoveryMeta } from "./types";
 import { DISCOVERY_TIERS } from "./types";
@@ -343,10 +342,10 @@ export async function syncDexDiscovery(
 
     const eligibleCoins: DiscoveryCandidate[] = [];
     const activeIds = new Set<string>();
-    for (const coin of ACTIVE_STABLECOINS) {
+    for (const coin of WORKER_ACTIVE_STABLECOINS) {
       activeIds.add(coin.id);
       const coverage = liquidityCoverage.get(coin.id);
-      const targets = getTrackedContracts(coin);
+      const targets = [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])];
       const censusVerifiedEmpty = hasVerifiedEmptyCensus(targets, censusById.get(coin.id));
       if (
         censusVerifiedEmpty &&

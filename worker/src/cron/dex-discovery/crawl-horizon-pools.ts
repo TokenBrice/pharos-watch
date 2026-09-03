@@ -3,7 +3,7 @@ import {
   isHorizonDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal } from "../../lib/abort";
 import { CIRCUIT_SOURCE, STELLAR_HORIZON_API, USER_AGENT } from "../../lib/constants";
@@ -51,7 +51,7 @@ export interface HorizonPoolsStageResult {
 const horizonRequestState = new IsolateLocalState(() => ({ lastStartedAtMs: 0 }));
 
 const trackedClassicAssets = new Map<string, { stablecoinId: string; address: string }>();
-for (const coin of ACTIVE_STABLECOINS) {
+for (const coin of WORKER_ACTIVE_STABLECOINS) {
   for (const deployment of [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])]) {
     if (deployment.chain !== "stellar") continue;
     const horizonAsset = getHorizonDiscoveryAsset(deployment.address, coin.symbol);
@@ -153,7 +153,7 @@ export async function crawlHorizonPoolsStage(input: {
 
   for (const target of targets) {
     if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
-    const stablecoinSymbol = ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
+    const stablecoinSymbol = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
     const horizonAsset = getHorizonDiscoveryAsset(target.address, stablecoinSymbol);
     if (!horizonAsset) {
       // A bare issuer needs the tracked asset code to form Horizon's filter.
