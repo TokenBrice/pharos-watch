@@ -19,7 +19,7 @@ import {
   findCriticalOwnershipGaps,
   type CriticalOwnership,
 } from "../lib/critical-ownership.mts";
-import { collectGitPaths } from "../lib/changed-files.mts";
+import { collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
@@ -270,18 +270,27 @@ export function runCriticalCoverageCheck({
   const parsed = parseLcov(lcov);
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
   const changedFromEnv = parseChangedFilesFromEnv(env);
-  let changedFromRef: string[] = [];
-  if (changedFromEnv.length === 0) {
-    try {
-      changedFromRef = getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
-    } catch {
-      exit(1);
-      return;
+  let changedFiles = changedFromEnv;
+  if (changedFiles.length === 0) {
+    if (env.CI) {
+      const { base, head } = parseChangedFileArgs([], env);
+      changedFiles = collectGitPaths(
+        { kind: "range", base, head, diffFilter: "ACMR" },
+        { execFile, failure: "empty" },
+      );
+    } else {
+      try {
+        changedFiles = getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
+      } catch {
+        exit(1);
+        return;
+      }
     }
   }
-  const changedFiles = changedFromEnv.length > 0 ? changedFromEnv : changedFromRef;
   const touchedCritical = CRITICAL_FILES.filter((file) => changedFiles.includes(file));
-
+  // A plumbing-only diff has no touched source to scope, matching the shard's
+  // fallback to a full include set. Local/manual runs also keep full coverage.
+  const coverageScope = ratchetAll || touchedCritical.length === 0 ? CRITICAL_FILES : touchedCritical;
   let failed = false;
   consoleImpl.log(`[coverage] Critical file line coverage threshold: ${threshold.toFixed(1)}%`);
   if (baseline) {
@@ -301,7 +310,7 @@ export function runCriticalCoverageCheck({
     return Number.isFinite(override) ? override : threshold;
   }
 
-  for (const file of CRITICAL_FILES) {
+  for (const file of coverageScope) {
     const cov = findCoverageFor(file, parsed);
     if (!cov) {
       failed = true;

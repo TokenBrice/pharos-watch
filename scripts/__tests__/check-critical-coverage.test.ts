@@ -357,6 +357,47 @@ describe("critical coverage changed-file detection", () => {
     expect(logs.filter((line) => line.includes("RATCHET PASS"))).toHaveLength(CRITICAL_FILES.length);
   });
 
+  it("limits per-file floor and missing checks to touched critical sources", () => {
+    const file = "worker/src/lib/auth.ts";
+    const lcov = [
+      `SF:${file}`,
+      "DA:1,1",
+      "LF:1",
+      "LH:1",
+      "BRF:2",
+      "BRH:2",
+      "end_of_record",
+    ].join("\n");
+    const files = new Map<string, string>([["coverage/lcov.info", lcov]]);
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    runCriticalCoverageCheck({
+      env: testEnv({
+        CI: "1",
+        CRITICAL_COVERAGE_CHANGED_FILES: file,
+      }),
+      fsImpl: mockFsImpl({
+        existsSync: (path: string) => files.has(path),
+        readFileSync: (path: string) => files.get(path) ?? "",
+      }),
+      consoleImpl: mockConsole({
+        log: (message: string) => logs.push(message),
+        error: (message: string) => errors.push(message),
+      }),
+      completenessOptions: { candidateFiles: [], waivers: {} },
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    });
+
+    expect(exits).toEqual([]);
+    expect(errors).toEqual([]);
+    expect(logs).toContain("[coverage] PASS worker/src/lib/auth.ts: 100.0% (1/1) (threshold 70.0%)");
+    expect(logs.some((line) => line.includes("MISSING:"))).toBe(false);
+  });
+
   it("fails a touched critical file when its line coverage regresses from the baseline", () => {
     const file = "worker/src/lib/price-consensus.ts";
     const errors: string[] = [];
