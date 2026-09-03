@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffFrozenIds } from "../telegram-digest-appendices";
+import { diffFrozenIds } from "../telegram/digest-appendices";
 
 describe("diffFrozenIds", () => {
   it("returns an empty set when nothing changed", () => {

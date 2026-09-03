@@ -5,7 +5,7 @@ import {
   safetyScoreV9TransferDeploymentKey,
   type SafetyScoreV9ReviewedTransferFact,
   type SafetyScoreV9TransferMaterialScope,
-} from "../safety-score-v9-extension-transfer";
+} from "../safety-score-v9/extension-transfer";
 
 const CLOCK_SEC = Date.parse("2026-08-10T00:00:00.000Z") / 1_000;
 

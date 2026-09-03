@@ -1,4 +1,4 @@
-import { TELEGRAM_ADOPTION_API_PATH } from "../lib/telegram-adoption-analytics";
+import { TELEGRAM_ADOPTION_API_PATH } from "../lib/telegram/adoption-analytics";
 import {
   defineLazyStaticRoute,
   type FullRouteContext,

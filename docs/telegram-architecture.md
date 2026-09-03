@@ -65,7 +65,7 @@ Nine seams: **Ingress**, **Command parsing**, **Callback routing**, **Action han
 **Allowed outbound dependencies.** Command parsing, Callback routing, Action handlers (via `COMMAND_HANDLERS`), State / persistence (for the processed-update claim, the pending-disambiguation read, the cooldown gate), Outbound transport (for reply helpers), Common.
 
 **Must NOT.**
-- Format alert messages — that is Action handlers / Common (`telegram-alerts.ts`).
+- Format alert messages — that is Action handlers / Common (`telegram/alerts.ts`).
 - Read alert snapshots or build subscriber queries — that is Dispatch.
 - Write subscription state directly — go through State / persistence helpers.
 - Reorganize the `COMMAND_HANDLERS` table without adding/removing a command. The two switch statements were intentionally collapsed in P1-M1; do not re-expand.
@@ -94,8 +94,8 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-parsing.ts`
-- `worker/src/lib/telegram-alerts.ts` — parts: `parseSubscribeArgs`, `validateSubscribeArgs`, `resolveTicker`, `parseDisambiguationReply`, `suggestClosestToken`, the formatting helpers, and the `splitMessage` chunker. (This file straddles parsing and formatting; see "Architectural tension" below.)
-- `worker/src/lib/telegram-presets.ts` — preset alias resolution (`resolveTelegramPresetAlias`) is part of parsing; `resolveTelegramPresetTargets` (which reads the cache) is consumed by Action handlers and Dispatch.
+- `worker/src/lib/telegram/alerts.ts` — parts: `parseSubscribeArgs`, `validateSubscribeArgs`, `resolveTicker`, `parseDisambiguationReply`, `suggestClosestToken`, the formatting helpers, and the `splitMessage` chunker. (This file straddles parsing and formatting; see "Architectural tension" below.)
+- `worker/src/lib/telegram/presets.ts` — preset alias resolution (`resolveTelegramPresetAlias`) is part of parsing; `resolveTelegramPresetTargets` (which reads the cache) is consumed by Action handlers and Dispatch.
 
 **Allowed inbound dependencies.** Ingress, Callback routing, Action handlers, Dispatch (for `splitMessage` and formatting), Outbound transport (replies use `splitMessage`).
 
@@ -189,8 +189,8 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 - `worker/src/cron/dispatch-telegram-fanout-plan.ts` (fan-out plan orchestration: routes all five alert families into per-chat bundles, runs the burst collapse, and builds the overflow-aware plan/format split; owns `buildTelegramFanoutPlan`)
 - `worker/src/cron/dispatch-telegram-events.ts` (DEWS/depeg/safety/launch/reserve-drift snapshot diffing into dispatch events; suppressed-safety-at-seed counting)
 - `worker/src/cron/telegram-alert-freeze.ts`, `telegram-freeze-outbox.ts` (fresh immutable Tape loading, dedicated freeze cohort/outbox, and canonical pending lineage handoff)
-- `worker/src/cron/telegram-recap-planner.ts` and `worker/src/lib/telegram-recap-store.ts` (private daily recap due-page planning and recap preference/target persistence; the store is shared with the Mini App seam)
-- `worker/src/lib/telegram-recap-facts.ts`, `telegram-recap-ranking.ts`, `telegram-recap-formatting.ts` (allowlisted Tape parsing, deterministic collapse/rank, one-message HTML formatter)
+- `worker/src/cron/telegram-recap-planner.ts` and `worker/src/lib/telegram/recap-store.ts` (private daily recap due-page planning and recap preference/target persistence; the store is shared with the Mini App seam)
+- `worker/src/lib/telegram/recap-facts.ts`, `worker/src/lib/telegram/recap-ranking.ts`, `worker/src/lib/telegram/recap-formatting.ts` (allowlisted Tape parsing, deterministic collapse/rank, one-message HTML formatter)
 - `worker/src/cron/dispatch-telegram-predicates.ts` (alertability/safety predicates: DEWS/depeg-step thresholds, escalation, per-subscriber safety inclusion)
 - `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets, the `DispatchResult` shape, and the shared pending/safety/reserve result-field mappers used by every dispatch path)
 - `worker/src/cron/dispatch-telegram-subscribers.ts` (subscriber/preset/global row loading, per-coin snooze map, subscriber-map merge)
@@ -201,7 +201,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 - `worker/src/cron/telegram-alert-job-target-outcomes.ts` (exclusive final-state projection and job counter reconciliation)
 - `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, alert context/reason builders, and per-target status helpers)
 - `worker/src/cron/telegram-alert-source-events.ts`, `telegram-alert-event-lineage.ts`, `dispatch-telegram-pending-lifecycle.ts` (source-event and preset-subscriber page loading, per-item key listing and handled-item pruning, and the shared pending-queue lifecycle step invoked by the authoritative and queue paths)
-- `worker/src/lib/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
+- `worker/src/lib/telegram/quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
 - `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` (token-aware five-minute orchestration: dispatch when configured, token-independent watchdog/cleanup/pulse, then all four serial registration checks)
 - `worker/src/cron/telegram-inactive-cleanup.ts`, `telegram-retention-cleanup.ts` (daily 03:00 UTC housekeeping jobs)
@@ -212,7 +212,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 **Allowed outbound dependencies.** Queue / rate-limit / retry, Outbound transport, State / persistence (read-heavy: subscribers, subscriptions, preset subscriptions, snoozes, snapshots), Common. Project shared lib for domain data is allowed.
 
 **Must NOT.**
-- Format command replies. Alert message formatting lives in `telegram-alerts.ts` (Common) and is shared between Dispatch and admin-broadcast; do not duplicate.
+- Format command replies. Alert message formatting lives in `telegram/alerts.ts` (Common) and is shared between Dispatch and admin-broadcast; do not duplicate.
 - Inline subscriber-query SQL into the entrypoint. Add new fan-out paths in `dispatch-telegram-alerts-fanout.ts` or one of the existing helper modules.
 - Duplicate admin-broadcast target selection SQL. Broadcast scopes call the Dispatch-owned `loadBroadcastTargetChatIds(db, scope)` helper so global/per-coin/preset watcher predicates evolve in one place.
 - Import API action-handler modules for alert context. Dispatch-owned context and reason helpers live under `worker/src/cron/`.
@@ -227,10 +227,10 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle helpers)
-- `worker/src/lib/telegram-pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL, re-exported by `telegram-pending/upsert-sql.ts`) and `worker/src/lib/telegram-pending-capacity.ts` (capacity/watchdog read model)
-- `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram-constants.ts` re-exports the established Worker import surface.
+- `worker/src/lib/telegram/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL, re-exported by `telegram-pending/upsert-sql.ts`) and `worker/src/lib/telegram/pending-capacity.ts` (capacity/watchdog read model)
+- `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram/constants.ts` re-exports the established Worker import surface.
 
-**Allowed inbound dependencies.** Dispatch and the personalized recap planner (the only legitimate alert/recap enqueuers), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram-alerts.ts` keyboard).
+**Allowed inbound dependencies.** Dispatch and the personalized recap planner (the only legitimate alert/recap enqueuers), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram/alerts.ts` keyboard).
 
 **Allowed outbound dependencies.** Outbound transport, State / persistence (cache helpers for global backoff), Common.
 
@@ -257,10 +257,10 @@ The provenance correction required no D1 migration because these two tables and 
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (compatibility barrel re-exporting `telegram-store/*`) and `worker/src/api/telegram-store/*` (the topic-specific SQL builders: `subscribers`, `subscriptions`, `chat-state`, `disambiguation`, `snooze`, `presets`, `forget`, `processed-updates`, `watchlist-import`). The import contract — per-coin/preset write SQL belongs in `telegram-webhook-store` — still holds via the barrel.
-- `worker/src/lib/telegram-chat-member.ts` (cached chat-admin read policy; Bot API HTTP goes through Outbound transport)
-- `worker/src/lib/telegram-usage-analytics.ts` (usage events, lifecycle snapshots, chat delivery diagnostics)
-- `worker/src/lib/telegram-adoption-analytics.ts` (aggregate funnel writes, one-time milestones, bounded D7/D30 catch-up, weekly report)
-- `worker/src/lib/telegram-webhook-registration.ts` (Bot API webhook/commands/profile/menu-button reconcile cadence and D1 cache markers; Bot API HTTP goes through Outbound transport)
+- `worker/src/lib/telegram/chat-member.ts` (cached chat-admin read policy; Bot API HTTP goes through Outbound transport)
+- `worker/src/lib/telegram/usage-analytics.ts` (usage events, lifecycle snapshots, chat delivery diagnostics)
+- `worker/src/lib/telegram/adoption-analytics.ts` (aggregate funnel writes, one-time milestones, bounded D7/D30 catch-up, weekly report)
+- `worker/src/lib/telegram/webhook-registration.ts` (Bot API webhook/commands/profile/menu-button reconcile cadence and D1 cache markers; Bot API HTTP goes through Outbound transport)
 - D1 schemas — owned by the migrations themselves (see [D1 Schema](#d1-schema)):
   - `telegram_subscribers` — per-chat state and defaults
   - `telegram_subscriptions` — per-chat direct/local per-coin alert preferences and explicit-off markers
@@ -309,7 +309,7 @@ The provenance correction required no D1 migration because these two tables and 
 **Owned files.**
 - `worker/src/lib/telegram.ts` (`postTelegramBotApi`, `sendToChat`, `sendBatch`, `postTelegramMessage`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
 - `worker/src/api/telegram-webhook-replies.ts` (`sendAuditedTelegramReply` — chunks + diagnostics + replyMarkup)
-- `worker/src/lib/telegram-log.ts` (structured Telegram event logger)
+- `worker/src/lib/telegram/log.ts` (structured Telegram event logger)
 
 **Allowed inbound dependencies.** Action handlers, Callback routing, Ingress (for replies), Dispatch (alert sends), Queue (drains), admin routes, daily digest, registration reconciliation, chat-admin membership probes.
 
@@ -317,7 +317,7 @@ The provenance correction required no D1 migration because these two tables and 
 
 **Must NOT.**
 - Know about subscribers, snapshots, or commands. Send what you are given.
-- Inline HTML formatting beyond `escapeHtml`. Body composition lives in `telegram-alerts.ts` or per-handler builders.
+- Inline HTML formatting beyond `escapeHtml`. Body composition lives in `telegram/alerts.ts` or per-handler builders.
 
 ---
 
@@ -341,8 +341,8 @@ The provenance correction required no D1 migration because these two tables and 
 - `worker/src/api/telegram-mini-app.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/lib/telegram-recap-store.ts` (shared generation-fenced recap preference mutation)
-- `worker/src/lib/telegram-mini-app-auth.ts`
+- `worker/src/lib/telegram/recap-store.ts` (shared generation-fenced recap preference mutation)
+- `worker/src/lib/telegram/mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
 - `shared/lib/telegram-mini-app-catalog.ts`
 - `shared/lib/telegram-presets.ts`
@@ -369,16 +369,16 @@ The provenance correction required no D1 migration because these two tables and 
 
 Files any seam may import:
 
-- `worker/src/lib/telegram-constants.ts` — central magic numbers and tokens (`SNOOZE_SECONDS`, `DEPEG_STEP_VALUES`, `TOP_VIEW_NAMES`, `TELEGRAM_MESSAGE_CHUNK_LIMIT`, ingress flood limits, group welcome/admin cooldown TTLs, all queue tuning, disambiguation TTL).
-- `worker/src/lib/telegram-alerts.ts` — compatibility barrel for alert parsing and formatting exports.
-- `worker/src/lib/telegram-alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
-- `worker/src/lib/telegram-alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
-- `worker/src/lib/telegram-format-age.ts` — compact relative-age labels shared by command and status surfaces.
-- `worker/src/lib/telegram-coin-dedupe.ts` — shared stablecoin de-duplication helpers for alert and command coin lists.
-- `worker/src/lib/telegram-presets.ts` — preset definitions and resolution.
-- `worker/src/lib/telegram-digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
-- `worker/src/lib/telegram-log.ts` — structured logging.
-- `worker/src/lib/telegram-pending-provenance.ts` — bounded target-group scope and markup-policy serialization/parsing shared by Dispatch and Queue.
+- `worker/src/lib/telegram/constants.ts` — central magic numbers and tokens (`SNOOZE_SECONDS`, `DEPEG_STEP_VALUES`, `TOP_VIEW_NAMES`, `TELEGRAM_MESSAGE_CHUNK_LIMIT`, ingress flood limits, group welcome/admin cooldown TTLs, all queue tuning, disambiguation TTL).
+- `worker/src/lib/telegram/alerts.ts` — compatibility barrel for alert parsing and formatting exports.
+- `worker/src/lib/telegram/alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
+- `worker/src/lib/telegram/alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
+- `worker/src/lib/telegram/format-age.ts` — compact relative-age labels shared by command and status surfaces.
+- `worker/src/lib/telegram/coin-dedupe.ts` — shared stablecoin de-duplication helpers for alert and command coin lists.
+- `worker/src/lib/telegram/presets.ts` — preset definitions and resolution.
+- `worker/src/lib/telegram/digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
+- `worker/src/lib/telegram/log.ts` — structured logging.
+- `worker/src/lib/telegram/pending-provenance.ts` — bounded target-group scope and markup-policy serialization/parsing shared by Dispatch and Queue.
 - `shared/lib/telegram-recap-policy.ts` — runtime-neutral recap cadence, freshness, page, message, priority, TTL, and load bounds.
 - `shared/lib/iana-local-time.ts` — validated IANA local-date/hour scheduling and deterministic DST handling shared by controls and planner.
 
@@ -401,7 +401,7 @@ When the current layout is wrong, document the new ownership and dependency dire
 1. **Two consecutive "extract helper" commits to Telegram code in 7 days** — the seams aren't holding; whatever was extracted is still entangled.
 2. **A bug fix touches more than 2 seams** — a single change rippling through Ingress + Action handlers + State means the boundary between them is wrong, not the code inside them.
 3. **A callback handler imports from 4+ seams** — the callback layer already sits at the edge: the per-action files in `webhook-callbacks/` reach into Action handlers' builders, State helpers (via store/settings-mutations), Common, and the setup state machine; if a new callback needs a 5th, the callback layer is doing too much.
-4. **A new constant gets defined outside `telegram-constants.ts`** within the Telegram subsystem — the centralization (P1-M2) is decaying.
+4. **A new constant gets defined outside `telegram/constants.ts`** within the Telegram subsystem — the centralization (P1-M2) is decaying.
 5. **The same SQL appears in two seams** — most likely State / persistence is missing a helper.
 6. **Ingress grows past ~600 lines again** — the dispatcher loop is doing more than routing. Push behavior into Action handlers or State.
 
@@ -409,7 +409,7 @@ When the current layout is wrong, document the new ownership and dependency dire
 
 ## Architectural tension flagged but not prescribed
 
-- **`worker/src/lib/telegram-alerts.ts` remains the stable import path for Common alert helpers, but implementation now lives in parser and formatter modules.** Keep the barrel so existing imports stay stable; do not create additional Common submodules without a doc-first seam update or a bug-driven reason.
+- **`worker/src/lib/telegram/alerts.ts` remains the stable import path for Common alert helpers, but implementation now lives in parser and formatter modules.** Keep the barrel so existing imports stay stable; do not create additional Common submodules without a doc-first seam update or a bug-driven reason.
 
 - **Callback routing now routes mutating callback writes through `telegram-webhook-store.ts` or `telegram-webhook-settings-mutations.ts`.** New mutating callbacks should continue using those persistence helpers rather than adding inline SQL back into `telegram-webhook-callbacks.ts`.
 
@@ -459,7 +459,7 @@ Pending disambiguation rows expire with their command TTL. Pending alert rows le
 
 `telegram-retention-cleanup` deletes retained Telegram audit/analytics rows in ordered 10,000-row SQL batches instead of uncapped table DELETEs. Terminal authoritative workflow rows (`telegram_alert_planning_subscribers`, plan pages/items, and completed expiry progress) retain 24 hours of recovery grace. Settled job targets and their exact target plans, jobs, source-resolution rows, and terminal source payloads retain a 14-day exact-replay window; a plan or source is deleted only after no retained target depends on it. Pre-authoritative targets without a plan generation also age out after 14 days only when their target state is terminal and no pending, sending, claimed, or `execution_unknown` effect remains; target-item lineage is deleted first, source-less terminal jobs are removed only after their targets are gone, and degraded job audit remains on the 90-day policy. Expired source-less `discovered`/`queued` jobs and expired unresolved sources with no dependent workflow, target, or job rows retain 30 days before cleanup. Other unresolved or `execution_unknown` effects remain on the 90-day audit/reconciliation policy, as do dead letters and freeze audit rows. The high-volume workflow/replay passes may process up to 100,000 rows per table per daily 03:00 UTC run, while other table/cache passes remain capped at 10,000. Processed updates run in 1,000-row batches with a 2-second internal time budget and a 5,000-row ceiling. Usage, adoption, and adoption-retention aggregates use 400 days; CTA quota buckets use two days; the Mini App open-to-first-mutation cache uses 30 minutes and is deleted immediately by `/forget`. A bounded 5,001-row processed-update probe reports the remaining count exactly below that limit or as a lower bound at the limit. Remaining processed-update debt or a saturated high-volume delete pass sets `runBudgetTruncated`; per-table `cappedAtLimit` metadata identifies the affected pass. The high-growth family additionally reports its cutoffs, row limit, deleted counts, oldest remaining/eligible timestamps, duration, and isolated error; a family error degrades the cron while the other retention passes continue. Dead-letter audit remains available after day 14, but exact admin replay correctly returns incomplete once its target-plan bundle has aged out.
 
-Telegram custom Worker logs are deliberately non-correlatable to a chat. `worker/src/lib/telegram-log.ts` uses a closed compile-time schema plus an independent runtime allowlist for operation/module labels, bounded counts, status codes, retry timing, and fixed error categories. It drops raw chat/user/update/callback/pending/source-event identifiers, message and callback content, URLs, tokens, secrets, `initData`, arbitrary error strings, arrays, and objects; allowed strings receive bounded secret/identifier scrubbing. Do not add unkeyed hashes or pseudonymous chat keys to restore general-log correlation. For one-chat incident response, use the Access-authenticated admin chat diagnostics and the D1 alert-target, pending, dead-letter, processed-update, and delivery-diagnostic rows. Expired-pending cleanup logs one aggregate summary rather than one record per target.
+Telegram custom Worker logs are deliberately non-correlatable to a chat. `worker/src/lib/telegram/log.ts` uses a closed compile-time schema plus an independent runtime allowlist for operation/module labels, bounded counts, status codes, retry timing, and fixed error categories. It drops raw chat/user/update/callback/pending/source-event identifiers, message and callback content, URLs, tokens, secrets, `initData`, arbitrary error strings, arrays, and objects; allowed strings receive bounded secret/identifier scrubbing. Do not add unkeyed hashes or pseudonymous chat keys to restore general-log correlation. For one-chat incident response, use the Access-authenticated admin chat diagnostics and the D1 alert-target, pending, dead-letter, processed-update, and delivery-diagnostic rows. Expired-pending cleanup logs one aggregate summary rather than one record per target.
 
 Cloudflare Workers Logs processes sampled custom records under the Cloudflare account permissions configured outside this repository. `worker/wrangler.toml` enables observability and invocation logs with `head_sampling_rate = 0.1`; the repository configures no separate Workers Logpush archive and no Telegram-specific/provider retention duration. Treat console logs as sampled, short-lived operational hints, not the durable incident ledger.
 

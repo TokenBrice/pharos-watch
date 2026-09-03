@@ -7,7 +7,7 @@ import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
-import { isSafetyScoreV9SnapshotFresh } from "./safety-score-v9-consumer-freshness";
+import { isSafetyScoreV9SnapshotFresh } from "./safety-score-v9/consumer-freshness";
 import { RISKY_GRADES, SAFE_GRADES } from "@shared/lib/safety-grade-buckets";
 
 const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId));

@@ -12,13 +12,13 @@ import {
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
   type TelegramCurrentLifecycleSnapshot,
-} from "../telegram-usage-analytics";
-import { loadTelegramDeliverySliRollup } from "../telegram-delivery-sli";
+} from "../telegram/usage-analytics";
+import { loadTelegramDeliverySliRollup } from "../telegram/delivery-sli";
 import { getCache } from "../db-cache";
 import {
   loadTelegramPendingCapacity,
   type TelegramPendingCapacitySnapshot,
-} from "../telegram-pending-capacity";
+} from "../telegram/pending-capacity";
 
 const TELEGRAM_DELIVERY_ACCEPTANCE_DEFINITION = "telegram_bot_api_accepted_not_user_receipt" as const;
 

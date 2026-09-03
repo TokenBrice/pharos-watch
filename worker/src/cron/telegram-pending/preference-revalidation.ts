@@ -7,7 +7,7 @@ import {
   parsePendingMarkupPolicy,
   type PendingAlertScopeItem,
   type PendingMarkupPolicyV1,
-} from "../../lib/telegram-pending-provenance";
+} from "../../lib/telegram/pending-provenance";
 import {
   alertSafetyIdentitiesAreComparable,
   loadActiveAlertSafetySourceAssessment,
@@ -17,8 +17,8 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
-} from "../../lib/telegram-presets";
-import { isPausedSentinel } from "../../lib/telegram-constants";
+} from "../../lib/telegram/presets";
+import { isPausedSentinel } from "../../lib/telegram/constants";
 import type { PendingAlertRow } from "./types";
 
 const INVALID_PROVENANCE_RETRY_SEC = 15 * 60;

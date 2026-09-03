@@ -13,7 +13,7 @@ const { publicationImplementationFactory, publicationRunnerFactory } =
   }));
 
 vi.mock(
-  "../../lib/safety-score-v9-publication-runner",
+  "../../lib/safety-score-v9/publication-runner",
   publicationRunnerFactory,
 );
 

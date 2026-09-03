@@ -147,8 +147,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     description: "Daily and weekly digest Telegram delivery.",
     files: [
       "worker/src/lib/telegram.ts",
-      "worker/src/lib/telegram-transport-control.ts",
-      "worker/src/lib/telegram-digest-outbox.ts",
+      "worker/src/lib/telegram/transport-control.ts",
+      "worker/src/lib/telegram/digest-outbox.ts",
       "worker/src/cron/digest/platform.ts",
       "worker/src/cron/daily-digest.ts",
       "worker/src/cron/telegram-digest-transport.ts",

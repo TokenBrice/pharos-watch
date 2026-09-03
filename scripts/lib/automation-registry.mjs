@@ -246,7 +246,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: [
       "shared/lib/safety-score-v9/**",
       "shared/types/safety-score-v9*.ts",
-      "worker/src/lib/safety-score-v9*.ts",
+      "worker/src/lib/safety-score-v9/**/*.ts",
     ],
   }),
   generatedArtifact({

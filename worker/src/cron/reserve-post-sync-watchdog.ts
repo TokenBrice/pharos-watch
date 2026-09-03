@@ -6,7 +6,7 @@ import { checkCollateralDrift } from "../lib/collateral-drift";
 import type { CronResult } from "../lib/cron-logger";
 import { recordCronFailure } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
-import { computeReserveCompositionOverview, getMaxSyncAge } from "../lib/live-reserves-store";
+import { computeReserveCompositionOverview, getMaxSyncAge } from "../lib/live-reserves/store";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "./sync-live-reserves-shared";
 import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";

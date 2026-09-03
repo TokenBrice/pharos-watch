@@ -26,7 +26,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
-import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
+import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)

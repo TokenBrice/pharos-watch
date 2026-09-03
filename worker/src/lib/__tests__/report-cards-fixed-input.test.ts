@@ -18,14 +18,14 @@ import {
   parseReportCardsFixedInputCacheArtifact,
   parseReportCardsFixedInputCacheValue,
 } from "../report-cards-fixed-input";
-import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9-supply-attribution";
+import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9/supply-attribution";
 import { makeV9RegistryFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
   expectedWmDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
-} from "../safety-score-v9-supply-attribution-contract";
+} from "../safety-score-v9/supply-attribution-contract";
 import {
   buildXautTransparencySource,
   deriveXautRepresentationGroupSupplyAttribution,
@@ -41,7 +41,7 @@ import {
   XAUT_CANONICAL_TOKEN_ADDRESS,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
-} from "../safety-score-v9-xaut-supply-attribution-contract";
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 
 function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   return makeV9RegistryFixedInput({

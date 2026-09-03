@@ -11,7 +11,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncRecordDeferredStatement,
-} from "../lib/live-reserves-store-statements";
+} from "../lib/live-reserves/store-statements";
 
 
 export interface RecordDeferredTailResult {

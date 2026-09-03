@@ -116,7 +116,7 @@ describe("classifyChangedFiles", () => {
   });
   it("routes Telegram delivery changes to the unified Telegram contract", () => {
     const contract = classifyChangedFiles([
-      "worker/src/lib/telegram-mini-app-auth.ts",
+      "worker/src/lib/telegram/mini-app-auth.ts",
       "shared/lib/telegram-delivery-policy.ts",
     ]);
 

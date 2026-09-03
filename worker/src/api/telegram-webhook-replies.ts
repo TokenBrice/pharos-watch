@@ -1,10 +1,10 @@
 import { sendToChat, type SendToChatOpts } from "../lib/telegram";
-import { logTelegramEvent } from "../lib/telegram-log";
+import { logTelegramEvent } from "../lib/telegram/log";
 import {
   recordTelegramReplyOutcome,
   recordTelegramUsageEvent,
-} from "../lib/telegram-usage-analytics";
-import { splitMessage } from "../lib/telegram-alerts";
+} from "../lib/telegram/usage-analytics";
+import { splitMessage } from "../lib/telegram/alerts";
 
 export interface AuditedTelegramReplyOptions extends SendToChatOpts {
   actionDetail?: string;

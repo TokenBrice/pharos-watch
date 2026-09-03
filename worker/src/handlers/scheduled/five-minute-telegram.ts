@@ -1,4 +1,4 @@
-import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-log";
+import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial: dispatch (when token configured) -> watchdog -> cleanup -> pulse
@@ -13,7 +13,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-l
 // so their module graphs never sit on the heap of isolates that only run the
 // heavy data lanes. Only types may be imported statically from them.
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
-import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram-recap-store";
+import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram/recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import {
   TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
@@ -116,7 +116,7 @@ function buildTelegramSlotGroups(
       return { targetRowsCancelled: 0, pendingRowsDeleted: 0 };
     }
     if (recapRolloutCleanup == null) {
-      const { cancelQueuedTelegramRecapsForRollout } = await import("../../lib/telegram-recap-store");
+      const { cancelQueuedTelegramRecapsForRollout } = await import("../../lib/telegram/recap-store");
       recapRolloutCleanup = await cancelQueuedTelegramRecapsForRollout(
         runtime.db,
         recapRollout,
@@ -374,7 +374,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         reconcileTelegramMenuButton,
         reconcileTelegramProfileRegistration,
         reconcileTelegramWebhookRegistration,
-      } = await import("../../lib/telegram-webhook-registration");
+      } = await import("../../lib/telegram/webhook-registration");
       const registrations: Array<{
         action: string;
         run: (signal?: AbortSignal) => Promise<{ attempted: boolean; skipped?: boolean; reason?: string }>;

@@ -198,7 +198,7 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
 // --- Telegram lifecycle snapshot cadence ---
 /**
  * Worker cadence (seconds) for refreshing the Telegram current-lifecycle snapshot.
- * Source of truth for the producer (worker/src/lib/telegram-usage-analytics.ts) and the
+ * Source of truth for the producer (worker/src/lib/telegram/usage-analytics.ts) and the
  * status UI's "snapshot stale" badge, so the threshold cannot drift between the two.
  */
 export const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;

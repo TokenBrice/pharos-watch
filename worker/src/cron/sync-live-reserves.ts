@@ -8,7 +8,7 @@ import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
   type ReserveSyncStateRecord,
-} from "../lib/live-reserves-store";
+} from "../lib/live-reserves/store";
 import {
   createAdapterLatencyCollector,
   syncReserveCoin,
@@ -49,7 +49,7 @@ import {
 import {
   didReserveSyncAttemptBecomeAuthoritative,
   repairAuthoritativeReserveSyncHistory,
-} from "../lib/live-reserves-store";
+} from "../lib/live-reserves/store";
 
 interface ReserveCoinQueueResult {
   counts: LiveReserveQueueCounts;

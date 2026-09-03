@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   hydrateSafetyScoreV9ShockCoverageExtension,
   selectSafetyScoreV9CdpShockMeasurement,
-} from "../safety-score-v9-extension-shock";
+} from "../safety-score-v9/extension-shock";
 
 const CAPTURE_9_CLOCK_SEC = 1_784_225_942;
 const POST_JULY_17_CLOCK_SEC = 1_784_279_256;

@@ -6,7 +6,7 @@ import susdaiAsset from "@shared/data/stablecoins/coins/susdai-usd-ai.json";
 import wmAsset from "@shared/data/stablecoins/coins/wm-m0.json";
 import { projectV9MechanismProfile } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
-import { resolveWrapperForm } from "../safety-score-v9-fact-set-wrapper";
+import { resolveWrapperForm } from "../safety-score-v9/fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
@@ -19,7 +19,7 @@ import {
   MechanismReviewOverlaySchema,
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
-} from "../safety-score-v9-extension-mechanism";
+} from "../safety-score-v9/extension-mechanism";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 

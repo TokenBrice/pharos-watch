@@ -1,8 +1,8 @@
 import {
   classifyTelegramStartSource,
   recordTelegramUsageEvent,
-} from "../../lib/telegram-usage-analytics";
-import { buildTelegramMiniAppUrl } from "../../lib/telegram-webhook-registration";
+} from "../../lib/telegram/usage-analytics";
+import { buildTelegramMiniAppUrl } from "../../lib/telegram/webhook-registration";
 import { parseStartPayload } from "../telegram-webhook-parsing";
 import { sendWizardIntro } from "../telegram-webhook-setup";
 import { START_MESSAGE } from "../telegram-webhook-shared";
@@ -12,7 +12,7 @@ import type { WebhookCommandHandler } from "./context";
 import {
   recordTelegramAdoptionEvent,
   telegramAdoptionDimensionsForStart,
-} from "../../lib/telegram-adoption-analytics";
+} from "../../lib/telegram/adoption-analytics";
 import { handleSubscribe } from "./subscribe";
 import { handleSample } from "./sample";
 import { handleStatus } from "./status";

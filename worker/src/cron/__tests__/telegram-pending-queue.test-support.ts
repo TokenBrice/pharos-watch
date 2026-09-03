@@ -4,7 +4,7 @@ import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram-pending-provenance";
+import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram/pending-provenance";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "WHERE delivery_state = 'sending'", rows: [] },

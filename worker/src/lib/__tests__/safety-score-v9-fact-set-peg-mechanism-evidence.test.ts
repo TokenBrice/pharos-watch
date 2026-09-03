@@ -6,11 +6,11 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evid
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
-import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9-extension-routes";
-import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9-extension-operational-resilience";
-import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
-import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9-fact-set";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
+import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
+import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9/extension-shock";
+import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,

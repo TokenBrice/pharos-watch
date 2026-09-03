@@ -2,7 +2,7 @@
 
 Use this runbook to review the privacy-preserving PharosWatchBot acquisition and onboarding funnel.
 
-`GET /api/admin-telegram-adoption-report` was retired on 2026-08-09. It was a pure read aggregation with no UI consumer; nothing about the data changed. The Worker producer (`/api/telegram-adoption` behind the Pages `/pharoswatchbot-adoption` shim plus `worker/src/lib/telegram-adoption-analytics.ts`) is still live and still writes `telegram_adoption_daily` and `telegram_adoption_retention_daily` from CTA clicks, the Telegram pulse, the Mini App, and the webhook `/start` and follow paths. The queries below reproduce what the endpoint returned.
+`GET /api/admin-telegram-adoption-report` was retired on 2026-08-09. It was a pure read aggregation with no UI consumer; nothing about the data changed. The Worker producer (`/api/telegram-adoption` behind the Pages `/pharoswatchbot-adoption` shim plus `worker/src/lib/telegram/adoption-analytics.ts`) is still live and still writes `telegram_adoption_daily` and `telegram_adoption_retention_daily` from CTA clicks, the Telegram pulse, the Mini App, and the webhook `/start` and follow paths. The queries below reproduce what the endpoint returned.
 
 ## Read The Report
 

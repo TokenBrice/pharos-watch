@@ -10,19 +10,19 @@ import type {
 } from "@shared/types/core";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
 import { describe, expect, it } from "vitest";
-import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   adaptBridgeReview,
   mergedBridgeAuthority,
   mergedBridgeCapSemantics,
   type StructuredBridgeOverlayEntry,
-} from "../safety-score-v9-extension-bridge";
+} from "../safety-score-v9/extension-bridge";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import {
   ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension-shared";
+} from "../safety-score-v9/extension-shared";
 import {
   makeV9FixedInput,
   v9TestClockSec,

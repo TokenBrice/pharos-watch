@@ -12,7 +12,7 @@ import {
   assignSharedDispatchState,
   type DispatchSnapshotState,
 } from "./dispatch-telegram-state";
-import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
   buildTelegramDispatchEvents,

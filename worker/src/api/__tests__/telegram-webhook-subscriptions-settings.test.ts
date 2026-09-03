@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram-subscription-eligibility";
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TELEGRAM_BOT_COMMANDS } from "@shared/lib/telegram-bot-registration";
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../webhook-commands";

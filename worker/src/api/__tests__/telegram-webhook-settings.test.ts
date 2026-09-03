@@ -6,7 +6,7 @@ import {
   telegramApiCalls,
   telegramCallBody,
 } from "../../test-helpers/__shared/telegram";
-import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
+import { PAUSE_SENTINEL_TS } from "../../lib/telegram/constants";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
 const {

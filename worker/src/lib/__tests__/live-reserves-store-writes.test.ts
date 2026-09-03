@@ -7,7 +7,7 @@ import {
 import {
   beginReserveSyncAttempt,
   pruneLiveReserveHistory,
-} from "../live-reserves-store";
+} from "../live-reserves/store";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("live-reserves-store", () => {

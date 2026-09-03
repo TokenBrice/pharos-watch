@@ -9,7 +9,7 @@ import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { setCache } from "../lib/db-cache";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
-import { prepareTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
+import { prepareTelegramDigestAppendices } from "../lib/telegram/digest-appendices";
 import { buildDailyDigestInput, buildDigestSafetyMapCapture } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";

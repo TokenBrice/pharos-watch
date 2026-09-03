@@ -1,6 +1,6 @@
 import { escapeHtml } from "../../lib/telegram";
-import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../../lib/telegram-constants";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../../lib/telegram/constants";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import {
   clearAlertSnooze,

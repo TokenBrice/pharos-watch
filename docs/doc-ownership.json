@@ -148,7 +148,7 @@
         "worker/src/cron/dispatch-telegram*.ts",
         "worker/src/cron/telegram-*/**",
         "worker/src/handlers/scheduled/*telegram*.ts",
-        "worker/src/lib/telegram-*.ts",
+        "worker/src/lib/telegram/**",
         "shared/lib/telegram-*.ts",
         "shared/lib/telegram-delivery-policy.ts",
         "src/app/pharoswatchbot/**"
@@ -233,7 +233,7 @@
         "shared/types/safety-score-v9*.ts",
         "shared/types/digest*.ts",
         "shared/data/safety-score-v9/**",
-        "worker/src/lib/safety-score-v9-*.ts",
+        "worker/src/lib/safety-score-v9/**",
         "worker/src/lib/digest-safety-map.ts",
         "worker/src/cron/daily-digest.ts",
         "worker/src/cron/daily-digest/**",

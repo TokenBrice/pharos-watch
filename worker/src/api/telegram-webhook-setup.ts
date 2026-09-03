@@ -9,21 +9,21 @@
  */
 
 import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../lib/telegram";
-import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
-import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import { buildTelegramMiniAppUrl } from "../lib/telegram/webhook-registration";
+import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
 import {
   recordTelegramFirstFollow,
   recordTelegramFirstSetupComplete,
   telegramAdoptionDimensionsForStart,
-} from "../lib/telegram-adoption-analytics";
+} from "../lib/telegram/adoption-analytics";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
-} from "../lib/telegram-presets";
-import { resolveTicker } from "../lib/telegram-alerts";
+} from "../lib/telegram/presets";
+import { resolveTicker } from "../lib/telegram/alerts";
 import {
   buildNotFoundMessage,
   buildPresetSubscriptionSummaryMessage,

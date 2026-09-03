@@ -287,7 +287,7 @@ const DIRECT_COIN_POOL = [
 const PRESET_MEMBERS = {
   "usd-top10": HOT_COIN_IDS.slice(0, 10),
   "usd-top25": HOT_COIN_IDS.slice(0, 25),
-  // Mirrors the production "usd-top50" preset id (worker/src/lib/telegram-presets.ts);
+  // Mirrors the production "usd-top50" preset id (worker/src/lib/telegram/presets.ts);
   // the fixture pool only has 25 hot ids, so this currently resolves to the same set as usd-top25.
   "usd-top50": HOT_COIN_IDS.slice(0, 25),
   "eur-top10": ["eurt-tether", "eurc-circle", "eurs-stasis"],

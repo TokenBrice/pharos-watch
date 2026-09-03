@@ -1,7 +1,7 @@
 import type {
   StatusResponse,
 } from "@shared/types/status";
-import { computeReserveCompositionOverview } from "../live-reserves-store";
+import { computeReserveCompositionOverview } from "../live-reserves/store";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { CronHealthSnapshot } from "./cron-health";
 import {

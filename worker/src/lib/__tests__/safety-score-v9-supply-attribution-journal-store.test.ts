@@ -14,7 +14,7 @@ import {
   SUPPLY_ATTRIBUTION_JOURNAL_STORE_RETENTION_SEC,
   appendSupplyAttributionJournalV1,
   loadSupplyAttributionJournalByIdV1,
-} from "../safety-score-v9-supply-attribution-journal-store";
+} from "../safety-score-v9/supply-attribution-journal-store";
 
 const DIGEST = "a".repeat(64);
 const MIGRATION = readFileSync(

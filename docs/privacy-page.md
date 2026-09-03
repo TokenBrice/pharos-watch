@@ -89,7 +89,7 @@ Durable follows and enabled recap preferences remain while configured; empty ina
 
 Telegram Mini App endpoints validate signed `initData` but do not persist the raw value or a hash. Mutation freshness, read/session portability, cooldown, and aggregate telemetry rules live in the endpoint/auth modules and [telegram-mini-app.md](./telegram-mini-app.md). The visible policy must remain aligned with those sources.
 
-Custom Telegram Worker logs use the allowlisted low-cardinality boundary in `worker/src/lib/telegram-log.ts`. Chat-specific investigation belongs in authenticated D1/admin diagnostics rather than raw identifiers in general logs.
+Custom Telegram Worker logs use the allowlisted low-cardinality boundary in `worker/src/lib/telegram/log.ts`. Chat-specific investigation belongs in authenticated D1/admin diagnostics rather than raw identifiers in general logs.
 
 ## Update Rules
 

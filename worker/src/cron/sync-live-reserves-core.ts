@@ -23,7 +23,7 @@ import {
   finalizeReserveSyncSuccess,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
-} from "../lib/live-reserves-store";
+} from "../lib/live-reserves/store";
 
 const TRACKED_STABLECOIN_IDS = new Set(TRACKED_META_BY_ID.keys());
 const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([

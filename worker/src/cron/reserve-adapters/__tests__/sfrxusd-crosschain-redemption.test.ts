@@ -21,8 +21,8 @@ import {
   type SfrxusdCrosschainRouteReadClient,
 } from "../sfrxusd-crosschain-redemption";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../../../lib/sfrxusd-crosschain-redemption-route";
-import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop-live-metadata";
-import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop-sources";
+import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
+import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 
 const ABI = parseAbi([
   "function paused() view returns (bool)",

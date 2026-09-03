@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
-import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9-extension-routes";
-import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9-fact-set";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
+import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9BoundedUnknownFeeRedemptionFixedInput as boundedUnknownFeeRedemptionFixedInput, makeV9FixedInput as exactFixedInput, makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   accessOnlyMeta,

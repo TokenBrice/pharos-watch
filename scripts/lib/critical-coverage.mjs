@@ -42,9 +42,10 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
 const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^worker\/src\/cron\/sync-live-reserves-[a-z0-9-]+\.ts$/,
   /^worker\/src\/lib\/[^/]*(price|pricing)[^/]*\.ts$/,
-  /^worker\/src\/lib\/live-reserves-store.*\.ts$/,
+  /^worker\/src\/lib\/live-reserves\/[^/]+\.ts$/,
   /^worker\/src\/lib\/(?:auth|evm-rpc)\.ts$/,
   /^worker\/src\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
+  /^worker\/src\/lib\/safety-score-v9\/[^/]+\.ts$/,
   /^worker\/src\/api\/[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
@@ -58,8 +59,8 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   // intentionally excluded from the generated enrollment set; their owning
   // implementation modules remain covered by direct import contracts.
   "worker/src/cron/compute-dews.ts": "2026-09-05",
-  "worker/src/lib/safety-score-v9-transfer-materiality-observer.ts": "2026-09-05",
-  "worker/src/lib/safety-score-v9-transfer-materiality.ts": "2026-09-05",
+  "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts": "2026-09-05",
+  "worker/src/lib/safety-score-v9/transfer-materiality.ts": "2026-09-05",
   "worker/src/cron/sync-live-reserves-config.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/cache-publication.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": "2026-09-05",
@@ -104,7 +105,7 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/lib/authoritative-price-sources.ts": "2026-09-05",
   "worker/src/lib/coingecko-simple-price.ts": "2026-09-05",
   "worker/src/lib/dex-api-token-pricing.ts": "2026-09-05",
-  "worker/src/lib/live-reserves-store.ts": "2026-09-05",
+  "worker/src/lib/live-reserves/store.ts": "2026-09-05",
   "worker/src/lib/native-peg-implied-prices.ts": "2026-09-05",
   "worker/src/lib/pricing-provider-diagnostics.ts": "2026-09-05",
   "worker/src/lib/pricing-provider-lifecycle.ts": "2026-09-05",

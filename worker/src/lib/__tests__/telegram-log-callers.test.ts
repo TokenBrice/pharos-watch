@@ -39,7 +39,7 @@ describe("Telegram structured log callers", () => {
     let callerCount = 0;
 
     for (const file of sourceFiles(path.resolve("worker/src"))) {
-      if (file.includes(`${path.sep}__tests__${path.sep}`) || file.endsWith(`${path.sep}telegram-log.ts`)) continue;
+      if (file.includes(`${path.sep}__tests__${path.sep}`) || file.endsWith(`${path.sep}telegram${path.sep}log.ts`)) continue;
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- files come only from sourceFiles(worker/src).
       const sourceText = readFileSync(file, "utf8");
       const source = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true);

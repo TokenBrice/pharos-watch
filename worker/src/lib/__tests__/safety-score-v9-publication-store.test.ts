@@ -10,7 +10,7 @@ import {
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
   SAFETY_SCORE_V9_CACHE_KEYS,
-} from "../safety-score-v9-publication-store";
+} from "../safety-score-v9/publication-store";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const databases: DatabaseSync[] = [];

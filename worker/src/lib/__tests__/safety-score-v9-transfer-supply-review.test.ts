@@ -4,23 +4,23 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { describe, expect, it } from "vitest";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
-} from "../safety-score-v9-fact-set";
-import type { SafetyScoreV9CompilerInput } from "../safety-score-v9-native-input";
+} from "../safety-score-v9/fact-set";
+import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import {
   buildSafetyScoreV9SupplyReview,
   SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS,
-} from "../safety-score-v9-extension-supply";
-import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9-extension-transfer";
+} from "../safety-score-v9/extension-supply";
+import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import {
   createSafetyScoreV9TransferMaterialityGeneration,
   type SafetyScoreV9TransferMaterialityGeneration,
   type SafetyScoreV9TransferMaterialityObservation,
-} from "../safety-score-v9-transfer-materiality";
+} from "../safety-score-v9/transfer-materiality";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK_SEC = Date.parse("2026-08-17T00:00:00Z") / 1_000;

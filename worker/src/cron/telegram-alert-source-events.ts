@@ -9,9 +9,9 @@ import {
   listTelegramPresets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
-} from "../lib/telegram-presets";
-import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
-import { logTelegramEvent } from "../lib/telegram-log";
+} from "../lib/telegram/presets";
+import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram/constants";
+import { logTelegramEvent } from "../lib/telegram/log";
 import { parseJson } from "../lib/json-parse";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
 import type { TelegramDispatchEvents } from "./dispatch-telegram-events";

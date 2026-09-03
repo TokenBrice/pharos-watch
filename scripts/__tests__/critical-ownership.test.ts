@@ -60,7 +60,7 @@ describe("critical ownership derivation", () => {
       {},
     )).toEqual(["worker/src/lib/new-critical-source.ts"]);
     expect(findCriticalOwnershipGaps(
-      ["worker/src/lib/safety-score-v9-capture.ts"],
+      ["worker/src/lib/safety-score-v9/capture.ts"],
       new Map(),
       CRITICAL_OWNERSHIP_WAIVERS,
     )).toEqual([]);

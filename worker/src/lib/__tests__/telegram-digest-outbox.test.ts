@@ -16,7 +16,7 @@ import {
   deliverTelegramDigestEdition,
   drainTelegramDigestOutbox,
   enqueueTelegramDigestEdition,
-} from "../telegram-digest-outbox";
+} from "../telegram/digest-outbox";
 import { checkDigestSafetyContextForDelivery } from "../digest-safety-context";
 
 interface StoredEdition {

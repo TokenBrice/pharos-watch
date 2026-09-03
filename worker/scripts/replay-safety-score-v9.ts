@@ -18,13 +18,13 @@ import {
   normalizeSafetyScoreV9CompilerInput,
   parseSafetyScoreV9InputCacheValue,
   type SafetyScoreV9CompilerInput,
-} from "../src/lib/safety-score-v9-native-input";
+} from "../src/lib/safety-score-v9/native-input";
 import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-exit-route-observations";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
-} from "../src/lib/safety-score-v9-candidate";
+} from "../src/lib/safety-score-v9/candidate";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 export interface SafetyScoreV9FutureDatedReview {

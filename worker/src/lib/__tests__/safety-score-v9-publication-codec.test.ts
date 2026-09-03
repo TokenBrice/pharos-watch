@@ -10,7 +10,7 @@ import {
 import {
   parseSafetyScoreV9Publication,
   serializeSafetyScoreV9Publication,
-} from "../safety-score-v9-publication-codec";
+} from "../safety-score-v9/publication-codec";
 
 describe("Safety Score V9 publication codec", () => {
   it("round-trips the canonical compressed publication", async () => {

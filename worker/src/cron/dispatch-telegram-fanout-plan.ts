@@ -1,7 +1,7 @@
 import {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
-} from "../lib/telegram-constants";
+} from "../lib/telegram/constants";
 import type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
 export type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
 import {

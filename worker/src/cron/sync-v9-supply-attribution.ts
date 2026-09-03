@@ -8,15 +8,15 @@ import {
 } from "../lib/db-cache";
 import {
   appendSupplyAttributionJournalV1,
-} from "../lib/safety-score-v9-supply-attribution-journal-store";
+} from "../lib/safety-score-v9/supply-attribution-journal-store";
 import {
   captureSafetyScoreV9SupplyAttribution,
-} from "../lib/safety-score-v9-supply-attribution";
+} from "../lib/safety-score-v9/supply-attribution";
 import {
   parseSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   type SafetyScoreV9SupplyAttributionSource,
-} from "../lib/safety-score-v9-supply-attribution-source";
+} from "../lib/safety-score-v9/supply-attribution-source";
 import {
   createSafetyScoreV9SupplyAttributionGeneration,
   isSafetyScoreV9SupplyAttributionGenerationCompatible,
@@ -24,7 +24,7 @@ import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionGeneration,
-} from "../lib/safety-score-v9-supply-attribution-generation";
+} from "../lib/safety-score-v9/supply-attribution-generation";
 
 const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
 

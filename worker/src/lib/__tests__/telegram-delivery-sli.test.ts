@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { loadTelegramDeliverySliRollup } from "../telegram-delivery-sli";
+import { loadTelegramDeliverySliRollup } from "../telegram/delivery-sli";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];

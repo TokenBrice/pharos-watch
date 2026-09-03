@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   makeV9Extension,
   makeV9FixedInput,

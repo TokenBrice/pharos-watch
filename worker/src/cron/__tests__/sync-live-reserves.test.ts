@@ -49,7 +49,7 @@ describe("syncLiveReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.doUnmock("../../lib/live-reserves-store");
+    vi.doUnmock("../../lib/live-reserves/store");
     vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
@@ -724,8 +724,8 @@ describe("syncLiveReserves", () => {
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
-    vi.doMock("../../lib/live-reserves-store", async () => ({
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       cleanupStaleLiveReserveArtifacts: vi.fn(async () => {
         throw new Error("artifact cleanup unavailable");
@@ -823,9 +823,9 @@ describe("syncLiveReserves", () => {
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
     let finalizeCalls = 0;
-    vi.doMock("../../lib/live-reserves-store", async () => ({
+    vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       finalizeReserveSyncSuccess: vi.fn(async (...args: Parameters<typeof actualStore.finalizeReserveSyncSuccess>) => {
         finalizeCalls++;
@@ -872,8 +872,8 @@ describe("syncLiveReserves", () => {
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
-    vi.doMock("../../lib/live-reserves-store", async () => ({
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       finalizeReserveSyncSuccess: vi.fn(async () => (
         await new Promise<Awaited<ReturnType<typeof actualStore.finalizeReserveSyncSuccess>>>(() => undefined)

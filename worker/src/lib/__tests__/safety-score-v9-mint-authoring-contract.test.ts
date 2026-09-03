@@ -6,8 +6,8 @@ import type { MintAuthorityProfile } from "@shared/types/core";
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-schemas";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
-import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 const AS_OF_SEC = 1_785_456_000;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
-import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9-extension";
-import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9-candidate";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
+import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import { makeV9TwoAssetFixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { buildLiveWithheldCounterfactualReport } from "../check-safety-score-v9-live-withheld";

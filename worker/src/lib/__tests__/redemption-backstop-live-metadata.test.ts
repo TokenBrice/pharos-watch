@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
-import type { ReserveSyncStateRecord } from "../live-reserves-store";
-import { parseReserveCompositionRow } from "../live-reserves-store-row-decoding";
+import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
+import type { ReserveSyncStateRecord } from "../live-reserves/store";
+import { parseReserveCompositionRow } from "../live-reserves/store-row-decoding";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const now = 1_780_000_000;

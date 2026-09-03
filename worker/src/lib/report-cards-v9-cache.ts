@@ -14,7 +14,7 @@ import {
 import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationHealth,
-} from "./safety-score-v9-publication-store";
+} from "./safety-score-v9/publication-store";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
   constructor(message: string) {

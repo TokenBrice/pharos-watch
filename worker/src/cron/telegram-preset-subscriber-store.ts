@@ -5,7 +5,7 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
-} from "../lib/telegram-presets";
+} from "../lib/telegram/presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 
 export type PresetAlertType = Extract<TelegramAlertType, "dews" | "depeg" | "safety">;

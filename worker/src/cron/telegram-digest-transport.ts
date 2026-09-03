@@ -5,9 +5,9 @@ import {
   recordTelegramTransportOutcomes,
   type TelegramTransportOutcome,
   type TelegramTransportPermit,
-} from "../lib/telegram-transport-control";
+} from "../lib/telegram/transport-control";
 import { recordCronFailure } from "../lib/cron-logger";
-import { parseTelegramTransportErrorClass } from "../lib/telegram-transport-errors";
+import { parseTelegramTransportErrorClass } from "../lib/telegram/transport-errors";
 
 export interface TelegramDigestPermittedDelivery {
   status: string;

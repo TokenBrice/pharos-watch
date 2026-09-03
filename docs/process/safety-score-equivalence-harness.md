@@ -22,7 +22,7 @@ Every later task that says "verified against the harness runbook" means the proc
 
 Two properties make the replay equal to production:
 
-- The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9-publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
+- The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9/publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
 - `worker/scripts/replay-safety-score-v9.ts` compiles that input through the same pipeline with no network, D1, or wall-clock reads. The artifact is a pure function of (capture, `--published-at`, code) — two replays of one capture at one commit are byte-identical.
 
 `worker/scripts/diff-safety-score-v9-replays.ts` drops two separately-owned key families at every depth — `VOLATILE_KEYS` (per-run publication identity and capture timing) and `VERSION_ACTIVATION_KEYS` (pinned-build and methodology-identity digests plus `policyVersion`, which move only on a deliberate version activation) — and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.

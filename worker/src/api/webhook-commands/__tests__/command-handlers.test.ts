@@ -4,8 +4,8 @@ import {
   createTelegramFetchSpy,
   lastSendMessageBody,
 } from "../../../test-helpers/__shared/telegram";
-import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
-import { resolveTicker } from "../../../lib/telegram-alerts";
+import { PAUSE_SENTINEL_TS } from "../../../lib/telegram/constants";
+import { resolveTicker } from "../../../lib/telegram/alerts";
 import type { WebhookCommandContext } from "../context";
 import { handleCancel } from "../cancel";
 import { handleHealth } from "../health";

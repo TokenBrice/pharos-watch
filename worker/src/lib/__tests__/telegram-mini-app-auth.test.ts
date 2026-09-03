@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   resetTelegramMiniAppChatTypeWarningsForTests,
   validateTelegramMiniAppInitData,
-} from "../telegram-mini-app-auth";
+} from "../telegram/mini-app-auth";
 
 const BOT_TOKEN = "123456:test-token";
 const NOW_SEC = 1_800_000_000;

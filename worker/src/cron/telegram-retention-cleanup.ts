@@ -9,13 +9,13 @@ import {
   countTelegramProcessedUpdateBacklog,
   pruneTelegramProcessedUpdates,
   type TelegramProcessedUpdateBacklog,
-} from "../lib/telegram-processed-updates";
+} from "../lib/telegram/processed-updates";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
-import { pruneTelegramRecapTargets } from "../lib/telegram-recap-store";
+import { pruneTelegramRecapTargets } from "../lib/telegram/recap-store";
 import {
   TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
   TELEGRAM_ADOPTION_SESSION_TTL_SEC,
-} from "../lib/telegram-adoption-analytics";
+} from "../lib/telegram/adoption-analytics";
 
 const DAY_SEC = 24 * 60 * 60;
 const ALERT_AUDIT_RETENTION_SEC = 90 * DAY_SEC;

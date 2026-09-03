@@ -15,8 +15,8 @@
  */
 
 import { answerCallbackQuery, editMessage } from "../lib/telegram";
-import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
-import { resolveTicker } from "../lib/telegram-alerts";
+import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
+import { resolveTicker } from "../lib/telegram/alerts";
 import {
   buildNotFoundMessage,
   buildStatusAmbiguousMessage,

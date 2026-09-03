@@ -182,7 +182,7 @@ describe("adaptive PR checks", () => {
 
   it("runs typechecks, structural checks, and generated verification in the bounded parallel phase", () => {
     const { commands } = buildPrStaticCheckPlan([
-      "worker/src/lib/safety-score-v9-extension.ts",
+      "worker/src/lib/safety-score-v9/extension.ts",
       "docs/editorial-style.md",
     ]);
     const partition = partitionPrStaticCheckPlan(commands);
@@ -208,7 +208,7 @@ describe("adaptive PR checks", () => {
   it("checks a changed generated artifact even when no Pages surface moved", () => {
     // The Wave-1 near-miss: a worker-only commit touching a manifest-pinned V9
     // source left the evaluation-build manifest stale and passed the PR gate.
-    const plan = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9-extension.ts"]);
+    const plan = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9/extension.ts"]);
     const artifactCommand = plan.commands.find(
       (command): command is { name: string; args: string[] } =>
         command.name === "check:generated-artifacts" && "args" in command,

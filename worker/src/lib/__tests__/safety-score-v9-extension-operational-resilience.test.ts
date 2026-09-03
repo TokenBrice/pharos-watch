@@ -6,7 +6,7 @@ import {
   SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
   SafetyScoreV9OperationalResilienceOverlayFileSchema,
   SafetyScoreV9OperationalResilienceOverlaySchema,
-} from "../safety-score-v9-extension-operational-resilience";
+} from "../safety-score-v9/extension-operational-resilience";
 
 const REVIEWED_AT_SEC = Date.parse("2026-07-23T12:37:19Z") / 1_000;
 const CURRENT_CLOCK_SEC = Date.parse("2026-07-24T00:00:00Z") / 1_000;

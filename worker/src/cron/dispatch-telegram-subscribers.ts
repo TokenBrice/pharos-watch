@@ -1,8 +1,8 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS } from "../lib/db";
-import { logTelegramEvent } from "../lib/telegram-log";
-import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram-broadcast-targets";
-import { listTelegramPresets, type TelegramPresetResolveOptions } from "../lib/telegram-presets";
+import { logTelegramEvent } from "../lib/telegram/log";
+import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram/broadcast-targets";
+import { listTelegramPresets, type TelegramPresetResolveOptions } from "../lib/telegram/presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import {
   TELEGRAM_FANOUT_FAMILIES,

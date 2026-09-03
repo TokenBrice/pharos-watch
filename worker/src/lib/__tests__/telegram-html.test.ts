@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const TELEGRAM_HTML_PATH = resolve(
   process.cwd().endsWith("/worker") ? process.cwd() : resolve(process.cwd(), "worker"),
-  "src/lib/telegram-html.ts",
+  "src/lib/telegram/html.ts",
 );
 
 function runtimeImportSpecifiers(sourceText: string): string[] {

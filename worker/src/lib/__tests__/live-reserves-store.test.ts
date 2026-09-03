@@ -13,8 +13,8 @@ import {
   loadLiveReserveHistoryWriteGaps,
   loadFreshIndependentLiveReserveMap,
   resolveReserveResult,
-} from "../live-reserves-store";
-import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
+} from "../live-reserves/store";
+import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 
 describe("live-reserves-store", () => {
   it("computes max sync age from the oldest required reserve attempt", async () => {

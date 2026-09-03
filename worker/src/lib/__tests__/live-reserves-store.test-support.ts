@@ -3,7 +3,7 @@ import {
   finalizeReserveSyncSuccess,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
-} from "../live-reserves-store";
+} from "../live-reserves/store";
 
 export const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 

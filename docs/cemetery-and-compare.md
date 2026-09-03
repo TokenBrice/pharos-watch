@@ -72,7 +72,7 @@ The static cemetery dataset export reflects the same merge:
 
 The cemetery dataset now has a worker-side Telegram notification path:
 
-- `worker/src/lib/telegram-digest-appendices.ts`
+- `worker/src/lib/telegram/digest-appendices.ts`
 - runs as part of daily Telegram digest delivery
 - diffs the deployed `DEAD_STABLECOINS` list against a cached snapshot in D1
 - seeds silently on first run so existing graves do not backfill into Telegram

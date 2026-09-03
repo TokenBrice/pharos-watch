@@ -21,14 +21,14 @@ import {
   TelegramMiniAppAuthError,
   validateTelegramMiniAppInitData,
   type TelegramMiniAppAuthContext,
-} from "../lib/telegram-mini-app-auth";
+} from "../lib/telegram/mini-app-auth";
 import {
   bucketTelegramCommandLatency,
   recordTelegramUsageEvent,
   recordTelegramUsageEvents,
   type TelegramUsageEventInput,
   type TelegramUsageEventType,
-} from "../lib/telegram-usage-analytics";
+} from "../lib/telegram/usage-analytics";
 import { acquireTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
 import {
   TelegramMiniAppMutationError,
@@ -47,7 +47,7 @@ import {
   recordTelegramMiniAppAdoptionSession,
   recordTelegramMiniAppFirstMutation,
   telegramAdoptionDimensionsForMiniApp,
-} from "../lib/telegram-adoption-analytics";
+} from "../lib/telegram/adoption-analytics";
 import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import {

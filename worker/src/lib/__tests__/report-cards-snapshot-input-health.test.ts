@@ -23,8 +23,8 @@ vi.mock("../redemption-backstops-store", async (importOriginal) => ({
     mocks.loadRedemptionBackstopSnapshot,
 }));
 
-vi.mock("../live-reserves-store", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../live-reserves-store")>()),
+vi.mock("../live-reserves/store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../live-reserves/store")>()),
   loadFreshIndependentLiveReserveMap:
     mocks.loadFreshIndependentLiveReserveMap,
 }));

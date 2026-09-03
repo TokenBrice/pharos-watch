@@ -38,8 +38,8 @@ Owned files:
 - `worker/src/api/telegram-mini-app-rate-limit.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/lib/telegram-recap-store.ts`
-- `worker/src/lib/telegram-mini-app-auth.ts`
+- `worker/src/lib/telegram/recap-store.ts`
+- `worker/src/lib/telegram/mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
 - `shared/lib/telegram-recap-policy.ts`
 - `shared/lib/iana-local-time.ts`
@@ -155,7 +155,7 @@ Each direct/local coin row's `CoinCard` renders a compact source chip derived pu
 
 ## Auth Model
 
-HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:
+HMAC validation is implemented in `worker/src/lib/telegram/mini-app-auth.ts`:
 
 - Parse `URLSearchParams` from raw `initData`.
 - Require `hash`, `auth_date`, and `user` for both Mini App endpoints.

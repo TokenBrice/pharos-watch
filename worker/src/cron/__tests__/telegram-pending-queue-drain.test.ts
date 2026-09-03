@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram-pending-provenance";
+import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram/pending-provenance";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
@@ -33,13 +33,13 @@ const mockMigrateTelegramChatId = vi.fn();
 const transportMocks = vi.hoisted(() => ({ claim: vi.fn(), readPause: vi.fn(), record: vi.fn() }));
 
 vi.mock("../../lib/telegram", async (importOriginal) => ({ ...(await importOriginal<typeof import("../../lib/telegram")>()), sendToChat: mockSendToChat }));
-vi.mock("../../lib/telegram-transport-control", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/telegram-transport-control")>()),
+vi.mock("../../lib/telegram/transport-control", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/telegram/transport-control")>()),
   claimTelegramTransportPermit: transportMocks.claim,
   readTelegramDeliveryPause: transportMocks.readPause,
   recordTelegramTransportOutcomes: transportMocks.record,
 }));
-vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({ migrateTelegramChatId: mockMigrateTelegramChatId }));
+vi.mock("../../lib/telegram/subscriber-lifecycle", () => ({ migrateTelegramChatId: mockMigrateTelegramChatId }));
 
 const {
   drainPendingQueue,
@@ -54,8 +54,8 @@ const {
   SEND_BATCH_SIZE,
   reconcileStalePendingSending,
 } = await import("../telegram-pending");
-const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram-pending-queue");
-await import("../../lib/telegram-alerts");
+const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram/pending-queue");
+await import("../../lib/telegram/alerts");
 
 beforeEach(() => {
   resetTelegramPendingMocks({ sendToChat: mockSendToChat, migrateTelegramChatId: mockMigrateTelegramChatId, transport: transportMocks, sendBatchSize: SEND_BATCH_SIZE });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { StatusForCoin } from "../../telegram-webhook-status";
-import { resolveTicker } from "../../../lib/telegram-alerts";
+import { resolveTicker } from "../../../lib/telegram/alerts";
 import {
   buildBriefMessage,
   buildCoverageMessage,

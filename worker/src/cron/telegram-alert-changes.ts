@@ -1,4 +1,4 @@
-import type { DewsChange, LaunchAlert, ReserveAlert, SafetyChange } from "../lib/telegram-alerts";
+import type { DewsChange, LaunchAlert, ReserveAlert, SafetyChange } from "../lib/telegram/alerts";
 import {
   extractTopSignals,
   type DewsRow,

@@ -8,13 +8,13 @@ import {
   buildReviewedDeploymentRouteInventory,
   expectedCentrifugeDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
-} from "../safety-score-v9-supply-attribution-contract";
+} from "../safety-score-v9/supply-attribution-contract";
 import {
   fetchSolanaCentrifugeDeploymentObservation,
   observeCentrifugeReviewedDeploymentUnitPartition,
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
   type CentrifugeSolanaRpcFetcher,
-} from "../safety-score-v9-centrifuge-supply-observer";
+} from "../safety-score-v9/centrifuge-supply-observer";
 
 const ASSET_ID = "jtrsy-anemoy";
 const AGGREGATE_SUPPLY_USD = 51_033_069.79770032;

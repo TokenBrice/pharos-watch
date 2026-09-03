@@ -17,8 +17,8 @@ import {
   type MockTableConfig,
 } from "./telegram-mini-app.test-support";
 import { type MockPreparedStatement } from "@shared/test-utils/mock-d1";
-import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
-import { encodeWatchlistTokenV3 } from "../../lib/telegram-watchlist-token";
+import { PAUSE_SENTINEL_TS } from "../../lib/telegram/constants";
+import { encodeWatchlistTokenV3 } from "../../lib/telegram/watchlist-token";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,

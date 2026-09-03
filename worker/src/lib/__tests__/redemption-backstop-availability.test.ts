@@ -7,9 +7,9 @@ import {
   loadSevereActiveDepegAvailabilityMap,
   type ActiveDepegAvailabilityRow,
   type EvaluatedOpenIncident,
-} from "../redemption-backstop-availability";
-import { buildRedemptionBackstopEntry } from "../redemption-backstop-sources";
-import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+} from "../redemption-backstop/availability";
+import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const REVIEW_DATE = "2026-04-22";

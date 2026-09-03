@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPendingAlertEnqueueStatement } from "../../lib/telegram-pending-queue";
+import { buildPendingAlertEnqueueStatement } from "../../lib/telegram/pending-queue";
 import { buildPendingAlertUpsertSql, pendingPrioritySql } from "../telegram-pending/upsert-sql";
 import { buildSetBasedPendingHandoffStatements } from "../telegram-alert-target-plans/delivery";
 import type { BatchMessage } from "../../lib/telegram";

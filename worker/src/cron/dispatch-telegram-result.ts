@@ -2,7 +2,7 @@ import type { TelegramDispatchCronResult } from "@shared/types";
 import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
-import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
 import type {
   PendingCapacitySnapshot,
   PendingDrainResult,

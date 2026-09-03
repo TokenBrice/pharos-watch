@@ -7,7 +7,7 @@ import {
   normalizeNativeV9Input,
   type NativeDexLiquidityRow,
   type NativeSafetyScoreV9Input,
-} from "../../safety-score-v9-native-input";
+} from "../../safety-score-v9/native-input";
 
 /**
  * Deterministic V9 calibration snapshot clock.

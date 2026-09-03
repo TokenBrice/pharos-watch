@@ -1,11 +1,11 @@
 import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../lib/telegram";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
-import { logTelegramEvent } from "../lib/telegram-log";
+import { logTelegramEvent } from "../lib/telegram/log";
 import { isChannelChatType, isGroupChatType } from "./telegram-webhook-auth";
 import { forgetSubscriber } from "./telegram-webhook-store";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import { TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC } from "../lib/telegram-constants";
+import { TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC } from "../lib/telegram/constants";
 
 /**
  * Local `my_chat_member` shape. Lives in the group-welcome module (the Ingress

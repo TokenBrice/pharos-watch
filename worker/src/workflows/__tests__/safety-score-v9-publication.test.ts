@@ -21,7 +21,7 @@ vi.mock("cloudflare:workers", () => ({
   WorkflowEntrypoint: class {},
 }));
 
-vi.mock("../../lib/safety-score-v9-native-input", () => ({
+vi.mock("../../lib/safety-score-v9/native-input", () => ({
   NATIVE_V9_INPUT_CACHE_KEY: "report-cards:fixed-input:exact",
   parseNativeV9InputCacheArtifact,
 }));

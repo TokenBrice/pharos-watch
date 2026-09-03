@@ -5,14 +5,14 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { ActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
-import type { PreparedTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
+import type { PreparedTelegramDigestAppendices } from "../../lib/telegram/digest-appendices";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
 import type { CollectorContext } from "../daily-digest/collectors-shared";
 import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type {
   EnqueueTelegramDigestEditionResult,
   TelegramDigestDeliveryResult,
-} from "../../lib/telegram-digest-outbox";
+} from "../../lib/telegram/digest-outbox";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeWorkerReportCardsV9Response,

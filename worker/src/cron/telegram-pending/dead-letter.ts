@@ -1,6 +1,6 @@
 import { batchExecute, buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
-import { TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram-constants";
-import { logTelegramEvent } from "../../lib/telegram-log";
+import { TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram/constants";
+import { logTelegramEvent } from "../../lib/telegram/log";
 import type { DeadLetterPendingRow, PendingDeadLetterReason } from "./types";
 
 export const PENDING_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;

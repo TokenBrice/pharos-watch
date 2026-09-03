@@ -15,7 +15,7 @@ import {
   TELEGRAM_SPLIT_VERSION,
   TOP_VIEW_NAMES,
   isDepegStepValue,
-} from "../telegram-constants";
+} from "../telegram/constants";
 
 describe("telegram-constants", () => {
   it("exposes the canonical depeg-step values and accepts only those", () => {

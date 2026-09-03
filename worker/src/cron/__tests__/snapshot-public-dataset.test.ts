@@ -15,7 +15,7 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
-import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
 const mockD1 = makePublicDatasetDb;

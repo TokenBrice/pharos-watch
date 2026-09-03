@@ -10,8 +10,8 @@ import type { Env } from "../lib/env";
 import {
   NATIVE_V9_INPUT_CACHE_KEY,
   parseNativeV9InputCacheArtifact,
-} from "../lib/safety-score-v9-native-input";
-import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9-publication-store";
+} from "../lib/safety-score-v9/native-input";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-store";
 
 export const SAFETY_SCORE_V9_WORKFLOW_JOB =
   "compute-safety-score-v9-workflow";

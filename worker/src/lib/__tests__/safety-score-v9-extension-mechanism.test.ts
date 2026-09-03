@@ -14,7 +14,7 @@ import {
   MechanismReviewOverlaySchema,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
   type MechanismReviewOverlay,
-} from "../safety-score-v9-extension-mechanism";
+} from "../safety-score-v9/extension-mechanism";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 

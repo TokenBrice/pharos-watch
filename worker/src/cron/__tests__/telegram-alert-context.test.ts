@@ -38,8 +38,8 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: mocks.loadStablecoinsCache,
 }));
 
-vi.mock("../../lib/telegram-log", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/telegram-log")>()),
+vi.mock("../../lib/telegram/log", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/telegram/log")>()),
   logTelegramEvent: mocks.logTelegramEvent,
 }));
 

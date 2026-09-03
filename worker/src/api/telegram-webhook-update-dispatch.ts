@@ -17,7 +17,7 @@ import {
   loadPendingDisambiguation,
   unixNow,
 } from "./telegram-webhook-store";
-import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
+import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram/log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import {
@@ -27,7 +27,7 @@ import {
 import {
   UNKNOWN_COMMAND_ACTION_DETAIL,
   recordTelegramUsageEvent,
-} from "../lib/telegram-usage-analytics";
+} from "../lib/telegram/usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import {
   buildMutationOperations,

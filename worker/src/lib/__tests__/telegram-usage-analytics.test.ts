@@ -7,7 +7,7 @@ import {
   loadTelegramTopFollowedCoins,
   recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
-} from "../telegram-usage-analytics";
+} from "../telegram/usage-analytics";
 
 describe("telegram usage analytics", () => {
   it("includes freeze opt-ins in lifecycle counts and all-family watcher gating", async () => {

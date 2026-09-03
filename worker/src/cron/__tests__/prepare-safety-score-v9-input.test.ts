@@ -58,13 +58,13 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: mockLoadStablecoinsCache,
 }));
 
-vi.mock("../../lib/safety-score-v9-peg-provenance", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/safety-score-v9-peg-provenance")>()),
+vi.mock("../../lib/safety-score-v9/peg-provenance", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/safety-score-v9/peg-provenance")>()),
   captureSafetyScoreV9PegProvenanceById: mockCapturePegProvenance,
   buildSafetyScoreV9PegProvenanceSeedCacheEntry: mockBuildV9PegProvenanceSeed,
 }));
 
-vi.mock("../../lib/safety-score-v9-transfer-materiality-observer", () => ({
+vi.mock("../../lib/safety-score-v9/transfer-materiality-observer", () => ({
   observeSafetyScoreV9TransferMaterialityGeneration: mockObserveTransferMateriality,
 }));
 
@@ -72,8 +72,8 @@ const {
   prepareSafetyScoreV9Input,
   V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS,
 } = await import("../prepare-safety-score-v9-input");
-const { buildNativeSafetyScoreV9Capture } = await import("../../lib/safety-score-v9-capture");
-const { NativeSafetyScoreV9InputSchema } = await import("../../lib/safety-score-v9-native-input");
+const { buildNativeSafetyScoreV9Capture } = await import("../../lib/safety-score-v9/capture");
+const { NativeSafetyScoreV9InputSchema } = await import("../../lib/safety-score-v9/native-input");
 
 type ProgressRow = {
   started_at: number;

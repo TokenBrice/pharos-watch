@@ -274,7 +274,7 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 
 ### Telegram
 
-**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-digest-outbox.ts`
+**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram/digest-outbox.ts`
 
 - Auth: bot token embedded in the request URL (no OAuth)
 - Parse mode: **HTML** — title is wrapped in `<b>`, link uses `<a href>`
@@ -298,7 +298,7 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 
 The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. It is the first text section after the separate map photo so the numbers stay adjacent to the image. A deterministic `Standing:` chronic-conditions line is rendered as its own expandable context blockquote (still capped at five entries). `New Cemetery Entries` and `Tracking Changes` are each rendered as expandable blockquotes; they remain in the same message, so no second-message cursor is needed. The private-recap CTA is emitted only when the resolved rollout policy is `public`, and links to `@PharosWatchBot` rather than suggesting that a channel can receive a private recap; a missing policy deliberately emits no CTA. Telegram persists the dated map URL, depicted date, and media delivery state with the immutable edition. Delivery sends the map first through `sendPhoto`, durably records `media_state=sent`, then resumes text from the existing chunk cursor. Retryable photo failures do not advance that cursor, and text retries never resend an accepted photo. Editions without a map remain text-only with `media_state=none`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
-Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
+Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram/digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
 
 - `New Cemetery Entries` for newly added cemetery rows
 - `Tracking Changes` for newly tracked coins, split into live tracked vs pre-launch

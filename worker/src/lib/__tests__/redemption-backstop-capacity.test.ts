@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop-capacity";
+import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const now = 1_780_000_000;

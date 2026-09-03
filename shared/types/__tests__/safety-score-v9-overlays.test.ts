@@ -10,7 +10,7 @@ import { SafetyScoreV9ReviewedTransferFileSchema } from "../safety-score-v9-tran
 // The one compiler fallback able to grade a fiat-cash/commodity-claim
 // assuranceAndReconciliation or tbill lossRecoveryDesign component `known`
 // rather than bounded-unknown is `assuranceFact()`
-// (worker/src/lib/safety-score-v9-extension-mechanism.ts), driven solely by
+// (worker/src/lib/safety-score-v9/extension-mechanism.ts), driven solely by
 // `proofOfReserves.latestReport`. `expandOverlayReview` gives any curated
 // component entry priority over that fallback, so a curated `unavailable`
 // row on that exact field silently demotes a known fact to bounded-unknown

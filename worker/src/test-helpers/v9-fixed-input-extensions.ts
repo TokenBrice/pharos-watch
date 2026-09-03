@@ -1,5 +1,5 @@
 import { computeReportCardsRegistryFingerprint } from "../lib/report-cards-fixed-input";
-import type { SafetyScoreV9FactSetExtensionV2 } from "../lib/safety-score-v9-fact-set";
+import type { SafetyScoreV9FactSetExtensionV2 } from "../lib/safety-score-v9/fact-set";
 import {
   V9_FIXTURE_OBSERVED_AT_SEC,
   V9_FIXTURE_CLOCK_SEC,

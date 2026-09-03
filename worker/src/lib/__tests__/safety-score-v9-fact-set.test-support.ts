@@ -1,14 +1,14 @@
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
-import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
+import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9/extension-transfer";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
+} from "../safety-score-v9/extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RouteReviews,
-} from "../safety-score-v9-extension-routes";
-import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/extension-routes";
+import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   makeV9FixedInput as exactFixedInput,

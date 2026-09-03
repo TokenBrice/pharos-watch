@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseReserveCompositionRow } from "../live-reserves-store-row-decoding";
+import { parseReserveCompositionRow } from "../live-reserves/store-row-decoding";
 
 function row(slices: unknown[]) {
   return {

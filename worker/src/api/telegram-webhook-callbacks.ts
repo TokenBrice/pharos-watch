@@ -27,7 +27,7 @@
  */
 
 import { answerCallbackQuery } from "../lib/telegram";
-import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
 import {
   CALLBACK_HANDLERS,
   type CallbackAction,

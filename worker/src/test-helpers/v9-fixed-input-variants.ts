@@ -4,7 +4,7 @@ import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput, normalizeFixedInput, type ReportCardsFixedInputDraft } from "../lib/report-cards-fixed-input";
 import { makeSupplyFullRedemption } from "../lib/__tests__/redemption-backstops-store.test-support";
-import { buildReviewedDeploymentRouteInventory, deriveReviewedDeploymentUnitPartition } from "../lib/safety-score-v9-supply-attribution-contract";
+import { buildReviewedDeploymentRouteInventory, deriveReviewedDeploymentUnitPartition } from "../lib/safety-score-v9/supply-attribution-contract";
 import { V9_FIXTURE_CLOCK_SEC, V9_FIXTURE_OBSERVED_AT_SEC, makeWmDeploymentObservations } from "./v9-fixed-input-observations";
 import { makeV9FixedInput, type V9FixedInput, v9ExitRouteObservation } from "./v9-fixed-input-core";
 

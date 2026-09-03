@@ -3,4 +3,4 @@ export {
   migrateTelegramChatId,
   prepareDeleteTelegramChatCacheStatements,
   unsubscribeAll,
-} from "../../lib/telegram-subscriber-lifecycle";
+} from "../../lib/telegram/subscriber-lifecycle";

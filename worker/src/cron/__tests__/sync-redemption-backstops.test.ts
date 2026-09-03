@@ -66,7 +66,7 @@ vi.mock("../../lib/dex-liquidity", () => ({
   loadDexLiquiditySnapshot: loadDexLiquiditySnapshotMock,
 }));
 
-vi.mock("../../lib/redemption-backstop-sources", () => ({
+vi.mock("../../lib/redemption-backstop/sources", () => ({
   buildFailedRedemptionBackstopEntry: buildFailedRedemptionBackstopEntryMock,
   buildRedemptionBackstopEntry: buildRedemptionBackstopEntryMock,
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
@@ -76,7 +76,7 @@ vi.mock("../../lib/redemption-backstops-store", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
 
-vi.mock("../../lib/live-reserves-store", () => ({
+vi.mock("../../lib/live-reserves/store", () => ({
   loadReserveSnapshotMetadataMap: loadReserveSnapshotMetadataMapMock,
 }));
 

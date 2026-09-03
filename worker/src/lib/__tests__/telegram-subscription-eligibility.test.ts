@@ -9,7 +9,7 @@ import {
 import {
   assertSubscribableCoin,
   isSubscribableCoin,
-} from "../telegram-subscription-eligibility";
+} from "../telegram/subscription-eligibility";
 
 describe("Telegram subscription eligibility", () => {
   it("allows active and pre-launch assets but rejects every inactive post-launch state", () => {

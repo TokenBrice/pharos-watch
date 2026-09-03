@@ -120,7 +120,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Bridge deployment materiality", stream: "BRDG",
     instructions: "Reconcile current chain-level circulating USD to reviewed deployment routes so selected, unknown, and unreviewed bridge supply shares are explicit. This usually needs both complete route metadata and a fresh chain-supply producer capture.",
     completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "stablecoin-identity-contracts",
-    likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
+    likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
     cautions: ["Do not add a manual supply override or multiply DefiLlama list-endpoint circulating USD by price."], ownerDomain: "control", defaultResolutionMode: "mixed-curation-and-runtime",
     reasonCodes: [
       "runtime-bridge-materiality-unavailable",
@@ -133,7 +133,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       controls: asset.controls,
     }),
     touchpoints: (source) =>
-      unique([risk(source), base(source), "worker/src/lib/safety-score-v9-extension-supply.ts"]),
+      unique([risk(source), base(source), "worker/src/lib/safety-score-v9/extension-supply.ts"]),
   },
   BRIDGE_ROUTE_REVIEW: {
     title: "Bridge route control review", stream: "BRDG",
@@ -159,7 +159,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Current chain supply evidence", stream: "SUPPLY",
     instructions: "Restore a current, score-eligible circulating-USD observation for the asset. Verify provider identity, price path, contracts, and chain coverage; enrich missing deployments or repair producer mapping when needed.",
     completionCriteria: "The exact fixed input contains current chain supply, the compiled supply status is known, and the chain-supply gapId is absent.", recommendedSkill: "stablecoin-runtime-price-marketcap-gate",
-    likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9-extension-supply.ts"],
+    likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9/extension-supply.ts"],
     cautions: ["Use getCirculatingRaw(); DefiLlama list circulating values are already USD-denominated.", "Do not add manual, on-chain, CMC, DEX, or other supply overrides."],
     ownerDomain: "evidence",
     defaultResolutionMode: "mixed-curation-and-runtime",
@@ -169,7 +169,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       unique([
         base(source),
         "worker/src/cron/snapshot-chain-supply.ts",
-        "worker/src/lib/safety-score-v9-extension-supply.ts",
+        "worker/src/lib/safety-score-v9/extension-supply.ts",
       ]),
   },
   DEPENDENCY_REVIEW: {
@@ -213,7 +213,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Exact DEX route coverage", stream: "EXIT",
     instructions: "Make every retained material DEX pool carry a score-eligible exact route observation: supported pool math, explicit output valuation, request/capacity curve, settlement facts, resource identity, and failure domains. Unsupported pool archetypes require producer capability, not a hand-entered estimate.",
     completionCriteria: "A fresh exact capture marks the retained DEX portfolio exact-complete and removes the incomplete-dex-route-coverage gapId.", recommendedSkill: null,
-    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9-extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
+    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
     reasonCodes: [
@@ -221,27 +221,27 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "unsupported-same-notional-route",
     ],
     context: exitContext,
-    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/lib/safety-score-v9-extension.ts"],
+    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/lib/safety-score-v9/extension.ts"],
   },
   EXIT_OUTPUT: {
     title: "Exit route output valuation", stream: "EXIT",
     instructions: "Identify the actual asset or basket delivered by the route and provide same-notional USD valuation. For documented redemption rails, add outputAssets to the matching redemption config; for DEX routes, repair producer token/output resolution.",
     completionCriteria: "The route output is explicit and valued in a fresh exact capture, and the route-specific unresolved-exit-output gapId is absent.", recommendedSkill: null,
-    likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/lib/safety-score-v9-extension.ts"], cautions: ["Only name an output that the route documentation or on-chain execution actually establishes."],
+    likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["Only name an output that the route documentation or on-chain execution actually establishes."],
     ownerDomain: "exit",
     defaultResolutionMode: "agent-curation",
     reasonCodes: ["unresolved-exit-output"],
     context: exitContext,
     touchpoints: (_source, context) =>
       typeof context === "object" && context !== null && "lane" in context && context.lane === "dex"
-        ? ["worker/src/lib/safety-score-v9-extension.ts"]
+        ? ["worker/src/lib/safety-score-v9/extension.ts"]
         : ["shared/lib/redemption-backstop-configs/"],
   },
   EXIT_RUNTIME_ROUTE: {
     title: "Runtime exit route evidence", stream: "EXIT",
     instructions: "Produce at least one current exact DEX, redemption, or retained route observation with comparable notional, capacity, cost, access, settlement, output valuation, and failure-domain evidence.",
     completionCriteria: "The exact fixed input contains a score-eligible route and a fresh replay removes the missing-runtime-route-evidence gapId.", recommendedSkill: null,
-    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9-extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
+    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
     reasonCodes: [
@@ -250,7 +250,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "missing-same-notional-route",
     ],
     context: exitContext,
-    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9-extension.ts"],
+    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
   },
   EXIT_SETTLEMENT_BOUND: {
     title: "Exit route settlement-bound proof", stream: "EXIT",
@@ -278,7 +278,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Mechanism risk component review", stream: "MECH",
     instructions: "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash, T-bill, and commodity-claim components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
     completionCriteria: "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.", recommendedSkill: "reserve-research",
-    likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric.", "Before curating fiat-cash assuranceAndReconciliation, commodity-claim assuranceAndReconciliation, or tbill lossRecoveryDesign as unavailable, check the asset's proofOfReserves.latestReport: when it is set, the compiler already grades that component known and a curated unavailable row silently overrides it to bounded-unknown. shared/types/__tests__/safety-score-v9-overlays.test.ts fails the build if this happens."],
+    likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric.", "Before curating fiat-cash assuranceAndReconciliation, commodity-claim assuranceAndReconciliation, or tbill lossRecoveryDesign as unavailable, check the asset's proofOfReserves.latestReport: when it is set, the compiler already grades that component known and a curated unavailable row silently overrides it to bounded-unknown. shared/types/__tests__/safety-score-v9-overlays.test.ts fails the build if this happens."],
     ownerDomain: "backing",
     defaultResolutionMode: "issuer-or-onchain-evidence",
     reasonCodes: ["bounded-mechanism-review"],
@@ -342,7 +342,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   PEG_INPUT: {
     title: "Current peg input", stream: "PEG",
     instructions: "Provide a resolvable peg reference and current peg observation with score, deviation, active-depeg state, tracking span, and failure-domain identity. Repair metadata/reference mapping or producer coverage as required; pure NAV assets need an explicit NAV disposition.",
-    completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9-extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
+    completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
     ownerDomain: "peg",
     defaultResolutionMode: "mixed-curation-and-runtime",
     reasonCodes: [
@@ -352,7 +352,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "missing-applicable-peg",
     ],
     context: (asset) => asset.peg,
-    touchpoints: (source) => unique([base(source), "worker/src/lib/safety-score-v9-extension.ts"]),
+    touchpoints: (source) => unique([base(source), "worker/src/lib/safety-score-v9/extension.ts"]),
   },
   RESERVE_COMPOSITION: {
     title: "Reserve composition envelope", stream: "RESV",

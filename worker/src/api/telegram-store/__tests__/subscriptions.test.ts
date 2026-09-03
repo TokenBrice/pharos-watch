@@ -7,7 +7,7 @@ import {
 import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../telegram-webhook-shared";
-import type { ResolvedCoin } from "../../../lib/telegram-alerts";
+import type { ResolvedCoin } from "../../../lib/telegram/alerts";
 
 const COIN: ResolvedCoin = {
   id: "usdc-circle",

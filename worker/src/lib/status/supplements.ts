@@ -31,7 +31,7 @@ import {
   resolveCloudflareD1StatusConfig,
   type CloudflareD1StatusBindings,
 } from "../env";
-import { loadFreshIndependentLiveReserveMap } from "../live-reserves-store";
+import { loadFreshIndependentLiveReserveMap } from "../live-reserves/store";
 import { validatePricingSourceFreshness } from "../pricing-source-freshness";
 import {
   hasUsableStablecoinsPayload,
@@ -49,7 +49,7 @@ import { loadYieldHealthSummary } from "./yield-health";
 import { logWorkerEvent } from "../structured-log";
 import { loadPublicationHealth } from "../publication-contract";
 import { loadProviderCircuitHealth } from "../provider-circuit-health";
-import { readTelegramPendingCapacity } from "../telegram-pending-capacity";
+import { readTelegramPendingCapacity } from "../telegram/pending-capacity";
 import { loadCanaryStatus } from "../canary-checks";
 import type { WorkerCanaryMode } from "../canary-checks";
 import type { StatusSupplements } from "./raw-snapshot";

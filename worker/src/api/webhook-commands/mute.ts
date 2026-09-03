@@ -1,5 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   buildMiniAppOnlyKeyboard,
   formatQuietHours,

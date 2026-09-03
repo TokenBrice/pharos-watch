@@ -9,12 +9,12 @@ import {
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
-} from "../safety-score-v9-extension-routes";
+} from "../safety-score-v9/extension-routes";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;

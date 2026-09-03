@@ -14,8 +14,8 @@ import {
   safetyScoreHistoryIdentityFromV2Row,
 } from "../lib/safety-score-history-v2";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
-import { loadSafetyScoreV9PublicationAttempt } from "../lib/safety-score-v9-publication-store";
-import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
+import { loadSafetyScoreV9PublicationAttempt } from "../lib/safety-score-v9/publication-store";
+import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { parseJson } from "../lib/json-parse";
 

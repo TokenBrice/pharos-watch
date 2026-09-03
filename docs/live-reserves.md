@@ -272,7 +272,7 @@ Per-coin operational state for the most recent attempt.
 
 Append-only source of all reserve-sync attempt payload metadata, including `ok`, `degraded`, `error`, and `skipped` outcomes with warnings, error message, and attempt-scoped metadata. Non-null attempt IDs are unique per coin and inserts are idempotent. The composition-history digest is computed from the successful snapshot payload while this table remains the durable source for warning/metadata payloads. The 4-hourly reserve cron prunes rows older than 30 days with the same frozen-coin and referenced-attempt preservation as the composition history.
 
-Freshness and consistency rules now live across the `worker/src/lib/live-reserves-store*.ts` helper family, with `worker/src/lib/live-reserves-store.ts` kept as the public facade:
+Freshness and consistency rules now live across the `worker/src/lib/live-reserves/store*.ts` helper family, with `worker/src/lib/live-reserves/store.ts` kept as the public facade:
 
 - `LIVE_RESERVE_FRESHNESS_SEC = 172800` (48 hours)
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at` and, when attempt IDs are stamped, `reserve_sync_state.last_success_attempt_id === reserve_composition.attempt_id`

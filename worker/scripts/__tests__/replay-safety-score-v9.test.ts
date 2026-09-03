@@ -7,8 +7,8 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9-extension";
-import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9-native-input";
+import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
+import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9/native-input";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import {
   buildReportCardsFixedInputCacheEntry,

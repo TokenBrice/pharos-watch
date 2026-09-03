@@ -3,7 +3,7 @@ import {
   formatDisambiguation,
   findInvalidDisambiguationToken,
   parseDisambiguationReply,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import {
   canActOnPendingOwner,
   SETUP_PENDING_ACTION_TYPE,

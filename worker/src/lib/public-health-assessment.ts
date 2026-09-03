@@ -35,7 +35,7 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
-import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9-publication-store";
+import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
 import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,

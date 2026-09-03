@@ -15,7 +15,7 @@ vi.mock("../../../cron/sync-kinesis-supply", () => ({
 vi.mock("../../../lib/collateral-drift", () => ({
   checkCollateralDrift: vi.fn(),
 }));
-vi.mock("../../../lib/live-reserves-store", () => ({
+vi.mock("../../../lib/live-reserves/store", () => ({
   getMaxSyncAge: vi.fn(),
   computeReserveCompositionOverview: vi.fn(),
 }));
@@ -41,8 +41,8 @@ import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
-import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
-import { emptyReserveCompositionOverview } from "../../../lib/live-reserves-store-shared";
+import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves/store";
+import { emptyReserveCompositionOverview } from "../../../lib/live-reserves/store-shared";
 import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-recovery-checkpoint.test-support";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";

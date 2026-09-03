@@ -14,7 +14,7 @@ import {
   cleanupStaleLiveReserveArtifacts,
   pruneLiveReserveHistory,
   type LiveReserveArtifactCleanupResult,
-} from "../lib/live-reserves-store";
+} from "../lib/live-reserves/store";
 import {
   CONFIGURED_COINS,
   CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,

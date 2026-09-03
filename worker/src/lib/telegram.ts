@@ -3,13 +3,13 @@ import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { logWorkerEventArgs } from "./structured-log";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
-import { escapeHtml } from "./telegram-html";
-import { logTelegramEvent } from "./telegram-log";
+import { escapeHtml } from "./telegram/html";
+import { logTelegramEvent } from "./telegram/log";
 import {
   classifyTelegramCaughtFailure,
   classifyTelegramResponseFailure,
   type TelegramTransportErrorClass,
-} from "./telegram-transport-errors";
+} from "./telegram/transport-errors";
 
 export interface TelegramCreds {
   botToken: string;
@@ -74,7 +74,7 @@ export async function postTelegramBotApi(
   });
 }
 
-export { escapeHtml } from "./telegram-html";
+export { escapeHtml } from "./telegram/html";
 
 /**
  * The digest is published in a channel, while personalized recaps are

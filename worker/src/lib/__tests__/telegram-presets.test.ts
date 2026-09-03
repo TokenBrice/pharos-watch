@@ -5,7 +5,7 @@ import {
   listTelegramPresets,
   resolveTelegramPresetAlias,
   resolveTelegramPresetTargets,
-} from "../telegram-presets";
+} from "../telegram/presets";
 
 function makeStablecoinsCacheValue(overrides: Record<string, number> = {}): string {
   return JSON.stringify({

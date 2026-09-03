@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { resolveReviewedReserveRows } from "../src/lib/safety-score-v9-extension";
+import { resolveReviewedReserveRows } from "../src/lib/safety-score-v9/extension";
 import {
   assertCliUsage,
   parseCliInteger,
