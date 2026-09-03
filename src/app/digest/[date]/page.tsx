@@ -15,6 +15,13 @@ import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
 import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { getDigestModelLabel } from "@/lib/digest-model-label";
+
+type DigestWithLlmMetadata = DigestContentEntry & {
+  llm?: {
+    servedModel?: string | null;
+  };
+};
 
 const DIGEST_RESEARCH_LINKS = [
   {
@@ -55,6 +62,7 @@ function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDat
 }
 
 function renderDigestDetail(digest: DigestContentEntry) {
+  const persistedMetadata = digest as DigestWithLlmMetadata;
   const formatted = formatDate(digest.date);
   const extendedParagraphs = splitDigestParagraphs(digest.extended);
   const isWeekly = digest.digestType === "weekly";
@@ -87,7 +95,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
             }),
           )}
       />
-      <EditorialMasthead date={formatted} editor="Claude Opus 4.8" />
+      <EditorialMasthead date={formatted} editor={getDigestModelLabel(persistedMetadata.llm?.servedModel)} />
       <div className="space-y-2">
         <p className="pharos-kicker">{editionKicker}</p>
         <h1
