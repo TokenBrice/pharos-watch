@@ -35,6 +35,24 @@ describe("critical ownership derivation", () => {
     ]);
   });
 
+  it("maps quoted dynamic imports without treating expressions as paths", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-ownership-dynamic-"));
+    temporaryDirectories.push(cwd);
+    mkdirSync(join(cwd, "src"), { recursive: true });
+    writeFileSync(join(cwd, "src/target.ts"), "export const target = 1;\n");
+    writeFileSync(
+      join(cwd, "src/dynamic.test.ts"),
+      'const loaded = await import("./target");\nvoid loaded;\n',
+    );
+
+    const ownership = deriveCriticalOwnership({
+      cwd,
+      testFiles: ["src/dynamic.test.ts"],
+    });
+
+    expect(ownership.get("src/target.ts")).toEqual(["src/dynamic.test.ts"]);
+  });
+
   it("reports an enrolled source without an owner unless it has a cutover waiver", () => {
     expect(findCriticalOwnershipGaps(
       ["worker/src/lib/new-critical-source.ts"],

@@ -15,6 +15,7 @@ const TEST_FILE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".ts
 const RESOLVABLE_SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"] as const;
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 const IMPORT_KEYWORD_PATTERN = /\bimport\b/g;
+const DYNAMIC_IMPORT_PATTERN = /\bimport\s*\(/g;
 const FROM_SPECIFIER_PATTERN = /from\s+["']([^"']+)["']/;
 const SIDE_EFFECT_IMPORT_PATTERN = /^\s*["']([^"']+)["']/;
 const VI_MOCK_PATTERN = /\bvi\.mock\s*\(\s*["']([^"']+)["']/g;
@@ -94,9 +95,9 @@ export function collectCriticalOwnershipTestFiles(cwd = process.cwd()): string[]
 }
 
 /**
- * Resolve the repository module named by a test's static import or vi.mock.
- * Package imports are intentionally ignored; only paths that resolve inside
- * this checkout can own a critical source.
+ * Resolve the repository module named by a test's static or dynamic import, or
+ * vi.mock call. Package imports are intentionally ignored; only paths that
+ * resolve inside this checkout can own a critical source.
  */
 export function resolveCriticalImport(
   specifier: string,
@@ -134,7 +135,7 @@ export function resolveCriticalImport(
   return null;
 }
 
-function collectStaticImportSpecifiers(source: string): string[] {
+function collectImportSpecifiers(source: string): string[] {
   const specifiers = new Set<string>();
   for (const match of source.matchAll(IMPORT_KEYWORD_PATTERN)) {
     const start = (match.index ?? 0) + match[0].length;
@@ -144,6 +145,13 @@ function collectStaticImportSpecifiers(source: string): string[] {
     const sideEffectMatch = SIDE_EFFECT_IMPORT_PATTERN.exec(statement);
     if (fromMatch) specifiers.add(fromMatch[1]);
     else if (sideEffectMatch) specifiers.add(sideEffectMatch[1]);
+  }
+  for (const match of source.matchAll(DYNAMIC_IMPORT_PATTERN)) {
+    const start = (match.index ?? 0) + match[0].length;
+    const closingParen = source.indexOf(")", start);
+    if (closingParen < 0) continue;
+    const sideEffectMatch = SIDE_EFFECT_IMPORT_PATTERN.exec(source.slice(start, closingParen));
+    if (sideEffectMatch) specifiers.add(sideEffectMatch[1]);
   }
   for (const match of source.matchAll(VI_MOCK_PATTERN)) specifiers.add(match[1]);
   return [...specifiers];
@@ -164,7 +172,7 @@ function readImportStatement(source: string, start: number): string {
   return newline >= 0 && newline < limit ? source.slice(start, newline) : segment;
 }
 
-/** Derive source → importing test files from the current test import graph. */
+/** Derive source → importing test files from each test's static or dynamic imports. */
 export function deriveCriticalOwnership({
   cwd = process.cwd(),
   testFiles = collectCriticalOwnershipTestFiles(cwd),
@@ -177,9 +185,8 @@ export function deriveCriticalOwnership({
   const ownership = new Map<string, Set<string>>();
   for (const inputTestFile of testFiles) {
     const testFile = normalizeOwnershipPath(isAbsolute(inputTestFile) ? relative(cwd, inputTestFile) : inputTestFile);
-    const absoluteTestFile = resolve(cwd, testFile);
-    const source = fsImpl.readFileSync(absoluteTestFile, "utf8");
-    for (const specifier of collectStaticImportSpecifiers(source)) {
+    const source = fsImpl.readFileSync(resolve(cwd, testFile), "utf8");
+    for (const specifier of collectImportSpecifiers(source)) {
       const resolved = resolveCriticalImport(specifier, testFile, cwd, fsImpl);
       if (!resolved || (sourceFilter && !sourceFilter.has(resolved))) continue;
       const owners = ownership.get(resolved) ?? new Set<string>();

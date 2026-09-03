@@ -118,7 +118,9 @@ export function buildCriticalCoverageArgs(
 ): string[] {
   const selectedSources = selectCriticalCoverageFiles(options);
   const ownership = options.ownership ?? generatedCriticalOwnership;
-  const selectedTests = collectOwningTests(selectedSources, ownership);
+  // Coverage must exercise every derived owner test even when the shard scopes
+  // remapping to a touched source; transitive imports can cover that source.
+  const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
   return [
     "run",
     ...buildCriticalCoverageOptions(selectedSources),

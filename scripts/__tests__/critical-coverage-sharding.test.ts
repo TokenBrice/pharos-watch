@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import {
+  CRITICAL_TEST_FILES,
   buildCriticalCoverageArgs,
   buildCriticalCoverageMergeArgs,
 } from "../lib/critical-test-files.mts";
@@ -20,12 +21,12 @@ describe("critical coverage sharding", () => {
     expect(args.some((arg) => arg.endsWith(".test.ts"))).toBe(true);
   });
 
-  it("limits a shard to sources touched by the supplied change set", () => {
+  it("limits coverage remapping to touched sources but retains the full owner suite", () => {
     const args = buildCriticalCoverageArgs([], { changedFiles: [CRITICAL_FILES[0]] });
 
     expect(args.filter((arg) => arg.startsWith("--coverage.include="))).toHaveLength(1);
     expect(args).toContain(`--coverage.include=${CRITICAL_FILES[0]}`);
-    expect(args.some((arg) => arg.endsWith(".test.ts"))).toBe(true);
+    expect(args.filter((arg) => CRITICAL_TEST_FILES.includes(arg))).toEqual(CRITICAL_TEST_FILES);
   });
 
   it("merges blobs with the same coverage scope before the ratchet runs", () => {
