@@ -17,6 +17,7 @@ Write `StablecoinAiSummary` entries in `data/ai-summaries.json`; `shared/types/e
 - Never call addresses users/holders without a defined method, compare unlike financing and token-supply quantities, or invent certainty for missing evidence.
 - Use current pillar/grade vocabulary only after reading `shared/lib/methodology-versions/current-version.json`. Missing reviewed evidence is NR, not safety.
 - AI drafts set actual `authoredBy`, `model`, `updatedAt`, and `factsAsOf`; only a named reviewer may add `reviewedBy`/`reviewedAt` after approving the exact text.
+- Live dashboard values the prose must cite (overall/pillar/peg grade, score, circulating USD) go in as registered claim tokens, never literals: put exactly one `{{grade}}`, `{{score}}`, or `{{supplyUsd}}` placeholder in `text` and register it in `claimTokens` with a `source` from `AI_SUMMARY_CLAIM_REGISTRY` (`shared/types/editorial.ts`) and a `factsAsOf` day. The detail page resolves tokens from the same live data the hero renders and prints `N/A` when the value is unavailable (including the build-time static fallback). Only active coins carry tokens; pre-launch summaries render literally.
 
 ## Queue And Workflow
 

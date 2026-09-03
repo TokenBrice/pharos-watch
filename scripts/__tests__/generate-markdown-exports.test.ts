@@ -107,6 +107,19 @@ describe("stablecoin markdown", () => {
     expect(md).not.toMatch(/undefined/);
   });
 
+  it("prints the unresolved fallback for registered claim tokens instead of raw placeholders", () => {
+    const md = renderStablecoinDetail("xsgd-straitsx", {
+      "xsgd-straitsx": {
+        title: "Summary",
+        text: "Holds a {{grade}} grade.",
+        updatedAt: "2026-09-01",
+        claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-09-01" }],
+      },
+    });
+    expect(md).toContain("Holds a N/A grade.");
+    expect(md).not.toContain("{{grade}}");
+  });
+
   it("iterates one route per tracked stablecoin", () => {
     expect(Array.from(iterateStablecoinRoutes())).toHaveLength(TRACKED_STABLECOINS.length);
   });

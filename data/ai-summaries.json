@@ -293,11 +293,19 @@
   },
   "fdusd-first-digital": {
     "title": "Binance's Current Favorite",
-    "text": "FDUSD is a BVI-issued dollar stablecoin backed by short-dated {{term:treasury}}T-bills{{/term}} and cash, custodied by First Digital Trust, and the custodian risk stopped being abstract in April 2025. First Digital USD rose to prominence as Binance's preferred stablecoin after BUSD's regulatory demise, and the lineage worry crystallized when Justin Sun publicly claimed the {{term:custody}}custodian{{/term}} was insolvent: FDUSD broke to $0.87 within hours before recovering, and First Digital answered with a Hong Kong defamation suit seeking retractions and damages: a peg defended in court filings as much as in redemption windows. The reserves themselves remain conventional: overwhelmingly short-dated T-bills and cash, {{term:attestation}}attested{{/term}} monthly, most recently by Hong Kong's AOGB for end-June 2026, but the C- overall grade shows where Pharos sees the weakness: backing and exit both sit in D territory, less about what is in the reserves than who vouches for and custodies them, while the peg holds A-grade tightness and the depeg history reads as brief episodes rather than chronic drift. Deployed across six chains including Sui, TON, and Solana, the distribution still follows Binance's ecosystem preferences more than organic DeFi demand. FDUSD's fate remains a single-dependency story: Binance's endorsement made it, one custodian tweet-storm nearly unmade it, and Binance's pivot to another favorite could finish the job.",
+    "text": "FDUSD is a BVI-issued dollar stablecoin backed by short-dated {{term:treasury}}T-bills{{/term}} and cash, custodied by First Digital Trust, and the custodian risk stopped being abstract in April 2025. First Digital USD rose to prominence as Binance's preferred stablecoin after BUSD's regulatory demise, and the lineage worry crystallized when Justin Sun publicly claimed the {{term:custody}}custodian{{/term}} was insolvent: FDUSD broke to $0.87 within hours before recovering, and First Digital answered with a Hong Kong defamation suit seeking retractions and damages: a peg defended in court filings as much as in redemption windows. The reserves themselves remain conventional: overwhelmingly short-dated T-bills and cash, {{term:attestation}}attested{{/term}} monthly, most recently by Hong Kong's AOGB for end-June 2026, but the {{grade}} overall grade shows where Pharos sees the weakness: backing and exit both sit in D territory, less about what is in the reserves than who vouches for and custodies them, while the peg holds A-grade tightness and the depeg history reads as brief episodes rather than chronic drift. Deployed across six chains including Sui, TON, and Solana, the distribution still follows Binance's ecosystem preferences more than organic DeFi demand. FDUSD's fate remains a single-dependency story: Binance's endorsement made it, one custodian tweet-storm nearly unmade it, and Binance's pivot to another favorite could finish the job.",
     "updatedAt": "2026-08-11",
     "authoredBy": "ai",
     "model": "claude-fable-5",
     "factsAsOf": "2026-08-11",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-09-01"
+      }
+    ],
     "sources": [
       {
         "label": "CoinDesk: First Digital Trust serves Justin Sun with defamation claim",
@@ -335,11 +343,19 @@
   },
   "usdy-ondo-finance": {
     "title": "Clean Treasuries, Multi-Day Exit",
-    "text": "Ondo's USDY carries a C- safety grade, and the spread of its pillars explains the discount better than any headline figure. The backing is about as clean as tokenized {{term:treasury}}Treasury{{/term}} exposure gets on paper. It includes short-term U.S. Treasuries, iShares short Treasury ETF shares, and bank demand deposits, with daily NAV {{term:attestation}}attestation{{/term}} from Ankura Trust. Yet the backing pillar only manages a C-, because v9 grades the mechanism wrapped around the assets, not just their quality on paper. The exit pillar grades D on weak on-chain liquidity and a multi-day {{term:redemption}}redemption{{/term}} window through the BVI-domiciled, issuer-controlled structure, despite a footprint spanning roughly a dozen networks from Ethereum and Solana through Cosmos chains like Noble and Mantra, while economic control at B- is, a little ironically, the strongest thing on the card. The peg itself stays unremarkable, with no depeg events on record and nothing flagging stress. That is the point of a {{term:yield-bearing}}yield-bearing{{/term}} NAV token that accrues value rather than chasing a hard dollar. USDY remains a clean way to hold American government debt for the non-U.S. investors that American regulators won't let buy it directly; the grade simply prices in that you're trusting Ondo's plumbing, not a market, to get your money back.",
+    "text": "Ondo's USDY carries a {{grade}} safety grade, and the spread of its pillars explains the discount better than any headline figure. The backing is about as clean as tokenized {{term:treasury}}Treasury{{/term}} exposure gets on paper. It includes short-term U.S. Treasuries, iShares short Treasury ETF shares, and bank demand deposits, with daily NAV {{term:attestation}}attestation{{/term}} from Ankura Trust. Yet the backing pillar only manages a C-, because v9 grades the mechanism wrapped around the assets, not just their quality on paper. The exit pillar grades D on weak on-chain liquidity and a multi-day {{term:redemption}}redemption{{/term}} window through the BVI-domiciled, issuer-controlled structure, despite a footprint spanning roughly a dozen networks from Ethereum and Solana through Cosmos chains like Noble and Mantra, while economic control at B- is, a little ironically, the strongest thing on the card. The peg itself stays unremarkable, with no depeg events on record and nothing flagging stress. That is the point of a {{term:yield-bearing}}yield-bearing{{/term}} NAV token that accrues value rather than chasing a hard dollar. USDY remains a clean way to hold American government debt for the non-U.S. investors that American regulators won't let buy it directly; the grade simply prices in that you're trusting Ondo's plumbing, not a market, to get your money back.",
     "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "factsAsOf": "2026-08-05"
+    "factsAsOf": "2026-08-05",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-09-01"
+      }
+    ]
   },
   "cadc-cad-coin": {
     "title": "Backed by Scanned Bank Letters",
@@ -833,11 +849,19 @@
   },
   "eurcv-societe-generale-forge": {
     "title": "SocGen’s Blockchain Experiment",
-    "text": "EURCV is SG-FORGE's MiCA EUR stablecoin, with reserves held in EUR cash at SocGen itself and institutional custody constrained by the concentration cap. EUR CoinVertible is issued by SG-FORGE, the digital asset arm of a systemically important European bank, with reserves held 100% in euro cash at Société Générale. That institutional-grade {{term:custody}}custody{{/term}} earns a solid B on the backing pillar while the exit pillar now grades at the very top of the scale. The C+ overall grade is a story about concentration rather than quality: the score sits under a binding critical-dependency cap because reviewed reserve paths share a single upgrade-control key: v9's way of saying that one Ethereum contract admin stands between EURCV and its collateral. The DEWS stress reading is among the lowest on the entire dashboard, suggesting an operational serenity most euro stablecoins cannot claim. Deployed across Ethereum, XRPL, Stellar, and Solana with MiCA EMI licensing from France's ACPR, whether EURCV is the future of tokenized money or a corporate innovation lab's pet project depends on whether SocGen commits distribution resources that match its regulatory credentials. Direct 1:1 {{term:redemption}}redemption{{/term}} runs through SG-FORGE.",
+    "text": "EURCV is SG-FORGE's MiCA EUR stablecoin, with reserves held in EUR cash at SocGen itself and institutional custody constrained by the concentration cap. EUR CoinVertible is issued by SG-FORGE, the digital asset arm of a systemically important European bank, with reserves held 100% in euro cash at Société Générale. That institutional-grade {{term:custody}}custody{{/term}} earns a solid B on the backing pillar while the exit pillar now grades at the very top of the scale. The {{grade}} overall grade is a story about concentration rather than quality: the score sits under a binding critical-dependency cap because reviewed reserve paths share a single upgrade-control key: v9's way of saying that one Ethereum contract admin stands between EURCV and its collateral. The DEWS stress reading is among the lowest on the entire dashboard, suggesting an operational serenity most euro stablecoins cannot claim. Deployed across Ethereum, XRPL, Stellar, and Solana with MiCA EMI licensing from France's ACPR, whether EURCV is the future of tokenized money or a corporate innovation lab's pet project depends on whether SocGen commits distribution resources that match its regulatory credentials. Direct 1:1 {{term:redemption}}redemption{{/term}} runs through SG-FORGE.",
     "updatedAt": "2026-08-11",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "factsAsOf": "2026-08-11"
+    "factsAsOf": "2026-08-11",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-09-01"
+      }
+    ]
   },
   "yusd-aegis": {
     "title": "Live Proof, Issuer-Controlled Exit",
@@ -1115,11 +1139,19 @@
   },
   "usdu-usdu-finance": {
     "title": "Undercollateralized by Design",
-    "text": "USDU Finance was refreshingly honest about what it was: an intentionally undercollateralized stablecoin at roughly 40% backing, minted through DAO-approved adapters connected to Curve, TermMax, and Morpho vault positions, designed explicitly for professional market participants who could price the risk. Apparently they priced it. Supply has since been all but wound down in a sharp, near-total contraction, and the issuer's transparency endpoint now reports backing roughly equal to the little that remains outstanding. The D safety grade reflects v9's refusal to grade on a curve: a nearly empty book is easy to cover one-for-one, but an economic-control pillar with effectively unbounded mint authority and no applicable peg or supply floor keeps the arithmetic from flattering anyone. The modular adapter architecture was genuinely interesting engineering: dynamic Curve liquidity management, fixed-rate TermMax lending, and Morpho vault integration. Building sophisticated infrastructure around a product that deliberately skipped the {{term:overcollateralization}}overcollateralization{{/term}} step is the kind of experiment that works until it doesn't. USDU's distinction is ending in the rare exit lane: wound down in orderly fashion before the market could write the depeg headline.",
+    "text": "USDU Finance was refreshingly honest about what it was: an intentionally undercollateralized stablecoin at roughly 40% backing, minted through DAO-approved adapters connected to Curve, TermMax, and Morpho vault positions, designed explicitly for professional market participants who could price the risk. Apparently they priced it. Supply has since been all but wound down in a sharp, near-total contraction, and the issuer's transparency endpoint now reports backing roughly equal to the little that remains outstanding. The {{grade}} safety grade reflects v9's refusal to grade on a curve: a nearly empty book is easy to cover one-for-one, but an economic-control pillar with effectively unbounded mint authority and no applicable peg or supply floor keeps the arithmetic from flattering anyone. The modular adapter architecture was genuinely interesting engineering: dynamic Curve liquidity management, fixed-rate TermMax lending, and Morpho vault integration. Building sophisticated infrastructure around a product that deliberately skipped the {{term:overcollateralization}}overcollateralization{{/term}} step is the kind of experiment that works until it doesn't. USDU's distinction is ending in the rare exit lane: wound down in orderly fashion before the market could write the depeg headline.",
     "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "factsAsOf": "2026-08-05"
+    "factsAsOf": "2026-08-05",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-09-01"
+      }
+    ]
   },
   "uty-xsy": {
     "title": "Pristine Peg, Padlocked Exit",
@@ -1207,11 +1239,19 @@
   },
   "musd-metamask": {
     "title": "Distribution as Moat",
-    "text": "MetaMask mUSD is what happens when crypto's default self-custody wallet decides to vertically integrate. It is issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The C safety grade is a split decision: a solid B- backing pillar and near-flawless peg behavior that rarely leaves the calm end of the stress scale, dragged down by an exit pillar that grades D. The secondary market hasn't caught up with primary-market confidence, and DEX liquidity stays spread wide and shallow. The reserve composition reads like a compliance team's wishlist, but a modest tally of brief depeg blips, including a sharp positive spike, shows that arbitrage works in theory while depth stays thin in practice. The funnel switched on at the end of June: MetaMask's Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert wallet distribution into float. The moat narrative is still more aspiration than balance sheet, but the infrastructure to realize it now exists.",
+    "text": "MetaMask mUSD is what happens when crypto's default self-custody wallet decides to vertically integrate. It is issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The C safety grade is a split decision: a solid {{grade}} backing pillar and near-flawless peg behavior that rarely leaves the calm end of the stress scale, dragged down by an exit pillar that grades D. The secondary market hasn't caught up with primary-market confidence, and DEX liquidity stays spread wide and shallow. The reserve composition reads like a compliance team's wishlist, but a modest tally of brief depeg blips, including a sharp positive spike, shows that arbitrage works in theory while depth stays thin in practice. The funnel switched on at the end of June: MetaMask's Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert wallet distribution into float. The moat narrative is still more aspiration than balance sheet, but the infrastructure to realize it now exists.",
     "updatedAt": "2026-08-11",
     "authoredBy": "ai",
     "model": "claude-fable-5",
     "factsAsOf": "2026-08-11",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.pillars.backing.grade",
+        "factsAsOf": "2026-09-01"
+      }
+    ],
     "sources": [
       {
         "label": "MetaMask: Introducing Money Account",
@@ -1731,11 +1771,19 @@
   },
   "dusd-dtrinity": {
     "title": "The Post-Exploit Bet on Frax",
-    "text": "dUSD is dTRINITY's reserve-backed dollar with Curve AMOs; post-exploit trust rebuild on a Frax-heavy reserve. The March 17 exploit hit dTRINITY at the worst possible moment: a protocol with genuinely novel economics (subsidized borrowing funded by reserve {{term:yield-bearing}}yield{{/term}}) now carries a danger notice that overshadows everything else on the page. Supply has contracted to the low single-digit millions, Sonic deployment is paused, and the F overall grade reflects failures in the backing pillar, where no current reserve composition is on file, and economic control. The reserve story tells the dependency tale: heavy sfrxUSD and Curve {{term:amo}}AMO{{/term}} positions mean dUSD is overwhelmingly a bet on Frax infrastructure, with chain-isolated reserves that at least prevent cross-chain contagion. Stress monitoring sits at the calm end of the scale, suggesting the acute crisis has stabilized, and the {{term:redemption}}redemption{{/term}} backstop, which anchors the one pillar still earning a passing mark, is doing most of the peg-defense work. An elegant flywheel that proved fragile under pressure: the borrower subsidy model deserves a second chance, but this protocol needs to earn it.",
+    "text": "dUSD is dTRINITY's reserve-backed dollar with Curve AMOs; post-exploit trust rebuild on a Frax-heavy reserve. The March 17 exploit hit dTRINITY at the worst possible moment: a protocol with genuinely novel economics (subsidized borrowing funded by reserve {{term:yield-bearing}}yield{{/term}}) now carries a danger notice that overshadows everything else on the page. Supply has contracted to the low single-digit millions, Sonic deployment is paused, and the {{grade}} overall grade reflects failures in the backing pillar, where no current reserve composition is on file, and economic control. The reserve story tells the dependency tale: heavy sfrxUSD and Curve {{term:amo}}AMO{{/term}} positions mean dUSD is overwhelmingly a bet on Frax infrastructure, with chain-isolated reserves that at least prevent cross-chain contagion. Stress monitoring sits at the calm end of the scale, suggesting the acute crisis has stabilized, and the {{term:redemption}}redemption{{/term}} backstop, which anchors the one pillar still earning a passing mark, is doing most of the peg-defense work. An elegant flywheel that proved fragile under pressure: the borrower subsidy model deserves a second chance, but this protocol needs to earn it.",
     "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "factsAsOf": "2026-08-05"
+    "factsAsOf": "2026-08-05",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-09-01"
+      }
+    ]
   },
   "sdusd-dtrinity": {
     "title": "The dUSD Lender Receipt",

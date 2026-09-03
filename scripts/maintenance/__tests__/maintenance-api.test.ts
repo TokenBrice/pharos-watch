@@ -9,6 +9,7 @@ import type {
 import {
   buildCurrentMap,
   extractFindings,
+  extractSummaryFindings,
   type Current,
 } from "../build-ai-summary-staleness-candidates";
 import { buildMaintenanceApiRequest } from "../../lib/maintenance-api";
@@ -151,5 +152,52 @@ describe("AI summary V9 current-value projection", () => {
     ).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: "holder-address-scope" }),
     ]));
+  });
+
+  it("auto-closes tokenised value drift but queues source-registration changes", () => {
+    const current: Current = {
+      name: "Test Coin",
+      symbol: "TEST",
+      overallGrade: "B+",
+      overallScore: 75,
+      pegGrade: null,
+      pegScore: null,
+      backingGrade: null,
+      backingScore: null,
+      exitGrade: null,
+      exitScore: null,
+      controlGrade: null,
+      controlScore: null,
+      dewsBand: null,
+      dewsScore: null,
+      depegCount: null,
+    };
+    const tokenised = {
+      text: "The current safety grade is {{grade}}.",
+      claimTokens: [{
+        token: "grade" as const,
+        placeholder: "{{grade}}" as const,
+        source: "report-card.grade" as const,
+        factsAsOf: "2026-09-01",
+      }],
+    };
+
+    expect(extractSummaryFindings(tokenised, current)).toEqual([]);
+    expect(extractSummaryFindings({
+      ...tokenised,
+      claimTokens: [{
+        ...tokenised.claimTokens[0],
+        source: "stablecoin.circulating-usd" as unknown as "report-card.grade",
+      }],
+    }, current)).toEqual([
+      expect.objectContaining({ kind: "claim-token-evidence", claimed: "wrong-registration" }),
+      expect.objectContaining({ kind: "claim-token-evidence", claimed: "unregistered-placeholder" }),
+    ]);
+    expect(extractSummaryFindings({
+      ...tokenised,
+      text: "The current safety grade is {{grade}}, but dependency risk grade of D remains.",
+    }, current)).toEqual([
+      expect.objectContaining({ kind: "legacy-dependency-grade" }),
+    ]);
   });
 });

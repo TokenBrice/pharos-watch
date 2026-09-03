@@ -30,8 +30,9 @@ import { buildMechanismCollateralizationView } from "@/lib/mechanism-collaterali
 import { buildMechanismReviewView } from "@/lib/mechanism-review";
 import { buildTransferReviewView } from "@/lib/transfer-review";
 import type { StablecoinDetailSnapshot } from "@/lib/api";
+import type { StablecoinAiSummariesById } from "@shared/types";
 
-const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
+const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 
 function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
   try {

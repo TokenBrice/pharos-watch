@@ -4,8 +4,13 @@ import { AiSummaryProse } from "@/components/ai-summary-prose";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
-import type { StablecoinAiSummary } from "@shared/types";
+import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types";
+import { resolveAiSummaryClaims } from "@shared/lib/ai-summary-claims";
 import { formatLongDate } from "@shared/lib/format";
+
+export type AiSummaryProps = StablecoinAiSummary & {
+  claimValues?: AiSummaryClaimValues;
+};
 
 export function AiSummary({
   title,
@@ -17,10 +22,16 @@ export function AiSummary({
   reviewedAt,
   factsAsOf,
   sources,
-}: StablecoinAiSummary) {
+  claimTokens,
+  claimValues,
+}: AiSummaryProps) {
   const isoDate = updatedAt;
   const dateline = formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
   const disclosure = buildAiDisclosureLine({ authoredBy, model, reviewedBy, reviewedAt, factsAsOf });
+  const resolved = resolveAiSummaryClaims(text, claimTokens, claimValues);
+  const claimsDateline = resolved.factsAsOf
+    .map((date) => formatLongDate(new Date(`${date}T00:00:00Z`), { utc: true }))
+    .join(", ");
 
   return (
     <Card>
@@ -28,9 +39,14 @@ export function AiSummary({
         <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent>
-        <AiSummaryProse textLength={text.length}>
-          <TermText text={text} />
+        <AiSummaryProse textLength={resolved.text.length}>
+          <TermText text={resolved.text} />
         </AiSummaryProse>
+        {claimsDateline ? (
+          <p className="mt-3 inline-flex rounded-full border border-border/60 bg-muted/30 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            Claims as of {claimsDateline}
+          </p>
+        ) : null}
         {sources?.length ? (
           <div className="mt-4 border-t border-border/40 pt-3">
             <p className="font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
