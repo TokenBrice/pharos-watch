@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import * as React from "react";
 import satori, { init as initSatori } from "satori/standalone";
 import yogaWasm from "satori/yoga.wasm";
@@ -20,7 +20,6 @@ import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -360,7 +359,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     return ogDataNotYetAvailable();
   }
 
-  const { peggedAssets, fxFallbackRates } = stablecoinsPayload.payload;
+  const { peggedAssets } = stablecoinsPayload.payload;
   const coin = peggedAssets.find((a) => a.id === id);
   if (!coin) {
     return ogErrorResponse("Stablecoin not found in cache", 404);
@@ -371,11 +370,9 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     ? safetySource.scores[id] ?? null
     : null;
 
-  // Cache-first: only pegScore is needed here, and the direct compute
-  // re-scans ~21K depeg_events rows per render. The cache is published every
-  // 15 minutes by the report-cards pass. The published cache is nav-inclusive
-  // (it also serves peg-summary) while the fallback compute excludes nav
-  // tokens, so force null for nav tokens to keep both branches in agreement.
+  // Cache-first: only pegScore is needed here, and a direct compute would
+  // re-scan ~21K depeg_events rows per render. If the cache is unavailable,
+  // keep the rest of the card available while omitting peg analytics.
   let pegScore: number | null = null;
   const pegAnalyticsCache = await loadPegAnalyticsCache(db).catch(() => null);
   if (pegAnalyticsCache && pegAnalyticsCache.kind === "ok") {
@@ -383,17 +380,14 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       ? null
       : pegAnalyticsCache.pegDataById.get(id)?.pegScore ?? null;
   } else {
-    const methodologyAsOf =
-      typeof stablecoinsPayload.updatedAt === "number"
-        ? stablecoinsPayload.updatedAt
-        : Math.floor(Date.now() / 1000);
-    const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
-      peggedAssets,
-      fxFallbackRates,
-      methodologyAsOf,
-      includeNavTokens: false,
+    logWorkerEvent({
+      scope: "api",
+      level: "warn",
+      event: "og.peg_cache_miss",
+      route: "/api/og/stablecoin",
+      message: "Peg analytics cache unavailable; rendering degraded card",
+      metadata: { stablecoinId: id },
     });
-    pegScore = pegAnalytics.pegDataById.get(id)?.pegScore ?? null;
   }
   const liq = dexLiqMap[id];
   const variantLabel = meta?.variantKind ? getVariantDisplay(meta.variantKind).shortLabel : null;

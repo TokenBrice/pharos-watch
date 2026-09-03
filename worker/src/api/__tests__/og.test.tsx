@@ -202,9 +202,48 @@ describe("stablecoin OG card data", () => {
       ]);
 
       const data = await renderedCardData(db, "/api/og/stablecoin/fpi-frax");
-      // The cache carries 87 (nav-inclusive for peg-summary), but the OG
-      // fallback compute excludes nav tokens; both branches must render "—".
+      // The cache carries 87 (nav-inclusive for peg-summary), but OG cards omit
+      // nav-token peg stats and therefore still render "—".
       expect(data.pegScore).toBeNull();
+    });
+
+    it("renders a degraded card and skips the peg analytics event scan on cache miss", async () => {
+      const stablecoinsValue = JSON.stringify({
+        peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
+      });
+      const db = mockD1([
+        {
+          match: "cache",
+          rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        },
+        { match: "dex_liquidity", rows: [] },
+        { match: "stress_signals", rows: [] },
+        { match: "supply_history", rows: [] },
+        { match: "depeg_events", rows: [] },
+        { match: "mint_burn_hourly", rows: [] },
+      ]);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Content-Type")).toBe("image/png");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
+        data: StablecoinCardData;
+      }>;
+      expect(element.type).toBe(StablecoinCard);
+      expect(element.props.data.pegScore).toBeNull();
+      expect(
+        db.getHistory().filter((entry) => entry.sql.includes("pharos:peg-analytics:recent-depeg-events")),
+      ).toHaveLength(0);
+
+      const logRecord = JSON.parse(String(warnSpy.mock.calls[0]?.[0])) as Record<string, unknown>;
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(logRecord).toMatchObject({
+        event: "og.peg_cache_miss",
+        metadata: { stablecoinId: "usdt-tether" },
+      });
     });
 
     it("serves the cached pegScore for non-nav coins", async () => {
