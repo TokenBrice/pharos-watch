@@ -324,6 +324,16 @@ async function syncDexMeasuredExecutionLane(
   const scoreBearingRoutes = lane === "active"
     ? await loadPublishedScoreBearingDexRoutes(db, signal)
     : null;
+  if (lane === "active" && scoreBearingRoutes === null) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "score-bearing-route-load-failed",
+      },
+      productivity: { productive: false, reason: "score-bearing-route-load-failed" },
+    });
+  }
   const scoreBearingTargetIds = lane === "active"
     ? scoreBearingRoutes
       ? collectScoreBearingTargetIds(targetGeneration.targets, scoreBearingRoutes)

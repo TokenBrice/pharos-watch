@@ -108,4 +108,19 @@ describe("depeg-resolver scheduling", () => {
       }),
     ]);
   });
+
+  it("admits a run with 45 seconds remaining in the fenced slot", async () => {
+    vi.setSystemTime((SLOT_STARTED_AT + 75) * 1_000);
+    const scheduledRuntime = runtime();
+
+    const summary = await runDepegResolverSlot(scheduledRuntime);
+
+    expect(mocks.computeDepegResolver).toHaveBeenCalledOnce();
+    expect(summary.jobs).toEqual([
+      expect.objectContaining({
+        job: "compute-depeg-resolver",
+        outcome: "ok",
+      }),
+    ]);
+  });
 });
