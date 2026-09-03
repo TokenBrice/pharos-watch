@@ -174,6 +174,27 @@ describe("critical coverage changed-file detection", () => {
     ).toEqual(["worker/src/cron/sync-stablecoins/missing.ts"]);
   });
 
+  it("fails completeness when an enrolled source has no importing owner", () => {
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    expect(runCriticalCoverageCompletenessGuard({
+      candidateFiles: ["worker/src/lib/new-critical-source.ts"],
+      criticalFiles: ["worker/src/lib/new-critical-source.ts"],
+      ownership: new Map(),
+      ownershipWaivers: {},
+      waivers: {},
+      consoleImpl: mockConsole({
+        error: (message: string) => errors.push(message),
+      }),
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    })).toBe(false);
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] Enrolled critical sources missing importing owner tests:");
+  });
   it("validates waiver metadata and rejects waivers for enrolled files", () => {
     expect(
       validateCriticalCoverageWaiverMetadata(

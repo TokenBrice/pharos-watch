@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import {
   buildCriticalCoverageArgs,
   buildCriticalCoverageMergeArgs,
@@ -16,6 +17,14 @@ describe("critical coverage sharding", () => {
     expect(args).toContain("--shard=1/4");
     expect(args).toContain("--maxWorkers=4");
     expect(args.some((arg) => arg.startsWith("--coverage.include="))).toBe(true);
+    expect(args.some((arg) => arg.endsWith(".test.ts"))).toBe(true);
+  });
+
+  it("limits a shard to sources touched by the supplied change set", () => {
+    const args = buildCriticalCoverageArgs([], { changedFiles: [CRITICAL_FILES[0]] });
+
+    expect(args.filter((arg) => arg.startsWith("--coverage.include="))).toHaveLength(1);
+    expect(args).toContain(`--coverage.include=${CRITICAL_FILES[0]}`);
     expect(args.some((arg) => arg.endsWith(".test.ts"))).toBe(true);
   });
 
