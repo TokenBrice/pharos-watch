@@ -9,6 +9,7 @@ import {
 import {
   buildStablecoinDetailSnapshots,
   fetchOptionalDetailSnapshotLane,
+  resolveSnapshotApiBase,
   serializedSnapshotBytes,
   validateStablecoinDetailSnapshot,
 } from "../build-stablecoin-detail-snapshots";
@@ -94,6 +95,20 @@ describe("stablecoin detail snapshot generator", () => {
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(requestInit.headers).toMatchObject({ "X-API-Key": "fixture-key" });
     expect(warning).toHaveBeenCalledWith(expect.stringContaining("HTTP 401"));
+  });
+
+  it("reads the public site-data lane when no build credential is configured", () => {
+    for (const name of ["PHAROS_API_KEY", "SITE_API_SHARED_SECRET", "DIGEST_API_KEY", "PUBLIC_DATASETS_API_KEY", "SMOKE_API_KEY",
+      "DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) {
+      vi.stubEnv(name, "");
+    }
+    expect(resolveSnapshotApiBase()).toBe("https://stablecoin-dashboard.pages.dev/_site-data");
+
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    expect(resolveSnapshotApiBase()).toBe("https://api.pharos.watch");
+
+    vi.stubEnv("PUBLIC_DATASETS_API_URL", "https://stablecoin-dashboard.pages.dev/_site-data");
+    expect(resolveSnapshotApiBase()).toBe("https://stablecoin-dashboard.pages.dev/_site-data");
   });
 
   it("omits a schema-invalid 200 response and still emits every coin", async () => {

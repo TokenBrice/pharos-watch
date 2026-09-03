@@ -5,7 +5,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZodError } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { API_ORIGIN, SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
+import { API_ORIGIN, PAGES_APP_ORIGIN, SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
+import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   SupplyHistoryResponseSchema,
@@ -115,9 +116,27 @@ function loadBuildAuthentication(): void {
   if (existsSync(envFile)) process.loadEnvFile(envFile);
 }
 
+function hasGeneratorCredential(): boolean {
+  return Object.keys(generatorFetchHeaders(`${API_ORIGIN}/api/stablecoins`))
+    .some((name) => !["accept", "origin"].includes(name.toLowerCase()));
+}
+
+/**
+ * Credentialed runs read the authoritative API; CI bootstraps and Pages
+ * release builds carry no API secret and read the public GET-only
+ * `/_site-data` lane the release refresh already uses.
+ */
+export function resolveSnapshotApiBase(): string {
+  const configured = resolveGeneratorApiBase();
+  if (configured) return configured;
+  if (process.env.SITE_API_SHARED_SECRET?.trim()) return SITE_API_ORIGIN;
+  if (hasGeneratorCredential()) return API_ORIGIN;
+  return `${PAGES_APP_ORIGIN}${SITE_DATA_PATH_PREFIX}`;
+}
+
 function authenticatedGeneratorHeaders(url: string): Record<string, string> {
   const headers = generatorFetchHeaders(url);
-  const isSiteDataRequest = new URL(url).pathname.startsWith("/_site-data/");
+  const isSiteDataRequest = new URL(url).pathname.startsWith(`${SITE_DATA_PATH_PREFIX}/`);
   const hasCredential = Object.keys(headers).some((name) => !["accept", "origin"].includes(name.toLowerCase()));
   if (!isSiteDataRequest && !hasCredential) {
     throw new Error("PHAROS_API_KEY or SITE_API_SHARED_SECRET is required for detail snapshot generation");
@@ -181,8 +200,7 @@ async function mapWithConcurrency<T, R>(
 
 async function generateSnapshots(): Promise<StablecoinDetailSnapshot[]> {
   loadBuildAuthentication();
-  const apiBase = resolveGeneratorApiBase() ??
-    (process.env.SITE_API_SHARED_SECRET?.trim() ? SITE_API_ORIGIN : API_ORIGIN);
+  const apiBase = resolveSnapshotApiBase();
   const liveIds = TRACKED_STABLECOINS
     .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen")
     .map((coin) => coin.id);
