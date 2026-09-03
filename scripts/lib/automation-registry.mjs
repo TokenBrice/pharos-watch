@@ -175,7 +175,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-depeg-event-search-data.ts",
-    sourcePaths: ["data/depeg-events.json", "src/lib/depeg-event-config.ts"],
+    sourcePaths: ["data/depeg-events/**", "src/lib/depeg-event-config.ts"],
   }),
   generatedArtifact({
     id: "postman",
@@ -357,7 +357,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",
-    sourcePaths: ["shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
+    sourcePaths: ["data/depeg-events/**", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
   }),
   generatedArtifact({
     id: "llms-txt",

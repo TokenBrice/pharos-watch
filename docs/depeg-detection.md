@@ -2,7 +2,7 @@
 
 Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron and writes every threshold-crossing onset to `depeg_pending`. Stage 2 runs immediately after and promotes only candidates that have remained beyond the full trigger threshold for at least 15 minutes and satisfy the applicable source-trust rule.
 
-> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails · Pending Depeg Confirmation.
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Build-time event archive · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails · Pending Depeg Confirmation.
 
 ## Methodology Versioning
 
@@ -171,6 +171,10 @@ Retention policy: `depeg_backfill_runs` is a backfill audit archive kept forever
 ### Non-USD threshold cleanup (folded into baseline)
 
 Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD threshold was raised from 100 to 150. This was a pre-squash migration now folded into `0000_baseline.sql`.
+
+### Build-time event archive
+
+The Pages build snapshot is maintained by `scripts/maintenance/sync-depeg-events.ts` under `data/depeg-events/`. `index.json` is the compact route-bearing projection used to enumerate permanent `/depeg/<event>/` pages and build the command-palette payload. It carries each route's slug, coin identity, direction, start date, and peak severity. The full event ledger is partitioned into UTC-year shards (`YYYY.json`); feeds, public dataset generation, and page hydration read those shards. A refresh therefore changes the index and only the affected year shard instead of rewriting one monolithic archive file.
 
 ## Cron Scheduling
 

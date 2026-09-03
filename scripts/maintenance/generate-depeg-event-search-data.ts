@@ -1,16 +1,13 @@
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  DepegEventStoredSnapshotSchema,
-  type DepegEventEntry,
   type DepegEventSearchEntry,
 } from "@shared/types/market";
 import { selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
+import { readDepegEventIndex, type DepegEventIndexEntry } from "../../src/lib/depeg-event-snapshot";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SOURCE = join(__dirname, "../../data/depeg-events.json");
 const OUTPUT = join(__dirname, "../../src/generated/depeg-event-search-data.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/depeg-event-search-data.json.d.ts");
 const RELATED_OUTPUT = join(__dirname, "../../src/generated/depeg-event-related-data.json");
@@ -20,11 +17,7 @@ const CHECK_MODE = process.argv.includes("--check");
 // generated search entry and does not apply a second depeg-event result cap.
 const SEARCH_EVENT_LIMIT = 10;
 
-function readDepegEvents(): readonly DepegEventEntry[] {
-  return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(SOURCE, "utf8")));
-}
-
-function buildClientEntries(events: readonly DepegEventEntry[]): DepegEventSearchEntry[] {
+function buildClientEntries(events: readonly DepegEventIndexEntry[]): DepegEventSearchEntry[] {
   return [...selectStaticDepegEventPages(events)]
     .sort((a, b) => {
       if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
@@ -41,7 +34,7 @@ function buildClientEntries(events: readonly DepegEventEntry[]): DepegEventSearc
     }));
 }
 
-const relatedEntries = buildClientEntries(readDepegEvents());
+const relatedEntries = buildClientEntries(readDepegEventIndex({ missing: "throw" }));
 const searchEntries = relatedEntries.slice(0, SEARCH_EVENT_LIMIT);
 
 const clientIndexTypes = "readonly DepegEventSearchEntry[]";
