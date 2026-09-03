@@ -38,19 +38,12 @@ carries report-only observability with no formula effect: a fixed-key `fallbackC
 both the stage and consume runs counting every optimistic default and silent exclusion in the
 scoring path (unmeasured-balance optimism, durability neutral defaults, the TVL-depth mcap
 fallback, staged-pool defaults, retained-pool exclusions, Fluid and direct-API measurement-flag
-defaults); and a per-cohort `shadowAdmissionReport` beside it classifying each shadow policy cohort
-as `no-eligible-source-row` or `eligible-source-rejected` (with gate reason) at target-publication
-time. The same publication and quote runs also emit a durable evidence ledger into
-`worker_producer_history.metadata_json` as bounded chunked scalars (`mxLedgerV`/`mxLedgerKind`
-`"A"`|`"B"`/`mxLedgerCycle`/`mxLedgerParts`/`mxLedger0..n`): Record A (06:16 shadow target
-publication — per-cohort eligible/rejected/published counts and the target generation id) and
-Record B (08:10 shadow quote sync — per-cohort measured/failed/budget-deferred counts plus
-ladder monotonicity and cost-bound-consistency violations computed at emission). Records are
-written on productive and zero-output runs alike, survive the outer handler merges, and are joined
-at retrieval (`shared/lib/measured-execution-ledger.ts`) to derive the third state,
-`target-produced-no-quote`. The 3-hour target/quote tables remain a rolling
-window; activation evidence is evaluated from this ledger,
-never from those tables.
+defaults). Half-hourly measured execution remains live, but active admission is capped to target
+IDs that match exactly one current published `exitRouteObservations` row with
+`scoreEligible=true`, `evidenceKind=measured-executable-depth`, and matching adapter, chain, pool,
+and output identity. Targets outside that score-bearing set are rejected before quote admission.
+The former daily shadow admission/quote evidence ledger and 240-character `mxLedger*` scalar
+encoding were removed; shadow target and quote generation persistence remains for compatibility.
 
 Current-row publication is generation-gated and active-set scoped. The cron may keep historical rows for inactive tracked assets, but the public `dex_liquidity` current table is rewritten from the current active tracked universe plus the `__global__` aggregate only. Candidate rows are written to `dex_liquidity_run_rows`, the expected active row count is validated, and only then is the candidate generation mirrored into the public table and marked `dex_liquidity_publication_generations.state = 'published'`. Rows without a publication generation id remain readable for schema compatibility, while generation-tagged rows are consumed only when their generation is published. The separate pre-v5.9 API fallback that reconstructed `methodology_version` from `updated_at` was removed in v6.0; readers pass the stored version through unchanged.
 
@@ -570,8 +563,8 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 - **Deployment outcome schema**: `dex_deployment_outcomes` stores one exact stablecoin/chain/contract row as `observed_pools`, `verified_no_pools`, or `provider_inaccessible`, including the provider set, reason, observation time, per-deployment `last_attempt_at`, pool count, and optional owned waiver. The provider set is derived per deployment by `getDexDiscoveryProviders()`, and the discovery crawl queries exactly the providers that set names. In addition to the general chain registry, the DEX-scoped GeckoTerminal resolver covers Starknet (`starknet-alpha`), Stacks, Hedera, and Injective, plus only 20-byte `0x` deployments on MANTRA EVM; Cosmos IBC denoms sharing the `mantra` repo chain id remain unsupported rather than being sent to the wrong network. Starknet token queries use GeckoTerminal's 64-hex-digit felt form, Hedera `0.0.N` entity ids use their 20-byte long-zero Solidity form, and Injective EVM, Peggy, IBC, and token-factory denoms use GeckoTerminal's provider-native identities. Provider-native token ids are URL-encoded once in the token-pools path while persisted census rows retain the registry address. The Curve discovery stage is scoped to `CURVE_NATIVE_DISCOVERY_CHAINS`, the same registered chains that credit Curve as a provider, so a Curve result can always be attributed to a named provider; its nested getPools requests run at most two chains at a time with a 4 MiB response ceiling. The liquidity stage reads Curve on a wider chain set for scoring; those extra chains are deliberately not crawled for deployment outcomes. A no-pool result is written only after a provider completes that exact token query and is usable only while that deployment's attempt fence has not superseded it. Before network work, the writer reconciles any unmatched legacy coin fence, advances `last_attempt_at` only for the selected rotating window, and atomically marks the coin fence as attributed. Missing, mismatched, or legacy attribution stays fail-closed; failed result persistence supersedes only attempted deployments, while untouched rows keep their prior evidence. Failed provider crawls materialize inaccessible outcomes for the attempted footprint when D1 is available. The canonical registry owns current inaccessible deployments; full-footprint gaps require explicit, expiring waivers while adapters or provider mappings are evaluated.
 - **Tiered priority**:
   - T1: coins with 0 pools (or effectively eligible baseline), every run.
-  - T2: 1–4 pools or 1 chain, every 3rd run.
-  - T3: `>=5` pools on `>=2` chains, every 10th run.
+  - T2: 1–4 pools or 1 chain, every 84th run (one week at the two-hour cron cadence).
+  - T3: `>=5` pools on `>=2` chains, every 84th run (one week), sharded by stablecoin id.
   - Global scheduling is tier-first (`T1 -> T2 -> T3 -> dormant`), with staleness used only as the tie-breaker inside a tier.
 - **Exponential backoff** (applied as a tier floor from `consecutiveMisses`; effective tier is `max(baseTier, backoffTier)`):
   - 0–2 misses: no backoff override (base tier from pool/chain counts determines placement)

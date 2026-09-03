@@ -21,6 +21,24 @@ const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
 const FLUID_GET_DEBT_RESERVES_SELECTOR = "0x55181f11";
 const FLUID_GET_POOL_FEE_SELECTOR = "0x42fcc6fb";
 const FLUID_RETRY_DELAY_CAP_MS = 5_000;
+const FLUID_LARGE_POOL_TVL_USD = 100_000_000;
+const FLUID_LARGE_POOL_MIN_VOLUME_USD = 50_000;
+const FLUID_MAX_ENRICHED_POOLS_PER_CHAIN = 5;
+
+/**
+ * The ticker endpoint does not expose USD volume; it exposes each side in
+ * token units. For the large-pool anti-poisoning guard, a raw side volume at
+ * least as large as the USD floor is the only source-side evidence available
+ * before token references are loaded by the scoring stage. Smaller pools use
+ * the existing TVL floor and are not subject to that guard.
+ */
+function shouldEnrichFluidPool(pool: DexApiPool): boolean {
+  if (pool.tvlUsd <= FLUID_LARGE_POOL_TVL_USD) return true;
+  const tokenVolumes = pool.tokenVolumes24h ?? [];
+  return tokenVolumes.some(
+    (volume) => Number.isFinite(volume) && volume >= FLUID_LARGE_POOL_MIN_VOLUME_USD,
+  );
+}
 
 /** Fluid API chain IDs mapped to our internal chain keys */
 const FLUID_CHAINS: Record<string, number> = {
@@ -230,9 +248,20 @@ export async function fetchFluidPools(
           tokenVolumes24h: [Number.isFinite(baseVol) ? baseVol : 0, Number.isFinite(targetVol) ? targetVol : 0],
         };
       }).filter((p): p is DexApiPool => p !== null);
-
       successfulChains++;
-      for (const pool of pools) {
+      // The API is ordered inconsistently across chains. Rank by TVL before
+      // spending resolver calls, then enrich only the retained/top-N candidates.
+      // Pools that do not qualify remain in the result with their neutral fields
+      // so scoring output and identity accounting are unchanged.
+      const rankedPools = [...pools]
+        .sort(
+          (left, right) =>
+            right.tvlUsd - left.tvlUsd ||
+            left.poolAddress.localeCompare(right.poolAddress),
+        )
+        .slice(0, FLUID_MAX_ENRICHED_POOLS_PER_CHAIN);
+      for (const pool of rankedPools) {
+        if (!shouldEnrichFluidPool(pool)) continue;
         try {
           await enrichFluidPool(chain, pool, resolvedChainRpcs, signal);
         } catch (error) {

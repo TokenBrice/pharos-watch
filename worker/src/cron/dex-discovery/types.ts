@@ -114,8 +114,9 @@ export const DISCOVERY_TIERS = {
   // Sentinel: coins with zero discovered pools get the highest crawl cadence (t1).
   T1_ZERO_POOL_SENTINEL: 0,
   T2_MAX_POOLS: 4,
-  T2_MODULO: 3,
-  T3_MODULO: 10,
+  // The discovery cron runs every two hours, so 84 runs is one week.
+  T2_MODULO: 84,
+  T3_MODULO: 84,
   BACKOFF_T2_MISSES: 3,
   BACKOFF_T3_MISSES: 6,
   BACKOFF_DORMANT_MISSES: 10,

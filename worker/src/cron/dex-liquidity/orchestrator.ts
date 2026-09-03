@@ -1236,7 +1236,6 @@ function buildDexLiquidityCronResult(
         failedSources: sourceState.failedSources,
         fallbackSignals: sourceState.fallbackSignals,
         fallbackCounters: scoreState.diagnostics.fallbackCounters,
-        shadowAdmission: scoreState.diagnostics.measuredExecution?.shadowAdmission ?? null,
         persistence: persistenceState.persistence,
         historicalSnapshot: persistenceState.historicalSnapshot,
       }),

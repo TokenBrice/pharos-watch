@@ -1,10 +1,6 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
-import {
-  buildMeasuredLedgerCohortKey,
-  type MeasuredLedgerAdmissionCohort,
-} from "@shared/lib/measured-execution-ledger";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { LiquidityFallbackCounters, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -42,19 +38,6 @@ interface ProtocolCapDiagnostics {
   reducedTvlUsd: number;
 }
 
-/**
- * Report-only shadow admission-opportunity capture from the daily 06:16
- * scoring run (Liquidity Score v6 Phases 0.1/0.4). Cohorts key on a stable
- * per-policy identity via `buildMeasuredLedgerCohortKey`; this run records
- * what it can decide (eligible/rejected/published) and the retrieval-time
- * join with the 08:10 quote record derives the full tri-state.
- */
-export interface DexShadowAdmissionDiagnostics {
-  /** Route-observation epoch of the emitting run (seconds). */
-  cycle: number;
-  targetGenerationId: string | null;
-  cohorts: Record<string, MeasuredLedgerAdmissionCohort>;
-}
 
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
@@ -71,8 +54,6 @@ interface ScoreDiagnostics {
     shadowTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
-    /** Populated only on the daily shadow-publication run; null otherwise. */
-    shadowAdmission: DexShadowAdmissionDiagnostics | null;
   };
 }
 
@@ -299,47 +280,6 @@ export async function computeStablecoinScores(
   }
   targetInventoryById.clear();
 
-  // Shadow admission-opportunity capture (Phases 0.1/0.4). This is the only
-  // place pre-target rejections are visible: a retained pool that failed target
-  // admission carries its `executionCapabilityGate`, while every produced
-  // shadow target sits in `shadowTargetInventory`. Emitted per policy cohort —
-  // never aggregated by adapter+chain — so a healthy policy cannot mask a
-  // broken sibling sharing the same adapter profile.
-  let shadowAdmission: DexShadowAdmissionDiagnostics | null = null;
-  if (measuredTargetPublicationMode === "active-and-shadow") {
-    const cohorts: Record<string, MeasuredLedgerAdmissionCohort> = {};
-    const cohortFor = (key: string) =>
-      (cohorts[key] ??= { eligible: 0, rejected: 0, published: 0, gateReason: null });
-    const shadowPublished = shadowTargetPublication.status === "published";
-    const shadowPublicationFailed = shadowTargetPublication.status === "failed";
-    for (const target of shadowTargetInventory) {
-      const cohort = cohortFor(buildMeasuredLedgerCohortKey(target));
-      cohort.eligible += 1;
-      if (shadowPublished) cohort.published += 1;
-      else if (shadowPublicationFailed && cohort.gateReason == null) {
-        cohort.gateReason = "shadow-target-publication-failed";
-      }
-    }
-    for (const [id, pools] of preparedRetainedPools) {
-      for (const pool of pools) {
-        const gate = pool.extra?.executionCapabilityGate;
-        if (!gate) continue;
-        const cohort = cohortFor(
-          buildMeasuredLedgerCohortKey({ chain: pool.chain, poolId: pool.poolId, stablecoinId: id }),
-        );
-        cohort.eligible += 1;
-        cohort.rejected += 1;
-        if (cohort.gateReason == null) cohort.gateReason = `${gate.family}:${gate.reason}`;
-      }
-    }
-    shadowAdmission = {
-      cycle: routeObservedAt,
-      targetGenerationId: shadowTargetPublication.status === "published"
-        ? shadowTargetPublication.generationId
-        : null,
-      cohorts,
-    };
-  }
 
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
@@ -508,7 +448,6 @@ export async function computeStablecoinScores(
         shadowInventoryTargetCount,
         targetPublication,
         shadowTargetPublication,
-        shadowAdmission,
       },
     },
   };
