@@ -42,6 +42,8 @@ defaults). Half-hourly measured execution remains live, but active admission is 
 IDs that match exactly one current published `exitRouteObservations` row with
 `scoreEligible=true`, `evidenceKind=measured-executable-depth`, and matching adapter, chain, pool,
 and output identity. Targets outside that score-bearing set are rejected before quote admission.
+Those intentional exclusions remain visible in failure diagnostics but do not degrade the active
+lane; inability to load the published score-bearing set fails closed and degrades the run.
 The former daily shadow admission/quote evidence ledger and 240-character `mxLedger*` scalar
 encoding were removed; shadow target and quote generation persistence remains for compatibility.
 

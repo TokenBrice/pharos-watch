@@ -715,6 +715,30 @@ describe("measured execution overflow admission", () => {
     ).toBe("ok");
   });
 
+  it("keeps targets outside the published score-bearing set diagnostic", () => {
+    const summary = summarizeMeasuredExecutionQuoteFailures([
+      {
+        target: target("coin-outside", 100_000),
+        status: "failed",
+        failureReason: "score-bearing-route-unavailable",
+      },
+    ]);
+
+    expect(summary).toMatchObject({
+      attemptedFailureCount: 0,
+      scoreEligibleAttemptedFailureCount: 0,
+      scoreEligibleBlockingFailureCount: 0,
+    });
+    expect(
+      resolveMeasuredExecutionCronStatus({
+        attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,
+        deferredCount: 0,
+        admissionRotationCycles: 1,
+        cursorWriteStatus: "not-needed",
+      }),
+    ).toBe("ok");
+  });
+
   it("degrades rotation that cannot refresh every admitted target within one hour", () => {
     expect(
       resolveMeasuredExecutionCronStatus({

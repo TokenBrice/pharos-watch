@@ -149,7 +149,10 @@ export function summarizeMeasuredExecutionQuoteFailures(
   diagnosticAttemptedFailureCount: number;
 } {
   const attemptedFailures = outcomes.filter(
-    (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
+    (outcome) =>
+      outcome.status === "failed" &&
+      outcome.failureReason !== "budget-deferred" &&
+      outcome.failureReason !== "score-bearing-route-unavailable",
   );
   const scoreEligibleFailures = attemptedFailures.filter(
     (outcome) =>
