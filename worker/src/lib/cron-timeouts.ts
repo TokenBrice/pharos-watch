@@ -74,6 +74,40 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   "weekly-recap": 14 * 60_000,
 };
 
+/**
+ * These status-tracked jobs are known short-lived control-plane/maintenance
+ * work. Their terminal cron_runs row remains useful, but an in-flight
+ * cron_run_progress row cannot provide meaningful operator value before they
+ * finish. Keep this explicit rather than deriving it from timeout overrides:
+ * those are conservative wall-clock caps, not p95 runtime measurements.
+ */
+export const PROGRESS_TELEMETRY_SKIP_JOBS: Readonly<Record<string, true>> = {
+  "stability-index": true,
+  "compute-dews": true,
+  "project-tape": true,
+  "cron-slot-sweeper": true,
+  "telegram-disambiguation-cleanup": true,
+  "telegram-pulse-snapshot": true,
+  "snapshot-supply": true,
+  "snapshot-chain-supply": true,
+  "prune-status-probe-runs": true,
+  "prune-cron-history": true,
+  "prune-detail-cache": true,
+  "cron-staleness-watchdog": true,
+  "digest-publication-watchdog": true,
+  "telegram-degradation-watchdog": true,
+  "dex-exit-route-turnover-watchdog": true,
+  "reserve-post-sync-watchdog": true,
+  "mint-burn-growth-watchdog": true,
+  "cron-duration-watchdog": true,
+};
+
+export function shouldSkipCronProgress(job: string): boolean {
+  return PROGRESS_TELEMETRY_SKIP_JOBS[job] === true
+    || job.startsWith("prune-")
+    || job.endsWith("-watchdog");
+}
+
 const cronJobIds = new Set(CRON_JOB_DEFINITIONS.map((definition) => definition.job));
 for (const job of Object.keys(CRON_TIMEOUT_OVERRIDES_MS)) {
   if (!cronJobIds.has(job)) {
