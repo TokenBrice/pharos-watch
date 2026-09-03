@@ -123,6 +123,7 @@ runs:
       with:
         path: |
           node_modules
+          worker/node_modules
           src/generated
           src/lib/case-study-client-index.ts
           public/openapi.json
