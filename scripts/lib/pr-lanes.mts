@@ -50,7 +50,7 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     id: "static",
     selector: "code",
     timeoutMinutes: 20,
-    commands: [{ id: "pr-static", program: "npm", args: ["run", "check:pr:static"] }],
+    commands: [{ id: "pr-static", program: "npm", args: ["run", "check:pr:static", "--"] }],
   },
   {
     id: "tests",

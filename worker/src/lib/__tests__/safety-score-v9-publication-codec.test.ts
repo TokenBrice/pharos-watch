@@ -9,6 +9,7 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import {
   parseSafetyScoreV9Publication,
+  publicationIdentityFromStorageEnvelope,
   serializeSafetyScoreV9Publication,
 } from "../safety-score-v9/publication-codec";
 
@@ -243,5 +244,34 @@ describe("Safety Score V9 publication codec", () => {
     await expect(
       parseSafetyScoreV9Publication(shadowKindEnvelope),
     ).rejects.toThrow();
+  });
+
+  it("rejects malformed and non-canonical stored JSON before decoding", async () => {
+    await expect(parseSafetyScoreV9Publication("{not json")).rejects.toThrow(
+      /Malformed Safety Score v9 publication JSON/,
+    );
+    const publication = makeWorkerSafetyScoreV9Publication();
+    // Uncompressed payload with reordered keys is valid JSON but not the
+    // canonical serialization the store authenticates.
+    const reordered = JSON.stringify(JSON.parse(stableJsonStringifyV1(publication)), Object.keys(publication).reverse());
+    await expect(parseSafetyScoreV9Publication(reordered)).rejects.toThrow(/not canonical/);
+  });
+
+  it("projects the storage envelope identity without inflating the body", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const stored = JSON.parse(await serializeSafetyScoreV9Publication(publication)) as { identity: unknown };
+
+    expect(publicationIdentityFromStorageEnvelope(stored.identity)).toEqual({
+      model: "v9",
+      schemaVersion: 1,
+      methodologyVersion: publication.policyVersion,
+      policyId: publication.policy.id,
+      policyDigest: publication.policy.semanticDigest,
+      evaluationBuildDigest: publication.evaluationBuildDigest,
+      baseInputGenerationId: publication.baseInputGenerationId,
+      publicationGenerationId: publication.publicationGenerationId,
+    });
+    expect(publicationIdentityFromStorageEnvelope({ policyId: "only" })).toBeNull();
+    expect(publicationIdentityFromStorageEnvelope(null)).toBeNull();
   });
 });

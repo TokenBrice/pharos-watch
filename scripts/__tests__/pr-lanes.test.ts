@@ -56,5 +56,9 @@ describe("PR lane manifest", () => {
     expect(buildPrLaneCommandArgs(tests, { base: "base" })).toEqual([
       "run", "test:pr", "--", "--base=base",
     ]);
+    // npm swallows bare `--base=` flags; the separator is what delivers them.
+    expect(buildPrLaneCommandArgs(getPrLane("static").commands[0], { base: "base", head: "HEAD" })).toEqual([
+      "run", "check:pr:static", "--", "--base=base", "--head=HEAD",
+    ]);
   });
 });
