@@ -12,11 +12,11 @@ function row(slices: unknown[]) {
     fetched_at: 1_700_000_000,
     source: "infinifi",
     metadata: "{}",
-    warnings: null,
-    warning_count: 0,
-    adapter_source_model: "dynamic-mix",
-    adapter_evidence_class: "independent",
-  } as never;
+    warnings: null as string | null,
+    warning_count: 0 as number | null,
+    adapter_source_model: "dynamic-mix" as string | null,
+    adapter_evidence_class: "independent" as string | null,
+  };
 }
 
 describe("stored live reserve dependency validation", () => {
@@ -51,19 +51,19 @@ describe("stored live reserve slice integrity", () => {
     ["empty-slices", "[]"],
     ["invalid-sum", JSON.stringify([{ name: "Cash", pct: 60, risk: "low" }])],
   ])("reports %s instead of returning a partial record", (code, slices) => {
-    const parsed = parseReserveCompositionRow({ ...row([]), slices } as never, null);
+    const parsed = parseReserveCompositionRow({ ...row([]), slices }, null);
     expect(parsed.record).toBeNull();
     expect(parsed.issue?.code).toBe(code);
   });
 
   it("falls back to the adapter definition for source model and evidence class, failing closed on unknown adapters", () => {
     const stored = { ...row([{ name: "Cash", pct: 100, risk: "low" }]), adapter_source_model: null, adapter_evidence_class: "nope" };
-    const parsed = parseReserveCompositionRow(stored as never, null);
+    const parsed = parseReserveCompositionRow(stored, null);
     expect(parsed.issue).toBeNull();
     expect(parsed.record).toMatchObject({ adapterSourceModel: expect.any(String), adapterEvidenceClass: expect.any(String) });
 
     const unknown = { ...stored, stablecoin_id: "not-tracked", source: "no-such-adapter" };
-    expect(parseReserveCompositionRow(unknown as never, null).issue?.code).toBe("unknown-adapter-source");
+    expect(parseReserveCompositionRow(unknown, null).issue?.code).toBe("unknown-adapter-source");
   });
 
   it("decodes warnings with severity and effect defaults and drops malformed entries", () => {
@@ -73,7 +73,7 @@ describe("stored live reserve slice integrity", () => {
         { code: "note", message: "fyi", severity: "info" },
         { code: "missing-message" },
         "not an object",
-      ]), warning_count: "3" } as never,
+      ]), warning_count: null },
       null,
     );
     expect(parsed.record?.warnings).toEqual([
