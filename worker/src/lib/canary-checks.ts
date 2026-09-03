@@ -1,4 +1,4 @@
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
@@ -14,6 +14,8 @@ import { loadPublishedStressSignalGeneration } from "./stress-signals-current-ro
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 import { classifyFreshness } from "./status/freshness-oracle";
+
+export { pruneWorkerCanaryRuns, WORKER_CANARY_RUN_RETENTION_SEC } from "./canary-prune";
 
 export { normalizeWorkerCanaryMode } from "./worker-canary-mode";
 export type { WorkerCanaryMode } from "./worker-canary-mode";
@@ -121,7 +123,6 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
 
 const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
 const MAX_CANARY_ERROR_CHARS = 800;
-export const WORKER_CANARY_RUN_RETENTION_SEC = 14 * 24 * 3600;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 const PSI_MAX_AGE_SEC = 4 * 3600;
 const DEWS_MAX_AGE_SEC = 4 * 3600;
@@ -193,7 +194,7 @@ function worstOf<TValue extends string>(
 
 async function checkStablecoinsCacheActiveCount(db: D1Database) {
   const cache = await loadStablecoinsCache(db, { mode: "lenient" });
-  const expectedActiveCount = ACTIVE_IDS.size;
+  const expectedActiveCount = WORKER_ACTIVE_IDS.size;
   if (!hasUsableStablecoinsPayload(cache)) {
     return errorResult(`stablecoins cache ${cache.reason}`, {
       expectedActiveCount,
@@ -753,23 +754,6 @@ export async function runAndPersistCanaryChecks(
     await persistCanaryRun(db, result, { mode: summary.mode });
   }
   return summary;
-}
-
-export async function pruneWorkerCanaryRuns(
-  db: D1Database,
-  cutoffObservedAt: number,
-  signal?: AbortSignal,
-): Promise<number> {
-  throwIfAborted(signal);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM worker_canary_runs WHERE observed_at < ?")
-      .bind(cutoffObservedAt)
-      .run(),
-    3,
-    signal,
-  );
-  return result.meta?.changes ?? 0;
 }
 
 function mapCanaryStatusRow(row: WorkerCanaryRunRow): CanaryStatus["checks"][string] {

@@ -778,7 +778,17 @@ export function projectWorkerRuntimeCoin(coin, index) {
     symbol: coin.symbol,
     name: coin.name,
     pegCurrency: coin.flags.pegCurrency,
+    governance: coin.flags.governance,
   };
+  if (typeof coin.geckoId === "string" && coin.geckoId.length > 0) {
+    projected.geckoId = coin.geckoId;
+  }
+  if (coin.flags.navToken === true) {
+    projected.navToken = true;
+  }
+  if (typeof coin.commodityOunces === "number") {
+    projected.commodityOunces = coin.commodityOunces;
+  }
   if (Object.prototype.hasOwnProperty.call(coin, "status")) {
     projected.status = coin.status;
   }

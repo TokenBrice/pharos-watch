@@ -3,7 +3,7 @@ import {
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types/market";
-import { getTrackedStablecoin } from "@shared/lib/tracked-stablecoin-utils";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { chainConfig, type ChainConfig } from "./chain-config";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
 
@@ -641,7 +641,7 @@ function resolveBlacklistStablecoinSymbol(
   override?: BlacklistStablecoin,
 ): BlacklistStablecoin {
   if (override) return override;
-  const symbol = getTrackedStablecoin(stablecoinId)?.symbol;
+  const symbol = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol;
   if (!symbol || !BLACKLIST_STABLECOIN_SET.has(symbol as BlacklistStablecoin)) {
     throw new Error(`Unsupported blacklist stablecoin symbol for ${stablecoinId}`);
   }

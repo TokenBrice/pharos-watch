@@ -75,8 +75,8 @@ export const STATUS_ONCHAIN_THRESHOLDS = {
 } as const;
 /** Window for treating an on-chain monitoring source as actively reporting. Sources silent longer than this are excluded from health rollups. */
 export const STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC = 3 * 24 * 3600;
-/** Per-coin on-chain snapshot freshness ceiling. Snapshots older than this contribute to the stale-snapshot count. */
-export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 2 * 3600;
+/** Per-coin on-chain snapshot freshness ceiling. Two missed producer cycles contribute to the stale-snapshot count. */
+export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 8 * 3600;
 /** Per-coin divergence ceiling (fraction). Above this, on-chain supply is considered to disagree with DefiLlama materially. */
 export const STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD = 0.05;
 

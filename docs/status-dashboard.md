@@ -322,7 +322,7 @@ The public `/api/health` lane now keys mint/burn freshness to the critical-lane 
 
 `dataQuality.onchainSupplyMonitoring === "unavailable"` renders in the quality cards and emits an info-level `onchain_monitor_unavailable` cause. This cause appears in the diagnostics watch list but does not affect health status.
 
-`onchainSupplyTrackedCoins` now counts only stablecoins with at least one `onchain_supply` update inside the active monitoring window (`3d`). Older historical rows stay in D1 for audit/debug use, but they no longer count toward `staleOnchainSupply` or `onchainStaleRatio`.
+`onchainSupplyTrackedCoins` now counts only stablecoins with at least one `onchain_supply` update inside the active monitoring window (`3d`). Older historical rows stay in D1 for audit/debug use, but they no longer count toward `staleOnchainSupply` or `onchainStaleRatio`. Per-coin snapshots become stale after two `sync-kinesis-supply` producer cycles (eight hours at the current four-hour cadence), so a healthy multi-hourly lane does not create a false warning between runs.
 
 Blacklist gap telemetry now also exposes operator diagnostics for historical recovery work:
 

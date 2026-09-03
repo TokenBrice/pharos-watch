@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -92,7 +92,7 @@ export async function crawlCoin(
   const priceObs: StagedPriceObservation[] = [];
   const providerChecks: DexDeploymentProviderCheck[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
-  const stablecoinMeta = TRACKED_META_BY_ID.get(stablecoinId);
+  const stablecoinMeta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   const context = createCrawlStageContext({
     stablecoinId,
     knownPoolIds,

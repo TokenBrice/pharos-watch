@@ -7,7 +7,7 @@
  * Reusable DEX utilities (symbol maps, quality multipliers):
  * see ../../lib/dex-constants.ts
  */
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 
@@ -153,10 +153,10 @@ export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
   CBBTC: 0.6,
 };
 
-/** Symbol → governance type lookup from ACTIVE_STABLECOINS */
+/** Symbol → governance type lookup from the active Worker runtime registry. */
 export const SYMBOL_GOVERNANCE = new Map<string, string>();
-for (const meta of ACTIVE_STABLECOINS) {
-  SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.flags.governance);
+for (const meta of WORKER_ACTIVE_STABLECOINS) {
+  SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.governance);
 }
 
 export const CG_TICKERS_RATE_MS = 2500; // conservative: ~24 req/min well under free-tier limit

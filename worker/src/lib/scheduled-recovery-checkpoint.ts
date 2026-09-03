@@ -5,9 +5,10 @@ import {
   SYNC_ORDERED_CONFIGURED_COINS,
 } from "../cron/sync-live-reserves-shared";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { throwIfAborted } from "./abort";
 import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
 import { parseJsonObject } from "./json-parse";
+
+export { pruneLiveReserveRecoveryCheckpoints } from "./scheduled-recovery-prune";
 
 export type ScheduledCheckpointState =
   | "running"
@@ -937,25 +938,4 @@ export async function claimNextLiveReserveCheckpointRecovery(
     };
   }
   return null;
-}
-
-export async function pruneLiveReserveRecoveryCheckpoints(
-  db: D1Database,
-  cutoffUpdatedAt: number,
-  signal?: AbortSignal,
-): Promise<number> {
-  throwIfAborted(signal);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `DELETE FROM worker_scheduled_checkpoints
-          WHERE updated_at < ?
-            AND state IN ('completed', 'failed', 'platform_abandoned')`,
-      )
-      .bind(cutoffUpdatedAt)
-      .run(),
-    3,
-    signal,
-  );
-  return result.meta?.changes ?? 0;
 }

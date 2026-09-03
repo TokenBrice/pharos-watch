@@ -20,13 +20,15 @@ const { GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [{ id: "mega-coin", contracts: FOOTPRINT }],
-}));
-
-vi.mock("../../dex-liquidity/pool-helpers", () => ({
-  getTrackedContracts: vi.fn((coin: { contracts?: ContractDeployment[] }) => coin.contracts ?? []),
-}));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
+  const registry = mockRegistry({
+    stablecoins: [{ id: "mega-coin", contracts: FOOTPRINT }],
+  });
+  return {
+    WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
+    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+  };
+});
 
 vi.mock("../../../lib/price-validation", () => ({
   loadPriceValidationReferences: vi.fn(async () => undefined),

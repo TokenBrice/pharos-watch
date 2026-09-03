@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ActivePriceCoverageGap } from "@shared/types/status";
 import { parseJsonObject } from "./json-parse";
@@ -9,7 +9,7 @@ export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 const MAX_VALID_DATE_SECONDS = 8_640_000_000_000;
 
 const ACTIVE_STABLECOIN_SYMBOL_BY_ID = new Map(
-  ACTIVE_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin.symbol] as const),
+  WORKER_ACTIVE_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin.symbol] as const),
 );
 
 export interface StablecoinPublicationWaiver {
@@ -149,7 +149,7 @@ export function evaluateStablecoinPublicationCoverage(
   publishedIds: Iterable<string>,
   nowSec: number = Math.floor(Date.now() / 1000),
   waivers: readonly StablecoinPublicationWaiver[] = STABLECOIN_PUBLICATION_WAIVERS,
-  expectedActiveIds: readonly string[] = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
+  expectedActiveIds: readonly string[] = WORKER_ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
 ): StablecoinPublicationCoverage {
   const presentIds = new Set(publishedIds);
   const resolvedWaivers = resolveStablecoinPublicationWaivers(expectedActiveIds, nowSec, waivers);
@@ -278,7 +278,7 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
     const missingActiveIds = Array.isArray(coverage.missingActiveIds)
       ? coverage.missingActiveIds
           .filter((id): id is string => typeof id === "string")
-          .slice(0, ACTIVE_STABLECOINS.length)
+          .slice(0, WORKER_ACTIVE_STABLECOINS.length)
       : [];
     const verboseDetails = Array.isArray(coverage.missingActiveAssets)
       ? coverage.missingActiveAssets
@@ -287,7 +287,7 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
       : [];
     const compactedDetails = Array.isArray(coverage.missingActiveState)
       ? coverage.missingActiveState
-          .slice(0, ACTIVE_STABLECOINS.length)
+          .slice(0, WORKER_ACTIVE_STABLECOINS.length)
           .map(parsePersistedMissingState)
           .filter((detail): detail is MissingActivePriceDetail => detail != null)
       : [];
@@ -363,7 +363,7 @@ function marketCapOrNull(asset: StablecoinPriceCoverageAsset | undefined): numbe
  * still a public data-quality failure, but it must not block cache publication. */
 export function evaluateStablecoinActivePriceCoverage(
   assets: Iterable<StablecoinPriceCoverageAsset>,
-  expectedActiveIds: readonly string[] = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
+  expectedActiveIds: readonly string[] = WORKER_ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
   options: StablecoinActivePriceCoverageOptions = {},
 ): StablecoinActivePriceCoverage {
   const assetsById = new Map<string, StablecoinPriceCoverageAsset>();

@@ -20,7 +20,7 @@ export interface DirectImportPolicy {
 }
 
 export interface RuntimeReachabilityPolicy {
-  id: "scheduled" | "mint-burn" | "pages-functions" | "client-registry";
+  id: "scheduled" | "mint-burn" | "memory-constrained-cron" | "pages-functions" | "client-registry";
   entrypoints: EntrypointSelector;
   forbidden: ForbiddenSelector;
   directImports?: DirectImportPolicy;
@@ -66,6 +66,29 @@ export const RUNTIME_REACHABILITY_POLICIES = [
     remediation:
       "Use the lightweight Worker runtime registry; the full stablecoin registry exceeds the lane's isolate memory budget.",
     successLabel: "Worker runtime import boundary",
+  },
+  {
+    id: "memory-constrained-cron",
+    entrypoints: {
+      kind: "paths",
+      paths: [
+        "worker/src/handlers/scheduled/hourly-blacklist.ts",
+        "worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts",
+        "worker/src/handlers/scheduled/daily-0300.ts",
+      ],
+    },
+    forbidden: {
+      kind: "paths",
+      paths: [
+        "shared/data/stablecoins/coins.generated.json",
+        "shared/lib/stablecoins/registry.ts",
+        "shared/lib/tracked-stablecoin-utils.ts",
+      ],
+    },
+    failureHeading: "Memory-constrained cron runtime boundary failed",
+    remediation:
+      "Use the lightweight Worker runtime registry and mode-scoped imports; the full stablecoin registry exceeds these lanes' isolate memory budget.",
+    successLabel: "Memory-constrained cron runtime boundary",
   },
   {
     id: "pages-functions",
