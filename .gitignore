@@ -24,6 +24,8 @@
 
 # generated build artifacts
 /src/generated/*
+# Build-time API snapshots consumed only while exporting stablecoin detail pages.
+/src/generated/stablecoin-detail-snapshots/
 
 # deterministic source-tree projections materialized by `npm run bootstrap:generated`
 /public/maps/world-countries.svg

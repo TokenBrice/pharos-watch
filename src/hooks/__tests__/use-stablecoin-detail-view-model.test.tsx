@@ -8,7 +8,6 @@ import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-mod
 const mocks = vi.hoisted(() => ({
   buildStablecoinDetailViewModel: vi.fn(),
   useSupplyHistory: vi.fn(),
-  useStablecoins: vi.fn(),
   usePegSummary: vi.fn(),
   useDexLiquidity: vi.fn(),
   useReportCardsV9: vi.fn(),
@@ -37,7 +36,6 @@ vi.mock("@/lib/stablecoin-detail-view-model", () => ({
 
 vi.mock("../use-stablecoins", () => ({
   useSupplyHistory: mocks.useSupplyHistory,
-  useStablecoins: mocks.useStablecoins,
 }));
 
 vi.mock("../api-hooks", () => ({
@@ -89,15 +87,6 @@ function installQueryMocks() {
     error: null,
     refetch: mocks.refetchSupply,
   });
-  mocks.useStablecoins.mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    error: null,
-    dataUpdatedAt: 0,
-    refetch: mocks.refetchList,
-    meta: null,
-  });
   mocks.usePegSummary.mockReturnValue({
     data: undefined,
     dataUpdatedAt: 0,
@@ -119,13 +108,17 @@ function installQueryMocks() {
     refetch: mocks.refetchReportCards,
     meta: null,
   });
-  mocks.useRegisteredApiQuery.mockReturnValue({
+  mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) => ({
     data: undefined,
+    isLoading: false,
+    isError: false,
     dataUpdatedAt: 0,
     error: null,
-    refetch: mocks.refetchRedemptionBackstops,
+    refetch: descriptor.queryKey[0] === "stablecoin-live-summary"
+      ? mocks.refetchList
+      : mocks.refetchRedemptionBackstops,
     meta: null,
-  });
+  }));
   mocks.useYieldRankings.mockReturnValue({
     data: { rankings: [] },
     isLoading: false,
@@ -183,8 +176,10 @@ describe("useStablecoinDetailViewModel", () => {
       }),
     );
 
-    expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id);
-    expect(mocks.useStablecoins).toHaveBeenCalled();
+    expect(mocks.useSupplyHistory).toHaveBeenCalledWith(coin.id, 90);
+    expect(mocks.useRegisteredApiQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["stablecoin-live-summary", coin.id] }),
+    );
     expect(mocks.usePegSummary).toHaveBeenCalled();
     expect(mocks.useDexLiquidity).toHaveBeenCalledWith({ enabled: false });
     expect(mocks.useReportCardsV9).toHaveBeenCalledWith({ enabled: false });

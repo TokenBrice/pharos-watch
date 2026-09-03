@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,10 @@ import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import {
+  seedStablecoinDetailQueryCache,
+  type StablecoinDetailSnapshot,
+} from "@/lib/api";
 import { DetailContent } from "./detail-content";
 
 function DetailLoadingShell({
@@ -77,9 +82,30 @@ interface StablecoinDetailClientProps {
   staticProfileContent?: ReactNode;
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
+  snapshot?: StablecoinDetailSnapshot | null;
 }
 
-export default function StablecoinDetailClient({
+export function StablecoinDetailSnapshotHydrator({
+  children,
+  snapshot,
+}: {
+  children: ReactNode;
+  snapshot: StablecoinDetailSnapshot | null;
+}) {
+  const queryClient = useQueryClient();
+
+  // Like HydrationBoundary, populate the cache while rendering the boundary so
+  // child query observers see the snapshot before they can start a request.
+  // The keyed route client remounts when its coin ID changes.
+  useState(() => {
+    if (snapshot) seedStablecoinDetailQueryCache(queryClient, snapshot);
+    return snapshot;
+  });
+
+  return children;
+}
+
+function StablecoinDetailClientContent({
   id,
   coin,
   summary,
@@ -180,5 +206,14 @@ export default function StablecoinDetailClient({
         viewModel={viewModel}
       />
     </StablecoinDetailIdentityProvider>
+  );
+}
+
+export default function StablecoinDetailClient(props: StablecoinDetailClientProps) {
+  if (!props.snapshot) return <StablecoinDetailClientContent {...props} />;
+  return (
+    <StablecoinDetailSnapshotHydrator snapshot={props.snapshot}>
+      <StablecoinDetailClientContent {...props} />
+    </StablecoinDetailSnapshotHydrator>
   );
 }

@@ -13,6 +13,8 @@ import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 const EXPECTED_RESPONSE_MODES: {
   [TKey in keyof FrontendApiQueryDescriptorRegistry]: "plain" | "meta" | "static";
 } = {
+  stablecoinDetail: "plain",
+  stablecoinLiveSummary: "plain",
   stablecoins: "meta",
   chains: "meta",
   bluechipRatings: "meta",
@@ -53,6 +55,8 @@ const EXPECTED_RESPONSE_MODES: {
 };
 
 const PARAMETERIZED_ARGS: Record<string, unknown[]> = {
+  stablecoinDetail: ["usdc-circle"],
+  stablecoinLiveSummary: ["usdc-circle"],
   dexLiquidityHistory: ["usdc-circle", 90],
   digestSnapshot: ["2026-07-09"],
   publicStatusHistory: ["7d"],

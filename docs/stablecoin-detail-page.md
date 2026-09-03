@@ -219,6 +219,14 @@ On the worker side, `GET /api/stablecoin/:id` now uses a small strategy layer:
 
 Detail API stale-while-refresh is bounded: rows older than the 5-minute D1 TTL but younger than 24 hours are served with `Warning: 110`, `X-Data-Age`, and `Cache-Control: no-store` while a single-flight refresh runs in the background. Rows older than 24 hours are not served as stale fallback; the Worker refreshes synchronously and returns the normal upstream/supply-history fallback result.
 
+### Build snapshot hydration
+
+The compile-input generator `scripts/build-data/build-stablecoin-detail-snapshots.ts` fetches and validates the coin-scoped `/api/stablecoin/:id` response, projects it to current price, four supply checkpoints, and observation timestamps, and fetches the 90-day first-paint supply-history response. Provider token history and passthrough research fields are never stored in the compact summary. The generator writes one gitignored JSON snapshot per tracked coin under `src/generated/stablecoin-detail-snapshots/`; a missing lane is omitted rather than represented by invented data. It never projects a single row into the global stablecoin-list or peg-summary cache keys. The 90-day window matches the Market Data chart's initial selection. Selecting `1Y` or `All` enables a distinct 1,825-day supply-history query and switches both charts to that response when it arrives, so the wider controls retain their full-history meaning without adding a first-paint request. The generator enforces 8 KiB as a hard serialized-envelope cap: it drops supply history first, then the compact live summary only if necessary. An empty per-coin envelope remains valid because the static page still renders its build-time catalog metadata.
+
+During static export, the server page reads only the current coin's file and passes it through the client boundary. The client seeds React Query only under the registered `stablecoin-live-summary` and per-coin supply-history keys with `dataUpdatedAt = snapshot.generatedAt`. The full `stablecoin-detail` key is not seeded. Producer-derived `staleTime` and `refetchInterval` remain unchanged, so fresh build lanes avoid their initial requests while an aged snapshot refetches normally. Peg summary remains an unseeded global query. Existing market and page-level freshness affordances use the preserved query timestamp; the snapshot is not labelled live.
+
+Report cards, liquidity, redemption, yield, stress, flows, blacklist, and reserves remain interaction/viewport-gated. The page-wide retry action includes only failed eager or currently enabled supplemental lanes.
+
 ### Reserve presentation
 
 The detail page prefers live reserve data when the coin is live-enabled:

@@ -15,6 +15,8 @@ import type { ChartDataTableColumn } from "@/components/chart-primitives/data-ta
 import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import { useSupplyHistory } from "@/hooks/use-stablecoins";
+import { STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
 
 const MCAP_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; mcap: number }>[] = [
@@ -38,6 +40,10 @@ interface McapChartProps {
    * from a single header-level selector.
    */
   controlledRange?: TimeRangeOption;
+  /** Keep range controls visible while a parent owns data loading for the selected range. */
+  onControlledRangeChange?: (range: TimeRangeOption) => void;
+  /** Fetch the detail page's full series only after 1Y or All is selected. */
+  expandHistoryOnWideRange?: boolean;
   /** Optional className for the outer `<Card>` (e.g. remove the accent border in grouped layouts). */
   cardClassName?: string;
   /** When true, drop the outer Card chrome so the chart can be embedded in a grouped panel. */
@@ -45,10 +51,33 @@ interface McapChartProps {
 }
 
 export function McapChart({
+  expandHistoryOnWideRange = false,
+  ...props
+}: McapChartProps) {
+  return expandHistoryOnWideRange ? <ExpandableHistoryMcapChart {...props} /> : <McapChartBody {...props} />;
+}
+
+function ExpandableHistoryMcapChart(props: McapChartProps) {
+  const range = props.controlledRange ?? "all";
+  const needsFullHistory = range === "1y" || range === "all";
+  const fullHistoryQuery = useSupplyHistory(
+    props.stablecoinId,
+    STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS,
+    { enabled: needsFullHistory },
+  );
+  const data = needsFullHistory && fullHistoryQuery.data.length > 0
+    ? fullHistoryQuery.data
+    : props.data;
+
+  return <McapChartBody {...props} data={data} />;
+}
+
+function McapChartBody({
   data,
   stablecoinId,
   hideAnnotationLegend = false,
   controlledRange,
+  onControlledRangeChange,
   cardClassName,
   embedded = false,
 }: McapChartProps) {
@@ -155,7 +184,13 @@ export function McapChart({
               : "Log scale is only meaningful on the full range — switch to All."
           }
         />
-        {controlledRange ? null : <TimeRangeButtons options={options} value={range} onChange={setRange} />}
+        {controlledRange && !onControlledRangeChange ? null : (
+          <TimeRangeButtons
+            options={options}
+            value={range}
+            onChange={onControlledRangeChange ?? setRange}
+          />
+        )}
       </div>
     </div>
   );

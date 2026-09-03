@@ -1,7 +1,9 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
+import { PriceConfidenceSchema } from "@shared/types/core";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
@@ -59,8 +61,90 @@ import {
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
 import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
+import { z } from "zod";
 
 export type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
+
+/** First-paint window selected by the stablecoin detail market charts. */
+export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
+/** Expanded window fetched only when a detail chart selects 1Y or All. */
+export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
+
+const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
+const StablecoinDetailTokenSchema = z.object({
+  date: z.number().optional(),
+  totalCirculatingUSD: StablecoinDetailPegBucketsSchema.optional(),
+  totalCirculating: StablecoinDetailPegBucketsSchema.optional(),
+  circulating: StablecoinDetailPegBucketsSchema.optional(),
+}).passthrough();
+
+/** Public per-coin detail response; provider-specific fields intentionally pass through. */
+export const StablecoinDetailResponseSchema = z.object({
+  price: z.number().nullable().optional(),
+  priceSource: z.string().nullable().optional(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
+  priceObservedAt: z.number().nullable().optional(),
+  tokens: z.array(StablecoinDetailTokenSchema).optional(),
+}).passthrough();
+export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
+
+export const StablecoinLiveSummarySchema = z.object({
+  price: z.number().nullable(),
+  priceSource: z.string().nullable(),
+  priceConfidence: PriceConfidenceSchema.nullable(),
+  priceUpdatedAt: z.number().nullable(),
+  priceObservedAt: z.number().nullable(),
+  supplyObservedAt: z.number().nullable(),
+  circulating: StablecoinDetailPegBucketsSchema,
+  circulatingPrevDay: StablecoinDetailPegBucketsSchema,
+  circulatingPrevWeek: StablecoinDetailPegBucketsSchema,
+  circulatingPrevMonth: StablecoinDetailPegBucketsSchema,
+});
+export type StablecoinLiveSummary = z.infer<typeof StablecoinLiveSummarySchema>;
+
+function detailBucketsAt(detail: StablecoinDetailResponse, targetDate: number): Record<string, number> {
+  let nearest: NonNullable<StablecoinDetailResponse["tokens"]>[number] | undefined;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const token of detail.tokens ?? []) {
+    if (token.date == null) continue;
+    const distance = Math.abs(token.date - targetDate);
+    if (distance < nearestDistance) {
+      nearest = token;
+      nearestDistance = distance;
+    }
+  }
+  return nearest?.totalCirculatingUSD ?? {};
+}
+
+/** Project the history-heavy endpoint into only the fields consumed above the fold. */
+export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): StablecoinLiveSummary {
+  const datedTokens = (detail.tokens ?? []).filter(
+    (token): token is typeof token & { date: number } => token.date != null,
+  );
+  const latest = datedTokens.reduce<(typeof datedTokens)[number] | undefined>(
+    (candidate, token) => !candidate || token.date > candidate.date ? token : candidate,
+    undefined,
+  );
+  const latestDate = latest?.date ?? null;
+
+  return StablecoinLiveSummarySchema.parse({
+    price: detail.price ?? null,
+    priceSource: detail.priceSource ?? null,
+    priceConfidence: detail.priceConfidence ?? null,
+    priceUpdatedAt: detail.priceUpdatedAt ?? null,
+    priceObservedAt: detail.priceObservedAt ?? detail.priceUpdatedAt ?? null,
+    supplyObservedAt: latestDate,
+    circulating: latest?.totalCirculatingUSD ?? {},
+    circulatingPrevDay: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400),
+    circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400),
+    circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400),
+  });
+}
+
+const StablecoinLiveSummaryResponseSchema = StablecoinDetailResponseSchema.transform(
+  projectStablecoinLiveSummary,
+);
 
 export interface MintBurnEventsDescriptorOptions {
   direction?: string;
@@ -110,6 +194,24 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
  * imports stay lazy and are cached per endpoint declaration.
  */
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
+  stablecoinDetail: defineParameterizedApiQuery(
+    "plain",
+    createLazySchema<StablecoinDetailResponse>(async () => StablecoinDetailResponseSchema),
+    (stablecoinId: string) => ({
+      queryKey: ["stablecoin-detail", stablecoinId] as const,
+      path: API_PATHS.stablecoinDetail(stablecoinId),
+      producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
+    }),
+  ),
+  stablecoinLiveSummary: defineParameterizedApiQuery(
+    "plain",
+    createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
+    (stablecoinId: string) => ({
+      queryKey: ["stablecoin-live-summary", stablecoinId] as const,
+      path: API_PATHS.stablecoinDetail(stablecoinId),
+      producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
+    }),
+  ),
   stablecoins: defineApiQuery(
     {
       queryKey: DATA_SURFACE_DESCRIPTORS.stablecoins.queryKey,
