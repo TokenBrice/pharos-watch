@@ -42,6 +42,7 @@ rg -n '/route-name/|src/app/route-name' docs
 
 ## Cross-Cutting Contracts
 
+- [api-reference.md](./api-reference.md) - public integration routes, schemas, authentication, and cache policy; [api-reference-admin.md](./api-reference-admin.md) is the internal operator-route companion and is not published through `/docs/`
 - [pharos-urn.md](./pharos-urn.md) - stable citation identifiers and JSON-LD integration
 - [telegram-architecture.md](./telegram-architecture.md) - Telegram seam index; routes ingress/storage to Architecture, commands/dispatch/delivery to Alerts, and client/auth/state to the Mini App contract
 - [pricing-pipeline.md](./pricing-pipeline.md), [supply-snapshot.md](./supply-snapshot.md), [stability-index.md](./stability-index.md), [depeg-detection.md](./depeg-detection.md), and [blacklist-tracker.md](./blacklist-tracker.md) - authoritative data-pipeline feature contracts; [data-flow-map.md](./data-flow-map.md) remains the routing diagram

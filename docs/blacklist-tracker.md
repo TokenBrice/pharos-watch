@@ -217,10 +217,10 @@ The API reference is authoritative for parameters, schemas, cache/freshness head
 
 - [`GET /api/blacklist`](./api-reference.md#get-apiblacklist)
 - [`GET /api/blacklist-summary`](./api-reference.md#get-apiblacklist-summary)
-- [`POST /api/reset-blacklist-sync`](./api-reference.md#post-apireset-blacklist-sync)
-- [`GET /api/debug-sync-state`](./api-reference.md#get-apidebug-sync-state)
-- [`POST /api/remediate-blacklist-amount-gaps`](./api-reference.md#post-apiremediate-blacklist-amount-gaps)
-- [`POST /api/backfill-blacklist-current-balances`](./api-reference.md#post-apibackfill-blacklist-current-balances)
+- [`POST /api/reset-blacklist-sync`](./api-reference-admin.md#post-apireset-blacklist-sync)
+- [`GET /api/debug-sync-state`](./api-reference-admin.md#get-apidebug-sync-state)
+- [`POST /api/remediate-blacklist-amount-gaps`](./api-reference-admin.md#post-apiremediate-blacklist-amount-gaps)
+- [`POST /api/backfill-blacklist-current-balances`](./api-reference-admin.md#post-apibackfill-blacklist-current-balances)
 
 Public event queries exclude rows with a suppression reason. Accepted filter symbols come from `BLACKLIST_STABLECOINS`; supported/deferred deployment coverage comes from the runtime coverage manifest. Summary coverage fields are contract/config-level and must not be relabeled as symbol-level coverage.
 

@@ -14,7 +14,8 @@ describe("loadApiReferenceDocument", () => {
     expect(document.sections.length).toBeGreaterThan(5);
     expect(document.sections[0]?.title).toBe("Surface Split");
     expect(document.sections.some((section) => section.title === "Public Endpoints")).toBe(true);
-    expect(document.sections.some((section) => section.title === "Admin Endpoints")).toBe(true);
+    // Admin sections intentionally moved to the unpublished operator-only companion reference.
+    expect(document.sections.some((section) => section.title === "Admin Endpoints")).toBe(false);
   });
 
   it("captures endpoint subsections under the public endpoint group", async () => {
