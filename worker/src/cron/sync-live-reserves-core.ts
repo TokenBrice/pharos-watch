@@ -36,7 +36,7 @@ export const ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS = [
 ] as const;
 export const ADAPTER_LATENCY_MAX_GROUPS = 128;
 // Leaves 24 KiB of the scheduled metadata envelope for the reserve lane's
-// existing outcome, cursor, breaker, and lease diagnostics.
+// existing outcome, checkpoint resume-pointer, breaker, and lease diagnostics.
 export const ADAPTER_LATENCY_MAX_BYTES = 36 * 1_024;
 
 export type AdapterLatencyStage = "primary" | "fallback";

@@ -31,7 +31,7 @@ describe("live-reserves-store", () => {
     ] as unknown as Array<{ sql: string; boundValues: unknown[] }>;
 
     expect(prepared.map(({ sql, boundValues }) => sha256Hex(JSON.stringify([sql, boundValues])))).toEqual([
-      "2c285906db9d95105d793760d4ad9efe796e513099ab176b9d6ea5ccab6d9d4b", "fc98a361dec5e601605c4d93b1a38f95276a5d0677e2600d8e645e232dcf287a", "7a6c72d8c03fbcd510f78cd461f3d318b981045099a437fa3bd349ac36ea8f6e", "65c7da7ed37dd8deaed6d8f7de43f01a25c87e698aab391bf69eed06191002a7",
+      "4c4c70287cfbda07532f42f1eddd5763c15d07d69789da3c2750c1a56359114c", "fc98a361dec5e601605c4d93b1a38f95276a5d0677e2600d8e645e232dcf287a", "12f2321981b4dab96753e2fa54774155a0ef61891774e73cbe014d90676d9507", "65c7da7ed37dd8deaed6d8f7de43f01a25c87e698aab391bf69eed06191002a7",
     ]);
   });
 

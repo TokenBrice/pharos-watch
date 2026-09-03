@@ -653,7 +653,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_RESERVE_RECOVERY_MODE",
     valueType: "string",
-    description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
+    description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `recover` claims and replays interrupted or abandoned reserve slots.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -770,6 +770,20 @@ export const ENV_BINDINGS = [
     runtimes: {
       pagesSiteData: { status: "required" },
     },
+  },
+  {
+    key: "R2_MEASUREMENTS_ACCESS_KEY_ID",
+    valueType: "string",
+    description: "CI/local maintenance credential for uploading compressed measurement captures to the pharos-measurements R2 bucket.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {},
+  },
+  {
+    key: "R2_MEASUREMENTS_SECRET_ACCESS_KEY",
+    valueType: "string",
+    description: "CI/local maintenance secret for uploading compressed measurement captures to the pharos-measurements R2 bucket.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {},
   },
 ] satisfies readonly EnvBindingDefinition[];
 

@@ -16,15 +16,14 @@ const serializeWarnings = (w: readonly unknown[]): string | null => (w.length > 
 const HISTORY_TARGETS = {
   composition: {
     table: "reserve_composition_history",
-    columns: ["stablecoin_id", "fetched_at", "adapter_key", "attempt_id", "slices", "metadata", "warnings",
+    columns: ["stablecoin_id", "fetched_at", "adapter_key", "attempt_id", "payload_sha256", "slices", "metadata", "warnings",
       "warning_count", "adapter_source_model", "adapter_evidence_class"],
-    insertValues: (record: ReserveCompositionRecord) => [
-      record.stablecoinId, record.fetchedAt, record.source, record.attemptId ?? null,
-      JSON.stringify(record.slices), JSON.stringify(record.metadata), serializeWarnings(record.warnings),
-      record.warningCount, record.adapterSourceModel, record.adapterEvidenceClass],
+    insertValues: (record: ReserveCompositionRecord, payloadSha256: string | null = null) => [
+      record.stablecoinId, record.fetchedAt, record.source, record.attemptId ?? null, payloadSha256,
+      "", "{}", null, record.warningCount, record.adapterSourceModel, record.adapterEvidenceClass],
     repairProjection: [
-      "c.stablecoin_id", "c.fetched_at", "c.source", "c.attempt_id", "c.slices", "c.metadata",
-      "c.warnings", "c.warning_count", "c.adapter_source_model", "c.adapter_evidence_class"],
+      "c.stablecoin_id", "c.fetched_at", "c.source", "c.attempt_id", "?", "''", "'{}'", "NULL",
+      "c.warning_count", "c.adapter_source_model", "c.adapter_evidence_class"],
   },
   attempt: {
     table: "reserve_sync_attempt_history",
@@ -71,6 +70,7 @@ function buildHistoryRepairStatement(
   target: HistoryTarget,
   stablecoinId: string,
   attemptId: string,
+  projectionBinds: readonly unknown[] = [],
 ): D1PreparedStatement {
   // SAFETY: `target` is one of the HISTORY_TARGETS `as const` descriptors above; table/columns/projection are literals.
   return db.prepare(
@@ -79,8 +79,9 @@ function buildHistoryRepairStatement(
        )
        SELECT ${target.repairProjection.join(",\n              ")}
          ${AUTHORITATIVE_HISTORY_SOURCE}`,
-  ).bind(stablecoinId, attemptId);
+  ).bind(...projectionBinds, stablecoinId, attemptId);
 }
+
 
 export function buildReserveCompositionFinalizeSuccessStatement(
   db: D1Database,
@@ -138,14 +139,31 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
     );
 }
 
-export const buildReserveCompositionHistoryInsertStatement = (db: D1Database, record: ReserveCompositionRecord) =>
-  buildHistoryInsertStatement(db, HISTORY_TARGETS.composition, HISTORY_TARGETS.composition.insertValues(record));
+export const buildReserveCompositionHistoryInsertStatement = (
+  db: D1Database,
+  record: ReserveCompositionRecord,
+  payloadSha256: string | null = null,
+) => buildHistoryInsertStatement(
+  db,
+  HISTORY_TARGETS.composition,
+  HISTORY_TARGETS.composition.insertValues(record, payloadSha256),
+);
 
 export const buildReserveSyncAttemptHistoryInsertStatement = (db: D1Database, record: ReserveSyncAttemptHistoryRecord) =>
   buildHistoryInsertStatement(db, HISTORY_TARGETS.attempt, HISTORY_TARGETS.attempt.insertValues(record));
 
-export const buildReserveCompositionHistoryRepairStatement = (db: D1Database, stablecoinId: string, attemptId: string) =>
-  buildHistoryRepairStatement(db, HISTORY_TARGETS.composition, stablecoinId, attemptId);
+export const buildReserveCompositionHistoryRepairStatement = (
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+  payloadSha256: string | null = null,
+) => buildHistoryRepairStatement(
+  db,
+  HISTORY_TARGETS.composition,
+  stablecoinId,
+  attemptId,
+  [payloadSha256],
+);
 
 export const buildReserveSyncAttemptHistoryRepairStatement = (db: D1Database, stablecoinId: string, attemptId: string) =>
   buildHistoryRepairStatement(db, HISTORY_TARGETS.attempt, stablecoinId, attemptId);

@@ -23,6 +23,7 @@
 | 0234     | `0234_mint_burn_price_repair_backlog_index.sql`              | Backfill the production-created historical-price-repair backlog index into migration lineage (no-op on production). |
 | 0235     | `0235_telegram_digest_media_state.sql`                        | Add typed Safety Score map attachment identity and retry-safe media delivery progress to Telegram digest editions. |
 | 0236     | `0236_dex_deployment_attempt_attribution.sql`                 | Add rollout-safe per-deployment DEX census attempt fences while retaining the legacy coin fence as a compatibility fallback. |
+| 0237     | `0237_reserve_composition_history_payload_hash.sql`       | Add nullable payload SHA-256 digest to reserve composition history while retaining payload columns for backward compatibility. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 

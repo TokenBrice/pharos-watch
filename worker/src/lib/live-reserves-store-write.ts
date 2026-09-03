@@ -3,6 +3,7 @@ import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
 import { buildInClause, executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { sha256Hex } from "./hash";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
   type LiveReserveHistoryPruneResult,
@@ -25,6 +26,49 @@ import {
 } from "./live-reserves-store-statements";
 
 const LIVE_RESERVE_ARTIFACT_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
+
+interface ReserveCompositionPayloadRow {
+  slices: string;
+  metadata: string;
+  warnings: string | null;
+}
+
+function reserveCompositionPayloadJson(payload: ReserveCompositionPayloadRow): string {
+  return JSON.stringify(payload);
+}
+
+function reserveCompositionPayloadFromRecord(record: ReserveCompositionRecord): ReserveCompositionPayloadRow {
+  return {
+    slices: JSON.stringify(record.slices),
+    metadata: JSON.stringify(record.metadata),
+    warnings: record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+  };
+}
+
+async function loadAuthoritativeReserveCompositionPayloadHash(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): Promise<string | null> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT c.slices, c.metadata, c.warnings
+           FROM reserve_composition c
+           JOIN reserve_sync_state s
+             ON s.stablecoin_id = c.stablecoin_id
+          WHERE c.stablecoin_id = ?
+            AND c.attempt_id = ?
+            AND s.last_success_at = c.fetched_at
+            AND s.last_attempt_id = c.attempt_id
+            AND s.last_success_attempt_id = c.attempt_id
+            AND s.pending_attempt_id IS NULL`,
+      )
+      .bind(stablecoinId, attemptId)
+      .first<ReserveCompositionPayloadRow>(),
+  );
+  return row ? sha256Hex(reserveCompositionPayloadJson(row)) : null;
+}
 
 export interface LiveReserveArtifactCleanupResult {
   syncStateDeleted: number;
@@ -70,10 +114,11 @@ export async function repairAuthoritativeReserveSyncHistory(
   stablecoinId: string,
   attemptId: string,
 ): Promise<boolean> {
+  const payloadSha256 = await loadAuthoritativeReserveCompositionPayloadHash(db, stablecoinId, attemptId);
   await executeAtomicBatch(db, [
-      buildReserveCompositionHistoryRepairStatement(db, stablecoinId, attemptId),
-      buildReserveSyncAttemptHistoryRepairStatement(db, stablecoinId, attemptId),
-    ]);
+    buildReserveCompositionHistoryRepairStatement(db, stablecoinId, attemptId, payloadSha256),
+    buildReserveSyncAttemptHistoryRepairStatement(db, stablecoinId, attemptId),
+  ]);
   const row = await runWithOverloadRetry(() =>
     buildReserveAuthoritativeHistoryRepairReadbackStatement(db, stablecoinId, attemptId)
       .first<{ repaired: number }>(),
@@ -127,10 +172,13 @@ export async function finalizeReserveSyncSuccess(
   }
 
   await onAuthoritativeWrite?.();
+  const payloadSha256 = await sha256Hex(
+    reserveCompositionPayloadJson(reserveCompositionPayloadFromRecord(composition)),
+  );
 
   try {
     await executeAtomicBatch(db, [
-        buildReserveCompositionHistoryInsertStatement(db, composition),
+        buildReserveCompositionHistoryInsertStatement(db, composition, payloadSha256),
         buildReserveSyncAttemptHistoryInsertStatement(db, {
           stablecoinId: syncState.stablecoinId,
           attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,

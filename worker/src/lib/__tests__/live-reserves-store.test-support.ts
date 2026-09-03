@@ -16,6 +16,7 @@ export const RESERVE_DEFAULT_TABLES: MockTableConfig[] = [
   { match: "UPDATE reserve_sync_state", rows: [] },
   { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
   { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
+  { match: "FROM worker_scheduled_checkpoints", rows: [], first: null },
   {
     match: "SELECT 1 AS finalized FROM reserve_composition c JOIN reserve_sync_state",
     rows: [],

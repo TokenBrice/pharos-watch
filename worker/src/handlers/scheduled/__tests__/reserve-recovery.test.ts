@@ -5,9 +5,7 @@ import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.te
 
 const mocks = vi.hoisted(() => ({
   claim: vi.fn(),
-  inspect: vi.fn(),
   prepare: vi.fn(),
-  retireIncompatible: vi.fn(),
   sweep: vi.fn(),
   runReserveSlot: vi.fn(),
   createRuntime: vi.fn(),
@@ -15,9 +13,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   claimNextLiveReserveCheckpointRecovery: mocks.claim,
-  inspectLiveReserveCheckpointRecoveryEligibility: mocks.inspect,
   prepareEligibleLiveReserveCheckpointRecoveries: mocks.prepare,
-  retireIncompatibleLiveReserveCheckpointRecoveries: mocks.retireIncompatible,
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
@@ -67,15 +63,7 @@ describe("reserve recovery mode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     latestLeasedResult = undefined;
-    mocks.inspect.mockResolvedValue(EMPTY_INSPECTION);
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
-    mocks.retireIncompatible.mockResolvedValue({
-      observedAt: 1_000,
-      candidates: 0,
-      retired: 0,
-      skippedActiveChildLease: 0,
-      retiredCheckpoints: [],
-    });
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
     mocks.claim.mockResolvedValue(null);
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
@@ -85,52 +73,23 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("off"));
 
     expect(result.jobsErrored).toBe(0);
-    expect(mocks.inspect).not.toHaveBeenCalled();
     expect(mocks.sweep).toHaveBeenCalledTimes(1);
     expect(mocks.sweep).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ staleAfterSec: 300, limit: 10 }),
     );
     expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
-    expect(mocks.retireIncompatible).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
   });
 
-  it("keeps shadow mode read-only while reporting eligibility", async () => {
-    mocks.inspect.mockResolvedValue({
-      ...EMPTY_INSPECTION,
-      eligibleCheckpointCount: 1,
-      candidates: [{ eligible: true, blockers: [] }],
-    });
-
+  it("treats removed rollout modes as disabled", async () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("shadow"));
 
     expect(result.jobsErrored).toBe(0);
-    expect(mocks.inspect).toHaveBeenCalledTimes(1);
     expect(mocks.sweep).toHaveBeenCalledTimes(1);
-    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
-    expect(mocks.retireIncompatible).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
-  });
-
-  it("prepares abandoned attempts in reconcile mode without claiming", async () => {
-    mocks.prepare.mockResolvedValue({
-      inspection: EMPTY_INSPECTION,
-      prepared: [{ abandonedAttemptNo: 1, recoveryAttemptNo: 2 }],
-    });
-
-    const result = await runFiveMinuteReserveRecoverySlot(runtime("reconcile"));
-
-    expect(result.jobsErrored).toBe(0);
-    expect(mocks.sweep).toHaveBeenCalledTimes(2);
-    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
-    expect(mocks.sweep.mock.calls[1]![1]).toMatchObject({ slotKey: "fourHourlyReserveSync" });
-    expect(mocks.retireIncompatible).toHaveBeenCalledTimes(1);
-    expect(mocks.prepare).toHaveBeenCalledTimes(1);
-    expect(mocks.claim).not.toHaveBeenCalled();
-    expect(mocks.runReserveSlot).not.toHaveBeenCalled();
   });
 
   it("claims and replays only in recover mode", async () => {
@@ -156,13 +115,6 @@ describe("reserve recovery mode", () => {
       disposition: "recovery-executed",
       mode: "recover",
       checkpointsClaimed: 1,
-      incompatibleRetirement: {
-        observedAt: 1_000,
-        candidates: 0,
-        retired: 0,
-        skippedActiveChildLease: 0,
-        retiredCheckpoints: [],
-      },
       originalScheduleKey: "fourHourlyReserveSync",
       originalSlotStartedAt: 800,
       recoveryAttemptNo: 2,

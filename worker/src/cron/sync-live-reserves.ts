@@ -33,11 +33,8 @@ import {
 import { finalizeReserveSyncRun, type ReserveSyncAttemptFailureGroup } from "./sync-live-reserves-finalize";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
 import {
-  loadLiveReserveCursorState,
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
-  type LiveReserveGlobalCursorOwner,
-  type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import {
   resolveLiveReserveSyncBudgetConfig,
@@ -483,8 +480,6 @@ async function runReserveCoinQueue(args: {
   checkpoint?: ScheduledCheckpointIdentity;
   startIndex: number;
   fullQueue: readonly ConfiguredCoin[];
-  manageGlobalCursor: boolean;
-  globalCursorOwner: LiveReserveGlobalCursorOwner | null;
   telemetry: AdapterLatencyCollector;
 }): Promise<ReserveCoinQueueResult> {
   const counts: LiveReserveQueueCounts = {
@@ -541,10 +536,6 @@ async function runReserveCoinQueue(args: {
         args.orderedCoins.slice(index),
         Math.floor(Date.now() / 1000),
         args.signal,
-        {
-          manageGlobalCursor: args.manageGlobalCursor,
-          globalCursorOwner: args.globalCursorOwner,
-        },
       );
       for (const key of deferred.additionalBreakerKeys) {
         breakerKeys.add(key);
@@ -685,21 +676,6 @@ export async function syncLiveReserves(
       `live reserve queue hash changed (${checkpoint.queueHash} -> ${LIVE_RESERVE_QUEUE_HASH}); refusing unsafe suffix replay`,
     );
   }
-  const recoveryCheckpointOwned = checkpoint?.state === "recovering" || checkpoint?.sourceAttemptNo != null;
-  const manageGlobalCursor = !recoveryCheckpointOwned;
-  const checkpointCursorOwner: LiveReserveGlobalCursorOwner | null = checkpoint
-    ? {
-        scheduleKey: checkpoint.scheduleKey,
-        slotStartedAt: checkpoint.slotStartedAt,
-        attemptNo: checkpoint.attemptNo,
-        executionGeneration: checkpoint.executionGeneration,
-        invocationId: checkpoint.invocationId,
-        queueHash: checkpoint.queueHash,
-      }
-    : null;
-  const cursorState: LoadedLiveReserveCursorState | null = manageGlobalCursor
-    ? await loadLiveReserveCursorState(db)
-    : null;
   let checkpointResumeId = checkpoint?.nextItemKey ?? null;
   if (checkpoint && checkpointResumeId && checkpoint.currentDomainAttemptId) {
     const authoritative = await didReserveSyncAttemptBecomeAuthoritative(
@@ -733,15 +709,10 @@ export async function syncLiveReserves(
       checkpoint = { ...checkpoint, nextItemKey: checkpointResumeId, currentDomainAttemptId: null, itemsDone: completedIndex + 1 };
     }
   }
-  // Cursor semantics over the evidence-class-ordered queue: a cursored run
-  // resumes at the first coin deferred by the previous run and processes only
-  // that deferred suffix. It deliberately does not wrap back to the
-  // high-priority head in the same run; otherwise a slow weak-probe tail could
-  // exhaust the resumed budget and rewrite independent head feeds as skipped.
-  // Once the deferred suffix completes, finalization clears the cursor and the
-  // next scheduled run starts again from the top of the priority queue. If the
-  // cursor coin is no longer in the queue (order or coverage changed between
-  // deploys), fall back to starting from the top of the ordered queue.
+  // A checkpoint's next-item pointer is the sole run-level resume mechanism.
+  // A resumed run processes only the deferred suffix and does not wrap back to
+  // the high-priority head; once the suffix completes, checkpoint finalization
+  // clears the pointer and the next scheduled run starts from the queue head.
   const fullQueueTotal = SYNC_ORDERED_CONFIGURED_COINS.length;
   const checkpointResumeIndex = checkpointResumeId
     ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === checkpointResumeId)
@@ -751,27 +722,10 @@ export async function syncLiveReserves(
   if (checkpointResumeId && checkpointResumeIndex < 0) {
     throw new Error(`live reserve checkpoint item ${checkpointResumeId} no longer exists in the queue`);
   }
-  const globalResumeId = cursorState?.nextStablecoinId ?? null;
-  const globalResumeIndex = globalResumeId
-    ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === globalResumeId)
-    : -1;
-  const checkpointHasUnfinishedAttempt = checkpoint?.currentDomainAttemptId != null;
-  const startIndex = recoveryCheckpointOwned || checkpointHasUnfinishedAttempt
-    ? checkpointResumeIndex
-    : Math.max(checkpointResumeIndex, Math.max(0, globalResumeIndex));
-  const frontierItemId = SYNC_ORDERED_CONFIGURED_COINS[startIndex]?.id ?? null;
-  if (
-    checkpoint
-    && manageGlobalCursor
-    && (checkpoint.nextItemKey !== frontierItemId || checkpoint.itemsDone !== startIndex)
-  ) {
-    await advanceLiveReserveCheckpoint(db, checkpointIdentity!, {
-      nextItemKey: frontierItemId,
-      itemsDone: startIndex,
-    });
-    checkpoint = { ...checkpoint, nextItemKey: frontierItemId, itemsDone: startIndex };
-  }
-  const effectiveResumeId = startIndex > 0 ? frontierItemId : null;
+  const startIndex = checkpointResumeIndex;
+  const effectiveResumeId = startIndex > 0
+    ? SYNC_ORDERED_CONFIGURED_COINS[startIndex]?.id ?? null
+    : null;
   const orderedCoins = startIndex >= fullQueueTotal
     ? []
     : selectConfiguredCoinRunQueue(SYNC_ORDERED_CONFIGURED_COINS, effectiveResumeId);
@@ -821,8 +775,6 @@ export async function syncLiveReserves(
     checkpoint: checkpointIdentity,
     startIndex: Math.max(0, startIndex),
     fullQueue: SYNC_ORDERED_CONFIGURED_COINS,
-    manageGlobalCursor,
-    globalCursorOwner: manageGlobalCursor ? checkpointCursorOwner : null,
     telemetry,
   });
 
@@ -834,10 +786,6 @@ export async function syncLiveReserves(
     runStartedMs,
     reportProgress,
     budgetConfig,
-    loadedCursorState: cursorState,
-    manageGlobalCursor,
-    checkpointOwned: checkpoint != null,
-    recoveryCursorOwner: recoveryCheckpointOwned ? checkpointCursorOwner : null,
     ...queueResult,
     phaseTimings: {
       setup: setupPhaseMs,
@@ -845,6 +793,7 @@ export async function syncLiveReserves(
       ...queueResult.phaseTimings,
     },
     cohortItemsDoneBeforeRun: Math.max(0, startIndex),
+    checkpointOwned: checkpointIdentity != null,
     adapterLatency: telemetry.finalize(),
     adapterTelemetryProgress: telemetry.progress(),
   });

@@ -2,8 +2,6 @@ import { logWorkerEventArgs } from "./structured-log";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./live-reserves-store-shared";
-import { getCache } from "./db-cache";
-import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "./operational-cache-keys";
 import {
   getConfiguredLiveReserveCoins,
   LIVE_RESERVE_FRESHNESS_SEC,
@@ -23,6 +21,27 @@ import {
 } from "./live-reserves-store-snapshot-state";
 import { parseReserveCompositionRow } from "./live-reserves-store-row-decoding";
 
+
+interface LiveReserveResumePointer {
+  next_item_key: string | null;
+  items_done: number;
+  items_total: number;
+  updated_at: number;
+}
+
+async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveReserveResumePointer | null> {
+  return db
+    .prepare(
+      `SELECT next_item_key, items_done, items_total, updated_at
+         FROM worker_scheduled_checkpoints
+        WHERE schedule_key = 'fourHourlyReserveSync'
+          AND job = 'sync-live-reserves'
+          AND state IN ('running', 'recovering', 'ready')
+        ORDER BY slot_started_at DESC, attempt_no DESC
+        LIMIT 1`,
+    )
+    .first<LiveReserveResumePointer>();
+}
 function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord): boolean {
   if (syncState.lastStatus === "degraded" || syncState.lastStatus === "error") {
     return true;
@@ -80,78 +99,6 @@ export async function loadLiveReserveHistoryWriteGaps(
       compositionHistoryMissing: Number(row.composition_history_missing) === 1,
       attemptHistoryMissing: Number(row.attempt_history_missing) === 1,
     }));
-}
-
-interface CursorState {
-  nextCursorStablecoinId: string | null;
-  cursorDeferredCount: number | null;
-  runBudgetTruncated: boolean;
-  deferredAt: number | null;
-  cursorTailState: ReserveCompositionOverview["cursorTailState"];
-  cursorTailError: string | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  runBudgetTruncationCount: number;
-}
-
-const EMPTY_CURSOR_STATE: CursorState = {
-  nextCursorStablecoinId: null,
-  cursorDeferredCount: null,
-  runBudgetTruncated: false,
-  deferredAt: null,
-  cursorTailState: null,
-  cursorTailError: null,
-  cursorRecordedAt: null,
-  cursorTailCompletedAt: null,
-  cursorTailFailedAt: null,
-  runBudgetTruncationCount: 0,
-};
-
-function parseCursorCacheState(
-  cursorCache: { value: string } | null,
-): CursorState {
-  if (!cursorCache) {
-    return { ...EMPTY_CURSOR_STATE };
-  }
-
-  try {
-    const parsed = JSON.parse(cursorCache.value) as {
-      nextStablecoinId?: unknown;
-      deferredCount?: unknown;
-      deferredAt?: unknown;
-      tailState?: unknown;
-      tailError?: unknown;
-      cursorRecordedAt?: unknown;
-      tailCompletedAt?: unknown;
-      tailFailedAt?: unknown;
-      runBudgetTruncationCount?: unknown;
-    };
-    const cursorDeferredCount = typeof parsed.deferredCount === "number" ? parsed.deferredCount : null;
-    const runBudgetTruncated = cursorDeferredCount != null && cursorDeferredCount > 0;
-    return {
-      nextCursorStablecoinId: typeof parsed.nextStablecoinId === "string" ? parsed.nextStablecoinId : null,
-      cursorDeferredCount,
-      runBudgetTruncated,
-      deferredAt: typeof parsed.deferredAt === "number" ? parsed.deferredAt : null,
-      cursorTailState:
-        parsed.tailState === "recording" || parsed.tailState === "incomplete" || parsed.tailState === "complete"
-          ? parsed.tailState
-          : null,
-      cursorTailError: typeof parsed.tailError === "string" ? parsed.tailError : null,
-      cursorRecordedAt: typeof parsed.cursorRecordedAt === "number" ? parsed.cursorRecordedAt : null,
-      cursorTailCompletedAt: typeof parsed.tailCompletedAt === "number" ? parsed.tailCompletedAt : null,
-      cursorTailFailedAt: typeof parsed.tailFailedAt === "number" ? parsed.tailFailedAt : null,
-      runBudgetTruncationCount:
-        typeof parsed.runBudgetTruncationCount === "number" && parsed.runBudgetTruncationCount > 0
-          ? parsed.runBudgetTruncationCount
-          : runBudgetTruncated
-            ? 1
-            : 0,
-    };
-  } catch {
-    return { ...EMPTY_CURSOR_STATE };
-  }
 }
 
 interface CoinStatusCounts {
@@ -319,12 +266,17 @@ export async function computeReserveCompositionOverview(
   }
 
   const coinIds = configuredCoins.map((coin) => coin.id);
-  const [syncById, compositionById] = await Promise.all([
+  const [syncById, compositionById, checkpoint] = await Promise.all([
     loadReserveSyncStateMap(db, coinIds),
     loadReserveCompositionRowMap(db, coinIds),
+    loadLatestLiveReserveResumePointer(db),
   ]);
 
-  const cursor = parseCursorCacheState(await getCache(db, LIVE_RESERVE_RUN_CURSOR_CACHE_KEY));
+  const pointerPending = checkpoint?.next_item_key != null
+    && checkpoint.items_done < checkpoint.items_total;
+  const pointerDeferredCount = pointerPending
+    ? Math.max(0, checkpoint!.items_total - checkpoint!.items_done)
+    : 0;
 
   let historyWriteGaps: NonNullable<ReserveCompositionOverview["historyWriteGaps"]> = [];
   let historyWriteGapCheckFailed = false;
@@ -350,16 +302,16 @@ export async function computeReserveCompositionOverview(
     staticValidatedFresh: counts.staticValidatedFresh,
     weakProbeFresh: counts.weakProbeFresh,
     writeTimeoutUncertain: counts.writeTimeoutUncertain,
-    deferredCoins: Math.max(counts.deferredCoins, cursor.cursorDeferredCount ?? 0),
-    runBudgetTruncated: cursor.runBudgetTruncated,
-    deferredAt: cursor.deferredAt,
-    nextCursorStablecoinId: cursor.nextCursorStablecoinId,
-    cursorTailState: cursor.cursorTailState,
-    cursorTailError: cursor.cursorTailError,
-    cursorRecordedAt: cursor.cursorRecordedAt,
-    cursorTailCompletedAt: cursor.cursorTailCompletedAt,
-    cursorTailFailedAt: cursor.cursorTailFailedAt,
-    runBudgetTruncationCount: cursor.runBudgetTruncationCount,
+    deferredCoins: Math.max(counts.deferredCoins, pointerDeferredCount),
+    runBudgetTruncated: pointerPending,
+    deferredAt: pointerPending ? checkpoint!.updated_at : null,
+    nextCursorStablecoinId: pointerPending ? checkpoint!.next_item_key : null,
+    cursorTailState: null,
+    cursorTailError: null,
+    cursorRecordedAt: pointerPending ? checkpoint!.updated_at : null,
+    cursorTailCompletedAt: null,
+    cursorTailFailedAt: null,
+    runBudgetTruncationCount: pointerPending ? 1 : 0,
     historyWriteGaps,
     historyWriteGapCheckFailed,
     persistentlyStaleIndependentCoins: counts.persistentlyStaleIndependentCoins.sort(

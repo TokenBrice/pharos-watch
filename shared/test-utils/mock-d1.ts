@@ -57,7 +57,7 @@ export function createMockD1Preset(defaults: readonly MockTableConfig[]) {
   return (overrides: MockTableConfig[] = []): MockD1Database => mockD1([...overrides, ...defaults]);
 }
 
-export function filterD1HistoryEntries(
+function filterD1HistoryEntries(
   db: MockD1Database,
   sqlIncludes: string,
   bindAt?: readonly [index: number, value: unknown],

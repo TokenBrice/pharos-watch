@@ -7,7 +7,6 @@ import {
   reserveCompositionRow,
   reserveSyncRow,
 } from "./live-reserves-store.test-support";
-import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../operational-cache-keys";
 import {
   computeReserveCompositionOverview,
   getMaxSyncAge,
@@ -871,25 +870,16 @@ describe("live-reserves-store", () => {
     expect(primarySum).toBe(overview.configuredCoins);
   });
 
-  it("surfaces partial deferred-tail cursor diagnostics in the overview", async () => {
+  it("surfaces pending checkpoint resume diagnostics in the overview", async () => {
     const now = 10_000;
     const db = mockD1([
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
+        match: "FROM worker_scheduled_checkpoints",
         rows: [],
         first: {
-          value: JSON.stringify({
-            nextStablecoinId: "coin-tail",
-            deferredCount: 12,
-            deferredAt: 9_900,
-            reason: "run-budget-exhausted",
-            tailState: "incomplete",
-            tailError: "batch unavailable",
-            cursorRecordedAt: 9_900,
-            tailFailedAt: 9_905,
-            runBudgetTruncationCount: 2,
-          }),
+          next_item_key: "coin-tail",
+          items_done: 0,
+          items_total: 12,
           updated_at: 9_905,
         },
       },
@@ -900,12 +890,12 @@ describe("live-reserves-store", () => {
     expect(overview.runBudgetTruncated).toBe(true);
     expect(overview.deferredCoins).toBeGreaterThanOrEqual(12);
     expect(overview.nextCursorStablecoinId).toBe("coin-tail");
-    expect(overview.cursorTailState).toBe("incomplete");
-    expect(overview.cursorTailError).toBe("batch unavailable");
-    expect(overview.cursorRecordedAt).toBe(9_900);
-    expect(overview.cursorTailFailedAt).toBe(9_905);
+    expect(overview.cursorTailState).toBeNull();
+    expect(overview.cursorTailError).toBeNull();
+    expect(overview.cursorRecordedAt).toBe(9_905);
+    expect(overview.cursorTailFailedAt).toBeNull();
     expect(overview.cursorTailCompletedAt).toBeNull();
-    expect(overview.runBudgetTruncationCount).toBe(2);
+    expect(overview.runBudgetTruncationCount).toBe(1);
   });
 
   it("detects authoritative reserve snapshots missing history rows", async () => {
