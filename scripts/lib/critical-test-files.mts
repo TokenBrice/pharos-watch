@@ -128,6 +128,16 @@ export function buildCriticalCoverageArgs(
   ];
 }
 
+export function countCriticalCoverageShards(
+  options: CriticalCoverageBuildOptions = {},
+  maxShards = 4,
+): number {
+  const selectedSources = selectCriticalCoverageFiles(options);
+  const ownership = options.ownership ?? generatedCriticalOwnership;
+  const selectedTests = collectOwningTests(selectedSources, ownership);
+  return Math.max(1, Math.min(maxShards, selectedTests.length));
+}
+
 export function buildCriticalCoverageMergeArgs(
   reportsDirectory = ".vitest-reports",
   options: CriticalCoverageBuildOptions = {},

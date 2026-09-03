@@ -45,6 +45,8 @@ jobs:
           CRITICAL_COVERAGE_CHANGED: ${{ steps.classify.outputs.critical_coverage_changed }}
           DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
           DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: echo "matrix=$(node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix)" >> "$GITHUB_OUTPUT"
 
   prepare:
@@ -63,7 +65,7 @@ jobs:
           workspace-cache: "true"
 
   validation:
-    name: ${{ matrix.lane }}${{ matrix.shard && format(' ({0}/4)', matrix.shard) || '' }}
+    name: ${{ matrix.lane }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shardCount) || '' }}
     needs: [preflight, prepare]
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.timeout }}
@@ -89,6 +91,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_LANE_ID: ${{ matrix.lane }}
           PR_LANE_SHARD: ${{ matrix.shard }}
+          PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
       - name: Upload critical coverage blob
         if: ${{ always() && matrix.lane == 'critical-coverage-shards' }}

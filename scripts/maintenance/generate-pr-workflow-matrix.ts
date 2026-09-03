@@ -3,6 +3,9 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
+import { collectGitPaths } from "../lib/changed-files.mts";
+import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
+import { countCriticalCoverageShards } from "../lib/critical-test-files.mts";
 import {
   PR_LANES,
   buildPrLaneCommandArgs,
@@ -15,6 +18,7 @@ import {
 export interface WorkflowMatrixEntry {
   lane: PrLaneId;
   shard?: number;
+  shardCount?: number;
   timeout: number;
 }
 
@@ -22,9 +26,15 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
   const include: WorkflowMatrixEntry[] = [];
   for (const lane of PR_LANES) {
     if (["preflight", "critical-coverage", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
-    const shards = lane.shards ?? 1;
+    const shards = lane.id === "critical-coverage-shards"
+      ? selection.criticalCoverageShards
+      : lane.shards ?? 1;
     for (let shard = 1; shard <= shards; shard += 1) {
-      include.push({ lane: lane.id, ...(lane.shards ? { shard } : {}), timeout: lane.timeoutMinutes });
+      include.push({
+        lane: lane.id,
+        ...(lane.shards ? { shard, shardCount: shards } : {}),
+        timeout: lane.timeoutMinutes,
+      });
     }
   }
   return { include };
@@ -37,6 +47,7 @@ function bool(value: string | undefined): boolean {
 function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
   const lane = getPrLane(laneId);
   const shard = env.PR_LANE_SHARD ? Number.parseInt(env.PR_LANE_SHARD, 10) : undefined;
+  const shardCount = env.PR_LANE_SHARD_COUNT ? Number.parseInt(env.PR_LANE_SHARD_COUNT, 10) : undefined;
   for (const command of lane.commands) {
     if (laneId === "critical-coverage" && command.id !== "critical-coverage-merge") continue;
     const program = command.program === "npm" ? "npm" : process.execPath;
@@ -44,6 +55,7 @@ function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
       base: env.PR_BASE_SHA,
       head: env.PR_HEAD_SHA,
       shard,
+      shardCount,
     }), { env, stdio: "inherit" });
     if (result.error) throw result.error;
     if (result.status !== 0) return result.status ?? 1;
@@ -76,8 +88,22 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
   const selectedModes = [values.matrix, values.preflight, values.run].filter(Boolean);
   assertCliUsage(selectedModes.length === 1, "Exactly one of --matrix, --preflight, or --run is required");
   if (values.matrix) {
+    const criticalCoverageChanged = bool(env.CRITICAL_COVERAGE_CHANGED);
+    let criticalCoverageShards = 0;
+    if (criticalCoverageChanged) {
+      const base = env.PR_BASE_SHA;
+      const head = env.PR_HEAD_SHA;
+      const changedFiles = base && head
+        ? collectGitPaths({ kind: "range", base, head, diffFilter: "ACMR" })
+        : [];
+      const changedCriticalFiles = changedFiles.some((file) => CRITICAL_FILES.includes(file))
+        ? changedFiles
+        : undefined;
+      criticalCoverageShards = countCriticalCoverageShards({ changedFiles: changedCriticalFiles });
+    }
     process.stdout.write(JSON.stringify(buildPrWorkflowMatrix({
-      criticalCoverageChanged: bool(env.CRITICAL_COVERAGE_CHANGED),
+      criticalCoverageChanged,
+      criticalCoverageShards,
       docsChanged: bool(env.DOCS_CHANGED),
       docsOnly: bool(env.DOCS_ONLY),
     })));
