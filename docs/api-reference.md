@@ -738,6 +738,39 @@ Returns reviewed redemption paths and backstop evidence.
 - **Success response schema:** [`RedemptionBackstopsResponse`](https://pharos.watch/openapi.json#/components/schemas/RedemptionBackstopsResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
+**Minimal response example**
+
+```json
+{
+  "coins": {},
+  "methodology": {
+    "version": "4.42",
+    "versionLabel": "v4.42",
+    "currentVersion": "4.42",
+    "currentVersionLabel": "v4.42",
+    "changelogPath": "/methodology/redemption-backstop-changelog/",
+    "asOf": 0,
+    "isCurrent": true,
+    "componentWeights": {
+      "access": 0.2,
+      "settlement": 0.15,
+      "executionCertainty": 0.15,
+      "capacity": 0.25,
+      "outputAssetQuality": 0.15,
+      "cost": 0.1
+    },
+    "routeFamilyCaps": {
+      "queueRedeem": 70,
+      "offchainIssuer": 65
+    }
+  },
+  "updatedAt": 0,
+  "snapshotSource": "run-rows"
+}
+```
+
+**Capacity-confidence vocabulary:** `live-direct`, `live-proxy`, `dynamic`, `documented-bound`, `heuristic`.
+
 ### `GET /api/safety-score-history`
 
 Returns legacy bounded Safety Score history for one stablecoin.

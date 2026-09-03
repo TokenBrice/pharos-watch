@@ -11,9 +11,16 @@ import {
   CHAIN_HEALTH_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   SAFETY_SCORE_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION,
 } from "@shared/lib/methodology-versions/constants";
+import {
+  REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
+  REDEMPTION_ROUTE_FAMILY_CAPS,
+} from "@shared/lib/redemption-backstop-scoring";
+import { RedemptionCapacityConfidenceSchema } from "@shared/types/redemption";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../../..");
 const OPENAPI_PATH = resolve(ROOT, "public/openapi.json");
@@ -191,6 +198,34 @@ function renderHealthFreshnessExample(): string {
     "```",
   ].join("\n");
 }
+function renderRedemptionBackstopContract(): string {
+  const versionLabel = `v${REDEMPTION_BACKSTOP_METHODOLOGY_VERSION}`;
+  const responseExample = {
+    coins: {},
+    methodology: {
+      version: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+      versionLabel,
+      currentVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+      currentVersionLabel: versionLabel,
+      changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
+      asOf: 0,
+      isCurrent: true,
+      componentWeights: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
+      routeFamilyCaps: REDEMPTION_ROUTE_FAMILY_CAPS,
+    },
+    updatedAt: 0,
+    snapshotSource: "run-rows",
+  };
+  return [
+    "**Minimal response example**",
+    "",
+    "```json",
+    JSON.stringify(responseExample, null, 2),
+    "```",
+    "",
+    `**Capacity-confidence vocabulary:** ${RedemptionCapacityConfidenceSchema.options.map((value) => `\`${value}\``).join(", ")}.`,
+  ].join("\n");
+}
 function currentMethodologyExample(operationId: string): Record<string, string> | null {
   switch (operationId) {
     case "blacklist":
@@ -229,6 +264,7 @@ function renderSourceBackedRouteDetails(operationId: string): string | null {
     ].join("\n"));
   }
   if (operationId === "health") lines.push(renderHealthFreshnessExample());
+  if (operationId === "redemptionBackstops") lines.push(renderRedemptionBackstopContract());
   if (operationId === "chains") {
     lines.push([
       "**Source-backed chain methodology example**",

@@ -65,5 +65,6 @@ describe("generate-api-reference", () => {
     expect(block).toContain(`Freshness threshold: ${API_FRESHNESS_MAX_AGE_SEC.stressSignals} s.`);
     expect(block).toContain(`"maxAge": ${CACHE_FRESHNESS_LANES.dexLiquidity.availabilityMaxAgeSec}`);
     expect(block).toContain("| `geckoId` | `string \\| null` |");
+    expect(block).toContain("**Capacity-confidence vocabulary:** `live-direct`, `live-proxy`");
   });
 });

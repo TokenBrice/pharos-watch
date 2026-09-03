@@ -106,7 +106,7 @@
         "docs/security-governance.md",
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" },
-        "docs/api-reference-admin.md"
+        { "path": "docs/api-reference-admin.md", "anchor": "admin-endpoints" }
       ],
       "background": ["docs/data-flow-map.md"],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
