@@ -1,4 +1,4 @@
-import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
@@ -45,7 +45,7 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
     const doomedKeys: string[] = [];
     for (const row of pageRows) {
       const stablecoinId = row.key.slice(DETAIL_KEY_PREFIX.length);
-      if (!READABLE_IDS.has(stablecoinId)) {
+      if (!WORKER_READABLE_IDS.has(stablecoinId)) {
         orphanCount += 1;
         doomedKeys.push(row.key);
       } else if (row.updated_at < cutoff) {

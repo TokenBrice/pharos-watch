@@ -1167,14 +1167,14 @@ describe("worker.scheduled", () => {
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });
 
-  it("runs daily 03:00 housekeeping on its dedicated trigger", async () => {
+  it("runs the logical daily 03:00 housekeeping slot on its staggered trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
     const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
     await worker.scheduled(
-      { cron: "0 3 * * *" } as ScheduledEvent,
+      { cron: "3 3 * * *" } as ScheduledEvent,
       env,
       ctx,
     );

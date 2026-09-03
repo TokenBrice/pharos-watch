@@ -1,5 +1,5 @@
 /**
- * Half-hourly trigger (0,30 * * * *):
+ * Half-hourly physical trigger (5,35 * * * *), retaining logical :00/:30 slots:
  *   sync-cl-exit-depth (3)
  *
  * Isolated score-bearing measured-execution lane. The lane's flat metadata
