@@ -35,6 +35,10 @@ const baseTestExcludes = [
 // registry/env state); they run in the node-isolated project below instead of
 // forcing isolation back on for the other ~200 functions/scripts/shared files.
 const isolationDependentNodeTests = [
+  // Mocks node:child_process; under isolate:false a sibling that imported
+  // scripts/lib/remote-d1.ts first would leave the unmocked module cached and
+  // the suite would shell out to real wrangler.
+  "scripts/__tests__/remote-d1.test.ts",
   "scripts/__tests__/serve-static-export.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
