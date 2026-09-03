@@ -9,7 +9,7 @@ Capability: spawn a read-only reviewer.
 ```text
 Audit <DOC_OR_DOC_FAMILY> against source. Do not edit files.
 
-Read docs/agent-task-router.md, docs/doc-ownership.json, docs/process/agent-artifacts.md, the target docs, and routed source/local imports.
+Read docs/process/agent-start-here.md, docs/doc-ownership.json, docs/process/agent-artifacts.md, the target docs, and routed source/local imports.
 
 Return false/stale claims with source-backed corrections, missing required updates, suspect source paths, and exact doc checks. Produce edit-ready findings, not rewritten prose.
 ```

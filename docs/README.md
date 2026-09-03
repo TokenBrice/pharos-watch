@@ -5,8 +5,7 @@ Verified entry point for Pharos documentation. Code, schemas, registries, and ch
 ## Start Here
 
 - [../README.md](../README.md) - repository overview, local setup, and deployment summary
-- [process/agent-start-here.md](./process/agent-start-here.md) - compact, harness-neutral agent workflow from routing through handoff
-- [agent-task-router.md](./agent-task-router.md) - find the smallest relevant docs and checks for a change
+- [process/agent-start-here.md](./process/agent-start-here.md) - canonical routing, harness workflow, and handoff guidance
 - [architecture.md](./architecture.md) - runtime boundaries, host model, and architectural decisions
 - [data-flow-map.md](./data-flow-map.md) - source-to-cron-to-API-to-page flow map
 - [process/agent-artifacts.md](./process/agent-artifacts.md) - durable documentation versus temporary research
@@ -26,9 +25,9 @@ Public and internal material can share a source file only when the public text r
 
 ## Engineering Entry Points
 
-Use the [Agent Task Router](./agent-task-router.md), the canonical source-to-document routing guide for engineering changes. The [Audiences](#audiences) section above provides the audience-level entry points.
+Use [Agent Start Here](./process/agent-start-here.md), the canonical source-to-document routing guide for engineering changes. The [Audiences](#audiences) section above provides the audience-level entry points.
 
-Route-specific contracts use descriptive filenames such as `homepage.md`, `*-page.md`, `stablecoin-detail-page.md`, and `status-dashboard.md`. Find the owning route doc from the task router or with:
+Route-specific contracts use descriptive filenames such as `homepage.md`, `*-page.md`, `stablecoin-detail-page.md`, and `status-dashboard.md`. Find the owning route doc from Agent Start Here or with:
 
 ```bash
 rg -n '/route-name/|src/app/route-name' docs

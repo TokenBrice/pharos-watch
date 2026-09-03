@@ -17,7 +17,7 @@ Use this skill from the Pharos repository root when the user asks to:
 ## Core Rules
 
 - Code and checked runtime data are the source of truth. Do not trust existing docs without verifying.
-- Start with `docs/agent-task-router.md` and read only the docs for the matched task family.
+- Start with `docs/process/agent-start-here.md` and read only the docs for the matched task family.
 - Use `docs/doc-ownership.json` to decide which docs may need updates.
 - Keep `/docs/` and `README.md` as the verified documentation corpus. Do not create committed planning archives.
 - Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), methodology/doc sync (`check:doc-sync`), the generated `AGENTS.md` mirror (`check:generated-artifacts -- --only=agents-doc`), and generated API artifacts (`check:generated-artifacts -- --only=api-reference,openapi,postman`). The rest of the API reference is hand-written and remains in semantic-audit scope.
@@ -28,7 +28,7 @@ Use this skill from the Pharos repository root when the user asks to:
 
 ## Read First
 
-1. `docs/agent-task-router.md`
+1. `docs/process/agent-start-here.md`
 2. `docs/process/agent-artifacts.md`
 3. `docs/doc-ownership.json`
 4. `docs/testing.md`

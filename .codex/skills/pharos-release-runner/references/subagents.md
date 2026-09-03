@@ -9,7 +9,7 @@ Capability: spawn a read-only reviewer.
 ```text
 Review the intended Pharos release surface for production readiness. Do not edit files.
 
-Read docs/agent-task-router.md, docs/deployment-process.md, docs/testing.md, and the committed diff against origin/main.
+Read docs/process/agent-start-here.md, docs/deployment-process.md, docs/testing.md, and the committed diff against origin/main.
 
 Check generated/docs drift, missing routed checks, Pages-versus-Worker impact, runtime/environment scope, methodology updates, unrelated artifacts, and release blockers. Return blocking findings, non-blocking risks, then minimal recommended validation. Do not summarize every file or propose broad refactors.
 ```
