@@ -30,7 +30,11 @@ function createDeferredStateHarness() {
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
-function makeBatchRecordingDb(batchSizes: number[], history: Array<{ sql: string; binds: unknown[] }> = []): D1Database {
+function makeBatchRecordingDb(
+  batchSizes: number[],
+  history: Array<{ sql: string; binds: unknown[] }> = [],
+  batchError?: Error,
+): D1Database {
   return {
     prepare: (sql: string) => ({
       bind: (...binds: unknown[]) => ({
@@ -48,6 +52,7 @@ function makeBatchRecordingDb(batchSizes: number[], history: Array<{ sql: string
     }),
     batch: async (statements: D1PreparedStatement[]) => {
       batchSizes.push(statements.length);
+      if (batchError) throw batchError;
       for (const statement of statements as unknown as Array<{ sql: string; binds: unknown[] }>) {
         history.push({ sql: statement.sql, binds: statement.binds });
       }
@@ -93,10 +98,17 @@ describe("recordDeferredTail", () => {
         cursorTailError: null,
         runBudgetTruncationCount: 1,
       },
+
       additionalBreakerKeys: expect.any(Set),
     });
     expect(result.additionalBreakerKeys.size).toBe(1);
     expect(batchSizes).toEqual([100, 22]);
+  });
+  it("surfaces deferred-tail persistence failures", async () => {
+    const db = makeBatchRecordingDb([], [], new Error("batch unavailable"));
+
+    await expect(recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000))
+      .rejects.toThrow("Failed to record deferred reserve tail state: batch unavailable");
   });
 
 
