@@ -30,18 +30,23 @@ interface LiveReserveResumePointer {
 }
 
 async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveReserveResumePointer | null> {
-  return db
-    .prepare(
-      `SELECT next_item_key, items_done, items_total, updated_at
-         FROM worker_scheduled_checkpoints
-        WHERE schedule_key = 'fourHourlyReserveSync'
-          AND job = 'sync-live-reserves'
-          AND state IN ('running', 'recovering', 'ready')
-        ORDER BY slot_started_at DESC, attempt_no DESC
-        LIMIT 1`,
-    )
-    .first<LiveReserveResumePointer>();
+  try {
+    return await db
+      .prepare(
+        `SELECT next_item_key, items_done, items_total, updated_at
+           FROM worker_scheduled_checkpoints
+          WHERE schedule_key = 'fourHourlyReserveSync'
+            AND job = 'sync-live-reserves'
+            AND state IN ('running', 'recovering', 'ready')
+          ORDER BY slot_started_at DESC, attempt_no DESC
+          LIMIT 1`,
+      )
+      .first<LiveReserveResumePointer>();
+  } catch {
+    return null;
+  }
 }
+
 function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord): boolean {
   if (syncState.lastStatus === "degraded" || syncState.lastStatus === "error") {
     return true;
