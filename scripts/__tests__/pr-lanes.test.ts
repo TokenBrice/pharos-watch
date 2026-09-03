@@ -2,10 +2,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { execFileSync } from "node:child_process";
 import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildPrWorkflowMatrix } from "../maintenance/generate-pr-workflow-matrix.ts";
 
-const WORKFLOW = readFileSync(resolve(import.meta.dirname, "../../.github/workflows/pull-request-checks.yml"), "utf8");
+const REPO_ROOT = resolve(import.meta.dirname, "../..");
+const WORKFLOW = readFileSync(resolve(REPO_ROOT, ".github/workflows/pull-request-checks.yml"), "utf8");
+const SETUP_WORKSPACE = readFileSync(resolve(REPO_ROOT, ".github/actions/setup-workspace/action.yml"), "utf8");
 
 describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
@@ -60,5 +64,22 @@ describe("PR lane manifest", () => {
     expect(buildPrLaneCommandArgs(getPrLane("static").commands[0], { base: "base", head: "HEAD" })).toEqual([
       "run", "check:pr:static", "--", "--base=base", "--head=HEAD",
     ]);
+  });
+
+  it("caches every gitignored bootstrap output so matrix jobs see what prepare generated", () => {
+    const cachedPaths = (SETUP_WORKSPACE.match(/path: \|\n((?:\s{10}\S+\n)+)/g) ?? [])
+      .flatMap((block) => block.split("\n").slice(1).map((line) => line.trim()).filter(Boolean));
+    const bootstrapOutputs = GENERATED_ARTIFACT_REGISTRY
+      .filter((artifact) => artifact.bootstrap)
+      .flatMap((artifact) => artifact.outputPaths)
+      .map((pattern) => pattern.replace(/\/\*\*$/, ""));
+    const ignored = execFileSync("git", ["check-ignore", "--no-index", ...bootstrapOutputs], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }).split("\n").filter(Boolean);
+    const uncached = ignored.filter((output) =>
+      !cachedPaths.some((cached) => output === cached || output.startsWith(`${cached}/`)),
+    );
+    expect(uncached).toEqual([]);
   });
 });

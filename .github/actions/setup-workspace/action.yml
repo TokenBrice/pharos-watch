@@ -125,6 +125,9 @@ runs:
           node_modules
           src/generated
           src/lib/case-study-client-index.ts
+          public/openapi.json
+          public/postman
+          public/maps/world-countries.svg
           shared/data/stablecoins/coins.generated.json
           shared/data/stablecoins/coins.client.detail
           shared/data/stablecoins/coins.client.list.generated.json
