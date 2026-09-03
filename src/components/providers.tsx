@@ -3,7 +3,7 @@
 import { ThemeProvider } from "next-themes";
 import { usePathname } from "next/navigation";
 import { createContext, lazy, Suspense, useCallback, useEffect, useState } from "react";
-import type { QueryClient as QueryClientType } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 /**
  * Custom event broadcast when the user presses a numeric key (1-9) to sort
@@ -57,8 +57,7 @@ const ToastContainer = lazy(() =>
 );
 
 const InteractiveProviders = lazy(async () => {
-  const [query, toastHook, themeHook, shortcutSettings, commandPalette, routeProgress] = await Promise.all([
-    import("@tanstack/react-query"),
+  const [toastHook, themeHook, shortcutSettings, commandPalette, routeProgress] = await Promise.all([
     import("@/hooks/use-toast"),
     import("@/hooks/use-theme-toggle"),
     import("@/lib/keyboard-shortcut-settings"),
@@ -66,14 +65,7 @@ const InteractiveProviders = lazy(async () => {
     import("@/components/route-progress-bar"),
   ]);
 
-  function createPharosQueryClient(): QueryClientType {
-    return new query.QueryClient({
-      defaultOptions: PHAROS_QUERY_DEFAULT_OPTIONS,
-    });
-  }
-
   function LoadedInteractiveProviders({ children }: { children: React.ReactNode }) {
-    const [queryClient] = useState(createPharosQueryClient);
     const { toasts, addToast, removeToast } = toastHook.useToast();
     const { toggleTheme } = themeHook.useThemeToggle({ toast: addToast });
     const [commandPaletteLoaded, setCommandPaletteLoaded] = useState(false);
@@ -150,27 +142,25 @@ const InteractiveProviders = lazy(async () => {
     }, [openGlobalCommandPalette, toggleTheme]);
 
     return (
-      <query.QueryClientProvider client={queryClient}>
-        <ToastContext.Provider value={{ addToast }}>
-          <routeProgress.RouteProgressBar />
-          {children}
-          {commandPaletteLoaded && (
-            <Suspense fallback={null}>
-              <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
-            </Suspense>
-          )}
-          {keyboardShortcutsLoaded && (
-            <Suspense fallback={null}>
-              <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
-            </Suspense>
-          )}
-          {toasts.length > 0 && (
-            <Suspense fallback={null}>
-              <ToastContainer toasts={toasts} removeToast={removeToast} />
-            </Suspense>
-          )}
-        </ToastContext.Provider>
-      </query.QueryClientProvider>
+      <ToastContext.Provider value={{ addToast }}>
+        <routeProgress.RouteProgressBar />
+        {children}
+        {commandPaletteLoaded && (
+          <Suspense fallback={null}>
+            <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+          </Suspense>
+        )}
+        {keyboardShortcutsLoaded && (
+          <Suspense fallback={null}>
+            <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
+          </Suspense>
+        )}
+        {toasts.length > 0 && (
+          <Suspense fallback={null}>
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
+          </Suspense>
+        )}
+      </ToastContext.Provider>
     );
   }
 
@@ -183,13 +173,21 @@ function RouteProviders({ children }: { children: React.ReactNode }) {
   return <InteractiveProviders>{children}</InteractiveProviders>;
 }
 
-/** Theme is the immutable shell; data and global interactions load only on interactive routes. */
+/**
+ * Theme and the query client are the immutable shell: the global chrome
+ * (TopNav health menu, RegimeBar PSI) queries on every route, including static
+ * content routes, so the provider cannot be route-gated. Overlays, shortcuts,
+ * toasts, and the route progress bar load only on interactive routes.
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: PHAROS_QUERY_DEFAULT_OPTIONS }));
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-      <Suspense fallback={null}>
-        <RouteProviders>{children}</RouteProviders>
-      </Suspense>
+      <QueryClientProvider client={queryClient}>
+        <Suspense fallback={null}>
+          <RouteProviders>{children}</RouteProviders>
+        </Suspense>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }
