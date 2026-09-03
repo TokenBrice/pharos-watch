@@ -535,7 +535,7 @@ export const DepegEventSchema = z.object({
 });
 export type DepegEvent = z.infer<typeof DepegEventSchema>;
 
-/** Build-time depeg archive written to data/depeg-events.json. */
+/** Build-time depeg archive written to data/depeg-events/*.json. */
 export const DepegEventStoredSnapshotSchema = z.array(
   DepegEventSchema.extend({
     slug: z.string().min(1),

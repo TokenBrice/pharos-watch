@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 vi.mock("../../../cron/daily-digest", () => ({
   generateDailyDigest: vi.fn(),
@@ -26,7 +27,7 @@ vi.mock("../../../lib/db-cache", () => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({
   recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
 }));
-vi.mock("../../../lib/telegram-digest-outbox", () => ({
+vi.mock("../../../lib/telegram/digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
 
@@ -35,7 +36,7 @@ import { resolveDigestSafetyMap } from "../../../lib/digest-safety-map";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
-import { drainTelegramDigestOutbox } from "../../../lib/telegram-digest-outbox";
+import { drainTelegramDigestOutbox } from "../../../lib/telegram/digest-outbox";
 import {
   DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
   DIGEST_TRIGGER_POLL_INTERVAL_SECONDS,
@@ -462,11 +463,11 @@ describe("runDigestTriggerPollSlot", () => {
     vi.setSystemTime(new Date("2026-08-31T09:00:00Z"));
     vi.mocked(getCache).mockResolvedValueOnce(null);
     vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1, metadata: "weekly ok" });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({
         bind: vi.fn(() => ({ first: vi.fn(async () => null) })),
       })),
-    } as unknown as D1Database;
+    });
     runLeasedCron.mockImplementationOnce(async (_job, fn) => {
       await fn(new AbortController().signal, async () => {});
       return { itemCount: 1, metadata: "weekly ok" } as CronResult;

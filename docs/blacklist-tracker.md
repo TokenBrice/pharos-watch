@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** `v4.0`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.0`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/blacklist-tracker.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -39,7 +39,7 @@ An `upstream` review needs no parent asset. It may come from a tracked parent or
 custody, or reserve exposure that strictly exceeds the 50% threshold under the policy above. A direct
 `Possible` token review stays in the `possible` tier even when it also carries upstream exposure. The
 Safety Score V9 access branch consumes that same reviewed verdict. `adaptAccessReview()` in
-`worker/src/lib/safety-score-v9-extension.ts` grants `structuralDisposition: "inherited-upstream"` —
+`worker/src/lib/safety-score-v9/extension.ts` grants `structuralDisposition: "inherited-upstream"` —
 which reclassifies the access gap from `missing-access-review` to the measured
 `inherited-access-exposure` — when the reviewed status is `inherited` and an upstream asset can be
 **named**, either by `variantOf`/`mintAuthority.inheritedFrom` or by a curated reserve slice.
@@ -61,7 +61,7 @@ review — the behaviour before the 2026-08-10 owner ruling — published assets
 and `crvusd-curve` as never reviewed and erased the exposure the reviewer had measured.
 
 The transfer half of the branch has its own structural case. `resolveSafetyScoreV9ReviewedTransferFact()`
-in `worker/src/lib/safety-score-v9-extension-transfer.ts` normally requires the curated
+in `worker/src/lib/safety-score-v9/extension-transfer.ts` normally requires the curated
 `transfer-review-overlays-v1.json` entry to cover every material *contract* deployment, which a
 chain-native asset with no `contracts[]` by design (fUSD on Zano, the Zephyr protocol assets) can
 never satisfy. When the registry offers nothing contract-addressable — no supported-chain contract
@@ -217,10 +217,10 @@ The API reference is authoritative for parameters, schemas, cache/freshness head
 
 - [`GET /api/blacklist`](./api-reference.md#get-apiblacklist)
 - [`GET /api/blacklist-summary`](./api-reference.md#get-apiblacklist-summary)
-- [`POST /api/reset-blacklist-sync`](./api-reference.md#post-apireset-blacklist-sync)
-- [`GET /api/debug-sync-state`](./api-reference.md#get-apidebug-sync-state)
-- [`POST /api/remediate-blacklist-amount-gaps`](./api-reference.md#post-apiremediate-blacklist-amount-gaps)
-- [`POST /api/backfill-blacklist-current-balances`](./api-reference.md#post-apibackfill-blacklist-current-balances)
+- [`POST /api/reset-blacklist-sync`](./api-reference-admin.md#post-apireset-blacklist-sync)
+- [`GET /api/debug-sync-state`](./api-reference-admin.md#get-apidebug-sync-state)
+- [`POST /api/remediate-blacklist-amount-gaps`](./api-reference-admin.md#post-apiremediate-blacklist-amount-gaps)
+- [`POST /api/backfill-blacklist-current-balances`](./api-reference-admin.md#post-apibackfill-blacklist-current-balances)
 
 Public event queries exclude rows with a suppression reason. Accepted filter symbols come from `BLACKLIST_STABLECOINS`; supported/deferred deployment coverage comes from the runtime coverage manifest. Summary coverage fields are contract/config-level and must not be relabeled as symbol-level coverage.
 

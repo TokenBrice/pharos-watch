@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseSafetyScoreV9InputCacheValue } from "../src/lib/safety-score-v9-native-input";
+import { parseSafetyScoreV9InputCacheValue } from "../src/lib/safety-score-v9/native-input";
 
 const USAGE = `Usage: npx tsx worker/scripts/capture-report-cards-fixed-input.ts [options]
 

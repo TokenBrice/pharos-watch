@@ -7,6 +7,8 @@ Enforcement is part of the ESLint configuration and runs on every changed file:
 - **frontend→worker** — a `no-restricted-imports` block in `eslint.config.mjs`, so the rule runs on every changed file through `lint:changed` rather than only when a worker file also moves.
 - **worker→frontend** — the `pharos/worker-import-boundaries` custom rule in `eslint.config.mjs`, which bans frontend specifiers from `worker/src/`.
 
+Bundle-graph enforcement is owned by `scripts/ci/check-runtime-reachability.ts` and its data table in `scripts/lib/runtime-reachability-policies.mts`. It detects transitive scheduled-runtime, Pages Functions, and client-registry boundary violations that direct-import lint cannot see. The legacy client traversal runs in parallel for one green CI cycle; it is not a waiver and must not be used to add exceptions to the policy table.
+
 The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
 
 ## Active Waivers

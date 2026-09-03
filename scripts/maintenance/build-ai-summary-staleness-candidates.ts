@@ -14,6 +14,9 @@
  * `agents/ai-summary-candidates.{md,json}` under the gitignored `agents/`
  * scratch folder. It never edits summaries — the rewrite is editorial and is
  * driven by the `write-ai-summaries` skill.
+ * Registered claim tokens are resolved by the page from current data. A valid
+ * token therefore closes value-only drift here, while malformed registrations
+ * remain candidates for evidence review.
  *
  * Live data comes from three authenticated public API endpoints
  * (report-cards/v9, stress-signals, peg-summary). Override the production API
@@ -26,6 +29,8 @@ import { dirname, resolve } from "node:path";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { validateAiSummaryClaimTokens } from "@shared/lib/ai-summary-claims";
+import type { AiSummaryClaimToken } from "@shared/types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   ReportCardsV9CurrentResponseSchema,
@@ -113,6 +118,14 @@ interface Candidate {
   factsAsOf: string | null;
   maxSeverity: Severity;
   findings: Finding[];
+}
+
+interface SummaryEntry {
+  title?: string;
+  text?: string;
+  updatedAt?: string;
+  factsAsOf?: string;
+  claimTokens?: AiSummaryClaimToken[];
 }
 
 // --- grade vocabulary -------------------------------------------------------
@@ -499,15 +512,30 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   return out;
 }
 
+export function extractSummaryFindings(entry: SummaryEntry, cur: Current): Finding[] {
+  const text = entry.text ?? "";
+  const tokenIssues = validateAiSummaryClaimTokens(text, entry.claimTokens);
+  const findings = extractFindings(text, cur);
+
+  for (const issue of tokenIssues) {
+    findings.push({
+      kind: "claim-token-evidence",
+      claim: issue.token ?? issue.code,
+      claimed: issue.code,
+      current: "registered token, placeholder, source, and factsAsOf must match",
+      severity: "medium",
+    });
+  }
+
+  return findings;
+}
+
 const SEV_RANK: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
 
 // --- main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const summaries = JSON.parse(readFileSync(SUMMARIES_PATH, "utf8")) as Record<
-    string,
-    { title?: string; text?: string; updatedAt?: string; factsAsOf?: string }
-  >;
+  const summaries = JSON.parse(readFileSync(SUMMARIES_PATH, "utf8")) as Record<string, SummaryEntry>;
 
   let current: Map<string, Current>;
   try {
@@ -521,13 +549,16 @@ async function main(): Promise<void> {
 
   const candidates: Candidate[] = [];
   let unmatched = 0;
+  let autoClosedTokenClaims = 0;
   for (const [id, entry] of Object.entries(summaries)) {
     const cur = current.get(id);
     if (!cur) {
       unmatched += 1;
       continue;
     }
-    const findings = extractFindings(entry.text ?? "", cur);
+    const tokenIssues = validateAiSummaryClaimTokens(entry.text ?? "", entry.claimTokens);
+    if (tokenIssues.length === 0) autoClosedTokenClaims += entry.claimTokens?.length ?? 0;
+    const findings = extractSummaryFindings(entry, cur);
     if (findings.length === 0) continue;
     const maxSeverity = findings.reduce<Severity>(
       (acc, f) => (SEV_RANK[f.severity] > SEV_RANK[acc] ? f.severity : acc),
@@ -552,12 +583,13 @@ async function main(): Promise<void> {
     low: candidates.filter((c) => c.maxSeverity === "low").length,
   };
 
-  writeOutputs(candidates, { unmatched, total: Object.keys(summaries).length, counts });
+  writeOutputs(candidates, { unmatched, total: Object.keys(summaries).length, counts, autoClosedTokenClaims });
 
   console.log(
     `Audited ${Object.keys(summaries).length} summaries (${unmatched} not in live report cards).`,
   );
   console.log(`Stale: ${candidates.length}  [high ${counts.high} · medium ${counts.medium} · low ${counts.low}]`);
+  console.log(`Auto-closed tokenised value claims: ${autoClosedTokenClaims}`);
   console.log(`Wrote ${OUTPUT_MD} and ${OUTPUT_JSON}`);
   for (const c of candidates.filter((x) => x.maxSeverity !== "low")) {
     const head = c.findings.filter((f) => f.severity !== "low").map((f) => `${f.kind} ${f.claimed}->${f.current}`);
@@ -567,7 +599,12 @@ async function main(): Promise<void> {
 
 function writeOutputs(
   candidates: Candidate[],
-  meta: { unmatched: number; total: number; counts: Record<Severity, number> },
+  meta: {
+    unmatched: number;
+    total: number;
+    counts: Record<Severity, number>;
+    autoClosedTokenClaims: number;
+  },
 ): void {
   mkdirSync(dirname(OUTPUT_MD), { recursive: true });
 
@@ -580,6 +617,7 @@ function writeOutputs(
     "",
     `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (non-active lifecycle) and were skipped.`,
     `Stale: ${candidates.length} — high ${meta.counts.high}, medium ${meta.counts.medium}, low ${meta.counts.low}.`,
+    `Auto-closed tokenised value claims: ${meta.autoClosedTokenClaims}.`,
     "",
     "Severity: **high** = visible hero contradiction (overall grade or DEWS band changed); ",
     "**medium** = pillar-grade change, a retired V8 dimension claim, or a cited score off by 5+; **low** = minor score/count drift.",

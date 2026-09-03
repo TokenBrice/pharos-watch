@@ -14,7 +14,6 @@ interface ProviderRuntimeStateRow {
   availability: string;
   blocked_status: number | null;
   next_probe_at: number | null;
-  target_cursor: number | null;
 }
 
 function tolerateStateTableError(error: unknown): void {
@@ -30,7 +29,7 @@ export async function readProviderAvailability(
 ): Promise<ProviderAvailabilityDecision> {
   try {
     const row = await db.prepare(
-      `SELECT availability, blocked_status, next_probe_at, target_cursor
+      `SELECT availability, blocked_status, next_probe_at
          FROM pricing_provider_runtime_state
         WHERE provider_id = ?`,
     ).bind(providerId).first<ProviderRuntimeStateRow>();
@@ -116,103 +115,4 @@ export async function recordProviderEnvironmentAvailable(
   } catch (error) {
     tolerateStateTableError(error);
   }
-}
-
-export async function suppressProviderUntil(
-  db: D1Database,
-  providerId: string,
-  status: number,
-  nowSec: number,
-  nextProbeAt: number,
-): Promise<void> {
-  return recordProviderBlockedUntil(db, providerId, status, nowSec, Math.max(nowSec + 1, nextProbeAt));
-}
-
-export async function readProviderNegativeCache(
-  db: D1Database | undefined,
-  providerId: string,
-  nowSec: number,
-): Promise<Set<string>> {
-  if (!db) return new Set();
-  try {
-    const rows = await db.prepare(
-      `SELECT target_key
-         FROM pricing_provider_negative_cache
-        WHERE provider_id = ? AND expires_at > ?`,
-    ).bind(providerId, nowSec).all<{ target_key: string }>();
-    return new Set((rows.results ?? []).map((row) => row.target_key));
-  } catch (error) {
-    tolerateStateTableError(error);
-    return new Set();
-  }
-}
-
-export async function writeProviderNegativeCache(
-  db: D1Database | undefined,
-  providerId: string,
-  targetKey: string,
-  status: number,
-  nowSec: number,
-  ttlSec: number,
-): Promise<void> {
-  if (!db) return;
-  try {
-    await db.prepare(
-      `INSERT INTO pricing_provider_negative_cache
-         (provider_id, target_key, status, first_observed_at, last_observed_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(provider_id, target_key) DO UPDATE SET
-         status = excluded.status,
-         last_observed_at = excluded.last_observed_at,
-         expires_at = excluded.expires_at`,
-    ).bind(providerId, targetKey, status, nowSec, nowSec, nowSec + Math.max(1, ttlSec)).run();
-  } catch (error) {
-    tolerateStateTableError(error);
-  }
-}
-
-export async function readProviderTargetCursor(
-  db: D1Database | undefined,
-  providerId: string,
-  fallbackCursor: number,
-): Promise<number> {
-  if (!db) return fallbackCursor;
-  try {
-    const row = await db.prepare(
-      "SELECT target_cursor FROM pricing_provider_runtime_state WHERE provider_id = ?",
-    ).bind(providerId).first<{ target_cursor: number | null }>();
-    return typeof row?.target_cursor === "number" && Number.isFinite(row.target_cursor)
-      ? Math.max(0, Math.floor(row.target_cursor))
-      : fallbackCursor;
-  } catch (error) {
-    tolerateStateTableError(error);
-    return fallbackCursor;
-  }
-}
-
-export async function writeProviderTargetCursor(
-  db: D1Database | undefined,
-  providerId: string,
-  targetCursor: number,
-  nowSec: number,
-): Promise<void> {
-  if (!db) return;
-  try {
-    await db.prepare(
-      `INSERT INTO pricing_provider_runtime_state
-         (provider_id, availability, consecutive_blocked, target_cursor, updated_at)
-       VALUES (?, 'available', 0, ?, ?)
-       ON CONFLICT(provider_id) DO UPDATE SET
-         target_cursor = excluded.target_cursor,
-         updated_at = excluded.updated_at`,
-    ).bind(providerId, Math.max(0, Math.floor(targetCursor)), nowSec).run();
-  } catch (error) {
-    tolerateStateTableError(error);
-  }
-}
-
-export function rotateTargets<T>(targets: readonly T[], cursor: number): T[] {
-  if (targets.length <= 1) return [...targets];
-  const offset = ((Math.floor(cursor) % targets.length) + targets.length) % targets.length;
-  return [...targets.slice(offset), ...targets.slice(0, offset)];
 }

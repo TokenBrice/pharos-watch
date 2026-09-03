@@ -10,6 +10,7 @@ import {
   parsePendingReason,
 } from "../depeg-helpers";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("pending reason helpers", () => {
   it("buildPendingReason orders flags canonically", () => {
@@ -71,7 +72,7 @@ describe("normalizePendingDepegRow", () => {
 
 describe("buildUpsertPendingDepegStmt", () => {
   function makePreparedStatementRecorder() {
-    return {
+    return makeNoopD1({
       prepare(sql: string) {
         return {
           sql,
@@ -80,7 +81,7 @@ describe("buildUpsertPendingDepegStmt", () => {
           },
         };
       },
-    } as unknown as D1Database;
+    });
   }
 
   it("generates an upsert that refreshes same-direction incidents and resets opposite-direction ones", () => {

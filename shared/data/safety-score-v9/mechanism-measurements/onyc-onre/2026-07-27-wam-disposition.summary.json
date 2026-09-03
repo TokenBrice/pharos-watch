@@ -1,0 +1,13 @@
+{
+  "mechanism": "onyc-onre",
+  "date": "2026-07-27-wam-disposition",
+  "sha256": "2374582c47a862ba12310cdddfe75e1b89b20dcd732cc73adf107507b854abd6",
+  "bytes": 923,
+  "r2Key": "captures/onyc-onre/2026-07-27-wam-disposition.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "onyc-onre",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/onyc-onre/2026-07-27-wam-disposition.json"
+  }
+}

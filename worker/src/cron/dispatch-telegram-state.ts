@@ -13,8 +13,8 @@ import { getCache, setCache } from "../lib/db-cache";
 import {
   loadSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
-} from "../lib/safety-score-v9-publication-store";
-import { logTelegramEvent } from "../lib/telegram-log";
+} from "../lib/safety-score-v9/publication-store";
+import { logTelegramEvent } from "../lib/telegram/log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {

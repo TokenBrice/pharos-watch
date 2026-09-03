@@ -5,8 +5,8 @@ import {
   resolveSafetyScoreV9ReviewedTransferFact,
   SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS,
   type SafetyScoreV9TransferMaterialScope,
-} from "../safety-score-v9-extension-transfer";
-import { safetyScoreV9ChainSupplySourcePayload } from "../safety-score-v9-supply-attribution";
+} from "../safety-score-v9/extension-transfer";
+import { safetyScoreV9ChainSupplySourcePayload } from "../safety-score-v9/supply-attribution";
 import {
   createSafetyScoreV9TransferMaterialityGeneration,
   parseSafetyScoreV9TransferMaterialityGeneration,
@@ -14,11 +14,11 @@ import {
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS,
   transferMaterialScopeFromOnchainGeneration,
   type SafetyScoreV9TransferMaterialityObservation,
-} from "../safety-score-v9-transfer-materiality";
+} from "../safety-score-v9/transfer-materiality";
 import {
   observeSafetyScoreV9TransferMaterialityGeneration,
   transferMaterialityObserverResolvesRpc,
-} from "../safety-score-v9-transfer-materiality-observer";
+} from "../safety-score-v9/transfer-materiality-observer";
 
 const ASSET_ID = "aa-falconx-mev-capital";
 const DEPLOYMENT_KEY = "ethereum:0xc26a6fa2c37b38e549a4a1807543801db684f99c";

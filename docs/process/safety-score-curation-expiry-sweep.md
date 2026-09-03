@@ -68,7 +68,7 @@ reads worklist items rather than score equivalence.
 
 ```bash
 worklist="agents/v9-captures/curation-worklist-${stamp}.md"
-node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
+npm run safety-score-v9:curation-worklist -- \
   --replay "${replay}" \
   --output "${worklist}"
 ```
@@ -141,6 +141,11 @@ touchpoints, current context, and disappearance sentinels are the routing contra
 Do not build another classifier from the evidence queue's four-value `action` field.
 Task rows, claim groups, and dispatch reachability are routing counts, not estimates of
 closable facts. No registry row closes a fact mechanically.
+
+The Markdown worklist is a compatibility renderer over this typed routing contract;
+it owns no reason-code classifier. The pre-expiry view likewise calls production's
+exported `resolveReviewedReserveRows()` branch instead of copying reserve-admission
+rules.
 
 Work one whole `claimGroupId` (one asset and `workType`) at a time. Read the embedded
 work-type definition and recommended skill, then verify all four boundaries:

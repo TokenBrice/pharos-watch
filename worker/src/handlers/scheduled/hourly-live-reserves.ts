@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *):
- *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → reserve-post-sync-watchdog (1)
+ *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → cron-sentinel reserve source (1)
  *
  * Reserve adapters run sequentially; backstops are DB-only.
  * Connection budget: 2/6 peak during reserve adapter I/O
@@ -9,13 +9,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { checkCollateralDrift } from "../../lib/collateral-drift";
-import { getCache, setCache } from "../../lib/db-cache";
-import { SNAPSHOT_KEYS } from "../../cron/telegram-alert-snapshots";
-import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live-reserves-store";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { recordCronFailure, type CronResult } from "../../lib/cron-logger";
+import { runCronSentinel } from "../../cron/cron-sentinel";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 import {
@@ -33,103 +27,7 @@ import {
   type ScheduledCheckpointIdentity,
   type ScheduledRecoveryCheckpoint,
 } from "../../lib/scheduled-recovery-checkpoint";
-import { SYNC_ORDERED_CONFIGURED_COINS } from "../../cron/sync-live-reserves-shared";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { buildAlertReserveSourceEnvelope } from "../../lib/alert-reserve-source-cache";
-
-const PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD = 3;
-const PERSISTENTLY_STALE_WARNING_MAX_AGE_SEC = 21 * DAY_SECONDS;
-
-async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, signal?: AbortSignal): Promise<CronResult> {
-  const degradedReasons: string[] = [];
-  let driftCoinCount = 0;
-  let fallbackCoinCount = 0;
-  let maxSyncAgeSec: number | null = null;
-  let persistentlyStaleIndependentCoinCount = 0;
-  let maxPersistentlyStaleAgeSec = 0;
-
-  try {
-    throwIfAborted(signal);
-    const drift = await checkCollateralDrift(runtime.db);
-    throwIfAborted(signal);
-    driftCoinCount = drift.driftCoins.length;
-    fallbackCoinCount = drift.fallbackCoins.length;
-    if (drift.driftCoins.length > 0) {
-      const driftSummary = drift.driftCoins
-        .map((d) => `${d.id}: live=${d.liveScore}, curated=${d.curatedScore} (Δ${d.delta})`)
-        .join("\n");
-      logWorkerEventArgs("handler", "warn", `[live-reserves] Collateral drift detected:\n${driftSummary}`);
-    }
-    if (drift.fallbackCoins.length > 5) {
-      logWorkerEventArgs("handler", "warn", `[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
-    }
-
-    // Persist the currently-drifting id-set for the Telegram reserve-drift alert
-    // family (C123). The four-hourly reserve slot is the producer; the dispatch
-    // cron only diffs prior-vs-current from this snapshot and never recomputes
-    // drift, keeping reserve-adapter network I/O out of the dispatch trigger's
-    // repo-defined six-request budget. fallbackCoins (failed live fetch) are intentionally
-    // omitted so a transient fetch failure never reads as a drift change.
-    const reservePublishedAt = Math.floor(Date.now() / 1000);
-    const previousReserveSource = await getCache(runtime.db, SNAPSHOT_KEYS.reserve);
-    const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
-      drift.driftCoins.map((d) => d.id),
-      previousReserveSource,
-      {
-        nowSec: reservePublishedAt,
-        producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
-      },
-    );
-    await setCache(runtime.db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
-
-    maxSyncAgeSec = await getMaxSyncAge(
-      runtime.db,
-      Math.floor(Date.now() / 1000),
-      SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id),
-    );
-    throwIfAborted(signal);
-  } catch (e) {
-    rethrowIfAborted(e, signal);
-    degradedReasons.push("drift-cache-age-check-failed");
-    recordCronFailure("reserve-post-sync-watchdog", e, { metadata: { stage: "drift-cache-age" } });
-  }
-
-  try {
-    throwIfAborted(signal);
-    const overview = await computeReserveCompositionOverview(runtime.db, Math.floor(Date.now() / 1000));
-    throwIfAborted(signal);
-    const persistentlyStale = overview.persistentlyStaleIndependentCoins;
-    persistentlyStaleIndependentCoinCount = persistentlyStale.length;
-    maxPersistentlyStaleAgeSec = persistentlyStale.length > 0 ? persistentlyStale[0].ageSec : 0;
-    const shouldWarn =
-      persistentlyStale.length > PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD ||
-      maxPersistentlyStaleAgeSec > PERSISTENTLY_STALE_WARNING_MAX_AGE_SEC;
-    if (shouldWarn) {
-      const staleSummary = persistentlyStale
-        .map((entry) => `${entry.stablecoinId}: ${Math.round(entry.ageSec / DAY_SECONDS)}d`)
-        .join("\n");
-      logWorkerEventArgs("handler", "warn", `[live-reserves] Persistently-stale independent sources:\n${staleSummary}`);
-    }
-  } catch (e) {
-    rethrowIfAborted(e, signal);
-    degradedReasons.push("persistent-stale-overview-failed");
-    recordCronFailure("reserve-post-sync-watchdog", e, { metadata: { stage: "persistent-stale-overview" } });
-  }
-
-  return {
-    status: degradedReasons.length > 0 ? "degraded" : "ok",
-    itemCount: driftCoinCount + persistentlyStaleIndependentCoinCount,
-    metadata: JSON.stringify({
-      degradedReasons,
-      driftCoinCount,
-      fallbackCoinCount,
-      maxSyncAgeSec,
-      persistentlyStaleIndependentCoinCount,
-      maxPersistentlyStaleAgeSec,
-    }),
-  };
-}
 
 function checkpointIdentity(checkpoint: ScheduledRecoveryCheckpoint): ScheduledCheckpointIdentity {
   return {
@@ -243,9 +141,9 @@ function buildReserveSyncSlotGroups(
       label: "reserve-post-sync",
       tasks: [
         {
-          job: "reserve-post-sync-watchdog",
+          job: "cron-sentinel",
           errorMessage: "[hourly-live-reserves] Reserve post-sync watchdog failed:",
-          run: (signal) => runReservePostSyncWatchdog(runtime, signal),
+          run: (signal) => runCronSentinel(runtime.db, { mode: "reserve-post-sync", signal }),
         },
       ],
     },

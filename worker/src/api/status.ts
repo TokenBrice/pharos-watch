@@ -15,7 +15,7 @@ import {
   loadStatusRawSnapshot,
   type StatusRawSnapshotLoadResult,
 } from "../lib/status/raw-snapshot";
-import { loadStatusSupplements } from "./status-supplements";
+import { loadStatusSupplements, type StatusSupplements } from "../lib/status/supplements";
 import { buildDependencyHealth } from "../lib/dependency-health";
 import type { StatusResponse, StatusSectionError } from "@shared/types/status";
 import type { CloudflareD1StatusBindings } from "../lib/env";
@@ -29,6 +29,7 @@ type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"],
 
 interface ResolvedRawStatus {
   raw: Awaited<ReturnType<typeof computeRawStatus>>;
+  supplements?: StatusSupplements;
   snapshotFallbackReason: StatusSnapshotFallbackReason | null;
   snapshotError?: string;
 }
@@ -135,6 +136,7 @@ async function resolveRawStatusForResponse(
   if (snapshot.kind === "fresh") {
     return {
       raw: snapshot.raw,
+      supplements: snapshot.supplements,
       snapshotFallbackReason: null,
     };
   }
@@ -173,6 +175,7 @@ export function handleStatus({
       const now = Math.floor(Date.now() / 1000);
       const {
         raw,
+        supplements: snapshotSupplements,
         snapshotFallbackReason,
         snapshotError,
       } = await resolveRawStatusForResponse(db, now, request);
@@ -215,7 +218,7 @@ export function handleStatus({
         getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
         getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
         listRecentStatusTransitions(db, 40, undefined, (issue) => timelineIssues.push(issue)),
-        loadStatusSupplements(
+        snapshotSupplements ?? loadStatusSupplements(
           db,
           now,
           raw.crons,
@@ -295,6 +298,7 @@ export function handleStatus({
         providerCircuitHealth: supplements.providerCircuitHealth,
         canaries: supplements.canaries,
         alertBroker: raw.alertBroker,
+        telegramSummary: supplements.telegramSummary,
         producerHeads: producerHistory.heads,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,

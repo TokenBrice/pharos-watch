@@ -1,0 +1,15 @@
+{
+  "mechanism": "mapollo-midas",
+  "date": "2026-07-27-unavailable-search",
+  "sha256": "443c79b1717ba07244b259c370eeb0ff5187cfce2ae56290373cb5da89f48a66",
+  "bytes": 3254,
+  "r2Key": "captures/mapollo-midas/2026-07-27-unavailable-search.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "mapollo-midas",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/mapollo-midas/2026-07-27-unavailable-search.json",
+    "capturedAt": "2026-07-28 ethereum token 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05; midas.app product page + docs.midas.app llms index (pricing/attestation/risk pages CF-challenged at research time); strategy manager narrative from package/product marketing"
+  }
+}

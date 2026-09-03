@@ -9,13 +9,13 @@ import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache } from "../lib/db-cache";
 import { buildInClause, chunkArray } from "../lib/db";
-import { DEPEG_STEP_VALUES } from "../lib/telegram-constants";
+import { DEPEG_STEP_VALUES } from "../lib/telegram/constants";
 import {
   isDewsAlertable,
   type DepegAlertPayload,
   type DepegResolved,
   type DepegWorsening,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
 import { buildAlertContextLines } from "./telegram-alert-context";
 import {

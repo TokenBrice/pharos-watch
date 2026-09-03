@@ -2,8 +2,8 @@ import { recordTelegramAlertTargetStatuses } from "../telegram-alert-target-stat
 import {
   PENDING_TTL_SEC,
   TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC,
-} from "../../lib/telegram-constants";
-import { logTelegramEvent } from "../../lib/telegram-log";
+} from "../../lib/telegram/constants";
+import { logTelegramEvent } from "../../lib/telegram/log";
 import {
   deadLetterTerminalPendingRows,
   deletePendingAlertsByIds,

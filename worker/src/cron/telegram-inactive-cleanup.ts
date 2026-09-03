@@ -2,7 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
-import { forgetSubscriber } from "../lib/telegram-subscriber-lifecycle";
+import { forgetSubscriber } from "../lib/telegram/subscriber-lifecycle";
 import { mapWithConcurrency } from "../lib/concurrency";
 
 /**

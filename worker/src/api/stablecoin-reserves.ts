@@ -1,7 +1,7 @@
 import { jsonFreshResponse, errorResponse } from "../lib/api-response";
 import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
-import { resolveReserveResult } from "../lib/live-reserves-store";
+import { resolveReserveResult } from "../lib/live-reserves/store";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export function reserveCacheControlForMode(mode: ReservePresentationMode): string {

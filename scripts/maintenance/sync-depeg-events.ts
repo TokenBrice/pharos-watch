@@ -1,6 +1,6 @@
 /**
  * Fetches confirmed depeg events from an explicit API base/URL and writes them
- * to data/depeg-events.json keyed by deterministic slug. Run before builds so
+ * to data/depeg-events/index.json plus UTC-year shards. Run before builds so
  * the /depeg/[event]/ static-export route can call generateStaticParams() from
  * the committed snapshot.
  *
@@ -17,7 +17,8 @@ import {
   type DepegEventEntry,
 } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 
@@ -26,17 +27,15 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   apiFetchHeaders,
   fetchWithRetry,
-  preserveExistingJsonArrayOnFetchFailure,
   resolveApiUrl,
   shouldAllowExistingDataOnFetchFailure,
-  syncJson,
 } from "../lib/sync-from-api";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/sync-depeg-events.ts [options]
 
 Options:
   --api-url <url>   Depeg API base or endpoint (overrides environment)
-  --output <path>   Output path (default: data/depeg-events.json)
+  --output <path>   Index output path (default: data/depeg-events/index.json)
   --allow-empty     Permit an empty response to replace a non-empty snapshot
   --allow-archive-shrink
                    Permit published depeg page slugs to disappear from the snapshot
@@ -83,10 +82,20 @@ export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
   };
 }
 
-function readExistingDepegEntries(outputPath: URL): readonly DepegEventEntry[] {
-  const outputFile = fileURLToPath(outputPath);
-  if (!existsSync(outputFile)) return [];
-  return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(outputFile, "utf8")));
+interface DepegEventOutputPaths {
+  dataDir: string;
+  indexFile: string;
+}
+
+function readExistingDepegEntries(dataDir: string): readonly DepegEventEntry[] {
+  if (!existsSync(dataDir)) return [];
+  return readdirSync(dataDir)
+    .filter((name) => /^\d{4}\.json$/.test(name))
+    .sort()
+    .flatMap((name) => {
+      const path = `${dataDir}/${name}`;
+      return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+    });
 }
 
 export function findMissingStaticDepegArchiveSlugs(
@@ -149,9 +158,53 @@ function baseSlug(event: DepegEvent): string {
   return `${symbolPart}-${formatIsoDate(event.startedAt)}`;
 }
 
-function resolveOutputPath(explicit: string | null): URL {
-  if (!explicit) return new URL("../../data/depeg-events.json", import.meta.url);
-  return new URL(explicit, `file://${process.cwd()}/`);
+function resolveOutputPaths(explicit: string | null): DepegEventOutputPaths {
+  const indexUrl = explicit
+    ? new URL(explicit, `file://${process.cwd()}/`)
+    : new URL("../../data/depeg-events/index.json", import.meta.url);
+  const indexFile = fileURLToPath(indexUrl);
+  return { dataDir: dirname(indexFile), indexFile };
+}
+
+function buildDepegEventIndex(entries: readonly DepegEventEntry[]) {
+  return selectStaticDepegEventPages(entries).map((event) => ({
+    slug: event.slug,
+    stablecoinId: event.stablecoinId,
+    symbol: event.symbol,
+    pegType: event.pegType,
+    direction: event.direction,
+    peakDeviationBps: event.peakDeviationBps,
+    startedAt: event.startedAt,
+  }));
+}
+
+function writeDepegEventLedger(
+  entries: readonly DepegEventEntry[],
+  paths: DepegEventOutputPaths,
+): { shardCount: number } {
+  const shards = new Map<string, DepegEventEntry[]>();
+  for (const entry of entries) {
+    const year = String(new Date(entry.startedAt * 1000).getUTCFullYear());
+    const shard = shards.get(year);
+    if (shard) shard.push(entry);
+    else shards.set(year, [entry]);
+  }
+
+  mkdirSync(paths.dataDir, { recursive: true });
+  const expectedShardNames = new Set<string>();
+  for (const year of [...shards.keys()].sort()) {
+    const name = `${year}.json`;
+    expectedShardNames.add(name);
+    writeFileSync(`${paths.dataDir}/${name}`, `${JSON.stringify(shards.get(year), null, 2)}\n`);
+  }
+  for (const name of readdirSync(paths.dataDir)) {
+    if (/^\d{4}\.json$/.test(name) && !expectedShardNames.has(name)) {
+      rmSync(`${paths.dataDir}/${name}`);
+    }
+  }
+
+  writeFileSync(paths.indexFile, `${JSON.stringify(buildDepegEventIndex(entries), null, 2)}\n`);
+  return { shardCount: shards.size };
 }
 
 /**
@@ -200,111 +253,107 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
     apiPath: "/api/depeg-events",
     scriptName: "sync-depeg-events",
   });
-  const outputPath = resolveOutputPath(options.output);
-  const previousEntries = readExistingDepegEntries(outputPath);
+  const outputPaths = resolveOutputPaths(options.output);
+  const previousEntries = readExistingDepegEntries(outputPaths.dataDir);
   const headers = new Headers(apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"], { url: apiUrl }));
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
 
   try {
-    const { entries, outputFile, written } = await syncJson<DepegEventEntry>({
-      writeTo: outputPath,
-      parse: async () => {
-        const collected: DepegEvent[] = [];
-        let cursor: string | null = null;
-        const limit = 1000;
-        const maxPages = 20; // hard ceiling so we cannot loop forever
-        for (let page = 0; page < maxPages; page++) {
-          const params = new URLSearchParams();
-          params.set("limit", String(limit));
-          if (cursor) params.set("cursor", cursor);
-          const pagedUrl = `${apiUrl}?${params.toString()}`;
-          const res = await fetchWithRetry(
-            pagedUrl,
-            { headers },
-            {
-              logLabel: "sync-depeg-events",
-              retryStatuses: [403],
-              backoffMs: [12_000, 12_000],
-            },
-          );
-          if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
-          const body = (await res.json()) as DepegEventsResponse;
-          const batch = Array.isArray(body.events) ? body.events : [];
-          collected.push(...batch);
-          cursor = body.nextCursor ?? null;
-          console.log(
-            `[sync-depeg-events] page=${page} fetched=${batch.length} total=${collected.length} cursor=${cursor ?? "null"}`,
-          );
-          if (!cursor || batch.length === 0) break;
-        }
-
-        // v1: confirmed events only (pending/expired/rejected do not get permanent URLs).
-        // The /api/depeg-events handler already excludes pending unless includePending=true.
-        // Do not filter on pendingReason here: confirmed events can retain that field
-        // as provenance for how they entered confirmation.
-        const confirmed = [...collected];
-
-        // Deduplicate on event id (defensive in case pagination yields overlap).
-        const seen = new Set<number>();
-        const unique: DepegEvent[] = [];
-        for (const event of confirmed) {
-          if (seen.has(event.id)) continue;
-          seen.add(event.id);
-          unique.push(event);
-        }
-
-        unique.sort((a, b) => {
-          if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
-          return b.id - a.id;
-        });
-
-        const computedEntries = assignSlugs(unique);
-
-        // Guard against API returning an empty list (e.g. token expiry, partial
-        // outage, or a misconfigured API base). Wiping the seed event would purge
-        // every /depeg/<slug>/ static page on the next build and invalidate the
-        // depeg RSS feed for downstream subscribers. Treat empty + non-empty
-        // existing file as a hard error rather than a silent overwrite.
-        if (computedEntries.length === 0) {
-          const existingFile = fileURLToPath(outputPath);
-          if (previousEntries.length > 0) {
-            console.error(
-              `[sync-depeg-events] API returned 0 events but ${existingFile} currently holds ${previousEntries.length}. ` +
-                `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
-            );
-            if (!options.allowEmpty)
-              throw new Error("Refusing to replace a non-empty depeg snapshot with an empty response");
-          }
-        }
-
-        const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousEntries, computedEntries);
-        assertStaticDepegArchivePreserved(
-          previousEntries,
-          archivePreservedEntries,
-          options.allowArchiveShrink,
+    const entries = await (async () => {
+      const collected: DepegEvent[] = [];
+      let cursor: string | null = null;
+      const limit = 1000;
+      const maxPages = 20; // hard ceiling so we cannot loop forever
+      for (let page = 0; page < maxPages; page++) {
+        const params = new URLSearchParams();
+        params.set("limit", String(limit));
+        if (cursor) params.set("cursor", cursor);
+        const pagedUrl = `${apiUrl}?${params.toString()}`;
+        const res = await fetchWithRetry(
+          pagedUrl,
+          { headers },
+          {
+            logLabel: "sync-depeg-events",
+            retryStatuses: [403],
+            backoffMs: [12_000, 12_000],
+          },
         );
-        return archivePreservedEntries;
-      },
-      write: !options.dryRun,
-    });
+        if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
+        const body = (await res.json()) as DepegEventsResponse;
+        const batch = Array.isArray(body.events) ? body.events : [];
+        collected.push(...batch);
+        cursor = body.nextCursor ?? null;
+        console.log(
+          `[sync-depeg-events] page=${page} fetched=${batch.length} total=${collected.length} cursor=${cursor ?? "null"}`,
+        );
+        if (!cursor || batch.length === 0) break;
+      }
+
+      // v1: confirmed events only (pending/expired/rejected do not get permanent URLs).
+      // The /api/depeg-events handler already excludes pending unless includePending=true.
+      // Do not filter on pendingReason here: confirmed events can retain that field
+      // as provenance for how they entered confirmation.
+      const confirmed = [...collected];
+
+      // Deduplicate on event id (defensive in case pagination yields overlap).
+      const seen = new Set<number>();
+      const unique: DepegEvent[] = [];
+      for (const event of confirmed) {
+        if (seen.has(event.id)) continue;
+        seen.add(event.id);
+        unique.push(event);
+      }
+
+      unique.sort((a, b) => {
+        if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
+        return b.id - a.id;
+      });
+
+      const computedEntries = assignSlugs(unique);
+
+      // Guard against API returning an empty list (e.g. token expiry, partial
+      // outage, or a misconfigured API base). Wiping the seed event would purge
+      // every /depeg/<slug>/ static page on the next build and invalidate the
+      // depeg RSS feed for downstream subscribers. Treat empty + non-empty
+      // existing file as a hard error rather than a silent overwrite.
+      if (computedEntries.length === 0) {
+        if (previousEntries.length > 0) {
+          console.error(
+            `[sync-depeg-events] API returned 0 events but ${outputPaths.dataDir} currently holds ${previousEntries.length} events. ` +
+              `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
+          );
+          if (!options.allowEmpty)
+            throw new Error("Refusing to replace a non-empty depeg snapshot with an empty response");
+        }
+      }
+
+      const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousEntries, computedEntries);
+      assertStaticDepegArchivePreserved(
+        previousEntries,
+        archivePreservedEntries,
+        options.allowArchiveShrink,
+      );
+      return archivePreservedEntries;
+    })();
+    const shardCount = new Set(
+      entries.map((entry) => String(new Date(entry.startedAt * 1000).getUTCFullYear())),
+    ).size;
+    if (!options.dryRun) writeDepegEventLedger(entries, outputPaths);
     console.log(
-      written
-        ? `[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputFile}`
-        : `[sync-depeg-events] Dry run: would write ${entries.length} confirmed events to ${outputFile}`,
+      options.dryRun
+        ? `[sync-depeg-events] Dry run: would write ${entries.length} confirmed events to ${outputPaths.indexFile} and ${shardCount} yearly shards`
+        : `[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputPaths.indexFile} and ${shardCount} yearly shards`,
     );
   } catch (err) {
     const allowExisting =
       options.allowExistingOnFetchFailure ||
       shouldAllowExistingDataOnFetchFailure(["DEPEG_EVENTS_SYNC_ALLOW_EXISTING_ON_FETCH_FAILURE"]);
-    if (
-      preserveExistingJsonArrayOnFetchFailure({
-        allow: allowExisting && !options.dryRun,
-        error: err,
-        label: "sync-depeg-events",
-        outputPath,
-      })
-    ) {
+    if (allowExisting && !options.dryRun && previousEntries.length > 0) {
+      const reason = err instanceof Error ? err.message : String(err);
+      console.warn(
+        `[sync-depeg-events] Live fetch failed (${reason}); preserving existing ${outputPaths.dataDir} (${previousEntries.length} events).`,
+      );
       return;
     }
     throw err;

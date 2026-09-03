@@ -24,6 +24,7 @@ The operator dashboard combines ten signals:
 The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
+- The public health payload is the status self-check's 15-minute snapshot projection; `/api/health` performs a live assessment only when the snapshot is missing or unusable. Operator-only Telegram lifecycle and alert-broker diagnostics live on `/api/status`.
 - `/admin/`: Triage workspace
 - `/admin/pipeline/`: data-quality, market, reserve, yield, storage, and integrity workbench
 - `/admin/reliability/`: endpoint, dependency, demand, and cache reliability workbench
@@ -90,17 +91,18 @@ The active frontend operator mode is now:
 - `src/hooks/admin-api-hooks.ts` — `useStatus()`
   - `useStatus()` — calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch` via `useAdminPollingQuery`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
-  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence)
+  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence); operator status remains a one-minute read because it includes live diagnostics when requested
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards/v9`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
   - The desktop lighthouse menu enables `useHealth()` only while the menu is open. Its status link reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim.
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
+  - Public `/status/` browser canaries use only `/api/health`, `/api/stablecoins`, `/api/peg-summary`, `/api/dex-liquidity`, and `/api/report-cards/v9`, with `staleTime: 900_000`, `refetchInterval: 1_800_000`, `retry: 0`
   - Public probes use the same-origin `/_site-data/*` website lane; admin probes use same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
   - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
-  - Also exports `usePublicEndpointProbes()` for the public `/status/` page, which probes only the public endpoint group
+  - `usePublicEndpointProbes()` is reserved for the public `/status/` page and does not inherit the full operator endpoint list
 - `src/hooks/use-public-status-history.ts`
   - Calls `GET /api/public-status-history` through same-origin `/_site-data/public-status-history` on website hosts
   - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
@@ -203,7 +205,14 @@ Related extracted loaders:
 
 ### Cron health model
 
-`CRON_INTERVALS` defines expected cadence per job (seconds). A cron is healthy when:
+`CRON_INTERVALS` defines expected cadence per job (seconds). Freshness comparisons route through
+`worker/src/lib/status/freshness-oracle.ts`: one fact loader returns each producer's latest run,
+latest successful/degraded run, status, and expected interval, while each consumer supplies its
+existing policy (for example status `2x`, watchdog `2x`/`3x`, canary `4h`/`48h`, or DEWS `2h`).
+The producer freshness portion of an evaluation uses one batched `cron_runs` statement for every
+requested producer, and consumers classify the returned facts in memory.
+Canonical job rows mark control-plane jobs with `freshnessSurface: "none"`; there is no separate
+exclusion list. A cron is healthy when:
 
 - A fresh non-stale `crons[*].inFlight` heartbeat exists for the job, or
 - Last run exists within `2 * expectedIntervalSec`
@@ -220,7 +229,7 @@ Operational nuance: a fresh recovery attempt should not keep `/status` degraded 
 
 The admin cron workbench resolves a neutral skip against the latest required non-neutral run before building its attention filter. A fresh `skipped_neutral` row with no inherited warning or failure renders as **Skipped**, not **Unhealthy**. Known V9 admission reasons replace the generic no-work label with the actual condition, such as `competing slot active` or `core slot not ready`. The row remains under `Needs attention` when backend availability still lacks required success evidence, so the neutral attempt outcome does not hide a starved producer. Inherited degraded outcomes retain warning treatment, inherited failures remain unhealthy, and stale neutral skips remain unhealthy.
 
-Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, except legacy false `daily-digest` not-started rows from idle `digestTriggerPoll` slots, which are excluded before the per-job history limit. Genuine forced digest outcomes and abandoned started-progress rows remain visible. The duration watchdog excludes synthetic reconciliation rows from runtime averages and reports proven publication, not-started children, publication failures, terminal-accounting unknowns, and real child failures as separate lifecycle counters. Remediation: [`docs/runbooks/cron-slot-abandonment.md`](./runbooks/cron-slot-abandonment.md).
+Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, except legacy false `daily-digest` not-started rows from idle `digestTriggerPoll` slots, which are excluded before the per-job history limit. Genuine forced digest outcomes and abandoned started-progress rows remain visible. The sentinel's duration source excludes synthetic reconciliation rows from runtime averages and reports proven publication, not-started children, publication failures, terminal-accounting unknowns, and real child failures as separate lifecycle counters. Remediation: [`docs/runbooks/cron-slot-abandonment.md`](./runbooks/cron-slot-abandonment.md).
 
 Synthetic timestamps preserve the evidence clock: started-child abandonment uses the original start and last durable progress heartbeat, while a proven not-started child uses the original slot invocation and last slot heartbeat. Reconciliation wall time remains metadata, so older synthetic evidence cannot outrank a newer real success or producer head. An idle conditional digest poll never synthesizes a `daily-digest` failure; durable started progress is still reconciled. The cron workbench labels the active child `Abandoned`, derives runtime from its last heartbeat, and displays reconciliation delay separately. Synthetic downstream children with `childDisposition = "not_started"` render as `Not started: upstream abandoned` with runtime `N/A`; explicit dependency markers with `skippedReason = "upstream-incomplete:<job>"`, `upstream-failure:<job>`, or `upstream-blocked:<job>` render as not started with the corresponding prerequisite state, also with runtime `N/A`, and expose the prerequisite job as table evidence. These rows retain their raw error or degraded audit status so availability accounting still records the missed required execution. High-ratio abandonment remains metadata-visible for the full 7-day lookback, but it only keeps the watchdog degraded while at least one matching abandoned slot is less than 24 hours old.
 
@@ -275,7 +284,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - exact active-price coverage is stale (`activePriceCoverageImpactStatus === "stale"`)
   - `missingPriceRatio > 0.45`
   - `blacklistMissingRatio >= 0.02` (2%)
-  - `blacklistRecentMissingAmounts >= 25` (last 24h)
+  - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-stale-threshold -->25<!-- GENERATED-END: status-blacklist-recent-stale-threshold -->` (last 24h)
   - `staleOnchainSupply >= 10`
   - `onchainSupplyDivergences >= 25`
   - `onchainStaleRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`
@@ -368,6 +377,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - `publicationHealth`: admin-only read-only publication generation summary for `dex-liquidity`, `yield-rankings`, `stablecoins`, `dews`, `psi`, and `safety-score-v9`. The V9 surface is derived from the canonical `report-cards:v9` publication and matching publication-health row; it does not consult the retired V8 compact cache.
 - `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. Cache-backed signals use the same override-aware availability ratio bands as public cache health, so `maxAge` remains a baseline rather than an immediate stale cutoff; producer-source degradation remains independently visible. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
 - `canaries`: admin-only latest structural canary results from the current authoritative `status` or `alert` rows in `worker_canary_runs`. In `off` or `shadow`, the field retains its empty/unknown compatibility shape and does not read older authoritative rows. The summary is constrained to the active canary registry, so retained rows for retired check IDs do not keep the current status stale. The checks cover DEX publication/current-row invariants, blacklist identity completeness, stablecoins-cache active coverage, PSI/DEWS latest samples, report-card cache generation/methodology freshness, and GBP benchmark currency/freshness without changing producer behavior.
+- `worker_canary_runs` retention is 14 days; the current status reads only active check IDs and does not depend on older retained rows.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from a freshness-qualified CoinGecko spot quote
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) plus additive `capacity` and cached `tableGrowth` assessments. `tableGrowth` contains the once-daily bounded per-table row counts, previous-snapshot deltas, oldest/newest allowlisted timestamps, and top growers; the Cloudflare-sourced fields are populated when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
@@ -469,7 +479,9 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 
 ### Synthetic self-check
 
-The isolated `9,24,39,54 * * * *` status lane runs `cron-slot-sweeper` before `status-self-check`; the five-minute reserve-recovery lane additionally runs an unscoped stale-slot sweep so a killed slot is reconciled within minutes rather than waiting for the next status window. The sweeper claims stale `cron_slot_executions` across all slot keys, preserves real terminal child rows, and classifies incomplete children from durable progress, lease, cron-history, and producer-publication evidence. Proven published DEX work receives a synthetic degraded audit row; real child failure, not-started work, publication failure, and terminal-accounting unknown remain distinct error dispositions. Reconciliation uses idempotent inserts plus exact owner/fence comparisons and CAS-style deletes for stale progress and expired leases; these separately fenced operations do not claim cross-artifact transactional atomicity. The sweep writes `scheduled-slot-abandoned` event markers, so a stopped heartbeat is visible before the next same schedule key fires without deleting a renewed or newer owner.
+The isolated `9,24,39,54 * * * *` status lane runs `status-self-check`, `data-invariant-canary`, and `cron-sentinel`. The sentinel owns the former freshness and digest-publication watchdog sources and retains their state keys, transition rules, 30-minute cooldowns, and operator-alert wording. The same status-tracked identity runs producer-adjacent turnover and reserve checks at their prior cadence, and its daily invocation owns duration, mint/burn growth, and repair-debt evaluation. Public health reads the nested daily growth and repair metadata, with the retired growth row retained as a rollout fallback, so its verdicts stay unchanged. The registry therefore tracks 47 jobs while the 40 physical trigger expressions and 24 lane plans remain unchanged.
+
+Stale-slot cleanup no longer has a status-tracked sweeper job. Every fenced scheduled invocation pre-sweeps stale prior rows for its own schedule key, and a same-slot takeover reconciles the displaced owner's artifacts before work resumes. The five-minute reserve-recovery lane retains the unscoped sweep so a killed lane is still discovered promptly. Reconciliation preserves real terminal child rows, classifies incomplete children from durable progress, lease, cron-history, and producer-publication evidence, and writes `scheduled-slot-abandoned` event markers without deleting a renewed or newer owner.
 
 `status-self-check` then:
 

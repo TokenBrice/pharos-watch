@@ -1,4 +1,4 @@
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
 import {

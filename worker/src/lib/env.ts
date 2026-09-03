@@ -32,8 +32,6 @@ export interface Env {
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;
   ALCHEMY_API_KEY?: string;
-  MORALIS_API_KEY?: string;
-  BIRDEYE_API_KEY?: string;
   ADDRESS_PRICE_PROVIDERS_ENABLED?: string;
   GRAPH_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
@@ -78,6 +76,7 @@ export interface Env {
   DDR_REPAIR_TASK_RUNNER_ENABLED?: string;
   WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_CANARY_MODE?: string;
+  WORKER_V9_WORKFLOW_MODE?: string;
 }
 
 export interface WorkerEnvIssue {

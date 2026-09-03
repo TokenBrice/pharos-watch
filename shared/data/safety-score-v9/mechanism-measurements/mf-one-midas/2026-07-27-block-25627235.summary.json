@@ -1,0 +1,15 @@
+{
+  "mechanism": "mf-one-midas",
+  "date": "2026-07-27-block-25627235",
+  "sha256": "692d43a2b648d181f589c45a37e356dcb341be7d6eb31deaf106eacb63756da0",
+  "bytes": 5646,
+  "r2Key": "captures/mf-one-midas/2026-07-27-block-25627235.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "mf-one-midas",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/mf-one-midas/2026-07-27-block-25627235.json",
+    "capturedAt": "ethereum block 25627235 hash 0xb94f5f19b26ad05164b659518d72be2982a240d3b93db03d4268300459a838f0 timestamp 2026-07-28T00:08:11Z; mF-ONE/USD oracle 0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C latestRoundData round 253 answer 111058227 (8 decimals = 1.11058227) updatedAt 2026-07-27T17:10:35Z; token totalSupply 63616254.848027974 mF-ONE"
+  }
+}

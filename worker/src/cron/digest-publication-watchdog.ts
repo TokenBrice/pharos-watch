@@ -4,13 +4,15 @@ import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import { cancelResponseBodyQuietly, readResponseTextWithinLimitWithSignal } from "../lib/response-body";
-import { escapeHtml, sendToChat, type TelegramCreds } from "../lib/telegram";
+import { escapeHtml, type TelegramCreds } from "../lib/telegram";
 import type { CronResult } from "../lib/cron-logger";
 import {
   NON_BLOCKED_DIGEST_SQL_FILTER,
   NON_INTERNAL_DIGEST_SQL_FILTER,
   NON_WEEKLY_DIGEST_SQL_FILTER,
 } from "../lib/digest-sql-filters";
+import { classifyFreshness } from "../lib/status/freshness-oracle";
+import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 const DIGEST_WATCHDOG_STATE_KEY = "digest-publication-watchdog:state:v1";
 const DIGEST_WATCHDOG_ALERT_KEY = "digest-publication-watchdog:alert:v1";
@@ -21,6 +23,26 @@ const DAILY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 30 * 60;
 const WEEKLY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 35 * 60;
 const MAP_MANIFEST_MAX_BYTES = 16_384;
 const MAP_MANIFEST_TIMEOUT_MS = 3_000;
+
+function isDueAfter(dayStartSec: number, nowSec: number, dueAfterSec: number): boolean {
+  return classifyFreshness(
+    {
+      job: "digest-publication-clock",
+      lastSuccessAt: dayStartSec,
+      lastRunAt: dayStartSec,
+      expectedIntervalSec: dueAfterSec,
+      lastStatus: "ok",
+    },
+    {
+      // Digest cutoffs are due at the exact second (`elapsed >= dueAfter`),
+      // while freshness age limits are inclusive. Unix clocks are integral,
+      // so dueAfter - 1 preserves the existing boundary exactly.
+      watchAt: { absoluteSec: dueAfterSec - 1 },
+      staleAt: { absoluteSec: dueAfterSec - 1 },
+    },
+    nowSec,
+  ).state === "stale";
+}
 
 /**
  * Single source for the condition set. The union is derived from it and every
@@ -349,11 +371,10 @@ export async function runDigestPublicationWatchdog(
   throwIfAborted(signal);
   const date = formatIsoDate(nowSec);
   const dayStartSec = Math.floor(Date.parse(`${date}T00:00:00Z`) / 1000);
-  const elapsedSec = nowSec - dayStartSec;
   const utcDay = new Date(nowSec * 1000).getUTCDay();
-  const dailyDue = elapsedSec >= DAILY_DIGEST_DUE_AFTER_SEC;
-  const weeklyDue = utcDay === 1 && elapsedSec >= WEEKLY_DIGEST_DUE_AFTER_SEC;
-  const mapDue = elapsedSec >= MAP_READY_AFTER_SEC;
+  const dailyDue = isDueAfter(dayStartSec, nowSec, DAILY_DIGEST_DUE_AFTER_SEC);
+  const weeklyDue = utcDay === 1 && isDueAfter(dayStartSec, nowSec, WEEKLY_DIGEST_DUE_AFTER_SEC);
+  const mapDue = isDueAfter(dayStartSec, nowSec, MAP_READY_AFTER_SEC);
   const { observations, map } = await readPublicationObservations(
     db,
     date,
@@ -417,11 +438,10 @@ export async function runDigestPublicationWatchdog(
     transitions.cooldown = cooldown;
     const creds = options.operatorTelegramCreds ?? null;
     if (!cooldown && creds) {
-      const delivery = await sendToChat(
-        creds.chatId,
+      const delivery = await deliverOperatorAlert(
+        creds,
         buildAlertText(date, stale, recovered),
-        creds.botToken,
-        { disableWebPagePreview: true, signal },
+        signal,
       );
       if (delivery.ok && hasBlockingTransition) {
         transitions.sent = true;

@@ -36,8 +36,8 @@ import {
   runTelegramTargetPlanCoordinator,
   TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
 } from "./telegram-alert-target-plans";
-import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
-import { readTelegramFreshHandoffAllowance } from "../lib/telegram-transport-control";
+import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram/constants";
+import { readTelegramFreshHandoffAllowance } from "../lib/telegram/transport-control";
 
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;

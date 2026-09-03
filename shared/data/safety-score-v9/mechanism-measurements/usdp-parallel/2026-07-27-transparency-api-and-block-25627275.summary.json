@@ -1,0 +1,15 @@
+{
+  "mechanism": "usdp-parallel",
+  "date": "2026-07-27-transparency-api-and-block-25627275",
+  "sha256": "81f77a07ce1f62e411c444c7187425d75a04b06441f2a0c3036c36590ce40a82",
+  "bytes": 9195,
+  "r2Key": "captures/usdp-parallel/2026-07-27-transparency-api-and-block-25627275.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mixed-api-and-onchain-mechanism-measurement",
+    "assetId": "usdp-parallel",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdp-parallel/2026-07-27-transparency-api-and-block-25627275.json",
+    "capturedAt": "2026-07-27T22:52:16Z"
+  }
+}

@@ -21,6 +21,7 @@ function minimalRawStatus() {
     budgetOnlySurfaces: [],
     dataQuality: {},
     telegramBot: null,
+    alertBroker: undefined,
     sectionErrors: {},
     datasetFreshness: {},
     summary: {},
@@ -131,5 +132,41 @@ describe("writeStatusRawSnapshot", () => {
     expect(cron.recentRuns[0].metadata).toBeDefined();
     expect(cron.recentRuns[1].metadata).toBeUndefined();
     expect(cron.staleArtifacts).toHaveLength(8);
+  });
+
+  it("persists the public-health projection and status supplements alongside raw data", async () => {
+    const db = mockD1([{
+      match: "INSERT INTO cache",
+      rows: [],
+      runMeta: { changes: 1 },
+    }], { requireMatch: true });
+    const publicHealth = {
+      status: "healthy",
+      timestamp: NOW,
+      warnings: [],
+      caches: {},
+      blacklist: {},
+      mintBurn: {},
+      circuits: {},
+    };
+    const supplements = {
+      telegramSummary: null,
+      sectionErrors: {},
+    };
+
+    const written = await writeStatusRawSnapshot(
+      db,
+      NOW,
+      minimalRawStatus() as unknown as Parameters<typeof writeStatusRawSnapshot>[2],
+      { publicHealth, supplements } as never,
+    );
+
+    expect(written).toBe(true);
+    const payload = JSON.parse(String(db.getHistory()[0].binds[1])) as {
+      publicHealth: typeof publicHealth;
+      supplements: typeof supplements;
+    };
+    expect(payload.publicHealth).toEqual(publicHealth);
+    expect(payload.supplements).toEqual(supplements);
   });
 });

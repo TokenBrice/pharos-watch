@@ -13,7 +13,7 @@ type DocReference = string | { anchor: string; path: string };
 type RegistryMapping = {
   alsoRead?: string[];
   background?: DocReference[];
-  checks: string[];
+  checks?: string[];
   docs: DocReference[];
   id: string;
   sources: string[];
@@ -84,11 +84,17 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
 describe("doc-ownership registry integrity", () => {
   it("uses mappings as the sole authored routing model", () => {
     expect(mappings.length).toBeGreaterThan(0);
+    expect(mappings.length).toBeLessThanOrEqual(20);
     expect(ownership.taskFamilies).toBeUndefined();
     expect(new Set(mappings.map((mapping) => mapping.id)).size).toBe(mappings.length);
-    for (const id of ["frontend-routes", "worker-cron", "worker-runtime", "shared-runtime"]) {
-      expect(mappings.find((mapping) => mapping.id === id)?.tier, id).toBe("fallback");
-    }
+    expect(mappings.find((mapping) => mapping.id === "documentation")?.tier).toBe("fallback");
+    expect(mappings.find((mapping) => mapping.id === "frontend-routes")?.checks).toEqual([
+      "npm run lint:changed",
+      "npm run typecheck",
+      "npx vitest run src",
+    ]);
+    expect(mappings.filter((mapping) => ["worker-runtime", "shared-runtime", "documentation"].includes(mapping.id))
+      .every((mapping) => mapping.checks === undefined)).toBe(true);
   });
 
   it("keeps every document, scoped context file, and anchor present", () => {
@@ -119,10 +125,9 @@ describe("doc-ownership registry integrity", () => {
       }
     }
   });
-
-  it("keeps every npm run check wired to a package script", () => {
+  it("keeps npm run checks wired to package scripts", () => {
     for (const mapping of mappings) {
-      for (const check of mapping.checks) {
+      for (const check of mapping.checks ?? []) {
         for (const match of check.matchAll(/\bnpm run\s+([^\s]+)/g)) {
           expect(Object.hasOwn(packageScripts, match[1]), `${mapping.id}: ${match[1]}`).toBe(true);
         }
@@ -144,17 +149,27 @@ describe("doc-ownership registry integrity", () => {
     }
   });
 
-  it("owns every previously unowned verified doc", () => {
+  it("keeps critical contract docs owned while generic routes use the frontend contract", () => {
     const required = [
-      "docs/alt-pegs-page.md", "docs/bluechip-ratings.md", "docs/compliance-page.md",
-      "docs/data-visualization.md", "docs/dependency-map.md", "docs/freezing-stablecoins.md",
-      "docs/funding-page.md", "docs/genius-tracker.md", "docs/learn-page.md", "docs/live-reserves.md",
-      "docs/mica-tracker.md", "docs/privacy-page.md", "docs/process/adding-a-stablecoin.md",
-      "docs/process/ddrr-calibration.md", "docs/process/mechanism-overlay-evidence-standard.md",
-      "docs/process/stablecoin-research-sidecars.md", "docs/process/worker-runtime-experiments.md",
-      "docs/redemption-backstops.md", "docs/screener-page.md", "docs/screener-picker-page.md",
-      "docs/sitemap-tree-page.md", "docs/stablecoin-taxonomy-pages.md",
-      "docs/yield-intelligence-operations.md",
+      "docs/stablecoin-data.md",
+      "docs/process/adding-a-stablecoin.md",
+      "docs/process/stablecoin-research-sidecars.md",
+      "docs/pricing-pipeline.md",
+      "docs/supply-snapshot.md",
+      "docs/api-endpoint-authoring.md",
+      "docs/worker-infrastructure.md",
+      "docs/process/cron-trigger-policy.md",
+      "docs/telegram-architecture.md",
+      "docs/telegram-alerts.md",
+      "docs/telegram-mini-app.md",
+      "docs/deployment-process.md",
+      "docs/report-cards.md",
+      "docs/mint-authority-scoring.md",
+      "docs/safety-score-map.md",
+      "docs/status-dashboard.md",
+      "docs/testing.md",
+      "docs/scripts.md",
+      "docs/process/agent-start-here.md",
     ];
     const ownedDocs = new Set(
       mappings.flatMap((mapping) => [...mapping.docs, ...(mapping.background ?? [])]

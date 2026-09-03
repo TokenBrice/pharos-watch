@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { timingSafeCompare, hasValidAdminCredential, requireAdmin, withAdmin } from "../../lib/auth";
 import {
   resetTelegramInvalidSecretLogStateForTests,
-} from "../../lib/telegram-log";
+} from "../../lib/telegram/log";
 import { validateTelegramWebhookSecret } from "../telegram-webhook-auth";
 
 describe("timingSafeCompare", () => {

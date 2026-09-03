@@ -18,16 +18,16 @@ import {
   buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
-import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
-import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9-extension";
+} from "../safety-score-v9/extension";
+import { deriveSafetyScoreV9PegScore } from "../safety-score-v9/fact-set";
+import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9/extension";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
-import { addReviewedStaticReserveEvidence } from "../safety-score-v9-extension-reserves";
+import { addReviewedStaticReserveEvidence } from "../safety-score-v9/extension-reserves";
 import {
   conservativeDateEndSec,
   ReviewEvidenceBuilder,
   reviewedObservationState,
-} from "../safety-score-v9-extension-shared";
+} from "../safety-score-v9/extension-shared";
 import {
   LIVE_RESERVES_CONFIG,
   eligibleReserveMeta,

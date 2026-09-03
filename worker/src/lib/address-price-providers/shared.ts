@@ -1,5 +1,4 @@
 export { isRecord } from "@shared/lib/type-guards";
-import { parseEpochSeconds } from "@shared/lib/epoch";
 import { coerceNonNegativeNumber } from "@shared/lib/type-guards";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { chunkArray } from "../collections";
@@ -65,29 +64,10 @@ export function normalizeAddressForKey(address: string): string {
   return trimmed.startsWith("0x") ? trimmed.toLowerCase() : trimmed;
 }
 
-export function parseObservedAt(value: unknown): number | null {
-  return parseEpochSeconds(value, {
-    numericTextPolicy: "any", millisecondsThreshold: 10_000_000_000,
-    millisecondsThresholdInclusive: false, floor: true, minExclusive: 0,
-  });
-}
-
 export { parsePositiveNumber };
 
 export function parseNonNegativeNumber(value: unknown): number | null {
   return coerceNonNegativeNumber(value);
-}
-
-/**
- * Drops null-valued provenance fields so only well-typed values (callers must
- * pre-narrow each field to its concrete type or null) land in quote.metadata.
- */
-export function narrowMetadata<T>(fields: Record<string, T | null>): Record<string, T> {
-  const result: Record<string, T> = {};
-  for (const [key, value] of Object.entries(fields)) {
-    if (value != null) result[key] = value;
-  }
-  return result;
 }
 
 export const chunk = chunkArray;
@@ -108,11 +88,6 @@ export function groupTargetsByProviderChain(targets: AddressPriceTarget[]): Map<
     grouped.set(target.providerChainId, list);
   }
   return grouped;
-}
-
-export function getTokenAddressFromRecord(record: Record<string, unknown>): string | null {
-  const value = record.address ?? record.tokenAddress ?? record.token_address;
-  return typeof value === "string" && value.trim() ? normalizeAddressForKey(value) : null;
 }
 
 export async function fetchProviderJson(params: {
@@ -204,43 +179,6 @@ export async function fetchProviderJson(params: {
   }
 }
 
-export function emptyProviderResult(
-  provider: AddressPriceProviderKey,
-  targetsOrCandidateCount: readonly AddressPriceTarget[] | number,
-  reason: PricingProviderRejectionReason,
-): AddressPriceProviderRunResult {
-  const targets = Array.isArray(targetsOrCandidateCount) ? targetsOrCandidateCount : [];
-  const candidateCount = typeof targetsOrCandidateCount === "number" ? targetsOrCandidateCount : targets.length;
-  return {
-    quotes: [],
-    diagnostics: [{
-      source: provider as PricingProviderDiagnosticSource,
-      stage: "primary",
-      endpoint: provider,
-      status: null,
-      ok: false,
-      success: false,
-      candidateCount,
-      rejectionReasonCounts: { [reason]: candidateCount },
-      ...(targets.length > 0 ? {
-        assetAttempts: targets.slice(0, 100).map((target) => createPricingAssetAttempt({
-          assetId: target.stablecoinId,
-          adapter: provider,
-          chain: target.chain,
-          target: target.address,
-          state: "skipped",
-          skipReason: "missing-provider",
-          rejectionClass: reason,
-          candidateAt: Math.floor(Date.now() / 1000),
-        })),
-      } : {}),
-    }],
-    rejectedTargets: { [reason]: candidateCount },
-    successfulRequests: 0,
-    attemptedRequests: 0,
-  };
-}
-
 function finalizeAddressPriceDiagnosticAttempts(
   diagnostic: PricingProviderAttemptDiagnostic,
   quotes: readonly AddressPriceQuote[],
@@ -284,10 +222,10 @@ function finalizeAddressPriceDiagnosticAttempts(
   };
 }
 
-export function buildSkippedAddressPriceAttempts(
+function buildSkippedAddressPriceAttempts(
   provider: AddressPriceProviderKey,
   targets: readonly AddressPriceTarget[],
-  skipReason: "budget" | "deadline" | "negative-cache" | "provider-suppressed" | "request-cap",
+  skipReason: "budget" | "deadline" | "request-cap",
   rejectionClass: string,
 ): PricingProviderAttemptDiagnostic["assetAttempts"] {
   return targets.slice(0, 100).map((target) => createPricingAssetAttempt({
@@ -308,7 +246,6 @@ export function createAddressProviderRunner(input: {
   targets: readonly AddressPriceTarget[];
   deadlineMs: number;
   maxRequests: number;
-  includeProcessedTargets?: boolean;
 }) {
   const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
   const quotes: AddressPriceQuote[] = [];
@@ -372,7 +309,6 @@ export function createAddressProviderRunner(input: {
         rejectedTargets,
         successfulRequests,
         attemptedRequests,
-        ...(input.includeProcessedTargets ? { processedTargets: [...processedTargets] } : {}),
       };
     },
   };

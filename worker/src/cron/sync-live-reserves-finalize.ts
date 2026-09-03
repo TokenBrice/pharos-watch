@@ -14,7 +14,7 @@ import {
   cleanupStaleLiveReserveArtifacts,
   pruneLiveReserveHistory,
   type LiveReserveArtifactCleanupResult,
-} from "../lib/live-reserves-store";
+} from "../lib/live-reserves/store";
 import {
   CONFIGURED_COINS,
   CONFIGURED_LIVE_RESERVE_BREAKER_KEYS,
@@ -24,12 +24,6 @@ import {
   type LiveReserveQueueCounts,
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
-import {
-  clearCursorStateIfComplete,
-  retireRecoveryOwnedGlobalCursor,
-  type LiveReserveGlobalCursorOwner,
-  type LoadedLiveReserveCursorState,
-} from "./sync-live-reserves-run-state";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
 import type { AdapterLatencySummary, AdapterTelemetryProgress } from "./sync-live-reserves-core";
 
@@ -52,10 +46,7 @@ export interface FinalizeReserveSyncRunArgs {
   coinsWithWarnings: string[];
   breaker: LiveReserveBreakerOutcome;
   deferredTail: LiveReserveDeferredTailOutcome;
-  loadedCursorState: LoadedLiveReserveCursorState | null;
-  manageGlobalCursor: boolean;
   checkpointOwned: boolean;
-  recoveryCursorOwner: LiveReserveGlobalCursorOwner | null;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
   budgetConfig: LiveReserveSyncBudgetConfig;
   phaseTimings: LiveReservePhaseTimings;
@@ -201,78 +192,6 @@ async function recoverNoCandidateLiveReserveBreakers(
   }
 }
 
-async function persistCursorStateForRun(
-  args: FinalizeReserveSyncRunArgs,
-  runStatus: CronResult["status"],
-): Promise<{
-  cursorPersistFailed: boolean;
-  cursorPersistError: string | null;
-  cursorRetiredByRecovery: boolean;
-  cursorPreservedAfterError: boolean;
-}> {
-  try {
-    if (runStatus === "error") {
-      return {
-        cursorPersistFailed: false,
-        cursorPersistError: null,
-        cursorRetiredByRecovery: false,
-        cursorPreservedAfterError: true,
-      };
-    }
-    if (!args.manageGlobalCursor) {
-      const cursorRetiredByRecovery =
-        args.counts.deferredCoins === 0
-        && args.recoveryCursorOwner != null
-        && await retireRecoveryOwnedGlobalCursor(
-          args.db,
-          args.recoveryCursorOwner,
-          args.signal,
-        );
-      return {
-        cursorPersistFailed: false,
-        cursorPersistError: null,
-        cursorRetiredByRecovery,
-        cursorPreservedAfterError: false,
-      };
-    }
-    await clearCursorStateIfComplete(
-      args.db,
-      args.counts.deferredCoins,
-      args.deferredTail.nextCursorStablecoinId,
-      args.signal,
-    );
-    return {
-      cursorPersistFailed: false,
-      cursorPersistError: null,
-      cursorRetiredByRecovery: false,
-      cursorPreservedAfterError: false,
-    };
-  } catch (error) {
-    const cursorPersistError = toErrorMessage(error);
-    await logCronEvent(args.db, {
-      job: "sync-live-reserves",
-      eventType: "live-reserve-cursor-finalize-failed",
-      severity: "warning",
-      message:
-        !args.manageGlobalCursor
-          ? "Recovery could not compare-and-delete its source reserve cursor; a later normal run will retain or drain it."
-          : args.counts.deferredCoins > 0
-          ? "Live reserve cursor persistence failed; the next run may restart from the previous cursor."
-          : "Live reserve cursor cleanup failed; status may show the previous deferred tail until cleanup succeeds.",
-      metadata: {
-        deferredCoins: args.counts.deferredCoins,
-        nextCursorStablecoinId: args.deferredTail.nextCursorStablecoinId,
-        error: cursorPersistError,
-      },
-    });
-    return {
-      cursorPersistFailed: true,
-      cursorPersistError,
-      cursorRetiredByRecovery: false,
-      cursorPreservedAfterError: false,
-    };
-  }
-}
 
 function getHistoryWriteFailedCoins(warningMessages: readonly string[]): string[] {
   return Array.from(new Set(
@@ -354,14 +273,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   });
 
   throwIfAborted(args.signal);
-  const {
-    cursorPersistFailed,
-    cursorPersistError,
-    cursorRetiredByRecovery,
-    cursorPreservedAfterError,
-  } = await persistCursorStateForRun(args, runStatus);
 
-  throwIfAborted(args.signal);
   await recordBreakerOutcomesForRun(args, finalizationBudget);
 
   throwIfAborted(args.signal);
@@ -457,11 +369,6 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       cursorTailCompletedAt: args.deferredTail.cursorTailCompletedAt,
       cursorTailFailedAt: args.deferredTail.cursorTailFailedAt,
       runBudgetTruncationCount: args.deferredTail.runBudgetTruncationCount,
-      loadedCursorNextStablecoinId: args.loadedCursorState?.nextStablecoinId ?? null,
-      loadedCursorTailState: args.loadedCursorState?.tailState ?? null,
-      loadedCursorDeferredAt: args.loadedCursorState?.deferredAt ?? null,
-      loadedCursorTruncationCount: args.loadedCursorState?.runBudgetTruncationCount ?? 0,
-      cursorOwnership: args.manageGlobalCursor ? "global" : "checkpoint",
       budgetMs: args.budgetConfig.runBudgetMs,
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
@@ -494,15 +401,11 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       staleBreakerRecoveriesSkipped: finalizationBudget.staleBreakerRecoveriesSkipped,
       artifactCleanupSkipped: finalizationBudget.artifactCleanupSkipped,
       historyPruneSkipped: finalizationBudget.historyPruneSkipped,
-      cursorPersistFailed,
-      cursorRetiredByRecovery,
-      cursorPreservedAfterError,
       ...(args.checkpointOwned
         ? { childDisposition: args.counts.deferredCoins > 0 ? "not_started" : "completed" }
         : {}),
       artifactCleanup,
       artifactCleanupWarningCount: artifactCleanupWarnings.length,
-      ...(cursorPersistError ? { cursorPersistError } : {}),
       ...(artifactCleanupWarnings.length > 0 ? { artifactCleanupWarnings } : {}),
       ...(historyWriteFailedCoins.length > 0 ? { historyWriteFailedCoins } : {}),
       ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),

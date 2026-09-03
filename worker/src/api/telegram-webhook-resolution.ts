@@ -4,7 +4,7 @@ import {
   resolveTicker,
   type ResolvedCoin,
   type TickerResolutionScope,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import { buildNotFoundMessage } from "./telegram-webhook-messages";
 import type {
   CoinResolution,

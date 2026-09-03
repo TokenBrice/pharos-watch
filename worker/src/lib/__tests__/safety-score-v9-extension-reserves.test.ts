@@ -8,12 +8,12 @@ import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9ReserveClassifications,
   dependencyReserveSlices,
-} from "../safety-score-v9-extension-reserves";
+} from "../safety-score-v9/extension-reserves";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 

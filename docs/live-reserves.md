@@ -171,12 +171,13 @@ Warnings now carry both a display `severity` and an execution `effect`:
 `syncLiveReserves()`:
 
 1. Filters `ACTIVE_STABLECOINS` to the coins that declare `liveReservesConfig`.
-2. Orders the queue by adapter evidence class (`independent`, then `static-validated`, then `weak-live-probe`) and packs coins sharing a `source-invariant` adapter contiguously, so run-budget truncation defers weak probes before score-grade feeds and shared fetches are reused immediately. Cursored runs process only the deferred tail and deliberately do not wrap back to the head within the same run; once that tail completes the cursor clears and the next scheduled run restarts from the head, so a coin deferred in one run is first in line on the next.
+2. Orders the queue by adapter evidence class (`independent`, then `static-validated`, then `weak-live-probe`) and packs coins sharing a `source-invariant` adapter contiguously, so run-budget truncation defers weak probes before score-grade feeds and shared fetches are reused immediately. The durable scheduler checkpoint stores the one next-item resume pointer; a resumed run processes only that deferred suffix and does not wrap back to the queue head.
 3. Resolves an adapter from `worker/src/cron/reserve-adapters/index.ts`.
 4. Builds a breaker key as `live-reserves:${breakerScope ?? adapter}`.
 5. Checks the per-source circuit breaker before each coin fetch.
 6. Persists either a fresh snapshot (`reserve_composition`) plus sync-state row, or an error/degraded/skipped sync-state row.
 
+The `reserve-recovery` lane retains its five-minute trigger. In `recover` mode it fences any in-flight attempt, claims the checkpoint's ready pointer, and replays the suffix; a crash before terminal checkpoint finalization is therefore retried within one recovery tick. `off` keeps the sweep but skips recovery scans. The checkpoint pointer is the sole run-level resume mechanism; the cache table is not used for reserve cursor ownership.
 **Adapter output validation:** After each adapter returns, `validateAdapterOutput()` checks
 that all slice `risk` values are valid enum members, all `pct` values are finite and strictly positive,
 the slice list is non-empty, and the sum is within 2 points of 100%. Invalid output is treated as
@@ -245,10 +246,9 @@ Latest successful live snapshot per live-enabled coin.
 | `warning_count` / `warnings`                      | Warning summary persisted alongside the successful snapshot                                           |
 | `adapter_source_model` / `adapter_evidence_class` | Registry-derived classification copied onto the snapshot row for authoritative reads                  |
 | `attempt_id`                                      | Attempt-fencing identifier for the successful snapshot when the writer stamped one                    |
-
 ### `reserve_composition_history`
 
-Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table. Non-null attempt IDs are unique per coin and history inserts are idempotent, so a retried D1 write cannot duplicate rows for the same attempt. The 4-hourly reserve cron prunes rows older than 30 days, but always preserves frozen-coin rows and any row whose attempt is still referenced by `reserve_composition` or `reserve_sync_state` (so long-suspended feeds keep their gap-check and recovery-fencing closure).
+Append-only index of successful live snapshots. Each row carries the attempt ID, adapter classification, and a nullable `payload_sha256` digest of the latest snapshot payload; `slices`, `metadata`, and `warnings` are intentionally empty because `reserve_sync_attempt_history` is the append-only source for attempt payload metadata. Non-null attempt IDs are unique per coin and history inserts are idempotent, so a retried D1 write cannot duplicate rows for the same attempt. The 4-hourly reserve cron prunes rows older than 30 days, but always preserves frozen-coin rows and any row whose attempt is still referenced by `reserve_composition` or `reserve_sync_state` (so long-suspended feeds keep their gap-check and recovery-fencing closure).
 
 ### `reserve_sync_state`
 
@@ -270,9 +270,9 @@ Per-coin operational state for the most recent attempt.
 
 ### `reserve_sync_attempt_history`
 
-Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. Non-null attempt IDs are unique per coin and inserts are idempotent. The 4-hourly reserve cron prunes rows older than 30 days with the same frozen-coin and referenced-attempt preservation as the composition history.
+Append-only source of all reserve-sync attempt payload metadata, including `ok`, `degraded`, `error`, and `skipped` outcomes with warnings, error message, and attempt-scoped metadata. Non-null attempt IDs are unique per coin and inserts are idempotent. The composition-history digest is computed from the successful snapshot payload while this table remains the durable source for warning/metadata payloads. The 4-hourly reserve cron prunes rows older than 30 days with the same frozen-coin and referenced-attempt preservation as the composition history.
 
-Freshness and consistency rules now live across the `worker/src/lib/live-reserves-store*.ts` helper family, with `worker/src/lib/live-reserves-store.ts` kept as the public facade:
+Freshness and consistency rules now live across the `worker/src/lib/live-reserves/store*.ts` helper family, with `worker/src/lib/live-reserves/store.ts` kept as the public facade:
 
 - `LIVE_RESERVE_FRESHNESS_SEC = 172800` (48 hours)
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at` and, when attempt IDs are stamped, `reserve_sync_state.last_success_attempt_id === reserve_composition.attempt_id`
@@ -318,7 +318,7 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 `corruptCoins` counts rows where a matching latest-success snapshot exists in D1 but fails strict integrity validation, so the system fails closed to fallback presentation instead of serving truncated or malformed live data.
 When a coin has both an old latest-success snapshot and a newer failing attempt state, the overview now prioritizes the active `error` / `degraded` attempt classification over generic `stale` labeling so status surfaces better reflect live incidents.
 `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path and whose authoritative success state could not be proven by readback.
-`runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` mirror the latest deferred-tail cursor so status surfaces can distinguish ordinary stale coverage from a run that intentionally stopped before the queue tail. `cursorTailState`, `cursorTailError`, `cursorRecordedAt`, `cursorTailCompletedAt`, `cursorTailFailedAt`, and `runBudgetTruncationCount` expose whether the deferred tail was fully recorded or left incomplete after a partial D1 write failure. `historyWriteGaps` reconciles authoritative current snapshots against composition and attempt history rows so missing history writes stay visible after the cron event has been overwritten by a newer event.
+`runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` mirror the latest active checkpoint's next-item resume pointer, so status surfaces can distinguish ordinary stale coverage from a run that intentionally stopped before the queue tail. The pointer survives a run-budget truncation and is replayed by the five-minute `reserve-recovery` lane; it is cleared only when the checkpoint reaches the queue end. `historyWriteGaps` reconciles authoritative current snapshots against the idempotent composition-history index and the attempt-history source, so missing history writes stay visible after the cron event has been overwritten by a newer event.
 
 ---
 

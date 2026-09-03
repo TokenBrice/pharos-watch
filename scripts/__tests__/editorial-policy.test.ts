@@ -91,13 +91,15 @@ function fixtureException(
 }
 
 describe("editorial corpus policy gate", () => {
+  // Scans the entire editorial corpus; the 5 s default is for unit-sized work
+  // and this case timed out inside a loaded four-way CI shard (1.1 s locally).
   it("records corpus findings in shadow mode and reserves blocking for the config flip", () => {
     const result = runEditorialPolicyGate();
     expect(result.observations).toEqual(expect.any(Array));
     if (EDITORIAL_POLICY_MODE === "enforce") {
       expect(result.blockingRegressions, formatGateDiagnostics(result)).toEqual([]);
     }
-  });
+  }, 30_000);
 
   it("keeps every source family registered and every surface assigned a known register", () => {
     expect(EDITORIAL_POLICY_TEST_PATH).toBe("scripts/__tests__/editorial-policy.test.ts");

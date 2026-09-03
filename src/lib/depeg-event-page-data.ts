@@ -1,6 +1,6 @@
 import type { DepegEventEntry } from "@shared/types/market";
 import { selectStaticDepegEventPages } from "@/lib/depeg-event-config";
-import { DEPEG_EVENT_SNAPSHOT_PATH, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
+import { DEPEG_EVENT_DATA_DIR, readDepegEventPageEntries } from "@/lib/depeg-event-snapshot";
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
@@ -10,23 +10,21 @@ export type { DepegEventEntry } from "@shared/types/market";
 
 function readDepegEventEntries(): readonly DepegEventEntry[] {
   try {
-    return readDepegEventSnapshot({ missing: "throw" });
+    return readDepegEventPageEntries();
   } catch (cause) {
     throw new Error(
-      `Failed to read depeg events from ${DEPEG_EVENT_SNAPSHOT_PATH}; run scripts/maintenance/sync-depeg-events.ts before building.`,
+      `Failed to read depeg events from ${DEPEG_EVENT_DATA_DIR}; run scripts/maintenance/sync-depeg-events.ts before building.`,
       { cause },
     );
   }
 }
-
-const ALL_ENTRIES = readDepegEventEntries();
 
 /**
  * Every generated event page is linked from the archive, listed in the sitemap,
  * and served `index,follow` — the static page set and the indexable set are the
  * same set by construction (`selectStaticDepegEventPages`).
  */
-export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = selectStaticDepegEventPages(ALL_ENTRIES);
+export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = selectStaticDepegEventPages(readDepegEventEntries());
 
 export const COLLIDING_DEPEG_EVENT_SLUGS: ReadonlySet<string> =
   buildSameDayDirectionCollisionSlugs(DEPEG_EVENT_ENTRIES);

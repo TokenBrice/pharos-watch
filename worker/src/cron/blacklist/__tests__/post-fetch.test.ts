@@ -5,6 +5,7 @@ import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../../lib/constants";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 vi.mock("../../../lib/blacklist/amount-recovery", () => ({
   enrichRowBalances: vi.fn(),
@@ -67,7 +68,7 @@ describe("processFetchedBlacklistRows", () => {
     const row = makeBlacklistRow({ id: "ethereum-aborted" }) as BlacklistRow;
 
     await expect(processFetchedBlacklistRows({
-      db: { prepare } as unknown as D1Database,
+      db: makeNoopD1({ prepare }),
       config,
       rows: [row],
       chainLabel: "evm",
@@ -93,9 +94,9 @@ describe("processFetchedBlacklistRows", () => {
       if (attempts === 1) throw new Error("D1 DB is overloaded");
       return { results: [{ id: row.id }] };
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: vi.fn(() => ({ all })) })),
-    } as unknown as D1Database;
+    });
     vi.spyOn(Math, "random").mockReturnValue(0);
 
     const result = await processFetchedBlacklistRows({

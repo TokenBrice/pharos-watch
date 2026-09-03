@@ -3,7 +3,7 @@ import {
   buildFlightToQualityClassificationFromV9Snapshot,
 } from "../flight-to-quality-classification";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
-import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9-consumer-freshness";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 
 describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
   it("uses canonical V9 grade boundaries for safe classifications", () => {

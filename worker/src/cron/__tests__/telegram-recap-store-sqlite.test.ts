@@ -10,7 +10,7 @@ import {
   queueTelegramRecapTarget,
   recordTelegramRecapSkip,
   setTelegramRecapPreference,
-} from "../../lib/telegram-recap-store";
+} from "../../lib/telegram/recap-store";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const NOW = 1_800_000_000;

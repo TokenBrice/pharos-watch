@@ -13,9 +13,9 @@ import {
   isTelegramRecapAvailableToChat,
   type TelegramRecapRolloutPolicy,
 } from "@shared/lib/telegram-recap-rollout";
-import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
-import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
-import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
+import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram/presets";
+import { loadTelegramChatHealthDiagnostics } from "../lib/telegram/usage-analytics";
+import type { TelegramMiniAppAuthContext } from "../lib/telegram/mini-app-auth";
 import {
   prepareTelegramPendingAlertCount,
   prepareTelegramRecapState,

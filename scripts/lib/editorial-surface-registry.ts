@@ -382,7 +382,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
   {
     id: "telegram-alert-copy",
     register: "alert",
-    paths: ["worker/src/lib/telegram-alerts-formatting.ts"],
+    paths: ["worker/src/lib/telegram/alerts-formatting.ts"],
     extractor: "structured-data",
     ownership: "pharos",
     tier: "committed-corpus",
@@ -407,7 +407,7 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
   {
     id: "telegram-delivery-wrappers",
     register: "delivery-wrapper",
-    paths: ["worker/src/lib/telegram-recap-formatting.ts"],
+    paths: ["worker/src/lib/telegram/recap-formatting.ts"],
     extractor: "structured-data",
     ownership: "pharos",
     tier: "committed-corpus",

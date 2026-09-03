@@ -8,6 +8,7 @@ import {
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 
@@ -653,7 +654,7 @@ describe("handleMintBurnFlows contract tests", () => {
     };
     let aggregateCacheLookups = 0;
 
-    const failingDb = {
+    const failingDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           all: async <T>() => {
@@ -687,7 +688,7 @@ describe("handleMintBurnFlows contract tests", () => {
         first: async () => null,
         run: async () => ({ success: true, meta: {} }),
       }),
-    } as unknown as D1Database;
+    });
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
     const body = await readJsonResponse(res, 200);
@@ -752,7 +753,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
     };
     let aggregateCacheLookups = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           all: async <T>() => {
@@ -777,7 +778,7 @@ describe("handleMintBurnFlows contract tests", () => {
           run: async () => ({ success: true, meta: {} }),
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
@@ -795,7 +796,7 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("returns 503 when the aggregate fallback cache is malformed", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const failingDb = {
+    const failingDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           all: async <T>() => {
@@ -827,7 +828,7 @@ describe("handleMintBurnFlows contract tests", () => {
         first: async () => null,
         run: async () => ({ success: true, meta: {} }),
       }),
-    } as unknown as D1Database;
+    });
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
 

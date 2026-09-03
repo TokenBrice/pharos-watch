@@ -57,9 +57,14 @@ function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
           return { meta: { changes: 0 } };
         },
         all: async () => {
-          if (sql.startsWith("SELECT job, MAX(started_at)")) {
+          if (sql.includes("ROW_NUMBER() OVER")) {
             const started_at = Math.floor(Date.now() / 1000);
-            return { results: (args as string[]).map((job) => ({ job, started_at })) };
+            return { results: (args as string[]).map((job) => ({
+              job,
+              last_success_at: started_at,
+              last_run_at: started_at,
+              last_status: "ok",
+            })) };
           }
           if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
             const keys = args as string[];

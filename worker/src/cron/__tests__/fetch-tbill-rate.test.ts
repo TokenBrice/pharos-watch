@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
+import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
 import {
   installCacheByKey,
@@ -14,6 +14,19 @@ import {
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
+
+const cadenceMocks = vi.hoisted(() => ({
+  claimCadenceBucket: vi.fn(),
+  completeCadenceBucket: vi.fn(),
+  failCadenceBucket: vi.fn(),
+}));
+
+vi.mock("../../lib/cadence-bucket", () => ({
+  cadenceBucketFor: (scheduledAtSec: number, cadenceSec: number) => Math.floor(scheduledAtSec / cadenceSec),
+  claimCadenceBucket: cadenceMocks.claimCadenceBucket,
+  completeCadenceBucket: cadenceMocks.completeCadenceBucket,
+  failCadenceBucket: cadenceMocks.failCadenceBucket,
+}));
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
@@ -97,6 +110,17 @@ const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FROZEN_NOW);
+  cadenceMocks.claimCadenceBucket.mockReset().mockResolvedValue({
+    kind: "claimed",
+    claim: {
+      key: "fetch-tbill-rate:weekly",
+      bucket: 0,
+      generation: "test-generation",
+      serializedClaim: "test-claim",
+    },
+  });
+  cadenceMocks.completeCadenceBucket.mockReset().mockResolvedValue(true);
+  cadenceMocks.failCadenceBucket.mockReset().mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -183,10 +207,9 @@ describe("fetchTbillRate", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe("usd:circuit-open");
-    expect(metadata.eurSource).toBe("ecb-estr-3m");
-    expect(metadata.usdEffrSource).toBe("nyfed-effr");
-    expect(metadata.gbpSource).toBe("fred-sonia-compounded-index");
+    expect(metadata.fallbackMode).toContain("usd:circuit-open");
+    expect(metadata.eurSource).toBeNull();
+    expect(metadata.usdEffrSource).toBeNull();
     expect(latestCachePayload()).toMatchObject({
       rate: RISK_FREE_RATE_FALLBACK,
       source: "hardcoded-fallback",
@@ -195,7 +218,7 @@ describe("fetchTbillRate", () => {
     });
     expect(calls.some((url) => url.includes("id=DGS3MO"))).toBe(false);
     expect(calls.some((url) => url.includes("treasury.gov"))).toBe(false);
-    expect(calls.some((url) => url.includes("data-api.ecb.europa.eu"))).toBe(true);
+    expect(calls.some((url) => url.includes("data-api.ecb.europa.eu"))).toBe(false);
     expect(recordOutcome).not.toHaveBeenCalled();
   });
 
@@ -246,7 +269,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.rubRate).toBe(14.5);
     expect(metadata.trySource).toBe("cbrt-evds-tlref");
     expect(metadata.tryRate).toBe(40);
-    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", true);
     expect(latestCachePayload()).toMatchObject({
       rate: 3.72,
       source: "fred-dgs3mo",
@@ -269,6 +292,44 @@ describe("fetchTbillRate", () => {
       fallbackMode: null,
     });
     expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
+  });
+
+  it("skips weekly benchmark descriptors on a second run in the same week", async () => {
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+    cadenceMocks.claimCadenceBucket
+      .mockResolvedValueOnce({
+        kind: "claimed",
+        claim: {
+          key: "fetch-tbill-rate:weekly",
+          bucket: 1,
+          generation: "first",
+          serializedClaim: "first-claim",
+        },
+      })
+      .mockResolvedValueOnce({ kind: "skip", reason: "already-completed", bucket: 1 });
+
+    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(1);
+    expect(calls.filter((url) => url.includes("id=DGS3MO"))).toHaveLength(2);
+    expect(calls.filter((url) => url.includes("report-download"))).toHaveLength(1);
+  });
+
+  it("isolates an open weekly descriptor circuit from the other descriptors", async () => {
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+    vi.mocked(shouldAttemptFetch).mockImplementation(
+      async (_db, source) => source !== "TREASURY_RATES:EUR",
+    );
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(result.status).toBe("degraded");
+    expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(0);
+    expect(calls.filter((url) => url.includes("report-download"))).toHaveLength(1);
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:CHF", true);
   });
 
   it("falls back to the ALFRED SONIA index when the FRED mirror is unreachable", async () => {
@@ -560,7 +621,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.usdSource).toBe("treasury-yield-xml");
     expect(metadata.usdRate).toBe(3.72);
     expect(metadata.fallbackMode).toBeNull();
-    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", true);
     expect(latestCachePayload()).toMatchObject({
       rate: 3.72,
       source: "treasury-yield-xml",
@@ -603,7 +664,7 @@ describe("fetchTbillRate", () => {
     expect(result.status).toBe("ok");
     expect(metadata.usdSource).toBe("treasury-yield-xml");
     expect(metadata.usdRate).toBe(3.72);
-    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", true);
   });
 
   it("retains the last EUR benchmark when the ECB feed fails", async () => {
@@ -737,7 +798,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.fallbackMode).toBe(
       "usd:all-sources-failed,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
-    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
+    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", false);
     expect(latestCachePayload()).toMatchObject({
       rate: RISK_FREE_RATE_FALLBACK,
       source: "hardcoded-fallback",

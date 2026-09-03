@@ -1,0 +1,25 @@
+{
+  "mechanism": "cjpy-yamato",
+  "date": "2026-07-15-block-25536894",
+  "sha256": "6f4ba783103362c8f638fbb6423c3831087402dc34d3facc4ed5042ce83ff9e9",
+  "bytes": 6345,
+  "r2Key": "captures/cjpy-yamato/2026-07-15-block-25536894.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "cjpy-yamato",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/cjpy-yamato/2026-07-15-block-25536894.json",
+    "chain": {
+      "key": "ethereum",
+      "evmChainId": 1
+    },
+    "block": {
+      "number": 25536894,
+      "hash": "0x9b5d38fcb302bfc941f2704759a37402b0a5f9f3c1ad6fc0badaf20219cb6422",
+      "timestampUnix": 1784104535,
+      "timestampIso": "2026-07-15T08:35:35.000Z",
+      "selection": "finalized"
+    }
+  }
+}

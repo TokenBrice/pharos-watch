@@ -15,7 +15,7 @@ import {
 } from "./dispatch-telegram-state";
 import { writeSnapshots } from "./telegram-alert-snapshots";
 import { runPendingQueueLifecycle } from "./dispatch-telegram-pending-lifecycle";
-import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
 import {
   type PendingDrainResult,
   type PendingCapacitySnapshot,

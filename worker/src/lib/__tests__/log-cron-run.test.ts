@@ -4,6 +4,7 @@ import { logCronRun } from "../cron-logger";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease-primitives";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("logCronRun", () => {
   const db = mockD1([
@@ -57,7 +58,7 @@ describe("logCronRun", () => {
 
   it.each(["skipped_locked", "skipped_neutral"] as const)("persists custom status %s", async (status) => {
     let insertedStatus: string | null = null;
-    const dbWithCapture = {
+    const dbWithCapture = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           run: async () => {
@@ -76,7 +77,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     await logCronRun(dbWithCapture, "test-job", async () => ({
       status,
@@ -88,7 +89,7 @@ describe("logCronRun", () => {
 
   it("writes and clears cron_run_progress when the job reports progress", async () => {
     const operations: string[] = [];
-    const dbWithProgressCapture = {
+    const dbWithProgressCapture = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -107,7 +108,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     await logCronRun(dbWithProgressCapture, "test-job", async (_signal, reportProgress) => {
       await reportProgress({
@@ -208,7 +209,7 @@ describe("logCronRun", () => {
   it("persists slot_started_at into cron_runs and cron_run_progress when provided", async () => {
     let runSlotStartedAt: number | null = null;
     let progressSlotStartedAt: number | null = null;
-    const dbWithSlotCapture = {
+    const dbWithSlotCapture = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           run: async () => {
@@ -230,7 +231,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     await logCronRun(
       dbWithSlotCapture,
@@ -265,7 +266,7 @@ describe("logCronRun", () => {
       let insertedStatus: string | null = null;
       let insertedError: string | null = null;
       let insertedMetadata: string | null = null;
-      const dbWithCapture = {
+      const dbWithCapture = makeNoopD1({
         prepare: (sql: string) => ({
           bind: (...args: unknown[]) => ({
             run: async () => {
@@ -286,7 +287,7 @@ describe("logCronRun", () => {
         batch: async () => [],
         exec: async () => ({ count: 0, duration: 0 }),
         dump: async () => new ArrayBuffer(0),
-      } as unknown as D1Database;
+      });
 
       const hangingJob = logCronRun(dbWithCapture, "test-job", async () => new Promise(() => {}));
       const abandonedExpectation = expect(hangingJob).rejects.toBeInstanceOf(CronJobAbandonedError);
@@ -307,7 +308,7 @@ describe("logCronRun", () => {
 
   it("does not DELETE from cron_runs on successful completion (prune moved to daily cron)", async () => {
     const sqlStatements: string[] = [];
-    const recordingDb = {
+    const recordingDb = makeNoopD1({
       prepare: (sql: string) => {
         sqlStatements.push(sql);
         return {
@@ -324,7 +325,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const result = await logCronRun(recordingDb, "test-job", async () => ({ itemCount: 1 }));
     expect(result).toMatchObject({ itemCount: 1 });
@@ -339,7 +340,7 @@ describe("logCronRun", () => {
     const committedKeys = new Set<string>();
     const attemptedKeys: string[] = [];
     let firstInsert = true;
-    const ambiguousDb = {
+    const ambiguousDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           run: async () => {
@@ -362,7 +363,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     await expect(logCronRun(ambiguousDb, "ambiguous-log", async () => ({ itemCount: 1 })))
       .resolves.toMatchObject({ itemCount: 1 });
@@ -375,7 +376,7 @@ describe("logCronRun", () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const cronRunStatements: string[] = [];
-    const overloadedDb = {
+    const overloadedDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: () => ({
           run: async () => {
@@ -392,7 +393,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
     const result = {
       status: "ok" as const,
       itemCount: 255,
@@ -426,7 +427,7 @@ describe("logCronRun", () => {
   it("does not overwrite a committed cron result when producer history telemetry fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const cronRunWrites: Array<{ sql: string; args: unknown[] }> = [];
-    const historyFailureDb = {
+    const historyFailureDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           run: async () => {
@@ -445,7 +446,7 @@ describe("logCronRun", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
     const result = { status: "ok" as const, itemCount: 12 };
 
     try {

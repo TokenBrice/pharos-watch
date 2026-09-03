@@ -4,18 +4,18 @@
  * telegram-webhook.ts during the P1-M1 dispatch split — behavior is unchanged.
  */
 import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { recordTelegramFirstFollow } from "../../lib/telegram-adoption-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { recordTelegramFirstFollow } from "../../lib/telegram/adoption-analytics";
 import {
   type ResolvedCoin,
   type TickerResolutionScope,
-} from "../../lib/telegram-alerts";
+} from "../../lib/telegram/alerts";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
   type TelegramPresetId,
-} from "../../lib/telegram-presets";
-import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram-subscription-eligibility";
+} from "../../lib/telegram/presets";
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
 import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,
@@ -45,7 +45,7 @@ import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import {
   BULK_CONFIRM_COIN_THRESHOLD,
   BULK_CONFIRM_PREVIEW_LIMIT,
-} from "../../lib/telegram-constants";
+} from "../../lib/telegram/constants";
 import {
   createTelegramWebhookIntent,
   type TelegramCommandMutationContext,

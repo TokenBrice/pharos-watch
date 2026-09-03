@@ -1,0 +1,15 @@
+{
+  "mechanism": "cdxusd-cod3x",
+  "date": "2026-07-27-block-49201813",
+  "sha256": "20c86b20f4fb66550d918779480ac27c506129c0eaa229f5080fda736a106e1e",
+  "bytes": 2711,
+  "r2Key": "captures/cdxusd-cod3x/2026-07-27-block-49201813.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "cdxusd-cod3x",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/cdxusd-cod3x/2026-07-27-block-49201813.json",
+    "capturedAt": "2026-07-27T22:58:00Z"
+  }
+}

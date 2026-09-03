@@ -3,12 +3,27 @@ import { z } from "zod";
 import { PriceConfidenceSchema } from "@shared/types/core";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import {
-  DailyDigestResponseSchema,
   DigestArchiveResponseSchema,
   DigestSnapshotResponseSchema,
+  DigestChangeSummarySchema,
+  DigestForwardLookOutcomeSchema,
+  DigestNextTriggerSchema,
+  DigestStandingConditionSchema,
+  DigestRiskTapeItemSchema,
 } from "@shared/types/digest";
-import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
-import { DdrResponseSchema } from "@shared/types/depeg-resolver";
+import {
+  DdrFrozenDurationSchema,
+  DdrOfficialLockOutcomeSchema,
+  DdrResolutionSchema,
+  DdrResponseSchema,
+  DdrV2ResponseRowSchema,
+} from "@shared/types/depeg-resolver";
+import {
+  DdrrResponseSchema,
+  DdrrRowSchema,
+  DdrrV2SummaryMetricsSchema,
+  DdrrV2SummarySegmentSchema,
+} from "@shared/types/depeg-resolver-review";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import {
   BlacklistResponseSchema,
@@ -30,23 +45,25 @@ import {
   MintBurnPerCoinResponseSchema,
 } from "@shared/types/mint-burn";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
-import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9DependencyGraphSchema,
+  ReportCardsV9ResponseSchema,
+  V9PublicationHealthSchema,
+} from "@shared/types/report-cards-v9";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import {
   SafetyScoreHistoryResponseSchema,
   SafetyScoreHistoryV2ResponseSchema,
 } from "@shared/types/safety-score-history";
-import { StabilityIndexResponseSchema, UsdsStatusResponseSchema } from "@shared/types/stability";
-import {
-  HealthResponseSchema,
-  PublicStatusHistoryResponseSchema,
-  TelegramPulseSchema,
-} from "@shared/types/status";
+import { StabilityIndexResponseSchema } from "@shared/types/stability";
+import { HealthResponseSchema, PublicStatusHistoryResponseSchema } from "@shared/types/status";
 import { TapeEventsResponseSchema } from "@shared/types/tape-event";
 import {
   YieldAdapterManifestResponseSchema,
   YieldHistoryResponseSchema,
+  YieldPysInputsAtPublishSchema,
   YieldRankingsResponseSchema,
+  YieldVenueRiskScoresSchema,
 } from "@shared/types/yield";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
@@ -139,6 +156,106 @@ export const SnapshotCoinResponseSchema = z.object({
   }),
 });
 
+/** Output shape of the worker's normalized USDS status response, without its runtime transform. */
+export const UsdsStatusResponseArtifactSchema = z.object({
+  implementationAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  freezeCapabilityPresent: z.boolean(),
+  lastChecked: z.number(),
+});
+
+const DailyDigestRiskSignalArtifactSchema = z.object({
+  kind: z.literal("depeg"),
+  symbol: z.string(),
+  bps: z.number(),
+  mcapUsd: z.number().nullable(),
+  severity: z.enum(["critical", "watch"]),
+  activeCount: z.number().optional(),
+  date: z.string().nullable().optional(),
+});
+
+/** Output shape of the daily digest endpoint, without its runtime defaulting transform. */
+export const DailyDigestResponseArtifactSchema = z.object({
+  digest: z.string().nullable(),
+  digestTitle: z.string().nullable(),
+  digestExtended: z.string().nullable(),
+  generatedAt: z.number().nullable(),
+  editionNumber: z.number().nullable(),
+  riskSignal: DailyDigestRiskSignalArtifactSchema.nullable(),
+  changeSummary: DigestChangeSummarySchema.nullable(),
+  nextTriggers: z.array(DigestNextTriggerSchema).nullable(),
+  forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable(),
+  riskTape: z.array(DigestRiskTapeItemSchema).nullable(),
+  standingConditions: z.array(DigestStandingConditionSchema).nullable(),
+});
+
+const TelegramPulsePrivacyArtifactSchema = z.object({
+  exactActiveWatchers: z.boolean(),
+  lowCardinalityThreshold: z.number(),
+  suppressedFields: z.array(z.string()),
+});
+
+const TelegramWatcherHistoryPointArtifactSchema = z.object({
+  date: z.string(),
+  timestamp: z.number(),
+  snapshotAt: z.number().nullable().optional(),
+  newWatchers: z.number().nullable().optional(),
+  activeWatchers: z.number(),
+  churnedWatchers: z.number().nullable().optional(),
+  reactivatedWatchers: z.number().nullable().optional(),
+});
+
+const TelegramTelemetryQualityArtifactSchema = z.object({
+  status: z.enum(["complete", "partial"]),
+  unavailableFields: z.array(z.string()),
+  errors: z.record(z.string(), z.string()).optional(),
+});
+
+/** Output shape of Telegram pulse after runtime defaults are applied. */
+export const TelegramPulseResponseArtifactSchema = z.object({
+  activeWatchers: z.number(),
+  coinSubscriptions: z.number(),
+  explicitCoinSubscriptions: z.number().optional(),
+  presetImpliedCoinSubscriptions: z.number().optional(),
+  activePresetFollowers: z.number().optional(),
+  newWatchersToday: z.number().nullable().optional(),
+  churnedWatchersToday: z.number().nullable().optional(),
+  reactivatedWatchersToday: z.number().nullable().optional(),
+  historySource: z.enum(["snapshot", "live-fallback"]).optional(),
+  topCoins: z.array(z.string()),
+  watcherHistory: z.array(TelegramWatcherHistoryPointArtifactSchema),
+  pendingDeliveries: z.number().nullable(),
+  miniAppSessionsToday: z.number().nullable().optional(),
+  miniAppMutationsToday: z.number().nullable().optional(),
+  miniAppDeniedToday: z.number().nullable().optional(),
+  miniAppReplayClaimsToday: z.number().nullable().optional(),
+  miniAppOpenToFirstMutationP50Sec: z.number().nullable().optional(),
+  currentSnapshotAt: z.number(),
+  lifecycleHistoryUpdatedAt: z.number().nullable(),
+  lifecycleHistoryEverySeconds: z.number(),
+  quality: TelegramTelemetryQualityArtifactSchema,
+  privacy: TelegramPulsePrivacyArtifactSchema,
+  updatedAt: z.number(),
+  updatedEverySeconds: z.number(),
+});
+
+/**
+ * Named nested contracts keep the largest response families readable in the
+ * generated components section without changing their runtime validators.
+ */
+export const PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS = {
+  DdrFrozenDuration: DdrFrozenDurationSchema,
+  DdrOfficialLockOutcome: DdrOfficialLockOutcomeSchema,
+  DdrResolution: DdrResolutionSchema,
+  DdrV2ResponseRow: DdrV2ResponseRowSchema,
+  DdrrRow: DdrrRowSchema,
+  DdrrV2SummaryMetrics: DdrrV2SummaryMetricsSchema,
+  DdrrV2SummarySegment: DdrrV2SummarySegmentSchema,
+  ReportCardsV9DependencyGraph: ReportCardsV9DependencyGraphSchema,
+  V9PublicationHealth: V9PublicationHealthSchema,
+  YieldPysInputsAtPublish: YieldPysInputsAtPublishSchema,
+  YieldVenueRiskScores: YieldVenueRiskScoresSchema,
+} as const satisfies Record<string, z.ZodType>;
+
 /**
  * snapshot-day deliberately remains a JsonValue debt entry in the artifact
  * catalog: it is a raw historical V8/V9 producer envelope whose large inline
@@ -160,7 +277,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DexLiquidityResponse: DexLiquidityMapSchema,
   DepegEventsResponse: DepegEventsResponseSchema,
   TapeEventsResponse: TapeEventsResponseSchema,
-  UsdsStatusResponse: UsdsStatusResponseSchema,
+  UsdsStatusResponse: UsdsStatusResponseArtifactSchema,
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
   DdrResponse: DdrResponseSchema,
@@ -179,11 +296,11 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   SupplyHistoryResponse: SupplyHistoryResponseSchema,
   SafetyScoreHistoryResponse: SafetyScoreHistoryResponseSchema,
   SafetyScoreHistoryV2Response: SafetyScoreHistoryV2ResponseSchema,
-  DailyDigestResponse: DailyDigestResponseSchema,
+  DailyDigestResponse: DailyDigestResponseArtifactSchema,
   DigestArchiveResponse: DigestArchiveResponseSchema,
   DigestSnapshotResponse: DigestSnapshotResponseSchema,
   PublicStatusHistoryResponse: PublicStatusHistoryResponseSchema,
-  TelegramPulseResponse: TelegramPulseSchema,
+  TelegramPulseResponse: TelegramPulseResponseArtifactSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type PublicApiResponseSchemaName = keyof typeof PUBLIC_API_RESPONSE_SCHEMAS;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeRedemptionRouteStatus, REDEMPTION_ROUTE_STATUS_PRODUCER } from "../redemption-backstop-route-status";
+import { mergeRedemptionRouteStatus, REDEMPTION_ROUTE_STATUS_PRODUCER } from "../redemption-backstop/route-status";
 import { severeMarketEvidence } from "./redemption-backstop-sources.test-support";
 
 const staticOpen = {

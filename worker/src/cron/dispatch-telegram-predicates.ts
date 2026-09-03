@@ -6,7 +6,7 @@ import {
   type ConsolidatedAlerts,
   type DepegWorsening,
   type SafetyChange,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import { isSafetyDeescalation } from "./telegram-alert-snapshots";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 

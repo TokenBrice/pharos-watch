@@ -12,8 +12,8 @@ import {
 const getReserveSyncStateMock = vi.fn();
 const getLatestSuccessfulReserveSnapshotMetadataMock = vi.fn();
 
-vi.mock("../live-reserves-store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../live-reserves-store")>();
+vi.mock("../live-reserves/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../live-reserves/store")>();
   return {
     ...actual,
     getReserveSyncState: getReserveSyncStateMock,
@@ -23,8 +23,8 @@ vi.mock("../live-reserves-store", async (importOriginal) => {
 });
 
 describe("buildRedemptionBackstopEntry", () => {
-  let buildRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildRedemptionBackstopEntry;
-  let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildFailedRedemptionBackstopEntry;
+  let buildRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildRedemptionBackstopEntry;
+  let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildFailedRedemptionBackstopEntry;
   const now = 1_700_000_000;
   const fixedFeeCases = [
     { feeBps: 0, expectedScore: 100 },
@@ -53,7 +53,7 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   beforeAll(async () => {
-    const mod = await import("../redemption-backstop-sources");
+    const mod = await import("../redemption-backstop/sources");
     buildRedemptionBackstopEntry = mod.buildRedemptionBackstopEntry;
     buildFailedRedemptionBackstopEntry = mod.buildFailedRedemptionBackstopEntry;
   });

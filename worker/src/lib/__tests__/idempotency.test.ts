@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { runIdempotentAction, runIdempotentAdminAction } from "../idempotency";
 import { DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES } from "../api-json-body";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 interface TestIdempotencyRecord {
   request_hash: string;
@@ -187,17 +188,14 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
     }),
   });
 
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => stmt(sql),
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
     getRecord: (action: string, key: string) => store.get(`${action}:${key}`),
-  } as unknown as D1Database & {
-    getHistory(): Array<{ sql: string; binds: unknown[] }>;
-    getRecord(action: string, key: string): TestIdempotencyRecord | undefined;
-  };
+  });
 }
 
 function request(key: string, query = "batch=1"): Request {

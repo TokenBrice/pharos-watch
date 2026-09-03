@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { ResolvedCoin } from "../lib/telegram-alerts";
+import type { ResolvedCoin } from "../lib/telegram/alerts";
 import type {
   TelegramPendingWriteContext,
 } from "./telegram-webhook-effect-fence";

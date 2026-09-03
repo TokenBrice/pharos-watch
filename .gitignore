@@ -24,14 +24,17 @@
 
 # generated build artifacts
 /src/generated/*
+# Build-time API snapshots consumed only while exporting stablecoin detail pages.
+/src/generated/stablecoin-detail-snapshots/
 
 # deterministic source-tree projections materialized by `npm run bootstrap:generated`
 /public/maps/world-countries.svg
 /public/openapi.json
 /public/postman/pharos-api.postman_collection.json
 /public/postman/pharos-api.postman_environment.json
-/shared/data/stablecoins/coins.client.generated.json
 /shared/data/stablecoins/coins.compliance.generated.json
+/shared/data/stablecoins/coins.client.list.generated.json
+/shared/data/stablecoins/coins.client.detail/
 /shared/data/stablecoins/coins.generated.json
 /shared/data/stablecoins/coins.telegram-mini-app.generated.json
 /shared/data/stablecoins/coins.worker-runtime.generated.json

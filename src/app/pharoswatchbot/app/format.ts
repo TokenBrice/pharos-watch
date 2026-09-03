@@ -43,7 +43,7 @@ const HEALTH_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short",
 
 /**
  * Far-future sentinel marking a durably "Paused" chat (`/pause`). Mirrors
- * `PAUSE_SENTINEL_TS` in `worker/src/lib/telegram-constants.ts` (2100-01-01 UTC);
+ * `PAUSE_SENTINEL_TS` in `worker/src/lib/telegram/constants.ts` (2100-01-01 UTC);
  * kept as a local literal so the Mini App bundle stays free of worker imports.
  */
 export const PAUSE_SENTINEL_TS = 4102444800;

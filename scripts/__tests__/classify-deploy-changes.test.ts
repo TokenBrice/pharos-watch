@@ -121,7 +121,7 @@ describe("hasPagesUiImpact", () => {
     expect(hasPagesUiImpact(["public/logo.svg"])).toBe(true);
     expect(hasPagesUiImpact(["shared/lib/classification.ts"])).toBe(true);
     expect(hasPagesUiImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
-    expect(hasPagesUiImpact(["data/depeg-events.json"])).toBe(true);
+    expect(hasPagesUiImpact(["data/depeg-events/index.json"])).toBe(true);
   });
 });
 

@@ -7,7 +7,7 @@ import {
   hostnameOfSiteDataCallerHeader,
   isSiteDataAllowedUiHostname,
 } from "@shared/lib/site-data-lane";
-import { writeTelegramAdoptionEvent } from "../lib/telegram-adoption-analytics";
+import { writeTelegramAdoptionEvent } from "../lib/telegram/adoption-analytics";
 import type { FullRouteContext } from "../routes/shared";
 import { z } from "zod";
 

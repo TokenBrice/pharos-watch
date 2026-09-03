@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { loadDexLiquiditySnapshot } from "../dex-liquidity";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function mockDb(rows: unknown[]): D1Database {
-  return {
+  return makeNoopD1({
     prepare: vi.fn(() => ({
       all: vi.fn().mockResolvedValue({ results: rows }),
     })),
-  } as unknown as D1Database;
+  });
 }
 
 function liquidityRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -77,7 +78,7 @@ describe("loadDexLiquiditySnapshot", () => {
     const prepare = vi.fn().mockReturnValue({
       all: vi.fn().mockRejectedValue(new Error("D1_ERROR: no such table: dex_deployment_outcomes")),
     });
-    const db = { prepare } as unknown as D1Database;
+    const db = makeNoopD1({ prepare });
 
     await expect(loadDexLiquiditySnapshot(db)).rejects.toThrow(
       "D1_ERROR: no such table: dex_deployment_outcomes",

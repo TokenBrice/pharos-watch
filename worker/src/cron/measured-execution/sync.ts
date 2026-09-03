@@ -9,9 +9,6 @@ import {
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
-import {
-  encodeMeasuredLedgerRecord,
-} from "@shared/lib/measured-execution-ledger";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
@@ -81,8 +78,9 @@ import {
   MAX_ADMISSION_ROTATION_CYCLES, MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
   MEASURED_EXECUTION_RPC_REQUEST_LIMIT, SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
-  admitTargetsWithinBudget, buildMeasuredShadowQuoteLedgerRecord, estimateAdmissionRotationCycles,
-  hasCompleteDexMeasuredQuoteProgress, loadExpiringScoreBearingPriorityPacket,
+  admitTargetsWithinBudget, collectScoreBearingTargetIds, estimateAdmissionRotationCycles,
+  hasCompleteDexMeasuredQuoteProgress, selectExpiringScoreBearingPriorityPacket,
+  loadPublishedScoreBearingDexRoutes,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
   type TargetDeployment,
 } from "./admission";
@@ -318,28 +316,24 @@ async function syncDexMeasuredExecutionLane(
       itemCount: 0,
       metadata: {
         reason: "target-generation-missing",
-        // A shadow run with no generation still writes an empty durable
-        // Record B so the ledger distinguishes "no generation" from "no row".
-        ...(lane === "shadow"
-          ? encodeMeasuredLedgerRecord(
-              buildMeasuredShadowQuoteLedgerRecord({
-                cycle: startedAt,
-                targetGenerationId: targetGeneration?.generationId ?? null,
-                quoteGenerationId: null,
-                outcomes: [],
-              }),
-            )
-          : {}),
       },
       productivity: { productive: false, reason: "target-generation-missing" },
     });
   }
 
+  const scoreBearingRoutes = lane === "active"
+    ? await loadPublishedScoreBearingDexRoutes(db, signal)
+    : null;
+  const scoreBearingTargetIds = lane === "active"
+    ? scoreBearingRoutes
+      ? collectScoreBearingTargetIds(targetGeneration.targets, scoreBearingRoutes)
+      : new Set<string>()
+    : undefined;
   const quoteGenerationId = lane === "shadow"
     ? buildDexShadowMeasuredQuoteGenerationId(startedAt)
     : buildDexMeasuredQuoteGenerationId(startedAt);
-  const expiringPriority = lane === "active"
-    ? await loadExpiringScoreBearingPriorityPacket(db, targetGeneration.targets, signal)
+  const expiringPriority = lane === "active" && scoreBearingRoutes
+    ? selectExpiringScoreBearingPriorityPacket(targetGeneration.targets, scoreBearingRoutes)
     : null;
   const priorityTargetIds = new Set(expiringPriority?.targetIds ?? []);
   const admissionState = await readDexSourcePaginationState(
@@ -351,6 +345,7 @@ async function syncDexMeasuredExecutionLane(
   const {
     admitted,
     deferred,
+    excluded,
     oversized,
     priorityAdmitted,
     oversizedCoinIds,
@@ -362,11 +357,13 @@ async function syncDexMeasuredExecutionLane(
     cursor: admissionCursor,
     priorityTargetIds,
     priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
+    scoreBearingTargetIds,
   });
   const admissionRotationCycles = estimateAdmissionRotationCycles(targetGeneration.targets, {
     cursor: admissionCursor,
     priorityTargetIds,
     priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
+    scoreBearingTargetIds,
   });
   const budgetDeferredCount = deferred.size - oversized.size;
   const orderedTargets = targetGeneration.targets
@@ -398,11 +395,13 @@ async function syncDexMeasuredExecutionLane(
     curveCompositeProof: null,
     uniswapV4PoolProof: null,
     points: [],
-    failedReason: oversized.has(target.targetId)
-      ? "admission-coin-group-oversized"
-      : deferred.has(target.targetId)
-        ? "budget-deferred"
-        : null,
+    failedReason: excluded.has(target.targetId)
+      ? "score-bearing-route-unavailable"
+      : oversized.has(target.targetId)
+        ? "admission-coin-group-oversized"
+        : deferred.has(target.targetId)
+          ? "budget-deferred"
+          : null,
     stopped: false,
     bracket: null,
   }));
@@ -934,24 +933,6 @@ async function syncDexMeasuredExecutionLane(
       }
       return counts;
     }, {}),
-    // Durable Record B (Phase 0.4): flat scalar chunks that survive the merged
-    // handler metadata and the producer-history scalar filter even when the
-    // run is nonproductive.
-    ...(lane === "shadow"
-      ? encodeMeasuredLedgerRecord(
-          buildMeasuredShadowQuoteLedgerRecord({
-            cycle: startedAt,
-            targetGenerationId: targetGeneration.generationId,
-            quoteGenerationId: publication.generationId,
-            outcomes: outcomes.map((outcome, index) => ({
-              target: outcome.target,
-              status: outcome.status,
-              ...(outcome.failureReason != null ? { failureReason: outcome.failureReason } : {}),
-              points: states[index]!.points,
-            })),
-          }),
-        )
-      : {}),
   };
   return {
     status: retention.error

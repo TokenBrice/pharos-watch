@@ -12,12 +12,12 @@ import {
 import {
   deriveReviewedDeploymentUnitPartition,
   type ReviewedDeploymentSupplyObservation,
-} from "../safety-score-v9-supply-attribution-contract";
+} from "../safety-score-v9/supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   type XautLockMintObservation,
-} from "../safety-score-v9-xaut-supply-attribution-contract";
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
   computeSafetyScoreV9SupplyAttributionGenerationId,
@@ -28,7 +28,7 @@ import {
   nextSafetyScoreV9SupplyAttributionDueAtSec,
   parseSafetyScoreV9SupplyAttributionGeneration,
   serializeSafetyScoreV9SupplyAttributionGeneration,
-} from "../safety-score-v9-supply-attribution-generation";
+} from "../safety-score-v9/supply-attribution-generation";
 import {
   createSafetyScoreV9FullRegistryInput,
   FULL_REGISTRY_CLOCK_SEC,

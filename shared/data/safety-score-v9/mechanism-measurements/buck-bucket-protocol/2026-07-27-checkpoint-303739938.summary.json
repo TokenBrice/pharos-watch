@@ -1,0 +1,15 @@
+{
+  "mechanism": "buck-bucket-protocol",
+  "date": "2026-07-27-checkpoint-303739938",
+  "sha256": "90ef1a614440ff17457b49be1a3aa9c8338b6a08b845905243413e7cf03761fb",
+  "bytes": 44533,
+  "r2Key": "captures/buck-bucket-protocol/2026-07-27-checkpoint-303739938.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "buck-bucket-protocol",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/buck-bucket-protocol/2026-07-27-checkpoint-303739938.json",
+    "capturedAt": "2026-07-27T23:05:00Z"
+  }
+}

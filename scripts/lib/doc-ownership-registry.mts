@@ -33,7 +33,7 @@ type RawDocReference = string | DocReference;
 interface RawMapping {
   alsoRead?: string[];
   background?: RawDocReference[];
-  checks: string[];
+  checks?: string[];
   docs: RawDocReference[];
   hints?: string[];
   id: string;
@@ -130,7 +130,7 @@ function normalizeMapping(mapping: RawMapping): PathFamily {
   const docs = mapping.docs.map(normalizeDocReference);
   return {
     background: (mapping.background ?? []).map(normalizeDocReference),
-    checks: mapping.checks,
+    checks: mapping.checks ?? [],
     docs,
     hardRules: mapping.rules ?? [],
     hints: mapping.hints ?? [],

@@ -7,6 +7,7 @@ import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import { resolveAiSummaryClaims } from "@shared/lib/ai-summary-claims";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
@@ -335,6 +336,9 @@ export function StablecoinDetailSeoContent({
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const summaryUpdatedAt = summary?.updatedAt ? formatAiSummaryDate(summary.updatedAt) : null;
+  // Build-time render has no live values: registered claim tokens print the
+  // unresolved fallback rather than raw placeholders until the client mounts.
+  const summaryText = summary ? resolveAiSummaryClaims(summary.text, summary.claimTokens).text : null;
   const compareHref = getPrimaryStaticComparisonLinkForCoin(coin.id)?.href ?? buildLiveCompareUrl([coin.id]);
   const alertCommand = buildAlertCommand(coin);
   const [identityAnswer, safetyAnswer] = buildStablecoinFaqItems(coin);
@@ -423,7 +427,7 @@ export function StablecoinDetailSeoContent({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text, 520)}</p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText ?? "", 520)}</p>
                 {(() => {
                   const disclosure = buildAiDisclosureLine(summary);
                   return disclosure ? (

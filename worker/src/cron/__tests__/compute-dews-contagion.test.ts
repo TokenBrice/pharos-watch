@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 // v5.95 contagion amplifier: exercise the real computeDEWS (not mocked) so the
 // two-pass scoring loop's amplifier wiring is end-to-end verified.
@@ -240,14 +241,14 @@ function makeDb(): D1Database {
     };
   };
 
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => stmt(sql),
     batch: async (statements: D1PreparedStatement[]) => Promise.all(
       statements.map((statement) => statement.run()),
     ),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 interface CapturedResult {

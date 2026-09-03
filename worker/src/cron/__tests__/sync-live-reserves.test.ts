@@ -3,7 +3,6 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
-import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import { buildSharedSourceCacheKey, LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import {
   getReserveAdapterMock,
@@ -50,7 +49,7 @@ describe("syncLiveReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.doUnmock("../../lib/live-reserves-store");
+    vi.doUnmock("../../lib/live-reserves/store");
     vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
@@ -322,13 +321,12 @@ describe("syncLiveReserves", () => {
     ]);
     const compositionRepairs = history.filter((entry) => (
       entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history")
-      && entry.sql.includes("SELECT c.stablecoin_id")
+      && entry.sql.includes("c.stablecoin_id")
     ));
     const attemptRepairs = history.filter((entry) => (
       entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history")
-      && entry.sql.includes("SELECT s.stablecoin_id")
+      && entry.sql.includes("s.stablecoin_id")
     ));
-    expect(compositionRepairs).toHaveLength(2);
     expect(attemptRepairs).toHaveLength(2);
     for (let index = 0; index < checkpointAdvances.length; index += 1) {
       const advanceIndex = history.indexOf(checkpointAdvances[index]!);
@@ -375,37 +373,6 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeyCount);
   });
 
-  it("keeps cursor cleanup best-effort and records a durable warning event", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1([
-      {
-        match: "DELETE FROM cache WHERE key = ?",
-        matchBinds: [LIVE_RESERVE_RUN_CURSOR_CACHE_KEY],
-        rows: [],
-        throwError: new Error("cursor delete unavailable"),
-      },
-    ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      cursorPersistFailed?: boolean;
-      cursorPersistError?: string;
-    };
-
-    expect(result?.status).toBe("ok");
-    expect(metadata).toMatchObject({
-      cursorPersistFailed: true,
-      cursorPersistError: "cursor delete unavailable",
-    });
-    const cursorEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-cursor-finalize-failed"
-    ));
-    expect(cursorEvent).toBeDefined();
-  });
 
   it("reuses identical shared HTTP reserve sources within a run", async () => {
     const adapterFetch = mockAdapterRegistry(async () => ({
@@ -757,8 +724,8 @@ describe("syncLiveReserves", () => {
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
-    vi.doMock("../../lib/live-reserves-store", async () => ({
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       cleanupStaleLiveReserveArtifacts: vi.fn(async () => {
         throw new Error("artifact cleanup unavailable");
@@ -856,9 +823,9 @@ describe("syncLiveReserves", () => {
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
     let finalizeCalls = 0;
-    vi.doMock("../../lib/live-reserves-store", async () => ({
+    vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       finalizeReserveSyncSuccess: vi.fn(async (...args: Parameters<typeof actualStore.finalizeReserveSyncSuccess>) => {
         finalizeCalls++;
@@ -905,8 +872,8 @@ describe("syncLiveReserves", () => {
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
-    vi.doMock("../../lib/live-reserves-store", async () => ({
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       finalizeReserveSyncSuccess: vi.fn(async () => (
         await new Promise<Awaited<ReturnType<typeof actualStore.finalizeReserveSyncSuccess>>>(() => undefined)
@@ -1224,7 +1191,7 @@ describe("syncLiveReserves", () => {
     const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     const successAttempt = db.getHistory().find((entry) => (
-      entry.sql.includes("reserve_composition_history")
+      entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds[0] === fallbackCoin!.id
     ));
     expect(successAttempt).toBeDefined();

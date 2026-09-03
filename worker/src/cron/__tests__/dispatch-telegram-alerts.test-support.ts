@@ -114,8 +114,8 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
 // C102 budget-before-format reorder can be asserted (format-count <= fresh budget
 // + allowance, not once per candidate).
 const formatConsolidatedMessageSpy = vi.fn();
-vi.mock("../../lib/telegram-alerts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/telegram-alerts")>();
+vi.mock("../../lib/telegram/alerts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/telegram/alerts")>();
   return {
     ...actual,
     formatConsolidatedMessage: (...args: Parameters<typeof actual.formatConsolidatedMessage>) => {
@@ -128,7 +128,7 @@ vi.mock("../../lib/telegram-alerts", async (importOriginal) => {
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
 const { pruneOverflowPlanBacklogForChat } = await import("../dispatch-telegram-overflow");
 const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } =
-  await import("../../lib/telegram-constants");
+  await import("../../lib/telegram/constants");
 
 function makeCanonicalSafetySourceCaches(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,

@@ -8,72 +8,40 @@
 //   node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
 //     --replay <replay-v9.json> [--output <worklist.md>]
 import { readFileSync, writeFileSync } from "node:fs";
+import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources.ts";
+import {
+  classifyV9CurationWorklistStream,
+  generateV9MissingDataRegistry,
+} from "./generate-safety-score-v9-missing-data-registry.ts";
 
 const STREAMS = [
   {
     key: "CTRL",
     title: "Control — mint / upgrade / control identity",
-    codes: [
-      "unresolved-mint-authority",
-      "missing-mint-authority",
-      "unknown-upgrade-authority",
-      "missing-upgradeability-review",
-      "missing-upgrade-control",
-      "unresolved-control-identity",
-      "unknown-control-cap-authority",
-      "unknown-control-mint-ability",
-      "mint-control-question",
-    ],
     ceiling: "control-unverified (55)",
     fix: "Resolve the asset's mintAuthority block in shared/data/stablecoins/coins/<id>.json: mint path, authority type + threshold, cap semantics, upgradeability model and controlRef, per-control evidence with sources. Mostly deterministic explorer/RPC reads (proxy admin slots, owner()/minters(), multisig thresholds); RPC endpoints and structural-blocker notes are in the mint-authority verified-campaign memory. Multichain assets need every deployment's authority graph.",
   },
   {
     key: "ORCL",
     title: "Oracle — profile and CDP branch reviews",
-    codes: [
-      "missing-oracle-profile",
-      "unreviewed-oracle-profile",
-      "incomplete-oracle-liquidation-branch",
-      "unresolved-oracle-branch-applicability",
-      "missing-required-oracle-branches",
-    ],
     ceiling: "oracle-unverified (55)",
     fix: "Populate/complete the oracleRisk block (tier, branch applicability disposition, per-branch feed/collateral-parameter/liquidation/backstop/shutdown reviews) in the coin JSON. CDP-family assets need the branch-applicability ruling; non-oracle designs need an explicit not-applicable review.",
   },
   {
     key: "BRDG",
     title: "Bridge — route reviews and supply materiality",
-    codes: [
-      "missing-bridge-routes",
-      "missing-bridge-route-rows",
-      "selected-bridge-route-missing",
-      "selected-bridge-route-unresolved",
-      "runtime-bridge-materiality-unavailable",
-      "material-bridge-supply-unmatched",
-    ],
     ceiling: "control-unverified (55)",
     fix: "Review the runtime-selected bridge routes (bridgeRoutes rows: route kind, verification model, controls) so selected routes resolve and bridged supply matches reviewed rows. The static P7 route research queue feeds this; only runtime-selected scoring routes matter here.",
   },
   {
     key: "RESV",
     title: "Backing — reserve envelope, composition, assurance",
-    codes: [
-      "missing-reserve-composition",
-      "stale-audited-reserve-composition",
-      "unreviewed-reserve-envelope",
-      "material-unknown-reserve-exposure",
-      "material-reserve-slice-unstructured",
-      "partial-reserve-review",
-      "missing-latest-assurance-report",
-      "missing-custody-profile",
-    ],
     ceiling: "backing-unverified (60)",
     fix: "Author or refresh the structured reserve evidence. For a missing or incomplete envelope, populate reserves[] slices with assetClass, issuerOrObligor, liquidityHorizon, maturityDaysMax, plus reserveReview, custodyProfile, and proofOfReserves.latestReport. For stale-audited-reserve-composition, refresh reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence. Use the reserve-research skill; envelope refresh recipes are in the V9 topic memory.",
   },
   {
     key: "MECH",
     title: "Mechanism — curated overlay for measured-ratio archetypes",
-    codes: [],
     archetypes: ["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"],
     ceiling: "component floor boundedUnknownQuality (35)",
     fix: "Author a sourced overlay in shared/data/safety-score-v9/mechanism-review-overlays-v1.json (archetype-specific components + REQUIRED measured metrics, e.g. CDP collateralizationRatio/liquidationCapacityRatio). NO FABRICATION: only author when an honest live source exists (bold-liquity via api.liquity.org is the template). CONFIRMED BLOCKED (2026-07-13 + independently re-verified by mechanism batch 01, 2026-07-14 — do not re-research): DAI/USDS (auction Hole limits are governance caps, not committed liquidation capital; no reproducible system CR), USDe (reserve fund observable, hedge notional/margin buffers not public), USDD (vault-only CR must not be applied to total supply; non-vault issuance routes), USDf-Falcon (insurance fund observable, empty venue map, no hedge measurements), crvUSD (PegKeeper share needs decomposition), LUSD (needs on-chain TCR read — the one actionable path). Expect most of this stream to stay blocked until issuers publish ratios or on-chain readers are built.",
@@ -81,91 +49,27 @@ const STREAMS = [
   {
     key: "EXIT",
     title: "Exit — same-notional route evidence",
-    codes: [
-      "missing-same-notional-route",
-      "unsupported-same-notional-route",
-      "missing-runtime-route-evidence",
-      "incomplete-dex-route-coverage",
-      "unresolved-exit-output",
-      "incomparable-route-requests",
-    ],
     ceiling: "exit-unverified (65)",
     fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) unresolved-exit-output routes: set `outputAssets` on the asset's entry in shared/lib/redemption-backstop-configs/ — tracked stablecoin ids for stable-single/stable-basket, canonical asset:<symbol> keys for collateral; ONLY when the documented rail names the output (config notes/docs are the source; schema validates shape), (c) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted). Captures with producer-embedded observations pick up outputAssets on the next production capture. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
   },
   {
     key: "PEG",
     title: "Peg — missing peg rows",
-    codes: ["missing-applicable-peg", "missing-peg-input"],
     ceiling: "peg-unverified (60)",
     fix: "Ensure the asset has a peg row (pegCurrency resolvable, price feed tracked) or a reviewed NAV/not-applicable ruling (flags.navToken for pure NAV designs). OTHER-peg assets need the peg building blocks first — check the GELT/OTHER-peg parked memory before grinding.",
   },
   {
     key: "DEP",
     title: "Dependencies — unreviewed relationship sets",
-    codes: ["unreviewed-dependency-relationships", "material-dependency-unavailable"],
     ceiling: "evidence:limited (69)",
     fix: "Review the effective dependency set (collateral mapping to reserve exposures must be exact; serial wrapper/mechanism edges explicit). material-dependency-unavailable clears when the upstream asset becomes rateable — check the upstream first.",
   },
   {
     key: "ARCH",
     title: "Archetype — unresolved classification (hard NR)",
-    codes: ["missing-archetype"],
     ceiling: "NR (stays-NR set)",
     fix: "Assign a mechanism archetype (resolve-mechanism-archetype path / resilience-classify skill). These are the only assets NR by classification; everything else in this file is score-improvement, not rateability.",
   },
-];
-
-// Deliberately narrower than the policy reason vocabulary: only codes assigned
-// to these operator curation streams belong here. Ordinary scoring, structural,
-// and diagnostic reasons remain silently unmapped by design.
-const CURATION_OWNED_CODES = [
-  // CTRL
-  "unresolved-mint-authority",
-  "missing-mint-authority",
-  "unknown-upgrade-authority",
-  "missing-upgradeability-review",
-  "missing-upgrade-control",
-  "unresolved-control-identity",
-  "unknown-control-cap-authority",
-  "unknown-control-mint-ability",
-  "mint-control-question",
-  // ORCL
-  "missing-oracle-profile",
-  "unreviewed-oracle-profile",
-  "incomplete-oracle-liquidation-branch",
-  "unresolved-oracle-branch-applicability",
-  "missing-required-oracle-branches",
-  // BRDG
-  "missing-bridge-routes",
-  "missing-bridge-route-rows",
-  "selected-bridge-route-missing",
-  "selected-bridge-route-unresolved",
-  "runtime-bridge-materiality-unavailable",
-  "material-bridge-supply-unmatched",
-  // RESV
-  "missing-reserve-composition",
-  "stale-audited-reserve-composition",
-  "unreviewed-reserve-envelope",
-  "material-unknown-reserve-exposure",
-  "material-reserve-slice-unstructured",
-  "partial-reserve-review",
-  "missing-latest-assurance-report",
-  "missing-custody-profile",
-  // EXIT
-  "missing-same-notional-route",
-  "unsupported-same-notional-route",
-  "missing-runtime-route-evidence",
-  "incomplete-dex-route-coverage",
-  "unresolved-exit-output",
-  "incomparable-route-requests",
-  // PEG
-  "missing-applicable-peg",
-  "missing-peg-input",
-  // DEP
-  "unreviewed-dependency-relationships",
-  "material-dependency-unavailable",
-  // ARCH
-  "missing-archetype",
 ];
 
 function arg(name) {
@@ -179,28 +83,18 @@ if (!replayPath) {
   process.exit(2);
 }
 const replay = JSON.parse(readFileSync(replayPath, "utf8"));
+const registry = generateV9MissingDataRegistry({
+  replay,
+  policy: JSON.parse(
+    readFileSync(new URL("../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json", import.meta.url), "utf8"),
+  ),
+  catalogEntries: loadPerCoinStablecoinEntries(),
+});
 const cards = replay.pipeline.candidate.cards;
+if (registry.summary.stablecoinCount !== cards.length) {
+  throw new Error("Typed missing-data registry and replay card counts differ");
+}
 const assets = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
-
-const curationOwnedCodeSet = new Set(CURATION_OWNED_CODES);
-for (const code of CURATION_OWNED_CODES) {
-  const streamKeys = STREAMS.filter((stream) => stream.codes.includes(code)).map((stream) => stream.key);
-  if (streamKeys.length !== 1) {
-    throw new Error(
-      `Curation-owned reason code "${code}" must map to exactly one worklist stream; found ${streamKeys.length}.`,
-    );
-  }
-}
-for (const stream of STREAMS) {
-  for (const code of stream.codes) {
-    if (!curationOwnedCodeSet.has(code)) {
-      throw new Error(`Worklist stream ${stream.key} routes undeclared curation reason code "${code}".`);
-    }
-  }
-}
-
-const codeToStream = new Map();
-for (const stream of STREAMS) for (const code of stream.codes) codeToStream.set(code, stream.key);
 
 function money(value) {
   if (!value) return "$0";
@@ -227,15 +121,13 @@ for (const card of cards) {
     ...asset.scoreInput.dependencyReasons,
   ];
   for (const reason of lanes) {
-    const streamKey = codeToStream.get(reason.code);
+    const streamKey = classifyV9CurationWorklistStream(reason.code);
     if (streamKey) addItem(streamKey, card.id, reason.code, reason.path);
   }
   for (const reason of card.nrReasons ?? []) {
-    const streamKey = codeToStream.get(reason.code);
+    const streamKey = classifyV9CurationWorklistStream(reason.code);
     if (streamKey) addItem(streamKey, card.id, reason.code, reason.field ?? null);
   }
-  // MECH: measured-ratio archetypes whose backing pillar rests on a bounded or
-  // absent mechanism review (no curated overlay).
   const mechStream = STREAMS.find((stream) => stream.key === "MECH");
   if (
     mechStream.archetypes.includes(asset.backing.archetype) &&

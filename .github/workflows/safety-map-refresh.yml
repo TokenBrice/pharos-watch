@@ -36,7 +36,59 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  plan:
+    name: Plan publication
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_render: ${{ steps.plan.outputs.should_render }}
+      plan_token: ${{ steps.plan.outputs.plan_token }}
+    env:
+      MAP_OUT_DIR: agents/safety-score-map/ci
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-workspace
+        with:
+          browser-cache: "false"
+          bootstrap-generated: "false"
+          install-playwright-firefox: "false"
+
+      # KV listing doubles as the namespace/token probe and lets scheduled
+      # retries skip a same-day publication that is already fresh.
+      - name: Plan publication from live KV state
+        id: plan
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts plan
+          --event-name="${{ github.event_name }}"
+          --out-dir="${MAP_OUT_DIR}"
+
+      - name: Preserve immutable plan state
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: safety-map-plan-${{ steps.plan.outputs.plan_token }}
+          path: ${{ env.MAP_OUT_DIR }}/publish-state.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Summarize skipped publication
+        if: ${{ always() && steps.plan.outputs.should_render == 'false' }}
+        run: >-
+          npx tsx scripts/maintenance/publish-safety-score-map.ts summary
+          --job-status=${{ job.status }}
+          --out-dir="${MAP_OUT_DIR}"
+
+  render:
+    needs: plan
+    if: ${{ needs.plan.outputs.should_render == 'true' }}
     name: Render and publish
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -54,6 +106,12 @@ jobs:
           browser-cache: "true"
           install-playwright-firefox: "true"
 
+      - name: Download immutable plan state
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: safety-map-plan-${{ needs.plan.outputs.plan_token }}
+          path: ${{ env.MAP_OUT_DIR }}
+
       - name: Verify render credentials
         env:
           PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
@@ -64,31 +122,17 @@ jobs:
             exit 1
           fi
 
-      # KV listing doubles as the namespace/token probe and lets scheduled
-      # retries skip a same-day publication that is already fresh.
-      - name: Plan publication from live KV state
-        id: plan
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-        run: >-
-          npx tsx scripts/maintenance/publish-safety-score-map.ts plan
-          --event-name="${{ github.event_name }}"
-          --out-dir="${MAP_OUT_DIR}"
-
       - name: Render and validate publication files
         id: render
-        if: steps.plan.outputs.already_published != 'true'
         env:
           PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts render
+          --plan-token="${{ needs.plan.outputs.plan_token }}"
           --out-dir="${MAP_OUT_DIR}"
 
       # Keep a rejected render inspectable even when the publish phase fails.
       - name: Upload the rendered map
-        if: steps.plan.outputs.already_published != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: safety-map-${{ steps.render.outputs.date }}
@@ -101,13 +145,13 @@ jobs:
           retention-days: 14
 
       - name: Publish in commit-marker order and verify readback
-        if: steps.plan.outputs.already_published != 'true'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts publish
+          --plan-token="${{ needs.plan.outputs.plan_token }}"
           --out-dir="${MAP_OUT_DIR}"
 
       - name: Summarize

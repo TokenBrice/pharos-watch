@@ -20,7 +20,7 @@ mockFetch([{
 // This suite verifies route registration and method/auth behavior. Handler-level
 // D1 contracts are covered by the dedicated endpoint suites, so D1 is incidental
 // setup for this broad router sweep.
-const db = mockD1([], { allowUnmatched: true });
+const db = mockD1([{ match: "", rows: [], allowUnused: true }]);
 const execCtx = {
   waitUntil: (_promise: Promise<unknown>) => {},
   passThroughOnException: () => {},

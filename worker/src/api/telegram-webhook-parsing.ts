@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import type { ResolvedCoin } from "../lib/telegram-alerts";
-import { dedupeCoins } from "../lib/telegram-coin-dedupe";
-import { isDepegStepValue } from "../lib/telegram-constants";
+import type { ResolvedCoin } from "../lib/telegram/alerts";
+import { dedupeCoins } from "../lib/telegram/coin-dedupe";
+import { isDepegStepValue } from "../lib/telegram/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
@@ -231,7 +231,7 @@ function parseResolvedCoins(value: unknown): ResolvedCoin[] {
   return coins;
 }
 
-// Re-exported from worker/src/lib/telegram-coin-dedupe.ts so existing API-layer
+// Re-exported from worker/src/lib/telegram/coin-dedupe.ts so existing API-layer
 // importers keep their import path; the store layer imports it from lib directly.
 export { dedupeCoins };
 

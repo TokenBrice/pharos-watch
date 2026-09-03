@@ -17,7 +17,7 @@ import {
   type SafetyModeValue,
 } from "./telegram-webhook-settings-shared";
 import { executeAtomicBatch } from "../lib/db";
-import { assertSubscribableCoin } from "../lib/telegram-subscription-eligibility";
+import { assertSubscribableCoin } from "../lib/telegram/subscription-eligibility";
 import {
   buildDepegStepUpsert,
   buildDepegUpsert,
@@ -31,7 +31,7 @@ import {
   type BuiltSubscriptionUpsert,
   type PlainAlertType,
 } from "./telegram-webhook-store";
-import type { TelegramOperationBatchOptions } from "../lib/telegram-operation-batch";
+import type { TelegramOperationBatchOptions } from "../lib/telegram/operation-batch";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,

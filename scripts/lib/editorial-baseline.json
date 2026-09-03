@@ -5485,7 +5485,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatDepegTriggeredLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatDepegTriggeredLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,
@@ -5495,7 +5495,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatDepegWorseningLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatDepegWorseningLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,
@@ -5505,7 +5505,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatDewsLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatDewsLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,
@@ -5515,7 +5515,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatFreezeLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatFreezeLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,
@@ -5525,7 +5525,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatLaunchLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatLaunchLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,
@@ -5535,7 +5535,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatReserveLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatReserveLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,
@@ -5545,7 +5545,7 @@
     },
     {
       "surface": "telegram-alert-copy",
-      "record": "worker/src/lib/telegram-alerts-formatting/formatSafetyLine",
+      "record": "worker/src/lib/telegram/alerts-formatting/formatSafetyLine",
       "field": "return",
       "rule": "no-clause-dash",
       "count": 1,

@@ -7,14 +7,14 @@ import {
   buildReviewedDeploymentRouteInventory,
   expectedWmDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
-} from "../safety-score-v9-supply-attribution-contract";
+} from "../safety-score-v9/supply-attribution-contract";
 import {
   fetchSolanaWmDeploymentObservation,
   observeWmReviewedDeploymentUnitPartition,
   observeWmReviewedDeploymentUnitPartitionAttempt,
   type SolanaRpcFetcher,
   WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN,
-} from "../safety-score-v9-wm-supply-observer";
+} from "../safety-score-v9/wm-supply-observer";
 
 const AGGREGATE_SUPPLY_USD = 87_020_618.58982982;
 const CLOCK_SEC = 1_784_881_340;

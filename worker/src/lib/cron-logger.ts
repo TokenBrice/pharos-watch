@@ -7,6 +7,7 @@ import {
 import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
+  shouldSkipCronProgress,
   type ResolvedCronTimeoutBudget,
 } from "./cron-timeouts";
 import {
@@ -297,12 +298,18 @@ function serializeProgressMetadata(metadata: Record<string, unknown> | null | un
   return JSON.stringify(metadata);
 }
 
+const CRON_PROGRESS_COALESCE_MS = 10_000;
+
+type CronProgressState = Required<Omit<CronProgressUpdate, "metadata">> & {
+  metadata: Record<string, unknown> | null;
+};
+
 async function upsertCronProgress(
   db: D1Database,
   job: string,
   startedAt: number,
   slotStartedAt: number | null,
-  progress: Required<Omit<CronProgressUpdate, "metadata">> & { metadata: Record<string, unknown> | null },
+  progress: CronProgressState,
 ): Promise<void> {
   const updatedAt = Math.floor(Date.now() / 1000);
   await runWithOverloadRetry(() =>
@@ -396,7 +403,7 @@ export async function logCronRun(
   let persistingCompletedTelemetry = false;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   let progressActivated = false;
-  let progressState: Required<Omit<CronProgressUpdate, "metadata">> & { metadata: Record<string, unknown> | null } = {
+  let progressState: CronProgressState = {
     stage: "running",
     itemsDone: null,
     itemsTotal: null,
@@ -405,7 +412,10 @@ export async function logCronRun(
     metadata: null,
   };
   let progressWriteTail = Promise.resolve();
+  let lastProgressWriteAtMs: number | null = null;
+  let lastProgressWriteStage: string | null | undefined;
   const reportProgress: CronProgressReporter = (update) => {
+    if (shouldSkipCronProgress(job)) return progressWriteTail;
     progressActivated = true;
     progressState = {
       stage: update.stage === undefined ? progressState.stage : (update.stage ?? null),
@@ -415,7 +425,18 @@ export async function logCronRun(
       leaseOwner: update.leaseOwner === undefined ? progressState.leaseOwner : (update.leaseOwner ?? null),
       metadata: update.metadata === undefined ? progressState.metadata : (update.metadata ?? null),
     };
+    const nowMs = Date.now();
+    const stageChanged = lastProgressWriteStage !== progressState.stage;
+    if (
+      !stageChanged
+      && lastProgressWriteAtMs != null
+      && nowMs - lastProgressWriteAtMs < CRON_PROGRESS_COALESCE_MS
+    ) {
+      return progressWriteTail;
+    }
     const snapshot = { ...progressState };
+    lastProgressWriteAtMs = nowMs;
+    lastProgressWriteStage = snapshot.stage;
     progressWriteTail = progressWriteTail.then(async () => {
       try {
         await upsertCronProgress(db, job, startSec, slotStartedAt, snapshot);

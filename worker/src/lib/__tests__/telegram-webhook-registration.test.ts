@@ -16,7 +16,7 @@ import {
   TELEGRAM_BOT_SHORT_DESCRIPTION,
   TELEGRAM_MINI_APP_BUTTON_TEXT,
   TELEGRAM_MINI_APP_URL,
-} from "../telegram-webhook-registration";
+} from "../telegram/webhook-registration";
 
 let fetchSpy = mockFetch([], { requireMatch: true });
 

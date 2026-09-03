@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
@@ -10,14 +11,54 @@ import {
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 import { PUBLIC_API_RESPONSE_SCHEMAS } from "../lib/public-api-response-schemas";
-import { buildOpenApiDocument } from "../maintenance/generate-openapi-spec";
+import {
+  buildOpenApiDocument,
+  buildOpenApiResponseSchemas,
+} from "../maintenance/generate-openapi-spec";
+
+type JsonSchemaObject = Record<string, unknown> & { $ref?: string };
+
+function resolveSchemaRef(schema: unknown, components: Record<string, unknown>): JsonSchemaObject {
+  const candidate = schema as JsonSchemaObject;
+  if (typeof candidate.$ref !== "string") {
+    return candidate;
+  }
+  const path = candidate.$ref.replace("#/components/schemas/", "").split("/");
+  let resolved: unknown = components;
+  for (const segment of path) {
+    resolved = (resolved as Record<string, unknown>)[segment];
+  }
+  return resolved as JsonSchemaObject;
+}
+
+function resolveSchemaTree(
+  schema: unknown,
+  components: Record<string, unknown>,
+  seenRefs = new Set<string>(),
+): unknown {
+  if (Array.isArray(schema)) {
+    return schema.map((child) => resolveSchemaTree(child, components, seenRefs));
+  }
+  if (typeof schema !== "object" || schema === null) {
+    return schema;
+  }
+  const candidate = schema as JsonSchemaObject;
+  if (typeof candidate.$ref === "string" && !seenRefs.has(candidate.$ref)) {
+    const nextRefs = new Set(seenRefs);
+    nextRefs.add(candidate.$ref);
+    return resolveSchemaTree(resolveSchemaRef(candidate, components), components, nextRefs);
+  }
+  return Object.fromEntries(
+    Object.entries(candidate).map(([key, child]) => [key, resolveSchemaTree(child, components, seenRefs)]),
+  );
+}
 
 describe("OpenAPI runtime response contracts", () => {
   it("derives documented response components from their canonical Zod schemas", () => {
     const document = buildOpenApiDocument();
     const schemas = document.components.schemas as Record<string, unknown>;
     const historySchema = schemas.YieldHistoryResponse as {
-      properties: { history: { items: { properties: Record<string, unknown> } } };
+      properties: { history: { items: Record<string, unknown> } };
     };
     const manifestSchema = schemas.YieldAdapterManifestResponse as {
       properties: { entries: { items: { properties: { lifecycle: { enum: readonly string[] } } } } };
@@ -25,9 +66,8 @@ describe("OpenAPI runtime response contracts", () => {
     const runtimeHistoryFields = Object.keys(
       YieldHistoryResponseSchema.shape.history.element.shape,
     );
-    const openApiHistoryFields = Object.keys(
-      historySchema.properties.history.items.properties,
-    );
+    const historyItems = resolveSchemaRef(historySchema.properties.history.items, schemas);
+    const openApiHistoryFields = Object.keys(historyItems.properties as Record<string, unknown>);
 
     expect(openApiHistoryFields).toEqual(runtimeHistoryFields);
     expect(openApiHistoryFields).toEqual(expect.arrayContaining([
@@ -44,7 +84,8 @@ describe("OpenAPI runtime response contracts", () => {
 
   it("publishes the expired-evidence responsibility in the report-card schema", () => {
     const document = buildOpenApiDocument();
-    const reportCardsSchema = document.components.schemas.ReportCardsV9Response;
+    const schemas = document.components.schemas as Record<string, JsonSchemaObject>;
+    const reportCardsSchema = resolveSchemaTree(schemas.ReportCardsV9Response, schemas);
 
     expect(JSON.stringify(reportCardsSchema)).toContain("published-evidence-expired");
   });
@@ -91,5 +132,22 @@ describe("OpenAPI runtime response contracts", () => {
       "snapshots-index": "SnapshotsIndexResponse",
       "snapshot-coin": "SnapshotCoinResponse",
     });
+  });
+
+  it("rejects empty converted response schemas with their schema name", () => {
+    expect(() => buildOpenApiResponseSchemas({ BrokenResponse: z.any() })).toThrow(
+      'Public API response schema "BrokenResponse" converted to an empty JSON Schema',
+    );
+  });
+
+  it("publishes properties for transform-bearing response output shapes", () => {
+    const schemas = buildOpenApiDocument().components.schemas as Record<string, {
+      properties?: Record<string, unknown>;
+    }>;
+
+    for (const name of ["UsdsStatusResponse", "DailyDigestResponse", "TelegramPulseResponse"]) {
+      expect(schemas[name].properties).toBeDefined();
+      expect(Object.keys(schemas[name].properties ?? {})).not.toHaveLength(0);
+    }
   });
 });

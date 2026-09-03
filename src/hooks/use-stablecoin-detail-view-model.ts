@@ -4,16 +4,16 @@ import { useCallback, useMemo } from "react";
 import {
   useDexLiquidity,
   usePegSummary,
-  useRedemptionBackstops,
+  useRegisteredApiQuery,
   useReportCardsV9,
   useStressSignals,
   useYieldRankings,
 } from "@/hooks/api-hooks";
-import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
+import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import { useQuerySlice, useQuerySlices } from "@/hooks/use-query-slice";
+import { useQuerySlice, useQuerySlices, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import {
@@ -22,8 +22,20 @@ import {
   type StablecoinDetailViewModel as BaseStablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
+import {
+  FRONTEND_API_QUERY_DESCRIPTORS,
+  STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
+  type StablecoinLiveSummary,
+} from "@/lib/api-query-descriptors";
+import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
+import type { StablecoinData } from "@shared/types";
 
 export interface StablecoinDetailSupplementalQueryControls {
+  liquidity?: boolean;
+  reportCards?: boolean;
+  redemption?: boolean;
+  yield?: boolean;
+  stress?: boolean;
   flows?: boolean;
   blacklist?: boolean;
   reserves?: boolean;
@@ -46,6 +58,56 @@ export type StablecoinDetailViewModel =
 
 export type { StablecoinDetailSummary };
 
+function useGatedQuerySlice<TData>(query: QueryResultLike<TData>, enabled: boolean): QuerySlice<TData> {
+  const slice = useQuerySlice(query);
+  return useMemo(
+    () => enabled
+      ? slice
+      : {
+          data: undefined,
+          isLoading: false,
+          isError: false,
+          error: null,
+          dataUpdatedAt: 0,
+          meta: null,
+        },
+    [enabled, slice],
+  );
+}
+
+function projectLiveSummary(
+  coin: StablecoinDetailCoinMeta,
+  summary: StablecoinLiveSummary,
+): StablecoinData {
+  const chains = [...new Set(coin.contracts?.map((contract) => contract.chain) ?? [])];
+
+  return {
+    id: coin.id,
+    name: coin.name,
+    symbol: coin.symbol,
+    geckoId: coin.geckoId ?? null,
+    pegType: `pegged${coin.flags.pegCurrency}`,
+    pegMechanism: coin.pegMechanism ?? "unknown",
+    price: summary.price,
+    priceSource: summary.priceSource ?? (coin.detailProvider === "coingecko" ? "coingecko" : "defillama"),
+    priceConfidence: summary.priceConfidence,
+    priceUpdatedAt: summary.priceUpdatedAt,
+    priceObservedAt: summary.priceObservedAt,
+    priceObservedAtMode: null,
+    priceSyncedAt: null,
+    consensusSources: [],
+    agreeSources: [],
+    supplySource: "stablecoin-detail",
+    ...(summary.supplyObservedAt != null ? { supplyObservedAt: summary.supplyObservedAt } : {}),
+    circulating: summary.circulating,
+    circulatingPrevDay: summary.circulatingPrevDay,
+    circulatingPrevWeek: summary.circulatingPrevWeek,
+    circulatingPrevMonth: summary.circulatingPrevMonth,
+    chainCirculating: {},
+    chains,
+  };
+}
+
 export function useStablecoinDetailViewModel({
   id,
   coin,
@@ -53,15 +115,36 @@ export function useStablecoinDetailViewModel({
   logoSrc,
   supplementalQueryControls,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
-  const supplyQuery = useSupplyHistory(id);
-  const listQuery = useStablecoins();
-  const pegQuery = usePegSummary();
-  const liquidityQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCardsV9();
-  const redemptionBackstopsQuery = useRedemptionBackstops();
-  const yieldRankingsQuery = useYieldRankings();
-  const stressSignalsQuery = useStressSignals();
+  const liquidityEnabled = supplementalQueryControls?.liquidity ?? true;
+  const reportCardsEnabled = supplementalQueryControls?.reportCards ?? true;
+  const redemptionEnabled = supplementalQueryControls?.redemption ?? true;
+  const yieldEnabled = supplementalQueryControls?.yield ?? true;
+  const stressEnabled = supplementalQueryControls?.stress ?? true;
   const flowsEnabled = supplementalQueryControls?.flows ?? true;
+  const supplyQuery = useSupplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS);
+  const liveSummaryQuery = useRegisteredApiQuery<StablecoinLiveSummary>(
+    FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id),
+  );
+  const listQuery = useMemo(() => ({
+    data: liveSummaryQuery.data
+      ? { peggedAssets: [projectLiveSummary(coin, liveSummaryQuery.data)] }
+      : undefined,
+    isLoading: liveSummaryQuery.isLoading,
+    isError: liveSummaryQuery.isError,
+    error: liveSummaryQuery.error,
+    dataUpdatedAt: liveSummaryQuery.dataUpdatedAt,
+    meta: null,
+  }), [coin, liveSummaryQuery.data, liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error,
+    liveSummaryQuery.isError, liveSummaryQuery.isLoading]);
+  const pegQuery = usePegSummary();
+  const liquidityQuery = useDexLiquidity({ enabled: liquidityEnabled });
+  const reportCardsQuery = useReportCardsV9({ enabled: reportCardsEnabled });
+  const redemptionBackstopsQuery = useRegisteredApiQuery<RedemptionBackstopsResponse>(
+    FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops,
+    { enabled: redemptionEnabled },
+  );
+  const yieldRankingsQuery = useYieldRankings({ enabled: yieldEnabled });
+  const stressSignalsQuery = useStressSignals({ enabled: stressEnabled });
   const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
   const blacklistEnabled = blacklistSupported && (supplementalQueryControls?.blacklist ?? true);
   const reservesEnabled = !!coin?.liveReservesConfig && (supplementalQueryControls?.reserves ?? true);
@@ -69,16 +152,20 @@ export function useStablecoinDetailViewModel({
   const blacklistQuery = useBlacklistSummary({ enabled: blacklistEnabled });
   const liveReserves = useStablecoinReserves(id, reservesEnabled);
 
+  const liquidity = useGatedQuerySlice(liquidityQuery, liquidityEnabled);
+  const reportCards = useGatedQuerySlice(reportCardsQuery, reportCardsEnabled);
+  const redemptionBackstops = useGatedQuerySlice(redemptionBackstopsQuery, redemptionEnabled);
+  const yieldRankings = useGatedQuerySlice(yieldRankingsQuery, yieldEnabled);
+  const stressSignals = useGatedQuerySlice(stressSignalsQuery, stressEnabled);
+
   const queries = useQuerySlices({
     supplyHistory: supplyQuery,
     stablecoinList: listQuery,
     pegSummary: pegQuery,
-    dexLiquidity: liquidityQuery,
-    reportCards: reportCardsQuery,
-    redemptionBackstops: redemptionBackstopsQuery,
+    dexLiquidity: liquidity,
+    reportCards,
+    redemptionBackstops,
   });
-  const yieldRankings = useQuerySlice(yieldRankingsQuery);
-  const stressSignals = useQuerySlice(stressSignalsQuery);
   const flowsSlice = useQuerySlice(flowsQuery);
   const blacklistSlice = useQuerySlice(blacklistQuery);
 
@@ -126,37 +213,53 @@ export function useStablecoinDetailViewModel({
   const handleRetryAll = useCallback(() => {
     return refetchQueryGroup(
       [
-        supplyQuery.refetch,
-        listQuery.refetch,
-        pegQuery.refetch,
-        liquidityQuery.refetch,
-        reportCardsQuery.refetch,
-        redemptionBackstopsQuery.refetch,
-        yieldRankingsQuery.refetch,
-        stressSignalsQuery.refetch,
-        ...(flowsEnabled ? [flowsQuery.refetch] : []),
-        ...(blacklistEnabled ? [blacklistQuery.refetch] : []),
-        ...(reservesEnabled ? [liveReserves.refetch] : []),
+        ...(supplyQuery.error != null ? [supplyQuery.refetch] : []),
+        ...(liveSummaryQuery.error != null ? [liveSummaryQuery.refetch] : []),
+        ...(pegQuery.error != null ? [pegQuery.refetch] : []),
+        ...(liquidityEnabled && liquidityQuery.error != null ? [liquidityQuery.refetch] : []),
+        ...(reportCardsEnabled && reportCardsQuery.error != null ? [reportCardsQuery.refetch] : []),
+        ...(redemptionEnabled && redemptionBackstopsQuery.error != null ? [redemptionBackstopsQuery.refetch] : []),
+        ...(yieldEnabled && yieldRankingsQuery.error != null ? [yieldRankingsQuery.refetch] : []),
+        ...(stressEnabled && stressSignalsQuery.error != null ? [stressSignalsQuery.refetch] : []),
+        ...(flowsEnabled && flowsQuery.error != null ? [flowsQuery.refetch] : []),
+        ...(blacklistEnabled && blacklistQuery.error != null ? [blacklistQuery.refetch] : []),
+        ...(reservesEnabled && liveReserves.error != null ? [liveReserves.refetch] : []),
       ],
       {
         warnLabel: "[refetch] Some queries failed to refresh",
       },
     );
   }, [
+    liveReserves.error,
     liveReserves.refetch,
     blacklistEnabled,
+    blacklistQuery.error,
     flowsEnabled,
+    flowsQuery.error,
     blacklistQuery.refetch,
     flowsQuery.refetch,
+    liquidityEnabled,
+    liquidityQuery.error,
     liquidityQuery.refetch,
-    listQuery.refetch,
+    liveSummaryQuery.error,
+    liveSummaryQuery.refetch,
+    pegQuery.error,
     pegQuery.refetch,
+    redemptionBackstopsQuery.error,
     redemptionBackstopsQuery.refetch,
+    reportCardsQuery.error,
     reportCardsQuery.refetch,
+    stressSignalsQuery.error,
     stressSignalsQuery.refetch,
+    supplyQuery.error,
     supplyQuery.refetch,
+    yieldRankingsQuery.error,
     yieldRankingsQuery.refetch,
+    redemptionEnabled,
+    reportCardsEnabled,
     reservesEnabled,
+    stressEnabled,
+    yieldEnabled,
   ]);
 
   const viewModel = useMemo(

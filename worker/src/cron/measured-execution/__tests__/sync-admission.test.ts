@@ -8,6 +8,7 @@ import type { DexExitRouteObservation } from "@shared/types/market";
 import {
   MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   admitTargetsWithinBudget,
+  collectScoreBearingTargetIds,
   estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
   estimateAdmissionRotationCycles,
@@ -366,6 +367,22 @@ describe("measured execution overflow admission", () => {
       ),
     ).toBeNull();
   });
+  it("rejects targets outside the current score-bearing route set", () => {
+    const scored = target("coin-scored", 100_000, "scored");
+    const outside = target("coin-outside", 100_000, "outside");
+    const scoreBearingTargetIds = collectScoreBearingTargetIds(
+      [scored, outside],
+      [publishedRoute(scored, 1_000)],
+    );
+    const admission = admitTargetsWithinBudget([scored, outside], {
+      maxEstimatedRpcRequests: 20,
+      scoreBearingTargetIds,
+    });
+
+    expect(admission.admitted).toEqual(new Set([scored.targetId]));
+    expect(admission.excluded).toEqual(new Set([outside.targetId]));
+  });
+
 
   it("admits one bounded priority without letting it advance the tail cursor", () => {
     const priority = target("coin-priority", 100_000);

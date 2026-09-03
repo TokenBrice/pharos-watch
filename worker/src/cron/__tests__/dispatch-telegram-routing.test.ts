@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ConsolidatedAlerts, DepegAlertPayload, DewsChange, SafetyChange } from "../../lib/telegram-alerts";
+import type { ConsolidatedAlerts, DepegAlertPayload, DewsChange, SafetyChange } from "../../lib/telegram/alerts";
 import {
   collapseBurstChats,
   expandSubscriberChunks,

@@ -66,12 +66,12 @@ describe("auth helpers", () => {
     expect(result).toBe(true);
   });
 
-  it("accepts Access-authenticated Worker preview requests for preview-only admin controls", async () => {
-    const request = new Request("https://stablecoin-api.preview.workers.dev/api/admin/preview-only-control", {
+  it("rejects Access-authenticated Worker preview requests on admin routes", async () => {
+    const request = new Request("https://x.workers.dev/api/admin/preview-only-control", {
       headers: { "Cf-Access-Jwt-Assertion": "valid-jwt" },
     });
     const result = await hasValidAdminCredential(request, false, TEST_ENV);
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 
   it("does not accept Access admin credentials on the public production API host", async () => {
@@ -123,8 +123,8 @@ describe("auth helpers", () => {
     })).toBe(true);
   });
 
-  it("accepts the shared site-proxy secret on worker preview URLs only", async () => {
-    const preview = new Request("https://stablecoin-api.user.workers.dev/api/stablecoins", {
+  it("accepts the shared site-proxy secret on the same worker preview host", async () => {
+    const preview = new Request("https://x.workers.dev/api/stablecoins", {
       headers: { "X-Pharos-Site-Proxy-Secret": "shared-secret" },
     });
     const publicHost = new Request("https://api.pharos.watch/api/stablecoins", {

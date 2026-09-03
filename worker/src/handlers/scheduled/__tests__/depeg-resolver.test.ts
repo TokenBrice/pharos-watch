@@ -4,6 +4,7 @@ import {
   makeScheduledRuntime,
   mockSuccessfulCronLease,
 } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
   computeDepegResolver: vi.fn(),
@@ -24,7 +25,7 @@ import { runDepegResolverSlot } from "../depeg-resolver";
 const SLOT_STARTED_AT = 2_580;
 
 function runtime(): ScheduledRuntimeContext {
-  const db = {
+  const db = makeNoopD1({
     prepare: vi.fn((sql: string) => {
       if (sql.includes("FROM cron_runs")) {
         return {
@@ -51,7 +52,7 @@ function runtime(): ScheduledRuntimeContext {
       );
       return { bind: vi.fn(() => ({ first })) };
     }),
-  } as unknown as D1Database;
+  });
 
   return makeScheduledRuntime({
     db,

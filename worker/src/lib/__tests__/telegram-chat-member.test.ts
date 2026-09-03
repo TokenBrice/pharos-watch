@@ -4,7 +4,7 @@ import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
 
 let fetchSpy = mockFetch([], { requireMatch: true });
 
-const { getCachedChatAdministrators, formatAdministratorMentions } = await import("../telegram-chat-member");
+const { getCachedChatAdministrators, formatAdministratorMentions } = await import("../telegram/chat-member");
 
 const NOW_SEC = Math.floor(Date.now() / 1000);
 

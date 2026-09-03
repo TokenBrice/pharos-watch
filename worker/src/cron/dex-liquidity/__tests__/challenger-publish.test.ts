@@ -9,6 +9,7 @@ import {
   selectDexPriceChallengerRowsFromPools,
 } from "../challenger-publish";
 import type { PoolEntry } from "../types";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 interface TestStatement extends D1PreparedStatement {
   sql: string;
@@ -74,7 +75,7 @@ function makePublishDb(
     return statement;
   };
 
-  const db = {
+  const db = makeNoopD1({
     prepare: (sql: string) => createStatement(sql),
     batch: async (statements: D1PreparedStatement[]) => {
       const batch = statements as TestStatement[];
@@ -85,7 +86,7 @@ function makePublishDb(
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 
   return { db, batches, runs, maxConstructedStatements: () => maxConstructedStatements };
 }

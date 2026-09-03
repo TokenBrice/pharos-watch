@@ -35,6 +35,10 @@ const baseTestExcludes = [
 // registry/env state); they run in the node-isolated project below instead of
 // forcing isolation back on for the other ~200 functions/scripts/shared files.
 const isolationDependentNodeTests = [
+  // Mocks node:child_process; under isolate:false a sibling that imported
+  // scripts/lib/remote-d1.ts first would leave the unmocked module cached and
+  // the suite would shell out to real wrangler.
+  "scripts/__tests__/remote-d1.test.ts",
   "scripts/__tests__/serve-static-export.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
@@ -130,6 +134,12 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
+      // Workerd provides this scheme in production; Node-based Vitest needs a
+      // runtime-only stand-in without changing the Worker bundle specifier.
+      "cloudflare:workers": path.resolve(
+        __dirname,
+        "worker/src/__mocks__/cloudflare-workers.ts",
+      ),
       // Stub WASM-dependent packages for vitest (Node can't handle Worker WASM imports)
       "satori/standalone": path.resolve(__dirname, "worker/src/__mocks__/satori-stub.ts"),
       "satori/yoga.wasm": path.resolve(__dirname, "worker/src/__mocks__/wasm-module-stub.ts"),

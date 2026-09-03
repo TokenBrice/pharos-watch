@@ -5,22 +5,41 @@ import { throwIfAborted } from "../lib/abort";
 /**
  * `mint_burn_events` normally turns over through the critical producer's
  * bounded retention pass after rows are valued, aggregated, and projected to
- * Tape. This daily count remains a fail-safe for a cleanup that is no longer
- * converging: ~2.3M rows is the existing proxy for the agreed ~5 GB revisit
- * point. Crossing it reports degraded so operators investigate retention,
- * protected repair debt, or unexpected producer growth before D1 approaches
- * its cap.
- * D1 disallows PRAGMA page_count, hence the row-count proxy.
+ * Tape. The latest completed watchdog result is the O(1) proxy for the
+ * current row count: ~2.3M rows is the existing proxy for the agreed ~5 GB
+ * revisit point. Crossing it reports degraded so operators investigate
+ * retention, protected repair debt, or unexpected producer growth before D1
+ * approaches its cap.
  */
 export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
+
 export async function runMintBurnGrowthWatchdog(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<CronResult> {
   throwIfAborted(signal);
-  const row = await db.prepare("SELECT COUNT(*) AS row_count FROM mint_burn_events").first<{ row_count: number }>();
+  const row = await db
+    .prepare(
+      `SELECT item_count, metadata
+       FROM cron_runs
+       WHERE job = ? AND status IN ('ok', 'degraded')
+       ORDER BY started_at DESC
+       LIMIT 1`,
+    )
+    .bind("mint-burn-growth-watchdog")
+    .first<{ item_count: number | null; metadata: string | null }>();
   throwIfAborted(signal);
-  const rowCount = row?.row_count ?? 0;
+  let rowCount = 0;
+  if (typeof row?.item_count === "number") {
+    rowCount = row.item_count;
+  } else if (row?.metadata) {
+    try {
+      const metadata = JSON.parse(row.metadata) as { rowCount?: unknown };
+      if (typeof metadata.rowCount === "number") rowCount = metadata.rowCount;
+    } catch {
+      // Treat malformed historical metadata as an empty count.
+    }
+  }
 
   if (rowCount < MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD) {
     return createCronResult({

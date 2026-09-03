@@ -3,7 +3,7 @@ import {
   createNativeSafetyScoreV9FullRegistryInput,
   createSafetyScoreV9FullRegistryInput,
 } from "./fixtures/safety-score-v9-full-registry-input";
-import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 
 // Double the 30s budget the other full-pipeline V9 suites use. Those run one
 // full-registry compile+evaluate pass per test; the equivalence test below runs

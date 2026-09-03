@@ -5,7 +5,7 @@ const transport = vi.hoisted(() => ({
   record: vi.fn(),
 }));
 
-vi.mock("../../lib/telegram-transport-control", () => ({
+vi.mock("../../lib/telegram/transport-control", () => ({
   claimTelegramTransportPermit: transport.claim,
   recordTelegramTransportOutcomes: transport.record,
 }));

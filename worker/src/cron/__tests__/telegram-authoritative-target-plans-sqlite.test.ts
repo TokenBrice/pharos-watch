@@ -34,7 +34,7 @@ import {
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../telegram-alert-target-plans/materialization";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
-import { loadTelegramPendingCapacity } from "../../lib/telegram-pending-capacity";
+import { loadTelegramPendingCapacity } from "../../lib/telegram/pending-capacity";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];

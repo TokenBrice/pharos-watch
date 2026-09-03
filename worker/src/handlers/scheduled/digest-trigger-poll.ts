@@ -18,7 +18,7 @@ import {
   missingTelegramCredentialNames,
   missingTwitterCredentialNames,
 } from "../../lib/runtime-credentials";
-import { drainTelegramDigestOutbox } from "../../lib/telegram-digest-outbox";
+import { drainTelegramDigestOutbox } from "../../lib/telegram/digest-outbox";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
 import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";

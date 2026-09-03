@@ -96,6 +96,7 @@ describe("ScreenerTable mobile cards", () => {
     expect(screen.getAllByText(/Liq/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Adequate").length).toBeGreaterThan(0);
     expect(screen.getByText("Mint authority")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Supply" }));
 
@@ -116,6 +117,7 @@ describe("ScreenerTable desktop table", () => {
     expect(screen.queryByText("Sort Results")).toBeNull();
     expect(screen.getByText("V9 Profile")).toBeTruthy();
     expect(screen.getByText("Adequate")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
   });
 
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {

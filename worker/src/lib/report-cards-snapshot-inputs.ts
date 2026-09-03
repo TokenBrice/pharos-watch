@@ -4,7 +4,7 @@ import {
   loadDexLiquiditySnapshot,
   type DexLiquidityLoadResult,
 } from "./dex-liquidity";
-import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
+import { loadFreshIndependentLiveReserveMap } from "./live-reserves/store";
 import {
   loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
@@ -21,9 +21,9 @@ import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { LiveReserveSnapshotProvenance } from "./live-reserves-store";
+import type { LiveReserveSnapshotProvenance } from "./live-reserves/store";
 import { parseJsonObject } from "./json-parse";
-import type { V9PublicationInputHealth } from "./safety-score-v9-publication-assessment";
+import type { V9PublicationInputHealth } from "./safety-score-v9/publication-assessment";
 
 export class ReportCardsSnapshotUnavailableError extends Error {
   constructor(message: string) {

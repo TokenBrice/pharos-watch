@@ -60,9 +60,9 @@ There is deliberately no day-over-day score, grade, tier, leader, census, supply
 
 ## Publication
 
-`.github/workflows/safety-map-refresh.yml` owns checkout, credentials, scheduling, and artifact upload. `scripts/maintenance/publish-safety-score-map.ts` owns the tested operational state machine through explicit `plan`, `render`, `publish`, and `summary` phases. `plan --dry-run` inspects live KV state and prints the same-day decision without rendering or writing KV; it still requires the purpose-scoped KV credentials because a useful plan cannot guess at live state.
+`.github/workflows/safety-map-refresh.yml` owns checkout, credentials, scheduling, and artifact upload. Its lightweight `plan` job inspects live KV with Node but no browser, emits `should_render` and an immutable plan token, and hands the state to the browser-enabled `render` job only when rendering is needed. `scripts/maintenance/publish-safety-score-map.ts` owns the tested operational state machine through explicit `plan`, `render`, `publish`, and `summary` phases; the workflow passes the plan token to render and publish so a stale plan cannot publish.
 
-The workflow reads the live manifest only to decide whether a scheduled slot has already produced a sufficiently fresh same-day map, renders the daily edition when needed, builds the compact KV manifest from the renderer's manifest sidecar, and publishes. Key order is load-bearing:
+The workflow reads the live manifest only in the plan-before-browser phase to decide whether a scheduled slot has already produced a sufficiently fresh same-day map. When needed, the render job installs Playwright/Firefox, renders the daily edition, builds the compact KV manifest from the renderer's manifest sidecar, and publishes. Key order is load-bearing:
 
 | Key | Contents |
 | --- | --- |

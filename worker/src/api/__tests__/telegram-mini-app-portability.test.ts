@@ -5,8 +5,8 @@ import {
   encodeWatchlistTokenV3,
   type WatchlistTokenDirectState,
   type WatchlistTokenPresetState,
-} from "../../lib/telegram-watchlist-token";
-import type { TelegramMiniAppAuthContext } from "../../lib/telegram-mini-app-auth";
+} from "../../lib/telegram/watchlist-token";
+import type { TelegramMiniAppAuthContext } from "../../lib/telegram/mini-app-auth";
 import {
   TelegramMiniAppMutationError,
   applyTelegramMiniAppMutation,

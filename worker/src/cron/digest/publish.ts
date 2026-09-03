@@ -11,11 +11,11 @@ import {
 } from "../../lib/digest-safety-context";
 import type { TelegramCreds } from "../../lib/telegram";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
-import type { TelegramDigestSuccessAction } from "../../lib/telegram-digest-appendices";
+import type { TelegramDigestSuccessAction } from "../../lib/telegram/digest-appendices";
 import {
   deliverTelegramDigestEdition,
   enqueueTelegramDigestEdition,
-} from "../../lib/telegram-digest-outbox";
+} from "../../lib/telegram/digest-outbox";
 import { postDigestTweet, type TwitterCreds } from "../../lib/twitter";
 import { buildTweetText } from "../../lib/twitter-digest-text";
 import { buildTelegramMessage } from "../../lib/telegram";

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const { sleepWithSignalMock } = vi.hoisted(() => ({
   sleepWithSignalMock: vi.fn(async () => undefined),
@@ -208,11 +209,11 @@ describe("fetchBinancePricesForRun", () => {
     const run = vi.fn(async () => ({ meta: { changes: 1 } }));
     const first = vi.fn(async () => row);
     return {
-      db: {
+      db: makeNoopD1({
         prepare: vi.fn(() => ({
           bind: vi.fn(() => ({ first, run })),
         })),
-      } as unknown as D1Database,
+      }),
       run,
     };
   }

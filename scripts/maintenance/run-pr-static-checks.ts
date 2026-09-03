@@ -26,10 +26,19 @@ import {
   EDITORIAL_POLICY_TEST_COMMAND,
   hasEditorialPolicyImpact,
 } from "../lib/editorial-surface-registry";
+import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
+const STRUCTURAL_TEST_PATH_PATTERNS = [
+  /(^|\/)__tests__(?:\/|$)/,
+  /\.test\.tsx?$/,
+  /(^|\/)test-utils(?:\/|$)/,
+  /(^|\/)test-helpers(?:\/|$)/,
+  /(^|\/)__mocks__(?:\/|$)/,
+  /(^|\/)fixtures(?:\/|$)/,
+];
 
 interface PrStaticCheckOptions {
   argv?: readonly string[];
@@ -52,17 +61,33 @@ const PARALLEL_STATIC_CHECKS = new Set([
 ]);
 const DEFERRED_STATIC_CHECKS = new Set<string>([EDITORIAL_POLICY_TEST_COMMAND.name]);
 
-function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
-  return changedFiles.some(
-    (file) =>
+type StructuralCheckImpact = "none" | "test-only" | "production";
+
+function getStructuralCheckImpact(changedFiles: readonly string[]): StructuralCheckImpact {
+  let hasTestImpact = false;
+  for (const file of changedFiles) {
+    const isStructuralPath =
       STRUCTURAL_CHECK_EXACT_PATHS.has(file) ||
-      STRUCTURAL_CHECK_PREFIXES.some((prefix) => file.startsWith(prefix)),
-  );
+      STRUCTURAL_CHECK_PREFIXES.some((prefix) => file.startsWith(prefix));
+    if (!isStructuralPath) continue;
+    if (!STRUCTURAL_TEST_PATH_PATTERNS.some((pattern) => pattern.test(file))) return "production";
+    hasTestImpact = true;
+  }
+  return hasTestImpact ? "test-only" : "none";
 }
 
 function formatNpmFailure(result: ExecutionResult): string {
   const name = result.failedCmd?.match(/^npm run (\S+)/)?.[1] ?? "unknown";
   return `npm run ${name} failed (${result.signal ? `signal ${result.signal}` : `exit ${result.status}`}).`;
+}
+
+export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
+  return changedFiles.some((file) => {
+    if (file.startsWith("docs/") || file === "README.md" || file === "CLAUDE.md") return false;
+    return PATH_FAMILIES.some(
+      (family) => family.docs.length > 0 && family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)),
+    );
+  });
 }
 
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
@@ -91,8 +116,17 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
     commands.push({ name: "audit:deps" });
   }
 
-  if (hasStructuralCheckImpact(changedFiles)) {
-    commands.push({ name: "check:structural" });
+  if (hasOwnedDocsImpact(changedFiles)) {
+    commands.push({ name: "check:doc-sync" });
+  }
+
+  switch (getStructuralCheckImpact(changedFiles)) {
+    case "production":
+      commands.push({ name: "check:structural" });
+      break;
+    case "test-only":
+      commands.push({ name: "check:clone-ratchet" }, { name: "check:cron-console-usage" });
+      break;
   }
   if (hasEditorialPolicyImpact(changedFiles)) {
     commands.push({

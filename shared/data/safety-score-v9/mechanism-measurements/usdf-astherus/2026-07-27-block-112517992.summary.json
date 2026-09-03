@@ -1,0 +1,15 @@
+{
+  "mechanism": "usdf-astherus",
+  "date": "2026-07-27-block-112517992",
+  "sha256": "f0db5cca385e4c71dcd50fbc9b39e04fb5f764c954001cbbd232120e3932bb17",
+  "bytes": 2583,
+  "r2Key": "captures/usdf-astherus/2026-07-27-block-112517992.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "usdf-astherus",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdf-astherus/2026-07-27-block-112517992.json",
+    "capturedAt": "2026-07-27T22:58:00Z"
+  }
+}

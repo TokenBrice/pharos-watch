@@ -131,17 +131,6 @@ export interface ScheduledRecoveryEligibilityInspection {
   candidates: ScheduledRecoveryEligibilityCandidate[];
 }
 
-export interface IncompatibleScheduledCheckpointRetirementSummary {
-  observedAt: number;
-  candidates: number;
-  retired: number;
-  skippedActiveChildLease: number;
-  retiredCheckpoints: Array<{
-    slotStartedAt: number;
-    attemptNo: number;
-    queueHash: string;
-  }>;
-}
 
 interface ScheduledRecoveryEligibilityRow extends ScheduledCheckpointRow {
   slot_state: string | null;
@@ -184,11 +173,9 @@ const LIVE_RESERVE_CHILD_PREREQUISITES = {
   "sync-live-reserves": [],
   "sync-redemption-backstops": ["sync-live-reserves"],
   "sync-kinesis-supply": [],
-  "reserve-post-sync-watchdog": ["sync-live-reserves"],
+  "cron-sentinel": ["sync-live-reserves"],
 } as const;
 const PLATFORM_ABANDONED_ERROR = "scheduled invocation ended before terminal checkpoint";
-const QUEUE_HASH_DRIFT_RETIREMENT_ERROR =
-  "scheduled recovery checkpoint retired because its queue hash no longer matches the active queue";
 
 export class ScheduledCheckpointOwnershipLostError extends Error {
   constructor(identity: ScheduledCheckpointIdentity) {
@@ -329,6 +316,25 @@ export async function loadLiveReserveCheckpoint(
         LIVE_RESERVE_CHECKPOINT_JOB,
         input.attemptNo,
       )
+      .first<ScheduledCheckpointRow>(),
+  );
+  return row ? mapCheckpointRow(row) : null;
+}
+
+export async function loadLatestLiveReserveCheckpoint(
+  db: D1Database,
+): Promise<ScheduledRecoveryCheckpoint | null> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT ${CHECKPOINT_COLUMNS}
+           FROM worker_scheduled_checkpoints
+          WHERE schedule_key = ? AND job = ?
+            AND state IN ('running', 'recovering', 'ready')
+          ORDER BY slot_started_at DESC, attempt_no DESC
+          LIMIT 1`,
+      )
+      .bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB)
       .first<ScheduledCheckpointRow>(),
   );
   return row ? mapCheckpointRow(row) : null;
@@ -812,131 +818,6 @@ export async function inspectLiveReserveCheckpointRecoveryEligibility(
   };
 }
 
-export async function retireIncompatibleLiveReserveCheckpointRecoveries(
-  db: D1Database,
-  input: {
-    nowSec?: number;
-    limit?: number;
-  },
-): Promise<IncompatibleScheduledCheckpointRetirementSummary> {
-  const timestamp = input.nowSec ?? nowSec();
-  const limit = Math.max(1, Math.min(input.limit ?? 5, 25));
-  const rows = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT ${CHECKPOINT_COLUMNS.split(", ").map((column) => `c.${column}`).join(", ")}
-           FROM worker_scheduled_checkpoints c
-           JOIN cron_slot_executions s
-             ON s.slot_key = c.schedule_key
-            AND s.slot_started_at = c.slot_started_at
-          WHERE c.schedule_key = ? AND c.job = ?
-            AND c.state IN ('running', 'recovering', 'ready')
-            AND c.queue_hash <> ?
-            AND s.state = 'finished'
-            AND (
-              c.state <> 'recovering'
-              OR c.recovery_lease_until IS NULL
-              OR c.recovery_lease_until < ?
-            )
-          ORDER BY c.updated_at ASC, c.slot_started_at ASC, c.attempt_no DESC
-          LIMIT ?`,
-      )
-      .bind(
-        LIVE_RESERVE_SCHEDULE_KEY,
-        LIVE_RESERVE_CHECKPOINT_JOB,
-        LIVE_RESERVE_QUEUE_HASH,
-        timestamp,
-        limit,
-      )
-      .all<ScheduledCheckpointRow>(),
-  );
-  const checkpoints = (rows.results ?? []).map(mapCheckpointRow);
-  const summary: IncompatibleScheduledCheckpointRetirementSummary = {
-    observedAt: timestamp,
-    candidates: checkpoints.length,
-    retired: 0,
-    skippedActiveChildLease: 0,
-    retiredCheckpoints: [],
-  };
-
-  for (const checkpoint of checkpoints) {
-    if (await hasActiveChildLeaseForScheduledSlot(db, checkpoint.scheduleKey, checkpoint.slotStartedAt, timestamp)) {
-      summary.skippedActiveChildLease++;
-      continue;
-    }
-    const childDispositions = { ...checkpoint.childDispositions };
-    for (const childJob of LIVE_RESERVE_SLOT_JOBS) {
-      if (childDispositions[childJob] !== "completed") {
-        childDispositions[childJob] = "platform_abandoned";
-      }
-    }
-    const statements: D1PreparedStatement[] = [
-      db
-        .prepare(
-          `UPDATE worker_scheduled_checkpoints
-              SET state = 'platform_abandoned', error = ?, completed_at = ?, updated_at = ?,
-                  child_dispositions_json = ?, current_item_key = NULL, current_domain_attempt_id = NULL,
-                  recovery_owner = NULL, recovery_lease_until = NULL
-            WHERE ${identityWhereSql()}
-              AND queue_hash = ?
-              AND queue_hash <> ?
-              AND state IN ('running', 'recovering', 'ready')
-              AND (
-                state <> 'recovering'
-                OR recovery_lease_until IS NULL
-                OR recovery_lease_until < ?
-              )`,
-        )
-        .bind(
-          QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-          timestamp,
-          timestamp,
-          JSON.stringify(childDispositions),
-          ...identityBinds(checkpoint),
-          checkpoint.queueHash,
-          LIVE_RESERVE_QUEUE_HASH,
-          timestamp,
-        ),
-    ];
-    const retiredCheckpointExistsSql = `EXISTS (
-      SELECT 1
-        FROM worker_scheduled_checkpoints
-       WHERE ${identityWhereSql()}
-         AND state = 'platform_abandoned'
-         AND error = ?
-         AND completed_at = ?
-    )`;
-    const retirementBinds = [
-      ...identityBinds(checkpoint),
-      QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-      timestamp,
-    ];
-    const retirementMetadata = JSON.stringify({
-      reason: "queue-hash-drift",
-      failureCategory: "platform-abandoned",
-      expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
-      checkpointQueueHash: checkpoint.queueHash,
-      reconciledAt: timestamp,
-    });
-    statements.push(...buildReserveAttemptAbandonmentStatements(db, checkpoint, {
-      timestamp,
-      error: QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-      metadata: retirementMetadata,
-      checkpointGuardSql: retiredCheckpointExistsSql,
-      checkpointGuardBinds: retirementBinds,
-    }));
-    const results = await runWithOverloadRetry(() => db.batch(statements));
-    if (((results[0] as D1Result | undefined)?.meta.changes ?? 0) !== 1) continue;
-    summary.retired++;
-    summary.retiredCheckpoints.push({
-      slotStartedAt: checkpoint.slotStartedAt,
-      attemptNo: checkpoint.attemptNo,
-      queueHash: checkpoint.queueHash,
-    });
-  }
-
-  return summary;
-}
 
 export async function prepareEligibleLiveReserveCheckpointRecoveries(
   db: D1Database,

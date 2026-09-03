@@ -12,17 +12,17 @@ import {
   projectSafetyScoreV9PegScoreResult,
   projectSafetyScoreV9PegSummary,
   SafetyScoreV9PegProvenanceSummarySchema,
-} from "./safety-score-v9-peg-provenance";
+} from "./safety-score-v9/peg-provenance";
 import {
   normalizeReviewedDeploymentAttribution,
   reviewedDeploymentAttributionValidationError,
-} from "./safety-score-v9-supply-attribution-contract";
+} from "./safety-score-v9/supply-attribution-contract";
 import {
   normalizeXautRepresentationGroupAttribution,
   XAUT_ASSET_ID,
   XautRepresentationGroupSupplyAttributionV2Schema,
   xautRepresentationGroupAttributionValidationError,
-} from "./safety-score-v9-xaut-supply-attribution-contract";
+} from "./safety-score-v9/xaut-supply-attribution-contract";
 
 const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),

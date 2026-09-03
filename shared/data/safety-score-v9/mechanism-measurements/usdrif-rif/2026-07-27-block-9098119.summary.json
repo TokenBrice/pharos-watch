@@ -1,0 +1,15 @@
+{
+  "mechanism": "usdrif-rif",
+  "date": "2026-07-27-block-9098119",
+  "sha256": "b1de51ccf4baf4d905605d4ec3fc10e96adc4f7b201262d5cbab6458371fca84",
+  "bytes": 964,
+  "r2Key": "captures/usdrif-rif/2026-07-27-block-9098119.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "usdrif-rif",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdrif-rif/2026-07-27-block-9098119.json",
+    "capturedAt": "2026-07-27T16:44:08Z"
+  }
+}

@@ -20,11 +20,11 @@ import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
-} from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RouteReviews,
-} from "../safety-score-v9-extension-routes";
+} from "../safety-score-v9/extension-routes";
 import {
   V9_EVALUATION_TEST_TIMEOUT_MS,
   makeV9BoundedUnknownFeeRedemptionFixedInput as boundedUnknownFeeRedemptionFixedInput,

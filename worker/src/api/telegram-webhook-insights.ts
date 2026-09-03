@@ -1,13 +1,13 @@
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { formatTelegramAge } from "../lib/telegram-format-age";
+import { formatTelegramAge } from "../lib/telegram/format-age";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { suggestClosestToken } from "../lib/telegram-alerts";
-import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
+import { suggestClosestToken } from "../lib/telegram/alerts";
+import { TOP_VIEW_NAMES } from "../lib/telegram/constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";

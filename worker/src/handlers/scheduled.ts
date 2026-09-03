@@ -75,13 +75,13 @@ type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "heartbeatSec" | "sta
 // write no terminal row), and every extra minute here extends the outage of
 // each lane that gates on the dead slot.
 const SHORT_SLOT_FENCE_POLICY = {
-  heartbeatSec: 30,
+  heartbeatSec: 60,
   staleAfterSec: 5 * 60,
   preSweepLimit: 5,
 } satisfies SlotFencePolicy;
 
 const MEDIUM_SLOT_FENCE_POLICY = {
-  heartbeatSec: 45,
+  heartbeatSec: 60,
   staleAfterSec: 5 * 60,
   preSweepLimit: 5,
 } satisfies SlotFencePolicy;

@@ -4,8 +4,8 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 
 ## Methodology Identity
 
-- Active model: `v9`
-- **Current methodology version:** `v9.46`
+- Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.46`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v5 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -21,9 +21,9 @@ V9 evaluates three pillars:
 
 | Pillar | Aggregation weight | Scope |
 | --- | ---: | --- |
-| Backing | 40% | Reserve quality, mechanism solvency, custody, assurance, and loss-bearing structure |
-| Exit | 35% | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
-| Economic Control | 25% | Mint, upgrade, oracle, bridge, and other binding control paths |
+| Backing | <!-- GENERATED-START: report-cards-backing-pillar-weight -->40%<!-- GENERATED-END: report-cards-backing-pillar-weight --> | Reserve quality, mechanism solvency, custody, assurance, and loss-bearing structure |
+| Exit | <!-- GENERATED-START: report-cards-exit-pillar-weight -->35%<!-- GENERATED-END: report-cards-exit-pillar-weight --> | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
+| Economic Control | <!-- GENERATED-START: report-cards-control-pillar-weight -->25%<!-- GENERATED-END: report-cards-control-pillar-weight --> | Mint, upgrade, oracle, bridge, and other binding control paths |
 
 The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
 
@@ -118,6 +118,8 @@ The publication pipeline has two active stages:
 1. `prepare-safety-score-v9-input` runs immediately after each successful half-hourly DEX publication. It captures the publication-exact base input and peg-provenance seed and binds them to that exact DEX generation.
 2. `compute-safety-score-v9` runs at minutes 22 and 52. It rejects an input whose DEX dependency no longer matches the latest accepted generation, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
 
+The approved Workflow pilot does not add a third authoritative stage. With `WORKER_V9_WORKFLOW_MODE=off` (the checked-in default), publication behavior is unchanged. In `shadow`, each completed cron publication triggers one deterministic Workflow instance for the same slot. The Workflow reuses the canonical compiler and gate, suppresses their live-cache writes, and stores the exact captured publication envelope and hold/current sidecars only at `safety-score-v9:shadow:<generation>`. Its separate terminal `cron_runs` job is `compute-safety-score-v9-workflow`. A seven-day byte-parity, replay, resource, observability, and cost review is required before a separate cutover decision; the live keys below remain cron-owned throughout the pilot.
+
 Since methodology `9.07` the private upstream input is a native V9 capture. Schema v4 carries exactly the fields the V9 compiler reads and drops everything the retired V8 report-card projection needed: bluechip ratings, resolved blacklist statuses, collateral-drift diagnostics, the non-current chain-circulating buckets, and every DEX row field outside the exit-route observations. Its capture identity is `model: "v9-input"`, bound to the V9 evaluation build; the retired V8 evaluation-build identity is gone with the engine. Base-input generation ids keep the `report-cards-input:v1:` prefix, which is a published format namespace pinned by the public fact-set schemas, the OpenAPI spec, the publication codec, and the `safety_score_history_v2` CHECK constraint — not a projection version. Which projection minted an id is carried by the input identity.
 
 The prepare cron owns:
@@ -204,6 +206,7 @@ The stablecoin detail Grade History module combines that legacy archive with `GE
   - `Why not higher` renders the two causal buckets from `scoreTrace`: `adverseAttribution` (measured and adverse) as a flat list, and `boundedUncertaintyAttribution` (unresolved) grouped by `responsibility`. Pharos's own gaps — `producer-failed`, `integration-missing`, `published-evidence-expired` — are named as ours rather than folded into a neutral "not measured".
   - Attribution `path` values are machine keys and are never rendered; producer messages quoting four or more decimal places round to three for display.
 - The detail card renders an evidence summary under the score, pillar rows, score adjustments/caps/construction, an access panel, and `EvidenceFooter`, which provides methodology links plus an optional folded `Sources (N)` list; it has no evidence chip. Dependency context remains with `ContagionSnapshot` ("Dependency Context"), which owns the full dependency graph.
+- Screener and comparison rows expose a compact top-driver chip alongside the V9 profile. `projectTopDriver(card)` reads the already-published binding cap first, then the weakest pillar, and preserves the card's evidence freshness without recalculating any score. Withheld cards identify that state explicitly. The chip links to the stablecoin detail `#report-card` anchor, where the full waterfall and causal explanation remain available; the screener uses its existing scalar row projection and does not issue another report-card request.
 - `AccessPosturePanel` renders the four scored access enums in the summary rail at `xl+` and inside the card below `xl` (`xl:hidden`), the same split `#price` uses. `buildSafetyScoreV9AccessRows` exposes the rows without building the whole card presentation. `primaryExit` distinguishes three kinds of absence and the panel treats them differently. `none` is a *reviewed negative* — an exit surface observed complete with zero routes — and renders as "None". `undisclosed` means no credited route resolved a posture, or the exit surface was never observed; it renders as an explicit "Not disclosed" row, because dropping it would let an evidence gap read as a clean bill of health. `unknown` means credited routes exist but their access facts are unresolved; it alone enters `unknownFields` and alone drops out of the panel. The posture is derived from every route the Exit pillar credits — score-eligible routes plus reviewed issuer-, protocol-, and eventual-redemption routes — so the panel cannot contradict a scored exit route.
 - `src/lib/safety-score-v9-labels.ts` is the single shared machine-key to display-copy map for public V9 surfaces. Cap kinds, failure domains, and attribution paths draw on overlapping producer keys, so new modules extend this map rather than adding their own.
 - `src/components/radar-chart-v9.tsx` renders Backing, Exit, and Economic Control comparisons.

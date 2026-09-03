@@ -82,7 +82,7 @@ const {
   prepareTelegramDigestAppendices,
   CEMETERY_FOOTERS,
   queuePendingTrackedStablecoinAdditions,
-} = await import("../telegram-digest-appendices");
+} = await import("../telegram/digest-appendices");
 
 describe("prepareTelegramDigestAppendices", () => {
   beforeEach(() => {

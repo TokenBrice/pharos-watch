@@ -1,11 +1,11 @@
 import { recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
+import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram/constants";
 import {
   assignSharedDispatchState,
   type TelegramDispatchSharedState,
 } from "./dispatch-telegram-state";
-import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
 import {
   archiveAgedExecutionUnknownPendingAlerts,
   cleanupExpiredPendingAlerts,

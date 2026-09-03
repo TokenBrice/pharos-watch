@@ -1,8 +1,8 @@
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { RedemptionRouteAvailability } from "../redemption-backstop-availability";
-import type { RedemptionBackstopBuildOptions } from "../redemption-backstop-capacity";
-import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+import type { RedemptionRouteAvailability } from "../redemption-backstop/availability";
+import type { RedemptionBackstopBuildOptions } from "../redemption-backstop/capacity";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 
 const BASE_REDEMPTION_ROUTE: RedemptionBackstopConfig = {
   routeFamily: "stablecoin-redeem",

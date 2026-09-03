@@ -9,7 +9,7 @@ import {
   loadStablecoinsCache,
   type StablecoinsCacheLoadResult,
 } from "../stablecoins-cache";
-import { emptyReserveCompositionOverview } from "../live-reserves-store";
+import { emptyReserveCompositionOverview } from "../live-reserves/store";
 import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";

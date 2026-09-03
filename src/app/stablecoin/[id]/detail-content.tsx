@@ -35,6 +35,8 @@ import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { revealAnchorId } from "@/lib/anchor-reveal";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
+import { scoreToGrade } from "@shared/lib/report-card-core";
+import type { AiSummaryClaimValues } from "@shared/types";
 import { buildDetailSharedModules, type DetailSharedModules } from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
 import { DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
@@ -255,6 +257,23 @@ export function DetailContent({
       isLoading={reservesLoading}
     />
   ) : null;
+  // Registered AI-summary claim tokens resolve against the same live values the
+  // hero and report card render; pillar grades use the breakdown's scoreToGrade.
+  const card = viewModel.reportCard;
+  const pegScore = viewModel.isNavToken ? null : viewModel.pegScoreResult?.pegScore ?? null;
+  const claimValues: AiSummaryClaimValues = {
+    "report-card.grade": card?.grade ?? null,
+    "report-card.score": card?.score ?? null,
+    "report-card.pillars.backing.grade": card ? scoreToGrade(card.pillars.backing.score) : null,
+    "report-card.pillars.backing.score": card?.pillars.backing.score ?? null,
+    "report-card.pillars.exit.grade": card ? scoreToGrade(card.pillars.exit.score) : null,
+    "report-card.pillars.exit.score": card?.pillars.exit.score ?? null,
+    "report-card.pillars.control.grade": card ? scoreToGrade(card.pillars.control.score) : null,
+    "report-card.pillars.control.score": card?.pillars.control.score ?? null,
+    "peg-summary.grade": pegScore == null ? null : scoreToGrade(pegScore),
+    "peg-summary.score": pegScore,
+    "stablecoin.circulating-usd": viewModel.mcap,
+  };
 
   return (
     <div>
@@ -279,7 +298,7 @@ export function DetailContent({
             ) : null}
           </div>
           <div className="mt-4">
-            {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+            {viewModel.summary ? <AiSummary {...viewModel.summary} claimValues={claimValues} /> : null}
             <DetailNavigation onActiveChange={onActiveBannerChange} viewModel={viewModel} />
           </div>
           <div className="mt-4 min-w-0 space-y-6">

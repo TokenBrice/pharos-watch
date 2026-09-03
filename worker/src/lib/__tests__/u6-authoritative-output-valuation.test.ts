@@ -4,11 +4,11 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RouteReviews,
-} from "../safety-score-v9-extension-routes";
+} from "../safety-score-v9/extension-routes";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 

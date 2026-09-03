@@ -1,0 +1,15 @@
+{
+  "mechanism": "mmev-midas",
+  "date": "2026-07-27-unavailable-search",
+  "sha256": "7203201da145a99c2c041aeb5d4b4063a47a132d9361267a74c01dac87a412fa",
+  "bytes": 2996,
+  "r2Key": "captures/mmev-midas/2026-07-27-unavailable-search.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "mmev-midas",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/mmev-midas/2026-07-27-unavailable-search.json",
+    "capturedAt": "2026-07-28 ethereum token 0x030b69280892c888670edcdcd8b69fd8026a0bf3; midas.app product page + docs.midas.app llms index (pricing/attestation/risk pages CF-challenged at research time); strategy manager narrative from package/product marketing"
+  }
+}

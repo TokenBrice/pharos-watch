@@ -1,9 +1,7 @@
 import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import {
   claimNextLiveReserveCheckpointRecovery,
-  inspectLiveReserveCheckpointRecoveryEligibility,
   prepareEligibleLiveReserveCheckpointRecoveries,
-  retireIncompatibleLiveReserveCheckpointRecoveries,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
 import { runFourHourlyReserveSyncSlot } from "./hourly-live-reserves";
@@ -11,14 +9,11 @@ import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 
-type ReserveRecoveryMode = "off" | "shadow" | "reconcile" | "recover";
+type ReserveRecoveryMode = "off" | "recover";
 
 function normalizeReserveRecoveryMode(value: string | null | undefined): ReserveRecoveryMode {
   const normalized = value?.trim().toLowerCase();
-  if (normalized === "shadow" || normalized === "reconcile" || normalized === "recover") {
-    return normalized;
-  }
-  return "off";
+  return normalized === "recover" ? "recover" : "off";
 }
 
 const RECOVERY_LEASE_SEC = 15 * 60;
@@ -44,21 +39,6 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     };
   }
 
-  if (mode === "shadow") {
-    const inspection = await inspectLiveReserveCheckpointRecoveryEligibility(runtime.db, {
-      staleAfterSec: RECOVERY_STALE_AFTER_SEC,
-    });
-    return {
-      status: "ok" as const,
-      itemCount: inspection.eligibleCheckpointCount,
-      metadata: JSON.stringify({
-        mode,
-        disposition: "shadow-observed",
-        checkpointsClaimed: 0,
-        inspection,
-      }),
-    };
-  }
 
   const sweep = await sweepStaleScheduledSlotExecutions(runtime.db, {
     slotKey: "fourHourlyReserveSync",
@@ -67,35 +47,10 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     signal,
     reconcilerWorkerVersion: runtime.workerVersion ?? null,
   });
-  const incompatibleRetirement = await retireIncompatibleLiveReserveCheckpointRecoveries(runtime.db, {
-    limit: 5,
-  });
   const preparation = await prepareEligibleLiveReserveCheckpointRecoveries(runtime.db, {
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     limit: 1,
   });
-  if (mode === "reconcile") {
-    const inspection = await inspectLiveReserveCheckpointRecoveryEligibility(runtime.db, {
-      staleAfterSec: RECOVERY_STALE_AFTER_SEC,
-    });
-    return {
-      status: "ok" as const,
-      itemCount: preparation.prepared.length + incompatibleRetirement.retired,
-      metadata: JSON.stringify({
-        mode,
-        disposition: preparation.prepared.length > 0
-          ? "recovery-prepared"
-          : incompatibleRetirement.retired > 0
-            ? "incompatible-checkpoints-retired"
-            : "no-reconciliation-due",
-        checkpointsClaimed: 0,
-        sweep,
-        incompatibleRetirement,
-        preparation,
-        inspection,
-      }),
-    };
-  }
 
   const checkpoint = await claimNextLiveReserveCheckpointRecovery(runtime.db, {
     owner: runtime.invocationId ?? createLeaseOwner("reserve-recovery"),
@@ -110,7 +65,6 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
         mode,
         checkpointsClaimed: 0,
         sweep,
-        incompatibleRetirement,
         preparation,
       }),
     };
@@ -142,7 +96,6 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
       disposition: recoveryDeferred ? "recovery-deferred" : "recovery-executed",
       mode,
       checkpointsClaimed: 1,
-      incompatibleRetirement,
       originalScheduleKey: checkpoint.scheduleKey,
       originalSlotStartedAt: checkpoint.slotStartedAt,
       recoveryAttemptNo: checkpoint.attemptNo,

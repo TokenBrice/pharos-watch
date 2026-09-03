@@ -13,6 +13,7 @@ import {
   writeDiscoveryTargetCursors,
 } from "../persistence";
 import { STAGED_POOL_MAX_TVL_USD, type StagedPool } from "../types";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 describe("isValidStagedPoolId", () => {
   it("accepts EVM chain:address lowercased form", () => {
@@ -60,7 +61,7 @@ describe("upsertStagedPools", () => {
   it("deletes the same-coin legacy exchange-only orderbook row before upserting suffixed ids", async () => {
     const preparedSql: string[] = [];
     const boundValues: unknown[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         preparedSql.push(sql);
         return {
@@ -71,7 +72,7 @@ describe("upsertStagedPools", () => {
         };
       },
       batch: async (stmts: unknown[]) => stmts.map(() => ({ success: true, meta: { changes: 1 } })),
-    } as unknown as D1Database;
+    });
 
     const nowSec = 1710000000;
     const pool: StagedPool = {
@@ -113,7 +114,7 @@ describe("upsertStagedPools", () => {
 describe("discovery persistence D1 retry coverage", () => {
   it("retries discovery meta writes on transient D1 overload", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -123,7 +124,7 @@ describe("discovery persistence D1 retry coverage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     await updateDiscoveryMeta(db, "usdc-circle", 2, 1_710_000_000);
 
@@ -132,7 +133,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("does not retry miss-counter arithmetic after an ambiguous D1 overload", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -141,7 +142,7 @@ describe("discovery persistence D1 retry coverage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     await expect(updateDiscoveryMeta(db, "usdc-circle", 0, 1_710_000_000)).rejects.toThrow(
       "D1 DB storage operation exceeded timeout",
@@ -153,7 +154,7 @@ describe("discovery persistence D1 retry coverage", () => {
   it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {
     let attempts = 0;
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
           run: async () => {
@@ -168,7 +169,7 @@ describe("discovery persistence D1 retry coverage", () => {
           oldest_raw_json_remaining_at: 1_709_990_000,
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const cleanup = await cleanupStaging(db, 1_710_000_000);
 
@@ -187,7 +188,7 @@ describe("discovery persistence D1 retry coverage", () => {
   });
 
   it("reports staging cleanup errors without throwing", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -195,7 +196,7 @@ describe("discovery persistence D1 retry coverage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const cleanup = await cleanupStaging(db, 1_710_000_000);
 
@@ -206,7 +207,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("retries discovery meta reads and maps rows", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         all: async () => {
           attempts++;
@@ -221,7 +222,7 @@ describe("discovery persistence D1 retry coverage", () => {
           };
         },
       }),
-    } as unknown as D1Database;
+    });
 
     const rows = await readDiscoveryMeta(db);
 
@@ -236,7 +237,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("aggregates the deployment census per coin and excludes unsupported chains", async () => {
     let sql = "";
-    const db = {
+    const db = makeNoopD1({
       prepare: (statement: string) => {
         sql = statement;
         return {
@@ -264,7 +265,7 @@ describe("discovery persistence D1 retry coverage", () => {
           }),
         };
       },
-    } as unknown as D1Database;
+    });
 
     const summaries = await readDiscoveryCensusSummaries(db);
 
@@ -286,7 +287,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("round-trips the per-coin target cursor as one durable map", async () => {
     let storedValue: string | undefined;
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         if (sql.startsWith("SELECT")) {
           return {
@@ -302,7 +303,7 @@ describe("discovery persistence D1 retry coverage", () => {
           }),
         };
       },
-    } as unknown as D1Database;
+    });
     const cursors = new Map([
       ["coin-a", "ethereum:0xaaa"],
       ["coin-b", "osmosis:ibc/BBB"],
@@ -316,7 +317,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("records an attempt fence without changing existing backoff counters", async () => {
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
           sql,
@@ -327,7 +328,7 @@ describe("discovery persistence D1 retry coverage", () => {
         prepared.push(...statements);
         return statements.map(() => ({ success: true, meta: { changes: 1 } }));
       },
-    } as unknown as D1Database;
+    });
 
     await recordDiscoveryAttemptFence(
       db,
@@ -363,10 +364,10 @@ describe("discovery persistence D1 retry coverage", () => {
     const controller = new AbortController();
     controller.abort(new Error("stop-discovery"));
     const prepare = vi.fn();
-    const db = {
+    const db = makeNoopD1({
       prepare,
       batch: async () => [],
-    } as unknown as D1Database;
+    });
 
     await expect(incrementRunSeq(db, controller.signal)).rejects.toThrow("stop-discovery");
     expect(prepare).not.toHaveBeenCalled();
@@ -374,7 +375,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("does not retry the discovery run sequence increment after an ambiguous D1 overload", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({}),
       }),
@@ -382,7 +383,7 @@ describe("discovery persistence D1 retry coverage", () => {
         attempts++;
         throw new Error("Requests queued for too long");
       },
-    } as unknown as D1Database;
+    });
 
     await expect(incrementRunSeq(db)).rejects.toThrow("Requests queued for too long");
     expect(attempts).toBe(1);

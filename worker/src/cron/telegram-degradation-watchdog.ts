@@ -5,19 +5,19 @@ import {
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { logTelegramEvent } from "../lib/telegram-log";
+import { logTelegramEvent } from "../lib/telegram/log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import {
   PENDING_DRAIN_TIME_ALERT_SEC,
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_OLD_AGE_ALERT_SEC,
-} from "../lib/telegram-constants";
+} from "../lib/telegram/constants";
 import {
   readTelegramPendingCapacity,
   type TelegramPendingCapacityReadResult,
   type TelegramPendingCapacitySnapshot,
-} from "../lib/telegram-pending-capacity";
+} from "../lib/telegram/pending-capacity";
 import { throwIfAborted } from "../lib/abort";
 import { parseJson } from "../lib/json-parse";
 

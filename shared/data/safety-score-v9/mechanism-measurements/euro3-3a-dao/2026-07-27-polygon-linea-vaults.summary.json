@@ -1,0 +1,15 @@
+{
+  "mechanism": "euro3-3a-dao",
+  "date": "2026-07-27-polygon-linea-vaults",
+  "sha256": "920bbd76e0fbb0151bc2416d426daa292530753827c753907331651c989c37c5",
+  "bytes": 1100,
+  "r2Key": "captures/euro3-3a-dao/2026-07-27-polygon-linea-vaults.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "euro3-3a-dao",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/euro3-3a-dao/2026-07-27-polygon-linea-vaults.json",
+    "capturedAt": "2026-07-27T17:36:00Z"
+  }
+}

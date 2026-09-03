@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   buildFreshnessMeta,
   buildCacheStatuses,
@@ -401,7 +402,7 @@ describe("buildCacheStatuses sentinel validation", () => {
 describe("buildCacheStatuses", () => {
   function makeDb(nowSec: number) {
     const seenSql: string[] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         seenSql.push(sql);
         const first = async <T>() => {
@@ -446,7 +447,7 @@ describe("buildCacheStatuses", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
     return { db, seenSql };
   }
 
@@ -468,7 +469,7 @@ describe("buildCacheStatuses", () => {
   it("uses freshness sentinels when present and skips hot-table freshness queries", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const seenSql: string[] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         seenSql.push(sql);
         const first = async <T>() => null as T | null;
@@ -524,7 +525,7 @@ describe("buildCacheStatuses", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const { caches, diagnostics } = await buildCacheStatuses(db, nowSec);
 
@@ -560,7 +561,7 @@ describe("buildCacheStatuses", () => {
 
   it("clamps negative table ages to zero without accepting a future DEWS table row", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         const first = async <T>() => {
           if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
@@ -582,7 +583,7 @@ describe("buildCacheStatuses", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const { caches } = await buildCacheStatuses(db, nowSec);
     expect(caches["dex-liquidity"]?.ageSeconds).toBe(0);
@@ -592,7 +593,7 @@ describe("buildCacheStatuses", () => {
 
   it("reports missing DEWS publication evidence instead of throwing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         const first = async <T>() => {
           if (sql.includes("MAX(updated_at)")) {
@@ -614,7 +615,7 @@ describe("buildCacheStatuses", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const { caches, failures } = await buildCacheStatuses(db, nowSec);
     expect(caches.dews?.ageSeconds).toBeNull();
@@ -629,7 +630,7 @@ describe("buildCacheStatuses", () => {
 
   it("does not let producer cron timestamps replace missing DEWS publication evidence", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         const first = async <T>() => {
           return null as T | null;
@@ -657,7 +658,7 @@ describe("buildCacheStatuses", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
     expect(caches.dews?.ageSeconds).toBeNull();
@@ -677,7 +678,7 @@ describe("buildCacheStatuses", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      const db = {
+      const db = makeNoopD1({
         prepare: (sql: string) => {
           const first = async <T>() => {
             if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
@@ -707,7 +708,7 @@ describe("buildCacheStatuses", () => {
         batch: async () => [],
         exec: async () => ({ count: 0, duration: 0 }),
         dump: async () => new ArrayBuffer(0),
-      } as unknown as D1Database;
+      });
 
       const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
 
@@ -739,7 +740,7 @@ describe("buildCacheStatuses", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      const db = {
+      const db = makeNoopD1({
         prepare: (sql: string) => {
           const first = async <T>() => {
             if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
@@ -777,7 +778,7 @@ describe("buildCacheStatuses", () => {
         batch: async () => [],
         exec: async () => ({ count: 0, duration: 0 }),
         dump: async () => new ArrayBuffer(0),
-      } as unknown as D1Database;
+      });
 
       const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
 
@@ -809,7 +810,7 @@ describe("buildCacheStatuses", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const db = {
+      const db = makeNoopD1({
         prepare: (sql: string) => {
           const first = async <T>() => {
             if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
@@ -836,7 +837,7 @@ describe("buildCacheStatuses", () => {
         batch: async () => [],
         exec: async () => ({ count: 0, duration: 0 }),
         dump: async () => new ArrayBuffer(0),
-      } as unknown as D1Database;
+      });
 
       const { failures } = await buildCacheStatuses(db, nowSec);
 
@@ -855,7 +856,7 @@ describe("buildCacheStatuses", () => {
 
   it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         const first = async <T>() => {
           if (sql.includes("FROM cache WHERE key = ?")) {
@@ -917,7 +918,7 @@ describe("buildCacheStatuses", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const { caches, statusFloor, warnings } = await buildCacheStatuses(db, nowSec);
 

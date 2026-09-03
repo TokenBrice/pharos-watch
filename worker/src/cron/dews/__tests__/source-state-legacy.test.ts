@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadDewsSourceState } from "../../../lib/dews/source-state";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
   DEWS_STALE_DEX_LIQUIDITY_SEC,
@@ -85,12 +86,12 @@ function mockDbWithPrevRows(
       run,
     };
   };
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => stmt(sql),
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 describe("loadDewsSourceState legacy signals_json hydration", () => {
@@ -352,12 +353,12 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       };
     };
 
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => stmt(sql),
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     let settled = false;
     const loadPromise = loadDewsSourceState({

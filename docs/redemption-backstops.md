@@ -8,7 +8,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.42`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.42`<!-- GENERATED-END: methodology-version-redemption-backstop -->
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
@@ -170,7 +170,7 @@ The 2026-07-19 second output pass made the following rulings over the routes tha
 
 ### Capacity Models
 
-Capacity resolution is dispatched in `worker/src/lib/redemption-backstop-capacity.ts`, with per-model resolvers under `worker/src/lib/redemption-backstop-capacity/` (`supply-full.ts`, `supply-ratio.ts`, `fixed-usd.ts`, `reserve-sync.ts`); `redemption-backstop-sources.ts` orchestrates the entry build and calls into it.
+Capacity resolution is dispatched in `worker/src/lib/redemption-backstop/capacity.ts`, with per-model resolvers under `worker/src/lib/redemption-backstop-capacity/` (`supply-full.ts`, `supply-ratio.ts`, `fixed-usd.ts`, `reserve-sync.ts`); `worker/src/lib/redemption-backstop/sources.ts` orchestrates the entry build and calls into it.
 
 | Capacity model          | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

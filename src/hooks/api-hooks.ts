@@ -160,7 +160,8 @@ export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotRe
     }),
   );
 }
-
+// Public health is a 15-minute cron snapshot; the registered descriptor derives
+// the 15-minute staleTime and 30-minute refetchInterval for this hook.
 export const useHealth = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.health, { retry: 1 });
 export const usePegSummary = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary);
 

@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { CLIENT_ACTIVE_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_ACTIVE_STABLECOINS as TRACKED_STABLECOINS, loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-registry";
+import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import type { YieldType } from "@shared/types";
 
 interface CoinIndexEntry {
@@ -30,13 +34,12 @@ const COIN_INDEX_TYPE_ORDER: readonly YieldType[] = [
   "governance-set",
   "lp-receipt",
 ];
-
-function buildCoinIndexGroups(): CoinIndexGroup[] {
+function buildCoinIndexGroups(detailsById: ReadonlyMap<string, StablecoinClientDetailMeta>): CoinIndexGroup[] {
   const buckets = new Map<YieldType | "unclassified", CoinIndexEntry[]>();
 
   for (const coin of TRACKED_STABLECOINS) {
     if (!coin.flags?.yieldBearing) continue;
-    const yieldType = coin.yieldConfig?.yieldType ?? "unclassified";
+    const yieldType = detailsById.get(coin.id)?.yieldConfig?.yieldType ?? coin.yieldType ?? "unclassified";
     const list = buckets.get(yieldType);
     const entry: CoinIndexEntry = { id: coin.id, symbol: coin.symbol };
     if (list) list.push(entry);
@@ -73,7 +76,30 @@ function buildCoinIndexGroups(): CoinIndexGroup[] {
 }
 
 export function YieldCoinIndex() {
-  const groups = buildCoinIndexGroups();
+  const [detailsById, setDetailsById] = useState<ReadonlyMap<string, StablecoinClientDetailMeta>>(new Map());
+  const yieldBearingIds = useMemo(
+    () => TRACKED_STABLECOINS.filter((coin) => coin.flags?.yieldBearing).map((coin) => coin.id),
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all(yieldBearingIds.map((id) => loadClientStablecoinDetail(id))).then((details) => {
+      if (cancelled) return;
+      setDetailsById(
+        new Map(
+          details
+            .filter((detail): detail is StablecoinClientDetailMeta => detail != null)
+            .map((detail) => [detail.id, detail]),
+        ),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [yieldBearingIds]);
+
+  const groups = useMemo(() => buildCoinIndexGroups(detailsById), [detailsById]);
   if (groups.length === 0) return null;
   const totalCoins = groups.reduce((sum, group) => sum + group.coins.length, 0);
 

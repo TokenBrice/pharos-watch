@@ -84,13 +84,12 @@ describe("normalizeChangedFiles", () => {
 });
 
 describe("classifyChangedFiles", () => {
-  it("routes stablecoin registry changes to data docs and checks", () => {
+  it("routes stablecoin registry changes to data docs", () => {
     const contract = classifyChangedFiles(["shared/data/stablecoins/coins/example-usd.json"]);
 
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("stablecoin-registry");
     expect(docKeys(contract)).toContain("docs/stablecoin-data.md");
     expect(contract.checks).toContain("npm run check:stablecoin-data");
-    // The family's supply-override hard rule must reach the contract. Its exact
     // wording is owner-editable in docs/doc-ownership.json (it was reworded by
     // 38dbd97cf), so pin the invariant rather than the sentence.
     expect(contract.hardRules.some((rule: string) => /supply overrides?\b/i.test(rule))).toBe(true);
@@ -103,54 +102,46 @@ describe("classifyChangedFiles", () => {
 
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("worker-cron");
     expect(contract.background.map((doc) => doc.path)).toContain("docs/worker-and-api-limits.md");
+    expect(contract.hardRules.some((rule: string) => /six-connection trigger budget/.test(rule))).toBe(true);
     expect(contract.checks).toContain("npm run check:cron-sync");
     expect(contract.checks).toContain("npm run check:cron-connections");
-    expect(contract.hardRules.some((rule: string) => /six-connection trigger budget/.test(rule))).toBe(true);
-  });
 
-  it("routes blog publishing changes to the editorial process and its focused suites", () => {
+  });
+  it("routes blog publishing changes to the frontend contract", () => {
     const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
 
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("editorial-publishing");
-    expect(docKeys(contract)).toContain("docs/process/blog-publishing.md");
-    expect(contract.checks).toContain(
-      "npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts",
-    );
-  });
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("frontend-routes");
+    expect(docKeys(contract)).toContain("docs/architecture.md");
 
-  it("routes Telegram delivery changes to the dispatch contract and runbooks", () => {
+  });
+  it("routes Telegram delivery changes to the unified Telegram contract", () => {
     const contract = classifyChangedFiles([
-      "worker/src/lib/telegram-mini-app-auth.ts",
+      "worker/src/lib/telegram/mini-app-auth.ts",
       "shared/lib/telegram-delivery-policy.ts",
     ]);
 
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("telegram-dispatch");
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("telegram");
     expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch");
-    expect(docKeys(contract)).not.toContain("docs/telegram-mini-app.md");
-  });
 
-  it("routes feedback verification changes to the feedback contract", () => {
+  });
+  it("routes feedback verification changes to the Worker API contract", () => {
     const contract = classifyChangedFiles(["worker/src/api/feedback/verification.ts"]);
 
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("feedback");
-    expect(docKeys(contract)).toContain("docs/feedback-pipeline.md");
-  });
+    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("worker-api-auth");
+    expect(docKeys(contract)).toContain("docs/api-endpoint-authoring.md");
 
+  });
   it("routes repo-local agent config changes to agent process guidance", () => {
     const contract = classifyChangedFiles([
       ".codex/config.toml",
       ".claude/settings.json",
       "scripts/ci/pharos-change-contract.ts",
     ]);
-
+    expect(contract.checks).toContain("npm run check:generated-artifacts -- --only=agents-doc");
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("agent-hooks-process");
     expect(docKeys(contract)).toContain("docs/process/agent-artifacts.md");
-    expect(contract.checks).toContain("npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts");
   });
-});
-
-describe("formatContract", () => {
-  it("includes docs, checks, warnings, and deploy impact in text output", () => {
+  it("includes docs, warnings, and deploy impact in text output", () => {
     const contract = classifyChangedFiles(["worker/migrations/0123_example.sql"]);
     const text = formatContract(contract);
 
@@ -179,26 +170,27 @@ describe("representative --file routing", () => {
     return classifyChangedFiles([file]);
   }
 
-  it("routes a screener component to the exact screener contract", () => {
+  it("routes a screener component through the shared frontend route contract", () => {
     const contract = route("src/components/screener/screener-table.tsx");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("screener");
-    expect(docKeys(contract)).toContain("docs/screener-page.md");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
+    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract).length).toBeLessThanOrEqual(3);
     expect(contract.checks).toContain("npm run typecheck");
   });
 
-  it("routes the yield cron to yield engineering and operations docs", () => {
+  it("routes the yield cron to the shared cron contract", () => {
     const contract = route("worker/src/cron/yield-coverage-audit.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("yield-cron");
-    expect(docKeys(contract).slice(0, 2)).toEqual([
-      "docs/yield-intelligence.md#engineering-contract",
-      "docs/yield-intelligence-operations.md",
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("worker-cron");
+    expect(docKeys(contract).slice(0, 3)).toEqual([
+      "docs/process/cron-trigger-policy.md",
+      "docs/worker-infrastructure.md#module-initialization",
+      "docs/process/agent-start-here.md",
     ]);
     expect(contract.scopedContext.slice(0, 2)).toEqual([
       "worker/src/cron/AGENTS.md",
       "worker/AGENTS.md",
     ]);
     expect(contract.checks).toContain("npm run check:cron-sync");
-    expect(docKeys(contract)).not.toContain("docs/methodology-page.md");
   });
 
   it("routes a coin record to the addition procedure and scoped context", () => {
@@ -212,44 +204,45 @@ describe("representative --file routing", () => {
     expect(contract.checks).toContain("npm run check:stablecoin-data");
   });
 
-  it("routes the digest safety-map type contract to both anchored owners", () => {
+  it("routes the digest safety-map type contract to the V9 publication owner", () => {
     const contract = route("shared/types/digest-safety-map-contract.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("digest-safety-map");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("safety-score-v9");
     expect(docKeys(contract)).toContain("docs/digest-pipeline.md#generation");
-    expect(docKeys(contract)).toContain("docs/safety-score-map.md#digest-map-pairing-bounded-carry-forward");
-    expect(contract.checks).toContain("npm run check:cron-sync");
+    expect(docKeys(contract)).toContain("docs/safety-score-map.md");
+    expect(contract.checks).toContain("npm run check:doc-sync");
   });
 
-  it("routes the homepage entrypoint to the homepage contract", () => {
+  it("routes the homepage entrypoint through the shared frontend route contract", () => {
     const contract = route("src/app/page.tsx");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("homepage");
-    expect(docKeys(contract)).toContain("docs/homepage.md");
-    expect(contract.checks).toContain("npm run build");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
+    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract).length).toBeLessThanOrEqual(3);
+    expect(contract.checks).toContain("npm run typecheck");
   });
 
-  it("routes Next configuration to frontend and Pages hosting owners", () => {
+  it("routes Next configuration to frontend and deployment owners", () => {
     const contract = route("next.config.ts");
     expect(contract.mappings.map((mapping) => mapping.id)).toEqual(
-      expect.arrayContaining(["frontend-routes", "pages-functions-hosting"]),
+      expect.arrayContaining(["frontend-routes", "validation-ci-policy"]),
     );
-    expect(docKeys(contract)).toContain("docs/operator-origin-access.md#pages-functions-proxy");
-    expect(contract.checks).toEqual(expect.arrayContaining(["npm run build", "npm run check:env-contract"]));
+    expect(docKeys(contract)).toContain("docs/deployment-process.md");
   });
 
-  it("routes Telegram API ingress without loading dispatch or Mini App docs", () => {
+  it("routes Telegram API ingress to the unified Telegram contract", () => {
     const contract = route("worker/src/api/telegram-webhook.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram-api");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram");
     expect(docKeys(contract)).toContain("docs/telegram-architecture.md#1-ingress");
-    expect(docKeys(contract)).not.toContain("docs/telegram-alerts.md#dispatch");
-    expect(docKeys(contract)).not.toContain("docs/telegram-mini-app.md");
-    expect(contract.checks).toContain("npm run test:critical-contracts");
+    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch");
+    expect(docKeys(contract)).toContain("docs/telegram-mini-app.md");
+    expect(contract.checks).toContain("npm run typecheck");
   });
 
-  it("routes Telegram command handlers to the commands contract", () => {
+  it("routes Telegram command handlers to the unified Telegram contract", () => {
     const contract = route("worker/src/api/webhook-commands/subscribe.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram-commands");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram");
     expect(docKeys(contract)).toContain("docs/telegram-alerts.md#commands");
-    expect(docKeys(contract)).not.toContain("docs/telegram-architecture.md#1-ingress");
+    expect(docKeys(contract)).toContain("docs/telegram-architecture.md#1-ingress");
+    expect(contract.checks).toContain("npm run typecheck");
   });
 
   it("keeps dynamic guidance out of Read first", () => {
@@ -439,47 +432,31 @@ describe("Codex hook outputs", () => {
     });
   });
 
-  it("emits bounded read, scoped-context, and focused-check lines for a routed file", () => {
+  it("emits bounded read and scoped-context lines for a routed file", () => {
     const context = buildSessionStartContext(classifyChangedFiles(["src/app/page.tsx"]));
 
     expect(context.split("\n")).toEqual([
       "Pharos change contract — explicit files (1 files) — deploy: pages=y, worker=n",
-      "Read first: docs/homepage.md, docs/agent-task-router.md, docs/architecture.md",
+      "Read first: docs/architecture.md, docs/process/agent-start-here.md",
       "Scoped context: src/app/AGENTS.md, src/AGENTS.md",
-      "Focused checks: npm run lint:changed, npm run typecheck, npm run build, npm run seo:check",
+      "Focused checks: npm run lint:changed, npm run typecheck, npx vitest run src",
       "Route a planned path: npm run agent:route -- --file <path>",
     ]);
     expect(context).not.toContain("Hints:");
     expect(context).not.toContain("Core rules:");
   });
 
-  it("keeps specific yield docs ahead of fallback docs at the four-doc cap", () => {
+  it("keeps the cron contract ahead of its runtime fallback", () => {
     const context = buildSessionStartContext(
       classifyChangedFiles(["worker/src/cron/yield-coverage-audit.ts"]),
     );
 
     expect(context).toContain(
-      "Read first: docs/yield-intelligence.md#engineering-contract, docs/yield-intelligence-operations.md, docs/agent-task-router.md, docs/process/cron-trigger-policy.md",
+      "Read first: docs/process/cron-trigger-policy.md, docs/worker-infrastructure.md#module-initialization, docs/process/agent-start-here.md",
     );
-    expect(context).not.toContain("Read first: docs/worker-infrastructure.md");
-  });
-
-  it("reads the agent:route alias from package.json", () => {
-    const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
-      scripts: Record<string, string>;
-    };
-
-    expect(packageJson.scripts["agent:route"]).toBe("node --import tsx scripts/ci/pharos-change-contract.ts");
-  });
-
-  it("emits no decision for an allowed Codex-shaped PreToolUse Bash payload", () => {
-    expect(
-      buildPreToolUseHookOutput({
-        hook_event_name: "PreToolUse",
-        tool_name: "Bash",
-        tool_input: { command: "git status" },
-      }),
-    ).toEqual({});
+    expect(context).toContain(
+      "Focused checks: npm run lint:changed, npm run typecheck:worker, npm run check:cron-sync, npm run check:cron-connections",
+    );
   });
 
   it("emits no decision for an allowed PermissionRequest", () => {

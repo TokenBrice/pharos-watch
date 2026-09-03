@@ -12,7 +12,7 @@ import {
   recordTelegramTransportOutcomes,
   resumeTelegramDelivery,
   setTelegramDeliveryPause,
-} from "../telegram-transport-control";
+} from "../telegram/transport-control";
 import type { SendToChatResult } from "../telegram";
 
 const NOW = 1_800_000_000;

@@ -15,28 +15,26 @@ function writer() {
 }
 
 describe("focused checks", () => {
-  it("uses component ownership checks without selecting Worker checks", () => {
+  it("uses the collapsed frontend route checks without selecting Worker checks", () => {
     const plan = buildFocusedCheckPlan(["src/components/query-error-notice.tsx"]);
 
     expect(plan.checks).toEqual([
-      { command: "npm run lint:changed", source: "frontend-components" },
-      { command: "npm run typecheck", source: "frontend-components" },
-      { command: "npx vitest run src/components", source: "frontend-components" },
+      { command: "npm run lint:changed", source: "frontend-routes" },
+      { command: "npm run typecheck", source: "frontend-routes" },
+      { command: "npx vitest run src", source: "frontend-routes" },
     ]);
     expect(plan.fallbackOnlyPaths).toBe(0);
   });
 
-  it("uses fallback checks when a path has no specific ownership mapping", () => {
+  it("uses the collapsed frontend defaults for an unclassified source path", () => {
     const plan = buildFocusedCheckPlan(["src/unclassified.ts"]);
 
     expect(plan.checks).toEqual([
       { command: "npm run lint:changed", source: "frontend-routes" },
       { command: "npm run typecheck", source: "frontend-routes" },
-      { command: "npm run build", source: "frontend-routes" },
-      { command: "npm run seo:check", source: "frontend-routes" },
       { command: "npx vitest run src", source: "frontend-routes" },
     ]);
-    expect(plan.fallbackOnlyPaths).toBe(1);
+    expect(plan.fallbackOnlyPaths).toBe(0);
   });
 
   it("parses repeatable files and source selection flags strictly", () => {
@@ -62,7 +60,7 @@ describe("focused checks", () => {
     expect(plan.checks.map((check) => check.command)).toEqual([
       "npm run lint:changed -- --base=origin/main",
       "npm run typecheck",
-      "npx vitest run src/components",
+      "npx vitest run src",
     ]);
   });
 
@@ -80,16 +78,16 @@ describe("focused checks", () => {
 
     expect(runCommandImpl).not.toHaveBeenCalled();
     expect(stdout.output()).toContain("Focused check plan:");
-    expect(stdout.output()).toContain("- npm run typecheck  (frontend-components)");
+    expect(stdout.output()).toContain("- npm run typecheck  (frontend-routes)");
     expect(stdout.output()).not.toContain("npm run build");
   });
 
-  it("reports fallback-only paths in text plans", async () => {
+  it("reports documentation fallback paths in text plans", async () => {
     const stdout = writer();
     const stderr = writer();
 
     await expect(runFocusedChecks({
-      argv: ["--file", "src/unclassified.ts", "--plan-only"],
+      argv: ["--file", "docs/testing.md", "--plan-only"],
       stderr,
       stdout,
     })).resolves.toBe(0);
@@ -114,9 +112,9 @@ describe("focused checks", () => {
       status: "planned",
     });
     expect(report.checks).toEqual([
-      { command: "npm run lint:changed", source: "frontend-components" },
-      { command: "npm run typecheck", source: "frontend-components" },
-      { command: "npx vitest run src/components", source: "frontend-components" },
+      { command: "npm run lint:changed", source: "frontend-routes" },
+      { command: "npm run typecheck", source: "frontend-routes" },
+      { command: "npx vitest run src", source: "frontend-routes" },
     ]);
     expect(report.lanes).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -140,7 +138,7 @@ describe("focused checks", () => {
     }));
 
     await expect(runFocusedChecks({
-      argv: ["--file", "shared/lib/format.ts"],
+      argv: ["--file", "src/components/query-error-notice.tsx"],
       runCommandImpl: runCommandImpl as never,
       stderr,
       stdout,
@@ -155,9 +153,9 @@ describe("focused checks", () => {
 describe("smallest-adequate matrix routing", () => {
   it.each([
     {
-      area: "Shared shared/lib",
+      area: "Shared runtime",
       file: "shared/lib/format.ts",
-      checks: ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npx vitest run shared/lib"],
+      checks: [],
     },
     {
       area: "Worker cron",
@@ -173,12 +171,19 @@ describe("smallest-adequate matrix routing", () => {
     {
       area: "src/components",
       file: "src/components/query-error-notice.tsx",
-      checks: ["npm run lint:changed", "npm run typecheck", "npx vitest run src/components"],
+      checks: ["npm run lint:changed", "npm run typecheck", "npx vitest run src"],
     },
     {
       area: "API route",
       file: "worker/src/api/og.tsx",
-      checks: ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts"],
+      checks: [
+        "npm run lint:changed",
+        "npm run typecheck",
+        "npm run typecheck:worker",
+        "npm run test:critical-contracts",
+        "npm run check:site-csp-sync",
+        "npm run check:frozen-invariants",
+      ],
     },
     {
       area: "D1 migration",
@@ -200,12 +205,7 @@ describe("smallest-adequate matrix routing", () => {
     {
       area: "Docs-only",
       file: "docs/testing.md",
-      checks: [
-        "npm run check:verified-doc-links",
-        "npm run check:doc-source-paths",
-        "npm run check:doc-sync",
-        "npm run check:generated-artifacts -- --only=agents-doc",
-      ],
+      checks: [],
     },
   ])("keeps the $area row exactly represented by routed checks", ({ file, checks }) => {
     const routed = buildFocusedCheckPlan([file]).checks.map((check) => check.command);

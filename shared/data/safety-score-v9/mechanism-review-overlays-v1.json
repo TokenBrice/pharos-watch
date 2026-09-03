@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios or evidence-backed qualitative legal and custody facts (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund, fiat-cash, tbill). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9-extension-mechanism.ts.",
+  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios or evidence-backed qualitative legal and custody facts (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund, fiat-cash, tbill). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9/extension-mechanism.ts.",
   "overlays": [
     {
       "assetId": "bd-basedollar",

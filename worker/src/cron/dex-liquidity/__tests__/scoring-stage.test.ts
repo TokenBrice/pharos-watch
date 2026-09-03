@@ -19,6 +19,7 @@ import {
   type DexLiquidityScoringStageChunk,
 } from "../scoring-stage";
 import type { LiquidityMetrics, PoolEntry } from "../types";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const openDatabases: ReturnType<typeof createLatestSchemaSqlite>["sqlite"][] = [];
 const textEncoder = new TextEncoder();
@@ -69,7 +70,7 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
     return wrapped;
   };
 
-  const injectedDb = {
+  const injectedDb = makeNoopD1({
     prepare: (sql: string) => wrapStatement(db.prepare(sql), sql),
     batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
       const result = await db.batch<T>(
@@ -77,7 +78,7 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
       );
       return result;
     },
-  } as unknown as D1Database;
+  });
 
   return {
     db: injectedDb,
@@ -672,7 +673,7 @@ describe("DEX liquidity scoring stage", () => {
   });
 
   it("reports scoring-stage cleanup errors without throwing", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -680,7 +681,7 @@ describe("DEX liquidity scoring stage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const retention = await pruneScoringStages(db, "current-ready", 100_000);
 

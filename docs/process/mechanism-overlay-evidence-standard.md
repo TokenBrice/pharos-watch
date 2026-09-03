@@ -3,7 +3,7 @@
 Status: canonical. Ratified by the owner on 2026-07-27 (wave-7 decision D3); extended to the
 `commodity-claim` archetype by methodology v9.14. This is the owner-approved evidence standard
 referenced by the compiler-bounded overlay gate in
-`worker/src/lib/safety-score-v9-extension-mechanism.ts`. Until this document existed, curated
+`worker/src/lib/safety-score-v9/extension-mechanism.ts`. Until this document existed, curated
 overlay claims on fiat-cash and tbill mechanism components were procedurally forbidden; they
 are now admissible only under the rules below.
 
@@ -73,7 +73,7 @@ Wave-6 packet research produced the canonical negative examples; they remain the
   - **Do not use `unavailable` on the auto-known assurance component without checking
     `proofOfReserves.latestReport` first.** `assuranceAndReconciliation` (fiat-cash,
     commodity-claim) and `lossRecoveryDesign` (tbill) are the one case where the compiler
-    fallback (`assuranceFact()` in `worker/src/lib/safety-score-v9-extension-mechanism.ts`)
+    fallback (`assuranceFact()` in `worker/src/lib/safety-score-v9/extension-mechanism.ts`)
     can already be `known` rather than bounded. `expandOverlayReview` gives any curated
     component entry priority over that fallback, so a curated `unavailable` row on that
     field demotes a known fact to bounded-unknown with no warning. When the asset's

@@ -28,7 +28,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
 
 const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
-const { resolveTicker } = await import("../../lib/telegram-alerts");
+const { resolveTicker } = await import("../../lib/telegram/alerts");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 

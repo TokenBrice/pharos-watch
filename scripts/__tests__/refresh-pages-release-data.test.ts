@@ -15,9 +15,10 @@ function fixture() {
   const repoRoot = mkdtempSync(join(tmpdir(), "pages-release-refresh-test-"));
   tempDirs.push(repoRoot);
   mkdirSync(join(repoRoot, "data"));
+  mkdirSync(join(repoRoot, "data/depeg-events"));
   mkdirSync(join(repoRoot, "public/datasets"), { recursive: true });
   writeFileSync(join(repoRoot, "data/digests.json"), JSON.stringify([{ id: 1 }, { id: 2 }]));
-  writeFileSync(join(repoRoot, "data/depeg-events.json"), JSON.stringify([{ id: "old" }]));
+  writeFileSync(join(repoRoot, "data/depeg-events/index.json"), JSON.stringify([{ id: "old" }]));
   writeFileSync(join(repoRoot, "public/datasets/latest.json"), "committed\n");
   const refreshDir = join(repoRoot, "refresh");
   const summaryPath = join(repoRoot, "summary.md");
@@ -53,7 +54,7 @@ describe("Pages release data refresh", () => {
     expect(result.depegEvents.ok).toBe(true);
     expect(result.publicDatasets.ok).toBe(true);
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8"))).toHaveLength(2);
-    expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events.json"), "utf8"))).toEqual([{ id: "new" }]);
+    expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events/index.json"), "utf8"))).toEqual([{ id: "new" }]);
     expect(readFileSync(paths.summaryPath, "utf8")).toContain("- Digest refresh: false (2 entries)");
   });
 
@@ -111,6 +112,6 @@ describe("Pages release data refresh", () => {
     expect(result.publicDatasets).toEqual({ ok: false, rolledBack: true });
     expect(readFileSync(datasetPath, "utf8")).toBe("committed\n");
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8"))).toHaveLength(3);
-    expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events.json"), "utf8"))).toEqual([{ id: "new" }]);
+    expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events/index.json"), "utf8"))).toEqual([{ id: "new" }]);
   });
 });

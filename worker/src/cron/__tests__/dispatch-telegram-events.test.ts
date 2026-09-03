@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTelegramDispatchEvents } from "../dispatch-telegram-events";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
   buildAlertContextLines: vi.fn(),
@@ -99,7 +100,7 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("suppresses resolved lines when a depeg closes and reopens in the same window", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({
         bind: vi.fn(() => ({
           all: vi.fn(async () => ({
@@ -114,7 +115,7 @@ describe("buildTelegramDispatchEvents", () => {
           })),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const events = await buildTelegramDispatchEvents(
       db,
@@ -293,7 +294,7 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("does not emit resolved lines for coverage-loss closures", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({
         bind: vi.fn(() => ({
           all: vi.fn(async () => ({
@@ -309,7 +310,7 @@ describe("buildTelegramDispatchEvents", () => {
           })),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const events = await buildTelegramDispatchEvents(
       db,
@@ -343,7 +344,7 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("allows native-quote recoveries without fabricating a recovery price", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({
         bind: vi.fn(() => ({
           all: vi.fn(async () => ({
@@ -359,7 +360,7 @@ describe("buildTelegramDispatchEvents", () => {
           })),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const events = await buildTelegramDispatchEvents(
       db,

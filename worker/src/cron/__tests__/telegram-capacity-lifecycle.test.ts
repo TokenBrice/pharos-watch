@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { readTelegramPendingCapacity } from "../../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacity } from "../../lib/telegram/pending-capacity";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function setup(): { sqlite: DatabaseSync; db: D1Database } {

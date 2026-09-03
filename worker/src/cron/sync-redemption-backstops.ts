@@ -12,19 +12,19 @@ import {
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
-import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves-store";
+import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves/store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
 import {
   buildFailedRedemptionBackstopEntry,
   buildRedemptionBackstopEntry,
   resolveRedemptionBackstopEntry,
-} from "../lib/redemption-backstop-sources";
+} from "../lib/redemption-backstop/sources";
 import {
   buildRedemptionCurrentDepegObservationMap,
   formatUtcDate,
   loadSevereActiveDepegAvailabilityMap,
-} from "../lib/redemption-backstop-availability";
-import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop-route-status";
+} from "../lib/redemption-backstop/availability";
+import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop/route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { throwIfAborted } from "../lib/abort";
 import { fnv1aHash } from "../lib/hash";
@@ -155,7 +155,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   // Staleness is tracked for operational visibility (degraded-run signal +
   // metadata) and does not suppress the route score. Aligns with the
   // report-card path, which also uses the last-known DEX score when stale —
-  // see the native capture at `worker/src/lib/safety-score-v9-capture.ts`.
+  // see the native capture at `worker/src/lib/safety-score-v9/capture.ts`.
   let liquidityStale = false;
   if (latestUpdatedAt == null) {
     logWorkerEventArgs("handler", "warn", "[sync-redemption-backstops] Liquidity data is missing");

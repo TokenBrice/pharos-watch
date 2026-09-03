@@ -3,7 +3,7 @@ import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism
 import {
   expandOverlayReview,
   MechanismReviewOverlaySchema,
-} from "../safety-score-v9-extension-mechanism";
+} from "../safety-score-v9/extension-mechanism";
 
 const EVIDENCE_ONLY_TARGETS = {
   "usdgo-osl": [],

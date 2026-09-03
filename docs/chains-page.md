@@ -24,7 +24,7 @@ Contract for the public chain analytics surfaces:
 
 The leaderboard is public and indexable. The profile routes are statically generated from `getActiveChainIds()`, which currently returns the sorted `CHAIN_META` key set.
 
-`CHAIN_META` membership is not only a display concern. `resolveChainId()` is what turns a raw DefiLlama supply label into a canonical chain identity, so an unregistered label is pooled into the Safety Score V9 uncanonicalized-chain-label row (`safety-score-v9-extension-supply.ts`). Above the common-mode materiality floor that pool fails closed into `unresolved-control-identity`, no matter how well the asset's other deployments are reviewed. Registering a chain is therefore the precondition for attributing its supply — it names the chain, but a reviewed `bridgeRouteRisk` route for that chain is still what clears the residual.
+`CHAIN_META` membership is not only a display concern. `resolveChainId()` is what turns a raw DefiLlama supply label into a canonical chain identity, so an unregistered label is pooled into the Safety Score V9 uncanonicalized-chain-label row (`worker/src/lib/safety-score-v9/extension-supply.ts`). Above the common-mode materiality floor that pool fails closed into `unresolved-control-identity`, no matter how well the asset's other deployments are reviewed. Registering a chain is therefore the precondition for attributing its supply — it names the chain, but a reviewed `bridgeRouteRisk` route for that chain is still what clears the residual.
 
 ---
 

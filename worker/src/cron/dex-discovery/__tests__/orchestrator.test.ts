@@ -5,7 +5,6 @@ import type { ContractDeployment } from "@shared/types/core";
 import type { DiscoveryMeta } from "../types";
 import { DISCOVERY_TIERS } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
-import { DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC } from "../../dex-liquidity/deployment-census-coverage";
 import {
   compareDiscoveryMeta,
   computeEffectiveTier,
@@ -16,48 +15,48 @@ import {
 const nowSec = 1710000000;
 
 describe("computeEffectiveTier", () => {
-  it("applies base tiers and cadence gating", () => {
+  it("applies base tiers and weekly cadence gating", () => {
     expect(computeEffectiveTier("coin-a", 0, 0, undefined, 1, nowSec)).toBe("t1");
     expect(computeEffectiveTier("coin-a", 3, 1, undefined, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier("coin-a", 3, 1, undefined, 3, nowSec)).toBe("t2");
+    expect(computeEffectiveTier("coin-91", 3, 1, undefined, 84, nowSec)).toBe("t2");
     expect(computeEffectiveTier("coin-d", 5, 2, undefined, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier("coin-d", 5, 2, undefined, 10, nowSec)).toBe("t3");
+    expect(computeEffectiveTier("coin-91", 5, 2, undefined, 84, nowSec)).toBe("t3");
   });
 
-  it("shards lower-tier cadence by stablecoin id instead of batching whole tiers", () => {
-    expect(computeEffectiveTier("coin-a", 3, 1, undefined, 3, nowSec)).toBe("t2");
-    expect(computeEffectiveTier("coin-b", 3, 1, undefined, 3, nowSec)).toBe("skip");
-    expect(computeEffectiveTier("coin-b", 3, 1, undefined, 1, nowSec)).toBe("t2");
+  it("shards lower-tier weekly cadence by stablecoin id", () => {
+    expect(computeEffectiveTier("coin-91", 3, 1, undefined, 84, nowSec)).toBe("t2");
+    expect(computeEffectiveTier("coin-92", 3, 1, undefined, 84, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-92", 3, 1, undefined, 85, nowSec)).toBe("t2");
   });
 
   it("demotes missed coins to lower cadences", () => {
     const meta: DiscoveryMeta = {
-      stablecoinId: "x",
+      stablecoinId: "coin-91",
       consecutiveMisses: 5,
       lastCrawlAt: nowSec - 100,
       lastHitAt: null,
     };
 
-    expect(computeEffectiveTier("coin-a", 0, 0, meta, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier("coin-a", 0, 0, meta, 3, nowSec)).toBe("t2");
+    expect(computeEffectiveTier("coin-91", 0, 0, meta, 1, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec)).toBe("t2");
   });
 
   it("puts long-miss coins into dormant mode with daily gating", () => {
     const recentDormant: DiscoveryMeta = {
-      stablecoinId: "x",
+      stablecoinId: "coin-91",
       consecutiveMisses: 10,
       lastCrawlAt: nowSec - 100,
       lastHitAt: null,
     };
     const staleDormant: DiscoveryMeta = {
-      stablecoinId: "x",
+      stablecoinId: "coin-91",
       consecutiveMisses: 10,
       lastCrawlAt: nowSec - 86401,
       lastHitAt: null,
     };
 
-    expect(computeEffectiveTier("coin-a", 0, 0, recentDormant, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier("coin-d", 0, 0, staleDormant, 10, nowSec)).toBe("dormant");
+    expect(computeEffectiveTier("coin-91", 0, 0, recentDormant, 1, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-91", 0, 0, staleDormant, 84, nowSec)).toBe("dormant");
   });
 });
 
@@ -182,46 +181,47 @@ describe("verified-empty census cadence (ODR-B1a)", () => {
   }
 
   it("holds a census-adequate tier across a long zero-pool run sequence", () => {
-    const runCount = 120;
-    const { tiers, crawlRuns } = simulateZeroPoolRuns("coin-d", true, runCount);
+    const runCount = 1_000;
+    const { tiers, crawlRuns } = simulateZeroPoolRuns("coin-91", true, runCount);
 
     // The ladder still backs the coin off, it just never reaches dormant.
     expect(tiers.some((tier) => tier === "t1")).toBe(true);
     expect(tiers.some((tier) => tier === "t3")).toBe(true);
     expect(tiers).not.toContain("dormant");
 
-    // Its own correct answer can no longer age itself out of the census: the
-    // widest crawl gap stays inside the freshness bound the census is judged by.
+    // Weekly t3 cadence is the explicit freshness contract for this replay.
     const gapRuns = maxGapRuns(crawlRuns, runCount);
     expect(gapRuns).toBeLessThanOrEqual(DISCOVERY_TIERS.T3_MODULO);
-    expect(gapRuns * RUN_INTERVAL_SEC).toBeLessThanOrEqual(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+    expect(gapRuns * RUN_INTERVAL_SEC).toBe(
+      DISCOVERY_TIERS.T3_MODULO * RUN_INTERVAL_SEC,
+    );
   });
 
   it("still demotes an unanswered zero-pool footprint to dormant", () => {
-    const { tiers } = simulateZeroPoolRuns("coin-d", false, 120);
+    const { tiers } = simulateZeroPoolRuns("coin-91", false, 1_000);
     expect(tiers).toContain("dormant");
   });
 
   it("keeps the dormant ladder for a coin whose census is not verified empty", () => {
     const meta: DiscoveryMeta = {
-      stablecoinId: "x",
+      stablecoinId: "coin-91",
       consecutiveMisses: DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES,
       lastCrawlAt: nowSec - DISCOVERY_TIERS.DORMANT_INTERVAL_SEC - 1,
       lastHitAt: null,
     };
-    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, false)).toBe("dormant");
-    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, true)).toBe("t3");
+    expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, false)).toBe("dormant");
+    expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, true)).toBe("t3");
   });
 
   it("never returns the dormant daily skip for a verified-empty census", () => {
     const meta: DiscoveryMeta = {
-      stablecoinId: "x",
+      stablecoinId: "coin-91",
       consecutiveMisses: 114,
       lastCrawlAt: nowSec - 100,
       lastHitAt: null,
     };
-    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, false)).toBe("skip");
-    expect(computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec, true)).toBe("t3");
+    expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, false)).toBe("skip");
+    expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, true)).toBe("t3");
   });
 });
 
@@ -294,25 +294,25 @@ describe("backoff reset integration", () => {
 
   it("dormant coin becomes eligible after 24h", () => {
     const meta: DiscoveryMeta = {
-      stablecoinId: "test-coin",
+      stablecoinId: "coin-91",
       consecutiveMisses: 15,
       lastCrawlAt: nowSec - 86401,
       lastHitAt: null,
     };
 
-    const tier = computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec);
+    const tier = computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec);
     expect(tier).not.toBe("skip");
   });
 
   it("dormant coin with recent crawl is skipped", () => {
     const meta: DiscoveryMeta = {
-      stablecoinId: "test-coin",
+      stablecoinId: "coin-91",
       consecutiveMisses: 15,
       lastCrawlAt: nowSec - 3600,
       lastHitAt: null,
     };
 
-    const tier = computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec);
+    const tier = computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec);
     expect(tier).toBe("skip");
   });
 });

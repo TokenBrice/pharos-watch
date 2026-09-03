@@ -27,10 +27,10 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
   loadExactDexPublicationGeneration: mocks.loadDexGeneration,
 }));
 
-vi.mock("../../lib/safety-score-v9-native-input", async (importOriginal) => {
+vi.mock("../../lib/safety-score-v9/native-input", async (importOriginal) => {
   const original =
     await importOriginal<
-      typeof import("../../lib/safety-score-v9-native-input")
+      typeof import("../../lib/safety-score-v9/native-input")
     >();
   return {
     ...original,
@@ -38,10 +38,10 @@ vi.mock("../../lib/safety-score-v9-native-input", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/safety-score-v9-peg-provenance", async (importOriginal) => {
+vi.mock("../../lib/safety-score-v9/peg-provenance", async (importOriginal) => {
   const original =
     await importOriginal<
-      typeof import("../../lib/safety-score-v9-peg-provenance")
+      typeof import("../../lib/safety-score-v9/peg-provenance")
     >();
   return {
     ...original,
@@ -50,11 +50,11 @@ vi.mock("../../lib/safety-score-v9-peg-provenance", async (importOriginal) => {
 });
 
 vi.mock(
-  "../../lib/safety-score-v9-supply-attribution-generation",
+  "../../lib/safety-score-v9/supply-attribution-generation",
   async (importOriginal) => {
     const original =
       await importOriginal<
-        typeof import("../../lib/safety-score-v9-supply-attribution-generation")
+        typeof import("../../lib/safety-score-v9/supply-attribution-generation")
       >();
     return {
       ...original,
@@ -73,12 +73,12 @@ vi.mock("../../lib/report-card-evidence-journal-store", () => ({
     mocks.loadEvidenceJournalById,
 }));
 
-vi.mock("../../lib/safety-score-v9-supply-attribution-journal-store", () => ({
+vi.mock("../../lib/safety-score-v9/supply-attribution-journal-store", () => ({
   loadSupplyAttributionJournalByIdV1:
     mocks.loadSupplyAttributionJournalById,
 }));
 
-vi.mock("../../lib/safety-score-v9-publication-runner", () => ({
+vi.mock("../../lib/safety-score-v9/publication-runner", () => ({
   runSafetyScoreV9Publication: mocks.runPublication,
 }));
 
@@ -206,8 +206,8 @@ describe("computeSafetyScoreV9", () => {
 
   it("degrades without publishing when the fixed-input cache row is still a v1 envelope (deploy-window overlap)", async () => {
     const actualNativeInput = await vi.importActual<
-      typeof import("../../lib/safety-score-v9-native-input")
-    >("../../lib/safety-score-v9-native-input");
+      typeof import("../../lib/safety-score-v9/native-input")
+    >("../../lib/safety-score-v9/native-input");
     mocks.parseFixedInput.mockImplementationOnce(
       actualNativeInput.parseNativeV9InputCacheArtifact,
     );

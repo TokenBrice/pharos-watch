@@ -14,7 +14,7 @@ import {
   it,
 } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
@@ -33,9 +33,9 @@ describe("Safety Score V9 canonical publication resource budget", {
       stdin: {
         contents: `
           import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
-          import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9-candidate.ts";
-          import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9-publication-codec.ts";
-          import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9-publication-assessment.ts";
+          import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
+          import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
+          import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
 
           const input = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());

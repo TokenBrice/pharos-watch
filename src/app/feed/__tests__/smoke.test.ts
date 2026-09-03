@@ -33,10 +33,10 @@ function makeDepegEvent(overrides: Record<string, unknown> = {}): Record<string,
 async function importDepegRouteWithData(raw: string | null) {
   vi.resetModules();
   const root = mkdtempRoot();
-  const dataDir = join(root, "data");
+  const dataDir = join(root, "data/depeg-events");
   mkdirSync(dataDir, { recursive: true });
   if (raw !== null) {
-    writeFileSync(join(dataDir, "depeg-events.json"), raw, "utf8");
+    writeFileSync(join(dataDir, "2023.json"), raw, "utf8");
   }
 
   const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(root);
@@ -110,13 +110,11 @@ describe("feed routes smoke", () => {
     const xml = await res.text();
     expect(xml).toContain("<title>Pharos Depeg Events</title>");
     expect(xml).toContain("<channel>");
-    // data/depeg-events.json carries a committed seed (newest window + the
+    // data/depeg-events/ carries a committed seed (newest window + the
     // grow-only archive set); CI sync refreshes it at build. The route
     // empty-channel branch still exists for the case where the file becomes [].
-    const { DepegEventStoredSnapshotSchema } = await import("@shared/types/market");
-    const seeded = DepegEventStoredSnapshotSchema.parse(
-      (await import("../../../../data/depeg-events.json")).default,
-    );
+    const { readDepegEventSnapshot } = await import("@/lib/depeg-event-snapshot");
+    const seeded = readDepegEventSnapshot({ missing: "throw" });
     const { selectStaticDepegEventPages } = await import("@/lib/depeg-event-config");
     const newest = selectStaticDepegEventPages(seeded)[0];
     expect(newest).toBeDefined();
@@ -137,7 +135,7 @@ describe("feed routes smoke", () => {
 
   it("depeg route throws on malformed events JSON", async () => {
     const mod = await importDepegRouteWithData("{not json");
-    await expect(mod.GET()).rejects.toThrow(/Failed to parse .*depeg-events\.json as JSON/);
+    await expect(mod.GET()).rejects.toThrow(/Failed to parse .*depeg-events.*\.json as JSON/);
   });
 
   it("depeg route throws on non-array events JSON", async () => {

@@ -1,242 +1,11 @@
+import {
+  collectOwningTests,
+  deriveCriticalOwnership,
+  normalizeOwnershipPath,
+  type CriticalOwnership,
+} from "./critical-ownership.mts";
 import { CRITICAL_FILES } from "./critical-coverage.mjs";
-
-export const CRITICAL_TEST_FILES: string[] = [
-  "src/lib/__tests__/api-fetch-contracts.test.ts",
-  "src/lib/__tests__/critical-invariants.test.ts",
-  "worker/src/__tests__/index.scheduled.test.ts",
-  "worker/src/lib/__tests__/api-response.test.ts",
-  "worker/src/lib/__tests__/api-params.test.ts",
-  "worker/src/lib/__tests__/api-history.test.ts",
-  "worker/src/lib/__tests__/api-cache-read.test.ts",
-  "worker/src/lib/__tests__/api-json-body.test.ts",
-  "worker/src/lib/__tests__/api-schema.test.ts",
-  "worker/src/lib/__tests__/api-freshness.test.ts",
-  "worker/src/lib/__tests__/api-pagination.test.ts",
-  "worker/src/lib/__tests__/api-keys.test.ts",
-  "worker/src/handlers/http/__tests__/gates.test.ts",
-  "worker/src/lib/__tests__/auth.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-auth.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-auth-lifecycle.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-rate-limits-commands.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-setup-access.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-subscriptions-settings.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-subscriptions-settings-settings.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callback-confirmations.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-coinsnooze.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-discoverability.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-forget.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-settings.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-setup.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-timezone.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-usage-analytics.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-callbacks-watchlist.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-effect-fence.test.ts",
-  "worker/src/api/__tests__/telegram-inline-queries.test.ts",
-  "worker/src/api/__tests__/telegram-webhook-setup-adoption.test.ts",
-  "worker/src/api/__tests__/telegram-mini-app.test.ts",
-  "worker/src/api/__tests__/telegram-mini-app-mutation.test.ts",
-  "worker/src/api/__tests__/telegram-mini-app-portability.test.ts",
-  "worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts",
-  "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
-  "shared/lib/__tests__/telegram-mini-app-contract.test.ts",
-  "src/app/pharoswatchbot/app/page.test.tsx",
-  "src/app/pharoswatchbot/app/mini-app-api.test.ts",
-  "src/app/pharoswatchbot/app/telegram-sdk.test.ts",
-  "src/app/pharoswatchbot/app/telegram-theme.test.ts",
-  "worker/src/handlers/scheduled/__tests__/five-minute-telegram.test.ts",
-  "worker/src/cron/__tests__/dispatch-telegram-alerts-backoff-transitions.test.ts",
-  "worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
-  "worker/src/cron/__tests__/dispatch-telegram-alerts-routing-safety.test.ts",
-  "worker/src/cron/__tests__/dispatch-telegram-alerts-snooze-presets.test.ts",
-  "worker/src/cron/__tests__/dispatch-telegram-routing.test.ts",
-  "worker/src/cron/__tests__/telegram-alert-source-events.test.ts",
-  "worker/src/cron/__tests__/telegram-authoritative-target-plan-contract.test.ts",
-  "worker/src/cron/__tests__/telegram-authoritative-target-plans-sqlite.test.ts",
-  "worker/src/cron/__tests__/telegram-pending-preference-revalidation.test.ts",
-  "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
-  "worker/src/cron/__tests__/telegram-pending-queue-drain.test.ts",
-  "worker/src/cron/__tests__/telegram-transport-outage-integration.test.ts",
-  "worker/src/lib/__tests__/telegram-constants.test.ts",
-  "worker/src/lib/__tests__/telegram-delivery-sli.test.ts",
-  "worker/src/lib/__tests__/telegram-transport-control.test.ts",
-  "worker/src/lib/__tests__/telegram-watchlist-token.test.ts",
-  "worker/src/lib/__tests__/telegram.test.ts",
-  "worker/src/api/telegram-store/__tests__/forget.test.ts",
-  "worker/src/api/telegram-store/__tests__/preset-intents.test.ts",
-  "worker/src/api/telegram-store/__tests__/preset-provenance.test.ts",
-  "worker/src/api/telegram-store/__tests__/snooze.test.ts",
-  "worker/src/api/telegram-store/__tests__/watchlist-import.test.ts",
-  "worker/src/api/webhook-commands/__tests__/import-preview-fence.test.ts",
-  "worker/src/api/webhook-callbacks/__tests__/watchlist-import-retry.test.ts",
-  "shared/lib/__tests__/telegram-adoption-analytics.test.ts",
-  "worker/src/lib/__tests__/telegram-adoption-analytics.test.ts",
-  "functions/__tests__/pharoswatchbot-adoption.test.ts",
-  "src/app/pharoswatchbot/telegram-adoption-link.test.tsx",
-  "worker/src/lib/__tests__/evm-rpc.test.ts",
-  "worker/src/lib/__tests__/safety-scores.test.ts",
-  "worker/src/lib/__tests__/stablecoins-cache.test.ts",
-  "worker/src/lib/__tests__/stablecoin-publication-coverage.test.ts",
-  "worker/src/lib/__tests__/public-health-assessment.test.ts",
-  "worker/src/lib/__tests__/mint-burn-scoring.test.ts",
-  "worker/src/lib/__tests__/mint-burn-historical-price-repair.test.ts",
-  "worker/src/lib/__tests__/price-divergence.test.ts",
-  "worker/src/lib/__tests__/price-consensus.test.ts",
-  "worker/src/lib/__tests__/price-validation.test.ts",
-  "worker/src/lib/__tests__/price-publish-policy.test.ts",
-  "worker/src/lib/__tests__/price-publication-state.test.ts",
-  "worker/src/lib/__tests__/pricing-provider-runtime-state.test.ts",
-  "worker/src/lib/__tests__/pricing-source-freshness.test.ts",
-  "worker/src/lib/__tests__/primary-price-collector.test.ts",
-  "worker/src/lib/__tests__/address-price-providers.test.ts",
-  "worker/src/lib/__tests__/authoritative-price-sources.test.ts",
-  "worker/src/lib/__tests__/aznd-curve-pool-price.test.ts",
-  "worker/src/lib/__tests__/jusd-stablecoin-bridge.test.ts",
-  "worker/src/lib/__tests__/kava-pricefeed.test.ts",
-  "worker/src/lib/__tests__/live-reserves-store.test.ts",
-  "worker/src/lib/__tests__/live-reserves-store-cas.test.ts",
-  "worker/src/lib/__tests__/live-reserves-store-writes.test.ts",
-  "worker/src/lib/__tests__/live-reserves-store-row-decoding.test.ts",
-  "worker/src/lib/__tests__/live-reserves-store-write.test.ts",
-  "worker/src/lib/__tests__/publication-contract.test.ts",
-  "worker/src/api/__tests__/cache-passthrough.test.ts",
-  "worker/src/api/__tests__/health.test.ts",
-  "worker/src/api/__tests__/peg-summary.test.ts",
-  "worker/src/api/__tests__/report-cards-v9.test.ts",
-  "shared/lib/__tests__/safety-score-publication.test.ts",
-  "shared/lib/__tests__/safety-score-v9-input-identity.test.ts",
-  "worker/src/lib/__tests__/safety-score-active-source.test.ts",
-  "worker/src/lib/__tests__/safety-score-active-identity.test.ts",
-  "worker/src/api/__tests__/safety-score-history-v2.test.ts",
-  "worker/src/lib/__tests__/safety-score-history-v2.test.ts",
-  "worker/scripts/lib/__tests__/safety-score-v9-anchor-gate.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-candidate.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-consumer-freshness.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-incidents.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-mechanism.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-operational-resilience.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-reserves.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-routes.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-shock.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-supply.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-extension-transfer.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-mint-authoring-contract.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-mint-bridge-scope.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-peg-reference-inheritance.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-transfer-supply-review.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-fact-set-backing.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-fact-set-control.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-fact-set-dependencies.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-fact-set-exit-coverage.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-fact-set-peg-mechanism-evidence.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-fact-set-supply-attribution.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-phase1-adapters.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-native-input.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-peg-provenance-identity.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-peg-provenance.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-publication-assessment.test.ts",
-  // safety-score-v9-resource-budget.test.ts is intentionally absent: its
-  // subprocess contributes no in-process V8 coverage and can time out when it
-  // competes with coverage workers. The full/nightly suite still owns it.
-  "worker/src/lib/__tests__/safety-score-v9-publication-codec.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-publication-runner.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-publication-store.test.ts",
-  "worker/src/cron/__tests__/prepare-safety-score-v9-input.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-centrifuge-supply-observer.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-supply-observation-primitives.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-supply-attribution-contract.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-supply-attribution-generation.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-supply-attribution-journal-store.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-supply-attribution-source.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-supply-attribution.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-wm-supply-observer.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-xaut-supply-observer.test.ts",
-  "worker/src/api/__tests__/blacklist.test.ts",
-  "worker/src/api/__tests__/blacklist-summary.test.ts",
-  "worker/src/lib/__tests__/blacklist-contracts.test.ts",
-  "worker/src/cron/__tests__/sync-blacklist.test.ts",
-  "shared/lib/__tests__/api-freshness.test.ts",
-  "shared/lib/__tests__/peg-score.test.ts",
-  "shared/lib/__tests__/psi-eligible.test.ts",
-  "shared/lib/__tests__/report-card-blacklist-authority.test.ts",
-  "shared/lib/__tests__/report-card-blacklist-matchers.test.ts",
-  "shared/lib/__tests__/blacklist-active-records.test.ts",
-  "shared/lib/__tests__/sha256-stable-json.test.ts",
-  "shared/lib/__tests__/safety-score-v9-matched-invariants.test.ts",
-  "shared/lib/__tests__/safety-score-v9-research.test.ts",
-  "shared/lib/__tests__/safety-score-v9-supply-attribution-journal.test.ts",
-  "shared/lib/__tests__/yield-scoring.test.ts",
-  "worker/src/api/__tests__/dex-liquidity.test.ts",
-  "worker/src/api/__tests__/yield-rankings.test.ts",
-  "worker/src/api/__tests__/yield-history.test.ts",
-  "worker/src/api/__tests__/stress-signals.test.ts",
-  "worker/src/lib/__tests__/stress-signals-current-rows.test.ts",
-  "worker/src/api/__tests__/mint-burn-flows.test.ts",
-  "worker/src/api/__tests__/mint-burn-flows-endpoint-contract.test.ts",
-  "worker/src/api/__tests__/stablecoin-detail.test.ts",
-  "worker/src/api/__tests__/stablecoin-reserves.test.ts",
-  "worker/src/api/__tests__/status-snapshots-core.test.ts",
-  "worker/src/api/__tests__/status-data-loaders.test.ts",
-  "worker/src/api/__tests__/status-cron-telegram.test.ts",
-  "worker/src/api/__tests__/status-data-quality-state.test.ts",
-  "worker/src/cron/__tests__/daily-digest.test.ts",
-  "worker/src/cron/__tests__/daily-digest-generation.test.ts",
-  "worker/src/cron/__tests__/sync-stablecoins.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/enrich-prices-primary-consensus.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/enrich-prices-primary-provider-collection.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/previous-trusted-price-lookup.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/primary-candidate-carry-through.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/post-enrichment-authoritative.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/primary-gt-probe.test.ts",
-  "worker/src/cron/sync-stablecoins/__tests__/protocol-override-application.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-validation.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-fallback-contract-dex.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-fallback-cmc-jupiter.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-fallback-cmc.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-fallback-dexscreener-defillama.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-primary-consensus.test.ts",
-  "worker/src/cron/__tests__/enrich-prices-pool-challenges.test.ts",
-  "worker/src/cron/__tests__/detect-depegs.test.ts",
-  "worker/src/cron/__tests__/confirm-pending-depegs.test.ts",
-  "worker/src/cron/__tests__/confirm-pending-depegs-opposite-direction.test.ts",
-  "worker/src/cron/__tests__/confirm-pending-depegs-pool-status.test.ts",
-  "worker/src/lib/dews/__tests__/signal-families.test.ts",
-  "worker/src/cron/__tests__/compute-dews.test.ts",
-  "worker/src/cron/__tests__/compute-depeg-resolver.test.ts",
-  "worker/src/cron/__tests__/depeg-resolver-public-projection.test.ts",
-  "worker/src/cron/__tests__/compute-depeg-resolver-review.test.ts",
-  "worker/src/lib/__tests__/depeg-resolver-ddrv2-store.test.ts",
-  "worker/src/lib/__tests__/depeg-resolver-errata-store.test.ts",
-  "worker/src/cron/depeg-detection/__tests__/decision-engine.test.ts",
-  "worker/src/cron/depeg-detection/__tests__/repair.test.ts",
-  "worker/src/cron/depeg-resolver/__tests__/incident-resolution.test.ts",
-  "worker/src/cron/depeg-resolver/__tests__/incident-state.test.ts",
-  "worker/src/cron/depeg-resolver/__tests__/storage-adapters.test.ts",
-  "worker/src/cron/depeg-resolver/__tests__/utils.test.ts",
-  "worker/src/cron/dews/__tests__/source-state-legacy.test.ts",
-  "worker/src/cron/dews/source-state/__tests__/fallback.test.ts",
-  "worker/src/lib/__tests__/dews-publication-pointer.test.ts",
-  "worker/src/cron/__tests__/sync-live-reserves.test.ts",
-  "worker/src/cron/__tests__/sync-live-reserves-telemetry.test.ts",
-  "worker/src/cron/__tests__/sync-live-reserves-independent.test.ts",
-  "worker/src/cron/__tests__/sync-live-reserves-orchestrator.test.ts",
-  "worker/src/cron/__tests__/sync-live-reserves-run-state.test.ts",
-  "worker/src/cron/reserve-adapters/__tests__/cap-vault.test.ts",
-  "worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts",
-  "worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts",
-  "worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts",
-  "worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts",
-  "worker/src/cron/__tests__/sync-dex-liquidity.test.ts",
-  "worker/src/cron/__tests__/sync-dex-liquidity-filter.test.ts",
-  "shared/lib/selector/__tests__/snapshot.test.ts",
-  "functions/__tests__/middleware.test.ts",
-  "functions/__tests__/selector-snapshot.test.ts",
-  "functions/__tests__/ops-asset-host-gates.test.ts",
-  "functions/__tests__/ops-admin-proxy.test.ts",
-  "functions/__tests__/site-data-proxy.test.ts",
-  "functions/__tests__/upstream-proxy.test.ts",
-];
+const generatedCriticalOwnership = deriveCriticalOwnership({ sourceFiles: CRITICAL_FILES });
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
   "src/lib/__tests__/reserve-coinid-validation.test.ts",
@@ -264,6 +33,73 @@ export const CRITICAL_CONTRACT_TEST_FILES: string[] = [
   "worker/src/api/__tests__/events.test.ts",
 ];
 
+// Always-on contracts protect the public response and schema boundary.
+const USER_FACING_CONTRACT_TEST_FILES: string[] = [
+  // Public API response serialization must not drift between endpoint modes.
+  "worker/src/lib/__tests__/api-response.test.ts",
+  // Public API schemas are the compatibility contract for generated clients.
+  "worker/src/lib/__tests__/api-schema.test.ts",
+  // Access and origin gates are the first authorization boundary.
+  "worker/src/handlers/http/__tests__/gates.test.ts",
+  // Admin/site-proxy credential acceptance must remain fail-closed.
+  "worker/src/lib/__tests__/auth.test.ts",
+  // Scheduled dispatch must continue selecting the registered runner.
+  "worker/src/__tests__/index.scheduled.test.ts",
+  // Supply attribution is a user-facing input to Safety Score publication.
+  "worker/src/lib/__tests__/safety-score-v9-supply-attribution-contract.test.ts",
+  // The 15-minute cron sync is the source of the public market snapshot.
+  "worker/src/cron/__tests__/sync-stablecoins.test.ts",
+  // Public health's freshness/degraded response is an operator and user contract.
+  "worker/src/lib/__tests__/public-health-assessment.test.ts",
+  // Reserve endpoint response and availability are public detail-page data.
+  "worker/src/api/__tests__/stablecoin-reserves.test.ts",
+  // Pagination metadata is consumed by public API clients and pages.
+  "worker/src/lib/__tests__/api-pagination.test.ts",
+  // API parameter normalization is part of the public request contract.
+  "worker/src/lib/__tests__/api-params.test.ts",
+  // Freshness headers tell clients whether a public snapshot is trustworthy.
+  "worker/src/lib/__tests__/api-freshness.test.ts",
+];
+
+export const ALWAYS_RUN_TEST_FILES: string[] = [
+  ...new Set([
+    ...CRITICAL_CONTRACT_TEST_FILES,
+    ...GLOBAL_INVARIANT_TEST_FILES,
+    ...USER_FACING_CONTRACT_TEST_FILES,
+  ]),
+];
+
+export const CRITICAL_TEST_FILES: string[] = collectOwningTests(CRITICAL_FILES, generatedCriticalOwnership);
+
+export interface CriticalCoverageBuildOptions {
+  changedFiles?: readonly string[];
+  criticalFiles?: readonly string[];
+  ownership?: CriticalOwnership;
+}
+
+function selectCriticalCoverageFiles({
+  changedFiles,
+  criticalFiles = CRITICAL_FILES,
+}: CriticalCoverageBuildOptions): string[] {
+  if (changedFiles === undefined) return [...criticalFiles];
+  const changed = new Set(changedFiles.map(normalizeOwnershipPath));
+  return criticalFiles.filter((file) => changed.has(normalizeOwnershipPath(file)));
+}
+
+function buildCriticalCoverageOptions(criticalFiles: readonly string[]): string[] {
+  return [
+    "--coverage",
+    "--coverage.thresholds.lines=0",
+    // The all-critical suite contains wall-clock-sensitive contract tests.
+    // Unbounded file workers can starve those probes on large local/CI hosts.
+    "--maxWorkers=4",
+    // Scope v8 remapping to the enrolled critical source. Per-file numbers for
+    // the enrolled files are unchanged, but the reporter stops remapping the
+    // rest of the loaded module graph — the heaviest part of this invocation.
+    ...criticalFiles.map((file) => `--coverage.include=${escapeCoverageIncludeGlob(file)}`),
+  ];
+}
+
 export function buildCriticalContractTestArgs(extraArgs: readonly string[] = []): string[] {
   return ["run", ...CRITICAL_CONTRACT_TEST_FILES, ...extraArgs];
 }
@@ -275,29 +111,26 @@ export function escapeCoverageIncludeGlob(file: string): string {
   return file.replace(/[\\[\](){}*?!+@|]/g, "\\$&");
 }
 
-function buildCriticalCoverageOptions(): string[] {
-  return [
-    "--coverage",
-    "--coverage.thresholds.lines=0",
-    // The all-critical suite contains wall-clock-sensitive contract tests.
-    // Unbounded file workers can starve those probes on large local/CI hosts.
-    "--maxWorkers=4",
-    // Scope v8 remapping to the enrolled critical source. Per-file numbers for
-    // the enrolled files are unchanged, but the reporter stops remapping the
-    // rest of the loaded module graph — the heaviest part of this invocation.
-    ...CRITICAL_FILES.map((file) => `--coverage.include=${escapeCoverageIncludeGlob(file)}`),
-  ];
-}
-
-export function buildCriticalCoverageArgs(extraArgs: readonly string[] = []): string[] {
+export function buildCriticalCoverageArgs(
+  extraArgs: readonly string[] = [],
+  options: CriticalCoverageBuildOptions = {},
+): string[] {
+  const selectedSources = selectCriticalCoverageFiles(options);
+  const ownership = options.ownership ?? generatedCriticalOwnership;
+  // A touched source pays only for tests that import it; full runs pass all
+  // enrolled sources and therefore retain the complete derived owner set.
+  const selectedTests = collectOwningTests(selectedSources, ownership);
   return [
     "run",
-    ...buildCriticalCoverageOptions(),
-    ...CRITICAL_TEST_FILES,
+    ...buildCriticalCoverageOptions(selectedSources),
+    ...selectedTests,
     ...extraArgs,
   ];
 }
 
-export function buildCriticalCoverageMergeArgs(reportsDirectory = ".vitest-reports"): string[] {
-  return [...buildCriticalCoverageOptions(), `--merge-reports=${reportsDirectory}`];
+export function buildCriticalCoverageMergeArgs(
+  reportsDirectory = ".vitest-reports",
+  options: CriticalCoverageBuildOptions = {},
+): string[] {
+  return [...buildCriticalCoverageOptions(selectCriticalCoverageFiles(options)), `--merge-reports=${reportsDirectory}`];
 }

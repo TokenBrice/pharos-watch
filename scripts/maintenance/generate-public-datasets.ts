@@ -2,7 +2,7 @@
  * Generate public dataset snapshots + stable latest/Sheets aliases (ideas 11.7 + 11.8 fused).
  *
  * Reads from W2-A's daily snapshot API (`GET /api/snapshots/<YYYY-MM-DD>.json`)
- * plus the depeg-events API for the depeg-history topic. Emits:
+ * plus the committed depeg event yearly shards for the depeg-history topic. Emits:
  *
  *   public/datasets/<topic>/<YYYY-MM-DD>.{csv,json,ndjson}     (90-day retention)
  *
@@ -50,6 +50,7 @@ import {
   type PublicSnapshotEnvelope,
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
+import { readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
 import {
@@ -175,35 +176,8 @@ function isProjectionEnvelope(envelope: PublicSnapshotEnvelope): envelope is Pub
   );
 }
 
-async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
-  const events: DepegEvent[] = [];
-  const seenCursors = new Set<string>();
-  let nextCursor: string | undefined;
-
-  for (let page = 0; page < 100; page += 1) {
-    const params = new URLSearchParams({ limit: "1000" });
-    if (nextCursor) params.set("cursor", nextCursor);
-
-    const payload = await safeFetchJson<{ events: DepegEvent[]; nextCursor?: string | null }>(
-      resolveApiPathUrl(apiBase, `/api/depeg-events?${params.toString()}`),
-    );
-    if (!payload) return null;
-
-    const batch = payload.events ?? [];
-    events.push(...batch);
-
-    if (!payload.nextCursor) return events;
-    if (batch.length === 0) {
-      throw new Error("Depeg event pagination returned an empty page with a continuation cursor.");
-    }
-    if (seenCursors.has(payload.nextCursor)) {
-      throw new Error(`Depeg event pagination repeated cursor "${payload.nextCursor}".`);
-    }
-    seenCursors.add(payload.nextCursor);
-    nextCursor = payload.nextCursor;
-  }
-
-  throw new Error("Depeg event pagination hit the 100-page safety cap before exhaustion.");
+function readDepegEventsFromShards(): DepegEvent[] {
+  return readDepegEventSnapshot({ missing: "throw" });
 }
 
 // --- Topic projections ------------------------------------------------------
@@ -802,10 +776,7 @@ export async function loadPublicDatasetLiveInputs(
   effectiveSnapshotDate = envelope.snapshotDate || effectiveSnapshotDate;
   const asOfISO = asOfIsoFromEnvelope(envelope, effectiveSnapshotDate);
 
-  const depegEvents = await fetchDepegEvents(apiBase);
-  if (!depegEvents) {
-    throw new Error("Unable to fetch depeg events for public dataset generation.");
-  }
+  const depegEvents = readDepegEventsFromShards();
   validateDepegHistoryCoverage(depegEvents, effectiveSnapshotDate);
 
   return { envelope, depegEvents, effectiveSnapshotDate, asOfISO };

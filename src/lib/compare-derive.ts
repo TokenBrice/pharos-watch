@@ -17,7 +17,7 @@ import type {
   SupplyHistoryPoint,
   YieldRanking,
 } from "@shared/types";
-import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
+import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import type {
   V9ConsumerCard,
   V9ConsumerIdentity,
@@ -27,7 +27,7 @@ import type { CompareRadarCohort } from "@/components/radar-chart-v9";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 export type ComparisonMeta = Pick<
-  StablecoinClientMeta,
+  StablecoinClientDetailMeta,
   | "blacklistStatus"
   | "collateralQuality"
   | "commodityOunces"

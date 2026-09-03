@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import type { TelegramDispatchEvents } from "../dispatch-telegram-events";
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import {
@@ -297,6 +298,12 @@ describe("Telegram alert source-event resolution", () => {
       getStablecoinsCacheResult: async () => stablecoinsResult(),
     });
     expect(recovered.allComplete).toBe(true);
+    expect(recovered).toMatchObject({
+      planningStatements: expect.any(Number),
+      planningMs: expect.any(Number),
+      sourceEventsProcessed: 1,
+    });
+    expect(recovered.planningStatements).toBeGreaterThan(0);
     expect(recovered.presetResults.dews.kind).toBe("ok");
     if (recovered.presetResults.dews.kind === "ok") {
       expect(recovered.presetResults.dews.rows.get("usdc-circle")?.map((row) => row.chat_id))
@@ -372,14 +379,14 @@ describe("Telegram alert source-event resolution", () => {
     insertPresetFollower(harness.sqlite, "membership-persist-failure");
     const source = await persistedSource(harness);
     let batchCalls = 0;
-    const failingDb = {
+    const failingDb = makeNoopD1({
       ...harness.db,
       batch: async () => {
         batchCalls += 1;
         if (batchCalls <= 3) throw new Error("membership persistence unavailable");
         return harness.db.batch([]);
       },
-    } as unknown as D1Database;
+    });
 
     const result = await resolveTelegramAlertSourcePresetPages(failingDb, source, NOW, {
       getStablecoinsCacheResult: async () => stablecoinsResult(),

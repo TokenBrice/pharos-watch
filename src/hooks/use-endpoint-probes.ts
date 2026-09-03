@@ -16,7 +16,7 @@ import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
-import { CRON_1MIN } from "@/lib/cron-intervals";
+import { CRON_1MIN, CRON_15MIN } from "@/lib/cron-intervals";
 
 /** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
@@ -24,11 +24,23 @@ export const ENDPOINT_GROUPS = {
   admin: getProbePaths("admin"),
   manual: getProbePaths("manual"),
 } as const;
+/**
+ * The public status page only needs a small, representative canary set. Keep
+ * this list explicit so adding a public endpoint does not increase every
+ * visitor's browser fan-out.
+ */
+const PUBLIC_STATUS_CANARY_PATHS = [
+  "/api/health",
+  "/api/stablecoins",
+  "/api/peg-summary",
+  "/api/dex-liquidity",
+  "/api/report-cards/v9",
+] as const;
 
 /** Only public + admin endpoints are probed. manual endpoints are
  *  action paths and must NOT be auto-probed from the dashboard loop. */
 const ALL_ENDPOINTS = [...ENDPOINT_GROUPS.public, ...ENDPOINT_GROUPS.admin];
-const PUBLIC_ENDPOINTS = ENDPOINT_GROUPS.public;
+const PUBLIC_ENDPOINTS: readonly string[] = PUBLIC_STATUS_CANARY_PATHS;
 const CRITICAL_ENDPOINTS = [...getEndpointProbeDescriptors("public"), ...getEndpointProbeDescriptors("admin")]
   .filter((descriptor) => descriptor.probeSemanticKind === "health" || descriptor.probeSemanticKind === "status")
   .map((descriptor) => descriptor.path);
@@ -305,7 +317,8 @@ export async function collectEndpointProbes(
 
 /**
  * Probes all API endpoints in parallel.
- * Auto-refreshes every 60s.
+ * Operator probes refresh every minute; the public status page uses the
+ * 15-minute self-check producer cadence.
  */
 export type EndpointProbeMode = "full" | "critical";
 
@@ -313,11 +326,12 @@ function useEndpointProbeQuery(
   key: readonly unknown[],
   paths: readonly string[],
   enabled: boolean,
+  producerIntervalMs = CRON_1MIN,
 ): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     key,
     ({ signal }) => collectEndpointProbes(paths, signal),
-    CRON_1MIN,
+    producerIntervalMs,
     { enabled, retry: 0 },
   );
 }
@@ -341,5 +355,6 @@ export function usePublicEndpointProbes(
     ["endpoint-probes", "public"],
     PUBLIC_ENDPOINTS,
     options.enabled ?? true,
+    CRON_15MIN,
   );
 }

@@ -23,7 +23,7 @@ import {
   resolveAlertLinkPreviewOptions,
   SNOOZE_REPLY_MARKUP,
   type ConsolidatedAlerts,
-} from "../telegram-alerts";
+} from "../telegram/alerts";
 
 describe("resolveTicker", () => {
   it("resolves unique ticker", () => {

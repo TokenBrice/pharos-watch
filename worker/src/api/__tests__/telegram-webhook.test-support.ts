@@ -17,9 +17,9 @@ import {
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const { handleTelegramWebhook, TELEGRAM_GROUP_ADMIN_GATING } = await import("../telegram-webhook");
-const { resolveTicker } = await import("../../lib/telegram-alerts");
+const { resolveTicker } = await import("../../lib/telegram/alerts");
 const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
-const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram-log");
+const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram/log");
 function encodeWatchlistToken(state: { coinIds: string[]; alertTypes: string[]; presetIds: string[] }): string {
   const json = JSON.stringify({ v: 1, c: state.coinIds, t: state.alertTypes, p: state.presetIds });
   return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

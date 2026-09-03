@@ -3,7 +3,7 @@ import { timingSafeCompare } from "../lib/auth";
 import {
   logTelegramInvalidSecretAttempt,
   logTelegramMissingSecretAttempt,
-} from "../lib/telegram-log";
+} from "../lib/telegram/log";
 import { drainResponseBody } from "../lib/response-body";
 
 export function isGroupChatType(chatType: string | null | undefined): boolean {

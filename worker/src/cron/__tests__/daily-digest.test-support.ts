@@ -5,11 +5,14 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { ActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
-import type { PreparedTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
+import type { PreparedTelegramDigestAppendices } from "../../lib/telegram/digest-appendices";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
+import type { CollectorContext } from "../daily-digest/collectors-shared";
+import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type {
   EnqueueTelegramDigestEditionResult,
   TelegramDigestDeliveryResult,
-} from "../../lib/telegram-digest-outbox";
+} from "../../lib/telegram/digest-outbox";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeWorkerReportCardsV9Response,
@@ -234,6 +237,15 @@ export function publishedGaugeTable(
   };
 }
 
+export function missingPublishedGaugeTable(): MockTableConfig {
+  return {
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+    rows: [],
+    first: null,
+  };
+}
+
 export function makeDailyDigestTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
@@ -396,3 +408,128 @@ export function makeDailyDigestScenario(
     deliveryMocks,
   };
 }
+
+export function makeCollectorCtx(db: D1Database): CollectorContext {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const todayTs = nowSec - (nowSec % 86_400);
+  const assets = [
+    makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.9975, circulating: { peggedUSD: 100_000_000_000 }, circulatingPrevWeek: { peggedUSD: 95_000_000_000 } }),
+    makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.99, circulating: { peggedUSD: 50_000_000_000 }, circulatingPrevWeek: { peggedUSD: 52_000_000_000 } }),
+    makeAsset({ id: "dai-makerdao", symbol: "DAI", price: 1.05, circulating: { peggedUSD: 5_000_000 }, circulatingPrevWeek: { peggedUSD: 5_000_000 } }),
+  ];
+  return {
+    db,
+    trackedStablecoinAssets: assets,
+    trackedStablecoinIds: new Set(assets.map(({ id }) => id)),
+    coreAggregateStablecoinAssets: assets,
+    coreAggregateStablecoinIds: new Set(assets.map(({ id }) => id)),
+    stablecoinAssetById: new Map(assets.map((asset) => [asset.id, asset])),
+    mcapById: new Map([["usdt-tether", 100_000_000_000], ["usdc-circle", 50_000_000_000], ["dai-makerdao", 5_000_000]]),
+    stablecoinsCacheIsFresh: true,
+    nowSec,
+    todayTs,
+    yesterdayTs: todayTs - 86_400,
+  };
+}
+
+export const BASE_DIGEST_INPUT: DigestInputData = {
+  totalMcapUsd: 160_000_000,
+  mcap7dDelta: 3_000_000,
+  activeDepegCount: 1,
+  topDepegs: [{ stablecoinId: "usdt-tether", symbol: "USDT", bps: -175, direction: "below", mcapUsd: 100_000_000 }],
+  biggestSupplyChange: { id: "usdc-circle", symbol: "USDC", name: "USD Coin", changeUsd: 40_000_000, currentMcap: 60_000_000 },
+  stabilityIndex: { score: 88, band: "STEADY", components: { severity: 4, breadth: 2, trend: -1 } },
+  yesterdayIndex: { score: 90, band: "BEDROCK" },
+  supplyVelocity: [{ coin: "USDC", change1d: 12_000_000, change7d: 40_000_000, signal: "accelerating" }],
+};
+
+export const BASE_SAFETY_CONTEXT = {
+  status: "available" as const,
+  expectedModel: "v9" as const,
+  identity: {
+    model: "v9" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: "9.0",
+    policyId: "safety-score-v9",
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}` as const,
+    publicationGenerationId: "report-cards:v9:test",
+  },
+  publishedAt: 1_788_000_000,
+  reason: null,
+} satisfies DigestSafetyContext;
+
+export function getInsertDigestBinds(db: MockD1Database): unknown[] | undefined {
+  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"))?.binds;
+}
+
+export function styleGateModeTables(modes: { daily: "shadow" | "enforce"; weekly: "shadow" | "enforce" }): MockTableConfig[] {
+  return (Object.entries(modes) as Array<[keyof typeof modes, "shadow" | "enforce"]>).map(([kind, mode]) => ({
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: [DIGEST_STYLE_GATE_MODE_CACHE_KEYS[kind]],
+    rows: [],
+    first: { value: mode, updated_at: Math.floor(Date.now() / 1000) },
+  }));
+}
+
+export function withClauseDash(raw: string): string {
+  const parsed = JSON.parse(raw) as { extended: string };
+  parsed.extended = parsed.extended.replace("selection, not volume", "selection — not volume");
+  return JSON.stringify(parsed);
+}
+
+export function makeDigestRow(nowSec: number, daysAgo: number, psiScore: number, band: string, mcap: number, gaugeScore?: number) {
+  const input = {
+    totalMcapUsd: mcap,
+    mcap7dDelta: 0,
+    activeDepegCount: 0,
+    topDepegs: [],
+    biggestSupplyChange: null,
+    stabilityIndex: { score: psiScore, band, components: { severity: 0, breadth: 0, trend: 0 } },
+    yesterdayIndex: null,
+    ...(gaugeScore == null ? {} : { mintBurnFlows: { gaugeScore, gaugeBand: "STABLE", flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 }, topPressure: [] } }),
+  };
+  return { generated_at: nowSec - daysAgo * 86_400, input_data: JSON.stringify(input) };
+}
+
+export function makeStreamResponse(text: string): Response {
+  const events = [
+    ["message_start", { type: "message_start", message: { model: "claude-opus-5", usage: { input_tokens: 1000, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } }],
+    ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }],
+    ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } }],
+    ["content_block_stop", { type: "content_block_stop", index: 0 }],
+    ["message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 500 } }],
+    ["message_stop", { type: "message_stop" }],
+  ] as const;
+  // Keep the SSE envelope byte-shaped: this is the Anthropic transport framing contract.
+  const body = events.map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join("");
+  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+export function makeRefusalResponse(): Response {
+  const body = [
+    ["message_start", { type: "message_start", message: { model: "claude-opus-5", usage: { input_tokens: 100 } } }],
+    ["message_delta", { type: "message_delta", delta: { stop_reason: "refusal", stop_details: { type: "refusal", category: "general_harms" } }, usage: { output_tokens: 7 } }],
+    ["message_stop", { type: "message_stop" }],
+  // Refusal events use the same exact framing contract as successful streams.
+  ].map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join("");
+  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+export const VALID_CAPTURE_MAP_SUMMARY = {
+  date: "2026-08-30",
+  asOfSec: 1_788_000_000,
+  methodologyVersion: "v9.4",
+  gradedCount: 10,
+  notRatedCount: 2,
+  totalMcapUsd: 100_000_000_000,
+  floorMcapByTier: { a: 1_000_000, other: 100_000 },
+  tiers: [
+    { tier: "A" as const, range: "90-100", count: 2, mcapUsd: 70_000_000_000, sharePct: 70, leaders: [{ symbol: "USDT", score: 95, mcapUsd: 60_000_000_000 }] },
+    { tier: "B" as const, range: "80-89", count: 2, mcapUsd: 15_000_000_000, sharePct: 15, leaders: [] },
+    { tier: "C" as const, range: "70-79", count: 2, mcapUsd: 8_000_000_000, sharePct: 8, leaders: [] },
+    { tier: "D" as const, range: "60-69", count: 2, mcapUsd: 5_000_000_000, sharePct: 5, leaders: [] },
+    { tier: "F" as const, range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
+  ],
+};

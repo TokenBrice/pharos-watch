@@ -1,0 +1,25 @@
+{
+  "mechanism": "fxusd-f-x-protocol",
+  "date": "2026-07-15-block-25536894",
+  "sha256": "8450e4c9d73e128b545edf74a6a72c2456190e657ff9c414fb2f9a32af793434",
+  "bytes": 17219,
+  "r2Key": "captures/fxusd-f-x-protocol/2026-07-15-block-25536894.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "fxusd-f-x-protocol",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/fxusd-f-x-protocol/2026-07-15-block-25536894.json",
+    "chain": {
+      "key": "ethereum",
+      "evmChainId": 1
+    },
+    "block": {
+      "number": 25536894,
+      "hash": "0x9b5d38fcb302bfc941f2704759a37402b0a5f9f3c1ad6fc0badaf20219cb6422",
+      "timestampUnix": 1784104535,
+      "timestampIso": "2026-07-15T08:35:35.000Z",
+      "selection": "operator-pinned"
+    }
+  }
+}

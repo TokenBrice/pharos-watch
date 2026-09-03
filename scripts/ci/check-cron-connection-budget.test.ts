@@ -77,7 +77,7 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
-  it("models transfer materiality in the serial charts lane without counting the D1-only duration watchdog", () => {
+  it("models transfer materiality in the serial charts lane without increasing the peak for the D1-only sentinel rule", () => {
     const report = evaluateCronConnectionBudget();
     const halfHourlyCharts = report.triggerReports.find(
       (trigger) => trigger.scheduleKey === "halfHourlyChartsOffset",
@@ -85,18 +85,13 @@ describe("check-cron-connection-budget", () => {
     const prepareV9Input = CRON_CONNECTION_BUDGET_ENTRIES.find(
       (entry) => entry.job === "prepare-safety-score-v9-input",
     );
-    const durationWatchdog = CRON_CONNECTION_BUDGET_ENTRIES.find(
-      (entry) => entry.job === "cron-duration-watchdog",
-    );
-
     expect(prepareV9Input?.maxConnections).toBe(3);
-    expect(durationWatchdog?.maxConnections).toBe(0);
     expect(halfHourlyCharts?.chains).toEqual([
       {
         chainKey: "chain-1",
         jobs: [
           "sync-dex-liquidity",
-          "dex-exit-route-turnover-watchdog",
+          "cron-sentinel",
           "prepare-safety-score-v9-input",
           "sync-stablecoin-charts",
         ],
@@ -104,10 +99,10 @@ describe("check-cron-connection-budget", () => {
       },
     ]);
     expect(halfHourlyCharts?.totalConnections).toBe(3);
-    // 33 since digest-publication-watchdog joined the status lane: it probes the
-    // Safety Score map manifest, so it is fetch-capable even though its
-    // publication assertions are D1-only.
-    expect(report.fetchCapableEntryCount).toBe(33);
+    // The shared sentinel remains globally fetch-capable because its status-mode
+    // digest source probes the Safety Score map manifest. Its charts-lane
+    // turnover source is D1-only and does not raise this serial chain's peak.
+    expect(report.fetchCapableEntryCount).toBe(29);
     expect(report.failed).toBe(false);
   });
 

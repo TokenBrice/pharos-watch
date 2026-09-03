@@ -1,0 +1,15 @@
+{
+  "mechanism": "dusd-standx",
+  "date": "2026-07-27-supply-pin",
+  "sha256": "fd3c1bfd716ee3960d7be07f4eac56a6a397a13d631cb8f004e64ac9ca43c775",
+  "bytes": 5565,
+  "r2Key": "captures/dusd-standx/2026-07-27-supply-pin.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "dusd-standx",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/dusd-standx/2026-07-27-supply-pin.json",
+    "capturedAt": "2026-07-28 research pin: BSC block 112516776 totalSupply()=91949147.093252 DUSD (6 dp) on 0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122 via bsc-dataseed.binance.org; Solana finalized slot 435626263 getTokenSupply DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM=11603048.52686; combined circulating supply ~103552195.62 DUSD. No issuer transparency API or PoR snapshot available to pin hedge/reserve state."
+  }
+}

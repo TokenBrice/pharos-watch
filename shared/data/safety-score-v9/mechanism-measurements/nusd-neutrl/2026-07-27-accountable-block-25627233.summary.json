@@ -1,0 +1,15 @@
+{
+  "mechanism": "nusd-neutrl",
+  "date": "2026-07-27-accountable-block-25627233",
+  "sha256": "e4e23b1c08f9fac9dd5110b26c1b8765f5982efd74f0305152e27edbc23f561d",
+  "bytes": 4849,
+  "r2Key": "captures/nusd-neutrl/2026-07-27-accountable-block-25627233.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "nusd-neutrl",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/nusd-neutrl/2026-07-27-accountable-block-25627233.json",
+    "capturedAt": "Accountable Neutrl dashboard snapshot ts 2026-07-27T22:41:46.555Z (cache.accountable.capital/dashboard/neutrl); Ethereum block 25627233 @ 2026-07-27T22:47:47Z via ethereum-rpc.publicnode.com; Neutrl funding-risks + margin-risks re-opened 2026-07-27T22:47Z"
+  }
+}

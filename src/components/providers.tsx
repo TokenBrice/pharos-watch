@@ -1,17 +1,9 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
 import { ThemeProvider } from "next-themes";
-import { useState, useCallback, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useThemeToggle } from "@/hooks/use-theme-toggle";
-import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
-import { isSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
-import { RouteProgressBar } from "@/components/route-progress-bar";
-
-// Create a context for toast functionality
-import { createContext } from "react";
+import { usePathname } from "next/navigation";
+import { createContext, lazy, Suspense, useCallback, useEffect, useState } from "react";
+import type { QueryClient as QueryClientType } from "@tanstack/react-query";
 
 /**
  * Custom event broadcast when the user presses a numeric key (1-9) to sort
@@ -23,148 +15,181 @@ export interface SortColumnEventDetail {
   columnNumber: number;
 }
 
-const CommandPalette = dynamic(() => import("./command-palette-root").then((mod) => mod.CommandPalette), {
-  ssr: false,
-});
-
-const KeyboardShortcuts = dynamic(() => import("./keyboard-shortcuts").then((mod) => mod.KeyboardShortcuts), {
-  ssr: false,
-});
-
-const ToastContainer = dynamic(() => import("./toast-container").then((mod) => mod.ToastContainer), {
-  ssr: false,
-});
-
 interface ToastContextType {
   addToast: (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
 
-export function createPharosQueryClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 5 * 60 * 1000,
-        refetchOnWindowFocus: false,
-        retry: 2,
-        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
-      },
-    },
-  });
+export const PHAROS_QUERY_DEFAULT_OPTIONS = {
+  queries: {
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 30000),
+  },
+};
+
+const STATIC_CONTENT_ROUTE_ROOTS = [
+  "/about",
+  "/learn",
+  "/docs",
+  "/changelog",
+  "/blog",
+  "/methodology",
+] as const;
+
+function isStaticContentPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return STATIC_CONTENT_ROUTE_ROOTS.some((root) => pathname === root || pathname.startsWith(`${root}/`));
 }
 
-// Inner component that has access to theme
-function AppProviders({ children }: { children: React.ReactNode }) {
-  const { toasts, addToast, removeToast } = useToast();
-  const { toggleTheme } = useThemeToggle({ toast: addToast });
-  const [commandPaletteLoaded, setCommandPaletteLoaded] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [keyboardShortcutsLoaded, setKeyboardShortcutsLoaded] = useState(false);
-  const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
+const CommandPalette = lazy(() =>
+  import("./command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
+);
 
-  const openGlobalCommandPalette = useCallback(() => {
-    setCommandPaletteLoaded(true);
-    setCommandPaletteOpen(true);
-  }, []);
+const KeyboardShortcuts = lazy(() =>
+  import("./keyboard-shortcuts").then((mod) => ({ default: mod.KeyboardShortcuts })),
+);
 
-  useEffect(() => {
-    function handleOpenCommandPalette() {
-      openGlobalCommandPalette();
-    }
+const ToastContainer = lazy(() =>
+  import("./toast-container").then((mod) => ({ default: mod.ToastContainer })),
+);
 
-    function handleGlobalOverlayKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setCommandPaletteLoaded(true);
-        setCommandPaletteOpen((open) => !open);
-        return;
+const InteractiveProviders = lazy(async () => {
+  const [query, toastHook, themeHook, shortcutSettings, commandPalette, routeProgress] = await Promise.all([
+    import("@tanstack/react-query"),
+    import("@/hooks/use-toast"),
+    import("@/hooks/use-theme-toggle"),
+    import("@/lib/keyboard-shortcut-settings"),
+    import("@/lib/command-palette"),
+    import("@/components/route-progress-bar"),
+  ]);
+
+  function createPharosQueryClient(): QueryClientType {
+    return new query.QueryClient({
+      defaultOptions: PHAROS_QUERY_DEFAULT_OPTIONS,
+    });
+  }
+
+  function LoadedInteractiveProviders({ children }: { children: React.ReactNode }) {
+    const [queryClient] = useState(createPharosQueryClient);
+    const { toasts, addToast, removeToast } = toastHook.useToast();
+    const { toggleTheme } = themeHook.useThemeToggle({ toast: addToast });
+    const [commandPaletteLoaded, setCommandPaletteLoaded] = useState(false);
+    const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+    const [keyboardShortcutsLoaded, setKeyboardShortcutsLoaded] = useState(false);
+    const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
+
+    const openGlobalCommandPalette = useCallback(() => {
+      setCommandPaletteLoaded(true);
+      setCommandPaletteOpen(true);
+    }, []);
+
+    useEffect(() => {
+      function handleOpenCommandPalette() {
+        openGlobalCommandPalette();
       }
 
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement ||
-        (event.target instanceof HTMLElement && event.target.isContentEditable)
-      ) {
-        return;
-      }
-
-      if (
-        event.key === "?" &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey
-      ) {
-        // WCAG 2.1.4: single-character shortcut, read the disable flag at
-        // keypress time so the shortcuts dialog preference applies immediately.
-        if (isSidebarShortcutDisabled()) return;
-        event.preventDefault();
-        setKeyboardShortcutsLoaded(true);
-        setKeyboardShortcutsOpen(true);
-        return;
-      }
-
-      if (event.ctrlKey || event.metaKey || event.altKey) {
-        return;
-      }
-
-      // Numeric column sort (1-9). Broadcast for tables to consume.
-      if (event.key >= "1" && event.key <= "9") {
-        if (isSidebarShortcutDisabled()) return;
-        event.preventDefault();
-        const columnNumber = Number(event.key);
-        window.dispatchEvent(
-          new CustomEvent<SortColumnEventDetail>(SORT_COLUMN_EVENT, {
-            detail: { columnNumber },
-          }),
-        );
-        return;
-      }
-
-      switch (event.key.toLowerCase()) {
-        case "t":
+      function handleGlobalOverlayKeyDown(event: KeyboardEvent) {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
           event.preventDefault();
-          toggleTheme();
-          break;
-        case "/":
+          setCommandPaletteLoaded(true);
+          setCommandPaletteOpen((open) => !open);
+          return;
+        }
+
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement ||
+          event.target instanceof HTMLSelectElement ||
+          (event.target instanceof HTMLElement && event.target.isContentEditable)
+        ) {
+          return;
+        }
+
+        if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          if (shortcutSettings.isSidebarShortcutDisabled()) return;
           event.preventDefault();
-          openGlobalCommandPalette();
-          break;
+          setKeyboardShortcutsLoaded(true);
+          setKeyboardShortcutsOpen(true);
+          return;
+        }
+
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+        if (event.key >= "1" && event.key <= "9") {
+          if (shortcutSettings.isSidebarShortcutDisabled()) return;
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent<SortColumnEventDetail>(SORT_COLUMN_EVENT, {
+              detail: { columnNumber: Number(event.key) },
+            }),
+          );
+          return;
+        }
+
+        switch (event.key.toLowerCase()) {
+          case "t":
+            event.preventDefault();
+            toggleTheme();
+            break;
+          case "/":
+            event.preventDefault();
+            openGlobalCommandPalette();
+            break;
+        }
       }
-    }
 
-    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
-    window.addEventListener("keydown", handleGlobalOverlayKeyDown);
-    return () => {
-      window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
-      window.removeEventListener("keydown", handleGlobalOverlayKeyDown);
-    };
-  }, [openGlobalCommandPalette, toggleTheme]);
+      window.addEventListener(commandPalette.OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
+      window.addEventListener("keydown", handleGlobalOverlayKeyDown);
+      return () => {
+        window.removeEventListener(commandPalette.OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
+        window.removeEventListener("keydown", handleGlobalOverlayKeyDown);
+      };
+    }, [openGlobalCommandPalette, toggleTheme]);
 
-  return (
-    <ToastContext.Provider value={{ addToast }}>
-      <RouteProgressBar />
-      {children}
-      {commandPaletteLoaded && (
-        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
-      )}
-      {keyboardShortcutsLoaded && (
-        <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
-      )}
-      {toasts.length > 0 && <ToastContainer toasts={toasts} removeToast={removeToast} />}
-    </ToastContext.Provider>
-  );
+    return (
+      <query.QueryClientProvider client={queryClient}>
+        <ToastContext.Provider value={{ addToast }}>
+          <routeProgress.RouteProgressBar />
+          {children}
+          {commandPaletteLoaded && (
+            <Suspense fallback={null}>
+              <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+            </Suspense>
+          )}
+          {keyboardShortcutsLoaded && (
+            <Suspense fallback={null}>
+              <KeyboardShortcuts open={keyboardShortcutsOpen} onOpenChange={setKeyboardShortcutsOpen} />
+            </Suspense>
+          )}
+          {toasts.length > 0 && (
+            <Suspense fallback={null}>
+              <ToastContainer toasts={toasts} removeToast={removeToast} />
+            </Suspense>
+          )}
+        </ToastContext.Provider>
+      </query.QueryClientProvider>
+    );
+  }
+
+  return { default: LoadedInteractiveProviders };
+});
+
+function RouteProviders({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (isStaticContentPath(pathname)) return children;
+  return <InteractiveProviders>{children}</InteractiveProviders>;
 }
 
+/** Theme is the immutable shell; data and global interactions load only on interactive routes. */
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(createPharosQueryClient);
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-        <AppProviders>{children}</AppProviders>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+      <Suspense fallback={null}>
+        <RouteProviders>{children}</RouteProviders>
+      </Suspense>
+    </ThemeProvider>
   );
 }

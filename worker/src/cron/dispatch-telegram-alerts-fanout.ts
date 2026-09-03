@@ -1,6 +1,6 @@
 import type { TelegramAlertType } from "@shared/types/status";
-import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram-broadcast-targets";
-import type { ConsolidatedAlerts } from "../lib/telegram-alerts";
+import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram/broadcast-targets";
+import type { ConsolidatedAlerts } from "../lib/telegram/alerts";
 import type { TelegramFanoutPlanEvents } from "./dispatch-telegram-events";
 import {
   meetsDepegStepThreshold,

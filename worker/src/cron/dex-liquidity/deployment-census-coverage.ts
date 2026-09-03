@@ -7,7 +7,7 @@ import {
   DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY,
 } from "../dex-discovery/provider-registry";
 import { tryParseJson } from "../../lib/json-parse";
-import { estimateDiscoverySweepPeriodSec } from "../dex-discovery/target-window";
+import { estimateDiscoverySweepPeriodSec, estimateDiscoverySweepWindowCount } from "../dex-discovery/target-window";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
 import {
   classifyStoredDexCensusState,
@@ -20,11 +20,9 @@ const DEX_DISCOVERY_PROVIDER_IDS = new Set<string>(
 );
 
 /**
- * Freshness floor for every coin. The lowest-priority discovery cohort is
- * eligible daily, so two daily windows bound one missed/deferred crawl without
- * turning an indefinitely old outcome into current known-empty evidence. Coins
- * whose footprint only sweeps across several runs raise this through
- * `resolveDexDeploymentCensusMaxAgeSec()`.
+ * Freshness floor for every coin. A footprint completed in one crawl keeps the
+ * global two-day bound. Footprints that require rotating windows raise this
+ * through `resolveDexDeploymentCensusMaxAgeSec()` based on their own sweep.
  */
 export const DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC =
   DISCOVERY_TIERS.DORMANT_INTERVAL_SEC * 2;
@@ -51,6 +49,8 @@ const DEX_DEPLOYMENT_CENSUS_SWEEP_HEADROOM = 1.5;
 export function resolveDexDeploymentCensusMaxAgeSec(
   deployments: readonly ContractDeployment[],
 ): number {
+  const sweepWindowCount = estimateDiscoverySweepWindowCount(deployments);
+  if (sweepWindowCount <= 1) return DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC;
   const sweepPeriodSec = estimateDiscoverySweepPeriodSec(deployments);
   return Math.max(
     DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,

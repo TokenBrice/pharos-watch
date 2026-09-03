@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { useRef, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createContagionSnapshotMock,
@@ -22,6 +22,7 @@ import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinMeta } from "@shared/types";
+import { DISABLED_DETAIL_QUERY_CONTROLS } from "@/hooks/__tests__/use-stablecoin-detail-view-model.test-support";
 
 const {
   lazyViewportValues,
@@ -188,9 +189,10 @@ describe("StablecoinDetailClient", () => {
     useNearViewportMock.mockReset();
     useNearViewportMock.mockImplementation((rootMargin?: string) => {
       const queue = rootMargin === "600px" ? nearViewportValues : lazyViewportValues;
+      const near = useRef(queue.shift() ?? true).current;
       return {
         ref: { current: null },
-        near: queue.shift() ?? true,
+        near,
       };
     });
     useStablecoinDetailViewModelMock.mockReset();
@@ -228,10 +230,16 @@ describe("StablecoinDetailClient", () => {
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
+    act(() => window.dispatchEvent(new Event("scroll")));
 
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         supplementalQueryControls: {
+          liquidity: true,
+          reportCards: false,
+          redemption: true,
+          yield: true,
+          stress: false,
           flows: true,
           blacklist: true,
           reserves: false,
@@ -247,10 +255,16 @@ describe("StablecoinDetailClient", () => {
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
+    act(() => window.dispatchEvent(new Event("scroll")));
 
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         supplementalQueryControls: {
+          liquidity: true,
+          reportCards: true,
+          redemption: true,
+          yield: false,
+          stress: true,
           flows: true,
           blacklist: false,
           reserves: true,
@@ -269,11 +283,7 @@ describe("StablecoinDetailClient", () => {
 
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        supplementalQueryControls: {
-          flows: false,
-          blacklist: false,
-          reserves: false,
-        },
+        supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
       }),
     );
   });

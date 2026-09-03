@@ -2,9 +2,8 @@
  * Half-hourly physical trigger (5,35 * * * *), retaining logical :00/:30 slots:
  *   sync-cl-exit-depth (3)
  *
- * Isolated score-bearing measured-execution lane. The lane's flat metadata
- * (including the durable `mxLedger*` evidence-ledger scalars, Liquidity Score
- * v6 Phase 0.4) is returned directly so producer history persists it.
+ * Isolated score-bearing measured-execution lane. Its flat metadata is
+ * returned directly so producer history persists the lane diagnostics.
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
 import type { CronResult } from "../../lib/cron-logger";

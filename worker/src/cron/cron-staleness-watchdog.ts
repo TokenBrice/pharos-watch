@@ -11,30 +11,13 @@ import type { CronResult } from "../lib/cron-logger";
 import { runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { getCache, setCache } from "../lib/db-cache";
-import { escapeHtml, sendToChat, type TelegramCreds } from "../lib/telegram";
-
-const NO_CONSUMER_FRESHNESS_SURFACE_JOBS = new Set([
-  // Control-plane observers and watchdogs produce telemetry, not consumer data.
-  "cron-slot-sweeper",
-  "reserve-recovery",
-  "cron-staleness-watchdog",
-  "telegram-degradation-watchdog",
-  "dex-exit-route-turnover-watchdog",
-  "reserve-post-sync-watchdog",
-  "mint-burn-growth-watchdog",
-  "cron-duration-watchdog",
-  // Delivery/planning jobs mutate transport state rather than a freshness surface.
-  "dispatch-telegram-alerts",
-  "telegram-personalized-recap-planner",
-  // Retention and repair jobs only delete or reconcile internal rows.
-  "telegram-disambiguation-cleanup",
-  "prune-status-probe-runs",
-  "prune-cron-history",
-  "worker-repair-runner",
-  "prune-detail-cache",
-  "telegram-inactive-cleanup",
-  "telegram-retention-cleanup",
-]);
+import { escapeHtml, type TelegramCreds } from "../lib/telegram";
+import {
+  classifyFreshness,
+  loadProducerFreshnessFacts,
+  type ProducerFreshnessFact,
+} from "../lib/status/freshness-oracle";
+import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -65,7 +48,7 @@ export function deriveCronFreshnessProducers(
   );
 
   return definitions.flatMap((definition): ProducerFreshnessLane[] => {
-    if (NO_CONSUMER_FRESHNESS_SURFACE_JOBS.has(definition.job)) return [];
+    if (definition.freshnessSurface === "none") return [];
     const cacheLane = cacheLaneByProducer.get(definition.job);
     if (cacheLane) {
       return [{
@@ -209,8 +192,27 @@ export interface CronStalenessObservation {
   availabilityImpacting: boolean;
 }
 
-function isFreshAge(ageSeconds: number | null, thresholdSec: number): boolean {
-  return ageSeconds != null && Number.isFinite(ageSeconds) && ageSeconds <= thresholdSec;
+function classifyAge(
+  job: string,
+  ageSeconds: number | null,
+  expectedIntervalSec: number,
+  thresholdSec: number,
+): ReturnType<typeof classifyFreshness> {
+  const nowSec = Math.max(0, ageSeconds ?? 0);
+  return classifyFreshness(
+    {
+      job,
+      lastSuccessAt: ageSeconds == null ? null : 0,
+      lastRunAt: ageSeconds == null ? null : 0,
+      expectedIntervalSec,
+      lastStatus: ageSeconds == null ? null : "ok",
+    },
+    {
+      watchAt: { absoluteSec: thresholdSec },
+      staleAt: { absoluteSec: thresholdSec },
+    },
+    nowSec,
+  );
 }
 
 function buildFullObservation(
@@ -229,16 +231,35 @@ function buildFullObservation(
     producerThresholdSec: thresholdSec,
     endpointThresholdSec: lane.endpointMaxAgeSec,
     availabilityThresholdSec: lane.availabilityMaxAgeSec,
-    availabilityImpacting: !isFreshAge(ageSeconds, lane.availabilityMaxAgeSec),
+    availabilityImpacting: classifyAge(
+      lane.producerJob,
+      ageSeconds,
+      lane.producerIntervalSec,
+      lane.availabilityMaxAgeSec,
+    ).state === "stale",
   };
 }
 
 function buildCronObservation(
   producer: ProducerFreshnessLane,
-  lastSuccessfulAt: number | null,
+  fact: ProducerFreshnessFact | undefined,
   nowSec: number,
 ): CronStalenessObservation {
-  const ageSeconds = lastSuccessfulAt == null ? null : Math.max(0, nowSec - lastSuccessfulAt);
+  const classification = classifyFreshness(
+    fact ?? {
+      job: producer.producerJob,
+      lastSuccessAt: null,
+      lastRunAt: null,
+      expectedIntervalSec: producer.producerIntervalSec,
+      lastStatus: null,
+    },
+    {
+      watchAt: { multiplier: 2 },
+      staleAt: { multiplier: 3 },
+    },
+    nowSec,
+  );
+  const ageSeconds = classification.ageSec;
   return {
     laneKey: producer.laneKey,
     cacheKey: producer.cacheKey,
@@ -248,12 +269,17 @@ function buildCronObservation(
     producerThresholdSec: producer.thresholdSec,
     endpointThresholdSec: producer.thresholdSec,
     availabilityThresholdSec: producer.thresholdSec,
-    availabilityImpacting: !isFreshAge(ageSeconds, producer.thresholdSec),
+    availabilityImpacting: classification.state === "stale",
   };
 }
 
 function isStale(observation: CronStalenessObservation): boolean {
-  return !isFreshAge(observation.ageSeconds, observation.thresholdSec);
+  return classifyAge(
+    observation.producerJob,
+    observation.ageSeconds,
+    observation.thresholdSec,
+    observation.thresholdSec,
+  ).state === "stale";
 }
 
 function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): Array<{
@@ -320,27 +346,6 @@ export function evaluateCronStaleness(
   });
 }
 
-async function loadProducerSuccessTimestamps(
-  db: D1Database,
-  producerJobs: readonly string[],
-): Promise<Map<string, number>> {
-  const timestamps = new Map<string, number>();
-  if (producerJobs.length === 0) return timestamps;
-  await runChunkedInFilter(
-    producerJobs,
-    (inClauseSql) => `SELECT job, MAX(started_at) AS started_at FROM cron_runs WHERE status IN ('ok', 'degraded') AND job IN (${inClauseSql}) GROUP BY job`,
-    async (sql, binds) => {
-      const rows = await runWithOverloadRetry(() =>
-        db.prepare(sql).bind(...binds).all<{ job: string; started_at: number | null }>(),
-      );
-      for (const row of rows.results ?? []) {
-        if (row.started_at != null) timestamps.set(row.job, row.started_at);
-      }
-    },
-  );
-  return timestamps;
-}
-
 type ProducerFreshnessState = Record<string, "ok" | "stale">;
 
 function parseProducerFreshnessState(value: string | null | undefined): ProducerFreshnessState {
@@ -404,11 +409,10 @@ async function alertOnFreshnessTransitions(params: {
     stale.length > 0 ? `<b>Stale producers</b>: ${stale.map(escapeHtml).join(", ")}` : null,
     recovered.length > 0 ? `<b>Recovered producers</b>: ${recovered.map(escapeHtml).join(", ")}` : null,
   ].filter((section): section is string => section != null);
-  const delivery = await sendToChat(
-    params.operatorTelegramCreds.chatId,
+  const delivery = await deliverOperatorAlert(
+    params.operatorTelegramCreds,
     `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
-    params.operatorTelegramCreds.botToken,
-    { disableWebPagePreview: true, signal: params.signal },
+    params.signal,
   );
   if (delivery.ok) {
     await setCache(params.db, WATCHDOG_ALERT_KEY, String(params.nowSec));
@@ -425,14 +429,18 @@ export async function runCronStalenessWatchdog(
   const status = await buildCacheStatuses(db, nowSec);
   const producers = deriveCronFreshnessProducers();
   const cronOnlyProducers = producers.filter((producer) => producer.laneKey == null);
-  const producerSuccessTimestamps = await loadProducerSuccessTimestamps(
+  const producerFacts = await loadProducerFreshnessFacts(
     db,
-    cronOnlyProducers.map((producer) => producer.producerJob),
+    nowSec,
+    CRON_JOB_DEFINITIONS.filter((definition) =>
+      cronOnlyProducers.some((producer) => producer.producerJob === definition.job),
+    ),
   );
+  const factByJob = new Map(producerFacts.map((fact) => [fact.job, fact]));
   const watchedObservations = producers.map((producer) => producer.laneKey == null
     ? buildCronObservation(
         producer,
-        producerSuccessTimestamps.get(producer.producerJob) ?? null,
+        factByJob.get(producer.producerJob),
         nowSec,
       )
     : buildFullObservation(

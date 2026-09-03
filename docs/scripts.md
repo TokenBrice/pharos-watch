@@ -53,6 +53,12 @@ Report shape:
 
 Compare captures before and after an infrastructure change by `period`, `sortBy`, `_pharos.sqlFingerprint`, and `_pharos.sourcePaths`. Keep generated reports under `agents/` unless a durable methodology or source change requires documentation.
 
+### Telegram Adoption
+
+| Script | Purpose |
+| --- | --- |
+| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and 14-day Telegram dispatch planning telemetry, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. |
+
 ## Routing Index
 
 The command name, composition, and default invocation are owned by the root [`package.json`](../package.json). Run the selected npm command with `-- --help`, or invoke a direct entrypoint with `--help`, for its current flags and defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not copy its roster into documentation.
@@ -99,6 +105,10 @@ Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` c
 ### Curation Audits
 
 Use the `audit:*`, `candidates:*`, and `calibrate:*` commands in `package.json`. These reports are advisory unless an owning methodology document or CI command explicitly says otherwise. Stablecoin curation procedures live in [Stablecoin Data](./stablecoin-data.md), while feature-specific interpretation lives in the matching methodology or pipeline doc. Keep review queues and research reports under `agents/` unless a reviewed source or durable methodology change belongs in the verified docs corpus. Protocol evidence refreshes are governed by [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md).
+
+Safety Score V9 curation has one typed queue source: `safety-score-v9:missing-data-registry`. `safety-score-v9:curation-worklist` renders its operator-oriented Markdown view, while `safety-score-v9:expiry-queue` adds only the preventive time-window view using production reserve admission. The low-level evidence-gap and mint-posture entrypoints remain directly invocable compatibility reports without npm aliases; they do not own curation routing.
+
+The V9 calibration analyzer consumes normalized replay artifacts, rebuilds them through the shared replay primitive, and reads its pinned distribution and binding expectations from `scripts/__tests__/fixtures/safety-score-v9-calibration-baseline.json`. It does not read measurement capture bodies. The retired replay-summary, B1 root-ledger, and composite-ceiling aliases remain available as direct one-time entrypoints where an archived runbook names them.
 
 ### One-Time And Operator Tools
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
+import { HeroPriceCard } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -289,6 +290,26 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 }
 
 describe("HeroCard", () => {
+  it("renders the existing unavailable placeholder when live price is null", () => {
+    const html = renderToStaticMarkup(
+      <HeroPriceCard
+        coin={coin}
+        coinData={{ ...coinData, price: null, priceConfidence: null }}
+        price={{
+          pegRef: 1,
+          deviationBps: null,
+          gaugeDeviationBps: 0,
+          pegReferenceUnavailable: false,
+          isNavToken: false,
+          limitedDepegCoverageNote: null,
+        }}
+      />,
+    );
+
+    expect(html).toMatch(/>Price<\/p><p[^>]*>N\/A<\/p>/);
+    expect(html).not.toContain("$0.0000");
+  });
+
   it("renders shared identity, price, and metric content across responsive layouts", () => {
     const html = renderHero();
 

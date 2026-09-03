@@ -33,7 +33,7 @@ import {
   FixedInputCacheEnvelopeFields,
   parseFixedInputCacheEntry,
 } from "./report-cards-fixed-input-cache-codec";
-import { V9PublicationInputHealthSchema } from "./safety-score-v9-publication-assessment";
+import { V9PublicationInputHealthSchema } from "./safety-score-v9/publication-assessment";
 
 export {
   SafetyScoreV9SupplyAttributionSchema,

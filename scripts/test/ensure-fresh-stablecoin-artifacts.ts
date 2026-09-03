@@ -23,7 +23,8 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const GENERATED_ASSET = join(REPO_ROOT, "shared/data/stablecoins/coins.generated.json");
 const CANONICAL_ORDER_ASSET = join(REPO_ROOT, "shared/data/stablecoins/canonical-order.json");
 const CLIENT_ARTIFACTS = [
-  "shared/data/stablecoins/coins.client.generated.json",
+  "shared/data/stablecoins/coins.client.list.generated.json",
+  "shared/data/stablecoins/coins.client.detail",
   "shared/data/stablecoins/coins.compliance.generated.json",
   "shared/data/stablecoins/coins.telegram-mini-app.generated.json",
   "shared/data/stablecoins/coins.worker-runtime.generated.json",

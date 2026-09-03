@@ -4,7 +4,7 @@ import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadActiveAlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import { buildInClause, chunkArray } from "../lib/db";
-import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
+import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram/log";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
 import { getCache } from "../lib/db-cache";

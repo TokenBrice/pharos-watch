@@ -142,7 +142,7 @@ describe("syncLiveReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.doUnmock("../../lib/live-reserves-store");
+    vi.doUnmock("../../lib/live-reserves/store");
     vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
@@ -168,7 +168,7 @@ describe("syncLiveReserves", () => {
       lastError: "fetch failed: network unreachable",
       failureCategory: "network",
     });
-    const { resolveReserveResult } = await import("../../lib/live-reserves-store");
+    const { resolveReserveResult } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(dbWithPreviousLiveReserveRows(rows), coin.id, now);
 
     expect(resolved?.mode).toBe("live");
@@ -202,7 +202,7 @@ describe("syncLiveReserves", () => {
       lastError: "HTTP 503 from reserve source",
       failureCategory: "upstream-http",
     });
-    const { resolveReserveResult } = await import("../../lib/live-reserves-store");
+    const { resolveReserveResult } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(dbWithPreviousLiveReserveRows(rows), coin.id, now);
 
     expect(resolved?.mode).toBe("live");
@@ -262,7 +262,7 @@ describe("syncLiveReserves", () => {
       failureCategory: "validation",
     });
     const db = dbWithPreviousLiveReserveRows(rows);
-    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves-store");
+    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 
@@ -402,7 +402,7 @@ describe("syncLiveReserves", () => {
         }],
       },
     ]);
-    const { loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves-store");
+    const { loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const scoringMap = await loadFreshIndependentLiveReserveMap(persistedDb, now);
     expect(scoringMap.has(coin!.id)).toBe(true);
   });
@@ -509,7 +509,7 @@ describe("syncLiveReserves", () => {
       failureCategory: "network",
     });
     const db = dbWithPreviousLiveReserveRows(rows);
-    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves-store");
+    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 
@@ -626,7 +626,7 @@ describe("syncLiveReserves", () => {
       lastError: null,
     });
     const db = dbWithPreviousLiveReserveRows(rows);
-    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves-store");
+    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 

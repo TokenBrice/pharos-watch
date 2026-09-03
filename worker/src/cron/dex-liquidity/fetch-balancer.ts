@@ -59,6 +59,16 @@ const REVIEWED_POOL_TYPES = new Set([...STABLE_MATH_POOL_TYPES, ...REVIEWED_CUST
 // values (e.g. legacy Fantom multiUSDC/DEI pool reports $337B). Set conservatively below
 // the global DIRECT_API_MAX_POOL_TVL_USD ($10B) so obvious garbage is rejected at source.
 const BALANCER_MAX_POOL_TVL_USD = 2_000_000_000;
+const BALANCER_RETAINED_LARGE_POOL_TVL_USD = 100_000_000;
+const BALANCER_RETAINED_MAX_VOLUME_TO_TVL_RATIO = 50;
+const BALANCER_RETAINED_LARGE_POOL_MIN_VOLUME_USD = 50_000;
+
+function shouldEnrichBalancerPool(tvlUsd: number, volume24hUsd: number): boolean {
+  if (tvlUsd <= 0 || !Number.isFinite(tvlUsd) || !Number.isFinite(volume24hUsd)) return false;
+  if (volume24hUsd / tvlUsd > BALANCER_RETAINED_MAX_VOLUME_TO_TVL_RATIO) return false;
+  return tvlUsd <= BALANCER_RETAINED_LARGE_POOL_TVL_USD ||
+    volume24hUsd >= BALANCER_RETAINED_LARGE_POOL_MIN_VOLUME_USD;
+}
 
 const QUERY = `query($first: Int!, $skip: Int!) {
   poolGetPools(
@@ -84,13 +94,13 @@ const QUERY = `query($first: Int!, $skip: Int!) {
  * providers. Stable-math rows also carry amp. Pools missing from this sweep
  * must remain explicit capability gates.
  */
-const AMP_QUERY = `query($first: Int!, $skip: Int!) {
+const AMP_QUERY = `query($first: Int!, $skip: Int!, $poolIds: [String!]!) {
   aggregatorPools(
     first: $first,
     skip: $skip,
     orderBy: totalLiquidity,
     orderDirection: desc,
-    where: { minTvl: 10000, poolTypeIn: [STABLE, COMPOSABLE_STABLE, META_STABLE, WEIGHTED] }
+    where: { minTvl: 10000, poolTypeIn: [STABLE, COMPOSABLE_STABLE, META_STABLE, WEIGHTED], idIn: $poolIds }
   ) {
     id
     chain
@@ -240,6 +250,7 @@ function isCanonicalEvmAddress(value: string): boolean {
 
 /** Fetch reviewed exact-capability membership and stable amp without throwing on non-abort errors. */
 async function fetchBalancerCapabilities(
+  poolIds: readonly string[],
   warnings: string[],
   signal?: AbortSignal,
 ): Promise<BalancerCapabilitySweep> {
@@ -256,7 +267,11 @@ async function fetchBalancerCapabilities(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: AMP_QUERY,
-          variables: { first: pageSize, skip: (page - 1) * pageSize },
+          variables: {
+            first: pageSize,
+            skip: (page - 1) * pageSize,
+            poolIds,
+          },
         }),
       },
     }),
@@ -499,10 +514,15 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         return null;
       }
 
+      const retainForEnrichment = shouldEnrichBalancerPool(
+        tvlUsd,
+        parseStrictFiniteDecimal(pool.dynamicData.volume24h) ?? 0,
+      );
       const shapedPool = shapeBalancerPool(pool, chain);
       return {
         pool: shapedPool,
-        ...(shapedPool.executionCapabilityGate == null &&
+        ...(retainForEnrichment &&
+        shapedPool.executionCapabilityGate == null &&
         (STABLE_MATH_POOL_TYPES.has(pool.type) || pool.type === "WEIGHTED")
           ? {
               exactCandidate: {
@@ -531,7 +551,11 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
   }
 
   if (exactCandidatePoolIdsByIndex.size > 0) {
-    const capabilitySweep = await fetchBalancerCapabilities(warnings, signal);
+    const capabilitySweep = await fetchBalancerCapabilities(
+      [...new Set([...exactCandidatePoolIdsByIndex.values()].map((candidate) => candidate.poolId))],
+      warnings,
+      signal,
+    );
     let ampAttached = 0;
     let capabilityGated = 0;
     for (const [index, candidate] of exactCandidatePoolIdsByIndex) {

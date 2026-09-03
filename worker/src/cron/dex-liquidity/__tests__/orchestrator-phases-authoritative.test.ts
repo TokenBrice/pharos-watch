@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import { buildDexDirectApiFetchers } from "../orchestrator-phases/direct-api";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const ETHEREUM_POOL_KEY = "ethereum:0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
 
@@ -207,7 +208,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
 describe("direct API census scope declarations", () => {
   it("withholds veto authority from every provider that returns a filtered extract", () => {
     const fetchers = buildDexDirectApiFetchers({
-      db: {} as unknown as D1Database,
+      db: makeNoopD1(),
       graphApiKey: null,
       chainAddressToId: new Map(),
       symbolToChainScopedIds: new Map(),

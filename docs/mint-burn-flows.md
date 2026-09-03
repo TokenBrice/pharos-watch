@@ -21,7 +21,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.191`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.191`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -374,19 +374,19 @@ Filters, cursor/offset pagination, ordering, response fields, cache/freshness be
 
 The recent cron path auto-heals bounded NULL-price debt; this operator path handles older history. It accepts only exact UTC event-day evidence from stored history or bounded historical providers, never current spot, peg par, or another day's price. Definitive no-source results become irreducible, transient provider failures remain retryable, and recovered rows stay `pending_aggregate` until every affected hourly bucket is rebuilt and verified. An interrupted run resumes aggregate verification before selecting new valuation work.
 
-Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference.md#post-apibackfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence.
+Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference-admin.md#post-apibackfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence.
 
 ### POST /api/backfill-mint-burn (admin)
 
 This controlled ingestion path uses the same parsing, classification, transaction-context, persistence, and hourly-aggregation helpers as cron ingestion. It can select the most urgent lagging configuration automatically, processes bounded chunks, and advances shared sync state monotonically so a partial backfill cannot regress the live cursor.
 
-Auth/idempotency, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn`](./api-reference.md#post-apibackfill-mint-burn).
+Auth/idempotency, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn`](./api-reference-admin.md#post-apibackfill-mint-burn).
 
 ### POST /api/reclassify-atomic-roundtrips (admin)
 
 This bounded repair applies the shared 0.5% same-transaction amount-tolerance rule in both directions: newly recognized mint/burn pairs become atomic roundtrips, while old atomic tags that fail the tolerance return to standard flow. Every affected hourly bucket is recalculated before a batch reports completion.
 
-Auth/idempotency, scope parameters, batch progression, counters, and errors are canonical in [API Reference: `POST /api/reclassify-atomic-roundtrips`](./api-reference.md#post-apireclassify-atomic-roundtrips).
+Auth/idempotency, scope parameters, batch progression, counters, and errors are canonical in [API Reference: `POST /api/reclassify-atomic-roundtrips`](./api-reference-admin.md#post-apireclassify-atomic-roundtrips).
 
 ---
 

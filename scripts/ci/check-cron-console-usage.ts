@@ -15,7 +15,7 @@ export const DEFAULT_STRUCTURED_LOG_ROOTS = [
   "worker/src/lib/route-wrappers.ts",
   "worker/src/lib/status",
   "worker/src/lib/structured-log.ts",
-  "worker/src/lib/telegram-log.ts",
+  "worker/src/lib/telegram/log.ts",
   "worker/src/router.ts",
 ];
 const DEFAULT_ROOTS = [...new Set([...DEFAULT_CRON_CONSOLE_ROOTS, ...DEFAULT_STRUCTURED_LOG_ROOTS])];
@@ -23,7 +23,7 @@ const BASELINE_PATH = "scripts/lib/cron-console-usage-baseline.json";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs"]);
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__"]);
 const CONSOLE_CALL_PATTERN = /\bconsole\.(?:log|warn|error|info|debug)\s*\(/g;
-const STRUCTURED_LOGGER_FILES = new Set(["worker/src/lib/structured-log.ts", "worker/src/lib/telegram-log.ts"]);
+const STRUCTURED_LOGGER_FILES = new Set(["worker/src/lib/structured-log.ts", "worker/src/lib/telegram/log.ts"]);
 
 interface ConsoleCall {
   line: number;

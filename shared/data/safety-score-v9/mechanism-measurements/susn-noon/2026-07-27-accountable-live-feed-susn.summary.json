@@ -1,0 +1,14 @@
+{
+  "mechanism": "susn-noon",
+  "date": "2026-07-27-accountable-live-feed-susn",
+  "sha256": "0384c71a8ece5e7db629f8fbb8f1aef07d256264be4b8f7496fe37f73ac17683",
+  "bytes": 3599,
+  "r2Key": "captures/susn-noon/2026-07-27-accountable-live-feed-susn.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "susn-noon",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/susn-noon/2026-07-27-accountable-live-feed-susn.json",
+    "capturedAt": "2026-07-27T22:54:31.000Z"
+  }
+}

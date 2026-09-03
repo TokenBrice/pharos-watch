@@ -124,7 +124,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Horizon's server-side rate limit is authoritative; this state only spaces requests within one isolate to stay under it.",
   },
   {
-    sourcePath: "worker/src/lib/telegram-quiet-hours.ts",
+    sourcePath: "worker/src/lib/telegram/quiet-hours.ts",
     stateNames: ["quietHoursTzFallbackLastLoggedAt"],
     owner: "Telegram quiet-hours telemetry",
     kind: "cache",
@@ -196,7 +196,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Atomic D1 feedback_rate_limit reservations are authoritative.",
   },
   {
-    sourcePath: "worker/src/lib/redemption-backstop-sources.ts",
+    sourcePath: "worker/src/lib/redemption-backstop/sources.ts",
     stateNames: ["outputDependencyResolutionRuns"],
     owner: "Redemption output-dependency resolution",
     kind: "coordination",
@@ -212,7 +212,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 api_request_consumer_stats and api_key_request_stats rows are authoritative.",
   },
   {
-    sourcePath: "worker/src/lib/safety-score-v9-fact-set.ts",
+    sourcePath: "worker/src/lib/safety-score-v9/fact-set.ts",
     stateNames: ["materializedExtensions"],
     owner: "Safety Score V9 extension materialization",
     kind: "cache",
@@ -236,7 +236,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The write-once D1 worker-version-first-seen cache row is authoritative; this flag only suppresses repeat attempts in one isolate.",
   },
   {
-    sourcePath: "worker/src/lib/telegram-log.ts",
+    sourcePath: "worker/src/lib/telegram/log.ts",
     stateNames: [
       "invalidSecretWindowStartedAt",
       "invalidSecretWindowCount",
@@ -265,7 +265,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Env ALCHEMY_API_KEY is authoritative; the map only pairs key-free URLs with their Authorization header.",
   },
   {
-    sourcePath: "worker/src/lib/telegram-mini-app-auth.ts",
+    sourcePath: "worker/src/lib/telegram/mini-app-auth.ts",
     stateNames: ["warnedNovelMiniAppChatTypes"],
     owner: "Telegram Mini App auth telemetry",
     kind: "cache",

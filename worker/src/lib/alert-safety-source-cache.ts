@@ -12,8 +12,8 @@ import {
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "./safety-score-active-source";
-import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9-publication-store";
-import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer-freshness";
+import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 
 const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v1";
 

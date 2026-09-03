@@ -204,34 +204,24 @@ function redactRunbookText(text: string): string {
   );
 }
 
-function redactPublicDocSource(markdown: string, source?: string): string {
+function redactPublicDocSource(markdown: string): string {
   const withoutRunbookLinks = markdown.replace(
     /\[([^\]]+)\]\((?:\.\/)?runbooks\/[^)]+\)/gi,
     (_full, label: string) => redactRunbookText(label),
   );
-  const withoutAgentPaths = redactRunbookText(withoutRunbookLinks)
+  return redactRunbookText(withoutRunbookLinks)
     .replace(/agents\/[^\s)`]+/g, "internal working notes")
     .replace(/AGENTS\.md/g, "agent instructions");
-  if (source !== "api-reference.md") return withoutAgentPaths;
-  const adminAuthIndex = withoutAgentPaths.indexOf("\n## Admin Auth And Idempotency");
-  const publicEndpointsIndex = withoutAgentPaths.indexOf("\n## Public Endpoints");
-  const withoutAdminAuth =
-    adminAuthIndex >= 0 && publicEndpointsIndex > adminAuthIndex
-      ? `${withoutAgentPaths.slice(0, adminAuthIndex)}\n${withoutAgentPaths.slice(publicEndpointsIndex)}`
-      : withoutAgentPaths;
-  const adminEndpointsIndex = withoutAdminAuth.indexOf("\n## Admin Endpoints");
-  return adminEndpointsIndex >= 0 ? withoutAdminAuth.slice(0, adminEndpointsIndex).trimEnd() : withoutAdminAuth;
 }
 
 export function preparePublicDocMarkdown(
   markdown: string,
   {
     absoluteLinks = false,
-    source,
     stripTitle = false,
   }: { absoluteLinks?: boolean; source?: string; stripTitle?: boolean } = {},
 ): string {
-  const redacted = redactPublicDocSource(markdown, source);
+  const redacted = redactPublicDocSource(markdown);
   const withoutTitle = stripTitle ? stripLeadingMarkdownH1(redacted) : redacted;
   return rewritePublicDocLinks(withoutTitle, { absolute: absoluteLinks });
 }

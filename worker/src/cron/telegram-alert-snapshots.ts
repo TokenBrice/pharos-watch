@@ -1,4 +1,4 @@
-import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts";
+import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram/alerts";
 import { setCacheMany } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {

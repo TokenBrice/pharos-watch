@@ -1,0 +1,15 @@
+{
+  "mechanism": "inalpha-nest",
+  "date": "2026-07-27-nest-api",
+  "sha256": "45b91234dbc8bfd1e27e2bb77b477b3d2dbad046d1715f9ee462662cf8407a06",
+  "bytes": 3902,
+  "r2Key": "captures/inalpha-nest/2026-07-27-nest-api.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "inalpha-nest",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/inalpha-nest/2026-07-27-nest-api.json",
+    "capturedAt": "Nest API nest-alpha-vault price NAV $13,666,789.77 price 1.105305 supply 12,364,722.65; eth getRate accountant 0xfbf12… = 1105305 (1.105305); lastPriceUpdate eth chainId=1 updatedAt 1785187259 (2026-07-27T21:20:59Z); positions nOPAL~$7,046,269 nFALCON~$4,070,929 nTBILL~$496,696 nACRDX~$99,938 + liquid ~$213,764"
+  }
+}

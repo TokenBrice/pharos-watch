@@ -35,6 +35,7 @@ Options:
   --event-name <name>    GitHub event name (plan; default: GITHUB_EVENT_NAME or workflow_dispatch)
   --job-status <status>  GitHub job status (summary; default: unknown)
   --dry-run              Plan only: inspect and print the decision without KV writes
+  --plan-token <token>   Render/publish token emitted by plan; refuses a different plan
   -h, --help             Show this help`;
 
 export interface SafetyMapKvAdapter {
@@ -61,6 +62,7 @@ export interface SafetyMapPublishState {
   phase: "planned" | "rendered" | "published";
   eventName: string;
   plannedAtSec: number;
+  planToken?: string;
   alreadyPublished: boolean;
   hadManifest: boolean;
   priorManifest?: Record<string, unknown>;
@@ -194,10 +196,18 @@ export async function planSafetyMapPublication({
   const ageSec = nowSec - Number(priorManifest?.asOfSec);
   const fresh = Number.isFinite(ageSec) && ageSec >= 0 && ageSec < FRESH_SAME_DAY_SECONDS;
   const alreadyPublished = eventName === "schedule" && priorManifest?.date === today && fresh;
+  const planToken = buildPlanToken({
+    alreadyPublished,
+    eventName,
+    hadManifest,
+    nowSec,
+    priorManifest,
+  });
   const state: SafetyMapPublishState = {
     phase: "planned",
     eventName,
     plannedAtSec: nowSec,
+    planToken,
     alreadyPublished,
     hadManifest,
     ...(priorManifest ? { priorManifest } : {}),
@@ -210,8 +220,47 @@ export async function planSafetyMapPublication({
 
   if (!dryRun) writeState(statePath, state);
   io.writeOutput("already_published", alreadyPublished);
+  io.writeOutput("should_render", !alreadyPublished);
   io.writeOutput("has_manifest", hadManifest);
+  io.writeOutput("plan_token", planToken);
   return state;
+}
+
+function buildPlanToken({
+  alreadyPublished,
+  eventName,
+  hadManifest,
+  nowSec,
+  priorManifest,
+}: {
+  alreadyPublished: boolean;
+  eventName: string;
+  hadManifest: boolean;
+  nowSec: number;
+  priorManifest?: Record<string, unknown>;
+}): string {
+  return sha256(Buffer.from(JSON.stringify({
+    version: 1,
+    eventName,
+    plannedAtSec: nowSec,
+    alreadyPublished,
+    hadManifest,
+    priorManifest: priorManifest ?? null,
+  }), "utf8"));
+}
+
+function assertPlanToken(state: SafetyMapPublishState, expectedPlanToken?: string): void {
+  if (expectedPlanToken === undefined) return;
+  const computedPlanToken = buildPlanToken({
+    alreadyPublished: state.alreadyPublished,
+    eventName: state.eventName,
+    hadManifest: state.hadManifest,
+    nowSec: state.plannedAtSec,
+    priorManifest: state.priorManifest,
+  });
+  if (!state.planToken || state.planToken !== expectedPlanToken || state.planToken !== computedPlanToken) {
+    throw new Error("Publication state does not match the supplied plan token; refusing to continue.");
+  }
 }
 
 function buildManifest(outDir: string): { manifest: SafetyMapManifest; manifestPath: string } {
@@ -250,14 +299,17 @@ export async function renderSafetyMapPublication({
   commandRunner = runShellCommand,
   io = DEFAULT_IO,
   outDir,
+  planToken,
   statePath,
 }: {
   commandRunner?: CommandImplementation;
   io?: PublicationIo;
   outDir: string;
+  planToken?: string;
   statePath: string;
 }): Promise<SafetyMapPublishState> {
   const state = readState(statePath);
+  assertPlanToken(state, planToken);
   if (state.alreadyPublished) return state;
   const started = Date.now();
   const command = `npm run build:safety-score-map -- --out ${shellQuote(join(outDir, "latest.png"))}`;
@@ -292,14 +344,17 @@ export async function publishSafetyMapPublication({
   adapter,
   io = DEFAULT_IO,
   outDir,
+  planToken,
   statePath,
 }: {
   adapter: SafetyMapKvAdapter;
   io?: PublicationIo;
   outDir: string;
+  planToken?: string;
   statePath: string;
 }): Promise<SafetyMapPublishState> {
   const state = readState(statePath);
+  assertPlanToken(state, planToken);
   if (state.alreadyPublished) return state;
   if (!state.manifest) throw new Error("Publication state has not completed the render phase");
   if (state.hadManifest) {
@@ -324,6 +379,7 @@ export async function publishSafetyMapPublication({
   writeState(statePath, state);
   return state;
 }
+
 
 export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobStatus: string): string {
   const manifest = state?.manifest;
@@ -364,6 +420,7 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
       "event-name": { type: "string" },
       "job-status": { type: "string" },
       "dry-run": { type: "boolean" },
+      "plan-token": { type: "string" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return;
@@ -373,12 +430,13 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
   assertCliUsage(values["dry-run"] !== true || phase === "plan", "--dry-run is only valid with plan");
   const outDir = resolve(typeof values["out-dir"] === "string" ? values["out-dir"] : "agents/safety-score-map/ci");
   const statePath = resolve(typeof values.state === "string" ? values.state : join(outDir, "publish-state.json"));
+  const planToken = typeof values["plan-token"] === "string" ? values["plan-token"] : undefined;
   if (phase === "plan") {
     await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", io, statePath });
   } else if (phase === "render") {
-    await renderSafetyMapPublication({ io, outDir, statePath });
+    await renderSafetyMapPublication({ io, outDir, planToken, statePath });
   } else if (phase === "publish") {
-    await publishSafetyMapPublication({ adapter: defaultAdapter(), io, outDir, statePath });
+    await publishSafetyMapPublication({ adapter: defaultAdapter(), io, outDir, planToken, statePath });
   } else {
     const state = existsSync(statePath) ? readState(statePath) : null;
     const summary = buildSafetyMapSummary(state, typeof values["job-status"] === "string" ? values["job-status"] : "unknown");

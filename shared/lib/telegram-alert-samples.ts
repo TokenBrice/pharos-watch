@@ -12,7 +12,7 @@ import type { TelegramAlertType } from "../types/status/telegram";
  * examples lie fails CI instead of drifting.
  *
  * Fixture shapes structurally mirror the Worker formatter payload interfaces
- * in `worker/src/lib/telegram-alerts-formatting.ts`; the contract test proves
+ * in `worker/src/lib/telegram/alerts-formatting.ts`; the contract test proves
  * assignability because it passes them to the formatter directly.
  */
 export interface TelegramDewsSampleFixture {

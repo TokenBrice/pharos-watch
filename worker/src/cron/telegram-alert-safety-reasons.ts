@@ -2,7 +2,7 @@ import {
   getReportCardGradeRank,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "@shared/lib/report-card-core";
-import type { SafetyChange } from "../lib/telegram-alerts";
+import type { SafetyChange } from "../lib/telegram/alerts";
 import type {
   AlertSafetyV9SourceRow,
   AlertSafetyV9ExplainSnapshot,

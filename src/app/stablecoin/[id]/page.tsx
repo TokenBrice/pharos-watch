@@ -1,4 +1,6 @@
 import { Suspense, type ReactNode } from "react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -27,8 +29,21 @@ import { buildMechanismBackingView } from "@/lib/mechanism-backing";
 import { buildMechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import { buildMechanismReviewView } from "@/lib/mechanism-review";
 import { buildTransferReviewView } from "@/lib/transfer-review";
+import type { StablecoinDetailSnapshot } from "@/lib/api";
+import type { StablecoinAiSummariesById } from "@shared/types";
 
-const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
+const typedSummaries = aiSummaries as StablecoinAiSummariesById;
+
+function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
+  try {
+    const file = resolve(process.cwd(), "src/generated/stablecoin-detail-snapshots", `${id}.json`);
+    // The ID comes from the closed tracked-stablecoin registry above.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    return JSON.parse(readFileSync(file, "utf8")) as StablecoinDetailSnapshot;
+  } catch {
+    return null;
+  }
+}
 
 function buildCollateralUsageIndex(): Map<string, CollateralUsageEntry[]> {
   const usageByStablecoinId = new Map<string, CollateralUsageEntry[]>();
@@ -244,6 +259,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     hasCollateralUsage: collateralUsageEntries.length > 0,
   });
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
+  const detailSnapshot = readDetailSnapshot(id);
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
   // Keep the FAQ visible and its FAQPage JSON-LD attached to the hydrated
   // dossier without placing it ahead of the primary coin identity.
@@ -269,6 +285,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         }
       >
         <StablecoinDetailClient
+          key={id}
           id={id}
           coin={clientCoin}
           summary={summary}
@@ -299,6 +316,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             />
           }
           faqContent={faqContent}
+          snapshot={detailSnapshot}
         />
       </Suspense>
       <BreadcrumbJsonLd

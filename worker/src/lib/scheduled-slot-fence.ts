@@ -49,7 +49,7 @@ interface ScheduledSlotFenceMetadata {
 // write no terminal row), and waiting longer only extends the outage window
 // for every lane that gates on this slot.
 const SLOT_EXECUTION_RUNNING_STALE_SEC = 5 * 60;
-const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
+const SLOT_EXECUTION_HEARTBEAT_SEC = 60;
 // A Cloudflare scheduled invocation cannot outlive the 15-minute event wall
 // clock, so a running row older than that plus a minute of skew is provably
 // dead regardless of what its heartbeat column claims.

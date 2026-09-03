@@ -1,0 +1,11 @@
+{
+  "mechanism": "fpi-frax",
+  "date": "fpi-collateral-raw",
+  "sha256": "575d5ba8eceb8f631424b0dd0a520fcdfba7e7c8b5ec5579f9b0fe443696cbcc",
+  "bytes": 8260,
+  "r2Key": "captures/fpi-frax/fpi-collateral-raw.json.gz",
+  "summary": {
+    "assetId": "fpi-frax",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/fpi-frax/fpi-collateral-raw.json"
+  }
+}

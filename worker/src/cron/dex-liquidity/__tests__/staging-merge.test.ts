@@ -10,6 +10,7 @@ import {
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
 import { makeStagedPoolRow } from "./staging-merge.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const confidenceCases = [
   { ageHours: 0, expected: 1 },
@@ -27,13 +28,13 @@ const maturityCases = [
 ] as const;
 
 function createMockDb(results: unknown[] | (() => Promise<{ results: unknown[] }>)): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         all: typeof results === "function" ? results : async () => ({ results }),
       }),
     }),
-  } as unknown as D1Database;
+  });
 }
 
 function makeKnownPoolIndex(entries: string[] = [], exactStablecoinId?: string): KnownPoolIdentityIndex {

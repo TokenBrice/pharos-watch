@@ -1,7 +1,13 @@
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { fetchBlockByNumber, pinBlock, JournaledEthCaller, ReplayEthCaller } from "../lib/mechanism-measurement/core";
+import { CAPTURE_SUMMARY_SUFFIX, parseMechanismCaptureSummary } from "../lib/mechanism-measurement/capture-summary";
+import { createR2MeasurementsClient } from "../lib/r2-measurements-client";
+import type { R2MeasurementsClient } from "../lib/r2-measurements-client";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { MechanismMeasurementEvidenceV1Schema } from "../lib/mechanism-measurement/schema";
 import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
@@ -27,6 +33,48 @@ interface CliOptions {
   block: number | null;
   outDir: string;
   replayPaths: string[];
+}
+
+const DEFAULT_CAPTURE_CACHE_DIR = resolve(process.cwd(), "agents/.cache/measurements");
+
+function captureSha256(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function decodeCaptureBody(bytes: Uint8Array): Buffer {
+  const body = Buffer.from(bytes);
+  return body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body;
+}
+
+export async function resolveCaptureBody(
+  path: string,
+  options: { cacheDir?: string; r2Client?: R2MeasurementsClient } = {},
+): Promise<Buffer> {
+  const absolutePath = resolve(path);
+  if (existsSync(absolutePath)) return readFileSync(absolutePath);
+  const summaryPath = absolutePath.endsWith(CAPTURE_SUMMARY_SUFFIX)
+    ? absolutePath
+    : `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
+  if (!existsSync(summaryPath)) throw new Error(`Missing mechanism evidence capture or summary: ${absolutePath}`);
+  const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
+  const cacheDir = resolve(options.cacheDir ?? DEFAULT_CAPTURE_CACHE_DIR);
+  const cachePath = resolve(cacheDir, `${summary.sha256}.json`);
+  if (existsSync(cachePath)) {
+    const cached = readFileSync(cachePath);
+    if (captureSha256(cached) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
+    return cached;
+  }
+  const client = options.r2Client ?? createR2MeasurementsClient();
+  for (const key of [summary.r2Key.replace(/^captures\//u, "pinned/"), summary.r2Key]) {
+    const compressed = await client.get(key);
+    if (!compressed) continue;
+    const body = decodeCaptureBody(compressed);
+    if (captureSha256(body) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(cachePath, body);
+    return body;
+  }
+  throw new Error(`capture ${summary.sha256} expired: non-replayable`);
 }
 
 function parseOptions(argv: string[]): CliOptions | null {
@@ -69,7 +117,9 @@ function measurementOnly(value: unknown): string {
 
 async function replayEvidence(path: string): Promise<void> {
   const absolutePath = resolve(path);
-  const recorded = MechanismMeasurementEvidenceV1Schema.parse(JSON.parse(readFileSync(absolutePath, "utf8")));
+  const recorded = MechanismMeasurementEvidenceV1Schema.parse(
+    JSON.parse((await resolveCaptureBody(absolutePath)).toString("utf8")),
+  );
   const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === recorded.assetId);
   if (!target) throw new Error(`No configured target for replay asset ${recorded.assetId}`);
   if (target.family !== recorded.family) {
@@ -144,6 +194,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     `All RPC endpoints failed for ${assetId}: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
   );
 }
+if (isDirectRun(import.meta.url, process.argv[1])) {
 
 void runCliEntrypoint(
   async () => {
@@ -161,3 +212,4 @@ void runCliEntrypoint(
   },
   { label: "measure-cdp-mechanism-metrics", usage: USAGE },
 );
+}

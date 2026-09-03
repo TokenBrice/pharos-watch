@@ -6,6 +6,7 @@ import {
   upsertDexDeploymentOutcomes,
 } from "../deployment-outcomes";
 import type { DexDeploymentProviderCheck, StagedPool } from "../types";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
 const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly StagedPool["source"][];
@@ -60,7 +61,7 @@ function poolFor(address: string): StagedPool {
 
 function createRecordingDb(): { db: D1Database; statements: Array<{ sql: string; values: unknown[] }> } {
   const statements: Array<{ sql: string; values: unknown[] }> = [];
-  const db = {
+  const db = makeNoopD1({
     prepare: vi.fn((sql: string) => ({
       bind: vi.fn((...values: unknown[]) => {
         statements.push({ sql, values });
@@ -68,7 +69,7 @@ function createRecordingDb(): { db: D1Database; statements: Array<{ sql: string;
       }),
     })),
     batch: vi.fn(async (batched: unknown[]) => batched.map(() => ({ meta: { changes: 1 } }))),
-  } as unknown as D1Database;
+  });
   return { db, statements };
 }
 

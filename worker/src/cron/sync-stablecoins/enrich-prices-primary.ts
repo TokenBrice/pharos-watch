@@ -4,7 +4,6 @@ import { throwIfAborted } from "../../lib/abort";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DlListQuote } from "../../lib/primary-price-collector";
-import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
@@ -37,7 +36,6 @@ export async function fetchPrimaryPrices(
   options?: {
     previousAssetsById?: Map<string, PeggedAsset>;
     previousMissingGenerationsById?: ReadonlyMap<string, number>;
-    addressProvider?: AddressPriceProviderRuntimeConfig;
     binanceSession?: BinanceFetchSession;
   },
 ): Promise<{
@@ -64,7 +62,7 @@ export async function fetchPrimaryPrices(
   const contexts = validationContexts ?? createValidationContextResolver();
   const results = new Map<string, PrimaryPriceResult>();
   const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
-  const plan = await buildPrimaryPricePlan(assets, db, dlListPrices, options);
+  const plan = await buildPrimaryPricePlan(assets, db, dlListPrices);
 
   if (plan.candidates.length === 0) {
     logDexPriceSourceLoadTelemetry(plan.dexPriceSourceTelemetry);

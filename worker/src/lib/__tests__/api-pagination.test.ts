@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeJsonCursor } from "../api-params";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   buildPaginatedEventResponse,
   fetchPaginatedEvents,
@@ -383,7 +384,7 @@ describe("buildPaginatedEventResponse", () => {
 describe("fetchPaginatedEvents", () => {
   it("builds count and data queries with validated pagination inputs", async () => {
     type BoundStatement = { sql: string; binds: unknown[] };
-    const db = {
+      const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({ sql, binds }),
       }),
@@ -403,7 +404,7 @@ describe("fetchPaginatedEvents", () => {
           { results: [{ id: "a" }, { id: "b" }] },
         ];
       }),
-    } as unknown as D1Database;
+    });
 
     const result = await fetchPaginatedEvents<{ id: string }, string>(db, {
       tableName: "blacklist_events",
@@ -422,7 +423,7 @@ describe("fetchPaginatedEvents", () => {
   });
 
   it("rejects non-allowlisted tables and malformed order clauses", async () => {
-    await expect(fetchPaginatedEvents({} as D1Database, {
+    await expect(fetchPaginatedEvents(makeNoopD1(), {
       tableName: "cache",
       orderBy: "timestamp DESC",
       conditions: [],
@@ -432,7 +433,7 @@ describe("fetchPaginatedEvents", () => {
       mapRow: (row) => row,
     })).rejects.toThrow("Invalid table: cache");
 
-    await expect(fetchPaginatedEvents({} as D1Database, {
+    await expect(fetchPaginatedEvents(makeNoopD1(), {
       tableName: "blacklist_events",
       orderBy: "timestamp DOWN",
       conditions: [],
@@ -442,7 +443,7 @@ describe("fetchPaginatedEvents", () => {
       mapRow: (row) => row,
     })).rejects.toThrow("Invalid orderBy direction: DOWN");
 
-    await expect(fetchPaginatedEvents({} as D1Database, {
+    await expect(fetchPaginatedEvents(makeNoopD1(), {
       tableName: "blacklist_events",
       orderBy: "timestamp DESC NULLS LAST",
       conditions: [],

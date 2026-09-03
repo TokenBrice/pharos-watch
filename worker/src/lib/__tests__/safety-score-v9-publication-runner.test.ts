@@ -17,16 +17,16 @@ vi.mock("../alert-safety-source-cache", async (importOriginal) => ({
   persistAlertSafetyV9SourceEnvelope: mocks.persistAlertEnvelope,
 }));
 
-vi.mock("../safety-score-v9-candidate", () => ({
+vi.mock("../safety-score-v9/candidate", () => ({
   buildSafetyScoreV9PublicationFromNormalizedInput: mocks.build,
 }));
-vi.mock("../safety-score-v9-publication-assessment", async (importOriginal) => ({
+vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => ({
   ...await importOriginal<
-    typeof import("../safety-score-v9-publication-assessment")
+    typeof import("../safety-score-v9/publication-assessment")
   >(),
   assessV9Publication: mocks.assess,
 }));
-vi.mock("../safety-score-v9-publication-store", () => ({
+vi.mock("../safety-score-v9/publication-store", () => ({
   loadSafetyScoreV9Publication: mocks.loadPublication,
   loadSafetyScoreV9PublicationHealth: mocks.loadHealth,
   persistSafetyScoreV9Publication: mocks.persist,
@@ -34,7 +34,7 @@ vi.mock("../safety-score-v9-publication-store", () => ({
 }));
 
 const { runSafetyScoreV9Publication } = await import(
-  "../safety-score-v9-publication-runner"
+  "../safety-score-v9/publication-runner"
 );
 const fixedInput = createSafetyScoreV9FullRegistryInput();
 

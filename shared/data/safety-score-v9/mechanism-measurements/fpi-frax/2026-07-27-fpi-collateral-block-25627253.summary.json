@@ -1,0 +1,14 @@
+{
+  "mechanism": "fpi-frax",
+  "date": "2026-07-27-fpi-collateral-block-25627253",
+  "sha256": "79c44aadc94e5c694e44830b2eb30236996928474f319a070c7815fdfc9061b4",
+  "bytes": 2762,
+  "r2Key": "captures/fpi-frax/2026-07-27-fpi-collateral-block-25627253.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "fpi-frax",
+    "archetype": "algorithmic",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/fpi-frax/2026-07-27-fpi-collateral-block-25627253.json",
+    "capturedAt": "2026-07-27T22:52:02.000Z"
+  }
+}

@@ -147,8 +147,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     description: "Daily and weekly digest Telegram delivery.",
     files: [
       "worker/src/lib/telegram.ts",
-      "worker/src/lib/telegram-transport-control.ts",
-      "worker/src/lib/telegram-digest-outbox.ts",
+      "worker/src/lib/telegram/transport-control.ts",
+      "worker/src/lib/telegram/digest-outbox.ts",
       "worker/src/cron/digest/platform.ts",
       "worker/src/cron/daily-digest.ts",
       "worker/src/cron/telegram-digest-transport.ts",
@@ -341,7 +341,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "coingecko-status-supplements",
     family: "status-supplements",
     description: "On-demand status supplement CoinGecko price fetch.",
-    files: ["worker/src/api/status-supplements.ts"],
+    files: ["worker/src/lib/status/supplements.ts"],
     tests: [
       "worker/src/api/__tests__/status-snapshots-core.test.ts",
       "worker/src/api/__tests__/status-data-loaders.test.ts",

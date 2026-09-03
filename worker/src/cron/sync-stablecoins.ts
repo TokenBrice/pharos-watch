@@ -23,7 +23,6 @@ export interface SyncStablecoinsOptions {
   chainRpcs?: Map<string, ChainRpcConfig>;
   reportProgress?: CronProgressReporter;
   jupiterApiKey?: string | null;
-  addressPriceProvider?: Parameters<typeof runStablecoinsPricingStage>[0]["addressPriceProvider"];
 }
 
 export async function syncStablecoins(
@@ -37,7 +36,6 @@ export async function syncStablecoins(
     chainRpcs,
     reportProgress,
     jupiterApiKey,
-    addressPriceProvider,
   } = options;
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
@@ -89,14 +87,11 @@ export async function syncStablecoins(
     syncStartSec,
     fxFallbackRates,
     validationReferences,
-    cmcApiKey,
-    jupiterApiKey,
     signal,
     coingeckoApiKey,
     chainRpcs,
-    addressPriceProvider,
-    reportProgress,
     binanceSession,
+    reportProgress,
     nativePegSession,
   });
   if ("enrichStats" in pricingStage === false) return pricingStage;

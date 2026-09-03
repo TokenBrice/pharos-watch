@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
-import { createAssetBuildContext } from "../safety-score-v9-fact-set-context";
-import { buildWrapperLocalFacts } from "../safety-score-v9-fact-set-wrapper";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
+import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import {
   makeV9RoleExtension,
   makeV9TwoAssetFixedInput,

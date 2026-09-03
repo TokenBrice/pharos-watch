@@ -7,16 +7,16 @@ import type { V9Grade } from "@shared/types/safety-score-v9";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
-} from "../src/lib/safety-score-v9-extension";
+} from "../src/lib/safety-score-v9/extension";
 import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
-} from "../src/lib/safety-score-v9-candidate";
+} from "../src/lib/safety-score-v9/candidate";
 import {
   computeNativeDexLiquidityPayloadFingerprint,
   normalizeSafetyScoreV9CompilerInput,
   type SafetyScoreV9CompilerInput,
-} from "../src/lib/safety-score-v9-native-input";
+} from "../src/lib/safety-score-v9/native-input";
 import {
   assertCliUsage,
   parseStrictCliArgs,

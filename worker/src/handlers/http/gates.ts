@@ -28,7 +28,7 @@ import {
 } from "../../lib/auth";
 import { validateWorkerEnvContract } from "../../lib/env";
 import type { Env } from "../../lib/env";
-import { TELEGRAM_ADOPTION_API_PATH } from "../../lib/telegram-adoption-analytics";
+import { TELEGRAM_ADOPTION_API_PATH } from "../../lib/telegram/adoption-analytics";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
   isCacheableGetRequest,

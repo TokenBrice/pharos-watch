@@ -274,7 +274,7 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 
 ### Telegram
 
-**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-digest-outbox.ts`
+**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram/digest-outbox.ts`
 
 - Auth: bot token embedded in the request URL (no OAuth)
 - Parse mode: **HTML** — title is wrapped in `<b>`, link uses `<a href>`
@@ -298,7 +298,7 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 
 The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. It is the first text section after the separate map photo so the numbers stay adjacent to the image. A deterministic `Standing:` chronic-conditions line is rendered as its own expandable context blockquote (still capped at five entries). `New Cemetery Entries` and `Tracking Changes` are each rendered as expandable blockquotes; they remain in the same message, so no second-message cursor is needed. The private-recap CTA is emitted only when the resolved rollout policy is `public`, and links to `@PharosWatchBot` rather than suggesting that a channel can receive a private recap; a missing policy deliberately emits no CTA. Telegram persists the dated map URL, depicted date, and media delivery state with the immutable edition. Delivery sends the map first through `sendPhoto`, durably records `media_state=sent`, then resumes text from the existing chunk cursor. Retryable photo failures do not advance that cursor, and text retries never resend an accepted photo. Editions without a map remain text-only with `media_state=none`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
-Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
+Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram/digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
 
 - `New Cemetery Entries` for newly added cemetery rows
 - `Tracking Changes` for newly tracked coins, split into live tracked vs pre-launch
@@ -467,7 +467,7 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
 1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Code releases via `deploy-cloudflare.yml` now also pass `refresh_data: true`, so a merge no longer regresses digest detail pages, the sitemap, and the RSS feed to the committed snapshot's age until the next scheduled rebuild.
-2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events.json`, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
+2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events/` index and yearly shards, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
 3. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
 4. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot and remains the safety net if a fail-open deploy shipped the committed snapshot.
 

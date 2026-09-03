@@ -41,6 +41,8 @@ The default self-serve key policy is:
 
 The reference page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. It renders only selected overview sections from `docs/api-reference.md` plus a route directory derived from the canonical public endpoint section. Full endpoint field tables, examples, edge cases, and admin sections remain in `docs/api-reference.md` and `/docs/api-reference/`.
 
+The machine-readable OpenAPI artifact now factors repeated response definitions into `$ref` components under `components/schemas`, while the previous inline artifact remains available in git history for clients that depended on that representation.
+
 ---
 
 ## Shell Contract

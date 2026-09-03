@@ -12,7 +12,7 @@ import {
   assignSharedDispatchState,
   type DispatchSnapshotState,
 } from "./dispatch-telegram-state";
-import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
   buildTelegramDispatchEvents,
@@ -45,6 +45,99 @@ export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 import type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 
 const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
+const TELEGRAM_PLANNING_TABLES = [
+  "telegram_alert_source_events",
+  "telegram_alert_source_resolution",
+  "telegram_alert_planning_subscribers",
+  "telegram_alert_target_plans",
+  "telegram_alert_target_plan_pages",
+  "telegram_alert_target_plan_items",
+  "telegram_alert_jobs",
+  "telegram_alert_job_targets",
+  "telegram_alert_job_target_items",
+  "telegram_subscribers",
+  "telegram_subscriptions",
+  "telegram_preset_subscriptions",
+] as const;
+
+interface TelegramPlanningCounters {
+  planningStatements: number;
+}
+
+function isTelegramPlanningStatement(sql: string): boolean {
+  const normalizedSql = sql.toLowerCase();
+  return TELEGRAM_PLANNING_TABLES.some((table) => normalizedSql.includes(table));
+}
+
+function createTelegramPlanningDatabase(
+  db: D1Database,
+  counters: TelegramPlanningCounters,
+): D1Database {
+  const countedDb = {
+    ...db,
+    prepare(sql: string) {
+      if (isTelegramPlanningStatement(sql)) counters.planningStatements += 1;
+      return db.prepare(sql);
+    },
+    batch: db.batch.bind(db),
+  };
+  return countedDb as D1Database;
+}
+
+function parseTelegramDispatchMetadata(metadata: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(metadata) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function finiteMetadataNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function addTelegramDispatchMetadataCounters(
+  result: { itemCount: number; metadata: string },
+  counters: TelegramPlanningCounters,
+): { itemCount: number; metadata: string } {
+  const metadata = parseTelegramDispatchMetadata(result.metadata);
+  const pendingRowsEnqueued = Math.max(0, finiteMetadataNumber(metadata.pendingEnqueued) ?? 0);
+  const sourceEventsProcessed = [
+    metadata.sourceEventId,
+    metadata.expiredSourceEventId,
+    (metadata.authoritativePlanning as Record<string, unknown> | null)?.sourceEventId,
+  ].some((value) => typeof value === "string" && value.length > 0)
+    ? 1
+    : 0;
+  const pendingWork = [
+    metadata.pendingAttempted,
+    metadata.pendingExpired,
+    metadata.pendingEnqueued,
+    metadata.pendingDrained,
+    metadata.pendingDropped,
+    metadata.messagesSent,
+    metadata.freezeObserved,
+    metadata.freezeQueued,
+    metadata.blockedUsersCleanedUp,
+  ].some((value) => (finiteMetadataNumber(value) ?? 0) > 0);
+  const noWorkRun = (metadata.eventlessFastPath === true || metadata.skipped === "circuit-open") && !pendingWork;
+  const planningMs = Math.max(0, finiteMetadataNumber(metadata.fanoutTotalMs) ?? 0);
+
+  return {
+    ...result,
+    metadata: JSON.stringify({
+      ...metadata,
+      planningStatements: Math.max(0, Math.floor(counters.planningStatements)),
+      planningMs,
+      sourceEventsProcessed,
+      pendingRowsEnqueued,
+      noWorkRun,
+    }),
+  };
+}
 
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
 
@@ -98,6 +191,8 @@ async function dispatchTelegramAlertsImpl(
   });
   const dispatchStartedAtMs = Date.now();
   const dispatchNowSec = Math.floor(dispatchStartedAtMs / 1000);
+  const planningCounters: TelegramPlanningCounters = { planningStatements: 0 };
+  const planningDb = createTelegramPlanningDatabase(db, planningCounters);
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     const nowSec = dispatchNowSec;
@@ -121,7 +216,10 @@ async function dispatchTelegramAlertsImpl(
         deferredTail: pendingTailState(result.pendingCapacityAfter),
       },
     });
-    return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
+    return addTelegramDispatchMetadataCounters(
+      { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
+      planningCounters,
+    );
   }
 
   let telegramDeliveryStarted = false;
@@ -191,6 +289,7 @@ async function dispatchTelegramAlertsImpl(
         reserveAlertSourceGeneration: snapshotState.reserveSourceAssessment.generation,
         safetyAlertSourceState: safetySourceAssessment.state,
         safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
+        safetyAlertSourceGeneration: safetySourceAssessment.generation,
         deferredTail: pendingTailState(pendingCapacityBefore),
       },
     });
@@ -209,7 +308,10 @@ async function dispatchTelegramAlertsImpl(
       markTelegramDeliveryStarted,
     });
     if (recovery.kind === "handled") {
-      return { itemCount: recovery.itemCount, metadata: recovery.metadata };
+      return addTelegramDispatchMetadataCounters(
+        { itemCount: recovery.itemCount, metadata: recovery.metadata },
+        planningCounters,
+      );
     }
     let sourceEvent = recovery.sourceEvent;
     const resumedSourceEvent = recovery.resumedSourceEvent;
@@ -228,7 +330,10 @@ async function dispatchTelegramAlertsImpl(
         sharedState,
         reportProgress,
       });
-      return { itemCount: 0, metadata: JSON.stringify(result) };
+      return addTelegramDispatchMetadataCounters(
+        { itemCount: 0, metadata: JSON.stringify(result) },
+        planningCounters,
+      );
     }
 
     await reportCronProgress(reportProgress, {
@@ -244,7 +349,7 @@ async function dispatchTelegramAlertsImpl(
       },
     });
     const dispatchEvents = sourceEvent?.events ?? await buildTelegramDispatchEvents(
-      db,
+      planningDb,
       sourceData,
       snapshotState,
       getSymbol,
@@ -256,7 +361,7 @@ async function dispatchTelegramAlertsImpl(
     const requiresFullFanoutPath = eventCount > 0 || sourceEvent != null;
     if (!sourceEvent && requiresFullFanoutPath) {
       sourceEvent = await persistTelegramAlertSourceEvent(
-        db,
+        planningDb,
         await buildTelegramAlertSourceEvent({
           events: dispatchEvents,
           baseline: currentSnapshots,
@@ -308,7 +413,10 @@ async function dispatchTelegramAlertsImpl(
         reportProgress,
         markTelegramDeliveryStarted,
       });
-      return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
+      return addTelegramDispatchMetadataCounters(
+        { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
+        planningCounters,
+      );
     }
 
     if (!sourceEvent) {
@@ -316,7 +424,7 @@ async function dispatchTelegramAlertsImpl(
     }
 
     const result = await executeFullFanoutPath({
-      db,
+      db: planningDb,
       botToken,
       snapshotState,
       events: dispatchEvents,
@@ -332,7 +440,10 @@ async function dispatchTelegramAlertsImpl(
       markTelegramDeliveryStarted,
     });
 
-    return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
+    return addTelegramDispatchMetadataCounters(
+      { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
+      planningCounters,
+    );
   } catch (error) {
     if (shouldRecordTelegramDispatchFailure(error, signal, telegramDeliveryStarted)) {
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);

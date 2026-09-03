@@ -14,30 +14,30 @@ import {
   NATIVE_V9_INPUT_CACHE_KEY,
   parseNativeV9InputCacheArtifact,
   type NativeV9InputCacheArtifact,
-} from "../lib/safety-score-v9-native-input";
+} from "../lib/safety-score-v9/native-input";
 import {
   parseSafetyScoreV9PegProvenanceSeed,
   SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
   type SafetyScoreV9PegProvenanceSeed,
-} from "../lib/safety-score-v9-peg-provenance";
-import { runSafetyScoreV9Publication } from "../lib/safety-score-v9-publication-runner";
+} from "../lib/safety-score-v9/peg-provenance";
+import { runSafetyScoreV9Publication } from "../lib/safety-score-v9/publication-runner";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
-} from "../lib/safety-score-v9-supply-attribution";
+} from "../lib/safety-score-v9/supply-attribution";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
   isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred,
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   type SafetyScoreV9SupplyAttributionGeneration,
-} from "../lib/safety-score-v9-supply-attribution-generation";
-import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9-supply-attribution-journal-store";
+} from "../lib/safety-score-v9/supply-attribution-generation";
+import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9/supply-attribution-journal-store";
 import { loadExactDexPublicationGeneration } from "../lib/report-cards-snapshot";
 import {
   parseSafetyScoreV9TransferMaterialityGeneration,
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
   type SafetyScoreV9TransferMaterialityGeneration,
-} from "../lib/safety-score-v9-transfer-materiality";
+} from "../lib/safety-score-v9/transfer-materiality";
 
 function unavailable(
   reason: string,

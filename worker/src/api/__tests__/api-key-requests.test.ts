@@ -11,6 +11,7 @@ import { redactProviderBody } from "../api-key-requests/email";
 import type { ApiKeySelfServeEnv } from "../api-key-requests/types";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 function setupSqlite(): DatabaseSync {
@@ -67,12 +68,12 @@ function throwingD1(): D1Database {
   const reject = () => {
     throw new Error("D1 should not be touched");
   };
-  return {
+  return makeNoopD1({
     prepare: reject,
     batch: reject,
     exec: reject,
     dump: reject,
-  } as unknown as D1Database;
+  });
 }
 
 function extractVerificationToken(sentBody: unknown): string {
@@ -603,7 +604,7 @@ describe("api key self-serve request handlers", () => {
     // Simulate a concurrent status change between the initial select and the
     // status-flip UPDATE: the moment the reject UPDATE is prepared, flip the
     // request to a terminal status so the WHERE clause matches 0 rows.
-    const racingDb = {
+    const racingDb = makeNoopD1({
       ...db,
       prepare: (sql: string) => {
         if (sql.includes("UPDATE api_key_requests SET status = 'rejected'")) {
@@ -611,7 +612,7 @@ describe("api key self-serve request handlers", () => {
         }
         return db.prepare(sql);
       },
-    } as unknown as D1Database;
+    });
 
     const response = await handleApiKeyRequestReject(
       racingDb,
@@ -665,7 +666,7 @@ describe("api key self-serve request handlers", () => {
     expect(issued.status).toBe(201);
     const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
 
-    const failRevocationDb = {
+    const failRevocationDb = makeNoopD1({
       ...db,
       prepare: (sql: string) => {
         const statement = db.prepare(sql);
@@ -685,7 +686,7 @@ describe("api key self-serve request handlers", () => {
           },
         };
       },
-    } as unknown as D1Database;
+    });
 
     const failedReject = await handleApiKeyRequestReject(
       failRevocationDb,

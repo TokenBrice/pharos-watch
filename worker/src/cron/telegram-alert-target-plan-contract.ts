@@ -5,7 +5,7 @@ import { D1_MAX_BOUND_PARAMETERS } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import { parseJson } from "../lib/json-parse";
 import type { BatchMessage } from "../lib/telegram";
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../lib/telegram-constants";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../lib/telegram/constants";
 import {
   parsePendingAlertScope,
   parsePendingAlertProvenance,
@@ -13,10 +13,10 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
   isValidPendingSourceEventId,
-} from "../lib/telegram-pending-provenance";
+} from "../lib/telegram/pending-provenance";
 import { expandSubscriberChunks, type RoutedSubscriberAlert } from "./dispatch-telegram-routing";
 import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
-import { buildDedupeKey } from "../lib/telegram-pending-queue";
+import { buildDedupeKey } from "../lib/telegram/pending-queue";
 
 const TELEGRAM_TARGET_PLAN_SCHEMA_VERSION = 1;
 const TELEGRAM_TARGET_PLAN_MAX_JSON_CHARS = 262_144;

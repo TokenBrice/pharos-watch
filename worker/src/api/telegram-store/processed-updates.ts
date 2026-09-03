@@ -1,1 +1,1 @@
-export * from "../../lib/telegram-processed-updates";
+export * from "../../lib/telegram/processed-updates";

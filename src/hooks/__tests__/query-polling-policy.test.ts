@@ -144,6 +144,8 @@ describe("query polling policy", () => {
     const options = useQueryMock.mock.calls[0][0] as {
       enabled: boolean;
       retry: number;
+      staleTime: number;
+      refetchInterval: number;
       queryKey: readonly unknown[];
       queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
     };
@@ -151,9 +153,20 @@ describe("query polling policy", () => {
     expect(options.enabled).toBe(false);
     expect(options.retry).toBe(0);
     expect(options.queryKey).toEqual(["endpoint-probes", "public"]);
+    expect(options.staleTime).toBe(900_000);
+    expect(options.refetchInterval).toBe(1_800_000);
     await options.queryFn(queryContext(options.queryKey));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toEqual(expect.stringContaining("/api/health"));
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock.mock.calls.map((call) => {
+      const input = call[0];
+      return input instanceof Request ? new URL(input.url).pathname : new URL(String(input), "https://pharos.watch").pathname;
+    })).toEqual([
+      "/api/health",
+      "/api/stablecoins",
+      "/api/peg-summary",
+      "/api/dex-liquidity",
+      "/api/report-cards/v9",
+    ]);
   });
 
   it("gives admin probes a longer timeout budget than public probes", async () => {

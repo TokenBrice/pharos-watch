@@ -15,7 +15,7 @@ vi.mock("../../../cron/sync-kinesis-supply", () => ({
 vi.mock("../../../lib/collateral-drift", () => ({
   checkCollateralDrift: vi.fn(),
 }));
-vi.mock("../../../lib/live-reserves-store", () => ({
+vi.mock("../../../lib/live-reserves/store", () => ({
   getMaxSyncAge: vi.fn(),
   computeReserveCompositionOverview: vi.fn(),
 }));
@@ -41,8 +41,8 @@ import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
-import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
-import { emptyReserveCompositionOverview } from "../../../lib/live-reserves-store-shared";
+import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves/store";
+import { emptyReserveCompositionOverview } from "../../../lib/live-reserves/store-shared";
 import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-recovery-checkpoint.test-support";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
@@ -243,7 +243,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     "sync-live-reserves",
     "sync-redemption-backstops",
     "sync-kinesis-supply",
-    "reserve-post-sync-watchdog",
+    "cron-sentinel",
   ] as const)("keeps a checkpoint recoverable when %s is lease-contended", async (contendedJob) => {
     runLeasedCron.mockImplementation(
       async (job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) => {
@@ -268,19 +268,19 @@ describe("runFourHourlyReserveSyncSlot", () => {
         "sync-live-reserves",
         "sync-redemption-backstops",
         "sync-kinesis-supply",
-        "reserve-post-sync-watchdog",
+        "cron-sentinel",
       ],
       "sync-kinesis-supply": [
         "sync-live-reserves",
         "sync-redemption-backstops",
         "sync-kinesis-supply",
-        "reserve-post-sync-watchdog",
+        "cron-sentinel",
       ],
-      "reserve-post-sync-watchdog": [
+      "cron-sentinel": [
         "sync-live-reserves",
         "sync-redemption-backstops",
         "sync-kinesis-supply",
-        "reserve-post-sync-watchdog",
+        "cron-sentinel",
       ],
     } as const;
     expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(expectedJobsThroughContention[contendedJob]);
@@ -310,7 +310,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
         "sync-live-reserves": "completed",
         "sync-redemption-backstops": "not_started",
         "sync-kinesis-supply": "completed",
-        "reserve-post-sync-watchdog": "completed",
+        "cron-sentinel": "completed",
       },
       3,
     );
@@ -341,7 +341,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
         "sync-live-reserves": "completed",
         "sync-redemption-backstops": "not_started",
         "sync-kinesis-supply": "completed",
-        "reserve-post-sync-watchdog": "completed",
+        "cron-sentinel": "completed",
       },
       3,
     );
@@ -433,7 +433,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
           "sync-live-reserves": "not_started",
           "sync-redemption-backstops": "not_started",
           "sync-kinesis-supply": "completed",
-          "reserve-post-sync-watchdog": "not_started",
+          "cron-sentinel": "not_started",
         },
         3,
       ),
@@ -452,7 +452,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual([
       "sync-live-reserves",
       "sync-redemption-backstops",
-      "reserve-post-sync-watchdog",
+      "cron-sentinel",
     ]);
     expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
@@ -468,7 +468,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
           "sync-live-reserves": "completed",
           "sync-redemption-backstops": "completed",
           "sync-kinesis-supply": "completed",
-          "reserve-post-sync-watchdog": "completed",
+          "cron-sentinel": "completed",
         },
         2,
       ),
@@ -501,7 +501,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
           "sync-live-reserves": "completed",
           "sync-redemption-backstops": "failed",
           "sync-kinesis-supply": "completed",
-          "reserve-post-sync-watchdog": "completed",
+          "cron-sentinel": "completed",
         },
         2,
       ),

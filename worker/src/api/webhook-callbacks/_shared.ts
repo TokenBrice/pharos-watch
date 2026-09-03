@@ -9,10 +9,10 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   recordTelegramUsageEvent,
   type TelegramUsageEventType,
-} from "../../lib/telegram-usage-analytics";
-import { logTelegramEvent } from "../../lib/telegram-log";
-import { SNOOZE_SECONDS } from "../../lib/telegram-constants";
-import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
+} from "../../lib/telegram/usage-analytics";
+import { logTelegramEvent } from "../../lib/telegram/log";
+import { SNOOZE_SECONDS } from "../../lib/telegram/constants";
+import { isSubscribableCoin } from "../../lib/telegram/subscription-eligibility";
 import { requireGroupAdminForCallback } from "../telegram-webhook-auth";
 import {
   createTelegramWebhookIntent,

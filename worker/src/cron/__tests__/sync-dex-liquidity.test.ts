@@ -4,6 +4,7 @@ import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const phaseFixtures = vi.hoisted(() => {
   function create(overrides: Record<string, unknown> = {}) {
@@ -274,7 +275,7 @@ import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 
-const db = {
+const db = makeNoopD1({
   prepare: () => ({
     bind: () => ({
       all: async () => ({ results: [] }),
@@ -288,7 +289,7 @@ const db = {
   batch: async () => [],
   exec: async () => ({ count: 0, duration: 0 }),
   dump: async () => new ArrayBuffer(0),
-} as unknown as D1Database;
+});
 
 /** Drive the scheduled composition: the stage producer followed by its consumer. */
 async function runDexLiquidityScoringCycle(
@@ -443,7 +444,7 @@ describe("dex liquidity scoring stage cycle", () => {
         protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
       },
     } as Awaited<ReturnType<typeof computeStablecoinScores>>);
-    const guardDb = {
+    const guardDb = makeNoopD1({
       prepare(sql: string) {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
           return { first: async () => ({ cnt: 165 }) };
@@ -477,7 +478,7 @@ describe("dex liquidity scoring stage cycle", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const result = await runDexLiquidityScoringCycle(guardDb, "graph-key");
 
@@ -1221,7 +1222,7 @@ describe("dex liquidity scoring stage cycle", () => {
       },
     } as Awaited<ReturnType<typeof computeStablecoinScores>>);
 
-    const driftDb = {
+    const driftDb = makeNoopD1({
       prepare(sql: string) {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__'")) {
           return { first: async () => ({ cnt: 5 }) };
@@ -1290,7 +1291,7 @@ describe("dex liquidity scoring stage cycle", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const result = await runDexLiquidityScoringCycle(driftDb, "graph-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {

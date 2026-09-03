@@ -11,7 +11,7 @@ import {
   unixNow,
   type TelegramWebhookOperationIntent,
 } from "./telegram-webhook-store";
-import { logTelegramEvent } from "../lib/telegram-log";
+import { logTelegramEvent } from "../lib/telegram/log";
 import {
   resolveUpdateChatId,
   resolveUpdateType,

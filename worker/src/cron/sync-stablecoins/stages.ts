@@ -1,8 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
-import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
@@ -43,7 +42,6 @@ import {
 } from "./shared";
 import {
   isAbortResult,
-  runMissingPriceEnrichmentPhase,
   runSharedPriceCompletion,
 } from "./post-enrichment";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
@@ -58,7 +56,6 @@ interface StablecoinsIntakeStageOptions {
   cmcApiKey?: string;
   jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
-  addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
@@ -158,10 +155,7 @@ interface StablecoinsPricingStageOptions {
   syncStartSec: number;
   fxFallbackRates: Awaited<ReturnType<typeof loadFreshFxRates>>["fxFallbackRates"];
   validationReferences: Awaited<ReturnType<typeof loadFreshFxRates>>["validationReferences"];
-  cmcApiKey?: string;
-  jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
-  addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
   binanceSession?: BinanceFetchSession;
   nativePegSession?: NativePegQuoteSession;
@@ -227,7 +221,6 @@ export async function runStablecoinsPricingStage(
     {
       previousAssetsById: options.previousAssetsById,
       previousMissingGenerationsById: options.previousMissingGenerationsById,
-      addressProvider: options.addressPriceProvider,
       binanceSession: options.binanceSession,
     },
   );
@@ -289,62 +282,19 @@ export async function runStablecoinsPricingStage(
     syncStartSec: options.syncStartSec,
     authoritativeOverrideStats,
   });
-  const enrichmentPhase = await runMissingPriceEnrichmentPhase({
-    assets: options.assets,
-    db: options.db,
-    syncStartSec: options.syncStartSec,
-    signal: options.signal,
-    cmcApiKey: options.cmcApiKey,
-    coingeckoApiKey: options.coingeckoApiKey,
-    jupiterApiKey: options.jupiterApiKey,
-    previousMissingGenerationsById: options.previousMissingGenerationsById,
-    returnIfAborted,
-    onProgress: async (progress) => {
-      const pass = progress.pass;
-      const passLabel = pass?.passLabel ?? "Fallback";
-      const missingCount = progress.finalMissing ?? options.assets.filter(hasMissingPrice).length;
-      let message: string;
-      switch (progress.phase) {
-        case "start":
-          message = "Preparing fallback price enrichment";
-          break;
-        case "fx-rates-loaded":
-          message = "Loaded fallback price-enrichment bounds";
-          break;
-        case "pass-start":
-          message = `Running ${passLabel} fallback price pass`;
-          break;
-        case "pass-failed":
-          message = `${passLabel} fallback price pass failed`;
-          break;
-        case "complete":
-          message = "Completed fallback price enrichment";
-          break;
-        case "pass-complete":
-          message = `${passLabel} fallback price pass completed`;
-          break;
-      }
-      await reportStablecoinsStage(options.reportProgress, "price-enrichment-fallback", message, {
-        itemsDone: options.assets.length - missingCount,
-        itemsTotal: options.assets.length,
-        metadata: {
-          subphase: progress.phase,
-          passKey: pass?.passKey,
-          passLabel: pass?.passLabel,
-          passIndex: pass?.passIndex,
-          passTotal: pass?.passTotal,
-          missingBeforePass: pass?.missingBeforePass,
-          missingAfterPass: pass?.missingAfterPass,
-          totalMissingBeforeFallback: progress.totalMissing,
-          finalMissing: progress.finalMissing,
-          failedPasses: progress.failedPasses,
-          counts: pass?.counts,
-        },
-      });
-    },
-  }, "");
-  if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
-  const { missingBefore, enrichStats } = enrichmentPhase;
+  const missingBefore = new Set(options.assets.filter(hasMissingPrice).map((asset) => asset.id));
+  const enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>> = {
+    totalMissing: missingBefore.size,
+    pass1: 0,
+    pass1b: 0,
+    passCmc: 0,
+    passJupiter: 0,
+    passDex: 0,
+    passCgLowVolume: 0,
+    finalMissing: missingBefore.size,
+    failedPasses: [],
+    providerDiagnostics: [],
+  };
 
   await reportStablecoinsStage(
     options.reportProgress,

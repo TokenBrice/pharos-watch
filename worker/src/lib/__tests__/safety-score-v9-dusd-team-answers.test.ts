@@ -5,8 +5,8 @@ import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-revi
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
-import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 
 // Kept ahead of the newest reviewed date in the registry metadata this fixture
 // reads: the usdc-circle parent's mint-authority review moved to 2026-08-08,

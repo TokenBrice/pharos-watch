@@ -1,4 +1,5 @@
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
@@ -8,10 +9,50 @@ import { runSingleScheduledJob } from "./slot-groups";
 const V9_PUBLICATION_WINDOW_MS = 3 * 60_000;
 const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
 
+export function safetyScoreV9WorkflowInstanceId(
+  slotStartedAt: number,
+): string {
+  return `v9-publication:${slotStartedAt}`;
+}
+
+async function triggerSafetyScoreV9ShadowWorkflow(
+  runtime: ScheduledRuntimeContext,
+): Promise<void> {
+  const id = safetyScoreV9WorkflowInstanceId(runtime.slotStartedAt);
+  const workflow = (
+    runtime.env as typeof runtime.env & {
+      SAFETY_SCORE_V9_WORKFLOW: Workflow;
+    }
+  ).SAFETY_SCORE_V9_WORKFLOW;
+  try {
+    await workflow.create({ id });
+  } catch (error) {
+    try {
+      const existing = await workflow.get(id);
+      const status = await existing.status();
+      if (status.status !== "unknown") return;
+    } catch {
+      // The structured warning below owns non-authoritative trigger failures.
+    }
+    logWorkerEvent({
+      scope: "handler",
+      level: "warn",
+      event: "safety_score_v9_shadow_workflow_trigger_failed",
+      job: "compute-safety-score-v9-workflow",
+      message: "Safety Score V9 shadow Workflow could not be created",
+      metadata: {
+        instanceId: id,
+        slotStartedAt: runtime.slotStartedAt,
+        errorName: error instanceof Error ? error.name : "Error",
+      },
+    });
+  }
+}
+
 export async function runV9PublicationSlot(
   runtime: ScheduledRuntimeContext,
 ) {
-  return runSingleScheduledJob(
+  const result = await runSingleScheduledJob(
     runtime,
     "fenced V9 publication slot",
     {
@@ -42,4 +83,8 @@ export async function runV9PublicationSlot(
         ),
     },
   );
+  if (runtime.env.WORKER_V9_WORKFLOW_MODE === "shadow") {
+    await triggerSafetyScoreV9ShadowWorkflow(runtime);
+  }
+  return result;
 }

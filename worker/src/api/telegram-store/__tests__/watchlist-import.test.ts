@@ -7,13 +7,13 @@ import {
   packWatchlistDirectState,
   packWatchlistPresetState,
   type WatchlistTokenDirectState,
-} from "../../../lib/telegram-watchlist-token";
+} from "../../../lib/telegram/watchlist-token";
 import { prepareTelegramProcessedUpdateMutationApplied } from "../processed-updates";
 import { persistPendingConfirmBulk } from "../disambiguation";
 import { prepareEnsureSubscriberExists } from "../subscribers";
 import { applyWatchlistDirectPatch, applyWatchlistImportV2, loadWatchlistPortableState } from "../watchlist-import";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { isSubscribableCoin } from "../../../lib/telegram-subscription-eligibility";
+import { isSubscribableCoin } from "../../../lib/telegram/subscription-eligibility";
 
 const NOW = 1_783_680_000;
 

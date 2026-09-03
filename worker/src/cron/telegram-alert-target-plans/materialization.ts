@@ -1,7 +1,7 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
-import { TELEGRAM_ALERT_TTL_SEC } from "../../lib/telegram-constants";
+import { TELEGRAM_ALERT_TTL_SEC } from "../../lib/telegram/constants";
 import {
   assertTelegramPlanMaterializationFitsD1Batch,
   serializeTelegramTargetPlan,

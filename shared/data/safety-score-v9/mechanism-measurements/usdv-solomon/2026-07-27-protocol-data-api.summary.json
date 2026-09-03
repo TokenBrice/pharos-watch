@@ -1,0 +1,14 @@
+{
+  "mechanism": "usdv-solomon",
+  "date": "2026-07-27-protocol-data-api",
+  "sha256": "e93e07177a46581540dad240bf1a515e6cc182ad1c56fa4d5fcef6c5f6667451",
+  "bytes": 4660,
+  "r2Key": "captures/usdv-solomon/2026-07-27-protocol-data-api.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "usdv-solomon",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdv-solomon/2026-07-27-protocol-data-api.json",
+    "capturedAt": "2026-07-27T22:52:19Z"
+  }
+}

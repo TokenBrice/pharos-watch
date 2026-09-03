@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TelegramRecapScopedFact } from "../telegram-recap-ranking";
-import { collapseTelegramRecapFacts, selectTelegramRecapFacts } from "../telegram-recap-ranking";
+import type { TelegramRecapScopedFact } from "../telegram/recap-ranking";
+import { collapseTelegramRecapFacts, selectTelegramRecapFacts } from "../telegram/recap-ranking";
 
 function fact(overrides: Partial<TelegramRecapScopedFact> = {}): TelegramRecapScopedFact {
   return {

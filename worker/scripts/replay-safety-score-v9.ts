@@ -1,6 +1,11 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { CAPTURE_SUMMARY_SUFFIX, parseMechanismCaptureSummary } from "../../scripts/lib/mechanism-measurement/capture-summary";
+import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
+import type { R2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   assertCliUsage,
@@ -13,13 +18,13 @@ import {
   normalizeSafetyScoreV9CompilerInput,
   parseSafetyScoreV9InputCacheValue,
   type SafetyScoreV9CompilerInput,
-} from "../src/lib/safety-score-v9-native-input";
+} from "../src/lib/safety-score-v9/native-input";
 import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-exit-route-observations";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
-} from "../src/lib/safety-score-v9-candidate";
+} from "../src/lib/safety-score-v9/candidate";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 export interface SafetyScoreV9FutureDatedReview {
@@ -71,10 +76,10 @@ export function formatFutureDatedReviewError(
   ].join("\n");
 }
 
-const USAGE = `Usage: npm run safety-score-v9:replay -- --input <path> --output <path> [options]
+const USAGE = `Usage: npm run safety-score-v9:replay -- --input <path-or-sha256> --output <path> [options]
 
 Options:
-  --input <path>                  V9 input capture, raw JSON or compressed cache envelope (required).
+  --input <path-or-sha256>         V9 input capture path, SHA-256 capture identity, raw JSON or compressed cache envelope (required).
                                   Accepts the native v4 capture (envelope v2) and, read-only, the
                                   retired v3 exact fixed input (envelope v1) so frozen pre-9.07
                                   operator captures keep replaying byte-for-byte.
@@ -105,10 +110,108 @@ export interface SafetyScoreV9ReplayArtifact {
   pipeline: Readonly<SafetyScoreV9CandidatePipelineResult>;
 }
 
+const CAPTURE_SHA256_PATTERN = /^[a-f0-9]{64}$/u;
+const DEFAULT_CAPTURE_SUMMARY_ROOT = resolve(
+  process.cwd(),
+  "shared/data/safety-score-v9/mechanism-measurements",
+);
+const DEFAULT_CAPTURE_CACHE_DIR = resolve(process.cwd(), "agents/.cache/measurements");
+
+export interface SafetyScoreV9ReplayInputResolverOptions {
+  cacheDir?: string;
+  summaryRoot?: string;
+  r2Client?: R2MeasurementsClient;
+}
+
+interface CaptureReference {
+  sha256: string;
+  r2Key: string;
+}
+
+function captureSha256(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function decodeCaptureBody(bytes: Uint8Array): Buffer {
+  const body = Buffer.from(bytes);
+  return body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body;
+}
+
+function findCaptureReference(directory: string, expectedSha256: string): CaptureReference | null {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- summary-root traversal is an explicit local operator path.
+  if (!existsSync(directory)) return null;
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- summary-root traversal is an explicit local operator path.
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      const found = findCaptureReference(path, expectedSha256);
+      if (found) return found;
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith(CAPTURE_SUMMARY_SUFFIX)) continue;
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- summary path discovered under the explicit local root.
+    const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(path, "utf8")), path);
+    if (summary.sha256 === expectedSha256) return { sha256: summary.sha256, r2Key: summary.r2Key };
+  }
+  return null;
+}
+
+function verifyCaptureBody(bytes: Uint8Array, expectedSha256: string): Buffer {
+  const body = decodeCaptureBody(bytes);
+  if (captureSha256(body) !== expectedSha256) {
+    throw new Error(`capture ${expectedSha256} integrity mismatch`);
+  }
+  return body;
+}
+
+/** Resolve a SHA-256 capture through the durable local cache, then R2. */
+export async function resolveSafetyScoreV9ReplayInput(
+  sha256: string,
+  options: SafetyScoreV9ReplayInputResolverOptions = {},
+): Promise<Buffer> {
+  const expectedSha256 = sha256.trim();
+  if (!CAPTURE_SHA256_PATTERN.test(expectedSha256)) {
+    throw new Error(`Invalid capture sha256: ${sha256}`);
+  }
+  const cacheDir = resolve(options.cacheDir ?? DEFAULT_CAPTURE_CACHE_DIR);
+  const cachedPath = resolve(cacheDir, `${expectedSha256}.json`);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache path.
+  if (existsSync(cachedPath)) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache path.
+    return verifyCaptureBody(readFileSync(cachedPath), expectedSha256);
+  }
+
+  const reference = findCaptureReference(resolve(options.summaryRoot ?? DEFAULT_CAPTURE_SUMMARY_ROOT), expectedSha256);
+  if (!reference) throw new Error(`capture ${expectedSha256} expired: non-replayable`);
+  const client = options.r2Client ?? createR2MeasurementsClient();
+  const keys = [
+    reference.r2Key.replace(/^captures\//u, "pinned/"),
+    reference.r2Key,
+  ];
+  for (const key of keys) {
+    const compressed = await client.get(key);
+    if (!compressed) continue;
+    const body = verifyCaptureBody(compressed, expectedSha256);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache directory.
+    mkdirSync(cacheDir, { recursive: true });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache path.
+    writeFileSync(cachedPath, body);
+    return body;
+  }
+  throw new Error(`capture ${expectedSha256} expired: non-replayable`);
+}
+
 function readJson(path: string): unknown {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
+async function readReplayInput(input: string): Promise<unknown> {
+  if (CAPTURE_SHA256_PATTERN.test(input.trim())) {
+    return JSON.parse(new TextDecoder().decode(await resolveSafetyScoreV9ReplayInput(input))) as unknown;
+  }
+  return readJson(input);
+}
+
 
 function isFixedInputCacheEnvelope(value: unknown): boolean {
   if (typeof value === "string") return true;
@@ -234,7 +337,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   );
 
   const fixedInput = rederiveUndisclosedFeeObservations(
-    await parseSafetyScoreV9ReplayFixedInput(readJson(values.input)),
+    await parseSafetyScoreV9ReplayFixedInput(await readReplayInput(values.input)),
   );
   if (values["allow-future-reviews"] !== true) {
     const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec);

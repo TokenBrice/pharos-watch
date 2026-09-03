@@ -22,6 +22,7 @@ const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
   "scripts/ci/check-critical-coverage.ts",
   "scripts/lib/critical-coverage.mjs",
   "scripts/lib/critical-test-files.mts",
+  "scripts/lib/critical-ownership.mts",
   "scripts/maintenance/merge-critical-coverage.ts",
   "scripts/maintenance/run-critical-coverage-shard.ts",
   "scripts/maintenance/run-critical-coverage.ts",

@@ -234,12 +234,6 @@ export function createScheduledRuntimeContext(
             producerKind,
           };
           const leaseOwner = createLeaseOwner(job);
-          await reportProgress({
-            stage: "started",
-            message: `Starting ${job}`,
-            leaseOwner,
-            metadata: slotMeta,
-          });
           const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
           const buildLeaseMeta = (lease: Awaited<ReturnType<typeof runCronWithLease>>) => ({
             leaseOwner: lease.leaseOwner,
@@ -262,6 +256,12 @@ export function createScheduledRuntimeContext(
             ...perJobLeaseOptions,
           };
           const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
+            await reportProgress({
+              stage: "started",
+              message: `Starting ${job}`,
+              leaseOwner,
+              metadata: slotMeta,
+            });
             await reportProgress({
               stage: "lease-acquired",
               message: `Lease acquired for ${job}`,

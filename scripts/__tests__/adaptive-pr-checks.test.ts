@@ -3,9 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
-import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
+import { ALWAYS_RUN_TEST_FILES, parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import {
   buildPrStaticCheckPlan,
+  hasOwnedDocsImpact,
   partitionPrStaticCheckPlan,
   runPrStaticChecks,
 } from "../maintenance/run-pr-static-checks.ts";
@@ -132,6 +133,17 @@ describe("adaptive PR checks", () => {
     );
   });
 
+  it("keeps the always-on contract diet at exactly thirty unique files", () => {
+    expect(ALWAYS_RUN_TEST_FILES).toHaveLength(30);
+    expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(30);
+  });
+
+  it("selects importing owners for changed critical source files", () => {
+    const selected = selectPrTestFiles([], ALWAYS_RUN_TEST_FILES, ["worker/src/lib/auth.ts"]);
+
+    expect(selected).toContain("worker/src/lib/__tests__/auth.test.ts");
+  });
+
   it("selects impacted generated artifacts and downstream dependants", () => {
     const registry = [
       { id: "catalog", sourcePaths: ["data/**"] },
@@ -156,6 +168,12 @@ describe("adaptive PR checks", () => {
     ]);
   });
 
+  it("selects doc-sync when a changed source has an owning documentation mapping", () => {
+    expect(hasOwnedDocsImpact(["shared/lib/classification.ts"])).toBe(true);
+    expect(buildPrStaticCheckPlan(["shared/lib/classification.ts"]).commands.map((command) => command.name))
+      .toContain("check:doc-sync");
+  });
+
   it("runs the critical-coverage completeness guard for every non-doc PR path", () => {
     expect(buildPrStaticCheckPlan(["worker/src/lib/auth.ts"]).commands.map((command) => command.name)).toContain(
       "check:critical-coverage-completeness",
@@ -164,7 +182,7 @@ describe("adaptive PR checks", () => {
 
   it("runs typechecks, structural checks, and generated verification in the bounded parallel phase", () => {
     const { commands } = buildPrStaticCheckPlan([
-      "worker/src/lib/safety-score-v9-extension.ts",
+      "worker/src/lib/safety-score-v9/extension.ts",
       "docs/editorial-style.md",
     ]);
     const partition = partitionPrStaticCheckPlan(commands);
@@ -190,7 +208,7 @@ describe("adaptive PR checks", () => {
   it("checks a changed generated artifact even when no Pages surface moved", () => {
     // The Wave-1 near-miss: a worker-only commit touching a manifest-pinned V9
     // source left the evaluation-build manifest stale and passed the PR gate.
-    const plan = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9-extension.ts"]);
+    const plan = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9/extension.ts"]);
     const artifactCommand = plan.commands.find(
       (command): command is { name: string; args: string[] } =>
         command.name === "check:generated-artifacts" && "args" in command,
@@ -220,6 +238,33 @@ describe("adaptive PR checks", () => {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");
     }
   });
+  it("uses only the lightweight structural checks for test-only changes", () => {
+    const names = buildPrStaticCheckPlan(["worker/src/cron/__tests__/x.test.ts"]).commands.map(
+      (command) => command.name,
+    );
+    expect(names.filter((name) => ["check:structural", "check:clone-ratchet", "check:cron-console-usage"].includes(name))).toEqual([
+      "check:clone-ratchet",
+      "check:cron-console-usage",
+    ]);
+  });
+
+  it("keeps the full structural chain when production and test paths are mixed", () => {
+    const names = buildPrStaticCheckPlan([
+      "worker/src/cron/__tests__/x.test.ts",
+      "worker/src/cron/x.ts",
+    ]).commands.map((command) => command.name);
+    expect(names).toContain("check:structural");
+    expect(names).not.toContain("check:clone-ratchet");
+    expect(names).not.toContain("check:cron-console-usage");
+  });
+
+  it("keeps the full structural chain for scripts CI sources", () => {
+    const names = buildPrStaticCheckPlan(["scripts/ci/foo.ts"]).commands.map((command) => command.name);
+    expect(names).toContain("check:structural");
+    expect(names).not.toContain("check:clone-ratchet");
+    expect(names).not.toContain("check:cron-console-usage");
+  });
+
   it("runs the editorial policy gate for every registered extractor family", () => {
     const representativePaths = [
       "data/ai-summaries.json",

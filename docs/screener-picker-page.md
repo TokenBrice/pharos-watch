@@ -75,7 +75,7 @@ Do not duplicate their full validation matrix here.
 
 ## OG Images
 
-`public/og-selector-default.png` is the card the Picker route selects in its metadata. `og-selector-treasury.png`, `og-selector-yield.png`, and `og-selector-trading.png` are checked-in profile cards that no route serves today, because `/screener/picker/` is a single route that resolves profiles client-side. Snapshot-specific social cards are intentionally not served, so shared output and answers do not appear in social preview fetches. See [og-images.md](./og-images.md).
+`public/og-selector-default.png` is the only retained Picker social card, and the route selects it in its metadata. `/screener/picker/` resolves profiles client-side, so no profile-specific or snapshot-specific social cards are served; shared output and answers do not appear in social preview fetches. See [og-images.md](./og-images.md).
 
 ## Deferred Surface
 
@@ -87,6 +87,6 @@ There is no standalone public `/methodology/selector/` route today. Selector met
 - Engine semantics: update `shared/lib/selector/`, engine version, and engine/editorial-policy tests.
 - Snapshot payload or endpoint: update the shared snapshot modules, Pages Function tests, [api-reference.md](./api-reference.md), and [privacy-page.md](./privacy-page.md) when storage changes.
 - Screener handoff: update `shared/lib/selector/answers-to-screener.ts`, `src/lib/selector-handoff.ts`, and [screener-page.md](./screener-page.md).
-- OG behavior: update the profile cards and [og-images.md](./og-images.md).
+- OG behavior: update the retained default card and [og-images.md](./og-images.md).
 
 The focused test surfaces are `shared/lib/selector/`, `src/app/screener/picker/`, `src/components/selector/`, and `functions/__tests__/selector-snapshot.test.ts`.

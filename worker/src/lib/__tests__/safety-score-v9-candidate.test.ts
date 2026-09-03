@@ -14,12 +14,12 @@ import {
   buildSafetyScoreV9PublicationFromNormalizedInput,
   computeSafetyScoreV9CandidateId,
   computeSafetyScoreV9ProducerCapabilityDigest,
-} from "../safety-score-v9-candidate";
+} from "../safety-score-v9/candidate";
 import {
   compileSafetyScoreV9FactSetFromValidatedExtension,
   type SafetyScoreV9FactSetExtensionV2,
-} from "../safety-score-v9-fact-set";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+} from "../safety-score-v9/fact-set";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   makeV9BoundedUnknownFeeRedemptionFixedInput,
   makeV9FixedInput,

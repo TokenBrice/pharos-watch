@@ -193,11 +193,12 @@ describe("data surface descriptors", () => {
     expect({
       path: DATA_SURFACE_DESCRIPTORS.publicHealth.apiPath,
       queryKey: DATA_SURFACE_DESCRIPTORS.publicHealth.queryKey,
+      // Public health is produced by the 15-minute status self-check snapshot.
       producerIntervalSec: DATA_SURFACE_DESCRIPTORS.publicHealth.producerIntervalSec,
     }).toEqual({
       path: "/api/health",
       queryKey: ["health"],
-      producerIntervalSec: 60,
+      producerIntervalSec: 900,
     });
   });
 

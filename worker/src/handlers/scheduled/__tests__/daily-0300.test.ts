@@ -1,24 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
 const mocks = vi.hoisted(() => ({
   runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runPruneCronHistory: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
-  runWorkerRepairTaskRunner: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runPruneDetailCache: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
-  runMintBurnGrowthWatchdog: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
-  runCronDurationWatchdog: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
+  runCronSentinel: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
 }));
 
 vi.mock("../../../cron/prune-status-probe-runs", () => ({
   runPruneStatusProbeRuns: mocks.runPruneStatusProbeRuns,
 }));
 vi.mock("../../../cron/prune-cron-history", () => ({ runPruneCronHistory: mocks.runPruneCronHistory }));
-vi.mock("../../../lib/repair-tasks", () => ({ runWorkerRepairTaskRunner: mocks.runWorkerRepairTaskRunner }));
 vi.mock("../../../cron/prune-detail-cache", () => ({ runPruneDetailCache: mocks.runPruneDetailCache }));
 vi.mock("../../../cron/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: mocks.runTelegramInactiveCleanup,
@@ -26,23 +24,18 @@ vi.mock("../../../cron/telegram-inactive-cleanup", () => ({
 vi.mock("../../../cron/telegram-retention-cleanup", () => ({
   runTelegramRetentionCleanup: mocks.runTelegramRetentionCleanup,
 }));
-vi.mock("../../../cron/mint-burn-growth-watchdog", () => ({
-  runMintBurnGrowthWatchdog: mocks.runMintBurnGrowthWatchdog,
-}));
-vi.mock("../../../cron/cron-duration-watchdog", () => ({
-  runCronDurationWatchdog: mocks.runCronDurationWatchdog,
-}));
+vi.mock("../../../cron/cron-sentinel", () => ({ runCronSentinel: mocks.runCronSentinel }));
 
 import { runDaily0300Slot } from "../daily-0300";
 
 function runtime(order: string[]): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
   return makeScheduledRuntime({
-    db: {
+    db: makeNoopD1({
       prepare: () => ({
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
-    } as unknown as D1Database,
+    }),
     cron: "3 3 * * *",
     scheduleKey: "daily0300Utc",
     scheduledTimeMs: null,
@@ -61,9 +54,10 @@ describe("daily 03:00 scheduling", () => {
     await runDaily0300Slot(runtime(order));
 
     expect(order).toEqual(flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.daily0300Utc));
-    expect(order.slice(0, 2)).toEqual([
-      "mint-burn-growth-watchdog",
-      "cron-duration-watchdog",
-    ]);
+    expect(order[0]).toBe("cron-sentinel");
+    expect(mocks.runCronSentinel).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      mode: "daily",
+      repairRunnerEnabled: true,
+    }));
   });
 });

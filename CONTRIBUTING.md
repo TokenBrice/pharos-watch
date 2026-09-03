@@ -14,7 +14,7 @@ Feature ideas should usually start in [GitHub Discussions](https://github.com/To
 
 ## Before Editing
 
-1. Read [docs/agent-task-router.md](./docs/agent-task-router.md) and follow the task family that matches your change.
+1. Read [docs/process/agent-start-here.md](./docs/process/agent-start-here.md) and route the task family that matches your change.
 2. Read any scoped `AGENTS.md` file under the directory you edit.
 3. Keep the change narrow. Avoid unrelated refactors, generated churn, or formatting sweeps.
 4. Update the matching docs when behavior, API contracts, methodology, data sources, or pipeline ownership changes.

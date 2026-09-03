@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import searchableCoinsAsset from "@shared/data/stablecoins/coins.telegram-mini-app.generated.json";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
-import { splitMessage } from "../../../lib/telegram-alerts";
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../../lib/telegram-constants";
-import { packWatchlistDirectState } from "../../../lib/telegram-watchlist-token";
+import { splitMessage } from "../../../lib/telegram/alerts";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../../lib/telegram/constants";
+import { packWatchlistDirectState } from "../../../lib/telegram/watchlist-token";
 import type { ConfirmBulkPayload } from "../../telegram-webhook-shared";
 import type { WebhookCommandContext } from "../context";
 import { buildV2PreviewMessageForTest, persistImportPreviewForTest } from "../import";

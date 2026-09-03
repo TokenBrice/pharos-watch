@@ -7,8 +7,8 @@
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../lib/telegram";
-import { isPausedSentinel } from "../lib/telegram-constants";
-import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
+import { isPausedSentinel } from "../lib/telegram/constants";
+import { buildTelegramMiniAppUrl } from "../lib/telegram/webhook-registration";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,

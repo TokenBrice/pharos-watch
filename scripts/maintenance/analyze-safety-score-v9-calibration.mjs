@@ -1,8 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { readFileSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { compileV9FactSetV2, compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile.ts";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set.ts";
 import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts.ts";
@@ -11,12 +8,14 @@ import { domainDigest } from "@shared/lib/safety-score-v9/primitives.ts";
 import { sha256Hex as sha256 } from "@shared/lib/sha256.ts";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity.ts";
 import { stableJsonStringifyV1 as stableStringify } from "@shared/lib/stable-json.ts";
+import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "@shared/lib/safety-score-v9/trace.ts";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
+import { buildSafetyScoreV9ReplayArtifact } from "../../worker/scripts/replay-safety-score-v9.ts";
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const TSX_CLI_PATH = fileURLToPath(import.meta.resolve("tsx/cli"));
-const TRUSTED_REPLAY_CLI_PATH = resolve(REPO_ROOT, "worker/scripts/replay-safety-score-v9.ts");
 const trustedReplayCache = new Map();
+const CALIBRATION_BASELINE = JSON.parse(
+  readFileSync(new URL("../__tests__/fixtures/safety-score-v9-calibration-baseline.json", import.meta.url), "utf8"),
+);
 
 export function deriveCalibrationGradePolicy(formula) {
   const thresholds = formula.gradeThresholds;
@@ -48,60 +47,10 @@ const CALIBRATION_GRADE_POLICY = deriveCalibrationGradePolicy(
 );
 const GRADE_ORDER = CALIBRATION_GRADE_POLICY.order;
 const GRADE_BOUNDARIES = CALIBRATION_GRADE_POLICY.boundaries;
-const ADVERSE_IDS = [
-  "usdd-tron-dao-reserve",
-  "u-united-stables",
-  "usdai-usd-ai",
-  "tusd-trueusd",
-  "eurs-stasis",
-  "mim-abracadabra",
-];
-const EXPECTED_BASELINE = {
-  expectedCount: 344,
-  ratedCount: 342,
-  nrIds: ["brlm-mento", "zeusd-zoth"],
-  histogram: {
-    "A+": 0,
-    A: 0,
-    "A-": 0,
-    "B+": 1,
-    B: 1,
-    "B-": 0,
-    "C+": 2,
-    C: 9,
-    "C-": 12,
-    D: 105,
-    F: 212,
-    NR: 2,
-  },
-  largestPillarTuple: { key: "35/35/45", count: 104 },
-  largestScoreBucket: { key: "38", count: 81 },
-  scoreIqr: 9,
-};
-const EXPECTED_ADVERSE_BASELINE = new Map([
-  ["usdd-tron-dao-reserve", { score: 31, grade: "F" }],
-  ["u-united-stables", { score: 31, grade: "F" }],
-  ["usdai-usd-ai", { score: 39, grade: "F" }],
-  ["tusd-trueusd", { score: 53, grade: "C-" }],
-  ["eurs-stasis", { score: 20, grade: "F" }],
-  ["mim-abracadabra", { score: 0, grade: "F" }],
-]);
-const EXPECTED_BASELINE_BINDINGS = {
-  candidateIdentity: {
-    schemaVersion: 1,
-    policyId: "safety-score-v9",
-    policyDigest: "84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d",
-    evaluationBuildDigest: "b2c0b298bea563d8b548c3f9d594e43cb46b762b62bfd7be3053a72430d320d1",
-    compilerFactSchemaDigest: "9d7b637e0f808df4f19699f7ad10f09413fb46cc66ed0befb707db59a44ca511",
-    producerCapabilityDigest: "19f1ab3ce18de294d33482cff07891f987a2715071cf48ba7cd75ff72562f198",
-  },
-  candidateId: "safety-score-v9:v1:2e833a90ec9847afe24ce18d4f1a74cc17b150d1f337c4e461d612a05e87fecb",
-  baseInputGenerationId: "report-cards-input:v1:79bcc863f04ce1e55040589185f4a996cc8765e063d7a53e9fb89c0e8c2642a4",
-  sourceGeneration: "report-cards:8.17:1784214085",
-  registryFingerprint: "2a821e9b50c4a82177c1589e0375a1a673ecee7be1a642329163486af5a47a39",
-  factSetDigest: "defb600329157e4b4413c4e1d6e5202ddc0b338d58034ebb4a786060e9309b11",
-  resultDigest: "0f6623acdcfb427a5ab36a0be9fa88ec5b8e83e97dd0a5141d2567db251cb426",
-};
+const ADVERSE_IDS = Object.keys(CALIBRATION_BASELINE.adverseCards);
+const EXPECTED_BASELINE = CALIBRATION_BASELINE.distribution;
+const EXPECTED_ADVERSE_BASELINE = new Map(Object.entries(CALIBRATION_BASELINE.adverseCards));
+const EXPECTED_BASELINE_BINDINGS = CALIBRATION_BASELINE.bindings;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_UNEXPLAINED_CAPTURE_MOVEMENT = 3;
 
@@ -316,6 +265,7 @@ const COMPILER_PROFILES = [
     matches: (identity) =>
       identity.evaluationBuildDigest === EXPECTED_BASELINE_BINDINGS.candidateIdentity.evaluationBuildDigest,
     capabilities: ["canonical-chain-supply-distribution.v1"],
+    fixedInputSchemaVersion: 3,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v1",
@@ -339,6 +289,7 @@ const COMPILER_PROFILES = [
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ],
+    fixedInputSchemaVersion: [3, 4],
     compiledFactSchemaVersion: 3,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
     routeAdapterVersion: "v2",
@@ -357,6 +308,7 @@ const COMPILER_PROFILES = [
       "journaled-cdp-shock-coverage.v1",
       "reviewed-transfer-deployments.v1",
     ],
+    fixedInputSchemaVersion: 3,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v2",
@@ -374,6 +326,7 @@ const COMPILER_PROFILES = [
       "exit-route-modeled-confidence.v1",
       "reviewed-transfer-deployments.v1",
     ],
+    fixedInputSchemaVersion: 3,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v2",
@@ -386,6 +339,7 @@ const COMPILER_PROFILES = [
     name: "phase-one",
     matches: () => true,
     capabilities: ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"],
+    fixedInputSchemaVersion: 3,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v2",
@@ -413,9 +367,12 @@ function assertCompilerIdentity(value, label) {
   const compilerProfile = COMPILER_PROFILES.find((profile) =>
     profile.matches(identity, profile.capabilities),
   );
+  const fixedInputSchemaVersions = Array.isArray(compilerProfile.fixedInputSchemaVersion)
+    ? compilerProfile.fixedInputSchemaVersion
+    : [compilerProfile.fixedInputSchemaVersion];
   if (
     identity.schemaVersion !== 1 ||
-    identity.fixedInputSchemaVersion !== 3 ||
+    !fixedInputSchemaVersions.includes(identity.fixedInputSchemaVersion) ||
     identity.factExtensionSchemaVersion !== 2 ||
     identity.compiledFactSchemaVersion !== compilerProfile.compiledFactSchemaVersion ||
     stableStringify(identity.compiledFactSchemaCapabilities) !== stableStringify(compilerProfile.capabilities) ||
@@ -424,7 +381,10 @@ function assertCompilerIdentity(value, label) {
     throw new Error(`${label} compiler identity does not match its closed production profile`);
   }
   requireDigest(identity.evaluationBuildDigest, `${label} compiler identity evaluationBuildDigest`);
-  return { identity, compilerProfile };
+  return {
+    identity,
+    compilerProfile: { ...compilerProfile, fixedInputSchemaVersion: identity.fixedInputSchemaVersion },
+  };
 }
 
 function assertProducerIdentity(value, label, compilerProfile) {
@@ -488,7 +448,7 @@ function assertProducerIdentity(value, label, compilerProfile) {
   };
   if (
     identity.schemaVersion !== 1 ||
-    contracts.fixedInput !== 3 ||
+    contracts.fixedInput !== compilerProfile.fixedInputSchemaVersion ||
     contracts.factExtension !== 2 ||
     stableStringify(adapters) !== stableStringify(expectedAdapters)
   ) {
@@ -524,6 +484,18 @@ function producerVersionsOrUnavailable(values, label) {
 
 export function computeCalibrationBaseInputGenerationId(input) {
   const fixedInput = requireRecord(input, "fixed input");
+  if (fixedInput.schemaVersion === 4) {
+    if (
+      typeof fixedInput.baseInputGenerationId !== "string" ||
+      !/^report-cards-input:v1:[a-f0-9]{64}$/.test(fixedInput.baseInputGenerationId)
+    ) {
+      throw new Error("fixed input base generation must be a report-cards-input:v1 digest");
+    }
+    // The shared replay builder normalizes and verifies native-v4 input before
+    // calibration accepts it. Avoid reconstructing the retired v3 projection
+    // here; the reproduction check below is the canonical v4 identity fence.
+    return fixedInput.baseInputGenerationId;
+  }
   const methodology = requireRecord(fixedInput.inputMethodologyVersions, "fixed input methodology versions");
   const requiredMaps = [
     "pegDataById",
@@ -574,8 +546,9 @@ function traceResultDigestVersion(trace) {
 }
 
 function compactTrace(trace, resultDigestVersion = traceResultDigestVersion(trace)) {
+  if (resultDigestVersion === 2) return projectCompactV9ScoreTrace(trace);
   const contributions = new Map(trace.pillarContributions.map((entry) => [entry.pillar, entry.score]));
-  const legacy = {
+  return {
     assetId: trace.assetId,
     score: trace.finalScore,
     grade: trace.finalGrade,
@@ -595,13 +568,6 @@ function compactTrace(trace, resultDigestVersion = traceResultDigestVersion(trac
     evaluationBuildDigest: trace.evaluationBuildDigest,
     asOfSec: trace.asOfSec,
   };
-  return resultDigestVersion === 1
-    ? legacy
-    : {
-        ...legacy,
-        inheritableScore: trace.inheritableScore,
-        scoreAdjustments: trace.scoreAdjustments,
-      };
 }
 
 export function computeCalibrationResultDigest(evaluatedSet) {
@@ -619,6 +585,9 @@ export function computeCalibrationResultDigest(evaluatedSet) {
     );
   }
   const resultDigestVersion = versions.values().next().value;
+  if (resultDigestVersion === 2) {
+    return computeV9ResultDigest(evaluated.assets.map((asset) => asset.trace));
+  }
   const results = evaluated.assets
     .map((asset) => compactTrace(asset.trace, resultDigestVersion))
     .sort((left, right) => compareText(left.assetId, right.assetId));
@@ -858,43 +827,19 @@ function reproduceCandidateReplay(replay, label) {
   const cacheKey = stableStringify(replayInput);
   let rebuilt = trustedReplayCache.get(cacheKey);
   if (rebuilt === undefined) {
-    const tempDir = mkdtempSync(resolve(tmpdir(), "pharos-v9-calibration-replay-"));
-    const fixedInputPath = resolve(tempDir, "fixed-input.json");
-    const extensionPath = resolve(tempDir, "extension.json");
-    const outputPath = resolve(tempDir, "replay.json");
     try {
-      writeFileSync(fixedInputPath, `${JSON.stringify(replayInput.fixedInput)}\n`, "utf8");
-      if (replayInput.extension !== undefined) {
-        writeFileSync(extensionPath, `${JSON.stringify(replayInput.extension)}\n`, "utf8");
-      }
-      const args = [
-        TSX_CLI_PATH,
-        TRUSTED_REPLAY_CLI_PATH,
-        "--input",
-        fixedInputPath,
-        ...(replayInput.extension === undefined ? [] : ["--extension", extensionPath]),
-        "--output",
-        outputPath,
-        "--published-at",
-        String(publishedAtSec),
-        ...(replayInput.releaseCandidateId ? ["--release-candidate-id", replayInput.releaseCandidateId] : []),
-      ];
-      execFileSync(process.execPath, args, {
-        cwd: REPO_ROOT,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        maxBuffer: 256 * 1024 * 1024,
-      });
-      rebuilt = JSON.parse(readFileSync(outputPath, "utf8")).pipeline;
+      rebuilt = buildSafetyScoreV9ReplayArtifact({
+        fixedInput: replayInput.fixedInput,
+        ...(replayInput.extension === undefined ? {} : { extension: replayInput.extension }),
+        publishedAtSec,
+        ...(replayInput.releaseCandidateId ? { releaseCandidateId: replayInput.releaseCandidateId } : {}),
+      }).pipeline;
       trustedReplayCache.set(cacheKey, rebuilt);
     } catch (error) {
-      const stderr = error && typeof error === "object" && "stderr" in error ? String(error.stderr).trim() : "";
       throw new Error(
-        `${label} could not run the trusted production compiler and evaluator${stderr ? `: ${stderr}` : ""}`,
+        `${label} could not run the trusted production compiler and evaluator`,
         { cause: error },
       );
-    } finally {
-      rmSync(tempDir, { recursive: true, force: true });
     }
   }
   if (stableStringify(rebuilt) !== stableStringify(replay.pipeline)) {
@@ -904,7 +849,8 @@ function reproduceCandidateReplay(replay, label) {
 }
 
 function baselineMatchesContract(distribution, cards, replay) {
-  const bold = cards.find((card) => card.id === "bold-liquity");
+  const anchor = EXPECTED_BASELINE.anchorCard;
+  const anchorCard = cards.find((card) => card.id === anchor.assetId);
   return (
     distribution.expectedCount === EXPECTED_BASELINE.expectedCount &&
     distribution.ratedCount === EXPECTED_BASELINE.ratedCount &&
@@ -913,8 +859,8 @@ function baselineMatchesContract(distribution, cards, replay) {
     JSON.stringify(distribution.largestPillarTuple) === JSON.stringify(EXPECTED_BASELINE.largestPillarTuple) &&
     JSON.stringify(distribution.largestScoreBucket) === JSON.stringify(EXPECTED_BASELINE.largestScoreBucket) &&
     distribution.scoreQuartiles.iqr === EXPECTED_BASELINE.scoreIqr &&
-    bold?.score === 79 &&
-    bold.grade === "B+" &&
+    anchorCard?.score === anchor.score &&
+    anchorCard.grade === anchor.grade &&
     stableStringify(replay.pipeline.candidateIdentity) ===
       stableStringify(EXPECTED_BASELINE_BINDINGS.candidateIdentity) &&
     replay.pipeline.candidate.candidateId === EXPECTED_BASELINE_BINDINGS.candidateId &&
@@ -1869,8 +1815,8 @@ export function analyzeV9Calibration(baseline, candidate, fridayEvidence = {}) {
       adverseControls.every((control) => control.baselineLocked),
     sameInput,
     coverage:
-      distribution.ratedCount === 342 &&
-      distribution.expectedCount === 344 &&
+      distribution.ratedCount === EXPECTED_BASELINE.ratedCount &&
+      distribution.expectedCount === EXPECTED_BASELINE.expectedCount &&
       JSON.stringify(distribution.nrIds) === JSON.stringify(baselineDistribution.nrIds) &&
       distribution.ratedSupplyShare !== null &&
       distribution.ratedSupplyShare >= 0.9999,

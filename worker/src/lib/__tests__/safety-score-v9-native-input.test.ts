@@ -14,7 +14,7 @@ import {
   parseNativeV9InputCacheValue,
   parseSafetyScoreV9InputCacheValue,
   type NativeSafetyScoreV9Input,
-} from "../safety-score-v9-native-input";
+} from "../safety-score-v9/native-input";
 import {
   createReportCardsFixedInput,
   parseReportCardsFixedInputCacheValue,

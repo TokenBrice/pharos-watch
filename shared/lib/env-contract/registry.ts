@@ -181,25 +181,7 @@ export const ENV_BINDINGS = [
   {
     key: "ALCHEMY_API_KEY",
     valueType: "string",
-    description: "Alchemy credential used for primary chain RPC endpoints and, when enabled, Alchemy Prices API address-price augmentation.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "MORALIS_API_KEY",
-    valueType: "string",
-    description: "Moralis credential used for optional exact-address token-price augmentation.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "BIRDEYE_API_KEY",
-    valueType: "string",
-    description: "Birdeye credential used for optional targeted Solana exact-address token-price augmentation.",
+    description: "Alchemy credential used for primary chain RPC endpoints.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -208,7 +190,7 @@ export const ENV_BINDINGS = [
   {
     key: "ADDRESS_PRICE_PROVIDERS_ENABLED",
     valueType: "string",
-    description: "Optional comma-separated allowlist for exact-address price providers. Production enables only the authenticated CoinGecko Onchain exact-address lane; the public GeckoTerminal corroboration pass remains excluded from the inline quarter-hour invocation for Worker heap safety. Unset auto-enables DexPaprika plus configured key-backed providers, and `dexscreener-address` remains explicit opt-in for the Cloudflare/WAF-protected public lane.",
+    description: "Optional exact-address price-provider allowlist for the hourly corroboration step. Only `coingecko-onchain-address` is available, and an unset value enables no provider.",
     example: {
       section: "workerOptional",
       value: "coingecko-onchain-address",
@@ -653,7 +635,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_RESERVE_RECOVERY_MODE",
     valueType: "string",
-    description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
+    description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `recover` claims and replays interrupted or abandoned reserve slots.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -664,6 +646,14 @@ export const ENV_BINDINGS = [
     valueType: "string",
     description: "Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors.",
     example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
+    key: "WORKER_V9_WORKFLOW_MODE",
+    valueType: "string",
+    description: "Safety Score V9 Workflow pilot mode: `off` keeps the cron-only path; `shadow` creates a replay-safe shadow instance after the authoritative cron publication settles.",
     runtimes: {
       worker: { status: "optional" },
     },
@@ -770,6 +760,20 @@ export const ENV_BINDINGS = [
     runtimes: {
       pagesSiteData: { status: "required" },
     },
+  },
+  {
+    key: "R2_MEASUREMENTS_ACCESS_KEY_ID",
+    valueType: "string",
+    description: "CI/local maintenance credential for uploading compressed measurement captures to the pharos-measurements R2 bucket.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {},
+  },
+  {
+    key: "R2_MEASUREMENTS_SECRET_ACCESS_KEY",
+    valueType: "string",
+    description: "CI/local maintenance secret for uploading compressed measurement captures to the pharos-measurements R2 bucket.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {},
   },
 ] satisfies readonly EnvBindingDefinition[];
 
