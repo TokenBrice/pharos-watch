@@ -1,6 +1,7 @@
 import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
+import { WorkflowEntrypoint } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -382,7 +383,7 @@ vi.mock("../lib/coingecko", async (importOriginal) => {
   return { ...original };
 });
 
-import worker from "../index";
+import worker, { SafetyScoreV9PublicationWorkflow } from "../index";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { makeScheduledEnv } from "../test-helpers/scheduled-runtime.test-support";
@@ -391,10 +392,24 @@ import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
 } from "../lib/public-dataset-snapshot-budget";
 
+const indexImportCronCalls = Object.entries(cronMocks)
+  .filter(([, mock]) => mock.mock.calls.length > 0)
+  .map(([name]) => name);
+
 describe("worker.scheduled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => undefined);
+  });
+
+  it("imports without cron side effects and resolves the Workflow test stub", () => {
+    const ctx = {} as ExecutionContext;
+    const env = makeScheduledEnv();
+    const workflow = new SafetyScoreV9PublicationWorkflow(ctx, env);
+
+    expect(indexImportCronCalls).toEqual([]);
+    expect(workflow).toBeInstanceOf(WorkflowEntrypoint);
+    expect(workflow).toMatchObject({ ctx, env });
   });
 
   it("records the worker-version first-seen marker without blocking scheduled execution", async () => {
@@ -532,7 +547,7 @@ describe("worker.scheduled", () => {
 
   it("runs V9 attribution, DDR, and compilation only on their dedicated triggers", async () => {
     const env = createWorkerEnv({
-      DB: mockD1([], { allowUnmatched: true }),
+      DB: mockD1([{ match: "", rows: [], allowUnused: true }]),
       CORS_ORIGIN: "https://pharos.watch",
     });
     const supply = makeExecutionContext();

@@ -88,6 +88,11 @@ binding = "DB"
 database_name = "stablecoin-db"
 database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 
+[[workflows]]
+name = "safety-score-v9-publication"
+binding = "SAFETY_SCORE_V9_WORKFLOW"
+class_name = "SafetyScoreV9PublicationWorkflow"
+
 [[ratelimits]]
 name = "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"
 namespace_id = "2026071001"
@@ -122,6 +127,7 @@ ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
 CF_ACCESS_TEAM_DOMAIN = "pharos-watch"
 CF_ACCESS_OPS_API_AUD = "72e74ead7cedf76e5c79f2bd0dd999aecd7d5b4e05fa1f9d696aed6a2cd31869"
 WORKER_CANARY_MODE = "status"
+WORKER_V9_WORKFLOW_MODE = "off"
 # `recover` claims and replays interrupted/abandoned reserve slots on the five-minute
 # recovery lane. This terminal lane uses the four-hourly checkpoint's resume pointer
 # to recover transient D1 failures without a separate cache cursor.

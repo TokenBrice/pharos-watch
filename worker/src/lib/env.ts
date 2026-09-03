@@ -76,6 +76,7 @@ export interface Env {
   DDR_REPAIR_TASK_RUNNER_ENABLED?: string;
   WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_CANARY_MODE?: string;
+  WORKER_V9_WORKFLOW_MODE?: string;
 }
 
 export interface WorkerEnvIssue {
