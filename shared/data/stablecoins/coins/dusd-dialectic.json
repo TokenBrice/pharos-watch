@@ -2,7 +2,7 @@
   "id": "dusd-dialectic",
   "name": "Dialectic USD",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is Dialectic's USDC-accounted Makina strategy share with queued exits, live backlog-adjusted USDC buffer capacity, and upstream USDC freeze exposure.",
+  "oneLiner": "DUSD is Dialectic Meccanico Ltd's USDC-accounted Makina strategy share with permissionless on-chain entry, queued exits, and upstream USDC freeze exposure.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -12,7 +12,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC deposited into the Dialectic USD Makina Machine and deployed by the Dialectic operator into AMM liquidity and money-market positions through Calibers on Ethereum, Base, Arbitrum, and Monad; execution is bounded by a Risk-Manager-curated Merkle instruction set, per-position and per-swap loss caps, and base-token allowlists, and an optional Security Module stakes DUSD shares as a slashable first-loss buffer",
+  "collateral": "USDC deposited into the Dialectic USD Makina Machine and deployed by the Operator, Dialectic Meccanico Ltd, into on-chain credit, lending, liquidity, and strategy positions through Calibers on Ethereum, Base, Arbitrum, and Monad; execution is bounded by a Risk-Manager-curated Merkle instruction set, per-position and per-swap loss caps, and base-token allowlists, and an optional Security Module stakes DUSD shares as a slashable first-loss buffer",
   "pegMechanism": "DUSD is not par-redeemable. Its price is the Machine's AUM divided by share supply in USDC terms, so it appreciates with strategy yield and can fall when the strategy loses value or the Security Council forces an AUM update past the share-price rate limit. Deposits mint shares atomically at the current share price through the DirectDepositor. Exits use the AsyncRedeemer queue and settle in USDC only when the operator finalizes requests after freeing accounting-token liquidity. The reviewed implementation advances sequential request IDs, but the Machine Terms make buybacks discretionary, grant no contractual redemption right or queue priority, permit requests to remain unfilled indefinitely, and establish a 12-hour minimum finalization delay rather than a maximum settlement SLA.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -23,7 +23,7 @@
     "sources": [
       {
         "label": "Makina Machine share price and AUM",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/share-price"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
       },
       {
         "label": "Makina strategy deployments",

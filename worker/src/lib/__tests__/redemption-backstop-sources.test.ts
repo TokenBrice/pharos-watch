@@ -4,6 +4,7 @@ import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildEntryFixture,
+  dusdOpenQueueMetadata,
   route,
   severeMarketEvidence,
   snapshot,
@@ -605,7 +606,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.liveHolderEligibility).toBe("whitelisted-primary");
   });
 
-  it("uses DUSD live queue capacity without treating whitelist access as route impairment", async () => {
+  it("treats DUSD's open operator-batched queue as an unproven settlement bound", async () => {
     const config = getRedemptionBackstopConfig("dusd-dialectic");
     expect(config).not.toBeNull();
 
@@ -615,38 +616,34 @@ describe("buildRedemptionBackstopEntry", () => {
       5_800_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("dusd-dialectic", {
-          freshnessMode: "verified",
-          sourceTimestamp: now - 120,
-          redemption: {
-            capacityUsd: 0,
-            capacityKind: "live-queue",
-            freshnessKind: "same-run-onchain",
-            queueDepthUsd: 3_104.889979,
-            holderEligibility: "issuer-discretionary",
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-          },
-          redemptionQueue: {
-            minimumFinalizationDelaySec: 43_200,
-          },
-        }, { fetchedAt: now - 120, source: "makina-strategy" }),
+        reserveSnapshotMetadata: snapshot(
+          "dusd-dialectic",
+          dusdOpenQueueMetadata(now),
+          { fetchedAt: now - 120, source: "makina-strategy" },
+        ),
       },
     );
 
     expect(entry.provider).toBe("reserve-sync-metadata");
     expect(entry.sourceMode).toBe("dynamic");
-    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.routeStatus).toBe("open");
     expect(entry.routeStatusSource).toBe("onchain");
-    expect(entry.liveHolderEligibility).toBe("issuer-discretionary");
+    expect(entry.liveHolderEligibility).toBe("any-holder");
     expect(entry.capacityConfidence).toBe("documented-bound");
     expect(entry.capacityBasis).toBe("live-proxy-buffer");
     expect(entry.capacityKind).toBe("live-queue");
-    expect(entry.immediateCapacityUsd).toBe(0);
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.capacityProfile).toMatchObject({
+      immediateUsd: null,
+      scoringUsd: null,
+      scoringHorizon: "unknown",
+      settlementBoundUnproven: true,
+    });
+    expect(entry.score).toBeNull();
     expect(entry.queueDepthUsd).toBe(3_104.889979);
     expect(entry.settlementDelaySec).toBeUndefined();
-    expect(entry.capsApplied).not.toContain("live-route-status-impairment");
+    expect(entry.notes).toContain("Live redemption settlement completion bound is unproven; capacity is not established");
   });
 
   it("fails DUSD closed when the live queue proof omits usable capacity", async () => {

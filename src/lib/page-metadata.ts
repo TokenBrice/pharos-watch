@@ -4,6 +4,7 @@ import {
   BACKING_PROSE_LABELS,
   GOVERNANCE_PROSE_LABELS,
   PEG_LABELS_SHORT,
+  getProfilePegLabel,
   getMechanismArchetypeLabel,
   getMechanismArchetypeOneLiner,
   getMechanismExplainerPath,
@@ -242,6 +243,10 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
 export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
   const governancePhrase = GOVERNANCE_PROSE_LABELS[coin.flags.governance];
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const profilePegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
   const backingPhrase = BACKING_PROSE_LABELS[coin.flags.backing];
 
   if (coin.status === "pre-launch") {
@@ -266,8 +271,9 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
     );
   }
 
-  const structure =
-    coin.flags.backing === "algorithmic"
+  const structure = coin.flags.navToken
+    ? `${governancePhrase} ${backingPhrase} yield-bearing token with ${profilePegLabel}`
+    : coin.flags.backing === "algorithmic"
       ? `${governancePhrase} ${backingPhrase} pegged to ${pegLabel}`
       : `${governancePhrase} stablecoin ${backingPhrase} and pegged to ${pegLabel}`;
   const chainCount = deploymentChainCount(coin);

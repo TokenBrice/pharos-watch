@@ -49,10 +49,10 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       // the newest curated review date + 24h. Re-pin when curation advances the
       // clock onto a different shock-coverage measurement: the 2026-08-31
       // curation batch moved the clock to 2026-09-01T00:00:00Z and this ratio
-      // with it, from 0.235898946423.
-      // Re-pinned 2026-09-01: bd-basedollar's blacklistability review was
-      // re-derived with a current reviewedAt, which feeds the evidence-age term.
-      stressLiquidationCoverageRatio: 0.190902714164,
+      // with it, from 0.235898946423. The 2026-09-03 DUSD evidence refresh
+      // advances the registry clock to 2026-09-04T00:00:00Z and therefore
+      // selects the next pinned Base Dollar shock-coverage measurement.
+      stressLiquidationCoverageRatio: 0.190891734374,
     });
   });
 

@@ -9,9 +9,9 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extensio
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 
 // Kept ahead of the newest reviewed date in the registry metadata this fixture
-// reads: the usdc-circle parent's mint-authority review moved to 2026-08-08,
+// reads: the DUSD reserve and mechanism reviews moved to 2026-09-03,
 // which the extension's scoring-clock guard treats as a future review.
-const AS_OF_SEC = Date.parse("2026-08-09T12:00:00.000Z") / 1_000;
+const AS_OF_SEC = Date.parse("2026-09-04T12:00:00.000Z") / 1_000;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "dusd-dialectic";
 const PARENT_ID = "usdc-circle";
@@ -27,7 +27,7 @@ function fixedInput() {
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
     activeAssetIds: [...ACTIVE_ASSET_IDS],
-    capturedAt: "2026-08-09T12:00:00.000Z",
+    capturedAt: "2026-09-04T12:00:00.000Z",
     sourceGeneration: "report-cards:fixture:dusd-team-answers",
     dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
     redemptionGenerationId: "redemption-backstops-unavailable",
@@ -146,7 +146,7 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       segregation: "mixed",
       bankruptcyRemoteness: "none",
       rehypothecation: "permitted",
-      reviewedAt: "2026-07-30",
+      reviewedAt: "2026-09-03",
       providers: [
         expect.objectContaining({
           name: "Dialectic Meccanico Ltd / Makina Machine and Caliber contracts",
@@ -232,7 +232,7 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       assuranceAndReconciliation: { quality: "limited" },
     });
     expect(overlay?.notes).toEqual(expect.stringContaining("affirmative legal evidence"));
-    expect(overlay?.notes).toEqual(expect.stringContaining("expected publication URL pending"));
+    expect(overlay?.notes).toEqual(expect.stringContaining("published Dialectic Meccanico Machine Terms"));
   });
 
   it("keeps DUSD wrapper-parent scoring on local facts with zero risk-transfer credit", () => {

@@ -58,7 +58,7 @@
         "sources": [
           {
             "label": "Makina deposits",
-            "url": "https://docs.makina.finance/concepts/architecture/machine/overview/deposits"
+            "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
           },
           {
             "label": "Dialectic USD Machine on Etherscan",

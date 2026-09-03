@@ -6,7 +6,10 @@ import { ArrowLeftRight, BadgeCheck, Flag, Rocket } from "lucide-react";
 import { ShareButton } from "@/components/share-button";
 import type { Infrastructure, StablecoinData, StablecoinMeta } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import {
+  CLIENT_TRACKED_META_BY_ID,
+  type StablecoinClientMeta,
+} from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -17,6 +20,7 @@ import {
   HERO_CHIP_BACKING_LABELS,
   HERO_CHIP_GOVERNANCE_LABELS,
   HERO_CHIP_PEG_LABELS,
+  getHeroPegLabel,
 } from "@shared/lib/classification";
 import {
   HeroCompactMarketCapCell,
@@ -57,7 +61,12 @@ function HeroCompactChip({ href, children }: { href?: string | null; children: R
 function HeroDesktopChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict: StablecoinVerdict }) {
   const showVerdict = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized";
   const launchDate = formatChipLaunchDate(coin.launchDate);
-  const pegLabel = HERO_CHIP_PEG_LABELS[coin.flags.pegCurrency];
+  const pegLabel = coin.flags.navToken
+    ? getHeroPegLabel(
+        coin.flags,
+        coin.pegReferenceId ? CLIENT_TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+      )
+    : HERO_CHIP_PEG_LABELS[coin.flags.pegCurrency];
   const backingLabel = HERO_CHIP_BACKING_LABELS[coin.flags.backing];
   const governanceLabel = HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance];
 

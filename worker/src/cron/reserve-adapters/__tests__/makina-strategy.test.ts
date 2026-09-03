@@ -18,12 +18,13 @@ const PARAMS = {
   otherThresholdPct: 2,
   reconciliationTolerancePct: 0.5,
 };
-const REVIEWED_IMPLEMENTATION = "0xd53dc14e0f268494c7540153126d78e4f54cc01c";
+const REVIEWED_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
 const ASYNC_REDEEMER = "0x1303c26cfe06bac5bfee29907f37919643def75c";
 const REVIEWED_IMPLEMENTATION_CODE_HASH =
-  "0xeed090b1c06e966eebca301a1fed3f0c152044c04912d8b5d7e7c934fa3a192a";
+  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
 const REDEMPTION_STATE = {
-  whitelistEnabled: true,
+  whitelistEnabled: false,
+  sanctionsCheckEnabled: true,
   minimumFinalizationDelaySec: 43_200,
   nextRequestId: 344,
   lastFinalizedRequestId: 342,
@@ -45,17 +46,18 @@ describe("makina-strategy adapter", () => {
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
 
     expect(result.slices).toEqual([
-      { name: "Morpho lending positions", pct: 62.2, risk: "medium" },
-      { name: "Aave V4 positions", pct: 19.1, risk: "medium" },
-      { name: "Re Protocol exposure", pct: 9.1, risk: "high" },
+      { sourceKey: "makina:protocol:morpho", name: "Morpho lending positions", pct: 62.2, risk: "medium" },
+      { sourceKey: "makina:protocol:aave-v4", name: "Aave V4 positions", pct: 19.1, risk: "medium" },
+      { sourceKey: "makina:protocol:re", name: "Re Protocol exposure", pct: 9.1, risk: "high" },
       {
+        sourceKey: "makina:base-token:usdc",
         name: "Unallocated USDC balances",
         pct: 6.4,
         risk: "low",
         coinId: "usdc-circle",
         depType: "collateral",
       },
-      { name: "Unknown Makina exposure", pct: 2.7, risk: "high" },
+      { sourceKey: "makina:unknown:unlabelled", name: "Unknown Makina exposure", pct: 2.7, risk: "high" },
       { name: "Other identified Makina positions", pct: 0.5, risk: "high" },
     ]);
     expect(result.metadata?.totalReserveUsd).toBe(11000);
@@ -76,6 +78,50 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.details?.oldestPositionUpdatedAt).toBe(1785265103);
     expect(result.metadata?.details?.oldestMaterialPositionUpdatedAt).toBe(1785265103);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["makina-unknown-exposure"]);
+  });
+
+  it("maps only the reviewed Monad PT-AUSD identity to Pendle", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    allocations.data.positions = allocations.data.positions.filter((position: { protocol?: string | null }) =>
+      position.protocol !== null
+    );
+    allocations.data.base_tokens.push({
+      accounting_token_value: "300000000",
+      protocol: null,
+      token: {
+        chainId: 143,
+        address: "0x9FC74f8Ed616B5BaF52a170caa97d6d3898602d1",
+        symbol: "PT-AUSD-8OCT2026",
+      },
+    });
+
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+
+    expect(result.slices).toContainEqual({
+      sourceKey: "makina:protocol:pendle",
+      name: "Pendle positions",
+      pct: 3.2,
+      risk: "high",
+    });
+    expect(result.slices.some((slice) => slice.name === "Unknown Makina exposure")).toBe(false);
+    expect(result.warnings?.map((warning) => warning.code) ?? []).not.toContain("makina-unknown-exposure");
+  });
+
+  it("retains submaterial unknown exposure without raising a materiality warning", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    const morpho = allocations.data.positions.find((position: { protocol?: string | null }) =>
+      position.protocol === "morpho"
+    );
+    const unknown = allocations.data.positions.find((position: { protocol?: string | null }) =>
+      position.protocol === null
+    );
+    morpho.value = "7149999000";
+    unknown.value = "1000";
+
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(0.0000090909);
+    expect(result.warnings?.map((warning) => warning.code) ?? []).not.toContain("makina-unknown-exposure");
   });
 
   it("reconciles allocations to current AUM when last reported AUM lags", () => {
@@ -149,19 +195,19 @@ describe("makina-strategy adapter", () => {
     expect(metadata).toEqual({
       redemption: {
         capacityUsd: 0,
+        settlementBoundUnproven: true,
         capacityKind: "live-queue",
         freshnessKind: "same-run-onchain",
         blockNumber: 25_646_765,
-        holderEligibility: "issuer-discretionary",
+        holderEligibility: "any-holder",
         queueDepthUsd: 3_104.889979,
         routeStatus: "open",
         routeStatusSource: "onchain",
-        routeStatusReason:
-          "AsyncRedeemer whitelist is enabled; Pharos models the route as issuer-discretionary access rather than impaired",
+        routeStatusReason: "AsyncRedeemer whitelist is disabled and its sanctions check is enabled",
         sourceUrls: [
           "https://docs.makina.finance/concepts/architecture/machine/redemptions",
           `https://eth.blockscout.com/address/${ASYNC_REDEEMER}?tab=contract`,
-          "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract",
+          "https://eth.blockscout.com/address/0x49c4762ab838f2e5d8252b69b90a1e8587a74511?tab=contract",
         ],
       },
       redemptionQueue: {
@@ -175,10 +221,13 @@ describe("makina-strategy adapter", () => {
         grossIdleCapacityUsd: 120.722783,
         queueDepthUsd: 3_104.889979,
         reservedUnclaimedUsdc: 0.003679,
+        settlementBoundUnproven: true,
         usableCapacityFormula: "max(0, Machine idle Ethereum USDC - convertToAssets(DUSD locked in AsyncRedeemer))",
         capacityBasis: "live-proxy-buffer",
         implementationAddress: REVIEWED_IMPLEMENTATION,
         implementationRuntimeCodeHash: REVIEWED_IMPLEMENTATION_CODE_HASH,
+        whitelistEnabled: false,
+        sanctionsCheckEnabled: true,
       },
     });
     expect(metadata.redemption).not.toHaveProperty("settlementDelaySec");
@@ -189,9 +238,10 @@ describe("makina-strategy adapter", () => {
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
+      settlementBoundUnproven: true,
       capacityKind: "live-queue",
       freshnessKind: "same-run-onchain",
-      holderEligibility: "issuer-discretionary",
+      holderEligibility: "any-holder",
       routeStatus: "open",
       routeStatusSource: "onchain",
       queueDepthUsd: 3_104.889979,
@@ -203,6 +253,7 @@ describe("makina-strategy adapter", () => {
       minimumFinalizationDelaySec: 43_200,
       grossIdleCapacityUsd: 120.722783,
       queueDepthUsd: 3_104.889979,
+      settlementBoundUnproven: true,
     });
     expect(result.metadata?.redemption).not.toHaveProperty("settlementDelaySec");
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
@@ -224,9 +275,10 @@ describe("makina-strategy adapter", () => {
 
     expect(metadata.redemption).toMatchObject({
       capacityUsd: 700,
+      settlementBoundUnproven: true,
       capacityKind: "live-queue",
       queueDepthUsd: 0,
-      holderEligibility: "issuer-discretionary",
+      holderEligibility: "any-holder",
       routeStatus: "open",
     });
     expect(metadata.redemptionQueue).toMatchObject({
@@ -234,6 +286,20 @@ describe("makina-strategy adapter", () => {
       lockedShares: 0,
       queueDepthUsd: 0,
       grossIdleCapacityUsd: 700,
+      settlementBoundUnproven: true,
+    });
+  });
+
+  it("publishes cohort-limited access when the Risk Manager enables the whitelist", () => {
+    const metadata = buildMakinaRedemptionMetadata({
+      ...REDEMPTION_STATE,
+      whitelistEnabled: true,
+    });
+
+    expect(metadata.redemption).toMatchObject({
+      holderEligibility: "whitelisted-primary",
+      routeStatus: "cohort-limited",
+      routeStatusReason: "AsyncRedeemer whitelist is enabled; requests and claims are limited to the active allowlist",
     });
   });
 });

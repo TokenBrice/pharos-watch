@@ -104,6 +104,7 @@ interface MakinaBucketValue {
   kind: MakinaBucketKind;
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  sourceKey?: string;
 }
 
 interface MakinaStrategyParams {
@@ -118,6 +119,7 @@ interface MakinaStrategyParams {
 
 export interface MakinaRedemptionState {
   whitelistEnabled: boolean;
+  sanctionsCheckEnabled: boolean;
   minimumFinalizationDelaySec: number;
   nextRequestId: number;
   lastFinalizedRequestId: number;
@@ -144,13 +146,15 @@ const DEFAULT_OTHER_THRESHOLD_PCT = 2;
 const DEFAULT_RECONCILIATION_TOLERANCE_PCT = 0.5;
 const ETHEREUM_CHAIN = "ethereum";
 const CANONICAL_ETHEREUM_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION = "0xd53dc14e0f268494c7540153126d78e4f54cc01c";
+const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
 const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION_CODE_HASH =
-  "0xeed090b1c06e966eebca301a1fed3f0c152044c04912d8b5d7e7c934fa3a192a";
+  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
+const REVIEWED_PENDLE_PT_AUSD_MONAD = "143:0x9fc74f8ed616b5baf52a170caa97d6d3898602d1";
 const REDEEMER_MACHINE_SELECTOR = "0x75c60225";
 const MACHINE_ACCOUNTING_TOKEN_SELECTOR = "0xda68cf8b";
 const MACHINE_SHARE_TOKEN_SELECTOR = "0x6c9fa59e";
 const IS_WHITELIST_ENABLED_SELECTOR = "0x184d69ab";
+const IS_SANCTIONS_CHECK_ENABLED_SELECTOR = "0x1c34eb35";
 const FINALIZATION_DELAY_SELECTOR = "0xf9823a5c";
 const NEXT_REQUEST_ID_SELECTOR = "0x6a84a985";
 const LAST_FINALIZED_REQUEST_ID_SELECTOR = "0x667a739e";
@@ -187,16 +191,19 @@ export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
   return {
     ...buildRedemptionSnapshotMetadata({
       capacityUsd: state.capacityUsd,
+      settlementBoundUnproven: true,
       capacityKind: "live-queue",
       freshnessKind: "same-run-onchain",
       blockNumber: state.blockNumber,
-      holderEligibility: "issuer-discretionary",
+      holderEligibility: state.whitelistEnabled ? "whitelisted-primary" : "any-holder",
       queueDepthUsd: state.queueDepthUsd,
-      routeStatus: "open",
+      routeStatus: state.whitelistEnabled ? "cohort-limited" : "open",
       routeStatusSource: "onchain",
       routeStatusReason: state.whitelistEnabled
-        ? "AsyncRedeemer whitelist is enabled; Pharos models the route as issuer-discretionary access rather than impaired"
-        : "AsyncRedeemer whitelist is disabled",
+        ? "AsyncRedeemer whitelist is enabled; requests and claims are limited to the active allowlist"
+        : state.sanctionsCheckEnabled
+          ? "AsyncRedeemer whitelist is disabled and its sanctions check is enabled"
+          : "AsyncRedeemer whitelist and sanctions check are disabled",
       sourceUrls: [
         "https://docs.makina.finance/concepts/architecture/machine/redemptions",
         `https://eth.blockscout.com/address/${state.asyncRedeemerAddress}?tab=contract`,
@@ -214,10 +221,13 @@ export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
       grossIdleCapacityUsd: state.grossIdleCapacityUsd,
       queueDepthUsd: state.queueDepthUsd,
       reservedUnclaimedUsdc: state.reservedUnclaimedUsdc,
+      settlementBoundUnproven: true,
       usableCapacityFormula: "max(0, Machine idle Ethereum USDC - convertToAssets(DUSD locked in AsyncRedeemer))",
       capacityBasis: "live-proxy-buffer",
       implementationAddress: state.implementationAddress,
       implementationRuntimeCodeHash: state.implementationRuntimeCodeHash,
+      whitelistEnabled: state.whitelistEnabled,
+      sanctionsCheckEnabled: state.sanctionsCheckEnabled,
     },
   };
 }
@@ -267,6 +277,7 @@ async function fetchMakinaRedemptionState(
           { label: "redeemer-locked-shares", contract: shareTokenAddress, data: encodeBalanceOfCallData(asyncRedeemerAddress) },
           { label: "redeemer-reserved-usdc", contract: CANONICAL_ETHEREUM_USDC, data: encodeBalanceOfCallData(asyncRedeemerAddress) },
           { label: "redeemer-whitelist", contract: asyncRedeemerAddress, data: IS_WHITELIST_ENABLED_SELECTOR },
+          { label: "redeemer-sanctions-check", contract: asyncRedeemerAddress, data: IS_SANCTIONS_CHECK_ENABLED_SELECTOR },
           { label: "redeemer-finalization-delay", contract: asyncRedeemerAddress, data: FINALIZATION_DELAY_SELECTOR },
           { label: "redeemer-next-request-id", contract: asyncRedeemerAddress, data: NEXT_REQUEST_ID_SELECTOR },
           { label: "redeemer-last-finalized-request-id", contract: asyncRedeemerAddress, data: LAST_FINALIZED_REQUEST_ID_SELECTOR },
@@ -345,6 +356,7 @@ async function fetchMakinaRedemptionState(
     }
 
     const whitelistEnabled = decodeBoolWord(multicallResultByLabel(reads, "redeemer-whitelist"));
+    const sanctionsCheckEnabled = decodeBoolWord(multicallResultByLabel(reads, "redeemer-sanctions-check"));
     const minimumFinalizationDelaySec = readSafeOnchainNumber(decodeUint256Word(
       multicallResultByLabel(reads, "redeemer-finalization-delay"),
     ));
@@ -359,6 +371,7 @@ async function fetchMakinaRedemptionState(
     const reservedUnclaimedRaw = decodeUint256Word(multicallResultByLabel(reads, "redeemer-reserved-usdc"));
     if (
       whitelistEnabled == null ||
+      sanctionsCheckEnabled == null ||
       minimumFinalizationDelaySec == null ||
       nextRequestId == null ||
       lastFinalizedRequestId == null ||
@@ -389,6 +402,7 @@ async function fetchMakinaRedemptionState(
     return {
       state: {
         whitelistEnabled,
+        sanctionsCheckEnabled,
         minimumFinalizationDelaySec,
         nextRequestId,
         lastFinalizedRequestId,
@@ -485,6 +499,10 @@ function displayProtocol(protocol: string): string {
       return "Aave V4 positions";
     case "morpho":
       return "Morpho lending positions";
+    case "fluid-lite":
+      return "Fluid Lite positions";
+    case "makina":
+      return "Makina Machine exposure";
     case "pareto":
       return "Pareto / FalconX credit exposure";
     case "pendle":
@@ -536,12 +554,20 @@ function isKnownAccountingToken(token: MakinaToken | undefined, params: MakinaSt
 
 function reserveSliceFromBucket(bucket: MakinaBucketValue): ReserveSlice {
   return {
+    ...(bucket.sourceKey ? { sourceKey: bucket.sourceKey } : {}),
     name: bucket.name,
     pct: bucket.value,
     risk: bucket.risk,
     ...(bucket.coinId ? { coinId: bucket.coinId } : {}),
     ...(bucket.depType ? { depType: bucket.depType } : {}),
   };
+}
+
+function reviewedBaseTokenProtocol(token: MakinaToken | undefined): string | null {
+  const chainId = readStringLike(token?.chainId);
+  const address = readString(token?.address)?.toLowerCase();
+  if (!chainId || !address) return null;
+  return `${chainId}:${address}` === REVIEWED_PENDLE_PT_AUSD_MONAD ? "pendle" : null;
 }
 
 function makeOtherBucket(buckets: MakinaBucketValue[]): MakinaBucketValue {
@@ -631,6 +657,7 @@ export function adaptMakinaStrategyReserves(
     if (isKnownAccountingToken(entry.token, params)) {
       pushBucket(buckets, {
         key: "base-token",
+        sourceKey: "makina:base-token:usdc",
         name: "Unallocated USDC balances",
         risk: "low",
         kind: "base-token",
@@ -639,10 +666,11 @@ export function adaptMakinaStrategyReserves(
       }, value);
       continue;
     }
-    const protocol = protocolKey(entry.protocol);
+    const protocol = protocolKey(entry.protocol) ?? reviewedBaseTokenProtocol(entry.token);
     if (protocol) {
       pushBucket(buckets, {
         key: `protocol:${protocol}`,
+        sourceKey: `makina:protocol:${protocol}`,
         name: displayProtocol(protocol),
         risk: protocolRisk(protocol),
         kind: "protocol",
@@ -651,6 +679,7 @@ export function adaptMakinaStrategyReserves(
     }
     pushBucket(buckets, {
       key: "unknown",
+      sourceKey: "makina:unknown:unlabelled",
       name: "Unknown Makina exposure",
       risk: "high",
       kind: "unknown",
@@ -679,7 +708,13 @@ export function adaptMakinaStrategyReserves(
     const name = protocol ? displayProtocol(protocol) : "Unknown Makina exposure";
     const key = protocol ? `protocol:${protocol}` : "unknown";
     const risk = protocol ? protocolRisk(protocol) : "high";
-    pushBucket(buckets, { key, name, risk, kind: protocol ? "protocol" : "unknown" }, signedValue);
+    pushBucket(buckets, {
+      key,
+      sourceKey: protocol ? `makina:protocol:${protocol}` : "makina:unknown:unlabelled",
+      name,
+      risk,
+      kind: protocol ? "protocol" : "unknown",
+    }, signedValue);
 
     positionDetails.push({
       id: readString(entry.id) ?? null,
@@ -722,7 +757,7 @@ export function adaptMakinaStrategyReserves(
   ];
   const unknownExposureUsd = unknownBuckets.reduce((sum, bucket) => sum + bucket.value, 0);
   const unknownExposurePct = unknownExposureUsd / netReserveUsd * 100;
-  if (unknownExposurePct > 0) {
+  if (unknownExposurePct >= otherThresholdPct) {
     warnings.push(reserveInfoWarning(
       "makina-unknown-exposure",
       `Makina allocation includes ${unknownExposurePct.toFixed(2)}% unlabelled exposure`,
