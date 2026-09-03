@@ -67,8 +67,14 @@ describe("PR lane manifest", () => {
   });
 
   it("caches every gitignored bootstrap output so matrix jobs see what prepare generated", () => {
-    const cachedPaths = (SETUP_WORKSPACE.match(/path: \|\n((?:\s{10}\S+\n)+)/g) ?? [])
-      .flatMap((block) => block.split("\n").slice(1).map((line) => line.trim()).filter(Boolean));
+    // Collect every `path: |` block's entries (ten-space indented lines) from the action.
+    const cachedPaths: string[] = [];
+    let inPathBlock = false;
+    for (const line of SETUP_WORKSPACE.split("\n")) {
+      if (line.trim() === "path: |") { inPathBlock = true; continue; }
+      if (inPathBlock && line.startsWith("          ") && line.trim()) cachedPaths.push(line.trim());
+      else inPathBlock = false;
+    }
     const bootstrapOutputs = GENERATED_ARTIFACT_REGISTRY
       .filter((artifact) => artifact.bootstrap)
       .flatMap((artifact) => artifact.outputPaths)
