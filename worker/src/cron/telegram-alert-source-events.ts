@@ -102,6 +102,25 @@ export interface TelegramAlertSourceResolution {
   pagesCompletedThisRun: number;
   queryFailures: number;
   resolutionFailures: number;
+  /** D1 statements issued while resolving this captured source event. */
+  planningStatements: number;
+  /** Wall-clock duration of source-event resolution in milliseconds. */
+  planningMs: number;
+  sourceEventsProcessed: number;
+}
+
+function createSourceResolutionDatabase(
+  db: D1Database,
+  counters: { statements: number },
+): D1Database {
+  return {
+    ...db,
+    prepare(sql: string) {
+      counters.statements += 1;
+      return db.prepare(sql);
+    },
+    batch: db.batch.bind(db),
+  } as D1Database;
 }
 
 function parseEvents(
@@ -738,7 +757,10 @@ export async function resolveTelegramAlertSourcePresetPages(
   nowSec: number,
   options: TelegramPresetResolveOptions & { includeSubscriberMaps?: boolean } = {},
 ): Promise<TelegramAlertSourceResolution> {
-  const pendingResult = await db
+  const resolutionStartedAtMs = Date.now();
+  const resolutionCounters = { statements: 0 };
+  const resolutionDb = createSourceResolutionDatabase(db, resolutionCounters);
+  const pendingResult = await resolutionDb
     .prepare(
       `SELECT source_event_id, page_key, alert_type, page_index,
               cursor_chat_id, cursor_preset_id, memberships_resolved,
@@ -758,7 +780,7 @@ export async function resolveTelegramAlertSourcePresetPages(
   for (const page of pendingResult.results ?? []) {
     let membershipOutcome: "ok" | "query-failed" | "resolution-failed" = "ok";
     if (page.memberships_resolved !== 1) {
-      membershipOutcome = await resolveMemberships(db, source, page, nowSec, options);
+      membershipOutcome = await resolveMemberships(resolutionDb, source, page, nowSec, options);
     }
     if (membershipOutcome === "query-failed") {
       queryFailures += 1;
@@ -770,7 +792,7 @@ export async function resolveTelegramAlertSourcePresetPages(
       resolutionFailuresByType[page.alert_type] += 1;
       continue;
     }
-    const followerOutcome = await resolveFollowerPage(db, source, page, nowSec);
+    const followerOutcome = await resolveFollowerPage(resolutionDb, source, page, nowSec);
     if (followerOutcome === "query-failed") {
       queryFailures += 1;
       queryFailuresByType[page.alert_type] += 1;
@@ -779,7 +801,7 @@ export async function resolveTelegramAlertSourcePresetPages(
     }
   }
 
-  const pendingRow = await db
+  const pendingRow = await resolutionDb
     .prepare(
       `SELECT COUNT(*) AS count
          FROM telegram_alert_source_resolution_pages
@@ -791,14 +813,14 @@ export async function resolveTelegramAlertSourcePresetPages(
   const maps: Record<PresetAlertType, Map<string, SubscriberRow[]>> =
     options.includeSubscriberMaps === false
       ? { dews: new Map(), depeg: new Map(), safety: new Map() }
-      : await loadSourcePresetRows(db, {
+      : await loadSourcePresetRows(resolutionDb, {
           sourceEventId: source.sourceEventId,
           types: PRESET_ALERT_TYPES,
           nowSec,
         });
   const familyHasPending = new Set<PresetAlertType>();
   if (pendingPages > 0) {
-    const pendingFamilies = await db
+    const pendingFamilies = await resolutionDb
       .prepare(
         `SELECT DISTINCT alert_type
            FROM telegram_alert_source_resolution_pages
@@ -825,7 +847,7 @@ export async function resolveTelegramAlertSourcePresetPages(
       : pendingPages > 0
         ? "preset_pages_pending"
         : null;
-  await db
+  await resolutionDb
     .prepare(
       `UPDATE telegram_alert_source_events
           SET attempt_count = attempt_count + 1,
@@ -851,6 +873,9 @@ export async function resolveTelegramAlertSourcePresetPages(
     pagesCompletedThisRun,
     queryFailures,
     resolutionFailures,
+    planningStatements: resolutionCounters.statements,
+    planningMs: Math.max(0, Date.now() - resolutionStartedAtMs),
+    sourceEventsProcessed: 1,
   };
 }
 

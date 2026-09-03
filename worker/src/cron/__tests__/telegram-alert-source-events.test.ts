@@ -297,6 +297,12 @@ describe("Telegram alert source-event resolution", () => {
       getStablecoinsCacheResult: async () => stablecoinsResult(),
     });
     expect(recovered.allComplete).toBe(true);
+    expect(recovered).toMatchObject({
+      planningStatements: expect.any(Number),
+      planningMs: expect.any(Number),
+      sourceEventsProcessed: 1,
+    });
+    expect(recovered.planningStatements).toBeGreaterThan(0);
     expect(recovered.presetResults.dews.kind).toBe("ok");
     if (recovered.presetResults.dews.kind === "ok") {
       expect(recovered.presetResults.dews.rows.get("usdc-circle")?.map((row) => row.chat_id))

@@ -199,6 +199,11 @@ describe("dispatchTelegramAlerts", () => {
         presetResolutionFailures: 0,
         subscribersNotified: 1,
         messagesSent: 1,
+        planningStatements: expect.any(Number),
+        planningMs: expect.any(Number),
+        sourceEventsProcessed: 1,
+        pendingRowsEnqueued: expect.any(Number),
+        noWorkRun: false,
       });
       expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "direct-chat" })]);
       expect(parseLogRecords(warnSpy).some((record) => record.action === "preset-resolution")).toBe(false);

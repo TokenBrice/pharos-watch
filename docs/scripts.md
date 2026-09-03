@@ -53,6 +53,12 @@ Report shape:
 
 Compare captures before and after an infrastructure change by `period`, `sortBy`, `_pharos.sqlFingerprint`, and `_pharos.sourcePaths`. Keep generated reports under `agents/` unless a durable methodology or source change requires documentation.
 
+### Telegram Adoption
+
+| Script | Purpose |
+| --- | --- |
+| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and 14-day Telegram dispatch planning telemetry, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. |
+
 ## Routing Index
 
 The command name, composition, and default invocation are owned by the root [`package.json`](../package.json). Run the selected npm command with `-- --help`, or invoke a direct entrypoint with `--help`, for its current flags and defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not copy its roster into documentation.
