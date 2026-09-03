@@ -104,6 +104,10 @@ const CRON_SCHEDULE_DEFINITIONS = {
   },
   halfHourlyMeasuredExecution: {
     schedule: "0,30 * * * *",
+    // Keep the logical :00/:30 evidence slots, but dispatch five minutes later
+    // so this RPC-heavy graph does not overlap the rich quarter-hourly graph in
+    // the same warm Worker isolate.
+    triggerSchedules: ["5,35 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution,
   },
   halfHourlyOffset: {
@@ -141,7 +145,13 @@ const CRON_SCHEDULE_DEFINITIONS = {
     ...CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery,
   },
   digestTriggerPoll: { schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
-  daily0300Utc: { schedule: "0 3 * * *", ...CRON_SCHEDULE_CADENCES.daily0300Utc },
+  // Preserve the 03:00 logical daily slot while moving its physical invocation
+  // off the quarter-hourly + measured-execution :00 collision.
+  daily0300Utc: {
+    schedule: "0 3 * * *",
+    triggerSchedules: ["3 3 * * *"],
+    ...CRON_SCHEDULE_CADENCES.daily0300Utc,
+  },
   daily0800Utc: { schedule: "0 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0800Utc },
   daily0805Utc: { schedule: "5 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0805Utc },
   daily0810Utc: { schedule: "10 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0810Utc },

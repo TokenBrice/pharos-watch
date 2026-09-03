@@ -43,7 +43,7 @@ function runtime(order: string[]): ScheduledRuntimeContext {
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
     } as unknown as D1Database,
-    cron: "0 3 * * *",
+    cron: "3 3 * * *",
     scheduleKey: "daily0300Utc",
     scheduledTimeMs: null,
     slotStartedAt: 0,

@@ -2,7 +2,14 @@ import workerRuntimeAsset from "../../data/stablecoins/coins.worker-runtime.gene
 import type { PegCurrency } from "../../types/core";
 import type { StablecoinStatus } from "../../types/stablecoin-taxonomy";
 import { buildStablecoinRegistryIndexes } from "./registry-indexes";
-import { isActiveStablecoinMeta, isFrozenStablecoinMeta, isPreLaunchStablecoinMeta } from "./status";
+import {
+  isActiveStablecoinMeta,
+  isDelistedStablecoinMeta,
+  isFrozenStablecoinMeta,
+  isPreLaunchStablecoinMeta,
+  isQuarantinedStablecoinMeta,
+  isReadableStablecoinMeta,
+} from "./status";
 
 export interface WorkerRuntimeContractDeployment {
   chain: string;
@@ -23,7 +30,13 @@ export interface WorkerRuntimeStablecoinMeta {
 
 const registry = buildStablecoinRegistryIndexes(workerRuntimeAsset as WorkerRuntimeStablecoinMeta[], {
   isActive: isActiveStablecoinMeta,
-  lifecyclePredicates: { frozen: isFrozenStablecoinMeta, preLaunch: isPreLaunchStablecoinMeta },
+  lifecyclePredicates: {
+    preLaunch: isPreLaunchStablecoinMeta,
+    frozen: isFrozenStablecoinMeta,
+    quarantined: isQuarantinedStablecoinMeta,
+    delisted: isDelistedStablecoinMeta,
+    readable: isReadableStablecoinMeta,
+  },
 });
 
 export const WORKER_TRACKED_STABLECOINS = registry.tracked.stablecoins as WorkerRuntimeStablecoinMeta[];
@@ -40,6 +53,8 @@ export const WORKER_PRE_LAUNCH_STABLECOINS: readonly WorkerRuntimeStablecoinMeta
   registry.lifecycle.preLaunch.stablecoins;
 
 export const WORKER_FROZEN_IDS: ReadonlySet<string> = registry.lifecycle.frozen.ids;
+
+export const WORKER_READABLE_IDS: ReadonlySet<string> = registry.lifecycle.readable.ids;
 
 export const WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES: readonly string[] = [
   ...new Set(

@@ -8,13 +8,12 @@ import {
 
 const mockD1 = makeSupplySnapshotDb;
 
-// Stub psi-eligible to avoid importing the full stablecoins list
-vi.mock("@shared/lib/psi-eligible", () => ({
-  PSI_ELIGIBLE_STABLECOINS: [
-    { id: "usdt-tether", symbol: "USDT" },
-    { id: "usdc-circle", symbol: "USDC" },
-    { id: "eurt-test", symbol: "EURT" },
-  ],
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
+  WORKER_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle"]),
+}));
+
+vi.mock("@shared/lib/shadow-stablecoins", () => ({
+  SHADOW_IDS: new Set(["eurt-test"]),
 }));
 
 // Stub supply helper

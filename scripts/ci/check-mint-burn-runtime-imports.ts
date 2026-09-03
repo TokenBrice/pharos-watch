@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import { build } from "esbuild";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -13,6 +14,14 @@ const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const ENTRYPOINTS = [
   "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts",
   "worker/src/handlers/scheduled/five-minute-telegram.ts",
+] as const;
+const MEMBERSHIP_ONLY_MODULES = [
+  "worker/src/cron/prune-detail-cache.ts",
+  "worker/src/cron/snapshot-supply.ts",
+] as const;
+const FORBIDDEN_MEMBERSHIP_IMPORTS = [
+  "@shared/lib/psi-eligible",
+  "@shared/lib/stablecoins/registry",
 ] as const;
 const FORBIDDEN_RUNTIME_INPUTS = new Set([
   "shared/data/stablecoins/coins.generated.json",
@@ -54,6 +63,15 @@ export async function checkMintBurnRuntimeImports(): Promise<number> {
     }
   }
 
+  for (const modulePath of MEMBERSHIP_ONLY_MODULES) {
+    const source = await readFile(resolve(REPO_ROOT, modulePath), "utf8");
+    for (const forbiddenImport of FORBIDDEN_MEMBERSHIP_IMPORTS) {
+      if (source.includes(`from "${forbiddenImport}"`) || source.includes(`from '${forbiddenImport}'`)) {
+        violations.push(`${modulePath} directly imports ${forbiddenImport}`);
+      }
+    }
+  }
+
   if (violations.length > 0) {
     process.stderr.write("Worker runtime import boundary failed:\n\n");
     for (const violation of violations) process.stderr.write(`  ${violation}\n`);
@@ -63,7 +81,9 @@ export async function checkMintBurnRuntimeImports(): Promise<number> {
     return 1;
   }
 
-  process.stdout.write(`Worker runtime import boundary: OK (${ENTRYPOINTS.length} entrypoints)\n`);
+  process.stdout.write(
+    `Worker runtime import boundary: OK (${ENTRYPOINTS.length} entrypoints, ${MEMBERSHIP_ONLY_MODULES.length} membership modules)\n`,
+  );
   return 0;
 }
 

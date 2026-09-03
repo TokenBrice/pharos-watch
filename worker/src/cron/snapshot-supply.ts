@@ -8,8 +8,8 @@ import {
 } from "../lib/db";
 import { SUPPLY_HISTORY_UPSERT_PREFIX } from "../lib/supply-history-db";
 import { prepareCacheUpsert } from "../lib/db-cache";
-import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -68,11 +68,9 @@ export async function snapshotSupply(
   throwIfAborted(signal);
 
   const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
-  const configuredRequiredActiveIds = options.requiredActiveIds ?? PSI_ELIGIBLE_STABLECOINS
-    .map((stablecoin) => stablecoin.id)
-    .filter((id) => ACTIVE_IDS.has(id));
+  const configuredRequiredActiveIds = options.requiredActiveIds ?? [...WORKER_ACTIVE_IDS];
   const snapshotEligibleIds = new Set(
-    options.snapshotEligibleIds ?? PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => stablecoin.id),
+    options.snapshotEligibleIds ?? [...WORKER_ACTIVE_IDS, ...SHADOW_IDS],
   );
   const preflight = await preflightSupplySnapshot(db, {
     nowSec: options.nowSec,
