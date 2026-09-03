@@ -322,3 +322,4 @@ bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__
 74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:211
 5738f03812cba4324cb3ab97ae815e62d7dc9109:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:632
 5738f03812cba4324cb3ab97ae815e62d7dc9109:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:634
+63185e73c0aeee25574d9df2a087f48719a404a4:scripts/maintenance/publish-safety-score-map.ts:generic-api-key:38
