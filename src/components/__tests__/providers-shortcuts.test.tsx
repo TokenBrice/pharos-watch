@@ -34,7 +34,7 @@ vi.mock("next-themes", () => ({
 }));
 
 vi.mock("@/components/route-progress-bar", () => ({
-  RouteProgressBar: () => null,
+  RouteProgressBar: () => <div data-testid="route-progress-bar" />,
 }));
 
 function pressKey(key: string) {
@@ -60,7 +60,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     "/changelog/",
     "/blog/client-runtime/",
     "/methodology/scoring-changelog/",
-  ])("omits the interactive provider on the static content route %s", (staticPath) => {
+  ])("keeps the query client but omits the interactive layer on the static content route %s", async (staticPath) => {
     pathname = staticPath;
     render(
       <Providers>
@@ -69,7 +69,24 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     );
 
     expect(screen.getByTestId("static-child")).toBeTruthy();
-    expect(screen.queryByTestId("query-client-provider")).toBeNull();
+    // Global chrome (TopNav health menu, RegimeBar PSI) queries on every route.
+    expect(screen.getByTestId("query-client-provider")).toBeTruthy();
+    // Give the lazy interactive layer a tick so an incorrect mount would surface.
+    const tick = Promise.withResolvers<void>();
+    setTimeout(tick.resolve, 0);
+    await tick.promise;
+    expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+  });
+
+  it("mounts the interactive layer on data routes", async () => {
+    pathname = "/stablecoin/usdt-tether/";
+    render(
+      <Providers>
+        <div data-testid="interactive-child" />
+      </Providers>,
+    );
+    expect(await screen.findByTestId("route-progress-bar")).toBeTruthy();
+    expect(screen.getByTestId("query-client-provider")).toBeTruthy();
   });
 
   it("broadcasts numeric column sort when single-key shortcuts are enabled", async () => {
