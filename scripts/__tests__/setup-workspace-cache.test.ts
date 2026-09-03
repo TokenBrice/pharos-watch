@@ -66,7 +66,8 @@ describe("setup-workspace caches", () => {
     expect(keyStep).toContain('raw_node_version="${RAW_NODE_VERSION}"');
     expect(keyStep).toContain("^v?([0-9]+)(\\..*)?$");
     expect(keyStep).toContain('echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"');
-    expect(action.match(/steps\.cache-key\.outputs\.node-key/g)).toHaveLength(9);
+    // The manifest workflow adds one workspace cache, keyed by the same normalized Node major.
+    expect(action.match(/steps\.cache-key\.outputs\.node-key/g)).toHaveLength(10);
   });
 
   it("installs Playwright Chromium only when requested", () => {
