@@ -4,7 +4,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.61`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.61`<!-- GENERATED-END: methodology-version-stability-index -->
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/stability-index.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/stability-index/`
 

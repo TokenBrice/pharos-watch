@@ -16,6 +16,8 @@ Use `package.json` for the full live npm-script list. `scripts/lib/automation-re
 
 `check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners. The static runner defers the corpus-wide editorial policy test until its bounded parallel typecheck, structural, and generated-artifact phase completes so Firefox-backed artifact checks cannot starve the test's unchanged timeout.
 
+`check:doc-sync` also verifies generated contract blocks: `scripts/lib/doc-sync/contract-blocks.ts` renders every source-backed literal (thresholds, weights, TTLs, methodology versions) between `<!-- GENERATED-START: <id> -->`/`<!-- GENERATED-END: <id> -->` markers, and the check fails with the expected block when a doc's marker content drifts from the source constant. Edit the source constant, then paste the reported expected block; never hand-edit the value inside the markers.
+
 ### Smallest adequate check per area
 
 Use `npm run check:focused -- --file <path>` to route one path through the change contract and run the checks selected by its ownership mappings, preferring specific-tier mappings over fallback-tier mappings for each path; add `--plan-only` to inspect the plan without executing it.

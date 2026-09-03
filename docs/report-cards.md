@@ -4,8 +4,8 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 
 ## Methodology Identity
 
-- Active model: `v9`
-- **Current methodology version:** `v9.46`
+- Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.46`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v5 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -21,9 +21,9 @@ V9 evaluates three pillars:
 
 | Pillar | Aggregation weight | Scope |
 | --- | ---: | --- |
-| Backing | 40% | Reserve quality, mechanism solvency, custody, assurance, and loss-bearing structure |
-| Exit | 35% | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
-| Economic Control | 25% | Mint, upgrade, oracle, bridge, and other binding control paths |
+| Backing | <!-- GENERATED-START: report-cards-backing-pillar-weight -->40%<!-- GENERATED-END: report-cards-backing-pillar-weight --> | Reserve quality, mechanism solvency, custody, assurance, and loss-bearing structure |
+| Exit | <!-- GENERATED-START: report-cards-exit-pillar-weight -->35%<!-- GENERATED-END: report-cards-exit-pillar-weight --> | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
+| Economic Control | <!-- GENERATED-START: report-cards-control-pillar-weight -->25%<!-- GENERATED-END: report-cards-control-pillar-weight --> | Mint, upgrade, oracle, bridge, and other binding control paths |
 
 The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
 

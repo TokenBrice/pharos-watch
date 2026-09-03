@@ -284,7 +284,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - exact active-price coverage is stale (`activePriceCoverageImpactStatus === "stale"`)
   - `missingPriceRatio > 0.45`
   - `blacklistMissingRatio >= 0.02` (2%)
-  - `blacklistRecentMissingAmounts >= 25` (last 24h)
+  - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-stale-threshold -->25<!-- GENERATED-END: status-blacklist-recent-stale-threshold -->` (last 24h)
   - `staleOnchainSupply >= 10`
   - `onchainSupplyDivergences >= 25`
   - `onchainStaleRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`

@@ -123,12 +123,12 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 
 | Endpoint                         | Max Age (sec) | Source                                       |
 | -------------------------------- | ------------- | -------------------------------------------- |
-| `GET /api/stablecoins`           | 600           | `createCacheHandler`                         |
-| `GET /api/chains`                | 1800          | `worker/src/api/chains.ts`                   |
+| `GET /api/stablecoins`           | <!-- GENERATED-START: api-meta-stablecoins-max-age -->600<!-- GENERATED-END: api-meta-stablecoins-max-age -->           | `createCacheHandler`                         |
+| `GET /api/chains`                | <!-- GENERATED-START: api-meta-chains-max-age -->1800<!-- GENERATED-END: api-meta-chains-max-age -->          | `worker/src/api/chains.ts`                   |
 | `GET /api/events`                | 600           | `worker/src/api/events.ts`                   |
-| `GET /api/bluechip-ratings`      | 43200         | `createCacheHandler`                         |
-| `GET /api/usds-status`           | 86400         | `createCacheHandler`                         |
-| `GET /api/yield-rankings`        | 3600          | Manual injection after live safety hydration |
+| `GET /api/bluechip-ratings`      | <!-- GENERATED-START: api-meta-bluechip-ratings-max-age -->43200<!-- GENERATED-END: api-meta-bluechip-ratings-max-age -->         | `createCacheHandler`                         |
+| `GET /api/usds-status`           | <!-- GENERATED-START: api-meta-usds-status-max-age -->86400<!-- GENERATED-END: api-meta-usds-status-max-age -->         | `createCacheHandler`                         |
+| `GET /api/yield-rankings`        | <!-- GENERATED-START: api-meta-yield-rankings-max-age -->3600<!-- GENERATED-END: api-meta-yield-rankings-max-age -->          | Manual injection after live safety hydration |
 | `GET /api/depeg-resolver`        | 900           | `worker/src/api/depeg-resolver.ts`           |
 | `GET /api/depeg-resolver-review` | 900           | `worker/src/api/depeg-resolver-review.ts`    |
 

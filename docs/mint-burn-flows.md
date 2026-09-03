@@ -21,7 +21,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.191`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.191`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 

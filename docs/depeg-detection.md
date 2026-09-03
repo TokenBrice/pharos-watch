@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.21`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.21`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/depeg-dews.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -19,22 +19,22 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `DEPEG_THRESHOLD_BPS` | 100 (1%) | USD peg deviation threshold |
-| `DEPEG_THRESHOLD_BPS_NON_USD` | 150 (1.5%) | Non-USD peg threshold (accounts for FX noise + thin liquidity) |
-| `DEPEG_CONFIRMATION_SUPPLY_THRESHOLD` | $1,000,000,000 | Adds the large-cap source-confirmation reason flag |
+| `DEPEG_THRESHOLD_BPS` | <!-- GENERATED-START: depeg-threshold-usd -->100 (1%)<!-- GENERATED-END: depeg-threshold-usd --> | USD peg deviation threshold |
+| `DEPEG_THRESHOLD_BPS_NON_USD` | <!-- GENERATED-START: depeg-threshold-non-usd -->150 (1.5%)<!-- GENERATED-END: depeg-threshold-non-usd --> | Non-USD peg threshold (accounts for FX noise + thin liquidity) |
+| `DEPEG_CONFIRMATION_SUPPLY_THRESHOLD` | <!-- GENERATED-START: depeg-confirmation-supply -->$1,000,000,000<!-- GENERATED-END: depeg-confirmation-supply --> | Adds the large-cap source-confirmation reason flag |
 | `DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD` | $750,000,000 | Adds the large-cap flag when source depth is below 2 or severity is at least 2x the peg threshold |
 | `DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD` | $500,000,000 | Adds the large-cap flag when both source depth is below 2 and severity is at least 2x the peg threshold |
-| `DEPEG_PENDING_MIN_AGE_SEC` | 900 (15 min) | Minimum continuous onset or recovery confirmation window |
+| `DEPEG_PENDING_MIN_AGE_SEC` | <!-- GENERATED-START: depeg-pending-min-age -->900 (15 min)<!-- GENERATED-END: depeg-pending-min-age --> | Minimum continuous onset or recovery confirmation window |
 | `DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC` | 1200 (20 min) | Largest gap allowed between consecutive qualifying onset or recovery observations. Set above measured `sync-stablecoins` start jitter (sampled gaps 868/907/932/932s) so ordinary scheduler drift is not read as a coverage break, and below two producer intervals so a fully missed run still resets the episode |
-| `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Base time before a pending record can expire |
+| `DEPEG_PENDING_EXPIRY_SEC` | <!-- GENERATED-START: depeg-pending-expiry -->2700 (45 min)<!-- GENERATED-END: depeg-pending-expiry --> | Base time before a pending record can expire |
 | `DEPEG_PENDING_EXTENDED_EXPIRY_SEC` | 8100 (135 min) | Extended limit when primary evidence still points same-direction or confirmation sources are unavailable/circuit-open |
 | `DEPEG_PENDING_SEVERE_EXPIRY_SEC` | 10800 (180 min) | Severe/extreme-move limit; expiry records `unconfirmed-severe` |
-| `DEPEG_SECONDARY_THRESHOLD_RATIO` | 1.0 | Secondary source agreement uses the full trigger threshold |
+| `DEPEG_SECONDARY_THRESHOLD_RATIO` | <!-- GENERATED-START: depeg-secondary-threshold-ratio -->1.0<!-- GENERATED-END: depeg-secondary-threshold-ratio --> | Secondary source agreement uses the full trigger threshold |
 | `DEPEG_RECOVERY_THRESHOLD_RATIO` | 0.5 | Recovery must reach half the trigger threshold before its confirmation window starts |
-| `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` | 1800 (30 min) | Primary prices older than this are marked `confirm_required` |
-| `DEPEG_EXTREME_MOVE_BPS` | 5000 (50%) | Adds the severe/extreme pending reason and extended expiry policy |
-| `DEX_FRESHNESS_SEC` | 4500 (75 min) | Hourly DEX prices older than this are ignored |
-| `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
+| `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` | <!-- GENERATED-START: depeg-primary-price-max-age -->1800 (30 min)<!-- GENERATED-END: depeg-primary-price-max-age --> | Primary prices older than this are marked `confirm_required` |
+| `DEPEG_EXTREME_MOVE_BPS` | <!-- GENERATED-START: depeg-extreme-move -->5000 (50%)<!-- GENERATED-END: depeg-extreme-move --> | Adds the severe/extreme pending reason and extended expiry policy |
+| `DEX_FRESHNESS_SEC` | <!-- GENERATED-START: depeg-dex-freshness -->4500 (75 min)<!-- GENERATED-END: depeg-dex-freshness --> | Hourly DEX prices older than this are ignored |
+| `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | <!-- GENERATED-START: depeg-dex-min-tvl -->1,000,000<!-- GENERATED-END: depeg-dex-min-tvl --> | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 | `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
 | `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg |
 | `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Single-pool TVL threshold that can veto a primary recovery or confirm a pending depeg without a second pool group |

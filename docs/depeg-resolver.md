@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.3`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.3`<!-- GENERATED-END: methodology-version-depeg-resolver -->
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
