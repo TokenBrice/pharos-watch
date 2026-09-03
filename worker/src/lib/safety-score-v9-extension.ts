@@ -125,6 +125,31 @@ export {
   buildSafetyScoreV9ReviewedStaticReserveRows,
 };
 
+type ReviewedReserveRows = ReturnType<typeof buildSafetyScoreV9ReviewedStaticReserveRows>;
+
+/**
+ * Resolve the reviewed reserve rows admitted by the production extension.
+ * Operator tooling calls this helper so preventive queues cannot drift from
+ * the score-bearing static/fallback/standalone branch order.
+ */
+export function resolveReviewedReserveRows(input: {
+  meta: V9ExtensionRegistryMeta;
+  clockSec: number;
+  liveReserveRows: readonly ReserveSlice[];
+  liveFallbackAllowed: boolean;
+}): ReviewedReserveRows {
+  if (input.liveReserveRows.length > 0) return null;
+  return (
+    buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec) ??
+    (input.meta.liveReservesConfig != null
+      ? input.liveFallbackAllowed
+        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec) ??
+          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec)
+        : null
+      : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec))
+  );
+}
+
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
@@ -1520,16 +1545,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       // ahead of it, so an asset excluded from falling back is not rescued; and
       // it is deliberately absent from the standalone branch, where no live
       // producer exists and nothing has gone stale.
-      const reviewedStaticReserveRows =
-        liveReserves.length === 0
-          ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) ??
-            (meta.liveReservesConfig != null
-              ? liveToFallbackAssetIds.has(assetId)
-                ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec) ??
-                  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)
-                : null
-              : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec))
-          : null;
+      const reviewedStaticReserveRows = resolveReviewedReserveRows({
+        meta,
+        clockSec,
+        liveReserveRows: liveReserves,
+        liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
+      });
       const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
