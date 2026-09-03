@@ -347,7 +347,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "sync-fx-rates",
     label: "FX rates",
     group: "quarter-hourly",
-    intervalSec: 1800, // Trigger fires every 15 min alongside sync-stablecoins, but internal cooldown gates actual writes to every 30 min.
+    intervalSec: 1800, // Trigger fires every 15 min; the generation-fenced publication bucket is 30 min and TTL-gates corroboration sources.
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     statusImpact: "critical",
@@ -642,9 +642,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "fetch-tbill-rate",
     label: "T-bill rate",
     group: "daily",
+    intervalSec: DAY_SECONDS, // USD/EFFR refresh daily; the remaining benchmark descriptors are isolated to a weekly cadence bucket.
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
-    maxConnections: 1, // Sequential benchmark fetches (ECB/FRED/Treasury/SNB)
+    maxConnections: 1, // Sequential benchmark fetches; the daily USD/EFFR path and weekly descriptor bucket share this chain.
     connectionGroup: "daily-0800-fetch-chain",
   },
   {

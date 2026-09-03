@@ -259,10 +259,14 @@ describe("syncFxRates", () => {
       mode: string;
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
+      sourceLastSuccessAtBySource: Record<string, number>;
     };
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+    expect(cachedMeta.sourceLastSuccessAtBySource["secondary:jsdelivr"]).toBeGreaterThan(0);
+    expect(cachedMeta.sourceLastSuccessAtBySource["secondary:pages.dev"]).toBeGreaterThan(0);
+    expect(cachedMeta.sourceLastSuccessAtBySource["secondary:jsdelivr-versioned"]).toBeGreaterThan(0);
   });
 
   it("uses ExchangeRate-API as a live full-set fallback when frankfurter and the secondary mirrors are unavailable", async () => {
@@ -828,6 +832,90 @@ describe("syncFxRates", () => {
     };
     expect(recordedRecord.consecutiveFailures).toBe(1);
     expect(recordedRecord.lastFailureAt).toBeGreaterThan(0);
+  });
+
+  it("fetches only Frankfurter when every secondary and overlay TTL is fresh", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousRates = makeCompleteFxRates();
+    const previousMeta = makeCacheRow({
+      ...makeFxRatesMeta(previousRates, {
+        usableSyncAt: nowSec - 60,
+        updatedAt: nowSec - 60,
+      }),
+      sourceLastSuccessAtBySource: {
+        "secondary:jsdelivr": nowSec - 60,
+        "secondary:pages.dev": nowSec - 60,
+        "secondary:jsdelivr-versioned": nowSec - 60,
+        openExchangeRates: nowSec - 60,
+        metals: nowSec - 60,
+        chainlink: nowSec - 60,
+      },
+    }, nowSec - 60);
+    mockFetch(fxMirrors({
+      secondary: "omit",
+      datedCdn: "omit",
+      cdn: "omit",
+      pages: "omit",
+      gold: "omit",
+      silver: "omit",
+      openExchange: "omit",
+    }));
+
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta,
+    });
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const result = await syncFxRates(db, undefined, "oxr-key");
+
+    expect(result.itemCount).toBeGreaterThan(0);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.frankfurter.dev");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: Record<string, string> };
+    expect(metadata.sources?.fawazahmed0).toBe("cached");
+    expect(metadata.sources?.openExchangeRates).toBe("cached");
+    expect(metadata.sources?.chainlink).toBe("cached");
+    expect(findCacheWrite(db, "fx-rates-meta")).toBeDefined();
+  });
+
+  it("attempts all secondary mirrors when Frankfurter fails despite fresh mirror TTLs", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousRates = makeCompleteFxRates();
+    const previousMeta = makeCacheRow({
+      ...makeFxRatesMeta(previousRates, {
+        usableSyncAt: nowSec - 60,
+        updatedAt: nowSec - 60,
+      }),
+      sourceLastSuccessAtBySource: {
+        "secondary:jsdelivr": nowSec - 60,
+        "secondary:pages.dev": nowSec - 60,
+        "secondary:jsdelivr-versioned": nowSec - 60,
+        openExchangeRates: nowSec - 60,
+        metals: nowSec - 60,
+        chainlink: nowSec - 60,
+      },
+    }, nowSec - 60);
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      datedCdn: { body: secondaryBody({ cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 }) },
+      cdn: { body: secondaryBody({ cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 }) },
+      pages: { body: secondaryBody({ cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 }) },
+      gold: "omit",
+      silver: "omit",
+      openExchange: "omit",
+    }));
+
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta,
+    });
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await syncFxRates(db, undefined, "oxr-key");
+
+    const urls = fetchSpy.mock.calls.map(([url]) => String(url));
+    expect(urls.filter((url) => url.includes("api.frankfurter.dev"))).toHaveLength(1);
+    expect(urls.filter((url) => url.includes("currency-api"))).toHaveLength(3);
   });
 
   it("skips a duplicate delivery for an already completed cadence bucket", async () => {
