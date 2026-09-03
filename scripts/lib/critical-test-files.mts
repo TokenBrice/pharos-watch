@@ -1,11 +1,10 @@
-import { CRITICAL_FILES } from "./critical-coverage.mjs";
 import {
   collectOwningTests,
   deriveCriticalOwnership,
   normalizeOwnershipPath,
   type CriticalOwnership,
 } from "./critical-ownership.mts";
-
+import { CRITICAL_FILES } from "./critical-coverage.mjs";
 const generatedCriticalOwnership = deriveCriticalOwnership({ sourceFiles: CRITICAL_FILES });
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
@@ -118,9 +117,9 @@ export function buildCriticalCoverageArgs(
 ): string[] {
   const selectedSources = selectCriticalCoverageFiles(options);
   const ownership = options.ownership ?? generatedCriticalOwnership;
-  // Coverage must exercise every derived owner test even when the shard scopes
-  // remapping to a touched source; transitive imports can cover that source.
-  const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
+  // A touched source pays only for tests that import it; full runs pass all
+  // enrolled sources and therefore retain the complete derived owner set.
+  const selectedTests = collectOwningTests(selectedSources, ownership);
   return [
     "run",
     ...buildCriticalCoverageOptions(selectedSources),
