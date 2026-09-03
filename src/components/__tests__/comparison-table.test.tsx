@@ -93,6 +93,20 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       sourceTvlUsd: 900_000_000,
     },
     stress: { band: "LOW", score: 12 },
+    safetyCard: {
+      score: 84,
+      grade: "A-",
+      pillars: {
+        backing: { score: 90 },
+        exit: { score: 88 },
+        control: { score: 42 },
+      },
+      weakestPillar: { pillar: "control", score: 42 },
+      bindingCap: null,
+      evidence: { level: "adequate", freshness: "stale" },
+      accessPosture: { primaryExit: "permissionless", freezeExposure: "none-known" },
+      dependencies: { serial: [], basket: [] },
+    },
   } as unknown as ComparisonCoinEntry;
 }
 
@@ -118,6 +132,8 @@ describe("ComparisonTable", () => {
     expect(html).toContain("Issuer yield");
     expect(html).toContain("Treasury bills 80%");
     expect(html).toContain("Direct freeze power");
+    expect(html).toContain("Open Safety Score waterfall for USDT");
+    expect(html).toContain("Evidence age stale");
   });
 
   it("uses the shared horizontally scrollable table foundation", () => {

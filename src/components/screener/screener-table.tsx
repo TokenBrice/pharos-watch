@@ -20,6 +20,7 @@ import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
+import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
@@ -29,6 +30,7 @@ import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
 import type { ReportCardGrade } from "@shared/types";
+import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public";
 
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,
 // liquidity, safety grade). A background refetch of any of these surfaces the
@@ -310,6 +312,7 @@ function ScreenerEmptyState({
 }
 
 function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) {
+  const topDriver = projectScreenerTopDriver(row);
   return (
     <article className="pharos-card-shell rounded-xl p-4">
       <div className="flex items-start justify-between gap-3">
@@ -349,6 +352,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <MobileMetricPill>DEWS <ScoreValue value={row.dewsScore} /></MobileMetricPill>
         <MobileMetricPill>Liq <ScoreValue value={row.liquidityScore} /></MobileMetricPill>
         <V9Profile row={row} compact />
+        <SafetyScoreTopDriver driver={topDriver} coinId={row.id} subjectLabel={row.symbol} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -394,6 +398,7 @@ function ScreenerTableRow({
   rowProps?: ReturnType<UseRowCursorResult["getRowProps"]>;
   showSparklines: boolean;
 }) {
+  const topDriver = projectScreenerTopDriver(row);
   return (
     <TableRow
       {...rowProps}
@@ -436,7 +441,10 @@ function ScreenerTableRow({
         )}
       </TableCell>
       <TableCell className="text-center">
-        <V9Profile row={row} />
+        <div className="flex flex-col items-center gap-1">
+          <V9Profile row={row} />
+          <SafetyScoreTopDriver driver={topDriver} coinId={row.id} subjectLabel={row.symbol} />
+        </div>
       </TableCell>
       <TableCell className="text-left text-muted-foreground">
         {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
@@ -489,6 +497,41 @@ const EVIDENCE_LABELS: Record<ScreenerRow["safetyEvidence"], string> = {
   limited: "Limited",
   nr: "NR",
 };
+
+// ScreenerRow intentionally remains the existing scalar projection; it does
+// not carry the card freshness enum, so this path reports age as unknown
+// rather than fetching or reconstructing the V9 card.
+function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | null {
+  const evidenceFreshness = "unknown" as const;
+  if (row.safetyGrade === null || row.safetyGrade === "NR") {
+    return {
+      kind: "withheld",
+      label: null,
+      value: null,
+      reason: "Safety Score is not rated.",
+      evidenceFreshness,
+    };
+  }
+  if (row.safetyBindingCapReason !== null) {
+    return {
+      kind: "cap-bound",
+      label: row.safetyBindingCapReason,
+      value: null,
+      reason: row.safetyBindingCapReason,
+      evidenceFreshness,
+    };
+  }
+  if (row.safetyWeakestPillar !== null && row.safetyWeakestScore !== null) {
+    return {
+      kind: "pillar-bound",
+      label: row.safetyWeakestPillar,
+      value: row.safetyWeakestScore,
+      reason: null,
+      evidenceFreshness,
+    };
+  }
+  return null;
+}
 
 function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
   const title = row.safetyBindingCapReason

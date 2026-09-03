@@ -20,6 +20,7 @@ import {
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { getPegReference } from "@shared/lib/peg-rates";
+import { projectTopDriver } from "@shared/lib/safety-score-v9/public";
 import {
   getCirculatingRaw,
   getPrevDayRawOrNull,
@@ -27,6 +28,7 @@ import {
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
 import {
   TableBody,
   TableCell,
@@ -202,6 +204,17 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "weakest-pillar", label: "Weakest pillar", render: (coin) => coin.safetyCard?.weakestPillar ? `${humanizeSafetyScoreV9Value(coin.safetyCard.weakestPillar.pillar)} · ${formatScore(coin.safetyCard.weakestPillar.score, { trimInteger: true })}` : NULL_VALUE },
         { key: "binding-cap", label: "Binding cap", render: (coin) => coin.safetyCard ? (coin.safetyCard.bindingCap ? `${humanizeSafetyScoreV9Value(coin.safetyCard.bindingCap.kind)} · ${coin.safetyCard.bindingCap.limit}` : "None") : NULL_VALUE },
         { key: "evidence", label: "Evidence", render: (coin) => coin.safetyCard ? `${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.level)} · ${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.freshness)}` : NULL_VALUE },
+        {
+          key: "top-driver",
+          label: "Top driver",
+          render: (coin) => {
+            if (!coin.safetyCard) return NULL_VALUE;
+            const driver = projectTopDriver(coin.safetyCard);
+            return driver ? (
+              <SafetyScoreTopDriver driver={driver} coinId={coin.id} subjectLabel={coin.symbol} />
+            ) : NULL_VALUE;
+          },
+        },
         { key: "primary-exit", label: "Primary exit access", render: (coin) => humanize(coin.safetyCard?.accessPosture.primaryExit) },
         { key: "freeze-exposure", label: "Freeze exposure", render: (coin) => humanize(coin.safetyCard?.accessPosture.freezeExposure) },
         { key: "dependencies", label: "Scored dependencies", render: dependencySummary },
