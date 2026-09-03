@@ -8,6 +8,7 @@ import {
 } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 let fetchMock: ReturnType<typeof mockFetch>;
 
@@ -32,7 +33,7 @@ function makeDbForTimestampCache(
     onCacheReadBindCount?: (count: number) => void;
   } = {},
 ): D1Database {
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => ({
       bind: (..._args: unknown[]) => {
         if (sql.includes("FROM block_timestamp_cache")) {
@@ -58,7 +59,7 @@ function makeDbForTimestampCache(
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 // --- buildAlchemyUrl ---

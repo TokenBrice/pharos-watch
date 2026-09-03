@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
@@ -181,12 +182,12 @@ function evidenceDb(input: {
   });
   return {
     preparedSql,
-    db: {
+    db: makeNoopD1({
       prepare: (sql: string) => {
         preparedSql.push(sql);
         return makeStmt(sql);
       },
-    } as unknown as D1Database,
+    }),
   };
 }
 
@@ -262,13 +263,13 @@ describe("measured execution raw payload policy", () => {
       },
       all: async () => ({ results: [] }),
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => makeStmt(sql),
       batch: async (stmts: Array<{ sql: string; binds: unknown[] }>) => {
         batched.push(...stmts);
         return stmts.map(() => ({ meta: { changes: 1 } }));
       },
-    } as unknown as D1Database;
+    });
 
     const result = await publishDexMeasuredQuoteGeneration({
       db,
@@ -328,7 +329,7 @@ describe("measured execution raw payload policy", () => {
       first: async () => sql.includes("COUNT(*) AS count") ? { count: 1 } : null,
       all: async () => ({ results: [] }),
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         return makeStmt(sql);
       },
@@ -336,7 +337,7 @@ describe("measured execution raw payload policy", () => {
         batched.push(...statements);
         return statements.map(() => ({ meta: { changes: 1 } }));
       },
-    } as unknown as D1Database;
+    });
 
     const result = await publishDexMeasuredQuoteGeneration({
       db,
@@ -387,7 +388,7 @@ describe("measured execution raw payload policy", () => {
     const batch = vi.fn(async (statements: D1PreparedStatement[]) =>
       statements.map(() => ({ meta: { changes: 1 } })),
     );
-    const db = { prepare: (sql: string) => makeStmt(sql), batch } as unknown as D1Database;
+    const db = makeNoopD1({ prepare: (sql: string) => makeStmt(sql), batch });
 
     const result = await publishDexMeasuredQuoteGeneration({
       db,
@@ -459,7 +460,7 @@ describe("measured execution raw payload policy", () => {
           return { results: [] };
         },
       });
-      return { prepare: (sql: string) => makeStmt(sql) } as unknown as D1Database;
+      return makeNoopD1({ prepare: (sql: string) => makeStmt(sql) });
     };
 
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(buildDb());
@@ -549,12 +550,12 @@ describe("measured execution raw payload policy", () => {
         return { results: [] };
       },
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         preparedSql.push(sql);
         return makeStmt(sql);
       },
-    } as unknown as D1Database;
+    });
 
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
 
@@ -641,12 +642,12 @@ describe("measured execution raw payload policy", () => {
         return { results: [] };
       },
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         preparedSql.push(sql);
         return makeStmt(sql);
       },
-    } as unknown as D1Database;
+    });
 
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
       deferProfiles: true,
@@ -932,7 +933,7 @@ describe("measured execution last-known-good selection", () => {
 describe("measured execution generation prune", () => {
   it("deletes only terminal generations before the 4-hour cutoff in bounded oldest-first batches", async () => {
     const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
           run: async () => {
@@ -949,7 +950,7 @@ describe("measured execution generation prune", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const nowSec = 1_700_000_000;
     const retention = await pruneDexMeasuredExecutionGenerations(db, nowSec);
@@ -1005,7 +1006,7 @@ describe("measured execution generation prune", () => {
   });
 
   it("reports cleanup errors without throwing after publication", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -1013,7 +1014,7 @@ describe("measured execution generation prune", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const retention = await pruneDexMeasuredExecutionGenerations(db, 1_700_000_000);
 

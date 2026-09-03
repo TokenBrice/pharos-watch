@@ -35,14 +35,14 @@ export interface MockD1Database extends D1Database {
 }
 
 export interface MockD1Options {
-  /** Shorthand for requireMatch + strictSql. */
+  /** Match normalized SQL exactly and require every executed statement to match. */
   strict?: boolean;
-  /** @deprecated mockD1 requires matches by default. Use allowUnmatched for permissive suites. */
+  /** @deprecated mockD1 requires matches by default. Kept for compatibility with shared test fixtures. */
   requireMatch?: boolean;
-  /** Allow unmatched statements to return the legacy empty/success responses. */
-  allowUnmatched?: boolean;
   /** Match normalized SQL exactly instead of substring search. */
   strictSql?: boolean;
+  /** Inject a named failure when a statement contains this SQL fragment. */
+  failOn?: { match: string; error: unknown };
   /** Resolve write changes dynamically when a table does not provide runMeta. */
   runChanges?: (sql: string) => number;
   /** Execute every batch entry with run(), matching the legacy scripts preset. */
@@ -106,14 +106,15 @@ function isCacheKeyLookup(sql: string): boolean {
 }
 
 export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
-  if (options.allowUnmatched === true && (options.strict === true || options.requireMatch === true)) {
-    throw new Error("mockD1: allowUnmatched cannot be combined with strict or requireMatch");
-  }
-
   const history: Array<{ sql: string; binds: unknown[] }> = [];
   const matchHits = new Map<MockTableConfig, number>();
-  const requireMatch = options.allowUnmatched !== true;
   const strictSql = options.strict === true || options.strictSql === true;
+
+  function matchesFailure(sql: string): boolean {
+    if (!options.failOn) return false;
+    const candidate = strictSql ? normalizeSql(options.failOn.match) : options.failOn.match;
+    return strictSql ? normalizeSql(sql) === candidate : sql.includes(candidate);
+  }
 
   function findTable(sql: string, boundValues: unknown[]): MockTableConfig | undefined {
     const normalizedSql = normalizeSql(sql);
@@ -142,8 +143,9 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
   function createStatement(sql: string, boundValues: unknown[] = []): MockPreparedStatement {
     const executeAll = async <T>() => {
       history.push({ sql, binds: [...boundValues] });
+      if (matchesFailure(sql)) throw toError(options.failOn?.error);
       const table = findTable(sql, boundValues);
-      if (!table && requireMatch) {
+      if (!table) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
@@ -157,8 +159,9 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
 
     const executeFirst = async <T>() => {
       history.push({ sql, binds: [...boundValues] });
+      if (matchesFailure(sql)) throw toError(options.failOn?.error);
       const table = findTable(sql, boundValues);
-      if (!table && requireMatch) {
+      if (!table) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
@@ -176,8 +179,9 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
 
     const executeRun = async () => {
       history.push({ sql, binds: [...boundValues] });
+      if (matchesFailure(sql)) throw toError(options.failOn?.error);
       const table = findTable(sql, boundValues);
-      if (!table && requireMatch) {
+      if (!table) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
@@ -190,8 +194,9 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
 
     const executeRaw = async <T extends unknown[]>() => {
       history.push({ sql, binds: [...boundValues] });
+      if (matchesFailure(sql)) throw toError(options.failOn?.error);
       const table = findTable(sql, boundValues);
-      if (!table && requireMatch) {
+      if (!table) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
@@ -265,12 +270,11 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
   } as unknown as MockD1Database;
 }
 
-/** Permissive preset retained for cross-runtime tests that only observe writes. */
+/** Compatibility preset for the Pages site-data attribution fixture. */
 export function makeTestD1Database(
   options: { runChanges?: (sql: string) => number } = {},
 ): MockD1Database {
-  return mockD1([], {
-    allowUnmatched: true,
+  return mockD1([{ match: "site_data_request_stats", rows: [], allowUnused: true }], {
     batchMode: "run",
     runChanges: options.runChanges ?? ((sql) => (sql.includes("DELETE") ? 0 : 1)),
   });

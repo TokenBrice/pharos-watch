@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   BINANCE_ENVIRONMENT_BLOCK_TTL_SEC,
   readProviderAvailability,
@@ -11,7 +12,7 @@ function makeDb(row: Record<string, unknown> | null = null) {
   const first = vi.fn(async () => row);
   const bind = vi.fn(() => ({ run, first }));
   const prepare = vi.fn(() => ({ bind }));
-  return { db: { prepare } as unknown as D1Database, prepare, bind, first, run };
+  return { db: makeNoopD1({ prepare }), prepare, bind, first, run };
 }
 
 describe("pricing provider runtime state", () => {

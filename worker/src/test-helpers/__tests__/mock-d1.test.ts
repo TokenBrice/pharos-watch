@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "@shared/test-utils/mock-d1";
+import { makeNoopD1 } from "../noop-d1";
 
 describe("mockD1 helper", () => {
   it("supports bind-aware matching and tracks statement history", async () => {
@@ -72,7 +73,7 @@ describe("mockD1 helper", () => {
       [
         { match: "SELECT value FROM sample WHERE id = ?", rows: [{ value: "one" }] },
       ],
-      { strictSql: true, requireMatch: true },
+      { strictSql: true },
     );
 
     const result = await db.prepare("SELECT   value   FROM   sample WHERE id = ?").bind(1).all<{ value: string }>();
@@ -80,7 +81,7 @@ describe("mockD1 helper", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
-  it("supports strict mode as exact SQL plus required match shorthand", async () => {
+  it("supports strict mode as exact SQL matching", async () => {
     const db = mockD1Strict([
       { match: "SELECT value FROM sample WHERE id = ?", rows: [{ value: "one" }] },
     ]);
@@ -103,25 +104,21 @@ describe("mockD1 helper", () => {
     await expect(execute(db)).rejects.toThrow(/mockD1: no match for SQL: .*missing_/);
   });
 
-  it("supports an explicit permissive mode for suites that do not exercise D1 contracts", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+  it("provides an explicit no-op double that fails if a test touches D1", async () => {
+    const db = makeNoopD1();
 
-    await expect(db.prepare("SELECT * FROM optional_table").all()).resolves.toEqual({
-      results: [],
-      success: true,
-      meta: {},
-    });
-    await expect(db.prepare("SELECT * FROM optional_table").first()).resolves.toBeNull();
-    await expect(db.prepare("UPDATE optional_table SET value = 1").run()).resolves.toEqual({
-      success: true,
-      meta: { changes: 1 },
-    });
+    expect(() => db.prepare("SELECT * FROM optional_table")).toThrow(
+      "makeNoopD1: unexpected D1 access through prepare()",
+    );
   });
 
-  it("rejects contradictory strict and permissive options", () => {
-    expect(() => mockD1([], { requireMatch: true, allowUnmatched: true })).toThrow(
-      "mockD1: allowUnmatched cannot be combined with strict or requireMatch",
+  it("injects named statement failures", async () => {
+    const db = mockD1(
+      [{ match: "UPDATE sample", rows: [] }],
+      { failOn: { match: "UPDATE sample", error: new Error("injected failure") } },
     );
+
+    await expect(db.prepare("UPDATE sample SET value = 1").run()).rejects.toThrow("injected failure");
   });
 
   it("exposes a shared assertion helper for strict fixture usage", async () => {

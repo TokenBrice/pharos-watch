@@ -3,6 +3,7 @@ import { buildPendingAlertEnqueueStatement } from "../../lib/telegram-pending-qu
 import { buildPendingAlertUpsertSql, pendingPrioritySql } from "../telegram-pending/upsert-sql";
 import { buildSetBasedPendingHandoffStatements } from "../telegram-alert-target-plans/delivery";
 import type { BatchMessage } from "../../lib/telegram";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 /**
  * Byte-level pin for the `telegram_pending_alerts` upsert.
@@ -22,7 +23,7 @@ interface CapturedStatement {
 }
 
 function capturingDb(captured: CapturedStatement[]): D1Database {
-  return {
+  return makeNoopD1({
     prepare(sql: string) {
       const record: CapturedStatement = { sql, binds: [] };
       captured.push(record);
@@ -34,7 +35,7 @@ function capturingDb(captured: CapturedStatement[]): D1Database {
       };
       return statement as unknown as D1PreparedStatement;
     },
-  } as unknown as D1Database;
+  });
 }
 
 function normalize(sql: string): string {

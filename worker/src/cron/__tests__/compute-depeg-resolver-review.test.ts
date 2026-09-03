@@ -12,6 +12,7 @@ import {
 } from "../compute-depeg-resolver-review";
 import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
 import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -251,7 +252,7 @@ function chunkAbortDb(input: {
   }
 
   return {
-    db: { prepare: (sql: string) => statement(sql) } as unknown as D1Database,
+    db: makeNoopD1({ prepare: (sql: string) => statement(sql) }),
     actualEventQueryCount: () => actualEventQueryCount,
     tapeEventQueryCount: () => tapeEventQueryCount,
   };

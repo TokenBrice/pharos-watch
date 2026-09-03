@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 stubCryptoForAuth();
 
@@ -23,6 +24,15 @@ import {
 
 const mutableActiveIds = ACTIVE_IDS as Set<string>;
 
+function makeBackfillDb() {
+  return mockD1([
+    { match: "mint_burn_sync_state", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "price_cache", rows: [] },
+    { match: "mint_burn", rows: [] },
+  ]);
+}
+
 describe("handleBackfillMintBurn", () => {
   const originalActiveIds = new Set(ACTIVE_IDS);
 
@@ -33,7 +43,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("auto-selects a config when configKey is omitted", async () => {
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeBackfillDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -55,7 +65,7 @@ describe("handleBackfillMintBurn", () => {
   it("skips inactive configs during automatic selection", async () => {
     mutableActiveIds.delete("usdt-tether");
 
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeBackfillDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -75,7 +85,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("returns 404 for an unknown configKey", async () => {
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -87,7 +97,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("rejects malformed JSON bodies", async () => {
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +109,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("rejects non-object JSON bodies", async () => {
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -122,7 +132,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
+    const response = await handleBackfillMintBurn({ db: makeBackfillDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     const body = (await readJsonResponse(response, 200)) as {
       done: boolean;
@@ -154,7 +164,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
+    const response = await handleBackfillMintBurn({ db: makeBackfillDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     const body = (await readJsonResponse(response, 200)) as {
       done: boolean;
@@ -185,7 +195,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
+    const response = await handleBackfillMintBurn({ db: makeBackfillDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     const body = (await readJsonResponse(response, 200)) as { done: boolean; chunksProcessed: number };
     expect(body.chunksProcessed).toBe(1);
@@ -268,7 +278,7 @@ describe("handleBackfillMintBurn", () => {
       .mockReset()
       .mockResolvedValue(new Map([[TX_HASH, txContext]]));
 
-    const db = mockD1([], { allowUnmatched: true });
+    const db = makeBackfillDb();
 
     const response = await handleBackfillMintBurn({ db, url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",

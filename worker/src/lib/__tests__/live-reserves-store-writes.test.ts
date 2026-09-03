@@ -8,6 +8,7 @@ import {
   beginReserveSyncAttempt,
   pruneLiveReserveHistory,
 } from "../live-reserves-store";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("live-reserves-store", () => {
   it("persists reserve composition and sync state together for successful snapshots", async () => {
@@ -104,7 +105,7 @@ describe("live-reserves-store", () => {
     let attemptIdx = 0;
     const history: Array<{ sql: string; binds: unknown[] }> = [];
 
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         sql,
         bind: (...binds: unknown[]) => ({
@@ -122,7 +123,7 @@ describe("live-reserves-store", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const result = await pruneLiveReserveHistory(db, 10_000, 1_000, 100);
     expect(result.compositionHistoryDeleted).toBe(650);

@@ -1,8 +1,9 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import type { D1PreparedStatement } from "@cloudflare/workers-types";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegsTrusted } from "../backfill-depegs";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
@@ -33,7 +34,7 @@ describe("handleBackfillDepegs", () => {
 
   it("combines delete and first insert chunk into a single batch (total <= D1 100-statement limit)", async () => {
     const calls: Array<{ kind: "batch"; size: number; firstSql: string }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare(sql: string) {
         return {
           sql,
@@ -50,7 +51,7 @@ describe("handleBackfillDepegs", () => {
         });
         return [];
       },
-    } as unknown as D1Database;
+    });
     const events = new Array(150).fill(null).map((_, i) => ({
       pegType: "peggedUSD",
       direction: "below" as const,
@@ -75,7 +76,7 @@ describe("handleBackfillDepegs", () => {
 
   it("issues a lone delete when events.length === 0 and never crashes mid-loop", async () => {
     const calls: Array<{ size: number }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare(sql: string) {
         return {
           sql,
@@ -85,7 +86,7 @@ describe("handleBackfillDepegs", () => {
         } as unknown as D1PreparedStatement;
       },
       async batch(stmts: D1PreparedStatement[]) { calls.push({ size: stmts.length }); return []; },
-    } as unknown as D1Database;
+    });
     await applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [], { startDay: 0, endDay: 1e10 } as unknown as BackfillReplayWindow);
     expect(calls).toEqual([{ size: 1 }]);
   });

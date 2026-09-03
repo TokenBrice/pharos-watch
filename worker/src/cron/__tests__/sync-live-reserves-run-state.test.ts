@@ -9,6 +9,7 @@ import {
 } from "../sync-live-reserves-run-state";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { breakerKeyForConfig, type ConfiguredCoin } from "../sync-live-reserves-shared";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function makeCoin(id: string): ConfiguredCoin {
   return {
@@ -35,7 +36,7 @@ function makeBatchRecordingDb(
   history: Array<{ sql: string; binds: unknown[] }> = [],
   batchError?: Error,
 ): D1Database {
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => ({
       bind: (...binds: unknown[]) => ({
         sql,
@@ -60,7 +61,7 @@ function makeBatchRecordingDb(
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -137,7 +138,7 @@ function makeStagedPool(poolId: string) {
   };
 }
 
-const db = {
+const db = makeNoopD1({
   prepare: (sql: string) => ({
     all: async () => ({
       results: sql.includes("FROM dex_liquidity")
@@ -148,7 +149,7 @@ const db = {
         : [],
     }),
   }),
-} as unknown as D1Database;
+});
 
 describe("syncDexDiscovery", () => {
   beforeEach(() => {

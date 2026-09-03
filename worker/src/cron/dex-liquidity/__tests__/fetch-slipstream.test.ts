@@ -18,6 +18,7 @@ import {
   projectSugarTokens,
   sqrtRatioToSpotPrice,
 } from "../fetch-slipstream";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const ABI = parseAbi([
   "function allPoolsLength() view returns (uint256)",
@@ -303,7 +304,7 @@ describe("fetchSlipstreamPools", () => {
       { label: "slipstream-recovery-0-token-1-decimals", success: true, returnData: encoded("decimals", 6) },
       { label: "slipstream-recovery-0-token-1-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 6n) },
     ]);
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           all: async () => ({ results: [{
@@ -314,7 +315,7 @@ describe("fetchSlipstreamPools", () => {
           }] }),
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const result = await fetchSlipstreamPools(
       "aerodrome-slipstream",

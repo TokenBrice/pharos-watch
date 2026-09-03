@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildAlertContextLines } from "../telegram-alert-context";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
   loadActiveAlertSafetySourceAssessment: vi.fn(),
@@ -69,9 +70,9 @@ describe("buildAlertContextLines", () => {
         ? { value: JSON.stringify({ netFlowUsd: 12_300_000, updatedAt: nowSec }), updatedAt: nowSec }
         : null,
     );
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle", "dai-makerdao"]);
 
@@ -83,9 +84,9 @@ describe("buildAlertContextLines", () => {
 
   it("omits safety context when the alert source assessment fails", async () => {
     mocks.loadActiveAlertSafetySourceAssessment.mockRejectedValueOnce(new Error("identity mismatch"));
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
@@ -96,9 +97,9 @@ describe("buildAlertContextLines", () => {
     mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValueOnce(
       safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }, "stale"),
     );
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
@@ -109,9 +110,9 @@ describe("buildAlertContextLines", () => {
     mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValueOnce(
       safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }),
     );
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
@@ -121,7 +122,7 @@ describe("buildAlertContextLines", () => {
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {
     const bindCounts: number[] = [];
     let nextRowOffset = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => {
         let currentBindCount = 0;
         const statement = {
@@ -149,7 +150,7 @@ describe("buildAlertContextLines", () => {
         };
         return statement;
       }),
-    } as unknown as D1Database;
+    });
 
     const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
     const context = await buildAlertContextLines(db, ids);
@@ -161,7 +162,7 @@ describe("buildAlertContextLines", () => {
 
   it("logs a warning and keeps successful liquidity chunks when one chunk fails", async () => {
     let call = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => {
         const statement = {
           bind: (..._binds: string[]) => statement,
@@ -181,7 +182,7 @@ describe("buildAlertContextLines", () => {
         };
         return statement;
       }),
-    } as unknown as D1Database;
+    });
 
     const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
     const context = await buildAlertContextLines(db, ids);

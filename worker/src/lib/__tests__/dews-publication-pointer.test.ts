@@ -63,7 +63,12 @@ describe("DEWS publication pointer reader", () => {
       { match: "stress-history-daily-ids", rows: [{ stablecoin_id: stablecoinId }] },
       { match: "publication-generation-count", rows: [{ cnt: 1 }], first: { cnt: 1 } },
       { match: "stress-latest-generation-count", rows: [{ cnt: 1 }], first: { cnt: 1 } },
-    ], { allowUnmatched: true });
+      { match: "stress_signal_history", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
+      { match: "INSERT INTO surface_publication_generations", rows: [] },
+      { match: "stress_signals", rows: [], allowUnused: true },
+      { match: "stress_signal_publication_rows", rows: [], allowUnused: true },
+    ]);
     await persistDewsResults({ db, results: [result], eligibleIds: new Set([stablecoinId]), publishFreshnessSentinel: false, nowSec });
     const reconcileDb = mockD1([
       pointerMatch(pointerPayload(nowSec - 60), nowSec - 60),

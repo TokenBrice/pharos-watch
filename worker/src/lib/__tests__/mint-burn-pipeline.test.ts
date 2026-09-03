@@ -68,15 +68,16 @@ import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function makeDb(): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         run: async () => ({ success: true, meta: {} }),
       }),
     }),
-  } as unknown as D1Database;
+  });
 }
 
 type HourlyRow = {
@@ -94,7 +95,7 @@ function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow>;
   const events: MintBurnRow[] = [];
   const hourlyRows = new Map<string, HourlyRow>();
 
-  return {
+  return makeNoopD1({
     events,
     hourlyRows,
     prepare: (sql: string) => ({
@@ -254,7 +255,7 @@ function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow>;
         },
       }),
     }),
-  } as unknown as D1Database & { hourlyRows: Map<string, HourlyRow>; events: MintBurnRow[] };
+  });
 }
 
 function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
@@ -731,7 +732,7 @@ describe("mint-burn shared pipeline modules", () => {
   it("uses monotonic sync-state upsert mode for backfill semantics", async () => {
     const prepareCalls: string[] = [];
     const bindArgs: unknown[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         prepareCalls.push(sql);
         return {
@@ -743,7 +744,7 @@ describe("mint-burn shared pipeline modules", () => {
           },
         };
       },
-    } as unknown as D1Database;
+    });
 
     await upsertMintBurnSyncState(db, "ethereum-0xabc", 123, "replace");
     await upsertMintBurnSyncState(db, "ethereum-0xabc", 456, "monotonic-max");
@@ -758,7 +759,7 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("reads sync state in chunked IN-clause queries instead of one select per config", async () => {
     const history: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
           all: async <T>() => {
@@ -774,7 +775,7 @@ describe("mint-burn shared pipeline modules", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const makeConfig = (stablecoinId: string, symbol: string, contractAddress: string) => ({
       chain: {

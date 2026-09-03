@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => {
   const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>(
@@ -358,14 +359,14 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     };
   };
 
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => stmt(sql),
     batch: async (statements: D1PreparedStatement[]) => Promise.all(
       statements.map((statement) => statement.run()),
     ),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 describe("computeAndStoreDEWS", () => {

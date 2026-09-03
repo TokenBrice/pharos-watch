@@ -10,6 +10,7 @@ import {
   runDigestChannelDelivery,
 } from "../platform";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   buildTelegramCreds,
   buildTwitterCreds,
@@ -290,7 +291,7 @@ describe("insertDigestRecord", () => {
 
   it("retries transient D1 overloads", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -300,7 +301,7 @@ describe("insertDigestRecord", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     await insertDigestRecord(makeOptions(db));
 
@@ -334,9 +335,9 @@ describe("insertDigestRecord", () => {
     const controller = new AbortController();
     controller.abort(new Error("stop-digest"));
     const prepare = vi.fn();
-    const db = {
+    const db = makeNoopD1({
       prepare,
-    } as unknown as D1Database;
+    });
 
     await expect(insertDigestRecord(makeOptions(db, controller.signal))).rejects.toThrow("stop-digest");
     expect(prepare).not.toHaveBeenCalled();
@@ -352,9 +353,9 @@ describe("insertDigestRecord", () => {
         },
       }),
     }));
-    const db = {
+    const db = makeNoopD1({
       prepare,
-    } as unknown as D1Database;
+    });
 
     await expect(insertDigestRecord(makeOptions(db, controller.signal))).rejects.toThrow("stop-after-insert");
     expect(prepare).toHaveBeenCalledTimes(1);

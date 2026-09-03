@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const GATE_LOAD_TIMEOUT_MS = 15_000;
 
 describe("loadDexPriceSources", () => {
   it("parses price_sources_json into per-stablecoin protocol arrays", async () => {
-    const mockDb = {
+    const mockDb = makeNoopD1({
       prepare: vi.fn().mockReturnValue({
         all: vi.fn().mockResolvedValue({
           results: [
@@ -19,7 +20,7 @@ describe("loadDexPriceSources", () => {
           ],
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const { loadDexPriceSources } = await import("../../lib/depeg-helpers");
     const result = await loadDexPriceSources(mockDb);
@@ -30,11 +31,11 @@ describe("loadDexPriceSources", () => {
   }, GATE_LOAD_TIMEOUT_MS);
 
   it("returns empty map on missing table", async () => {
-    const mockDb = {
+    const mockDb = makeNoopD1({
       prepare: vi.fn().mockReturnValue({
         all: vi.fn().mockRejectedValue(new Error("no such table: dex_prices")),
       }),
-    } as unknown as D1Database;
+    });
 
     const { loadDexPriceSources } = await import("../../lib/depeg-helpers");
     const result = await loadDexPriceSources(mockDb);
@@ -43,7 +44,7 @@ describe("loadDexPriceSources", () => {
 
   it("logs and skips malformed price_sources_json rows", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const mockDb = {
+    const mockDb = makeNoopD1({
       prepare: vi.fn().mockReturnValue({
         all: vi.fn().mockResolvedValue({
           results: [
@@ -55,7 +56,7 @@ describe("loadDexPriceSources", () => {
           ],
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const { createDexPriceSourceLoadTelemetry, loadDexPriceSources } = await import("../../lib/depeg-helpers");
     const telemetry = createDexPriceSourceLoadTelemetry();
@@ -81,7 +82,7 @@ describe("loadDexPriceSources", () => {
 
   it("records stale price source rows without loading them", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 2_101;
-    const mockDb = {
+    const mockDb = makeNoopD1({
       prepare: vi.fn().mockReturnValue({
         all: vi.fn().mockResolvedValue({
           results: [
@@ -95,7 +96,7 @@ describe("loadDexPriceSources", () => {
           ],
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const { createDexPriceSourceLoadTelemetry, loadDexPriceSources } = await import("../../lib/depeg-helpers");
     const telemetry = createDexPriceSourceLoadTelemetry();

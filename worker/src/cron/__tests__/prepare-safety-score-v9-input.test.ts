@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import type { PegSummaryCoin } from "@shared/types/market";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const ASSET_ID = "usdc-circle";
 const CLOCK_SEC = 1_783_891_200;
@@ -84,7 +85,7 @@ type ProgressRow = {
 
 function makeDb(progressRows: ProgressRow[] = [null]): D1Database {
   let progressIndex = 0;
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         first: async () => {
@@ -94,7 +95,7 @@ function makeDb(progressRows: ProgressRow[] = [null]): D1Database {
         },
       }),
     }),
-  } as unknown as D1Database;
+  });
 }
 
 function pegSummary(): PegSummaryCoin {

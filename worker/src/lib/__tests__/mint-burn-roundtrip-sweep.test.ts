@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 
 vi.mock("../db", () => ({
@@ -15,13 +16,13 @@ vi.mock("../mint-burn-pipeline/persistence", async (importOriginal) => {
 
 describe("sweepRecentRoundtrips", () => {
   it("returns 0 when no cross-run roundtrips exist", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn().mockReturnValue({
         bind: vi.fn().mockReturnValue({
           all: vi.fn().mockResolvedValue({ results: [] }),
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const result = await sweepRecentRoundtrips(db, Math.floor(Date.now() / 1000));
     expect(result.reclassified).toBe(0);
@@ -39,7 +40,7 @@ describe("sweepRecentRoundtrips", () => {
       run: vi.fn().mockResolvedValue({ meta: { changes: 2 } }),
     });
     const prepare = vi.fn().mockReturnValue({ bind: mockBind });
-    const db = { prepare } as unknown as D1Database;
+    const db = makeNoopD1({ prepare });
 
     // Mock batchExecute to return the number of changes
     const { batchExecute } = await import("../db");
@@ -62,7 +63,7 @@ describe("sweepRecentRoundtrips", () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       }),
     });
-    const db = { prepare } as unknown as D1Database;
+    const db = makeNoopD1({ prepare });
 
     await sweepRecentRoundtrips(db, 1700001000);
 
@@ -80,7 +81,7 @@ describe("sweepRecentRoundtrips", () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       }),
     });
-    const db = { prepare } as unknown as D1Database;
+    const db = makeNoopD1({ prepare });
 
     await sweepRecentRoundtrips(db, 1700001000);
 

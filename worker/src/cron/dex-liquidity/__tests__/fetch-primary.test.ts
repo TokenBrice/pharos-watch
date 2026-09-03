@@ -42,9 +42,10 @@ import {
   shouldRetainCurveCompositePoolIdentity,
 } from "../../measured-execution/curve-composite-identities";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../../measured-execution/curve-composite";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 function createMockDb(): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         all: async () => ({ results: [] }),
@@ -58,7 +59,7 @@ function createMockDb(): D1Database {
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 // Generate 1000+ minimal pool entries to pass the DL threshold

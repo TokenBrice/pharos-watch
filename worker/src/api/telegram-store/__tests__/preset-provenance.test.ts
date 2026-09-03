@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   loadPresetSubscriberRowsBatch,
   mergeSubscriberMaps,
@@ -283,7 +284,7 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
     for (let boundary = 0; boundary <= 3; boundary += 1) {
       const { sqlite } = openLatestSchema();
       const base = createSqliteD1(sqlite);
-      const db = {
+      const db = makeNoopD1({
         prepare: base.prepare.bind(base),
         batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
           sqlite.exec("BEGIN IMMEDIATE");
@@ -301,7 +302,7 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
             throw error;
           }
         },
-      } as unknown as D1Database;
+      });
       try {
         await expect(applySubscribeIntent(db, {
           chatId: "rollback",

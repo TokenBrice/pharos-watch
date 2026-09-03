@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { logSkippedCronRun } from "../preflight-skip";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
-function buildRuntime(prepare: D1Database["prepare"]): ScheduledRuntimeContext {
+function buildRuntime(prepare: unknown): ScheduledRuntimeContext {
   return makeScheduledRuntime({
-    db: { prepare } as D1Database,
+    db: makeNoopD1({ prepare }),
     cron: "16,46 * * * *",
     scheduleKey: "halfHourlyChartsOffset",
     scheduledTimeMs: null,
@@ -24,7 +25,7 @@ describe("logSkippedCronRun", () => {
     const bind = vi.fn((..._args: unknown[]) => {
       return { run };
     });
-    const prepare = vi.fn(() => ({ bind })) as unknown as D1Database["prepare"];
+    const prepare = vi.fn(() => ({ bind }));
 
     await logSkippedCronRun(buildRuntime(prepare), {
       job: "sync-dex-liquidity",
@@ -64,7 +65,7 @@ describe("logSkippedCronRun", () => {
     const bind = vi.fn((..._args: unknown[]) => {
       return { run };
     });
-    const prepare = vi.fn(() => ({ bind })) as unknown as D1Database["prepare"];
+    const prepare = vi.fn(() => ({ bind }));
 
     await logSkippedCronRun(buildRuntime(prepare), {
       job: "sync-dex-liquidity",

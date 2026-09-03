@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
@@ -205,11 +206,11 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
 
   it("buildInsertDepegEventStmt binds confirmation_sources and pending_reason", () => {
     const bindCalls: unknown[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare(_sql: string) {
         return { bind(...args: unknown[]) { bindCalls.push(args); return this; } } as unknown as D1PreparedStatement;
       },
-    } as unknown as D1Database;
+    });
     buildInsertDepegEventStmt(db, {
       id: 0,
       stablecoinId: "usdt-tether",

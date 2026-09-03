@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { mockRegistry } from "../../../test-helpers/cron";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 // A mega-multichain footprint: a cheap CoinGecko head plus a GeckoTerminal-only
 // tail whose 2s pacing floor cannot fit in the same per-coin budget.
@@ -70,11 +71,11 @@ import { crawlCoin } from "../crawl-sources";
 import { discoveryTargetCursorKey, estimateDeploymentCrawlCostMs } from "../target-window";
 import { recordDiscoveryAttemptFence } from "../persistence";
 
-const db = {
+const db = makeNoopD1({
   prepare: () => ({
     all: async () => ({ results: [{ stablecoin_id: "mega-coin", pool_count: 0, chain_count: 0 }] }),
   }),
-} as unknown as D1Database;
+});
 
 function totalFootprintCostMs(): number {
   return FOOTPRINT.reduce((sum, target) => sum + estimateDeploymentCrawlCostMs(target.chain), 0);

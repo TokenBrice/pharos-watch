@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
@@ -154,13 +155,13 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-supply-history?batch=999999&batchSize=100"), request: makeApiRequest("/api/backfill-supply-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
+    const res = await handleBackfillSupplyHistoryTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-supply-history?batch=999999&batchSize=100"), request: makeApiRequest("/api/backfill-supply-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
 
     expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts rows for a valid USD stablecoin detail payload", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -204,7 +205,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("preserves unbounded history for bare backfill calls", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const oldDay = Math.floor(Date.UTC(2020, 0, 1) / 1000);
     const recentDay = Math.floor(Date.UTC(2026, 0, 1) / 1000);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -271,7 +272,7 @@ describe("handleBackfillSupplyHistory", () => {
       ),
     );
 
-    const firstDb = mockD1([], { allowUnmatched: true });
+    const firstDb = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const firstUrl = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-01-01&endDay=2026-01-03&windowDays=2";
     const firstRes = await handleBackfillSupplyHistoryTrusted({ db: firstDb, url: makeApiUrl(firstUrl), request: makeApiRequest(firstUrl, { adminKey: "secret" }) });
     const firstBody = (await firstRes.json()) as {
@@ -286,7 +287,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(firstBody.continuationCursor).toBeTypeOf("string");
     expect(firstBody.window).toMatchObject({ startDay: day1, endDay: day2, windowDays: 2 });
 
-    const secondDb = mockD1([], { allowUnmatched: true });
+    const secondDb = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const secondUrl = `/api/backfill-supply-history?stablecoin=usdt-tether&cursor=${encodeURIComponent(firstBody.continuationCursor!)}`;
     const secondRes = await handleBackfillSupplyHistoryTrusted({ db: secondDb, url: makeApiUrl(secondUrl), request: makeApiRequest(secondUrl, { adminKey: "secret" }) });
     const secondBody = (await secondRes.json()) as {
@@ -304,7 +305,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("threads the request AbortSignal into supply backfill upstream helpers", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -336,7 +337,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("uses fiat FX history for a non-USD DefiLlama coin without CoinGecko history", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const day1 = 1_700_006_400;
     const day2 = 1_700_092_800;
 
@@ -403,7 +404,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("does not clamp sparse non-USD price history outside its covered range", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const beforePriceRange = Math.floor(1_699_913_600 / 86400) * 86400;
     const afterPriceRange = Math.floor(1_700_086_400 / 86400) * 86400;
 
@@ -464,7 +465,7 @@ describe("handleBackfillSupplyHistory", () => {
     // Simulates a brand-new single-deployment CG-only coin: CoinGecko returns valid prices
     // but market_caps=0 and circulating_supply=0 (upstream data not yet populated).
     // Backfill should replay on-chain totalSupply per historical day and compute mcap = supply × price.
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const fixtureId = useSingleDeploymentSparkSupplyFixture();
 
     const ts1 = 1_775_692_800_000; // CG returns ms timestamps
@@ -555,7 +556,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("repairs partial CoinGecko market-cap gaps with historical on-chain totalSupply", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const fixtureId = useSingleDeploymentSparkSupplyFixture();
 
     const ts1 = 1_775_692_800_000;
@@ -640,7 +641,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("fails closed instead of replaying one EVM lane for multi-deployment supply fallback", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
 
     const ts = 1_775_692_800_000;
 
@@ -699,7 +700,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("skips eEARN days when historical totalSupply has no USD price", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
     const day2 = Math.floor(Date.UTC(2026, 5, 10) / 1000);
     const blockNumber = 22_500_000;
@@ -782,7 +783,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("skips autoUSD days without a CoinGecko ID or historical price", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const blockNumber = 22_500_000;
     const totalSupplyRaw = 6_700_000n * 10n ** 18n;
 
@@ -841,7 +842,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("skips historical totalSupply when contract decimals are missing", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const fixtureId = useMissingDecimalsHistoricalSupplyFixture();
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-06-09&endDay=2026-06-09`;
 
@@ -859,7 +860,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const day1 = Math.floor(Date.UTC(2026, 7, 4) / 1000);
     const day2 = Math.floor(Date.UTC(2026, 7, 5) / 1000);
     const blockNumber = 49_507_741;
@@ -941,7 +942,7 @@ describe("handleBackfillSupplyHistory", () => {
     ]);
     psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, ...historicalTotalSupplyCoins);
 
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const day = Math.floor(Date.UTC(2026, 5, 9) / 1000);
     const blockNumber = 22_500_000;
     const blockSearchCaches: unknown[] = [];
@@ -1028,7 +1029,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("backfills USG historical supply after subtracting PegKeeper balances", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const blockNumber = 24_500_000;
     const totalSupplyRaw = 40_020_000n * 10n ** 18n;
     const keeperOneRaw = 19_686_793n * 10n ** 18n;
@@ -1126,7 +1127,7 @@ describe("handleBackfillSupplyHistory", () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", {
+    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", {
         adminKey: "secret",
       }), coingeckoApiKey: null });
 
@@ -1141,7 +1142,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("does not extrapolate TVL fallback prices beyond the DefiLlama price chart range", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const day1 = Math.floor(Date.UTC(2026, 3, 9) / 1000);
     const day2 = day1 + 86_400;
 
@@ -1248,7 +1249,7 @@ describe("handleBackfillSupplyHistory", () => {
     });
 
     const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10";
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }) });
+    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]), url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }) });
 
     const body = (await readJsonResponse(res, 200)) as { errors?: string[] };
     expect(body.errors?.[0]).toContain("no TVL history");

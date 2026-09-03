@@ -6,6 +6,7 @@ import {
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
 } from "../../lib/telegram-quiet-hours";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
 
@@ -131,12 +132,12 @@ function createStubDb(rows: DisambiguationRow[]): D1Database {
     return stmt as unknown as D1PreparedStatement;
   }
 
-  return {
+  return makeNoopD1({
     prepare,
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 describe("cleanExpiredDisambiguations", () => {

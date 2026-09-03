@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { insertBlacklistRows } from "../persistence";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -66,7 +67,7 @@ describe("insertBlacklistRows", () => {
     const sqls: string[] = [];
     const binds: unknown[][] = [];
     const row = makeRow({ amount_native: 42.5 });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn((sql: string) => {
         sqls.push(sql);
         return {
@@ -77,7 +78,7 @@ describe("insertBlacklistRows", () => {
         };
       }),
       batch: async () => [{ success: true, meta: { changes: 1 } }],
-    } as unknown as D1Database;
+    });
 
     await expect(insertBlacklistRows(db, [row])).resolves.toBe(1);
 
@@ -94,7 +95,7 @@ describe("insertBlacklistRows", () => {
 
   it("retries transient D1 overloads through batchExecute", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({}),
       }),
@@ -103,7 +104,7 @@ describe("insertBlacklistRows", () => {
         if (attempts === 1) throw new Error("D1 DB is overloaded");
         return [{ success: true, meta: { changes: 1 } }];
       },
-    } as unknown as D1Database;
+    });
 
     const inserted = await insertBlacklistRows(db, [makeRow()]);
 
@@ -115,10 +116,10 @@ describe("insertBlacklistRows", () => {
     const controller = new AbortController();
     controller.abort(new Error("stop-blacklist"));
     const prepare = vi.fn();
-    const db = {
+    const db = makeNoopD1({
       prepare,
       batch: async () => [],
-    } as unknown as D1Database;
+    });
 
     await expect(insertBlacklistRows(db, [makeRow()], controller.signal)).rejects.toThrow("stop-blacklist");
     expect(prepare).not.toHaveBeenCalled();

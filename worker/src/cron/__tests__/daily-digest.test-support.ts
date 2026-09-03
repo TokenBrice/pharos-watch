@@ -418,7 +418,7 @@ export function makeCollectorCtx(db: D1Database): CollectorContext {
     makeAsset({ id: "dai-makerdao", symbol: "DAI", price: 1.05, circulating: { peggedUSD: 5_000_000 }, circulatingPrevWeek: { peggedUSD: 5_000_000 } }),
   ];
   return {
-    db: db as unknown as D1Database,
+    db,
     trackedStablecoinAssets: assets,
     trackedStablecoinIds: new Set(assets.map(({ id }) => id)),
     coreAggregateStablecoinAssets: assets,

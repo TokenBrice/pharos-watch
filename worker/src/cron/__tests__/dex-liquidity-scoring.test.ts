@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("../../lib/db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/db")>();
@@ -167,13 +168,13 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { scoringTestState: S
     } as unknown as PreparedStatementWithMeta;
   }
 
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => createStatement(sql),
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     scoringTestState,
-  } as unknown as D1Database & { scoringTestState: ScoringTestState };
+  });
 }
 
 function curveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
@@ -251,7 +252,7 @@ describe("dex-liquidity scoring", () => {
       coverage_confidence: 1,
     }));
     let queryCount = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (
           _thirtyDaysAgo: number,
@@ -277,7 +278,7 @@ describe("dex-liquidity scoring", () => {
         }),
         sql,
       }),
-    } as unknown as D1Database;
+    });
 
     const result = await loadConfidentHistoryStability(db);
 

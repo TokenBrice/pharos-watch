@@ -4,6 +4,7 @@ import {
   buildYieldHistoryEvaluationInputsCooperative,
 } from "../yield-sync/coordinator-history";
 import { loadYieldHistorySnapshots, type YieldHistorySnapshotRow } from "../yield-sync/history";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function row(overrides: Partial<YieldHistorySnapshotRow>): YieldHistorySnapshotRow {
   return {
@@ -138,7 +139,7 @@ describe("yield coordinator history", () => {
 
   it("loads only published or legacy history rows for evaluation inputs", async () => {
     const sqlSeen: string[] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         sqlSeen.push(sql);
         return {
@@ -147,7 +148,7 @@ describe("yield coordinator history", () => {
           }),
         };
       },
-    } as unknown as D1Database;
+    });
 
     await loadYieldHistorySnapshots(db, ["coin-a"], 1_700_100_000, 1_699_495_200);
 

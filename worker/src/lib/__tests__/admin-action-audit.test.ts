@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { logAdminAction, DETAILS_MAX_LEN } from "../admin-action-audit";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function makeAuditMockDb() {
   return mockD1([
@@ -23,13 +24,13 @@ function lastInsert(db: ReturnType<typeof mockD1>): { sql: string; binds: unknow
 describe("logAdminAction", () => {
   it("reports a resolved D1 write with success=false as an audit failure", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => ({ success: false, meta: { changes: 0 } }),
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     await expect(logAdminAction(db, { action: "backfill", result: "ok" })).resolves.toBe(false);
     expect(warning).toHaveBeenCalled();

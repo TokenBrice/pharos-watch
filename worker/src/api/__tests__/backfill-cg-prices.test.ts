@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { mockFetchRetry } from "../../test-helpers/cron/mock-fetch-retry";
 import { handleBackfillCgPricesTrusted } from "../backfill-cg-prices";
@@ -33,7 +34,7 @@ describe("handleBackfillCgPrices", () => {
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillCgPricesTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100") });
+    const res = await handleBackfillCgPricesTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100") });
     expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
@@ -44,7 +45,8 @@ describe("handleBackfillCgPrices", () => {
         match: "SELECT snapshot_date, price, circulating_usd FROM supply_history",
         rows: [{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }],
       },
-    ], { allowUnmatched: true });
+      { match: "UPDATE supply_history", rows: [] },
+    ]);
     const res = await handleBackfillCgPricesTrusted({ db, url: makeApiUrl("/api/backfill-cg-prices?stablecoin=usdt-tether") });
 
     const body = (await readJsonResponse(res, 200)) as {
@@ -66,7 +68,8 @@ describe("handleBackfillCgPrices", () => {
         match: "SELECT snapshot_date, price, circulating_usd FROM supply_history",
         rows: [{ snapshot_date: snapshotDate, price: null, circulating_usd: 15_000_000_000 }],
       },
-    ], { allowUnmatched: true });
+      { match: "UPDATE supply_history", rows: [] },
+    ]);
     const res = await handleBackfillCgPricesTrusted({ db, url: makeApiUrl("/api/backfill-cg-prices?stablecoin=ust-terra") });
 
     const body = (await readJsonResponse(res, 200)) as {

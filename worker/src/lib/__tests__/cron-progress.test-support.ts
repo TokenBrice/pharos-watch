@@ -1,3 +1,5 @@
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
+
 export type DbCall = { sql: string; args: unknown[] };
 
 export function makeCaptureDb(calls: DbCall[]): D1Database {
@@ -11,10 +13,10 @@ export function makeCaptureDb(calls: DbCall[]): D1Database {
     first: async <T>() => null as T | null,
   } as unknown as D1PreparedStatement);
 
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => statement(sql),
     batch: async (statements: D1PreparedStatement[]) => Promise.all(statements.map((item) => item.run())),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }

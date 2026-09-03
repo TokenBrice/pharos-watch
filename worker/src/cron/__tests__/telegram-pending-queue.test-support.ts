@@ -2,6 +2,9 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Mock } from "vitest";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram-pending-provenance";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "WHERE delivery_state = 'sending'", rows: [] },
@@ -43,6 +46,58 @@ export type PendingAlertSeed = {
   preferenceGeneration?: number | null;
   markupPolicyJson?: string | null;
 };
+
+export type PendingQueryRow = Record<string, unknown>;
+
+/** A complete row for the mocked candidate/claimed-row SELECTs. */
+export function makePendingQueryRow(
+  id: number,
+  overrides: PendingQueryRow = {},
+): PendingQueryRow {
+  return {
+    id,
+    chat_id: `chat-${id}`,
+    message_html: `<b>Alert ${id}</b>`,
+    disable_notification: 0,
+    created_at: 1_000,
+    expires_at: 10_000,
+    attempts: 0,
+    not_before_at: null,
+    priority: 50,
+    source_type: "legacy",
+    alert_type: null,
+    dedupe_key: null,
+    chunk_index: 0,
+    last_error_class: null,
+    source_event_id: null,
+    alert_scope_json: null,
+    preference_generation: null,
+    markup_policy_json: null,
+    delivery_state: "pending",
+    delivery_owner: null,
+    delivery_generation: 0,
+    delivery_started_at: null,
+    delivery_completed_at: null,
+    delivery_claim_expires_at: null,
+    alert_snooze_until_ts: null,
+    quiet_hours_enabled: 0,
+    quiet_hours_start_utc: null,
+    quiet_hours_end_utc: null,
+    timezone: null,
+    ...overrides,
+  };
+}
+
+export function makePendingQueryRows(
+  count: number,
+  overrides: (index: number) => PendingQueryRow = (index) => ({
+    chat_id: `chat-${index}`,
+    message_html: `msg${index}`,
+    id: index + 1,
+  }),
+): PendingQueryRow[] {
+  return Array.from({ length: count }, (_, index) => makePendingQueryRow(index + 1, overrides(index)));
+}
 
 export function insertPendingSqlite(
   sqlite: DatabaseSync,
@@ -247,6 +302,121 @@ function insertAlertJobTargetSqlite(sqlite: DatabaseSync, row: TelegramAlertJobT
       row.preferenceGeneration ?? null,
       row.markupPolicyJson ?? null,
     );
+}
+
+export function insertRiskPendingSqlite(
+  sqlite: DatabaseSync,
+  options: { id: number; chatId: string; html?: string; dedupeKey?: string; sourceEventId?: string; generation?: number } = { id: 1, chatId: "risk-chat" },
+  now = Math.floor(Date.now() / 1000),
+): void {
+  const generation = options.generation ?? 1;
+  const sourceEventId = options.sourceEventId ?? `source-${options.id}`;
+  insertSubscriberSqlite(sqlite, { chatId: options.chatId, preferenceGeneration: generation, globalAlertDews: 1, globalAlertDepeg: 1, globalAlertSafety: 1 });
+  insertPendingSqlite(sqlite, {
+    id: options.id,
+    chatId: options.chatId,
+    html: options.html ?? `<b>Risk ${options.id}</b>`,
+    createdAt: now - 60,
+    expiresAt: now + 600,
+    dedupeKey: options.dedupeKey ?? `dedupe-${options.id}`,
+    sourceType: "risk_alert",
+    alertType: "dews",
+    sourceEventId,
+    alertScopeJson: serializePendingAlertScope([{ stablecoinId: "usdc-circle", family: "dews" }]),
+    preferenceGeneration: generation,
+    markupPolicyJson: serializePendingMarkupPolicy({}),
+  }, now);
+}
+
+export function createClaimContentionD1(sqlite: DatabaseSync): D1Database & {
+  getHistory(): Array<{ sql: string; binds: unknown[] }>;
+  getOwner(): string | null;
+} {
+  const inner = createSqliteD1(sqlite);
+  const history: Array<{ sql: string; binds: unknown[] }> = [];
+  let winner: string | null = null;
+  let reads = 0;
+  let release: (() => void) | undefined;
+  const bothRead = new Promise<void>((resolve) => { release = resolve; });
+  const statement = (sql: string, values: unknown[] = []): D1PreparedStatement => {
+    const bound = values.length ? inner.prepare(sql).bind(...values) : inner.prepare(sql);
+    return {
+      bind: (...next: unknown[]) => statement(sql, next),
+      first: async <T>() => { history.push({ sql, binds: [...values] }); return bound.first<T>(); },
+      all: async <T>() => {
+        history.push({ sql, binds: [...values] });
+        const result = await bound.all<T>();
+        if (sql.includes("SELECT p.id") && sql.includes("processing_owner IS NULL")) {
+          reads++;
+          if (reads === 2) release?.();
+          await bothRead;
+        }
+        return result;
+      },
+      run: async () => {
+        history.push({ sql, binds: [...values] });
+        const result = await bound.run();
+        if (sql.includes("SET processing_owner = ?") && Number(result.meta?.changes ?? 0) > 0) winner = String(values[0]);
+        return result;
+      },
+    } as unknown as D1PreparedStatement;
+  };
+  return makeNoopD1({
+    prepare: (sql: string) => statement(sql),
+    batch: async (statements: D1PreparedStatement[]) => Promise.all(statements.map((item) => item.run())),
+    exec: async (sql: string) => { sqlite.exec(sql); return { count: 0, duration: 0 }; },
+    dump: async () => new ArrayBuffer(0),
+    getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
+    getOwner: () => winner,
+  });
+}
+
+export function insertAlertJobFixture(sqlite: DatabaseSync, row: TelegramAlertJobSeed, now: number): void {
+  insertAlertJobSqlite(sqlite, row, now);
+}
+
+export function insertAlertJobTargetFixture(sqlite: DatabaseSync, row: TelegramAlertJobTargetSeed, now: number): void {
+  insertAlertJobTargetSqlite(sqlite, row, now);
+}
+
+export function insertRecapDeliveryFixture(
+  sqlite: DatabaseSync,
+  now: number,
+  options: { chatId?: string; generation?: number; paused?: boolean } = {},
+): { chatId: string; recapKey: string } {
+  const chatId = options.chatId ?? "recap-delivery";
+  const generation = options.generation ?? 4;
+  const recapKey = `recap:${chatId}:2026-07-11:v1`;
+  insertSubscriberSqlite(sqlite, {
+    chatId,
+    preferenceGeneration: generation,
+    alertSnoozeUntilTs: options.paused ? 4_102_444_800 : null,
+  });
+  sqlite.prepare(
+    `INSERT INTO telegram_recap_preferences
+     (chat_id, chat_kind, enabled, last_window_end_at, last_delivered_local_date, created_at, updated_at)
+     VALUES (?, 'private', 1, NULL, NULL, ?, ?)`,
+  ).run(chatId, now, now);
+  sqlite.prepare(
+    `INSERT INTO telegram_recap_targets
+     (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation,
+      watchlist_fingerprint, pending_dedupe_key, status, created_at, updated_at)
+     VALUES (?, ?, '2026-07-11', ?, ?, ?, 'fingerprint-v1', ?, 'queued', ?, ?)`,
+  ).run(recapKey, chatId, now - 3660, now - 60, generation, recapKey, now, now);
+  insertPendingSqlite(sqlite, {
+    id: options.paused ? 8_502 : 8_501,
+    chatId,
+    html: "<b>Your Watchbot recap</b>",
+    createdAt: now - 30,
+    expiresAt: now + 3600,
+    priority: 100,
+    sourceType: "personalized_recap",
+    dedupeKey: recapKey,
+    sourceEventId: recapKey,
+    preferenceGeneration: generation,
+    markupPolicyJson: serializePendingMarkupPolicy({ replyMarkup: { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] } }),
+  });
+  return { chatId, recapKey };
 }
 
 export type PendingQueueScenarioOverrides = {
