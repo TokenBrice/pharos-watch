@@ -99,6 +99,7 @@ export const STABLECOIN_CLIENT_LIST_FIELDS = [
   "symbol",
   "protocolSlug",
   "flags",
+  "infrastructures",
   "mechanismArchetype",
   "variantOf",
   "variantKind",

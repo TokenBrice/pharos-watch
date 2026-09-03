@@ -203,6 +203,9 @@ function projectEffectiveMechanismArchetype(coin, sourceById) {
 
 export function projectListCoin(coin, listFields, listingClass, sourceById) {
   const projected = projectRawCoin(coin, listFields);
+  for (const field of listFields) {
+    if (projected[field] === null) delete projected[field];
+  }
   const mechanismArchetype = projectEffectiveMechanismArchetype(coin, sourceById);
   if (mechanismArchetype !== undefined) projected.mechanismArchetype = mechanismArchetype;
   projected[CHAIN_IDS_FIELD] = projectChainIds(coin);

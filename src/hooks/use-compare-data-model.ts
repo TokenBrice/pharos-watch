@@ -30,6 +30,7 @@ import {
   deriveFlowSeries,
   deriveFlowCardData,
 } from "@/lib/compare-derive";
+import type { ComparisonMeta } from "@/lib/compare-derive";
 import type { StablecoinData } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
@@ -84,9 +85,9 @@ export function useCompareDataModel({
     };
   }, [selectedIdsSignature]);
 
-  const comparisonMetaMap = useMemo(
+  const comparisonMetaMap = useMemo<ReadonlyMap<string, ComparisonMeta>>(
     () =>
-      new Map(
+      new Map<string, ComparisonMeta>(
         [...TRACKED_META_BY_ID].map(([id, meta]) => [
           id,
           clientDetailsById.get(id) ? { ...meta, ...clientDetailsById.get(id) } : meta,
