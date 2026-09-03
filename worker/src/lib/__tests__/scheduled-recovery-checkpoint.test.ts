@@ -19,13 +19,13 @@ const CHILD_JOBS = [
   "sync-live-reserves",
   "sync-redemption-backstops",
   "sync-kinesis-supply",
-  "reserve-post-sync-watchdog",
+  "cron-sentinel",
 ] as const;
 const CHILD_PREREQUISITES = {
   "sync-live-reserves": [],
   "sync-redemption-backstops": ["sync-live-reserves"],
   "sync-kinesis-supply": [],
-  "reserve-post-sync-watchdog": ["sync-live-reserves"],
+  "cron-sentinel": ["sync-live-reserves"],
 } as const;
 
 function createHarness() {
@@ -366,7 +366,7 @@ describe("scheduled recovery checkpoint", () => {
       "sync-live-reserves": "completed",
       "sync-redemption-backstops": "platform_abandoned",
       "sync-kinesis-supply": "platform_abandoned",
-      "reserve-post-sync-watchdog": "platform_abandoned",
+      "cron-sentinel": "platform_abandoned",
     });
 
     const ready = await loadLiveReserveCheckpoint(db, {
@@ -379,7 +379,7 @@ describe("scheduled recovery checkpoint", () => {
       "sync-live-reserves": "completed",
       "sync-redemption-backstops": "not_started",
       "sync-kinesis-supply": "not_started",
-      "reserve-post-sync-watchdog": "not_started",
+      "cron-sentinel": "not_started",
     });
 
     await expect(prepareLiveReserveCheckpointRecoveryForSlot(db, {
@@ -432,7 +432,7 @@ describe("scheduled recovery checkpoint", () => {
       "sync-live-reserves": "not_started",
       "sync-redemption-backstops": "not_started",
       "sync-kinesis-supply": "completed",
-      "reserve-post-sync-watchdog": "not_started",
+      "cron-sentinel": "not_started",
     });
   });
 

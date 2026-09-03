@@ -173,7 +173,7 @@ const LIVE_RESERVE_CHILD_PREREQUISITES = {
   "sync-live-reserves": [],
   "sync-redemption-backstops": ["sync-live-reserves"],
   "sync-kinesis-supply": [],
-  "reserve-post-sync-watchdog": ["sync-live-reserves"],
+  "cron-sentinel": ["sync-live-reserves"],
 } as const;
 const PLATFORM_ABANDONED_ERROR = "scheduled invocation ended before terminal checkpoint";
 

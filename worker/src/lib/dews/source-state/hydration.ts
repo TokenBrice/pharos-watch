@@ -41,6 +41,7 @@ import {
   loadPreviousStressSignalCurrentRows,
   type PreviousStressSignalCurrentRow,
 } from "../../stress-signals-current-rows";
+import { classifyFreshness } from "../../status/freshness-oracle";
 
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
@@ -69,6 +70,24 @@ export interface HydrationContext extends HydrationCallbacks {
 
 function getRowAgeSec(updatedAt: number | null | undefined, nowSec: number): number | null {
   return typeof updatedAt === "number" && Number.isFinite(updatedAt) ? Math.max(0, nowSec - updatedAt) : null;
+}
+
+function isFreshAt(updatedAt: number | null | undefined, nowSec: number, maxAgeSec: number): boolean {
+  const timestamp = typeof updatedAt === "number" && Number.isFinite(updatedAt) ? updatedAt : null;
+  return classifyFreshness(
+    {
+      job: "dews-source",
+      lastSuccessAt: timestamp,
+      lastRunAt: timestamp,
+      expectedIntervalSec: maxAgeSec,
+      lastStatus: timestamp == null ? null : "ok",
+    },
+    {
+      watchAt: { absoluteSec: maxAgeSec },
+      staleAt: { absoluteSec: maxAgeSec },
+    },
+    nowSec,
+  ).state === "fresh";
 }
 
 async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<PreviousStressSignalRow[]> {
@@ -177,7 +196,7 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
     if (ageSec != null) {
       dexLiqAgeSecById.set(row.stablecoin_id, ageSec);
     }
-    if (ageSec == null || ageSec > DEWS_STALE_DEX_LIQUIDITY_SEC) {
+    if (!isFreshAt(row.updated_at, ctx.nowSec, DEWS_STALE_DEX_LIQUIDITY_SEC)) {
       dexLiqStaleIds.add(row.stablecoin_id);
       continue;
     }
@@ -189,7 +208,11 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
     return latest;
   }, null);
   const dexLiquidityAgeSec = dexLiquidityUpdatedAt != null ? Math.max(0, ctx.nowSec - dexLiquidityUpdatedAt) : null;
-  if (dexLiquidityAgeSec != null && dexLiquidityAgeSec > DEWS_STALE_DEX_LIQUIDITY_SEC) {
+  if (dexLiquidityUpdatedAt != null && !isFreshAt(
+    dexLiquidityUpdatedAt,
+    ctx.nowSec,
+    DEWS_STALE_DEX_LIQUIDITY_SEC,
+  )) {
     ctx.registerSourceFailure(
       "dex-liquidity-freshness",
       `dex_liquidity age ${dexLiquidityAgeSec}s exceeds ${DEWS_STALE_DEX_LIQUIDITY_SEC}s`,

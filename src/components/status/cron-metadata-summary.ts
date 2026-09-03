@@ -407,6 +407,24 @@ function summarizeCronDurationWatchdog(metadata: Record<string, unknown>): strin
   ];
 }
 
+function summarizeCronSentinel(metadata: Record<string, unknown>): string[] {
+  const mode = readString(metadata.mode);
+  const sources = readRecord(metadata.sources);
+  const sourceStatuses = sources
+    ? Object.entries(sources).map(([source, value]) => {
+        const status = readString(readRecord(value)?.status);
+        return status ? `${source} ${status}` : source;
+      })
+    : [];
+  const durationMetadata = readRecord(readRecord(sources?.duration)?.metadata);
+
+  return [
+    mode ? `mode ${mode}` : null,
+    sourceStatuses.length > 0 ? `sources ${sourceStatuses.join(", ")}` : null,
+    ...(durationMetadata ? summarizeCronDurationWatchdog(durationMetadata) : []),
+  ].filter((line): line is string => line != null);
+}
+
 const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => string[]> = {
   "status-self-check": summarizeStatusSelfCheck,
   "sync-dex-discovery": summarizeDexDiscovery,
@@ -419,6 +437,7 @@ const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => s
   "dispatch-telegram-alerts": summarizeTelegramAlerts,
   "snapshot-supply": summarizeSnapshotSupply,
   "telegram-degradation-watchdog": summarizeTelegramWatchdog,
+  "cron-sentinel": summarizeCronSentinel,
   "cron-duration-watchdog": summarizeCronDurationWatchdog,
 };
 

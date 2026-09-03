@@ -13,6 +13,7 @@ import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
+import { classifyFreshness } from "./status/freshness-oracle";
 
 export { normalizeWorkerCanaryMode } from "./worker-canary-mode";
 export type { WorkerCanaryMode } from "./worker-canary-mode";
@@ -127,6 +128,23 @@ const DEWS_MAX_AGE_SEC = 4 * 3600;
 const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
 const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+
+function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: number): boolean {
+  return classifyFreshness(
+    {
+      job: "canary-source",
+      lastSuccessAt: timestampSec,
+      lastRunAt: timestampSec,
+      expectedIntervalSec: maxAgeSec,
+      lastStatus: timestampSec == null ? null : "ok",
+    },
+    {
+      watchAt: { absoluteSec: maxAgeSec },
+      staleAt: { absoluteSec: maxAgeSec },
+    },
+    observedAt,
+  ).state === "fresh";
+}
 
 function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
   return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;
@@ -414,7 +432,7 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     if (!isScoreInRange(row.score)) {
       return errorResult(`latest PSI score is out of range: ${String(row.score)}`, metadata);
     }
-    if (ageSec > PSI_MAX_AGE_SEC) {
+    if (!isFreshAt(row.stored_at, observedAt, PSI_MAX_AGE_SEC)) {
       return degradedResult(`latest PSI sample is ${ageSec}s old`, metadata);
     }
     return okResult(metadata);
@@ -453,7 +471,7 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
     if (outOfRangeScores > 0) {
       return errorResult(`${outOfRangeScores} DEWS stress signals have out-of-range scores`, metadata);
     }
-    if (ageSec != null && ageSec > DEWS_MAX_AGE_SEC) {
+    if (!isFreshAt(latestComputedAt, observedAt, DEWS_MAX_AGE_SEC)) {
       return degradedResult(`latest DEWS signal is ${ageSec}s old`, metadata);
     }
     return okResult(metadata);
@@ -485,7 +503,7 @@ export async function checkReportCardCacheMethodology(db: D1Database) {
   if (active.kind === "held") {
     return degradedResult("Safety Score V9 publication is held", metadata);
   }
-  if (ageSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+  if (!isFreshAt(active.snapshot.updatedAt, Math.floor(Date.now() / 1_000), SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC)) {
     return degradedResult("Safety Score V9 publication is stale", { ...metadata, ageSec });
   }
   if (active.snapshot.cards.length === 0) {
@@ -531,10 +549,14 @@ async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
     const problems: string[] = [];
     if (!gbp) problems.push("GBP benchmark is missing");
     if (gbp?.isFallback) problems.push(`GBP benchmark is fallback (${gbp.fallbackMode ?? "unknown"})`);
-    if (fetchedAgeSec == null || fetchedAgeSec > GBP_BENCHMARK_MAX_FETCH_AGE_SEC) {
+    if (!isFreshAt(gbp?.fetchedAt ?? null, observedAt, GBP_BENCHMARK_MAX_FETCH_AGE_SEC)) {
       problems.push("GBP benchmark fetch is stale");
     }
-    if (recordAgeSec == null || recordAgeSec > GBP_BENCHMARK_MAX_RECORD_AGE_SEC) {
+    if (!isFreshAt(
+      Number.isFinite(recordDateMs) ? Math.floor(recordDateMs / 1000) : null,
+      observedAt,
+      GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
+    )) {
       problems.push("GBP benchmark observation is stale");
     }
     if (consecutiveFreshRuns < 2) {

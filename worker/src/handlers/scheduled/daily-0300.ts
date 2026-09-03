@@ -4,12 +4,10 @@ import { runPruneCronHistory } from "../../cron/prune-cron-history";
 import { runPruneDetailCache } from "../../cron/prune-detail-cache";
 import { runTelegramInactiveCleanup } from "../../cron/telegram-inactive-cleanup";
 import { runTelegramRetentionCleanup } from "../../cron/telegram-retention-cleanup";
-import { runMintBurnGrowthWatchdog } from "../../cron/mint-burn-growth-watchdog";
-import { runCronDurationWatchdog } from "../../cron/cron-duration-watchdog";
+import { runCronSentinel } from "../../cron/cron-sentinel";
 import { resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
-import { runWorkerRepairTaskRunner } from "../../lib/repair-tasks";
 
 function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
   const ddrRepairTaskRunner = resolveDdrRepairTaskRunnerConfig(runtime.env);
@@ -32,14 +30,14 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
     mode: "serial",
     label: "retention-and-telegram-housekeeping",
     implementations: {
-      "mint-burn-growth-watchdog": (signal) => runMintBurnGrowthWatchdog(runtime.db, signal),
-      "cron-duration-watchdog": (signal) => runCronDurationWatchdog(runtime.db, signal),
+      "cron-sentinel": (signal) => runCronSentinel(runtime.db, {
+        mode: "daily",
+        nowSec: Math.floor(Date.now() / 1_000),
+        repairRunnerEnabled: ddrRepairTaskRunner.enabled,
+        signal,
+      }),
       "prune-status-probe-runs": (signal) => runPruneStatusProbeRuns(runtime.db, signal),
       "prune-cron-history": (signal) => runPruneCronHistory(runtime.db, signal),
-      "worker-repair-runner": (signal) => runWorkerRepairTaskRunner(runtime.db, {
-        signal,
-        enabled: ddrRepairTaskRunner.enabled,
-      }),
       "prune-detail-cache": (signal) => runPruneDetailCache(runtime.db, signal),
       "telegram-inactive-cleanup": (signal) => runTelegramInactiveCleanup(runtime.db, signal),
       "telegram-retention-cleanup": (signal) => runTelegramRetentionCleanup(runtime.db, signal),

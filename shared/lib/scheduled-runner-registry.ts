@@ -42,11 +42,9 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   statusSelfCheckOffset: {
     jobChains: [[
-      "cron-slot-sweeper",
       "status-self-check",
       "data-invariant-canary",
-      "cron-staleness-watchdog",
-      "digest-publication-watchdog",
+      "cron-sentinel",
     ]],
   },
   sixHourlyBlacklist: {
@@ -70,7 +68,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   halfHourlyChartsOffset: {
     jobChains: [[
       "sync-dex-liquidity",
-      "dex-exit-route-turnover-watchdog",
+      "cron-sentinel",
       "prepare-safety-score-v9-input",
       "sync-stablecoin-charts",
     ]],
@@ -79,7 +77,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },
   fourHourlyReserveSync: {
-    jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply", "reserve-post-sync-watchdog"]],
+    jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply", "cron-sentinel"]],
   },
   hourlyYieldSync: {
     jobChains: [["sync-yield-data"]],
@@ -106,11 +104,9 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   daily0300Utc: {
     jobChains: [[
-      "mint-burn-growth-watchdog",
-      "cron-duration-watchdog",
+      "cron-sentinel",
       "prune-status-probe-runs",
       "prune-cron-history",
-      "worker-repair-runner",
       "prune-detail-cache",
       "telegram-inactive-cleanup",
       "telegram-retention-cleanup",
@@ -170,6 +166,7 @@ export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, Scheduled
  * purpose; anything not listed here should have a distinct job name.
  */
 export const SHARED_SCHEDULED_JOB_IDENTITIES = {
+  "cron-sentinel": ["statusSelfCheckOffset", "halfHourlyChartsOffset", "fourHourlyReserveSync", "daily0300Utc"],
   "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
   "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
   "snapshot-supply": ["quarterHourly", "daily0800Utc"],

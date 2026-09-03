@@ -41,6 +41,7 @@ export function makePublicHealth(
     mintBurnQueryError: null,
     mintBurnLastRunStatus: "ok",
     mintBurnBootstrap: false,
+    repairRunnerAutoRepairCount: null,
     circuits: {},
     openCircuitCount: 0,
     circuitImpactStatus: "healthy",

@@ -205,6 +205,7 @@ export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
 export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
 export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
+export type CronFreshnessSurface = "consumer" | "none";
 
 const _cronSchedules: Record<string, CronScheduleExpression> = {};
 const _cronTriggerSchedules: Record<string, readonly string[]> = {};
@@ -244,11 +245,14 @@ export interface CronJobDefinition {
   maxConnections?: number;
   /** Jobs with the same trigger and concurrency group are chained, so their peak is max(), not sum(). */
   connectionGroup?: string;
+  /** Whether this job publishes data whose age is meaningful to consumers. */
+  freshnessSurface?: CronFreshnessSurface;
 }
 
 export interface CronJobMeta extends CronJobDefinition {
   schedule: CronScheduleExpression;
   statusImpact: CronStatusImpact;
+  freshnessSurface: CronFreshnessSurface;
 }
 
 export interface CronConnectionBudgetDefinition {
@@ -382,21 +386,13 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "dews-psi-chain",
   },
   {
-    job: "cron-slot-sweeper",
-    label: "Cron slot sweeper",
-    group: "quarter-hourly",
-    scheduleKey: "statusSelfCheckOffset",
-    triggerMode: "isolated",
-    maxConnections: 1, // DB stale-slot reconciliation
-    connectionGroup: "status-self-check-chain",
-  },
-  {
     job: "reserve-recovery",
     label: "Reserve recovery",
     group: "five-minute",
     scheduleKey: "fiveMinuteReserveRecovery",
     triggerMode: "isolated",
     statusImpact: "critical",
+    freshnessSurface: "none",
     maxConnections: 2,
     connectionGroup: "reserve-recovery-chain",
   },
@@ -419,20 +415,12 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "status-self-check-chain",
   },
   {
-    job: "cron-staleness-watchdog",
-    label: "Cron staleness watchdog",
+    job: "cron-sentinel",
+    label: "Cron sentinel",
     group: "quarter-hourly",
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
-    maxConnections: 1, // DB freshness inspection
-    connectionGroup: "status-self-check-chain",
-  },
-  {
-    job: "digest-publication-watchdog",
-    label: "Digest publication watchdog",
-    group: "quarter-hourly",
-    scheduleKey: "statusSelfCheckOffset",
-    triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 1, // One serial map-manifest fetch or operator alert; D1 reads are local binding work.
     connectionGroup: "status-self-check-chain",
   },
@@ -442,6 +430,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -451,6 +440,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // D1-only deterministic planning; delivery remains in the pending drain
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -460,6 +450,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 1, // DB inspection plus one serial durable-broker webhook retry
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -469,6 +460,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only DELETE of expired pending disambiguation rows
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -540,16 +532,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
     maxConnections: 0, // D1-only consumer of the complete source-stage generation.
-    connectionGroup: "half-hourly-scoring-charts-chain",
-  },
-  {
-    job: "dex-exit-route-turnover-watchdog",
-    label: "DEX exit-route turnover watchdog",
-    group: "multi-hourly",
-    intervalSec: 2 * 3600,
-    scheduleKey: "halfHourlyChartsOffset",
-    triggerMode: "shared",
-    maxConnections: 0, // D1-only comparison against the compact prior publication snapshot.
     connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
@@ -701,15 +683,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "reserve-sync-chain",
   },
   {
-    job: "reserve-post-sync-watchdog",
-    label: "Reserve post-sync watchdog",
-    group: "multi-hourly",
-    scheduleKey: "fourHourlyReserveSync",
-    triggerMode: "shared",
-    maxConnections: 1, // DB drift/cache/age checks
-    connectionGroup: "reserve-sync-chain",
-  },
-  {
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
@@ -750,6 +723,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only DELETE
   },
   {
@@ -758,15 +732,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
-  },
-  {
-    job: "worker-repair-runner",
-    label: "Worker repair runner",
-    group: "daily",
-    scheduleKey: "daily0300Utc",
-    triggerMode: "isolated",
-    maxConnections: 0, // DB-only due/stale repair-debt telemetry
   },
   {
     job: "prune-detail-cache",
@@ -774,6 +741,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only scan + DELETE of detail:* cache rows
   },
   {
@@ -783,6 +751,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 7 * DAY_SECONDS,
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only cascade DELETE per inactive chat
   },
   {
@@ -791,23 +760,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only retention DELETEs and target reconciliation
-  },
-  {
-    job: "mint-burn-growth-watchdog",
-    label: "Mint/burn growth budget watchdog",
-    group: "daily",
-    scheduleKey: "daily0300Utc",
-    triggerMode: "isolated",
-    maxConnections: 1, // DB row-count read
-  },
-  {
-    job: "cron-duration-watchdog",
-    label: "Cron duration budget watchdog",
-    group: "daily",
-    scheduleKey: "daily0300Utc",
-    triggerMode: "isolated",
-    maxConnections: 0, // D1-only duration aggregates; no outbound fetches.
   },
 ] as const;
 
@@ -818,6 +772,7 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
     intervalSec,
     schedule: CRON_SCHEDULES[definition.scheduleKey],
     statusImpact: definition.statusImpact ?? "watch",
+    freshnessSurface: definition.freshnessSurface ?? "consumer",
   };
 });
 

@@ -25,11 +25,6 @@ import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import { type CacheFreshnessDiagnostic } from "./api-freshness";
 
-function readRepairRunnerAutoRepairCount(crons: StatusResponse["crons"]): number | null {
-  const value = crons["worker-repair-runner"]?.lastRun?.metadata?.autoRepairCount;
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
-}
-
 export interface RawStatusComputation {
   dbHealthy: boolean;
   availabilityStatus: StatusResponse["availabilityStatus"];
@@ -183,7 +178,7 @@ export async function computeRawStatus(db: D1Database, now: number) {
     onchainAssessment,
     reserveCompositionStatus: reserveAssessment.status,
     activePriceCoverageImpactStatus: publicHealth.activePriceCoverageImpactStatus,
-    repairRunnerAutoRepairCount: readRepairRunnerAutoRepairCount(crons),
+    repairRunnerAutoRepairCount: publicHealth.repairRunnerAutoRepairCount,
     activePriceCoverage: publicHealth.activePriceCoverage,
     onchainAssessmentCauses: onchainAssessment.causes,
     reserveCompositionQueryFailed,

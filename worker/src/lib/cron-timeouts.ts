@@ -48,6 +48,7 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   // a controlled error instead of losing the invocation without a cron_runs row.
   "sync-stablecoins": 8 * 60_000,
   "reserve-recovery": 13 * 60_000,
+  "cron-sentinel": 13 * 60_000,
   "sync-live-reserves": 12 * 60_000,
   // The producer stops RPC work at eight minutes, leaving one minute to publish
   // a complete quote generation and record the cron result.
@@ -85,7 +86,6 @@ export const PROGRESS_TELEMETRY_SKIP_JOBS: Readonly<Record<string, true>> = {
   "stability-index": true,
   "compute-dews": true,
   "project-tape": true,
-  "cron-slot-sweeper": true,
   "telegram-disambiguation-cleanup": true,
   "telegram-pulse-snapshot": true,
   "snapshot-supply": true,
@@ -93,13 +93,8 @@ export const PROGRESS_TELEMETRY_SKIP_JOBS: Readonly<Record<string, true>> = {
   "prune-status-probe-runs": true,
   "prune-cron-history": true,
   "prune-detail-cache": true,
-  "cron-staleness-watchdog": true,
-  "digest-publication-watchdog": true,
+  "cron-sentinel": true,
   "telegram-degradation-watchdog": true,
-  "dex-exit-route-turnover-watchdog": true,
-  "reserve-post-sync-watchdog": true,
-  "mint-burn-growth-watchdog": true,
-  "cron-duration-watchdog": true,
 };
 
 export function shouldSkipCronProgress(job: string): boolean {

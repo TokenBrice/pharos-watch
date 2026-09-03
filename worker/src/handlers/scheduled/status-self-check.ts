@@ -1,8 +1,6 @@
-import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
-import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
-import { runDigestPublicationWatchdog } from "../../cron/digest-publication-watchdog";
 import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
+import { runCronSentinel } from "../../cron/cron-sentinel";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { resolveCloudflareD1StatusConfig } from "../../lib/env";
 import { normalizeWorkerCanaryMode } from "../../lib/worker-canary-mode";
@@ -14,11 +12,6 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
       mode: "serial",
       label: "status-self-check",
       tasks: [
-        {
-          job: "cron-slot-sweeper",
-          errorMessage: "[cron] cron-slot-sweeper failed in isolated slot:",
-          run: (signal) => runCronSlotSweeper(runtime.db, signal, runtime.workerVersion ?? null),
-        },
         {
           job: "status-self-check",
           errorMessage: "[cron] status-self-check failed in isolated slot:",
@@ -51,23 +44,14 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
             }),
         },
         {
-          job: "cron-staleness-watchdog",
-          errorMessage: "[cron] cron-staleness-watchdog failed in isolated slot:",
-          run: (signal) =>
-            runCronStalenessWatchdog(runtime.db, signal, {
-              operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
-            }),
-        },
-        {
-          job: "digest-publication-watchdog",
-          errorMessage: "[cron] digest-publication-watchdog failed in isolated slot:",
-          run: (signal) =>
-            runDigestPublicationWatchdog(
-              runtime.db,
-              Math.floor(Date.now() / 1_000),
-              { operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env) },
-              signal,
-            ),
+          job: "cron-sentinel",
+          errorMessage: "[cron] cron-sentinel failed in isolated slot:",
+          run: (signal) => runCronSentinel(runtime.db, {
+            mode: "status",
+            nowSec: Math.floor(Date.now() / 1_000),
+            operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
+            signal,
+          }),
         },
       ],
     },
