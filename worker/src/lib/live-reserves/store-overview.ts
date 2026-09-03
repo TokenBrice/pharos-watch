@@ -23,6 +23,7 @@ import { parseReserveCompositionRow } from "./store-row-decoding";
 
 
 interface LiveReserveResumePointer {
+  state: string;
   next_item_key: string | null;
   items_done: number;
   items_total: number;
@@ -33,11 +34,10 @@ async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveR
   try {
     return await db
       .prepare(
-        `SELECT next_item_key, items_done, items_total, updated_at
+        `SELECT state, next_item_key, items_done, items_total, updated_at
            FROM worker_scheduled_checkpoints
           WHERE schedule_key = 'fourHourlyReserveSync'
             AND job = 'sync-live-reserves'
-            AND state IN ('running', 'recovering', 'ready')
           ORDER BY slot_started_at DESC, attempt_no DESC
           LIMIT 1`,
       )
@@ -277,7 +277,9 @@ export async function computeReserveCompositionOverview(
     loadLatestLiveReserveResumePointer(db),
   ]);
 
-  const pointerPending = checkpoint?.next_item_key != null
+  const pointerPending = checkpoint != null
+    && (checkpoint.state === "running" || checkpoint.state === "recovering" || checkpoint.state === "ready")
+    && checkpoint.next_item_key != null
     && checkpoint.items_done < checkpoint.items_total;
   const pointerDeferredCount = pointerPending
     ? Math.max(0, checkpoint!.items_total - checkpoint!.items_done)

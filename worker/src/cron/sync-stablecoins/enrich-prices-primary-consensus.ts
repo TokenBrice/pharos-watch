@@ -13,7 +13,7 @@ import {
   type PrimaryDexCandidateTelemetry,
   type PrimaryCollectedQuotes,
 } from "../../lib/primary-price-collector";
-import type { DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
+import type { DexPriceRow, DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
 import type { ValidationContextResolver } from "./pricing";
 import type {
   PrimaryConsensusQuoteMaps,
@@ -22,6 +22,17 @@ import type {
 } from "./enrich-prices-primary-provider-collection";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { isUsableGeckoId, type PriceValidationStats } from "./enrich-prices-primary-shared";
+
+const VUSD_PRIMARY_DEX_AGGREGATE_ID = "vusd-virtue";
+
+function isPrimaryPublicationDexAggregateEligible(
+  assetId: string,
+  row: DexPriceRow,
+  nowSec: number,
+): boolean {
+  const trustTier = assetId === VUSD_PRIMARY_DEX_AGGREGATE_ID ? "ui" : "depeg";
+  return isTrustedDexPriceRow(row, nowSec, trustTier);
+}
 
 export function buildPrimaryConsensusResults(params: {
   candidates: PeggedAsset[];
@@ -76,7 +87,9 @@ export function buildPrimaryConsensusResults(params: {
       protocolSources: params.dexPriceSources.get(asset.id),
       dexAggregateQuote: (() => {
         const dexRow = params.dexRows.get(asset.id);
-        return dexRow && isTrustedDexPriceRow(dexRow, params.nowSec, "depeg") ? dexRow : undefined;
+        return dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec)
+          ? dexRow
+          : undefined;
       })(),
     };
 

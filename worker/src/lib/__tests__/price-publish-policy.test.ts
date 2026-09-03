@@ -60,6 +60,20 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
     expect(decision.reason).toBe("severe_downside_requires_corroboration");
   });
 
+  it("keeps a VUSD dex-promoted aggregate subject to severe-downside corroboration", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.38,
+      source: "dex-promoted",
+      confidence: "single-source",
+      agreeSources: ["dex-promoted"],
+      candidatePrices: { "dex-promoted": 0.38 },
+      validationContext: { ...USD_CONTEXT, stablecoinId: "vusd-virtue" },
+    });
+
+    expect(decision.accepted).toBe(false);
+    expect(decision.reason).toBe("severe_downside_requires_corroboration");
+  });
+
   it("accepts severe downside when 2+ candidate sources confirm severe downside", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.38,

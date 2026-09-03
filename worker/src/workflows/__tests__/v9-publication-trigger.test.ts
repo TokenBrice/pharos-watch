@@ -66,7 +66,7 @@ describe("V9 publication Workflow trigger", () => {
 
     expect(order).toEqual(["cron", "workflow"]);
     expect(workflow.create).toHaveBeenCalledWith({
-      id: "v9-publication:1788433200",
+      id: "v9-publication-1788433200",
     });
   });
 
@@ -86,7 +86,7 @@ describe("V9 publication Workflow trigger", () => {
 
     expect(result).toEqual({ jobsRun: ["compute-safety-score-v9"] });
     expect(workflow.get).toHaveBeenCalledWith(
-      "v9-publication:1788433200",
+      "v9-publication-1788433200",
     );
   });
 });

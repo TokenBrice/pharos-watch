@@ -411,13 +411,13 @@ export function safetyScoreV9WorkflowInstanceId(
   if (!Number.isInteger(slotStartedAt) || slotStartedAt < 0) {
     throw new Error("Safety Score V9 Workflow slot must be epoch seconds");
   }
-  return `v9-publication:${slotStartedAt}`;
+  return `v9-publication-${slotStartedAt}`;
 }
 
 export function safetyScoreV9WorkflowSlotStartedAt(
   instanceId: string,
 ): number {
-  const match = /^v9-publication:(\d+)$/u.exec(instanceId);
+  const match = /^v9-publication-(\d+)$/u.exec(instanceId);
   const slotStartedAt = match === null ? Number.NaN : Number(match[1]);
   if (!Number.isSafeInteger(slotStartedAt) || slotStartedAt < 0) {
     throw new Error("Safety Score V9 Workflow instance id is invalid");

@@ -12,7 +12,7 @@ const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
 export function safetyScoreV9WorkflowInstanceId(
   slotStartedAt: number,
 ): string {
-  return `v9-publication:${slotStartedAt}`;
+  return `v9-publication-${slotStartedAt}`;
 }
 
 async function triggerSafetyScoreV9ShadowWorkflow(
@@ -40,6 +40,7 @@ async function triggerSafetyScoreV9ShadowWorkflow(
       event: "safety_score_v9_shadow_workflow_trigger_failed",
       job: "compute-safety-score-v9-workflow",
       message: "Safety Score V9 shadow Workflow could not be created",
+      error,
       metadata: {
         instanceId: id,
         slotStartedAt: runtime.slotStartedAt,

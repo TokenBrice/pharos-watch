@@ -345,6 +345,7 @@ function normalizeFreshSyncedAt(value: number | null | undefined, nowSec: number
 interface LiveParentTrustOptions {
   allowFreshNonReplaySafeParent?: boolean;
   allowFreshReplaySafeSingleSourceParent?: boolean;
+  requireReportedSingleSourceConfidence?: boolean;
 }
 
 interface TrustedInheritedParentResult {
@@ -399,6 +400,7 @@ function resolveTrustedInheritedParent(
     options?.allowFreshReplaySafeSingleSourceParent === true &&
     replaySafeCoreParts.length === 1 &&
     (parentConfidence === "single-source" || parentConfidence === "high") &&
+    (options.requireReportedSingleSourceConfidence !== true || parentConfidence === "single-source") &&
     !cachedSource
   ) {
     // A single replay-safe core member is admitted under single-source

@@ -1742,6 +1742,7 @@ describe("authoritative-price-sources", () => {
   it("keeps scoped M0 wrapper overrides single-source when inheriting a fresh replay-safe single-source parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchLiveOverrides([
+      asset("m-m0", { circulating: { peggedUSD: 300_000_000 } }),
       asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
       asset("xo-exodus", { circulating: { peggedUSD: 2_400_000 } }),
       freshParent("wm-m0", 0.999674, "coingecko", {
@@ -1750,6 +1751,17 @@ describe("authoritative-price-sources", () => {
       }),
     ]);
 
+    expect(overrides.get("m-m0")).toMatchObject({
+      price: 0.999674,
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentSource: "coingecko",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
     expect(overrides.get("usdk-kast")).toMatchObject({
       price: 0.999674,
       source: "coingecko",
@@ -1802,16 +1814,29 @@ describe("authoritative-price-sources", () => {
     const overrides = await fetchLiveOverrides([
       unpricedChild("m-m0"),
       unpricedChild("usdn-noble"),
-      freshParent("wm-m0", 0.999812, "coingecko+raydium-dex", { nowSec }),
+      freshParent("wm-m0", 0.999812, "coingecko", {
+        nowSec,
+        priceConfidence: "single-source",
+      }),
     ]);
 
     expect(overrides.get("m-m0")).toMatchObject({
       price: 0.999812,
-      metadata: { inheritedFrom: "wm-m0" },
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
     });
     expect(overrides.get("usdn-noble")).toMatchObject({
       price: 0.999812,
-      metadata: { inheritedFrom: "m-m0" },
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "m-m0",
+        parentReplaySafe: true,
+      },
     });
   });
 

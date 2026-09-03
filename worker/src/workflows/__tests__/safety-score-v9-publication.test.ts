@@ -37,6 +37,7 @@ import {
   gateSafetyScoreV9ShadowPublication,
   runSafetyScoreV9PublicationWorkflow,
   safetyScoreV9WorkflowInstanceId,
+  safetyScoreV9WorkflowSlotStartedAt,
   writeSafetyScoreV9ShadowPublication,
 } from "../safety-score-v9-publication";
 import {
@@ -125,7 +126,7 @@ class ReplayFakeStep {
 }
 
 const EVENT = {
-  instanceId: "v9-publication:1788433200",
+  instanceId: "v9-publication-1788433200",
   timestamp: new Date("2026-09-03T11:00:00.000Z"),
   workflowName: "safety-score-v9-publication",
   payload: {},
@@ -139,10 +140,14 @@ describe("Safety Score V9 publication Workflow", () => {
 
   it("uses the cron slot as the deterministic Workflow instance id", () => {
     expect(safetyScoreV9WorkflowInstanceId(1788433200)).toBe(
-      "v9-publication:1788433200",
+      "v9-publication-1788433200",
     );
     expect(scheduledInstanceId(1788433200)).toBe(
       safetyScoreV9WorkflowInstanceId(1788433200),
+    );
+    expect(safetyScoreV9WorkflowSlotStartedAt("v9-publication-1788433200")).toBe(1788433200);
+    expect(() => safetyScoreV9WorkflowSlotStartedAt("v9-publication:1788433200")).toThrow(
+      "Safety Score V9 Workflow instance id is invalid",
     );
   });
 
