@@ -151,6 +151,52 @@ describe("Safety Score V9 publication Workflow", () => {
     );
   });
 
+  it("takes the slot from params when the runtime event carries no instance id", async () => {
+    // Production instance v9-publication-1788466920 errored before its first
+    // step because the runtime event did not expose `instanceId`, so the slot
+    // must come from the trigger's `params` payload.
+    const step = new ReplayFakeStep();
+    const { db } = createRecordingDb({
+      "report-cards:fixed-input:exact": {
+        value: "fixed-input-envelope",
+        updatedAt: 1788433200,
+      },
+    });
+    computeSafetyScoreV9.mockImplementation(async (compilerDb: D1Database) => {
+      for (const [key, value] of [
+        ["report-cards:v9", "canonical-publication-envelope"],
+        ["report-cards:v9:publication-health", "canonical-health"],
+        ["report-cards:v9:last-attempt", "canonical-attempt"],
+      ] as const) {
+        await compilerDb.prepare(
+          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        ).bind(key, value, 1788433200).run();
+      }
+      return {
+        status: "ok",
+        itemCount: 200,
+        metadata: JSON.stringify({
+          sourceGenerationId: "report-cards:v9:1788433200",
+          baseInputGenerationId: "report-cards-input:v1:1788433200",
+          publication: { status: "published" },
+        }),
+      };
+    });
+    const runtimeEvent = {
+      timestamp: EVENT.timestamp,
+      workflowName: EVENT.workflowName,
+      payload: { slotStartedAt: 1788433200 },
+    } as unknown as typeof EVENT;
+
+    await expect(
+      runSafetyScoreV9PublicationWorkflow({ DB: db }, runtimeEvent, step as unknown as WorkflowStep),
+    ).resolves.toMatchObject({
+      status: "complete",
+      instanceId: "v9-publication-1788433200",
+    });
+    expect(step.calls[0]?.name).toBe("load fixed input");
+  });
+
   it("replays completed steps without repeating compiler or writer effects", async () => {
     const step = new ReplayFakeStep();
     const { db, statements } = createRecordingDb({

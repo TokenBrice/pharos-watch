@@ -25,7 +25,10 @@ async function triggerSafetyScoreV9ShadowWorkflow(
     }
   ).SAFETY_SCORE_V9_WORKFLOW;
   try {
-    await workflow.create({ id });
+    // `params` is the documented input channel. The instance id carries the
+    // same slot for human/idempotency use, but the Workflow must not depend on
+    // reading its own id back out of the runtime event.
+    await workflow.create({ id, params: { slotStartedAt: runtime.slotStartedAt } });
   } catch (error) {
     try {
       const existing = await workflow.get(id);

@@ -65,8 +65,11 @@ describe("V9 publication Workflow trigger", () => {
     await runV9PublicationSlot(runtimeWith("shadow", workflow));
 
     expect(order).toEqual(["cron", "workflow"]);
+    // The Workflow reads its slot from params; the id stays deterministic for
+    // idempotency, but is not the input channel.
     expect(workflow.create).toHaveBeenCalledWith({
       id: "v9-publication-1788433200",
+      params: { slotStartedAt: 1788433200 },
     });
   });
 
