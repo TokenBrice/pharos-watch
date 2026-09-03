@@ -30,6 +30,14 @@ import {
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
+const STRUCTURAL_TEST_PATH_PATTERNS = [
+  /(^|\/)__tests__(?:\/|$)/,
+  /\.test\.tsx?$/,
+  /(^|\/)test-utils(?:\/|$)/,
+  /(^|\/)test-helpers(?:\/|$)/,
+  /(^|\/)__mocks__(?:\/|$)/,
+  /(^|\/)fixtures(?:\/|$)/,
+];
 
 interface PrStaticCheckOptions {
   argv?: readonly string[];
@@ -52,12 +60,19 @@ const PARALLEL_STATIC_CHECKS = new Set([
 ]);
 const DEFERRED_STATIC_CHECKS = new Set<string>([EDITORIAL_POLICY_TEST_COMMAND.name]);
 
-function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
-  return changedFiles.some(
-    (file) =>
+type StructuralCheckImpact = "none" | "test-only" | "production";
+
+function getStructuralCheckImpact(changedFiles: readonly string[]): StructuralCheckImpact {
+  let hasTestImpact = false;
+  for (const file of changedFiles) {
+    const isStructuralPath =
       STRUCTURAL_CHECK_EXACT_PATHS.has(file) ||
-      STRUCTURAL_CHECK_PREFIXES.some((prefix) => file.startsWith(prefix)),
-  );
+      STRUCTURAL_CHECK_PREFIXES.some((prefix) => file.startsWith(prefix));
+    if (!isStructuralPath) continue;
+    if (!STRUCTURAL_TEST_PATH_PATTERNS.some((pattern) => pattern.test(file))) return "production";
+    hasTestImpact = true;
+  }
+  return hasTestImpact ? "test-only" : "none";
 }
 
 function formatNpmFailure(result: ExecutionResult): string {
@@ -91,8 +106,13 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
     commands.push({ name: "audit:deps" });
   }
 
-  if (hasStructuralCheckImpact(changedFiles)) {
-    commands.push({ name: "check:structural" });
+  switch (getStructuralCheckImpact(changedFiles)) {
+    case "production":
+      commands.push({ name: "check:structural" });
+      break;
+    case "test-only":
+      commands.push({ name: "check:clone-ratchet" }, { name: "check:cron-console-usage" });
+      break;
   }
   if (hasEditorialPolicyImpact(changedFiles)) {
     commands.push({

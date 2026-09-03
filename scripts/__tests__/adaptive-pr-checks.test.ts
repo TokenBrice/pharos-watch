@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
-import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
+import { ALWAYS_RUN_TEST_FILES, parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import {
   buildPrStaticCheckPlan,
   partitionPrStaticCheckPlan,
@@ -132,6 +132,17 @@ describe("adaptive PR checks", () => {
     );
   });
 
+  it("keeps the always-on contract diet at exactly thirty unique files", () => {
+    expect(ALWAYS_RUN_TEST_FILES).toHaveLength(30);
+    expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(30);
+  });
+
+  it("selects importing owners for changed critical source files", () => {
+    const selected = selectPrTestFiles([], ALWAYS_RUN_TEST_FILES, ["worker/src/lib/auth.ts"]);
+
+    expect(selected).toContain("worker/src/lib/__tests__/auth.test.ts");
+  });
+
   it("selects impacted generated artifacts and downstream dependants", () => {
     const registry = [
       { id: "catalog", sourcePaths: ["data/**"] },
@@ -220,6 +231,33 @@ describe("adaptive PR checks", () => {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");
     }
   });
+  it("uses only the lightweight structural checks for test-only changes", () => {
+    const names = buildPrStaticCheckPlan(["worker/src/cron/__tests__/x.test.ts"]).commands.map(
+      (command) => command.name,
+    );
+    expect(names.filter((name) => ["check:structural", "check:clone-ratchet", "check:cron-console-usage"].includes(name))).toEqual([
+      "check:clone-ratchet",
+      "check:cron-console-usage",
+    ]);
+  });
+
+  it("keeps the full structural chain when production and test paths are mixed", () => {
+    const names = buildPrStaticCheckPlan([
+      "worker/src/cron/__tests__/x.test.ts",
+      "worker/src/cron/x.ts",
+    ]).commands.map((command) => command.name);
+    expect(names).toContain("check:structural");
+    expect(names).not.toContain("check:clone-ratchet");
+    expect(names).not.toContain("check:cron-console-usage");
+  });
+
+  it("keeps the full structural chain for scripts CI sources", () => {
+    const names = buildPrStaticCheckPlan(["scripts/ci/foo.ts"]).commands.map((command) => command.name);
+    expect(names).toContain("check:structural");
+    expect(names).not.toContain("check:clone-ratchet");
+    expect(names).not.toContain("check:cron-console-usage");
+  });
+
   it("runs the editorial policy gate for every registered extractor family", () => {
     const representativePaths = [
       "data/ai-summaries.json",
