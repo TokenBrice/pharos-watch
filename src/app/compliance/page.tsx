@@ -152,7 +152,7 @@ const route = createClientFeaturePage({
     description: complianceDescription,
     ogImage: `${SITE_URL}/og-card.png`,
   },
-  loadClient: () => import("@/components/compliance/compliance-client").then((m) => ({ default: m.ComplianceClient })),
+  loadClient: () => import("./client").then((m) => ({ default: m.ComplianceClient })),
   loading: <ComplianceContentLoadingState />,
   shell: {
     breadcrumbName: "Compliance",
