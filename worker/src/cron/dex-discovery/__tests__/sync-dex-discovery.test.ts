@@ -249,10 +249,10 @@ describe("syncDexDiscovery", () => {
       runSeq: 1,
       tierBreakdown: {
         t1: 1,
-        t2: 1,
+        t2: 0,
         t3: 0,
         dormant: 0,
-        skipped: 0,
+        skipped: 1,
       },
     });
 
