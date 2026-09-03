@@ -1,23 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Build-time projection of `shared/data/stablecoins/coins.generated.json`
- * into slim client- and Worker-facing JSON consumed by
+ * Build-time projections of `shared/data/stablecoins/coins.generated.json`
+ * into compact browser- and Worker-facing JSON consumed by
  * `shared/lib/stablecoins/client-registry.ts`, the compliance route, and the
  * bundled Telegram Mini App catalog.
  *
- * Client surfaces read a curated subset of the full generated registry fields
- * for routing, labels, filtering, classification, reserve coverage summaries,
- * mint-authority coverage classification, and portfolio exposure. This generator
- * drops fields that still belong on server-only paths (`contracts`, `dependencies`,
- * `blacklistabilityReview`, mint-authority review evidence, `featuredContent`,
- * obituary prose, etc.) and emits an array with deterministic key ordering.
- *
- * The output files are checked in (not generated at runtime) so Next.js client
- * bundles can `import` them directly without runtime fetches.
+ * The browser registry is split into one small canonical list and one
+ * on-demand detail JSON per coin. The list is intentionally limited to
+ * identity, lifecycle, filtering, and compact badge fields; evidence-heavy
+ * metadata is loaded only when a detail surface asks for it.
  *
  * Modes:
- *   node scripts/build-data/build-client-registry.mjs           # write file
+ *   node scripts/build-data/build-client-registry.mjs           # write files
  *   node scripts/build-data/build-client-registry.mjs --check   # CI guard
  */
 
@@ -36,7 +31,8 @@ const REPO_ROOT = resolve(__dirname, "../..");
 const SOURCE_JSON_REL = "shared/data/stablecoins/coins.generated.json";
 const CANONICAL_ORDER_JSON_REL = "shared/data/stablecoins/canonical-order.json";
 const LISTING_DECISIONS_JSON_REL = "shared/data/stablecoins/listing-decisions.json";
-const OUTPUT_JSON_REL = "shared/data/stablecoins/coins.client.generated.json";
+const LIST_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.client.list.generated.json";
+const DETAIL_OUTPUT_DIR_REL = "shared/data/stablecoins/coins.client.detail";
 const COMPLIANCE_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.compliance.generated.json";
 const TELEGRAM_MINI_APP_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.telegram-mini-app.generated.json";
 const WORKER_RUNTIME_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.worker-runtime.generated.json";
@@ -44,19 +40,32 @@ const CLIENT_META_TS_REL = "shared/types/stablecoin-client-meta.ts";
 const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const CANONICAL_ORDER_JSON_ABS = resolve(REPO_ROOT, CANONICAL_ORDER_JSON_REL);
 const LISTING_DECISIONS_JSON_ABS = resolve(REPO_ROOT, LISTING_DECISIONS_JSON_REL);
-const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
+const LIST_OUTPUT_JSON_ABS = resolve(REPO_ROOT, LIST_OUTPUT_JSON_REL);
+const DETAIL_OUTPUT_DIR_ABS = resolve(REPO_ROOT, DETAIL_OUTPUT_DIR_REL);
 const COMPLIANCE_OUTPUT_JSON_ABS = resolve(REPO_ROOT, COMPLIANCE_OUTPUT_JSON_REL);
 const TELEGRAM_MINI_APP_OUTPUT_JSON_ABS = resolve(REPO_ROOT, TELEGRAM_MINI_APP_OUTPUT_JSON_REL);
 const WORKER_RUNTIME_OUTPUT_JSON_ABS = resolve(REPO_ROOT, WORKER_RUNTIME_OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
-const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
+const CLIENT_LIST_FIELDS_EXPORT = "STABLECOIN_CLIENT_LIST_FIELDS";
+const CLIENT_DETAIL_FIELDS_EXPORT = "STABLECOIN_CLIENT_DETAIL_FIELDS";
 const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
 const GENIUS_COMPLIANCE_FIELDS_EXPORT = "GENIUS_COMPLIANCE_PROFILE_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
+const MINT_AUTHORITY_STATUS_FIELD = "mintAuthorityStatus";
+const MICA_COMPLIANCE_FIELDS = [
+  "status",
+  "tokenType",
+  "authorizationType",
+  "competentAuthority",
+  "authorizedEntity",
+  "significant",
+  "references",
+];
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
 const GENIUS_FIELD = "genius";
 const LISTING_CLASS_FIELD = "listingClass";
+const CHAIN_IDS_FIELD = "chainIds";
 const LISTING_CLASS_VALUES = new Set([
   "core-stablecoin",
   "cash-equivalent",
@@ -64,7 +73,6 @@ const LISTING_CLASS_VALUES = new Set([
   "stable-value-investment",
   "excluded",
 ]);
-
 function readListingClassById(sourcePath = LISTING_DECISIONS_JSON_ABS) {
   const parsed = JSON.parse(readFileSync(sourcePath, "utf8"));
   if (!isPlainObject(parsed?.listingClassById)) {
@@ -136,7 +144,11 @@ function readStringLiteralArrayExport(exportName, sourcePath = CLIENT_META_TS_AB
 }
 
 export function readCanonicalClientFields(sourcePath = CLIENT_META_TS_ABS) {
-  return readStringLiteralArrayExport(CLIENT_FIELDS_EXPORT, sourcePath);
+  return readStringLiteralArrayExport(CLIENT_LIST_FIELDS_EXPORT, sourcePath);
+}
+
+export function readCanonicalClientDetailFields(sourcePath = CLIENT_META_TS_ABS) {
+  return readStringLiteralArrayExport(CLIENT_DETAIL_FIELDS_EXPORT, sourcePath);
 }
 
 export function readGeniusClientFields(sourcePath = CLIENT_META_TS_ABS) {
@@ -150,27 +162,78 @@ export function readGeniusComplianceFields(sourcePath = CLIENT_META_TS_ABS) {
 const DEFAULT_GENIUS_CLIENT_FIELDS = readGeniusClientFields();
 const DEFAULT_GENIUS_COMPLIANCE_FIELDS = readGeniusComplianceFields();
 
-/** @returns {Partial<StablecoinClientMeta>} */
-export function projectCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
-  const slim = {};
+function projectRawCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
+  const projected = {};
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(coin, field)) {
-      slim[field] = field === GENIUS_FIELD ? projectGeniusProfile(coin[field], geniusClientFields) : coin[field];
+      projected[field] = field === GENIUS_FIELD ? projectGeniusProfile(coin[field], geniusClientFields) : coin[field];
     }
   }
+  return projected;
+}
+
+/** @returns {Partial<StablecoinClientMeta>} */
+export function projectCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
+  const projected = projectRawCoin(coin, clientFields, geniusClientFields);
   const blacklistStatus = projectBlacklistStatus(coin);
-  if (blacklistStatus !== undefined) {
-    slim[BLACKLIST_STATUS_FIELD] = blacklistStatus;
+  if (blacklistStatus !== undefined) projected[BLACKLIST_STATUS_FIELD] = blacklistStatus;
+  const mintAuthoritySummary = projectMintAuthoritySummary(coin);
+  if (mintAuthoritySummary) projected[MINT_AUTHORITY_SUMMARY_FIELD] = mintAuthoritySummary;
+  const liveReserveAdapter = projectLiveReserveAdapter(coin);
+  if (liveReserveAdapter !== undefined) projected[LIVE_RESERVE_ADAPTER_FIELD] = liveReserveAdapter;
+  return projected;
+}
+
+export function projectChainIds(coin) {
+  const chains = new Set();
+  for (const deployment of [...(coin?.contracts ?? []), ...(coin?.tradedContracts ?? [])]) {
+    if (typeof deployment?.chain === "string" && deployment.chain.length > 0) {
+      chains.add(deployment.chain);
+    }
   }
+  return [...chains].sort();
+}
+
+function projectEffectiveMechanismArchetype(coin, sourceById) {
+  if (coin?.archetypeOverride === true || !coin?.variantOf) {
+    return coin?.mechanismArchetype;
+  }
+  return sourceById?.get(coin.variantOf)?.mechanismArchetype ?? coin.mechanismArchetype;
+}
+
+export function projectListCoin(coin, listFields, listingClass, sourceById) {
+  const projected = projectRawCoin(coin, listFields);
+  const mechanismArchetype = projectEffectiveMechanismArchetype(coin, sourceById);
+  if (mechanismArchetype !== undefined) projected.mechanismArchetype = mechanismArchetype;
+  projected[CHAIN_IDS_FIELD] = projectChainIds(coin);
+  projected[LISTING_CLASS_FIELD] = listingClass;
+  const blacklistStatus = projectBlacklistStatus(coin);
+  if (blacklistStatus !== undefined) projected[BLACKLIST_STATUS_FIELD] = blacklistStatus;
+  const custodyModel = coin?.custodyModel;
+  if (typeof custodyModel === "string") projected.custodyModel = custodyModel;
   const mintAuthoritySummary = projectMintAuthoritySummary(coin);
   if (mintAuthoritySummary) {
-    slim[MINT_AUTHORITY_SUMMARY_FIELD] = mintAuthoritySummary;
+    projected[MINT_AUTHORITY_SUMMARY_FIELD] = {
+      mintPath: mintAuthoritySummary.mintPath,
+      authorityPosture: mintAuthoritySummary.authorityPosture,
+      confidence: mintAuthoritySummary.confidence,
+      ...(mintAuthoritySummary.inheritedFrom ? { inheritedFrom: mintAuthoritySummary.inheritedFrom } : {}),
+    };
   }
   const liveReserveAdapter = projectLiveReserveAdapter(coin);
-  if (liveReserveAdapter !== undefined) {
-    slim[LIVE_RESERVE_ADAPTER_FIELD] = liveReserveAdapter;
-  }
-  return slim;
+  if (liveReserveAdapter !== undefined) projected[LIVE_RESERVE_ADAPTER_FIELD] = liveReserveAdapter;
+  const mintAuthorityStatus = projectMintAuthorityStatus(coin);
+  if (mintAuthorityStatus !== undefined) projected[MINT_AUTHORITY_STATUS_FIELD] = mintAuthorityStatus;
+  const yieldType = coin?.yieldConfig?.yieldType;
+  if (typeof yieldType === "string") projected.yieldType = yieldType;
+  return projected;
+}
+
+export function projectDetailCoin(coin, detailFields, geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS) {
+  return {
+    id: coin.id,
+    ...projectCoin(coin, detailFields, geniusComplianceFields),
+  };
 }
 
 export function projectLiveReserveAdapter(coin) {
@@ -215,6 +278,11 @@ function projectGeniusField(field, value) {
     return projectGeniusNegativeEvidenceReview(value);
   }
   return value;
+}
+
+export function projectMicaProfile(profile) {
+  if (!isPlainObject(profile)) return undefined;
+  return projectRawCoin(profile, MICA_COMPLIANCE_FIELDS);
 }
 
 function projectGeniusEvidence(value) {
@@ -407,6 +475,44 @@ export function projectMintAuthoritySummary(coin) {
 
   return summary;
 }
+function hasActiveMultisigMintControl(summary) {
+  return (summary.controls ?? []).some(
+    (control) =>
+      (control.authorityType === "safe" || control.authorityType === "multisig") &&
+      control.directMintAbility !== "none",
+  );
+}
+
+function hasDirectNonMultisigMintControl(summary) {
+  return (summary.controls ?? []).some(
+    (control) =>
+      control.directMintAbility === "direct" &&
+      control.authorityType !== "safe" &&
+      control.authorityType !== "multisig",
+  );
+}
+
+export function projectMintAuthorityStatus(coin) {
+  const summary = projectMintAuthoritySummary(coin);
+  if (!summary) return undefined;
+  if (summary.mintPath === "wrapped-or-variant-inherited") return "inherited-authority";
+  if (
+    summary.mintPath === "immutable-user-collateralized" &&
+    (summary.authorityPosture === "none-resolved" || summary.authorityPosture === "none-resolved-mint")
+  ) {
+    return "no-privileged-mint";
+  }
+  if (summary.mintPath === "bridge-or-oft-synthetic") return "bridge-mint";
+  if (hasActiveMultisigMintControl(summary)) return "multisig-mint";
+  if (
+    summary.mintPath === "issuer-direct-mint" ||
+    summary.mintPath === "offchain-attested-minter" ||
+    hasDirectNonMultisigMintControl(summary)
+  ) {
+    return "issuer-or-backend-mint";
+  }
+  return "governed-mint";
+}
 
 export function validateProjection(
   slim,
@@ -471,34 +577,108 @@ export function validateGeniusComplianceProjection(
   }
 }
 
+function readCanonicalOrder(sourcePath = CANONICAL_ORDER_JSON_ABS) {
+  const parsed = JSON.parse(readFileSync(sourcePath, "utf8"));
+  if (!Array.isArray(parsed) || parsed.some((id) => typeof id !== "string")) {
+    throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} is not a string array`);
+  }
+  return parsed;
+}
+
+function orderSourceCoins(parsed, canonicalOrder) {
+  const sourceById = new Map(parsed.map((coin) => [coin.id, coin]));
+  const ordered = canonicalOrder.map((id) => {
+    const coin = sourceById.get(id);
+    if (!coin) {
+      throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} references unknown stablecoin ID: ${id}`);
+    }
+    return coin;
+  });
+  if (ordered.length !== parsed.length) {
+    throw new Error(
+      `[client-registry] ${CANONICAL_ORDER_JSON_REL} covers ${ordered.length}/${parsed.length} stablecoins`,
+    );
+  }
+  return ordered;
+}
+
+export function validateListProjection(slim, sourceCoin, index, listFields, listingClass, sourceById) {
+  const fieldsToValidate = listFields.filter((field) => field !== "mechanismArchetype");
+  validateProjection(slim, sourceCoin, index, fieldsToValidate);
+  if (slim.mechanismArchetype !== projectEffectiveMechanismArchetype(sourceCoin, sourceById)) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field mechanismArchetype diverges from source`);
+  }
+  if (!Array.isArray(slim[CHAIN_IDS_FIELD]) || JSON.stringify(slim[CHAIN_IDS_FIELD]) !== JSON.stringify(projectChainIds(sourceCoin))) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): chainIds diverge from source`);
+  }
+  if (slim[LISTING_CLASS_FIELD] !== listingClass) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): listingClass diverges from source`);
+  }
+  for (const field of ["custodyModel", BLACKLIST_STATUS_FIELD]) {
+    const expected = field === BLACKLIST_STATUS_FIELD ? projectBlacklistStatus(sourceCoin) : sourceCoin[field];
+    if (JSON.stringify(slim[field]) !== JSON.stringify(expected)) {
+      throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${field} diverges from source`);
+    }
+  }
+  if (slim[MINT_AUTHORITY_STATUS_FIELD] !== projectMintAuthorityStatus(sourceCoin)) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${MINT_AUTHORITY_STATUS_FIELD} diverges from source`);
+  }
+  const summary = projectMintAuthoritySummary(sourceCoin);
+  const expectedSummary = summary
+    ? {
+        mintPath: summary.mintPath,
+        authorityPosture: summary.authorityPosture,
+        confidence: summary.confidence,
+        ...(summary.inheritedFrom ? { inheritedFrom: summary.inheritedFrom } : {}),
+      }
+    : undefined;
+  if (JSON.stringify(slim[MINT_AUTHORITY_SUMMARY_FIELD]) !== JSON.stringify(expectedSummary)) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${MINT_AUTHORITY_SUMMARY_FIELD} diverges from source`);
+  }
+  if (slim[LIVE_RESERVE_ADAPTER_FIELD] !== projectLiveReserveAdapter(sourceCoin)) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${LIVE_RESERVE_ADAPTER_FIELD} diverges from source`);
+  }
+  if (slim.yieldType !== sourceCoin?.yieldConfig?.yieldType) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field yieldType diverges from source`);
+  }
+}
+
 export function buildClientRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
+  canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
   listingDecisionsJsonPath = LISTING_DECISIONS_JSON_ABS,
   clientFields = readCanonicalClientFields(),
-  geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS,
+  detailFields = readCanonicalClientDetailFields(),
 } = {}) {
   const rawJson = readFileSync(sourceJsonPath, "utf8");
   const parsed = JSON.parse(rawJson);
+  const canonicalOrder = readCanonicalOrder(canonicalOrderJsonPath);
   const listingClassById = readListingClassById(listingDecisionsJsonPath);
-
-  if (!Array.isArray(parsed)) {
-    throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
-  }
-
-  const slimCoins = parsed.map((coin, index) => {
-    const slim = projectCoin(coin, clientFields, geniusClientFields);
+  const sourceById = new Map(parsed.map((coin) => [coin.id, coin]));
+  const orderedCoins = orderSourceCoins(parsed, canonicalOrder);
+  const listCoins = orderedCoins.map((coin, index) => {
     const listingClass = listingClassById.get(coin.id);
     if (!listingClass) {
       throw new Error(`[client-registry] entry ${index} (${coin.id}): missing listing decision`);
     }
-    slim[LISTING_CLASS_FIELD] = listingClass;
-    validateProjection(slim, coin, index, clientFields, geniusClientFields);
-    return slim;
+    const list = projectListCoin(coin, clientFields, listingClass, sourceById);
+    validateListProjection(list, coin, index, clientFields, listingClass, sourceById);
+    return list;
   });
+  const detailCoins = orderedCoins.map((coin) => projectDetailCoin(coin, detailFields));
+  const detailOutputs = detailCoins.map((detail) => ({
+    id: detail.id,
+    output: `${JSON.stringify(detail, null, 2)}\n`,
+    detail,
+  }));
 
   return {
-    output: `${JSON.stringify(slimCoins, null, 2)}\n`,
-    slimCoins,
+    output: `${JSON.stringify(listCoins)}\n`,
+    listOutput: `${JSON.stringify(listCoins)}\n`,
+    slimCoins: listCoins,
+    listCoins,
+    detailCoins,
+    detailOutputs,
   };
 }
 
@@ -513,19 +693,29 @@ export function buildComplianceRegistryOutput({
     throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
   }
 
+  const complianceEntries = [];
   const geniusEntries = [];
   parsed.forEach((coin, index) => {
     const genius = projectGeniusProfile(coin.genius, geniusComplianceFields);
-    if (!genius || !isPlainObject(genius)) {
+    const mica = projectMicaProfile(coin.mica);
+    if ((!genius || !isPlainObject(genius)) && (!mica || !isPlainObject(mica))) {
       return;
     }
-    const entry = { id: coin.id, genius };
-    validateGeniusComplianceProjection(entry, coin, index, geniusComplianceFields);
-    geniusEntries.push(entry);
+    const entry = { id: coin.id };
+    if (genius && isPlainObject(genius)) {
+      entry.genius = genius;
+      validateGeniusComplianceProjection(entry, coin, index, geniusComplianceFields);
+      geniusEntries.push({ id: coin.id, genius });
+    }
+    if (mica && isPlainObject(mica)) {
+      entry.mica = mica;
+    }
+    complianceEntries.push(entry);
   });
 
   return {
-    output: `${JSON.stringify(geniusEntries, null, 2)}\n`,
+    output: `${JSON.stringify(complianceEntries, null, 2)}\n`,
+    complianceEntries,
     geniusEntries,
   };
 }
@@ -648,14 +838,18 @@ export function buildWorkerRuntimeRegistryOutput({
   };
 }
 
+function detailOutputPath(id) {
+  return resolve(DETAIL_OUTPUT_DIR_ABS, `${id}.generated.json`);
+}
+
 export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
-  const { output, slimCoins } = buildClientRegistryOutput();
+  const { output, listCoins, detailOutputs } = buildClientRegistryOutput();
   const { output: complianceOutput, geniusEntries } = buildComplianceRegistryOutput();
   const { output: telegramMiniAppOutput, searchableCoins } = buildTelegramMiniAppCatalogOutput();
   const { output: workerRuntimeOutput, runtimeCoins } = buildWorkerRuntimeRegistryOutput();
 
   if (checkMode) {
-    const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
+    const currentList = existsSync(LIST_OUTPUT_JSON_ABS) ? readFileSync(LIST_OUTPUT_JSON_ABS, "utf8") : "";
     const currentCompliance = existsSync(COMPLIANCE_OUTPUT_JSON_ABS)
       ? readFileSync(COMPLIANCE_OUTPUT_JSON_ABS, "utf8")
       : "";
@@ -665,18 +859,26 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     const currentWorkerRuntime = existsSync(WORKER_RUNTIME_OUTPUT_JSON_ABS)
       ? readFileSync(WORKER_RUNTIME_OUTPUT_JSON_ABS, "utf8")
       : "";
+    const detailIsStale = detailOutputs.some(({ id, output: expected }) => {
+      const path = detailOutputPath(id);
+      return !existsSync(path) || readFileSync(path, "utf8") !== expected;
+    });
     if (
-      current !== output ||
+      currentList !== output ||
+      detailIsStale ||
       currentCompliance !== complianceOutput ||
       currentTelegramMiniApp !== telegramMiniAppOutput ||
       currentWorkerRuntime !== workerRuntimeOutput
     ) {
       console.error(
-        `${OUTPUT_JSON_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}, or ${WORKER_RUNTIME_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
+        `${LIST_OUTPUT_JSON_REL}, ${DETAIL_OUTPUT_DIR_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}, or ${WORKER_RUNTIME_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
       );
       process.exit(1);
     }
-    console.log(`${OUTPUT_JSON_REL}: client registry is current (${slimCoins.length} entries, ${output.length} bytes)`);
+    console.log(`${LIST_OUTPUT_JSON_REL}: client list is current (${listCoins.length} entries, ${output.length} bytes)`);
+    console.log(
+      `${DETAIL_OUTPUT_DIR_REL}: client details are current (${detailOutputs.length} entries, ${detailOutputs.reduce((sum, entry) => sum + entry.output.length, 0)} bytes)`,
+    );
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: compliance registry is current (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );
@@ -687,15 +889,22 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
       `${WORKER_RUNTIME_OUTPUT_JSON_REL}: Worker runtime registry is current (${runtimeCoins.length} entries, ${workerRuntimeOutput.length} bytes)`,
     );
   } else {
-    mkdirSync(dirname(OUTPUT_JSON_ABS), { recursive: true });
-    writeFileSync(OUTPUT_JSON_ABS, output, "utf8");
+    mkdirSync(dirname(LIST_OUTPUT_JSON_ABS), { recursive: true });
+    writeFileSync(LIST_OUTPUT_JSON_ABS, output, "utf8");
+    mkdirSync(DETAIL_OUTPUT_DIR_ABS, { recursive: true });
+    for (const { id, output: detailOutput } of detailOutputs) {
+      writeFileSync(detailOutputPath(id), detailOutput, "utf8");
+    }
     mkdirSync(dirname(COMPLIANCE_OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput, "utf8");
     mkdirSync(dirname(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, telegramMiniAppOutput, "utf8");
     mkdirSync(dirname(WORKER_RUNTIME_OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(WORKER_RUNTIME_OUTPUT_JSON_ABS, workerRuntimeOutput, "utf8");
-    console.log(`${OUTPUT_JSON_REL}: wrote client registry (${slimCoins.length} entries, ${output.length} bytes)`);
+    console.log(`${LIST_OUTPUT_JSON_REL}: wrote client list (${listCoins.length} entries, ${output.length} bytes)`);
+    console.log(
+      `${DETAIL_OUTPUT_DIR_REL}: wrote client details (${detailOutputs.length} entries, ${detailOutputs.reduce((sum, entry) => sum + entry.output.length, 0)} bytes)`,
+    );
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: wrote compliance registry (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );

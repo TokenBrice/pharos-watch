@@ -7,5 +7,7 @@ interface GeniusComplianceEntry {
 }
 
 export const GENIUS_COMPLIANCE_PROFILE_BY_ID = new Map(
-  (perCoinComplianceAsset as GeniusComplianceEntry[]).map((entry) => [entry.id, entry.genius] as const),
+  (perCoinComplianceAsset as GeniusComplianceEntry[])
+    .filter((entry) => entry.genius != null)
+    .map((entry) => [entry.id, entry.genius] as const),
 );

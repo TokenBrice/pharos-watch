@@ -292,7 +292,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     bootstrap: true,
     dependsOn: ["stablecoin-catalog"],
     outputPaths: [
-      "shared/data/stablecoins/coins.client.generated.json",
+      "shared/data/stablecoins/coins.client.list.generated.json",
+      "shared/data/stablecoins/coins.client.detail",
       "shared/data/stablecoins/coins.compliance.generated.json",
       "shared/data/stablecoins/coins.telegram-mini-app.generated.json",
       "shared/data/stablecoins/coins.worker-runtime.generated.json",
