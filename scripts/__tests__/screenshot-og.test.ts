@@ -78,8 +78,21 @@ describe("OG screenshot capture", () => {
       "build-og-case-studies.ts",
     ]) {
       const script = readFileSync(resolve(process.cwd(), "scripts/maintenance", file), "utf8");
-      expect(script).toContain("runOgStaticBuild");
-      expect(script).not.toContain('from "playwright"');
+      const runnerImport = script.match(
+        /import\s*\{([^}]*)\}\s*from\s*["']\.\.\/lib\/og-static-runner\.mts["'];/,
+      );
+      const importedNames = runnerImport?.[1].split(",").map((name) => name.trim()) ?? [];
+
+      expect(importedNames).toEqual(expect.arrayContaining(["runOgStaticCli", "runOgStaticMain"]));
+      expect(script.match(/\brunOgStaticCli\s*\(\{/g)).toHaveLength(1);
+      expect(script.match(/\brunOgStaticMain\s*\(import\.meta\.url,\s*main\);/g)).toHaveLength(1);
     }
+
+    const screenshotScript = readFileSync(
+      resolve(process.cwd(), "scripts/maintenance/screenshot-og.mjs"),
+      "utf8",
+    );
+    expect(screenshotScript.match(/\.\.\/lib\/og-static-runner\.mts/g)).toBeNull();
+    expect(screenshotScript.match(/\brunOgStatic(?:Build|Cli|Main)\s*\(/g)).toBeNull();
   });
 });
