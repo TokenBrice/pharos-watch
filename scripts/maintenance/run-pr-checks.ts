@@ -4,7 +4,6 @@ import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import {
   createExecutionUnit,
-  createNpmScriptCommand,
   createSpawnCommand,
   runExecutionUnit,
   runSpawnCommand,
@@ -19,13 +18,9 @@ import {
   type GateReport,
   type OutputWriter,
 } from "../lib/report-violations.mts";
+import { buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 
-const DOC_CHECK_LANES = [
-  "verified-doc-links",
-  "doc-source-paths",
-  "doc-sync",
-  "agents-doc-artifact",
-] as const;
+const DOC_CHECK_LANES = getPrLane("docs").commands.map((command) => command.id as PrCheckLane);
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface PrCheckFlags {
@@ -184,13 +179,30 @@ export function createLaneCommand(
     lane,
   });
 
+  const manifestCommand = getPrLane(
+    ["classifier-smoke", "gitleaks"].includes(lane)
+      ? "preflight"
+      : DOC_CHECK_LANES.includes(lane)
+        ? "docs"
+        : lane === "pr-static"
+          ? "static"
+          : lane === "pr-tests"
+            ? "tests"
+            : "critical-coverage",
+  ).commands.find((command) => command.id === lane);
+  if (!manifestCommand) throw new Error(`Missing PR lane command: ${lane}`);
+  const command = manifestCommand.program === "npm"
+    ? createSpawnCommand("npm", buildPrLaneCommandArgs(manifestCommand, {
+        base,
+        forwardedTestArgs,
+        head,
+      }))
+    : createSpawnCommand("node", buildPrLaneCommandArgs(manifestCommand));
+
   switch (lane) {
     case "classifier-smoke":
       return withLane({
-        ...createSpawnCommand("node", [
-          "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
-          "scripts/ci/classify-deploy-changes.ts",
-        ]),
+        ...command,
         captureOutput: true,
       }, {
         DEPLOY_BASE_SHA: base,
@@ -198,29 +210,19 @@ export function createLaneCommand(
         DEPLOY_EVENT_NAME: "push",
       });
     case "gitleaks":
-      return withLane(createSpawnCommand("node", [
-        "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
-        "scripts/ci/run-gitleaks.ts",
-        "--range",
-        "--lenient-platform",
-      ]), {
+      return withLane(command, {
         GITLEAKS_BASE_REF: base,
         GITLEAKS_HEAD_REF: head,
       });
     case "verified-doc-links":
-      return withLane(createNpmScriptCommand("check:verified-doc-links"));
     case "doc-source-paths":
-      return withLane(createNpmScriptCommand("check:doc-source-paths"));
     case "doc-sync":
-      return withLane(createNpmScriptCommand("check:doc-sync"));
     case "agents-doc-artifact":
-      return withLane(createNpmScriptCommand("check:generated-artifacts", ["--only=agents-doc"]));
     case "pr-static":
-      return withLane(createNpmScriptCommand("check:pr:static", [`--base=${base}`, `--head=${head}`]));
     case "pr-tests":
-      return withLane(createNpmScriptCommand("test:pr", [`--base=${base}`, ...forwardedTestArgs]));
+      return withLane(command);
     case "critical-coverage":
-      return withLane(createNpmScriptCommand("coverage:critical"), {
+      return withLane(command, {
         ...(env as Record<string, string>),
         CRITICAL_COVERAGE_COMPARE_REF: resolvedBaseSha,
       });

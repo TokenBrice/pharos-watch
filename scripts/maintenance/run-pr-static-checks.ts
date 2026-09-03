@@ -26,6 +26,7 @@ import {
   EDITORIAL_POLICY_TEST_COMMAND,
   hasEditorialPolicyImpact,
 } from "../lib/editorial-surface-registry";
+import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
@@ -80,6 +81,15 @@ function formatNpmFailure(result: ExecutionResult): string {
   return `npm run ${name} failed (${result.signal ? `signal ${result.signal}` : `exit ${result.status}`}).`;
 }
 
+export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
+  return changedFiles.some((file) => {
+    if (file.startsWith("docs/") || file === "README.md" || file === "CLAUDE.md") return false;
+    return PATH_FAMILIES.some(
+      (family) => family.docs.length > 0 && family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)),
+    );
+  });
+}
+
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
   return {
     sequential: commands.filter(
@@ -104,6 +114,10 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
 
   if (changedFiles.some((file) => ROOT_DEPENDENCY_PATHS.has(file))) {
     commands.push({ name: "audit:deps" });
+  }
+
+  if (hasOwnedDocsImpact(changedFiles)) {
+    commands.push({ name: "check:doc-sync" });
   }
 
   switch (getStructuralCheckImpact(changedFiles)) {

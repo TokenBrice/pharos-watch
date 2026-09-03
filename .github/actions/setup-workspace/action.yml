@@ -30,6 +30,10 @@ inputs:
     description: Whether to restore the Playwright browser download cache.
     required: false
     default: "false"
+  workspace-cache:
+    description: Whether to restore the PR workspace dependency and generated-artifact cache.
+    required: false
+    default: "false"
   install-deps:
     description: Whether to run npm ci after setup.
     required: false
@@ -69,7 +73,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
+    - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' || inputs.workspace-cache == 'true' }}
       id: cache-key
       shell: bash
       env:
@@ -113,6 +117,25 @@ runs:
       with:
         path: ~/.cache/ms-playwright
         key: browser-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json') }}
+
+    - if: ${{ inputs.workspace-cache == 'true' }}
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: |
+          node_modules
+          src/generated
+          src/lib/case-study-client-index.ts
+          shared/data/stablecoins/coins.generated.json
+          shared/data/stablecoins/coins.client.detail
+          shared/data/stablecoins/coins.client.list.generated.json
+          shared/data/stablecoins/coins.compliance.generated.json
+          shared/data/stablecoins/coins.telegram-mini-app.generated.json
+          shared/data/stablecoins/coins.worker-runtime.generated.json
+          shared/data/stablecoins/report-card-registry-fingerprint.generated.ts
+          shared/data/stablecoins/legacy-llama-redirects.generated.json
+          shared/data/safety-score-v9/shock-coverage-measurements-v1.json
+          shared/data/safety-score-v9/evaluation-build-manifest-v1.ts
+        key: pr-workspace-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json') }}-${{ github.event.pull_request.head.sha }}
 
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash

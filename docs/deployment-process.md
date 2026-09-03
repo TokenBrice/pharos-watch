@@ -141,7 +141,7 @@ The acceptance job reads the public Pages shell after a Pages release and the pu
 
 Repository settings:
 
-- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. That job accepts either the full static-plus-test validation path or the focused docs-only path and always requires the PR secret scan.
+- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. The gate accepts the validation matrix selected from `scripts/lib/pr-lanes.mts`: either the full static-plus-four-test-shard path or the focused docs-only path, with optional docs and four-shard touched-critical coverage lanes. A single preparation job installs dependencies and caches the generated workspace for the matrix; preflight always requires the strict pinned PR secret scan.
 - The GitHub `production` environment is restricted to `main` and is attached only to the Worker and Pages mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
 

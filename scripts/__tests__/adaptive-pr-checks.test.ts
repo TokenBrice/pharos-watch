@@ -6,6 +6,7 @@ import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.
 import { ALWAYS_RUN_TEST_FILES, parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import {
   buildPrStaticCheckPlan,
+  hasOwnedDocsImpact,
   partitionPrStaticCheckPlan,
   runPrStaticChecks,
 } from "../maintenance/run-pr-static-checks.ts";
@@ -165,6 +166,12 @@ describe("adaptive PR checks", () => {
       "check:critical-coverage-completeness",
       "check:generated-artifacts",
     ]);
+  });
+
+  it("selects doc-sync when a changed source has an owning documentation mapping", () => {
+    expect(hasOwnedDocsImpact(["shared/lib/classification.ts"])).toBe(true);
+    expect(buildPrStaticCheckPlan(["shared/lib/classification.ts"]).commands.map((command) => command.name))
+      .toContain("check:doc-sync");
   });
 
   it("runs the critical-coverage completeness guard for every non-doc PR path", () => {
