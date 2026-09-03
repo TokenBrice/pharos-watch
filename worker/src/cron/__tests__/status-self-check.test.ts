@@ -172,12 +172,17 @@ describe("runStatusSelfCheck", () => {
       D1Database,
       number,
       { rawOverallStatus: string },
+      {
+        publicHealth?: { status?: string };
+        supplements?: Record<string, unknown>;
+      },
     ];
     expect(firstSnapshotWrite[2]).toMatchObject({
       rawOverallStatus: "healthy",
     });
     expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
-    expect(firstSnapshotWrite.slice(3)).toEqual([]);
+    expect(firstSnapshotWrite[3]?.publicHealth?.status).toBeTypeOf("string");
+    expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
   });
 

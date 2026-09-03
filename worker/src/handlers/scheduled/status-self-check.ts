@@ -5,9 +5,9 @@ import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { resolveCloudflareD1StatusConfig } from "../../lib/env";
+import { normalizeWorkerCanaryMode } from "../../lib/worker-canary-mode";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
-
 function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
   return [
     {
@@ -30,6 +30,8 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
               siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
               d1StatusConfig: resolveCloudflareD1StatusConfig(runtime.env) ?? undefined,
+              coingeckoApiKey: runtime.coingeckoApiKey,
+              workerCanaryMode: normalizeWorkerCanaryMode(runtime.env.WORKER_CANARY_MODE),
             }),
         },
         {

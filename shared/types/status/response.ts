@@ -26,6 +26,7 @@ import type {
 } from "./operational";
 import { CacheStatusSchema } from "./schema-primitives";
 import type { TelegramBotStats } from "./telegram";
+import type { TelegramHealthSummary } from "./public-health";
 import type {
   ClassificationWarning,
   CoinGeckoPriceDiff,
@@ -148,6 +149,7 @@ const StatusResponseObjectSchema = z
     providerCircuitHealth: statusObjectSchema<ProviderCircuitHealth>().nullable().optional(),
     canaries: statusObjectSchema<CanaryStatus>().nullable().optional(),
     alertBroker: statusObjectSchema<AlertBrokerHealthSummary>().optional(),
+    telegramSummary: statusObjectSchema<TelegramHealthSummary>().nullable().optional(),
     producerHeads: z.array(statusObjectSchema<ProducerHeadStatus>()).optional(),
     priceSourceHealth: statusObjectSchema<PriceSourceHealth>().nullable(),
     priceProviderDiagnostics: z.array(z.record(z.string(), z.unknown())).nullable(),

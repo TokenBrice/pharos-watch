@@ -341,7 +341,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "coingecko-status-supplements",
     family: "status-supplements",
     description: "On-demand status supplement CoinGecko price fetch.",
-    files: ["worker/src/api/status-supplements.ts"],
+    files: ["worker/src/lib/status/supplements.ts"],
     tests: [
       "worker/src/api/__tests__/status-snapshots-core.test.ts",
       "worker/src/api/__tests__/status-data-loaders.test.ts",

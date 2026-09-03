@@ -24,6 +24,7 @@ The operator dashboard combines ten signals:
 The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
+- The public health payload is the status self-check's 15-minute snapshot projection; `/api/health` performs a live assessment only when the snapshot is missing or unusable. Operator-only Telegram lifecycle and alert-broker diagnostics live on `/api/status`.
 - `/admin/`: Triage workspace
 - `/admin/pipeline/`: data-quality, market, reserve, yield, storage, and integrity workbench
 - `/admin/reliability/`: endpoint, dependency, demand, and cache reliability workbench
@@ -90,17 +91,18 @@ The active frontend operator mode is now:
 - `src/hooks/admin-api-hooks.ts` — `useStatus()`
   - `useStatus()` — calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch` via `useAdminPollingQuery`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
-  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence)
+  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence); operator status remains a one-minute read because it includes live diagnostics when requested
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards/v9`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
   - The desktop lighthouse menu enables `useHealth()` only while the menu is open. Its status link reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim.
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
+  - Public `/status/` browser canaries use only `/api/health`, `/api/stablecoins`, `/api/peg-summary`, `/api/dex-liquidity`, and `/api/report-cards/v9`, with `staleTime: 900_000`, `refetchInterval: 1_800_000`, `retry: 0`
   - Public probes use the same-origin `/_site-data/*` website lane; admin probes use same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
   - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
-  - Also exports `usePublicEndpointProbes()` for the public `/status/` page, which probes only the public endpoint group
+  - `usePublicEndpointProbes()` is reserved for the public `/status/` page and does not inherit the full operator endpoint list
 - `src/hooks/use-public-status-history.ts`
   - Calls `GET /api/public-status-history` through same-origin `/_site-data/public-status-history` on website hosts
   - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
@@ -368,6 +370,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - `publicationHealth`: admin-only read-only publication generation summary for `dex-liquidity`, `yield-rankings`, `stablecoins`, `dews`, `psi`, and `safety-score-v9`. The V9 surface is derived from the canonical `report-cards:v9` publication and matching publication-health row; it does not consult the retired V8 compact cache.
 - `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. Cache-backed signals use the same override-aware availability ratio bands as public cache health, so `maxAge` remains a baseline rather than an immediate stale cutoff; producer-source degradation remains independently visible. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
 - `canaries`: admin-only latest structural canary results from the current authoritative `status` or `alert` rows in `worker_canary_runs`. In `off` or `shadow`, the field retains its empty/unknown compatibility shape and does not read older authoritative rows. The summary is constrained to the active canary registry, so retained rows for retired check IDs do not keep the current status stale. The checks cover DEX publication/current-row invariants, blacklist identity completeness, stablecoins-cache active coverage, PSI/DEWS latest samples, report-card cache generation/methodology freshness, and GBP benchmark currency/freshness without changing producer behavior.
+- `worker_canary_runs` retention is 14 days; the current status reads only active check IDs and does not depend on older retained rows.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from a freshness-qualified CoinGecko spot quote
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) plus additive `capacity` and cached `tableGrowth` assessments. `tableGrowth` contains the once-daily bounded per-table row counts, previous-snapshot deltas, oldest/newest allowlisted timestamps, and top growers; the Cloudflare-sourced fields are populated when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.

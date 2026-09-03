@@ -123,6 +123,23 @@ export interface PublicHealthAssessment {
   activePriceCoverageImpactStatus: HealthResponse["status"];
 }
 
+export function buildPublicHealthResponse(
+  assessment: PublicHealthAssessment,
+  timestamp: number,
+): HealthResponse {
+  return {
+    status: assessment.overallStatus,
+    timestamp,
+    warnings: assessment.warnings,
+    caches: assessment.caches,
+    blacklist: assessment.blacklist,
+    mintBurn: assessment.mintBurn,
+    circuits: assessment.circuits,
+    stablecoinPublication: assessment.stablecoinPublication,
+    activePriceCoverage: assessment.activePriceCoverage,
+  };
+}
+
 function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
   switch (kind) {
     case "blacklist":

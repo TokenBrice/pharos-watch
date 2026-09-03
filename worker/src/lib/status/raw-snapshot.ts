@@ -1,4 +1,20 @@
 import { isRecord } from "@shared/lib/type-guards";
+import type {
+  CanaryStatus,
+  ClassificationWarning,
+  CoinGeckoPriceDiff,
+  HealthResponse,
+  LiquidityHealth,
+  MintBurnReconciliationSummary,
+  PublicationHealth,
+  PriceSourceHealth,
+  ProviderCircuitHealth,
+  ReserveDriftEntry,
+  StatusSectionErrors,
+  TelegramHealthSummary,
+  YieldHealthSummary,
+} from "@shared/types/status";
+import type { D1UsageSummaryWithTableGrowth } from "./d1-usage";
 import type { RawStatusComputation } from "../status-evaluation";
 import { getCache, setCacheIfNewer } from "../db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -17,15 +33,40 @@ const SNAPSHOT_METADATA_ARRAY_LIMIT = 40;
 const SNAPSHOT_METADATA_OBJECT_KEY_LIMIT = 80;
 const SNAPSHOT_STRING_LIMIT = 2_000;
 
+interface StatusSupplements {
+  liquidityHealth: LiquidityHealth | null;
+  yieldHealth: YieldHealthSummary | null;
+  publicationHealth: PublicationHealth | null;
+  providerCircuitHealth: ProviderCircuitHealth | null;
+  canaries: CanaryStatus | null;
+  priceSourceHealth: PriceSourceHealth | null;
+  priceProviderDiagnostics: Array<Record<string, unknown>> | null;
+  gtProbe: Record<string, unknown> | null;
+  coingeckoPriceDiff: CoinGeckoPriceDiff | null;
+  d1Usage: D1UsageSummaryWithTableGrowth | null;
+  cacheBlobSizes?: Record<string, number>;
+  mintBurnReconciliation: MintBurnReconciliationSummary | null;
+  reserveDrift?: ReserveDriftEntry[];
+  classificationWarnings?: ClassificationWarning[];
+  telegramSummary: TelegramHealthSummary | null;
+  sectionErrors: StatusSectionErrors;
+}
+
+export type { StatusSupplements };
+
 interface StatusRawSnapshotPayload {
   version: 1;
   producedAt: number;
   raw: RawStatusComputation;
+  publicHealth?: HealthResponse;
+  supplements?: StatusSupplements;
 }
 
 interface FreshStatusRawSnapshot {
   kind: "fresh";
   raw: RawStatusComputation;
+  publicHealth?: HealthResponse;
+  supplements?: StatusSupplements;
   updatedAt: number;
   ageSec: number;
   maxAgeSec: number;
@@ -40,6 +81,7 @@ interface UnavailableStatusRawSnapshot {
 }
 
 export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusRawSnapshot;
+
 
 function isStatusLevel(value: unknown): value is StatusLevel {
   return value === "healthy" || value === "degraded" || value === "stale";
@@ -140,6 +182,24 @@ function hasRawStatusShape(value: unknown): value is RawStatusComputation {
     Array.isArray(value.freshnessDiagnostics)
   );
 }
+function hasPublicHealthShape(value: unknown): value is HealthResponse {
+  if (!isRecord(value)) return false;
+  return (
+    isStatusLevel(value.status) &&
+    typeof value.timestamp === "number" &&
+    Number.isFinite(value.timestamp) &&
+    Array.isArray(value.warnings) &&
+    isRecord(value.caches) &&
+    isRecord(value.blacklist) &&
+    isRecord(value.mintBurn) &&
+    isRecord(value.circuits)
+  );
+}
+
+export interface StatusRawSnapshotWriteOptions {
+  publicHealth?: HealthResponse;
+  supplements?: StatusSupplements;
+}
 
 function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload | null {
   try {
@@ -157,6 +217,16 @@ function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload 
           ? parsed.raw.budgetOnlySurfaces as RawStatusComputation["budgetOnlySurfaces"]
           : [],
       },
+      publicHealth: parsed.publicHealth == null
+        ? undefined
+        : hasPublicHealthShape(parsed.publicHealth)
+          ? parsed.publicHealth
+          : undefined,
+      supplements: parsed.supplements == null
+        ? undefined
+        : isRecord(parsed.supplements)
+          ? parsed.supplements as unknown as StatusSupplements
+          : undefined,
     };
   } catch {
     return null;
@@ -203,6 +273,8 @@ export async function loadStatusRawSnapshot(
     return {
       kind: "fresh",
       raw: payload.raw,
+      publicHealth: payload.publicHealth,
+      supplements: payload.supplements,
       updatedAt: cached.updatedAt,
       ageSec,
       maxAgeSec,
@@ -222,11 +294,14 @@ export async function writeStatusRawSnapshot(
   db: D1Database,
   now: number,
   raw: RawStatusComputation,
+  options: StatusRawSnapshotWriteOptions = {},
 ): Promise<boolean> {
   const payload: StatusRawSnapshotPayload = {
     version: 1,
     producedAt: now,
     raw: compactRawStatusForSnapshot(raw),
+    publicHealth: options.publicHealth,
+    supplements: options.supplements,
   };
 
   try {

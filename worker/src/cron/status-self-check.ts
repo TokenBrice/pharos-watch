@@ -9,7 +9,10 @@ import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import { computeRawStatus } from "../lib/status-evaluation";
+import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
+import { loadStatusSupplements } from "../lib/status/supplements";
+import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { route } from "../router";
 import {
   buildDiscrepancy,
@@ -19,8 +22,8 @@ import {
   type StatusLevel,
 } from "../lib/status-reliability";
 import { hasDivergence } from "../lib/status-discrepancy-view";
-import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import type { CloudflareD1StatusConfig } from "../lib/env";
+import type { CloudflareD1StatusBindings, CloudflareD1StatusConfig } from "../lib/env";
+import type { WorkerCanaryMode } from "../lib/canary-checks";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
 import { refreshD1TableGrowthSnapshot } from "../lib/status/d1-usage";
 
@@ -81,6 +84,9 @@ export interface StatusSelfCheckOptions {
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   siteApiSharedSecret?: string | null;
   d1StatusConfig?: CloudflareD1StatusConfig;
+  coingeckoApiKey?: string | null;
+  cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
+  workerCanaryMode?: WorkerCanaryMode;
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -730,7 +736,29 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const raw = await computeRawStatus(db, now);
   const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
-  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
+  const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
+    ?? (options.d1StatusConfig
+      ? {
+          CLOUDFLARE_ACCOUNT_ID: options.d1StatusConfig.accountId,
+          CLOUDFLARE_D1_STATUS_API_TOKEN: options.d1StatusConfig.apiToken,
+          CLOUDFLARE_D1_DATABASE_ID: options.d1StatusConfig.databaseId,
+        }
+      : undefined);
+  const [publicHealthAssessment, supplements] = await Promise.all([
+    assessPublicHealth(db, now, { logPrefix: "status-self-check" }),
+    loadStatusSupplements(
+      db,
+      now,
+      raw.crons,
+      options.coingeckoApiKey,
+      cloudflareD1StatusBindings,
+      options.workerCanaryMode ?? "off",
+    ),
+  ]);
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, {
+    publicHealth: buildPublicHealthResponse(publicHealthAssessment, now),
+    supplements,
+  });
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);
