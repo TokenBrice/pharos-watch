@@ -9,7 +9,7 @@ import {
 } from "@/components/depeg-control-board";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
-import type { PegSummaryCoin, PegSummaryStats, StressSignalEntry } from "@shared/types";
+import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
@@ -64,16 +64,6 @@ function makeRow(
   };
 }
 
-const stats: PegSummaryStats = {
-  activeDepegCount: 1,
-  medianDeviationBps: 0,
-  worstCurrent: { id: "coin-a", symbol: "SUSD", bps: -6899 },
-  coinsAtPeg: 300,
-  totalTracked: 369,
-  depegEventsToday: 1,
-  depegEventsYesterday: 0,
-};
-
 function renderBoard(
   rows: DepegTrackerRow[],
   overrides: Partial<ComponentProps<typeof DepegControlBoard>> = {},
@@ -81,7 +71,6 @@ function renderBoard(
   return render(
     <DepegControlBoard
       rows={rows}
-      stats={stats}
       logos={{}}
       pegFilter="all"
       typeFilter="all"

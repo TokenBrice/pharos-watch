@@ -78,6 +78,8 @@
    ────────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
+  --mobile-bottom-nav-height: 4rem;
+  --mobile-bottom-nav-safe-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
   /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
      sticky table header and the mobile utility dock. Defaults to 0 on desktop
      where `--table-header-top` is unset; the mobile breakpoint below redefines

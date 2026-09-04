@@ -59,6 +59,12 @@ export interface NavItem {
   shortLabel?: string;
   icon: LucideIcon;
   description?: string;
+  /**
+   * Extra search terms for the command palette. Lets a route stay findable by
+   * the acronyms people actually type without forcing them into the visible
+   * label or description.
+   */
+  keywords?: string;
   external?: boolean;
 }
 
@@ -84,43 +90,45 @@ const DASHBOARD_NAV_ITEM: NavItem = {
   href: "/",
   label: "Dashboard",
   icon: LayoutDashboard,
-  description: "Live triage surface for market stress, rankings, and first-pass research",
+  description: "Market stress, rankings, and triage",
 };
 
 const STABILITY_INDEX_NAV_ITEM: NavItem = {
   href: "/stability-index/",
   label: "Stability Index",
   icon: LighthouseIcon,
-  description: "Market-regime read for the stablecoin system",
+  description: "Market-regime read for stablecoins",
 };
 
 const SAFETY_SCORES_NAV_ITEM: NavItem = {
   href: "/safety-scores/",
   label: "Safety Scores",
   icon: ShieldCheck,
-  description: "Cross-market safety grades and contagion scenarios",
+  description: "Safety grades and contagion scenarios",
 };
 
 const YIELD_NAV_ITEM: NavItem = {
   href: "/yield/",
   label: "Yield Intelligence",
   icon: CircleDollarSign,
-  description: "Yield ranked after adjusting for stablecoin risk",
+  description: "Yield ranked after adjusting for risk",
 };
 
 const DEPEG_NAV_ITEM: NavItem = {
   href: "/depeg/",
   label: "Depeg & Recovery",
   icon: Activity,
-  description: "Live peg incidents, DEWS early warnings, DDR recovery outlooks, and reviews",
+  description: "Live peg incidents and recovery outlooks",
+  // The visible description is deliberately short; these are the acronyms
+  // people type in the palette (DDR = Depeg Duration Resolver, DEWS = Depeg
+  // Early Warning System) and this route is where both live.
+  keywords: "ddr dews depeg duration resolver early warning",
 };
 
 /**
  * Desktop quick rail: the five highest-traffic routes, promoted out of the
- * dropdowns so they cost one click instead of hover-then-scan. They stay
- * listed inside their owning menu as well — the rail is a shortcut layer, not
- * a sibling section, so "I opened Risk and Safety Scores wasn't there" can't
- * happen.
+ * dropdowns so they cost one click instead of hover-then-scan. Apart from the
+ * dashboard, the rail is their sole desktop navigation surface.
  */
 export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   DASHBOARD_NAV_ITEM,
@@ -134,43 +142,43 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "PSI" },
 ];
 
-/* ── "More" columns — the low-traffic tail, organized instead of dumped ─── */
+/* ── Resources columns — reference, monitoring, and product links ───── */
 
 const MORE_COLUMNS: readonly NavColumn[] = [
   {
-    key: "learn",
-    label: "Learn",
+    key: "research",
+    label: "Research",
     items: [
-      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Stablecoin mechanisms, case studies, and glossary definitions" },
-      { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each stablecoin design produces its peg" },
-      { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Long-form retrospectives of major depegs and failures" },
-      { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined and version-pinned" },
+      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Mechanisms, case studies, and glossary" },
+      { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg" },
+      { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs" },
+      { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined" },
+      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions" },
     ],
   },
   {
-    key: "updates",
-    label: "Updates",
+    key: "watch",
+    label: "Watch",
     items: [
-      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
-      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
-      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and feature updates" },
-      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the story of Pharos" },
-      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "PharosWatchBot push alerts for depegs, DEWS shifts, launches, and the daily digest" },
+      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market" },
+      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change" },
+      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches" },
     ],
   },
   {
     key: "pharos",
     label: "Pharos",
     items: [
-      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
-      { href: "/about/", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
-      { href: "/api/", label: "API Access", icon: KeyRound, description: "Request a public API key and open the endpoint reference" },
-      { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline and cron sync" },
+      { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists" },
+      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
+      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
+      { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference" },
+      { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
       {
         href: "https://pharosville.pharos.watch/",
         label: "PharosVille",
         icon: Ship,
-        description: "The stablecoin universe as a working harbor — DEWS zones at a glance",
+        description: "The stablecoin universe as a harbor",
         external: true,
       },
     ],
@@ -182,40 +190,36 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     key: "markets",
     label: "Markets",
     items: [
-      STABILITY_INDEX_NAV_ITEM,
-      YIELD_NAV_ITEM,
-      { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and market support" },
-      { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
-      { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
-      { href: "/alt-pegs/", label: "Non-USD Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
-      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
+      { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and peg support" },
+      { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Mint and burn pressure by chain" },
+      { href: "/chains/", label: "Chains", icon: Layers, description: "Stablecoin share and health by chain" },
+      { href: "/alt-pegs/", label: "Non-USD Pegs", icon: Globe, description: "Market structure beyond the dollar" },
+      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch dates" },
     ],
   },
   {
     key: "risk",
     label: "Risk",
     items: [
-      SAFETY_SCORES_NAV_ITEM,
-      DEPEG_NAV_ITEM,
-      { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
-      { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA authorization and GENIUS implementation status across tracked stablecoins" },
-      { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
-      { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
+      { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer power to freeze your balance" },
+      { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA and GENIUS status, coin by coin" },
+      { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph of upstream risk" },
+      { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and their lessons" },
     ],
   },
   {
     key: "tools",
     label: "Tools",
     items: [
-      { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Multi-axis filter across every tracked stablecoin" },
-      { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
-      { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
-      { href: "/stablecoins/", label: "Stablecoin Directory", icon: Coins, description: "Every tracked stablecoin, browsable by peg, backing, governance, and infrastructure" },
+      { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Filter every stablecoin on any axis" },
+      { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Peer sets and substitutes side by side" },
+      { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Your holdings as one stablecoin book" },
+      { href: "/stablecoins/", label: "Stablecoin Directory", icon: Coins, description: "Browse every tracked stablecoin" },
     ],
   },
   {
     key: "more",
-    label: "More",
+    label: "Resources",
     columns: MORE_COLUMNS,
     items: MORE_COLUMNS.flatMap((column) => column.items),
   },
@@ -236,33 +240,32 @@ export function stickyChromeTopOffsetClass(pathname: string | null | undefined):
   return pathname === "/" ? "top-0" : "top-[3px]";
 }
 
-/**
- * Mobile drawer defaults. Every group starts collapsed now that the quick rail
- * carries the highest-traffic routes above them: the drawer opens as four
- * labeled headers instead of eleven pre-expanded rows. `useNavCollapse` still
- * force-expands whichever group owns the active route.
- */
-export const DEFAULT_EXPANDED: Record<string, boolean> = {
-  markets: false,
-  risk: false,
-  tools: false,
-  more: false,
-};
-
 /** Bottom items (always shown at sidebar bottom) */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
-  { href: "/start/", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
+  { href: "/start/", label: "Start Here", icon: Compass, description: "The fastest way into Pharos" },
 ];
 
 /**
  * Flat list for the command palette, 404 route-guess, and homepage shortcuts.
- * Group items come first so the rail's presentation-only `shortLabel` aliases
- * never win the dedupe: search must offer "Yield Intelligence", not "Yield".
+ * Canonical rail items are seeded before their presentation-only quick-rail
+ * aliases so search offers "Yield Intelligence", not "Yield".
  */
 export const NAV_ITEMS: NavItem[] = (() => {
   const seen = new Set<string>();
   const flat: NavItem[] = [];
-  for (const item of [...NAV_GROUPS.flatMap((group) => group.items), ...QUICK_NAV_ITEMS, ...BOTTOM_NAV_ITEMS]) {
+  const canonicalRailItems = [
+    DASHBOARD_NAV_ITEM,
+    SAFETY_SCORES_NAV_ITEM,
+    YIELD_NAV_ITEM,
+    DEPEG_NAV_ITEM,
+    STABILITY_INDEX_NAV_ITEM,
+  ];
+  for (const item of [
+    ...NAV_GROUPS.flatMap((group) => group.items),
+    ...canonicalRailItems,
+    ...QUICK_NAV_ITEMS,
+    ...BOTTOM_NAV_ITEMS,
+  ]) {
     const key = normalizeNavPath(item.href);
     if (seen.has(key)) continue;
     seen.add(key);

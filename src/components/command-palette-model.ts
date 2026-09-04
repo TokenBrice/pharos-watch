@@ -390,7 +390,11 @@ export function buildCommandPaletteResultDescriptors({
     }
 
     for (const page of COMMAND_PALETTE_PAGES) {
-      if (fuzzyMatch(q, page.label) || (page.description && fuzzyMatch(q, page.description))) {
+      if (
+        fuzzyMatch(q, page.label) ||
+        (page.description && fuzzyMatch(q, page.description)) ||
+        (page.keywords && fuzzyMatch(q, page.keywords))
+      ) {
         items.push({
           id: `page-${page.href}`,
           label: page.label,

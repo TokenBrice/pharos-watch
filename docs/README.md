@@ -37,6 +37,7 @@ rg -n '/route-name/|src/app/route-name' docs
 
 - [api-page.md](./api-page.md) - public API access and reference pages
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - cemetery and compare surfaces
+- [depeg-page.md](./depeg-page.md) - depeg and recovery incident board, hero contract, and event archive routing
 - [portfolio-page.md](./portfolio-page.md) - personal stablecoin risk workspace
 - [upcoming-page.md](./upcoming-page.md) - pre-launch stablecoin tracker
 

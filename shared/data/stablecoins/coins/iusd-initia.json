@@ -90,6 +90,33 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "initia-wrapper-vault",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "iusd-initia",
+    "display": {
+      "url": "https://rest.initia.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=move%2F6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+      "label": "Initia LCD — iusd-vault AUSD0 balance vs iUSD supply"
+    },
+    "inputs": {
+      "primary": { "kind": "http-json", "url": "https://rest.initia.xyz" }
+    },
+    "params": {
+      "lcdUrl": "https://rest.initia.xyz",
+      "iusdDenom": "move/6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+      "iusdMetadataAddress": "0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+      "vaultOwnerAddress": "0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a",
+      "ausd0MetadataAddress": "0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef",
+      "decimals": 6,
+      "slice": {
+        "name": "Agora AUSD bridged via LayerZero (Initia AUSD0)",
+        "risk": "low",
+        "coinId": "ausd-agora",
+        "depType": "wrapper"
+      }
+    }
+  },
   "notices": [
     {
       "type": "warning",

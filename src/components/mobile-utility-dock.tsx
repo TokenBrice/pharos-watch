@@ -31,7 +31,7 @@ export function MobileUtilityDock() {
     <>
       <div
         className={cn(
-          "fixed inset-x-0 bottom-[max(0.875rem,env(safe-area-inset-bottom))] z-50 flex max-w-[100vw] justify-end overflow-x-clip px-4 sm:hidden",
+          "fixed inset-x-0 bottom-[calc(var(--mobile-bottom-nav-safe-height)+0.875rem)] z-50 flex max-w-[100vw] justify-end overflow-x-clip px-4 sm:hidden",
           showFeedback
             ? "pointer-events-none visible translate-y-0 opacity-100"
             : "pointer-events-none invisible translate-y-4 opacity-0",

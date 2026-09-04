@@ -528,7 +528,7 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 
 ### Depeg dashboard stat context
 
-`DepegTrackerStats` (`src/components/depeg-tracker-stats.tsx`) now uses the shared contextual methodology pattern on the key cards (`Active Depegs`, `Coins at Peg`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology.
+`DepegOutlookHero` (`src/components/depeg-outlook-hero.tsx`) uses the shared contextual methodology pattern on its key figures (`Active depegs`, `Holding peg`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology. It replaced the route's earlier stat-card stack; route composition is owned by [depeg-page.md](./depeg-page.md).
 
 ### Component: DepegHistory (`depeg-history.tsx`)
 

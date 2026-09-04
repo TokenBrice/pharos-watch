@@ -234,6 +234,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
   },
+  "astherus-earn-wrapper": declareAdapter("astherusEarnWrapper", ONCHAIN_SINGLE_ASSET_V1, {
+    // asUSDF withdrawals are delayed rather than provably immediate, so the
+    // net USDF balance backing the shares is composition evidence, not capacity.
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+  }),
   asymmetry: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
   }),
@@ -553,6 +558,19 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   infinifi: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),
+  "initia-wrapper-vault": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "initiaWrapperVault",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    // Initia has no EVM read path, so the vault balance is read over the chain's
+    // LCD; the wrapper has no published redemption terms, so no capacity.
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   jupusd: {
     primaryInputKinds: ["http-json"],
     paramsSchema: "jupusd",
@@ -831,6 +849,19 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
+  "stoneyield-router-pool": declareAdapter("stoneyieldRouterPool", ONCHAIN_SINGLE_ASSET_V1, {
+    // stUSD's exit is `needs-research`/`capacity-unpublished` and there is no
+    // public unwrap, so no capacity may be published from the pool read.
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "staged",
+      rationale:
+        "On-chain evidence contradicts the reviewed 100% USDC sidecar row, so the adapter must not publish yet. At BSC block 119927831 SUSDC.getProtocolStats reported totalSupply 10,020,010, totalUSDCDeposited 10, totalRewardsDistributed 10,020,000 and contractUSDCBalance 0.05; the only observed USDC egress is 4.95 (block 69663673) plus 5 (block 69664002), both to StrategyRouter 0x563f48aAD50a75Ef3662827a4d536dbd46aBb5a2, which is the sole active full-weight strategy, and the Venus look-through adds 5.098725768562729 to 4.95 idle. Against STUSD supply 2,894,743.271428093 that is coverage 0.0000034886429716375584. Park until reserve-composition curation resolves the contradiction; review when verified backing or corrected supply evidence exists.",
+      parkedSince: "2026-09-04",
+      nextReview: "2026-12-04",
+    },
+  }),
+
   "superstate-liquidity": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "superstateLiquidity",

@@ -376,9 +376,9 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       ),
     ).toEqual(generation);
     expect([generation.generationId, new TextEncoder().encode(serialized).byteLength, sha256Hex(serialized)]).toEqual([
-      "safety-score-v9-supply-attribution:v1:3fded246844327e7cbc3b769a08e934231ae78c8037df24b755def0f1b7e01fa",
+      "safety-score-v9-supply-attribution:v1:7e2d2f69a013d0c27c8280932d46181cdc6e21dab74a7a718e6fab479bec5c01",
       3_867,
-      "52596ed4490813e4f6fe7c599d1c63e4f2e2fdeae787399c38df0d97ca3b72ec",
+      "354231ca708e4b364d3ea27dc7d747dce0a944d0da5a9673bf6d70448fa4d7bd",
     ]);
     expect(generation.expectedAssetIds).toEqual(["xaut-tether"]);
     expect(generation.observedAssetIds).toEqual(["xaut-tether"]);

@@ -9,8 +9,10 @@ import {
 } from "@shared/lib/methodology-versions/registry";
 import {
   NAV_GROUPS,
+  NAV_ITEMS,
   BOTTOM_NAV_ITEMS,
   QUICK_NAV_ITEMS,
+  normalizeNavPath,
   type NavItem,
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model";
@@ -211,7 +213,7 @@ const TIERS: readonly TierColumn[] = [
     key: "markets",
     label: "Markets",
     kicker: "Market structure",
-    intro: "Regime, yield, liquidity, flows, chain distribution, peg cohorts, and launch watch.",
+    intro: "Liquidity, flows, chain distribution, peg cohorts, and launch watch.",
     primary: MARKETS_GROUP?.items.map(navToRow) ?? [],
     sub: [
       {
@@ -228,7 +230,7 @@ const TIERS: readonly TierColumn[] = [
     key: "risk",
     label: "Risk",
     kicker: "Failure modes",
-    intro: "Safety, depeg, freeze, compliance, dependency, and failure-history surfaces.",
+    intro: "Freeze authority, compliance, dependency, and failure-history surfaces.",
     primary: RISK_GROUP?.items.map(navToRow) ?? [],
   },
   {
@@ -239,24 +241,24 @@ const TIERS: readonly TierColumn[] = [
     primary: TOOLS_GROUP?.items.map(navToRow) ?? [],
   },
   {
-    key: "learn",
-    label: "Learn",
-    kicker: "Education",
-    intro: "Mechanism explainers, case studies, and the vocabulary behind the dashboard.",
-    primary: moreColumnRows("learn"),
+    key: "research",
+    label: "Research",
+    kicker: "Reference",
+    intro: "Mechanism explainers, case studies, the vocabulary, and the scoring methodology.",
+    primary: moreColumnRows("research"),
   },
   {
-    key: "updates",
-    label: "Updates",
+    key: "watch",
+    label: "Watch",
     kicker: "What changed",
-    intro: "Daily digest, the event timeline, release notes, long-form posts, and push alerts.",
-    primary: moreColumnRows("updates"),
+    intro: "Daily digest, the unified event timeline, and push alerts.",
+    primary: moreColumnRows("watch"),
   },
   {
     key: "pharos",
     label: "Pharos",
-    kicker: "Docs and methodology",
-    intro: "Methodology, product context, API access, pipeline health, and supporting documentation.",
+    kicker: "The product",
+    intro: "Product context, release notes, long-form posts, API access, and pipeline health.",
     primary: moreColumnRows("pharos"),
     sub: [
       {
@@ -275,7 +277,10 @@ const TIERS: readonly TierColumn[] = [
   },
 ];
 
-const QUICK_ROWS: readonly RouteRow[] = QUICK_NAV_ITEMS.map(navToRow);
+const CANONICAL_NAV_LABELS = new Map(NAV_ITEMS.map((item) => [normalizeNavPath(item.href), item.label]));
+const QUICK_ROWS: readonly RouteRow[] = QUICK_NAV_ITEMS.map((item) =>
+  navToRow({ ...item, label: CANONICAL_NAV_LABELS.get(normalizeNavPath(item.href)) ?? item.label }),
+);
 const BOTTOM_ROWS: readonly RouteRow[] = BOTTOM_NAV_ITEMS.map(navToRow);
 
 const HUMAN_SITEMAP_LISTED_PATHS = new Set([
