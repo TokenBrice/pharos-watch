@@ -48,8 +48,6 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
-          next-cache: "true"
-          next-cache-save: "true"
       - name: Materialize compile-input artifacts
         # The dataset refresh consumes the generated stablecoin catalog, so
         # compile inputs must exist before the refresh runs.
@@ -63,6 +61,9 @@ jobs:
           PUBLIC_DATASETS_REQUIRE_API: "1"
         run: node --import tsx scripts/maintenance/refresh-pages-release-data.ts
       - name: Build clean production export
+        # Production builds deliberately start without a restored .next/cache.
+        # A stale Webpack/PostCSS entry can otherwise pair new Tailwind class
+        # names in HTML with an older generated stylesheet.
         env:
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
