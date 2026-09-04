@@ -16,6 +16,7 @@ import {
 import type { NavItem } from "@/lib/nav-config";
 import { ChevronLeft, ChevronRight, ExternalLink, Menu, Search, X } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
+import { OPEN_NAV_DRAWER_EVENT } from "@/lib/nav-drawer";
 import { isRouteActive } from "@/lib/navigation";
 import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility";
 
@@ -114,6 +115,17 @@ export function Header() {
     returnFocusCategoryKeyRef.current = activeCategoryKey;
     setActiveCategoryKey(null);
   }
+
+  useEffect(() => {
+    function handleOpenNavDrawer() {
+      setActiveCategoryKey(null);
+      returnFocusCategoryKeyRef.current = null;
+      setOpen(true);
+    }
+
+    window.addEventListener(OPEN_NAV_DRAWER_EVENT, handleOpenNavDrawer);
+    return () => window.removeEventListener(OPEN_NAV_DRAWER_EVENT, handleOpenNavDrawer);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
