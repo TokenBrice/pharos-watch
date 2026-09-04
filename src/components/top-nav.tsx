@@ -194,10 +194,11 @@ export function TopNav() {
                 {/* The icon is the affordance that separates a direct link from
                     a menu trigger; triggers carry a chevron and no glyph. */}
                 <Icon className="size-4 shrink-0 opacity-70" aria-hidden />
-                {/* Full names from 2xl only: below it the five-item rail, the
-                    search field, and four section menus do not fit one row. */}
-                <span className="2xl:hidden">{item.shortLabel ?? item.label}</span>
-                <span className="hidden 2xl:inline">{item.label}</span>
+                {/* Prefer descriptive route names once the rail has room. The
+                    search control stays icon-only at xl so these labels can
+                    expand without pushing the right edge out of view. */}
+                <span className="xl:hidden">{item.shortLabel ?? item.label}</span>
+                <span className="hidden xl:inline">{item.label}</span>
               </Link>
             );
           })}
@@ -327,13 +328,13 @@ export function TopNav() {
           type="button"
           onClick={openCommandPalette}
           aria-label="Search"
-          className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-44 xl:justify-start xl:px-3 2xl:w-72"
+          className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground 2xl:w-72 2xl:justify-start 2xl:px-3"
         >
           <Search className="size-4 shrink-0" aria-hidden />
-          {/* Below xl the five-item rail plus four menus need the width; the
-              icon plus ⌘K still carries search. */}
-          <span className="hidden xl:inline">Search</span>
-          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-[10px] text-muted-foreground xl:inline">
+          {/* The icon carries search until there is room for both the complete
+              route names and the expanded command-palette control. */}
+          <span className="hidden 2xl:inline">Search</span>
+          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-[10px] text-muted-foreground 2xl:inline">
             ⌘K
           </kbd>
         </button>

@@ -89,6 +89,23 @@ describe("TopNav", () => {
     expect(railLinks[0].getAttribute("aria-current")).toBe("page");
   });
 
+  it("expands descriptive rail labels before expanding the search control", () => {
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+
+    const ddrLink = screen.getByRole("link", { name: /Depeg & Recovery/ });
+    const compactLabel = ddrLink.querySelector("span.xl\\:hidden");
+    const fullLabel = ddrLink.querySelector("span.hidden.xl\\:inline");
+    const search = screen.getByRole("button", { name: "Search" });
+
+    expect(compactLabel?.textContent).toBe("DDR");
+    expect(fullLabel?.textContent).toBe("Depeg & Recovery");
+    expect(search.className).toContain("2xl:w-72");
+    expect(search.className).not.toContain("xl:w-44");
+    expect(search.querySelector("span")?.className).toContain("2xl:inline");
+  });
+
   it("opens the More panel on hover with the tail grouped into columns", async () => {
     const matchMedia = installMatchMediaMock(true);
 
