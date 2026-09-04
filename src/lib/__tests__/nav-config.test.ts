@@ -1,142 +1,128 @@
 import { describe, expect, it } from "vitest";
 import {
-  COMPANION_NAV_ITEMS,
+  BOTTOM_NAV_ITEMS,
   DEFAULT_EXPANDED,
   NAV_GROUPS,
   NAV_ITEMS,
-  UTILITY_NAV_ITEMS,
+  QUICK_NAV_ITEMS,
 } from "@/lib/nav-config";
+import { COMMAND_PALETTE_PAGES } from "@/components/command-palette-model";
 
 describe("nav-config", () => {
-  it("uses the grouped IA as the canonical navigation model", () => {
-    expect(NAV_GROUPS.map((group) => group.key)).toEqual([
-      "overview",
-      "markets",
-      "risk",
-      "analyze",
-      "learn",
-      "reference",
+  it("uses a quick rail plus four section menus as the canonical navigation model", () => {
+    expect(QUICK_NAV_ITEMS.map((item) => item.href)).toEqual([
+      "/",
+      "/safety-scores/",
+      "/yield/",
+      "/depeg/",
+      "/stability-index/",
     ]);
 
-    expect(NAV_GROUPS.map((group) => group.label)).toEqual([
-      "Overview",
-      "Markets",
-      "Risk",
-      "Analyze",
-      "Learn",
-      "Reference",
-    ]);
+    expect(NAV_GROUPS.map((group) => group.key)).toEqual(["markets", "risk", "tools", "more"]);
+    expect(NAV_GROUPS.map((group) => group.label)).toEqual(["Markets", "Risk", "Tools", "More"]);
   });
 
-  it("groups overview, market, and risk routes by user intent", () => {
-    const overviewGroup = NAV_GROUPS.find((group) => group.key === "overview");
-    const marketsGroup = NAV_GROUPS.find((group) => group.key === "markets");
-    const riskGroup = NAV_GROUPS.find((group) => group.key === "risk");
+  it("keeps every rail route inside its owning menu so the section still answers for it", () => {
+    const marketsHrefs = NAV_GROUPS.find((group) => group.key === "markets")?.items.map((item) => item.href);
+    const riskHrefs = NAV_GROUPS.find((group) => group.key === "risk")?.items.map((item) => item.href);
 
-    expect(overviewGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/", label: "Dashboard" },
-      { href: "/stability-index/", label: "Stability Index" },
-      { href: "/timeline/", label: "Timeline" },
-      { href: "/digest/", label: "Daily Digest" },
-      { href: "/pharoswatchbot/", label: "Alert Bot" },
-    ]);
+    expect(marketsHrefs).toContain("/stability-index/");
+    expect(marketsHrefs).toContain("/yield/");
+    expect(riskHrefs).toContain("/safety-scores/");
+    expect(riskHrefs).toContain("/depeg/");
+  });
 
-    expect(marketsGroup?.items.map((item) => item.href)).toEqual([
+  it("splits market structure, failure modes, and interactive tools", () => {
+    expect(NAV_GROUPS.find((group) => group.key === "markets")?.items.map((item) => item.href)).toEqual([
+      "/stability-index/",
+      "/yield/",
       "/liquidity/",
       "/flows/",
       "/chains/",
       "/alt-pegs/",
-      "/yield/",
       "/upcoming/",
     ]);
 
-    expect(riskGroup?.items.map((item) => item.href)).toEqual([
+    expect(NAV_GROUPS.find((group) => group.key === "risk")?.items.map((item) => item.href)).toEqual([
       "/safety-scores/",
       "/depeg/",
       "/freezewatch/",
       "/compliance/",
+      "/dependency-map/",
       "/cemetery/",
     ]);
-  });
 
-  it("keeps Analyze tool-focused and separates Learn from Reference", () => {
-    const analyzeGroup = NAV_GROUPS.find((group) => group.key === "analyze");
-    const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
-    const referenceGroup = NAV_GROUPS.find((group) => group.key === "reference");
-
-    expect(analyzeGroup?.items.map((item) => item.href)).toEqual([
+    expect(NAV_GROUPS.find((group) => group.key === "tools")?.items.map((item) => item.href)).toEqual([
       "/screener/",
-      "/dependency-map/",
       "/compare/",
       "/portfolio/",
+      "/stablecoins/",
     ]);
-
-    expect(learnGroup?.items.map((item) => item.href)).toEqual([
-      "/learn/",
-      "/learn/mechanisms/",
-      "/learn/case-studies/",
-      "/learn/glossary/",
-    ]);
-
-    expect(referenceGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/methodology/", label: "Methodology" },
-      { href: "/coverage/", label: "Coverage" },
-      { href: "/about/", label: "About" },
-      { href: "/funding/", label: "Funding" },
-      { href: "/blog/", label: "Blog" },
-    ]);
-
-    expect(referenceGroup?.items.some((item) => item.href.startsWith("/learn/"))).toBe(false);
-    expect(referenceGroup?.items.some((item) => item.href === "/api/")).toBe(false);
-    expect(referenceGroup?.items.some((item) => item.href === "/changelog/")).toBe(false);
-    expect(referenceGroup?.items.some((item) => item.href === "/status/")).toBe(false);
   });
 
-  it("keeps overflow utility routes outside the grouped Reference menu", () => {
-    expect(UTILITY_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/api/", label: "API Access" },
-      { href: "/changelog/", label: "Changelog" },
-      { href: "/status/", label: "System Status" },
-    ]);
+  it("organizes the low-traffic tail into labeled More columns", () => {
+    const more = NAV_GROUPS.find((group) => group.key === "more");
 
-    const referenceGroup = NAV_GROUPS.find((group) => group.key === "reference");
-    const referenceHrefs = new Set(referenceGroup?.items.map((item) => item.href));
-    for (const item of UTILITY_NAV_ITEMS) {
-      expect(referenceHrefs.has(item.href)).toBe(false);
-      expect(NAV_ITEMS.some((navItem) => navItem.href === item.href)).toBe(true);
-    }
+    expect(more?.columns?.map((column) => column.key)).toEqual(["learn", "updates", "pharos"]);
+    expect(more?.columns?.map((column) => column.label)).toEqual(["Learn", "Updates", "Pharos"]);
+    // `items` must stay the exact flattening, or the mobile drawer and
+    // /sitemap-tree/ silently drop rows the desktop panel still shows.
+    expect(more?.items).toEqual(more?.columns?.flatMap((column) => column.items));
   });
 
-  it("sets practical default expansion for grouped mobile and legacy sidebar nav", () => {
-    expect(DEFAULT_EXPANDED).toEqual({
-      overview: true,
-      markets: true,
-      risk: true,
-      analyze: false,
-      learn: false,
-      reference: false,
-    });
-  });
-
-  it("exposes every grouped route to shared nav consumers without duplicates", () => {
+  it("gives every chrome-only utility route a home in a group", () => {
     const groupedHrefs = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.href));
-    const navHrefs = NAV_ITEMS.map((item) => item.href);
 
-    for (const href of groupedHrefs) {
-      expect(navHrefs).toContain(href);
+    // /status/ previously lived only in the hardcoded desktop overflow and had
+    // no mobile surface at all.
+    for (const href of ["/status/", "/api/", "/changelog/", "/pharoswatchbot/"]) {
+      expect(groupedHrefs).toContain(href);
     }
-
-    expect(new Set(groupedHrefs).size).toBe(groupedHrefs.length);
-    expect(new Set(navHrefs).size).toBe(navHrefs.length);
   });
 
-  it("exposes PharosVille as an external companion entry, not a grouped route", () => {
-    expect(COMPANION_NAV_ITEMS).toHaveLength(1);
-    const ville = COMPANION_NAV_ITEMS[0];
-    expect(ville.label).toBe("PharosVille");
-    expect(ville.external).toBe(true);
-    expect(ville.href.startsWith("https://")).toBe(true);
-    expect(NAV_GROUPS.flatMap((group) => group.items).some((item) => item.label === "PharosVille")).toBe(false);
-    expect(NAV_ITEMS.some((item) => item.label === "PharosVille")).toBe(true);
+  it("exposes PharosVille as an external row rather than an internal route", () => {
+    const ville = NAV_ITEMS.find((item) => item.label === "PharosVille");
+
+    expect(ville?.external).toBe(true);
+    expect(ville?.href.startsWith("https://")).toBe(true);
+  });
+
+  it("indexes canonical labels, not the rail's presentation-only short forms", () => {
+    // NAV_ITEMS feeds the command palette and the 404 route-guess: search must
+    // offer "Yield Intelligence", never the rail's "Yield".
+    expect(NAV_ITEMS.find((item) => item.href === "/yield/")?.label).toBe("Yield Intelligence");
+    expect(NAV_ITEMS.find((item) => item.href === "/stability-index/")?.shortLabel).toBeUndefined();
+    expect(NAV_ITEMS.find((item) => item.href === "/safety-scores/")?.shortLabel).toBeUndefined();
+  });
+
+  it("keeps footer-only routes searchable through the palette page index", () => {
+    // /coverage/ and /funding/ left the menus in the 2026-09-04 revamp; search
+    // must still find them or the demotion becomes a disappearance.
+    const hrefs = COMMAND_PALETTE_PAGES.map((page) => page.href);
+
+    expect(hrefs).toContain("/coverage/");
+    expect(hrefs).toContain("/funding/");
+  });
+
+  it("exposes every navigable route exactly once to shared nav consumers", () => {
+    const hrefs = NAV_ITEMS.map((item) => item.href);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+
+    for (const href of [
+      ...NAV_GROUPS.flatMap((group) => group.items.map((item) => item.href)),
+      ...QUICK_NAV_ITEMS.map((item) => item.href),
+      ...BOTTOM_NAV_ITEMS.map((item) => item.href),
+    ]) {
+      expect(hrefs).toContain(href);
+    }
+  });
+
+  it("opens the mobile drawer as labeled headers now that the rail carries the hot routes", () => {
+    expect(DEFAULT_EXPANDED).toEqual({
+      markets: false,
+      risk: false,
+      tools: false,
+      more: false,
+    });
   });
 });

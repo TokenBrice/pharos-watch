@@ -55,83 +55,74 @@ beforeEach(() => {
 describe("getExpandedState", () => {
   it("returns defaults when localStorage is empty", () => {
     const state = getExpandedState();
-    // The high-traffic Overview, Markets, and Risk groups default open so
-    // common routes are one click away; deeper research/reference groups stay collapsed.
-    expect(state["overview"]).toBe(true);
-    expect(state["markets"]).toBe(true);
-    expect(state["risk"]).toBe(true);
-    expect(state["analyze"]).toBe(false);
-    expect(state["learn"]).toBe(false);
-    expect(state["reference"]).toBe(false);
+    // Every group starts collapsed: the desktop quick rail and its mobile tile
+    // block already carry the high-traffic routes above the group headers.
+    expect(state).toEqual({ markets: false, risk: false, tools: false, more: false });
   });
 
   it("merges persisted state over defaults", () => {
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ markets: false }));
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ markets: true }));
     const state = getExpandedState();
-    expect(state["overview"]).toBe(true); // default
-    expect(state["markets"]).toBe(false); // overridden
-    expect(state["risk"]).toBe(true);     // default
-    expect(state["analyze"]).toBe(false); // default
-    expect(state["learn"]).toBe(false);   // default
-    expect(state["reference"]).toBe(false); // default
+    expect(state["markets"]).toBe(true); // overridden
+    expect(state["risk"]).toBe(false); // default
+    expect(state["tools"]).toBe(false); // default
+    expect(state["more"]).toBe(false); // default
   });
 
   it("handles corrupted localStorage gracefully", () => {
     mockStorage.setItem(STORAGE_KEY, "not-json");
-    const state = getExpandedState();
-    expect(state["overview"]).toBe(true); // falls back to defaults
-    expect(state["markets"]).toBe(true);
-    expect(state["risk"]).toBe(true);
-    expect(state["analyze"]).toBe(false);
-    expect(state["learn"]).toBe(false);
-    expect(state["reference"]).toBe(false);
+    expect(getExpandedState()).toEqual({ markets: false, risk: false, tools: false, more: false });
   });
 
   it("ignores valid JSON with an invalid persisted shape", () => {
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify(["markets", false]));
-    const state = getExpandedState();
-    expect(state["overview"]).toBe(true);
-    expect(state["markets"]).toBe(true);
-    expect(state["risk"]).toBe(true);
-    expect(state["analyze"]).toBe(false);
-    expect(state["learn"]).toBe(false);
-    expect(state["reference"]).toBe(false);
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify(["markets", true]));
+    expect(getExpandedState()).toEqual({ markets: false, risk: false, tools: false, more: false });
   });
 
   it("keeps only boolean values from mixed persisted entries", () => {
     mockStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        overview: false,
-        markets: "false",
-        risk: false,
-        analyze: true,
-        reference: null,
+        markets: "true",
+        risk: true,
+        tools: null,
+        more: true,
       }),
     );
 
     const state = getExpandedState();
 
-    expect(state["overview"]).toBe(false);
-    expect(state["markets"]).toBe(true);
+    expect(state["markets"]).toBe(false);
+    expect(state["risk"]).toBe(true);
+    expect(state["tools"]).toBe(false);
+    expect(state["more"]).toBe(true);
+  });
+
+  it("survives a payload persisted under the retired group keys", () => {
+    // Pre-revamp drawers persisted overview/analyze/learn/reference.
+    mockStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ overview: true, analyze: true, learn: true, reference: true }),
+    );
+
+    const state = getExpandedState();
+
+    expect(state["markets"]).toBe(false);
     expect(state["risk"]).toBe(false);
-    expect(state["analyze"]).toBe(true);
-    expect(state["learn"]).toBe(false);
-    expect(state["reference"]).toBe(false);
+    expect(state["tools"]).toBe(false);
+    expect(state["more"]).toBe(false);
   });
 });
 
 describe("setExpandedState", () => {
   it("persists state to localStorage", () => {
-    setExpandedState({ overview: true, markets: false, risk: true, analyze: false, learn: false, reference: true });
+    setExpandedState({ markets: true, risk: false, tools: false, more: true });
     const raw = mockStorage.getItem(STORAGE_KEY);
     expect(JSON.parse(raw!)).toEqual({
-      overview: true,
-      markets: false,
-      risk: true,
-      analyze: false,
-      learn: false,
-      reference: true,
+      markets: true,
+      risk: false,
+      tools: false,
+      more: true,
     });
   });
 });
@@ -143,18 +134,18 @@ describe("useNavCollapse", () => {
   }
 
   it("renders the hydration pass from defaults before applying localStorage state", async () => {
-    // Defaults expand the Markets group, so the server pass should reflect
-    // that baseline regardless of the persisted state that will later hydrate.
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ markets: false }));
+    // Defaults collapse the Markets group, so the server pass reflects that
+    // baseline regardless of the persisted state that will later hydrate.
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ markets: true }));
 
-    expect(renderToString(createElement(NavCollapseProbe))).toContain('data-expanded="true"');
+    expect(renderToString(createElement(NavCollapseProbe))).toContain('data-expanded="false"');
 
     const { result } = renderHook(() => useNavCollapse());
 
-    // After client hydration, the persisted override (false) should win over
-    // the default (true).
+    // After client hydration, the persisted override (true) should win over
+    // the default (false).
     await waitFor(() => {
-      expect(result.current.isExpanded("markets")).toBe(false);
+      expect(result.current.isExpanded("markets")).toBe(true);
     });
   });
 });

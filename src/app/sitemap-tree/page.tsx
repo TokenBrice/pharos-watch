@@ -10,8 +10,7 @@ import {
 import {
   NAV_GROUPS,
   BOTTOM_NAV_ITEMS,
-  COMPANION_NAV_ITEMS,
-  UTILITY_NAV_ITEMS,
+  QUICK_NAV_ITEMS,
   type NavItem,
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model";
@@ -27,7 +26,7 @@ import { PUBLIC_ROUTE_INVENTORY } from "@/lib/public-route-inventory";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Sitemap: Stablecoin Dashboard Route Index",
   description:
-    "Every public Pharos route grouped by Overview, Markets, Risk, Analyze, Learn, and Reference. The full surface area of the stablecoin dashboard on a single page.",
+    "Every public Pharos route grouped by Markets, Risk, Tools, Learn, Updates, and Pharos. The full surface area of the stablecoin dashboard on a single page.",
   canonical: "/sitemap-tree/",
 });
 
@@ -185,12 +184,12 @@ const MORE_REFERENCE_ROUTES: readonly RouteRow[] = [
   },
 ];
 
-const OVERVIEW_GROUP = NAV_GROUPS.find((g) => g.key === "overview");
 const MARKETS_GROUP = NAV_GROUPS.find((g) => g.key === "markets");
 const RISK_GROUP = NAV_GROUPS.find((g) => g.key === "risk");
-const ANALYZE_GROUP = NAV_GROUPS.find((g) => g.key === "analyze");
-const LEARN_GROUP = NAV_GROUPS.find((g) => g.key === "learn");
-const REFERENCE_GROUP = NAV_GROUPS.find((g) => g.key === "reference");
+const TOOLS_GROUP = NAV_GROUPS.find((g) => g.key === "tools");
+const MORE_GROUP = NAV_GROUPS.find((g) => g.key === "more");
+const moreColumnRows = (key: string): readonly RouteRow[] =>
+  MORE_GROUP?.columns?.find((column) => column.key === key)?.items.map(navToRow) ?? [];
 
 const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((coin) => ({
   href: buildStablecoinUrl(coin.id),
@@ -209,17 +208,10 @@ const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((co
 
 const TIERS: readonly TierColumn[] = [
   {
-    key: "overview",
-    label: "Overview",
-    kicker: "Command center",
-    intro: "Daily entry points for market pulse, regime, event tape, digest, and alerts.",
-    primary: OVERVIEW_GROUP?.items.map(navToRow) ?? [],
-  },
-  {
     key: "markets",
     label: "Markets",
     kicker: "Market structure",
-    intro: "Liquidity, flows, chain distribution, peg cohorts, yield, and launch watch.",
+    intro: "Regime, yield, liquidity, flows, chain distribution, peg cohorts, and launch watch.",
     primary: MARKETS_GROUP?.items.map(navToRow) ?? [],
     sub: [
       {
@@ -240,25 +232,32 @@ const TIERS: readonly TierColumn[] = [
     primary: RISK_GROUP?.items.map(navToRow) ?? [],
   },
   {
-    key: "analyze",
-    label: "Analyze",
+    key: "tools",
+    label: "Tools",
     kicker: "Research tools",
-    intro: "Power-user surfaces for filtering, peer comparison, and portfolio review.",
-    primary: ANALYZE_GROUP?.items.map(navToRow) ?? [],
+    intro: "Power-user surfaces for filtering, peer comparison, portfolio review, and directory browsing.",
+    primary: TOOLS_GROUP?.items.map(navToRow) ?? [],
   },
   {
     key: "learn",
     label: "Learn",
     kicker: "Education",
     intro: "Mechanism explainers, case studies, and the vocabulary behind the dashboard.",
-    primary: LEARN_GROUP?.items.map(navToRow) ?? [],
+    primary: moreColumnRows("learn"),
   },
   {
-    key: "reference",
-    label: "Reference",
+    key: "updates",
+    label: "Updates",
+    kicker: "What changed",
+    intro: "Daily digest, the event timeline, release notes, long-form posts, and push alerts.",
+    primary: moreColumnRows("updates"),
+  },
+  {
+    key: "pharos",
+    label: "Pharos",
     kicker: "Docs and methodology",
-    intro: "Methodology, coverage, product context, funding, and supporting documentation.",
-    primary: REFERENCE_GROUP?.items.map(navToRow) ?? [],
+    intro: "Methodology, product context, API access, pipeline health, and supporting documentation.",
+    primary: moreColumnRows("pharos"),
     sub: [
       {
         title: "About Pharos",
@@ -276,18 +275,16 @@ const TIERS: readonly TierColumn[] = [
   },
 ];
 
-const COMPANION_ROWS: readonly RouteRow[] = COMPANION_NAV_ITEMS.map(navToRow);
+const QUICK_ROWS: readonly RouteRow[] = QUICK_NAV_ITEMS.map(navToRow);
 const BOTTOM_ROWS: readonly RouteRow[] = BOTTOM_NAV_ITEMS.map(navToRow);
-const UTILITY_ROWS: readonly RouteRow[] = UTILITY_NAV_ITEMS.map(navToRow);
 
 const HUMAN_SITEMAP_LISTED_PATHS = new Set([
   ...TIERS.flatMap((tier) => [
     ...tier.primary.map((row) => row.href),
     ...(tier.sub?.flatMap((group) => group.rows.map((row) => row.href)) ?? []),
   ]),
-  ...COMPANION_ROWS.map((row) => row.href),
+  ...QUICK_ROWS.map((row) => row.href),
   ...BOTTOM_ROWS.map((row) => row.href),
-  ...UTILITY_ROWS.map((row) => row.href),
 ]);
 
 const INDEXED_ARCHIVE_ROWS: readonly RouteRow[] = PUBLIC_ROUTE_INVENTORY
@@ -379,7 +376,7 @@ export default function SitemapTreePage() {
       path="/sitemap-tree/"
       title="All pages"
       leadParagraphs={[
-        "Every public Pharos route, grouped by the same Overview / Markets / Risk / Analyze / Learn / Reference sections as the top nav. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
+        "Every public Pharos route, grouped by the same Markets / Risk / Tools sections as the top nav, plus the Learn, Updates, and Pharos columns behind its More menu. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
       ]}
     >
       <div className="grid gap-10 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 xl:gap-8">
@@ -388,25 +385,25 @@ export default function SitemapTreePage() {
         ))}
       </div>
 
-      {(UTILITY_ROWS.length > 0 || COMPANION_ROWS.length > 0 || BOTTOM_ROWS.length > 0) && (
+      {(QUICK_ROWS.length > 0 || BOTTOM_ROWS.length > 0) && (
         <section
-          aria-labelledby="sitemap-companion"
+          aria-labelledby="sitemap-quick-access"
           className="mt-10 space-y-4 border-t border-border/60 pt-8"
         >
           <header className="space-y-1">
-            <p className="pharos-kicker">Companion</p>
+            <p className="pharos-kicker">Quick access</p>
             <h2
-              id="sitemap-companion"
+              id="sitemap-quick-access"
               className="pharos-display text-xl font-bold tracking-tight text-foreground"
             >
-              Utilities and sibling sites
+              Daily entry points
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Overflow utilities, entry points for new readers, and sibling experiences that consume the same Pharos data.
+              The routes promoted to the masthead quick rail, plus the guided entry point for new readers.
             </p>
           </header>
           <ul className="grid gap-0.5 sm:grid-cols-2">
-            {[...UTILITY_ROWS, ...BOTTOM_ROWS, ...COMPANION_ROWS].map((row) => (
+            {[...QUICK_ROWS, ...BOTTOM_ROWS].map((row) => (
               <li key={row.href}>
                 <RouteRowLink row={row} />
               </li>

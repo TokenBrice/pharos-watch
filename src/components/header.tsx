@@ -9,8 +9,8 @@ import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from 
 import { Button } from "@/components/ui/button";
 import {
   BOTTOM_NAV_ITEMS,
-  COMPANION_NAV_ITEMS,
   NAV_GROUPS,
+  QUICK_NAV_ITEMS,
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
@@ -77,7 +77,8 @@ export function Header() {
   const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
   const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
   const groups = NAV_GROUPS;
-  const mobileLeadItemCount = priorityBottomNavItems.length;
+  // +1 so the quick rail occupies the first animation slot.
+  const mobileLeadItemCount = priorityBottomNavItems.length + 1;
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   // The header renders above the core rail in flow, so it pins directly under
@@ -170,6 +171,35 @@ export function Header() {
                   </div>
                 ) : null}
 
+                {/* Quick rail: the four highest-traffic routes, always visible. */}
+                <div
+                  className="mt-4 grid grid-cols-2 gap-2 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
+                  style={{
+                    animationDelay: `${priorityBottomNavItems.length * 50}ms`,
+                    animationDuration: "220ms",
+                  }}
+                >
+                  {QUICK_NAV_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const active = isRouteActive(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        prefetch={false}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={`pharos-focus-ring flex min-h-16 flex-col justify-between rounded-lg border px-3 py-2.5 transition-colors ${
+                          active ? "border-border/70 bg-muted/60" : "border-border/45 bg-muted/20 hover:bg-muted/40"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+                        <span className="text-sm font-semibold leading-tight text-foreground">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+
                 {/* Grouped sections */}
                 {groups.map((group, groupIndex) => {
                   const groupIsActive = group.items.some((item) => isRouteActive(pathname, item.href));
@@ -209,14 +239,28 @@ export function Header() {
                       >
                         <div className="overflow-hidden">
                           <div id={`mobile-nav-group-${group.key}`}>
-                            {group.items.map((item) => (
-                              <MobileNavLink
-                                key={item.href}
-                                item={item}
-                                active={isRouteActive(pathname, item.href)}
-                                onNavigate={() => setOpen(false)}
-                              />
-                            ))}
+                            {group.columns
+                              ? group.columns.map((column) => (
+                                  <div key={column.key} className="mb-1.5">
+                                    <p className="pharos-kicker mb-1 mt-2 text-muted-foreground/60">{column.label}</p>
+                                    {column.items.map((item) => (
+                                      <MobileNavLink
+                                        key={item.href}
+                                        item={item}
+                                        active={isRouteActive(pathname, item.href)}
+                                        onNavigate={() => setOpen(false)}
+                                      />
+                                    ))}
+                                  </div>
+                                ))
+                              : group.items.map((item) => (
+                                  <MobileNavLink
+                                    key={item.href}
+                                    item={item}
+                                    active={isRouteActive(pathname, item.href)}
+                                    onNavigate={() => setOpen(false)}
+                                  />
+                                ))}
                           </div>
                         </div>
                       </div>
@@ -243,21 +287,6 @@ export function Header() {
                         active={isRouteActive(pathname, item.href)}
                         onNavigate={() => setOpen(false)}
                       />
-                    ))}
-                  </div>
-                ) : null}
-
-                {COMPANION_NAV_ITEMS.length > 0 ? (
-                  <div
-                    className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
-                    style={{
-                      animationDelay: `${(mobileLeadItemCount + groups.length + 1) * 50}ms`,
-                      animationDuration: "220ms",
-                    }}
-                  >
-                    <p className="pharos-kicker mb-1.5 text-muted-foreground/70">Companion</p>
-                    {COMPANION_NAV_ITEMS.map((item) => (
-                      <MobileNavLink key={item.href} item={item} active={false} onNavigate={() => setOpen(false)} />
                     ))}
                   </div>
                 ) : null}

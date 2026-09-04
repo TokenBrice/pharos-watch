@@ -1,6 +1,7 @@
 import {
   BookOpen,
   Coins,
+  Heart,
   KeyRound,
   Landmark,
   LockKeyhole,
@@ -97,6 +98,20 @@ export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
     label: "Report Card Changelog",
     icon: TableProperties,
     description: "Version history for Safety Score and report-card scoring",
+  },
+  // Footer-only routes: demoted out of NAV_GROUPS by the 2026-09-04 nav
+  // revamp, so the palette must carry them explicitly or search loses them.
+  {
+    href: "/coverage/",
+    label: "Coverage",
+    icon: TableProperties,
+    description: "Truth surface for what each route can show per coin",
+  },
+  {
+    href: "/funding/",
+    label: "Funding",
+    icon: Heart,
+    description: "Running costs, supporter ledger, and public sustainability path",
   },
 ] as const;
 

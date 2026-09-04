@@ -253,7 +253,7 @@ BotFather-owned release checklist:
 
 ## Frontend Main Page
 
-`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is linked from the top-nav menus ("Alert Bot") and the homepage status strip.
+`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is linked from the top-nav `More` menu's `Updates` column ("Alert Bot") and the homepage status strip.
 
 - Route: `/pharoswatchbot/`
 - Legacy alias: `/telegram` redirects to `/pharoswatchbot/`, and `/telegram/*` redirects to the matching `/pharoswatchbot/*` path
