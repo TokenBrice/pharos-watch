@@ -21,7 +21,7 @@ const PAST_PEAK_FLOOR_BPS = 25;
  * The baseline is the event's peak deviation, so this says "past its worst" —
  * not "worse than at lock", which this data cannot support.
  */
-export function isPastEventPeak(row: DdrDisplayRow): boolean {
+function isPastEventPeak(row: DdrDisplayRow): boolean {
   const live = getLiveCurrentDeviationBps(row);
   if (live == null) return false;
   const peak = Math.abs(getPeakDeviationBps(row));
