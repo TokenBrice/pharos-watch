@@ -81,9 +81,11 @@ jobs:
 
       - name: Summarize skipped publication
         if: ${{ always() && steps.plan.outputs.should_render == 'false' }}
+        env:
+          JOB_STATUS: ${{ job.status }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts summary
-          --job-status=${{ job.status }}
+          --job-status="${JOB_STATUS}"
           --out-dir="${MAP_OUT_DIR}"
 
   render:
@@ -94,6 +96,7 @@ jobs:
     timeout-minutes: 15
     env:
       MAP_OUT_DIR: agents/safety-score-map/ci
+      PLAN_TOKEN: ${{ needs.plan.outputs.plan_token }}
       WRANGLER_SEND_METRICS: "false"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -128,7 +131,7 @@ jobs:
           PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts render
-          --plan-token="${{ needs.plan.outputs.plan_token }}"
+          --plan-token="${PLAN_TOKEN}"
           --out-dir="${MAP_OUT_DIR}"
 
       # Keep a rejected render inspectable even when the publish phase fails.
@@ -151,12 +154,14 @@ jobs:
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts publish
-          --plan-token="${{ needs.plan.outputs.plan_token }}"
+          --plan-token="${PLAN_TOKEN}"
           --out-dir="${MAP_OUT_DIR}"
 
       - name: Summarize
         if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts summary
-          --job-status=${{ job.status }}
+          --job-status="${JOB_STATUS}"
           --out-dir="${MAP_OUT_DIR}"
