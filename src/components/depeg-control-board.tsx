@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowDown, ArrowUp, RotateCcw, ShieldCheck, Waves } from "lucide-react";
+import { ArrowDown, ArrowUp, RotateCcw } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { DEWSBadge } from "@/components/dews-badge";
@@ -18,7 +18,6 @@ import {
   metricTone,
 } from "@/components/depeg-board-model";
 import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
-import type { PegSummaryStats } from "@shared/types";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { formatCurrency, formatElapsedSeconds, formatPercent, formatTrackingSpanDays } from "@shared/lib/format";
@@ -28,7 +27,6 @@ export { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 
 interface DepegControlBoardProps {
   rows: DepegTrackerRow[];
-  stats: PegSummaryStats | null | undefined;
   logos: Record<string, string> | undefined;
   pegFilter: PegCurrency | "all";
   typeFilter: GovernanceType | "all";
@@ -39,6 +37,8 @@ interface DepegControlBoardProps {
   onClearFilters: () => void;
   onRowClick: (id: string) => void;
   nowSeconds: number;
+  /** Assets whose event history is too short to score, shown as scope context. */
+  eventFloorCount?: number;
 }
 
 const BOARD_PAGE_SIZE = 12;
@@ -50,77 +50,21 @@ const SORT_MODES: Array<{ key: DepegTableSortKey; label: string }> = [
   { key: "eventCount", label: "Events" },
 ];
 
+// Column layout starts at lg, not md: the six minimum tracks plus gaps need
+// ~820px and a 768px viewport gives the rows ~734px, which clipped the last
+// column with no horizontal access. Below lg the rows keep the stacked
+// card grammar, which preserves every field.
 const BOARD_GRID_CLASS =
-  "grid w-full grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 md:grid-cols-[2.5rem_minmax(11rem,1.12fr)_minmax(12rem,1fr)_minmax(7rem,0.58fr)_minmax(8rem,0.68fr)_minmax(7rem,0.58fr)] xl:grid-cols-[2.75rem_minmax(13rem,1.15fr)_minmax(13rem,1fr)_minmax(7.5rem,0.58fr)_minmax(9rem,0.72fr)_minmax(7.5rem,0.58fr)_minmax(8rem,0.62fr)]";
+  "grid w-full grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 lg:grid-cols-[2.5rem_minmax(11rem,1.12fr)_minmax(12rem,1fr)_minmax(7rem,0.58fr)_minmax(8rem,0.68fr)_minmax(7rem,0.58fr)] xl:grid-cols-[2.75rem_minmax(13rem,1.15fr)_minmax(13rem,1fr)_minmax(7.5rem,0.58fr)_minmax(9rem,0.72fr)_minmax(7.5rem,0.58fr)_minmax(8rem,0.62fr)]";
 
 const METRIC_HELP = {
   deviation: "Current deviation from the peg in basis points. 100 bps equals 1%.",
   dews: "DEWS is the Depeg Early Warning Score, a 0-100 stress score. Higher is more stressed.",
   pegHealth: "Peg Health merges Peg Score, where 100 is best, with the live percent of observations holding peg.",
-  events: "Confirmed depeg event count for the asset, with the worst historical deviation shown below.",
+  events: "Confirmed depeg event count for the asset, over the span Pharos has tracked it.",
   dexCheck: "DEX check compares trusted DEX prices with the primary peg signal when available.",
 };
 
-function ThreatTickerStrip({
-  worstAbs,
-  warningCount,
-  totalRows,
-  clearPct,
-  worstSymbol,
-}: {
-  worstAbs: number;
-  warningCount: number;
-  totalRows: number;
-  clearPct: number;
-  worstSymbol?: string;
-}) {
-  const stressPct = totalRows > 0 ? (warningCount / totalRows) * 100 : 0;
-  const cells = [
-    {
-      label: "Peg pressure",
-      value: `${Math.round(worstAbs)} bps`,
-      detail: worstSymbol ? `${worstSymbol} worst live move` : "no live outlier",
-      icon: Waves,
-      className: worstAbs >= 500 ? "text-red-700 dark:text-red-300" : worstAbs >= 100 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300",
-    },
-    {
-      label: "Stress breadth",
-      value: `${warningCount}/${totalRows || 0}`,
-      detail: `${formatPercent(stressPct, 0)} of filtered rows`,
-      icon: AlertTriangle,
-      className: stressPct >= 25 ? "text-red-700 dark:text-red-300" : stressPct >= 10 ? "text-amber-700 dark:text-amber-300" : "text-sky-700 dark:text-sky-300",
-    },
-    {
-      label: "At-peg coverage",
-      value: formatPercent(clearPct, 0),
-      detail: "tracked universe holding peg",
-      icon: ShieldCheck,
-      className: clearPct >= 95 ? "text-emerald-700 dark:text-emerald-300" : clearPct >= 85 ? "text-amber-700 dark:text-amber-300" : "text-red-700 dark:text-red-300",
-    },
-  ] as const;
-
-  return (
-    <div className="grid gap-2 md:grid-cols-3" aria-label="Current depeg triage summary">
-      {cells.map((cell) => {
-        const Icon = cell.icon;
-        return (
-          <div key={cell.label} className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/55 px-3 py-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <Icon className={cn("h-3.5 w-3.5 shrink-0", cell.className)} aria-hidden="true" />
-              <div className="min-w-0">
-                <div className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{cell.label}</div>
-                <div className="truncate text-xs text-muted-foreground">{cell.detail}</div>
-              </div>
-            </div>
-            <div className={cn("pharos-numeric shrink-0 text-lg font-bold", cell.className)}>
-              {cell.value}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function desktopHeaderCell(label: string, className?: string, title?: string) {
   return (
@@ -154,13 +98,13 @@ function MetricCell({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="mb-1 flex items-baseline justify-between gap-2 md:hidden">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
+      <div className="mb-1 flex items-baseline justify-between gap-2 lg:hidden">
+        <span className="pharos-kicker">{label}</span>
         <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
       </div>
-      <div className="pharos-numeric hidden text-sm font-semibold text-foreground md:block">{value}</div>
+      <div className="pharos-numeric hidden text-sm font-semibold text-foreground lg:block">{value}</div>
       {children ? <div className="mt-1.5">{children}</div> : null}
-      {subline ? <div className="pharos-numeric mt-1 truncate text-[10px] text-muted-foreground">{subline}</div> : null}
+      {subline ? <div className="pharos-meta pharos-numeric mt-1 truncate">{subline}</div> : null}
     </div>
   );
 }
@@ -181,7 +125,7 @@ function InstrumentRow({
   const prefetch = usePrefetchStablecoin();
   const coin = row.coin;
   const absDev = Math.abs(coin.currentDeviationBps ?? 0);
-  const worstAbsDev = Math.abs(coin.worstDeviationBps ?? 0);
+  const trackingSpan = formatTrackingSpanDays(coin.trackingSpanDays);
   const pegHealthValue =
     coin.pegScore !== null ? (
       <span className={pegScoreColor(coin.pegScore)}>{coin.pegScore}</span>
@@ -206,7 +150,7 @@ function InstrumentRow({
       )}
       aria-label={`Open ${coin.symbol} depeg detail`}
     >
-      <div className="pharos-numeric pt-0.5 text-xs text-muted-foreground md:text-right">#{rank}</div>
+      <div className="pharos-numeric pt-0.5 text-xs text-muted-foreground lg:text-right">#{rank}</div>
       <div className="min-w-0">
         <StablecoinIdentity
           logoSrc={logos?.[coin.id]}
@@ -217,16 +161,16 @@ function InstrumentRow({
           badge={<span className="hidden truncate text-xs text-muted-foreground sm:inline">{coin.name}</span>}
         />
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none", statusClassName(row))}>
+          <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-semibold uppercase leading-none", statusClassName(row))}>
             {statusLabel(row)}
           </span>
-          <span className="pharos-numeric text-[11px] text-muted-foreground">{eventAge}</span>
-          <span className="pharos-numeric text-[11px] text-muted-foreground">{coin.pegCurrency}</span>
+          <span className="pharos-meta pharos-numeric">{eventAge}</span>
+          <span className="pharos-meta pharos-numeric">{coin.pegCurrency}</span>
         </div>
       </div>
-      <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3 md:contents">
+      <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3 lg:contents">
         <MetricCell
-          className="col-span-2 md:col-span-1"
+          className="col-span-2 lg:col-span-1"
           label="Deviation"
           value={
             <span className={cn(deviationColorClass(absDev))}>
@@ -256,7 +200,7 @@ function InstrumentRow({
         <MetricCell
           label="Events"
           value={coin.eventCount}
-          subline={worstAbsDev > 0 ? `${worstAbsDev} bps max` : "no history"}
+          subline={coin.eventCount > 0 ? `over ${trackingSpan}` : "no history"}
         >
           <EventLoadMeter count={coin.eventCount} symbol={coin.symbol} />
         </MetricCell>
@@ -274,7 +218,6 @@ function InstrumentRow({
 
 export function DepegControlBoard({
   rows,
-  stats,
   logos,
   pegFilter,
   typeFilter,
@@ -285,11 +228,9 @@ export function DepegControlBoard({
   onClearFilters,
   onRowClick,
   nowSeconds,
+  eventFloorCount,
 }: DepegControlBoardProps) {
-  const worstAbs = Math.max(0, ...rows.map((row) => Math.abs(row.coin.currentDeviationBps ?? 0)));
   const warningCount = rows.filter((row) => row.coin.activeDepeg || row.pendingIncident || (row.dews?.score ?? 0) >= 36).length;
-  const totalRows = rows.length;
-  const clearPct = stats && stats.totalTracked > 0 ? (stats.coinsAtPeg / stats.totalTracked) * 100 : 0;
   const filtersActive = pegFilter !== "all" || typeFilter !== "all" || searchQuery.length > 0;
 
   const {
@@ -318,24 +259,23 @@ export function DepegControlBoard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="pharos-kicker">Leaderboard controls</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">Peg control board</h2>
+          <h2 className="pharos-section-title mt-1">Peg control board</h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span><span className="pharos-numeric font-semibold text-foreground">{sortedTotalRows}</span> rows</span>
-          <span aria-hidden="true">/</span>
-          <span><span className="pharos-numeric font-semibold text-foreground">{warningCount}</span> attention</span>
-        </div>
+        <p className="pharos-meta">
+          <span className="pharos-numeric font-semibold text-foreground">{warningCount}</span>{" "}
+          {filtersActive ? "filtered coins need attention" : "need attention"}
+          {eventFloorCount ? (
+            <>
+              {" · "}
+              <span className="pharos-numeric font-semibold text-foreground">{eventFloorCount}</span>{" "}
+              below the event-history floor
+            </>
+          ) : null}
+        </p>
       </div>
 
       <div className="pharos-table-shell">
         <div className="pharos-table-toolbar">
-          <ThreatTickerStrip
-            worstAbs={worstAbs}
-            warningCount={warningCount}
-            totalRows={totalRows}
-            clearPct={clearPct}
-            worstSymbol={stats?.worstCurrent?.symbol}
-          />
           <div className="flex flex-wrap items-center gap-1.5">
             <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by peg currency">
               {PEG_FILTER_OPTIONS.map((f) => (
@@ -421,7 +361,7 @@ export function DepegControlBoard({
               {rangeStart}-{rangeEnd} / {sortedTotalRows}
             </div>
           </div>
-          <div className={cn(BOARD_GRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 md:grid")}>
+          <div className={cn(BOARD_GRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 lg:grid")}>
             {desktopHeaderCell("#", "text-right")}
             {desktopHeaderCell("Asset")}
             {desktopHeaderCell("Deviation", undefined, METRIC_HELP.deviation)}

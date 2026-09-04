@@ -81,15 +81,15 @@ export function StateOnlyCard({
           <div className="flex min-w-0 items-center gap-3">
             <CoinLockup row={row} logos={logos} logoSize={52} />
           </div>
-          <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+          <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">
             {dirGlyph} {row.direction} {row.pegCurrency}
           </span>
         </div>
 
         <div className={cn("rounded-lg border px-3 py-2.5", copy.tone)}>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[0.95rem] font-bold uppercase leading-none tracking-wide">{copy.title}</p>
-            <span className="rounded-full border border-current/30 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide">
+            <p className="text-base font-bold uppercase leading-none tracking-wide">{copy.title}</p>
+            <span className="rounded-full border border-current/30 px-1.5 py-0.5 font-mono text-xs uppercase tracking-wide">
               {copy.badge}
             </span>
           </div>

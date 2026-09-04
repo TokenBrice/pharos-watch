@@ -83,7 +83,7 @@ function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
       <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" aria-hidden="true" />
       {/* now cap */}
       <span className="absolute right-0 top-1/2 h-3 w-px -translate-y-1/2 bg-foreground/40" aria-hidden="true" />
-      <span className="absolute -top-0.5 right-0 font-mono text-[8px] uppercase tracking-wide text-muted-foreground">
+      <span className="pharos-meta pharos-numeric absolute -top-0.5 right-0 uppercase tracking-wide">
         now
       </span>
 
@@ -111,26 +111,13 @@ function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
 // --- primitives ------------------------------------------------------------
 
 function Kicker({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-      {children}
-    </p>
-  );
+  return <p className="pharos-kicker">{children}</p>;
 }
 
 /** Scored-vs-maturing progress: a filled segment over a muted track plus a count caption. */
-function CalibrationBar({
-  scored,
-  maturing,
-  tone,
-}: {
-  scored: number;
-  maturing: number;
-  tone: "emerald" | "cyan";
-}) {
+function CalibrationBar({ scored, maturing }: { scored: number; maturing: number }) {
   const total = scored + maturing;
   const scoredPct = total > 0 ? (scored / total) * 100 : 0;
-  const fill = tone === "emerald" ? "bg-emerald-500/80" : "bg-cyan-500/80";
   return (
     <div className="space-y-1.5">
       <div
@@ -138,9 +125,9 @@ function CalibrationBar({
         role="img"
         aria-label={`${scored} scored of ${total}, ${maturing} still maturing`}
       >
-        <div className={cn("h-full rounded-full", fill)} style={{ width: `${scoredPct}%` }} />
+        <div className="h-full rounded-full bg-foreground/55" style={{ width: `${scoredPct}%` }} />
       </div>
-      <p className="font-mono text-[10px] text-muted-foreground">
+      <p className="pharos-meta pharos-numeric">
         {scored} scored · {maturing} maturing
       </p>
     </div>
@@ -164,8 +151,8 @@ function BreakdownStat({
         : "text-foreground";
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className={cn("font-mono text-sm font-semibold tabular-nums", color)}>{value}</span>
-      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className={cn("pharos-numeric text-sm font-semibold", color)}>{value}</span>
+      <span className="pharos-meta">{label}</span>
     </div>
   );
 }
@@ -179,14 +166,14 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
     <div className="mt-4 border-t border-border/50 pt-3">
       <div className="flex items-baseline justify-between gap-2">
         <Kicker>Accuracy by version</Kicker>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="pharos-meta">
           sub-versions consolidated into majors
         </span>
       </div>
       <div className="mt-2 space-y-1.5">
         {segments.map((segment) => (
           <div key={segment.major} className="flex items-center gap-3">
-            <span className="w-7 shrink-0 font-mono text-[11px] font-semibold text-foreground">
+            <span className="pharos-numeric w-7 shrink-0 font-semibold text-foreground">
               {segment.major}
             </span>
             <div
@@ -205,13 +192,13 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
                 />
               ) : null}
             </div>
-            <span className="w-36 shrink-0 whitespace-nowrap text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+            <span className="pharos-meta pharos-numeric w-36 shrink-0 whitespace-nowrap text-right">
               {segment.accuracy != null
                 ? `${formatPercent(segment.accuracy)} · ${segment.scored} scored`
                 : "maturing · 0 scored"}
             </span>
             <span
-              className="hidden w-24 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground sm:inline"
+              className="pharos-meta pharos-numeric hidden w-24 shrink-0 text-right sm:inline"
               aria-label={
                 segment.meanSignedDurationErrorSec != null
                   ? `${segment.major}: mean duration miss ${formatDdrSignedDuration(segment.meanSignedDurationErrorSec)}`
@@ -254,12 +241,12 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
         <div className="space-y-2.5">
           <Kicker>Recovery calls</Kicker>
           <div className="flex items-baseline gap-2">
-            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+            <span className="pharos-numeric text-2xl font-semibold text-foreground">
               {recoveryValue}
             </span>
             <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
           </div>
-          <CalibrationBar scored={scored} maturing={pending} tone="emerald" />
+          <CalibrationBar scored={scored} maturing={pending} />
         </div>
 
         <div className="space-y-2.5 sm:border-l sm:border-border/50 sm:pl-6">
@@ -267,7 +254,7 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
           <div className="flex items-baseline gap-2">
             {durationScored > 0 ? (
               <>
-                <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                <span className="pharos-numeric text-2xl font-semibold text-foreground">
                   {formatDdrSignedDuration(metrics.meanSignedDurationErrorSec)}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -277,25 +264,20 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
               </>
             ) : (
               <>
-                <span className="font-mono text-2xl font-semibold tabular-nums text-muted-foreground/70">
+                <span className="pharos-numeric text-2xl font-semibold text-muted-foreground">
                   —
                 </span>
                 <span className="text-xs text-muted-foreground">not yet scored</span>
               </>
             )}
           </div>
-          <CalibrationBar scored={durationScored} maturing={pending} tone="cyan" />
+          <p className="pharos-meta pharos-numeric">{durationScored} duration outcomes scored</p>
         </div>
       </div>
 
       <VersionAccuracyStrip summary={summary} />
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/50 pt-3">
-        <BreakdownStat
-          label="correct"
-          value={metrics.recoveryLikelihoodCorrectCount}
-          tone="emerald"
-        />
         <BreakdownStat
           label="false terminal"
           value={rowBreakdown.falseTerminal}
@@ -310,7 +292,6 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
           label="inside typical range"
           value={`${rowBreakdown.withinIqrCount}/${rowBreakdown.iqrScoredCount}`}
         />
-        <BreakdownStat label="pending" value={pending} />
       </div>
     </div>
   );
@@ -350,15 +331,15 @@ function CoverageAccountabilityLedger({
     <div className="pharos-card-shell p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Kicker>Coverage accountability</Kicker>
-        <span className="font-mono text-[10px] text-muted-foreground">
+        <span className="pharos-meta pharos-numeric">
           {policyUniverseCount.toLocaleString()} policy-universe incidents
         </span>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="pharos-subtle-band mt-3 grid grid-cols-1 divide-y divide-border/50 p-0 md:grid-cols-5 md:divide-x md:divide-y-0">
         {metricCards.map((metric) => (
-          <div key={metric.label} className="min-w-0 rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
-            <p className="truncate text-[11px] text-muted-foreground">{metric.label}</p>
-            <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground">{metric.value}</p>
+          <div key={metric.label} className="min-w-0 px-3 py-2.5">
+            <p className="pharos-meta truncate">{metric.label}</p>
+            <p className="pharos-numeric mt-1 text-lg font-semibold text-foreground">{metric.value}</p>
           </div>
         ))}
       </div>
@@ -399,16 +380,16 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
       <Badge
         variant="outline"
         className={cn(
-          "justify-self-end text-[11px] sm:col-start-3 sm:row-start-1 sm:justify-self-start",
+          "justify-self-end text-xs sm:col-start-3 sm:row-start-1 sm:justify-self-start",
           verdictStyle,
         )}
       >
         {verdictLabel}
       </Badge>
-      <span className="justify-self-start font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
+      <span className="pharos-meta pharos-numeric justify-self-start uppercase tracking-wide sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
         {getRowContextLabel(row)} · {DDR_OUTCOME_LABELS[actualOutcome]}
       </span>
-      <span className="justify-self-end font-mono text-[11px] tabular-nums text-muted-foreground sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
+      <span className="pharos-meta pharos-numeric justify-self-end sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
         {durationText}
       </span>
     </li>
@@ -422,7 +403,7 @@ function ReviewLegend() {
     { tone: "bg-sky-500", label: "pending" },
   ];
   return (
-    <div className="hidden items-center gap-3 text-[10px] text-muted-foreground sm:flex">
+    <div className="pharos-meta hidden items-center gap-3 sm:flex">
       {items.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1">
           <span className={cn("h-1.5 w-1.5 rounded-full", item.tone)} aria-hidden="true" />
@@ -437,22 +418,22 @@ function ReviewLegend() {
 
 function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: DdrrResponse | undefined }) {
   const meta = data?._meta;
-  const scored = data?.summary.headline.recoveryLikelihoodScoredCount ?? 0;
+  const assessed = data?._meta.assessedEventCount ?? 0;
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2.5">
-          <span className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-cyan-700 dark:text-cyan-300">
+          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-xs font-bold tracking-wide text-background">
             DDRR
           </span>
           <h2 className="pharos-section-title">Depeg Duration Resolver Reviewer</h2>
           <Badge
             variant="outline"
             className={cn(
-              "px-1.5 py-0 text-[10px] uppercase tracking-wide",
+              "px-1.5 py-0 text-xs uppercase tracking-wide",
               calibrating
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+                : "border-border/60 bg-muted/40 text-muted-foreground",
             )}
           >
             {calibrating ? "Calibrating" : "Review"}
@@ -469,8 +450,8 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
           />
         </div>
         {meta ? (
-          <p className="font-mono text-[10px] text-muted-foreground">
-            comparing {meta.assessedEventCount} stored readouts · {scored} scored
+          <p className="pharos-meta pharos-numeric">
+            comparing {assessed} stored readouts
           </p>
         ) : null}
       </div>
@@ -589,7 +570,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             </div>
             <div className="pharos-card-shell px-4 py-3 sm:px-5">
               <TrackRecordTimeline rows={trackRecordRows} />
-              <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-wide text-muted-foreground/70">
+              <div className="pharos-meta pharos-numeric mt-1 flex justify-between uppercase tracking-wide">
                 <span>older calls</span>
                 <span>recent</span>
               </div>
@@ -605,7 +586,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
               ))}
             </ul>
             {hiddenCount > 0 ? (
-              <p className="px-1 font-mono text-[11px] text-muted-foreground">
+              <p className="pharos-meta pharos-numeric px-1">
                 +{hiddenCount} more reviewer rows
               </p>
             ) : null}

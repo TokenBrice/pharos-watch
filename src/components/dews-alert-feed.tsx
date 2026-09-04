@@ -18,6 +18,8 @@ interface DEWSAlertFeedProps {
   logos?: Record<string, string>;
   allowedIds?: Set<string>;
   className?: string;
+  /** Render without its own card shell, for composition inside another surface. */
+  embedded?: boolean;
 }
 
 interface AlertCoin {
@@ -31,7 +33,7 @@ interface AlertCoin {
 
 const PAGE_SIZE = 3;
 
-export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAlertFeedProps) {
+export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded }: DEWSAlertFeedProps) {
   const prefetch = usePrefetchStablecoin();
   const [page, setPage] = useState(0);
 
@@ -71,10 +73,12 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
 
   if (!signals) {
     return (
-      <div className={cn("pharos-card-shell flex flex-col p-4", className)}>
-        <h2 className="pb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          DEWS Alert Queue
-        </h2>
+      <div className={cn(embedded ? "flex flex-col" : "pharos-card-shell flex flex-col p-4", className)}>
+        {embedded ? (
+          <h3 className="pharos-section-title pb-3">DEWS alert queue</h3>
+        ) : (
+          <h2 className="pharos-section-title pb-3">DEWS alert queue</h2>
+        )}
         <div className="space-y-2">
           <Skeleton className="h-12 rounded-lg" />
           <Skeleton className="h-12 rounded-lg" />
@@ -85,20 +89,16 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
   }
 
   return (
-    <div className={cn("pharos-card-shell flex flex-col p-4", className)}>
+    <div className={cn(embedded ? "flex flex-col" : "pharos-card-shell flex flex-col p-4", className)}>
       <div className="flex items-center justify-between gap-2 pb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          DEWS Alert Queue
-        </h2>
-        <span className="pharos-numeric text-xs text-muted-foreground">
-          {alertCoins.length} at alert+
-        </span>
+        {embedded ? <h3 className="pharos-section-title">DEWS alert queue</h3> : <h2 className="pharos-section-title">DEWS alert queue</h2>}
+        {/* The hero rail owns the tracked ALERT+ count; repeating it here would
+            put the same figure twice inside one shell. */}
+        {embedded ? null : <span className="pharos-meta">{alertCoins.length} at alert or worse</span>}
       </div>
       <div className="grid flex-1 grid-cols-1 gap-y-1.5" aria-live="polite">
         {alertCoins.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
-            All coins with current DEWS coverage are below ALERT.
-          </p>
+          <p className="pharos-empty-note">All peg-catalog assets with DEWS coverage are below ALERT.</p>
         ) : (
           pageCoins.map((coin) => {
             const top = getTopDewsContributors(coin.entry.signals, 2);

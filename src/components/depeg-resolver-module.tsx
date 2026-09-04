@@ -1,9 +1,13 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { DdrInfoTooltip } from "@/components/depeg-resolver-info-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { DepegResolverRowCard } from "@/components/depeg-resolver-row-card-parts";
+import {
+  compareResolverUrgency,
+  summarizeResolverBook,
+} from "@/components/depeg-resolver-book-summary";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { DDR_PUBLIC_WARNING, type DdrResponse } from "@shared/types/depeg-resolver";
@@ -13,9 +17,15 @@ interface DepegResolverModuleProps {
   logos?: Record<string, string>;
 }
 
+/**
+ * Forecast cards rendered before the disclosure. The worklist answers "what
+ * needs attention now"; the full book is one click away and only mounts then.
+ */
+const DEFAULT_VISIBLE_ROWS = 4;
+
 // --- module header ---------------------------------------------------------
 
-function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
+function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summary: ReactNode }) {
   const lineage = data?._meta.lineage ?? null;
   const versionLabel = data?.methodology.currentVersionLabel ?? DDR_METHODOLOGY_VERSION_LABEL;
   return (
@@ -62,6 +72,7 @@ function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
         <span className="text-foreground">before the event resolves</span>.{" "}
         <span className="text-muted-foreground/70">{DDR_PUBLIC_WARNING}</span>
       </p>
+      {summary}
     </div>
   );
 }
@@ -69,14 +80,39 @@ function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
 // --- public component -------------------------------------------------------
 
 export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
+  const [showAll, setShowAll] = useState(false);
+  const rows = useMemo(() => data?.rows ?? [], [data]);
+
+  const ordered = useMemo(() => [...rows].sort(compareResolverUrgency), [rows]);
+  const book = useMemo(() => summarizeResolverBook(rows), [rows]);
+
   if (!isDepegResolverEnabled()) return null;
 
-  const rows = data?.rows ?? [];
   const showStaleRows = data?._meta.degraded === true && data._meta.degradedReason === "stale-cache" && rows.length > 0;
+  const visible = showAll ? ordered : ordered.slice(0, DEFAULT_VISIBLE_ROWS);
+  const hiddenCount = ordered.length - visible.length;
+
+  // The recovery-verdict split lives in the hero, which owns route-level
+  // posture. This header only states the book size and which slice is on
+  // screen, so the four cards are never mistaken for the whole book.
+  const summary =
+    rows.length > 0 ? (
+      <p className="pharos-meta">
+        Whole book · <span className="pharos-numeric text-foreground">{book.total}</span>{" "}
+        {book.total === 1 ? "forecast" : "forecasts"} ·{" "}
+        {hiddenCount > 0 ? `showing the ${visible.length} most urgent` : `showing all ${visible.length}`}
+        {book.pastPeakCount > 0 ? (
+          <span className="text-amber-700 dark:text-amber-400">
+            {" "}
+            · {book.pastPeakCount === 1 ? "1 is" : `${book.pastPeakCount} are`} past their worst
+          </span>
+        ) : null}
+      </p>
+    ) : null;
 
   return (
     <section aria-label="Depeg Duration Resolver" className="space-y-4">
-      <ResolverHeader data={data} />
+      <ResolverHeader data={data} summary={summary} />
 
       {!data ? (
         <div className="pharos-empty-note text-center">Resolver data is loading.</div>
@@ -98,12 +134,22 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
             </p>
           ) : null}
           <div className="pharos-stagger-entrance grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-            {rows.map((row, i) => (
+            {visible.map((row, i) => (
               <div key={`${row.stablecoinId}:${row.eventId}`} style={{ "--stagger-index": i } as CSSProperties}>
                 <DepegResolverRowCard row={row} logos={logos} />
               </div>
             ))}
           </div>
+          {hiddenCount > 0 || showAll ? (
+            <button
+              type="button"
+              onClick={() => setShowAll((open) => !open)}
+              aria-expanded={showAll}
+              className="pharos-focus-ring pharos-control-pill"
+            >
+              {showAll ? `Show only the ${DEFAULT_VISIBLE_ROWS} most urgent` : `Show all ${ordered.length} forecasts`}
+            </button>
+          ) : null}
         </>
       )}
     </section>

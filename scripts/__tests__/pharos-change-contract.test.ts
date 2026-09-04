@@ -220,6 +220,24 @@ describe("representative --file routing", () => {
     expect(contract.checks).toContain("npm run typecheck");
   });
 
+  it("routes the depeg route and its owned modules to the depeg page contract", () => {
+    const clientContract = route("src/app/depeg/client.tsx");
+    expect(clientContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
+    expect(docKeys(clientContract)).toContain("docs/depeg-page.md");
+
+    // Route-owned components live outside src/app/depeg/, so the mapping has to
+    // reach them too or a hero/board change silently loses its contract.
+    const heroContract = route("src/components/depeg-outlook-hero.tsx");
+    expect(heroContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
+    expect(docKeys(heroContract)).toContain("docs/depeg-page.md");
+
+    // The disclosure-gated reviewer fetch contract lives in this hook, not in
+    // the client, so it has to route to the same owner.
+    const hookContract = route("src/hooks/use-depeg-resolver-surfaces.ts");
+    expect(hookContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
+    expect(docKeys(hookContract)).toContain("docs/depeg-page.md");
+  });
+
   it("routes Next configuration to frontend and deployment owners", () => {
     const contract = route("next.config.ts");
     expect(contract.mappings.map((mapping) => mapping.id)).toEqual(
