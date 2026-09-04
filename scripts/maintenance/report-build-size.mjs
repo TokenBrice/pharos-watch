@@ -243,6 +243,7 @@ function writeStepSummary(rows) {
 const outDir = path.join(root, "out");
 const nextStaticDir = path.join(outDir, "_next/static");
 const chunksDir = path.join(nextStaticDir, "chunks");
+const cssDir = path.join(nextStaticDir, "css");
 const mediaDir = path.join(nextStaticDir, "media");
 
 if (!existsSync(outDir)) {
@@ -252,7 +253,7 @@ if (!existsSync(outDir)) {
 
 const allOutFiles = collectFiles(outDir);
 const jsFiles = collectFiles(chunksDir, (file) => file.endsWith(".js"));
-const cssFiles = collectFiles(chunksDir, (file) => file.endsWith(".css"));
+const cssFiles = collectFiles(cssDir, (file) => file.endsWith(".css"));
 const cssFilesWithGzip = withGzipSize(cssFiles);
 const mediaFiles = collectFiles(mediaDir);
 const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
@@ -367,6 +368,10 @@ if (check) {
   const failures = [];
   console.log("\nDeploy gate (blocking)");
   checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
+  const cssBundle = cssFiles.map((file) => readFileSync(file.path, "utf8")).join("\n");
+  if (!cssBundle.includes(".xl\\:w-\\[15rem\\]")) {
+    failures.push("compiled CSS is missing the desktop search width utility");
+  }
 
   const referenceRows = [
     referenceDelta(

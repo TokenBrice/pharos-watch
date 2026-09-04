@@ -20,14 +20,17 @@ describe("CI workflow scope", () => {
     expect(run).toBe("node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
   });
 
-  it("preserves the Next compiler cache and consolidates Pages artifact checks", () => {
+  it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {
     const workflow = readRepoFile(".github/workflows/pages-release.yml");
+    const buildSizeCheck = readRepoFile("scripts/maintenance/report-build-size.mjs");
 
     expect(workflow).toContain('bootstrap-generated: "false"');
-    expect(workflow).toContain('next-cache: "true"');
-    expect(workflow).toContain('next-cache-save: "true"');
+    expect(workflow).not.toContain("next-cache:");
+    expect(workflow).not.toContain("next-cache-save:");
     expect(workflow).toContain('PHAROS_RELEASE_PR_TYPECHECKED: "1"');
     expect(workflow).toContain("npm run check:pages-release");
+    expect(buildSizeCheck).toContain('path.join(nextStaticDir, "css")');
+    expect(buildSizeCheck).toContain('.xl\\\\:w-\\\\[15rem\\\\]');
     const compileInputAt = workflow.indexOf("npm run prebuild -- --build-lifecycle=compile-input");
     const refreshAt = workflow.indexOf("refresh-pages-release-data.ts");
     const postRefreshAt = workflow.indexOf("npm run prebuild -- --build-lifecycle=post-refresh");
