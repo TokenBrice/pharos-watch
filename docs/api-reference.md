@@ -723,8 +723,8 @@ Returns the currently published Safety Score V9 report-card set.
 
 ```json
 {
-  "version": "9.46",
-  "methodologyVersion": "9.46"
+  "version": "9.461",
+  "methodologyVersion": "9.461"
 }
 ```
 
@@ -806,7 +806,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.42",
-  "methodologyVersion": "9.46"
+  "methodologyVersion": "9.461"
 }
 ```
 

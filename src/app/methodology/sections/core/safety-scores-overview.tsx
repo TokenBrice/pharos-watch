@@ -97,6 +97,48 @@ export function SafetyScoresOverview() {
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.461, two evaluator mapping defects are corrected without adding evidence. First,
+        reviewed-native selected supply rows no longer enter the bridge-exposure completeness join:
+        <code className="text-xs">evaluateV9SubthresholdUnresolvedBridgeJoins</code> excludes them from
+        <code className="text-xs">bridgeControlsByDeployment</code>, while the route predicate and native-liability
+        boundary keep native controls as umbrella facts and exclude native route ids from
+        <code className="text-xs">bridgeClaimControls</code>. On replay of
+        <code className="text-xs">capture-20260904-1100.json</code> at clock
+        <code className="text-xs">1788509806</code>, this corrected a wrong join and closed 9 facts
+        (<code className="text-xs">nonmaterial-bridge-supply-unmatched</code> on
+        <code className="text-xs">ausd-agora</code>, <code className="text-xs">pyusd-paypal</code>,
+        <code className="text-xs">reusd-re-protocol</code>, <code className="text-xs">usbd-bima</code>,
+        <code className="text-xs">fusd-finchain</code>, <code className="text-xs">cusd-celo</code>,
+        <code className="text-xs">frxusd-frax</code>, <code className="text-xs">usdy-ondo-finance</code>, plus
+        <code className="text-xs">missing-bridge-route-rows</code> on
+        <code className="text-xs">fusd-finchain</code>), with 0 replacements and exactly 1 mover:
+        <code className="text-xs">fusd-finchain</code> NR -&gt; 46/D. Floors, the completeness predicate, and
+        <code className="text-xs">unknownBridgeShare</code> are unchanged; Pharos learned nothing new.
+      </p>
+      <p>
+        Second, offchain-issuer commodity routes whose
+        <code className="text-xs">outputAssetType</code> is
+        <code className="text-xs">bluechip-collateral</code> (physical GOLD/SILVER delivery) now resolve as
+        <code className="text-xs">unresolved-asset</code> rather than fiat. The old mapping let
+        <code className="text-xs">buildOutputReview</code> imply a synthetic $1 value for a physical bar; removing
+        that false valuation ADDED 5 facts
+        (<code className="text-xs">unresolved-exit-output</code> and
+        <code className="text-xs">missing-runtime-route-evidence</code> on
+        <code className="text-xs">gldt-gold-dao</code>, <code className="text-xs">paxg-paxos</code>, and
+        <code className="text-xs">xnk-kinka</code>) and moved 2 grades:
+        <code className="text-xs">gldt-gold-dao</code> 47/D -&gt; NR and
+        <code className="text-xs">xnk-kinka</code> 41/D -&gt; 39/F. This is an honest loss of false coverage, not a
+        newly learned adverse fact. The affected asset set is
+        <code className="text-xs">cgo-comtech</code>, <code className="text-xs">dgld-gold-token-sa</code>,
+        <code className="text-xs">ggbr-goldfish-gold</code>, <code className="text-xs">gldt-gold-dao</code>,
+        <code className="text-xs">gldy-streamex</code>, <code className="text-xs">kag-kinesis</code>,
+        <code className="text-xs">kau-kinesis</code>, <code className="text-xs">paxg-paxos</code>,
+        <code className="text-xs">pgold-pleasing</code>, <code className="text-xs">xagm-matrixdock</code>,
+        <code className="text-xs">xaum-matrixdock</code>, <code className="text-xs">xaut-tether</code>, and
+        <code className="text-xs">xnk-kinka</code>. Both effects are measured on that fixed capture; producer-side
+        repairs in these waves cannot manifest until a real producer cycle runs.
+      </p>
+      <p>
         Since methodology v9.4, stale issuer- or parent-published evidence is attributed as
         {" "}<code className="text-xs">published-evidence-expired</code> when its publisher provenance is explicit,
         rather than being described as issuer non-disclosure. Unknown provenance still fails closed under the existing
