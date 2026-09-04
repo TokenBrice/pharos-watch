@@ -13,8 +13,8 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "nOPAL has three reviewed independent native-issuance routes on Ethereum, Plume, and BSC. Nest's current registry and fixed-block supply reads establish three live native liability surfaces; the Plume and BSC rows retain Ethereum as the issuer's primary reference but are canonical native issuance, not peripheral bridge representations. No separate public bridge topology, OFT, lockbox, adapter, or destination-token mint role was identified.",
+    "tier": "external-validated-network",
+    "summary": "nOPAL has three reviewed independent native-issuance routes on Ethereum, Plume, and BSC. Nest's current registry and fixed-block supply reads establish three live native liability surfaces; the Plume and BSC rows retain Ethereum as the issuer's primary reference but are canonical native issuance, not peripheral bridge representations. Nest's current registry and nOPAL integration guide also identify a Solana LayerZero OFT route via OFT store FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq; its Solana mint and route are authored below. Additional Plasma, World Chain, and Avalanche deployments are not authored because their route mechanics remain unsourced.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); FIX2-09 Mint/Bridge boundary migration 2026-08-16",
     "confidence": "verified",
@@ -99,6 +99,38 @@
           {
             "label": "Nest Protocol",
             "url": "https://nest.credit/"
+          }
+        ]
+      },
+      {
+        "id": "solana:GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq",
+        "sourceChain": "plume",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq",
+        "representationId": "solana:FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Nest's nOPAL integration guide says Solana mint flows route to Plume and deliver nOPAL through LayerZero OFT; its current registry identifies OFT store FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Nest nOPAL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nopal/"
+          },
+          {
+            "label": "Nest current nOPAL vault registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ]
       }

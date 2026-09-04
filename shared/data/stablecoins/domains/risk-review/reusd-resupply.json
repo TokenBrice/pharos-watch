@@ -1,7 +1,7 @@
 {
   "id": "reusd-resupply",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "REUSD verified contract source",

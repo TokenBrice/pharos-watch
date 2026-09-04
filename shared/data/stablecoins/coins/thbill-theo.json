@@ -2,7 +2,7 @@
   "id": "thbill-theo",
   "name": "Theo thBILL",
   "symbol": "thBILL",
-  "oneLiner": "thBILL is Theo Network's NAV-accreting wrapper of Standard Chartered Libeara's tokenized U.S. T-bill fund, mint/redeem gated to KYC-verified institutions.",
+  "oneLiner": "Theo Network's NAV-accreting tokenized Treasury product is backed by a diversified basket of Wellington/Libeara ULTRA and Fidelity International FILQ funds.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -10,7 +10,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Basket of institutional-grade tokenized U.S. Treasury bills; currently 100% tULTRA, a wrapped representation of Standard Chartered Libeara's ULTRA fund (Delta Wellington Ultra Short Treasury On-Chain Fund), managed by Wellington Management, custodied by Standard Chartered, fund administration by FundBridge Capital",
+  "collateral": "Tokenized units of a diversified fund basket comprising Wellington/Libeara ULTRA and Fidelity International FILQ, with allocation managed by Theo and weights undisclosed; FILQ may hold government securities and asset-backed commercial paper",
   "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates as T-bill yield accrues; KYC-gated mint/redemption processed instantly in USDC, underlying collateral settled within T+4 business days; restricted to institutional and non-U.S. accredited investors",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {

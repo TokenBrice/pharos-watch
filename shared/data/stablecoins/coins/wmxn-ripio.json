@@ -3,7 +3,7 @@
   "llamaId": "383",
   "detailProvider": "defillama",
   "name": "Ripio wMXN",
-  "symbol": "WMXN",
+  "symbol": "wMXN",
   "oneLiner": "WMXN is Ripio's Mexican-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
@@ -52,9 +52,6 @@
       "url": "https://x.com/ripioapp"
     }
   ],
-  "jurisdiction": {
-    "country": "Mexico"
-  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -116,5 +113,5 @@
       "risk": "high"
     }
   },
-  "launchDate": "2025-07-11"
+  "launchDate": "2025-10-17"
 }

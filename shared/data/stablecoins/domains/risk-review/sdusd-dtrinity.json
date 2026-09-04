@@ -94,8 +94,7 @@
         "reviewNote": "Verified on ethereum at block 25570988: sdUSD token 0x7cb20517776636ed76b68edb3d99dcce356abf02 (symbol sdUSD, EIP-1967 upgradeable) is the dSTAKE ERC-4626 vault whose asset() = 0x07fff99e1664d9b116fbc158c0e99785f81ca236 (local dUSD, symbol verified). sdUSD is staked dUSD minted by depositing the local dUSD into the vault. No bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "fraxtal",
-        "canonicalChain": "fraxtal",
+        "canonicalChain": "ethereum",
         "observedBlock": 25570988,
         "sources": [
           {

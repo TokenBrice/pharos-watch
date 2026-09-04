@@ -34,10 +34,10 @@
   "cmcSlug": "usdm",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+    "url": "https://moneta.global/transparency/",
     "provider": "Charli3 daily reserve verification feed (attribution confirmed via docs, but the portal.charli3.io endpoint rejects non-browser TLS handshakes on repeated checks and the only archive capture is a 2024 unrendered shell - statically unverifiable)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "daily"
   },
   "links": [
     {
@@ -50,9 +50,9 @@
     }
   ],
   "jurisdiction": {
-    "country": "Norway",
-    "regulator": "Finanstilsynet",
-    "license": "EMI license; MiCA EMT authorization pending"
+    "country": "United States / Norway",
+    "regulator": "FinCEN / Finanstilsynet",
+    "license": "FinCEN MSB #31000327040139 / E-money institution; MiCA EMT authorization pending"
   },
   "contracts": [
     {

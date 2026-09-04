@@ -1,13 +1,13 @@
 {
   "id": "lisusd-lista",
   "name": "Lista USD",
-  "symbol": "LISUSD",
+  "symbol": "lisUSD",
   "oneLiner": "LISUSD is Lista DAO's overcollateralized stablecoin on BNB Chain, minted from BNB and LST vaults with a PSM enabling 1:1 swaps against USDT, USDC, and FDUSD.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "BNB, ETH, LSTs, and BTCB via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
+  "collateral": "BNB, ETH, LSTs, BTCB, and additional GemJoin assets including sUSDX, USDF, asUSDF, and USD1 through Lista CDPs; PSM facilities separately support 1:1 USDT, USDC, and FDUSD swaps, while D3M is a distinct credit-based direct-deposit exposure",
   "pegMechanism": "PSM enabling 1:1 swaps with centralized stablecoins; CDP overcollateralization and liquidation",
   "mechanismArchetype": "cdp",
   "llamaId": "79",

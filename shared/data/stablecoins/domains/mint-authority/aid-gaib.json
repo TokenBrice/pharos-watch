@@ -8,26 +8,6 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x410C19F3f80B64C7486Ae34890Ee9251D0696433",
-        "deploymentRefs": [
-          "ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596"
-        ],
-        "label": "AID Ethereum MINTER_ROLE holder (contract)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "AID Ethereum token",
-            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
-          }
-        ],
-        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0x410C19…) = true; eth_getCode = 4099 bytes (contract). owner() on this contract returned EOA 0x3885be… (DEFAULT_ADMIN EOA)."
-      },
-      {
-        "chain": "ethereum",
         "address": "0xE2E1424687EB676b3807693CBb439362b8eA908E",
         "deploymentRefs": [
           "ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596"

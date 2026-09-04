@@ -45,7 +45,7 @@
     ],
     "rationale": "Re-verified on 2026-08-11. Issuer product, token-feature, and legal materials consistently state that each PGOLD represents 1 troy ounce of 99.99% purity physical gold meeting LBMA standards, with KYC-gated physical redemption. VISTO CPA's June 25, 2026 report independently confirms the Arbitrum 19,505-token liability figure and part of the bullion inventory, but physically counts only 50.86% of the claimed bullion, relies on shipping and issuer/insider assertions for the rest, excludes weight, purity, authenticity, and valuation, and does not cover the separate Ethereum native supply. The reserve category remains a single 100% commodity-allocated position; the report does not justify a stronger assurance or custody conclusion.",
     "compositionBasis": "Pleasing Gold product, token-feature, and legal disclosures",
-    "compositionAsOf": "2026-08-11",
+    "compositionAsOf": "2026-06-25",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve category is fully identified. A single independent report covers only the Arbitrum liability and a partly observed bullion inventory; recurring assurance, complete multi-chain liabilities, custody provider identity, segregation, rehypothecation, insurance, and redemption liquidity remain unresolved and are tracked in the mechanism and custody reviews.",
     "knownUnknownExposurePct": 0,
@@ -62,7 +62,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Pleasing Gold issuer and undisclosed gold custodian",
+        "name": "Undisclosed qualified gold custodians",
         "role": "custodian",
         "jurisdiction": "Hong Kong"
       }

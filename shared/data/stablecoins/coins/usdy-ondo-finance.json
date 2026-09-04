@@ -100,12 +100,22 @@
     {
       "chain": "mantra",
       "address": "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
-      "decimals": 6
+      "decimals": 18
     },
     {
       "chain": "injective",
       "address": "ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9",
       "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x608593d17a2decbbc4399e4185be4922f97ed32e",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000d479b9f6ec0ceff9",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

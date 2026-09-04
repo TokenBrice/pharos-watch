@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "sfrxUSD is native on Ethereum and Fraxtal; the six other tracked deployments are FraxZero LayerZero OFTs. Current 2026-08-16 reads confirm the Fraxtal lockbox as the hub peer, the Ethereum lockbox as a canonical-side authorized minter, a common representation ProxyAdmin, and 3-of-6 chain-local OFT owner Safes. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the lockboxes provide the external-lock route; these representations are not direct Frax balance-sheet liabilities. Endpoint DVN configuration, enforced options, rate limits, and lockbox redemption caps remain unresolved.",
+    "summary": "sfrxUSD is native on Ethereum and Fraxtal; 25 other tracked EVM deployments are FraxZero LayerZero OFTs, and Solana, Aptos, and Movement are non-EVM OFT representations with documented direct connectivity to both Fraxtal and Ethereum. Current 2026-08-16 reads confirm the Fraxtal lockbox as the hub peer, the Ethereum lockbox as a canonical-side authorized minter, a common representation ProxyAdmin, and 3-of-6 chain-local OFT owner Safes for the six previously reviewed EVM routes. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the lockboxes provide the external-lock route; these representations are not direct Frax balance-sheet liabilities. Endpoint DVN configuration, enforced options, rate limits, and lockbox redemption caps remain unresolved.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "verified",
@@ -149,7 +149,7 @@
         "observedAt": "2026-08-09",
         "observedBlock": 225324299,
         "controllerChain": "sei",
-        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "controllerAddress": "0x0357d02fc95320b990322d3ff69204c3d251171b",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -184,7 +184,7 @@
         "observedAt": "2026-08-09",
         "observedBlock": 43071398,
         "controllerChain": "mode",
-        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "controllerAddress": "0x6336cfa6edbec2a459d869031db77fc2770eaa66",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -197,7 +197,7 @@
           },
           {
             "label": "sfrxUSD Mode OFT explorer",
-            "url": "https://modescan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+            "url": "https://explorer.mode.network/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
           }
         ]
       },
@@ -219,7 +219,7 @@
         "observedAt": "2026-07-31",
         "observedBlock": 66684387,
         "controllerChain": "xlayer",
-        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "controllerAddress": "0xe7cc52f0c86f4fab6630f1e26167b487fbf66a61",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -254,7 +254,7 @@
         "observedAt": "2026-07-31",
         "observedBlock": 38710865,
         "controllerChain": "katana",
-        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "controllerAddress": "0x19a90b0476cdc8ec1239266663ca820175b9b527",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -289,7 +289,7 @@
         "observedAt": "2026-07-31",
         "observedBlock": 76783101,
         "controllerChain": "sonic",
-        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "controllerAddress": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -324,7 +324,7 @@
         "observedAt": "2026-07-31",
         "observedBlock": 489447803,
         "controllerChain": "arbitrum",
-        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "controllerAddress": "0x3da490b19f300e7cb2280426c8ad536db2df445c",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -338,6 +338,606 @@
           {
             "label": "sfrxUSD Arbitrum OFT explorer",
             "url": "https://arbiscan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      },
+      {
+        "id": "aurora:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "aurora",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the aurora sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "avalanche",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the avalanche sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "berachain",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the berachain sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "bsc",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the bsc sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the hyperevm sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "ink",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the ink sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "optimism",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the optimism sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "plume",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the plume sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "polygon",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the polygon sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "polygon-zkevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "polygon-zkevm",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the polygon-zkevm sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "stable:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "stable",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the stable sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "unichain",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the unichain sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "worldchain",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the worldchain sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x137643f7b2c189173867b3391f6629cab46f0f1a",
+        "sourceChain": "fraxtal",
+        "destinationChain": "monad",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x137643f7b2c189173867b3391f6629cab46f0f1a",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the monad sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "base:0x91a3f8a8d7a881fbdfcfecd7a2dc92a46dcfa14e",
+        "sourceChain": "fraxtal",
+        "destinationChain": "base",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x91a3f8a8d7a881fbdfcfecd7a2dc92a46dcfa14e",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the base sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "linea:0x592a48c0fb9c7f8bf1701cb0136b90dea2a5b7b6",
+        "sourceChain": "fraxtal",
+        "destinationChain": "linea",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x592a48c0fb9c7f8bf1701cb0136b90dea2a5b7b6",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the linea sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0xc6b2be25d65760b826d0c852fd35f364250619c2",
+        "sourceChain": "fraxtal",
+        "destinationChain": "scroll",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0xc6b2be25d65760b826d0c852fd35f364250619c2",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the scroll sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+        "sourceChain": "fraxtal",
+        "destinationChain": "zksync",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the zksync sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "abstract:0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+        "sourceChain": "fraxtal",
+        "destinationChain": "abstract",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the abstract sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          }
+        ]
+      },
+      {
+        "id": "solana:DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45",
+        "destinationChain": "solana",
+        "contractAddress": "DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the solana sfrxUSD deployment, and current review reads identified its live OFT representation (9 decimals). Frax documents direct connectivity for this non-EVM deployment to both Fraxtal and Ethereum; it is bridge representation machinery rather than a native issuance route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Solscan sfrxUSD Solana mint",
+            "url": "https://solscan.io/token/DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45"
+          }
+        ]
+      },
+      {
+        "id": "aptos:0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+        "destinationChain": "aptos",
+        "contractAddress": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the aptos sfrxUSD deployment, and current review reads identified its live OFT representation (6 decimals). Frax documents direct connectivity for this non-EVM deployment to both Fraxtal and Ethereum; it is bridge representation machinery rather than a native issuance route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Aptos sfrxUSD OFT resources",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources"
+          }
+        ]
+      },
+      {
+        "id": "movement:0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+        "destinationChain": "movement",
+        "contractAddress": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's official cross-chain inventory lists the movement sfrxUSD deployment, and current review reads identified its live OFT representation (6 decimals). Frax documents direct connectivity for this non-EVM deployment to both Fraxtal and Ethereum; it is bridge representation machinery rather than a native issuance route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Frax official cross-chain address inventory",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Movement sfrxUSD OFT resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources"
           }
         ]
       }
@@ -637,7 +1237,7 @@
           },
           {
             "label": "sfrxUSD Mode OFT explorer",
-            "url": "https://modescan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+            "url": "https://explorer.mode.network/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
           }
         ],
         "evidence": "At Mode block 43379094 on 2026-08-16, the sfrxUSD OFT owner was Safe 0x6336cfa6edbec2a459d869031db77fc2770eaa66; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."

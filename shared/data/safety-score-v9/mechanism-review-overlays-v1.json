@@ -12824,11 +12824,6 @@
           "rationale": "Searched the binding terms, product pages, licenses page, and referenced transparency surface. No active gold custodian/vault is named and no provider allocation, anti-rehypothecation term, insurance schedule, or failure/replacement procedure is published.",
           "sourceUrl": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md"
         },
-        "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The current Reserve Report page embeds a June 25, 2026 VISTO CPA HKSAE 3000 report, but only 50.86% of the claimed bullion was physically counted, the remainder relies on shipping and issuer/insider assertions, the liability perimeter covers the Arbitrum contract while a separate Ethereum native supply exists, and no recurring cadence is stated. This newly located report remains pending an explicit methodology ruling and does not yet replace the bounded disposition.",
-          "sourceUrl": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md"
-        },
         "physicalRedemption": {
           "quality": "limited"
         }

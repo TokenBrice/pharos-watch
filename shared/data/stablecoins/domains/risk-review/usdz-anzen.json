@@ -102,7 +102,7 @@
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "base",
-        "controllerAddress": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+        "controllerAddress": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
@@ -145,7 +145,7 @@
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "arbitrum",
-        "controllerAddress": "0x5018609ab477cc502e170a5accf5312b86a4b94f",
+        "controllerAddress": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
@@ -189,7 +189,7 @@
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "blast",
-        "controllerAddress": "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+        "controllerAddress": "0x9076e336e9d0901a3aca0d559124884e114d7b48",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
@@ -233,7 +233,7 @@
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "manta",
-        "controllerAddress": "0x73d23f3778a90be8846e172354a115543df2a7e4",
+        "controllerAddress": "0x349D4B7580aBC27cD9fBA78C0e7A62865eF51da6",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",

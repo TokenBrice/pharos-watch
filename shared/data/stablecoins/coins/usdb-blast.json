@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "yieldBearing": true
   },
-  "collateral": "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
+  "collateral": "DAI held through Blast's MakerDAO DSR yield manager; USDC, USDT, and DAI are supported bridge deposit inputs, while USDB withdrawals redeem to DAI.",
   "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -37,7 +37,7 @@
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/Blast_L2"
+      "url": "https://x.com/blast"
     },
     {
       "label": "Docs",
@@ -74,7 +74,6 @@
       "supplyChain": "blast",
       "supplyTokenAddress": "0x4300000000000000000000000000000000000003",
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "fallbackRpcUrl": "https://eth.llamarpc.com",
       "supplyRpcUrl": "https://rpc.blast.io"
     }
   },

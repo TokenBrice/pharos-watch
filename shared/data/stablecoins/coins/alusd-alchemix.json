@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
-  "pegMechanism": "Self-repaying loans: yield from deposited stablecoin collateral automatically repays debt; Transmuter guarantees 1:1 redemption",
+  "pegMechanism": "Self-repaying loans: yield from deposited collateral automatically repays debt; the v3 Fixed-Duration Transmuter redeems alUSD 1:1 into collateral at DAO-scheduled maturity dates (per-chain deposit caps apply; 3% early-exit fee since 2026-07-15)",
   "mechanismArchetype": "cdp",
   "llamaId": "20",
   "detailProvider": "defillama",

@@ -20,7 +20,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Grok wave-8 reserve re-verification; Pharos reserve research",
     "confidence": "probable",
     "sources": [
@@ -37,9 +37,9 @@
         "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
       }
     ],
-    "rationale": "Re-opened 2026-08-29: the AFI proof endpoint reports active rwaUSDi total reserves of $1,500,000,000.00 against total liabilities of $368,551,600.00 (collateral ratio 406.9986) and the periodic endpoint lists weekly solvency confirmations through 2026-08-23. The cryptographic proof verifies aggregate reserve and liability totals but exposes no itemized holdings, borrowers, funds, strategy counterparties, or weights. Multipli documentation independently describes a KYB-gated institutional credit layer spanning private credit, structured finance, project finance, asset-backed lending, and market-neutral strategies with scheduled redemptions. The complete envelope therefore remains one unresolved mixed basket rather than a fabricated allocation.",
+    "rationale": "Re-opened 2026-09-04: the AFI proof endpoint reports active rwaUSDi total reserves of $1,500,000,000.00 against total liabilities of $472,502,100.00 (collateral ratio 317.4589). The cryptographic proof verifies aggregate reserve and liability totals but exposes no itemized holdings, borrowers, funds, strategy counterparties, or weights. Multipli documentation independently describes a KYB-gated institutional credit layer spanning private credit, structured finance, project finance, asset-backed lending, and market-neutral strategies with scheduled redemptions. The complete envelope therefore remains one unresolved mixed basket rather than a fabricated allocation.",
     "compositionBasis": "AFI aggregate solvency proof plus Multipli's documented rwaUSDi eligible-asset envelope; current constituents and weights undisclosed",
-    "compositionAsOf": "2026-08-29",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
     "knownUnknownExposure": "Current asset classes, individual borrowers and funds, constituent weights, credit seniority, maturities, valuation marks, custody shares, strategy exposures, and redemption schedules are not exposed by the reviewed proof.",
     "knownUnknownExposurePct": 100,

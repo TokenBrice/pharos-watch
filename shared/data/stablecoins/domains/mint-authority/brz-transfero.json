@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "BRZ Ethereum owner and masterMinter are both a 2-of-3 Gnosis Safe (0xaf24/0x2c64, proxy to singleton 0xd9db). Proxy admin (0x478e) is also owned by the same Safe. Non-Ethereum chain owners are issuer-context EOAs or 2-of-3 Safes. Solana mint authority is a system-program wallet. All controls corroborate Transfero centralized issuance.",
+    "summary": "BRZ Ethereum owner and masterMinter are both a 2-of-3 Gnosis Safe (0xaf24/0x2c64, proxy to singleton 0xd9db). Proxy admin (0x478e) is also owned by the same Safe. Reviewed non-Ethereum chain controls include 2-of-3 Safes, a current BSC owner contract (0xd66f), and a current 1-of-2 Solana Token-2022 mint-authority multisig (DzZjd6); legacy BSC/Solana observations remain historical in review evidence only. All controls corroborate Transfero centralized issuance.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -37,15 +37,7 @@
         "authorityType": "safe",
         "address": "0xaf24edebf7fdaed86d839be018647ba6279b9d7a",
         "deploymentRefs": [
-          "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
-          "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
-          "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
-          "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
-          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
-          "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
-          "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
-          "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
-          "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
         ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
@@ -75,58 +67,49 @@
         "evidence": "At Ethereum block 25294823: owner() on BRZ ETH (0x01d33fd36ec67c6ada32cf36b31e88ee190b1839) returned 0xaf24edebf7fdaed86d839be018647ba6279b9d7a. Storage of 0xaf24: slot0=GnosisSafe singleton 0xd9db, slot3=ownerCount 3, slot4=threshold 2, slot5=nonce 5. Owners read from linked list at mapping slot 2: 0x567a (EOA), 0x8c5f (EOA), 0x2455 (EOA). Modules: sentinel points to 0x1 (none-detected). masterMinter() (0x2c64) is a matching 2-of-3 Safe (ownerCount=3, threshold=2, nonce=15). ProxyAdmin 0x478e owner() = 0xaf24 (same Safe)."
       },
       {
-        "label": "BRZ BSC owner (issuer EOA)",
+        "label": "BRZ current BSC owner contract",
+        "chain": "bsc",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0x01455c3b57e40223352a53c9897643273ad78a57",
+        "authorityType": "contract",
+        "address": "0xd66f8ebda47ec5ec549ecc00fd4bbe102aa4989a",
         "deploymentRefs": [
-          "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
-          "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
-          "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
-          "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
-          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
-          "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
-          "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
-          "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
-          "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+          "bsc:0x0295afd3d7e86068050d64509e515f2db71b4914"
         ],
         "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-09-04",
         "sources": [
           {
-            "label": "BSC: BRZ token contract",
-            "url": "https://bscscan.com/address/0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb"
+            "label": "BSC JSON-RPC owner() and code reads",
+            "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "At BSC block 103622902: owner() on BRZ BSC (0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb) returned 0x01455c3b57e40223352a53c9897643273ad78a57; eth_getCode returned 0x (EOA)."
+        "evidence": "At latest BSC state, owner() on current BRZ contract 0x0295afd3D7E86068050d64509e515f2Db71b4914 returned 0xd66f8ebda47ec5ec549ecc00fd4bbe102aa4989a; eth_getCode on that owner returned non-empty bytecode, so the current owner is recorded as a contract authority."
       },
       {
-        "label": "BRZ Solana mint authority (Transfero issuer wallet)",
+        "label": "BRZ current Solana Token-2022 mint authority multisig",
+        "chain": "solana",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D",
+        "authorityType": "multisig",
+        "address": "DzZjd63zf674JCbQcGD7mZ8AXxrAfFE2of5coe2ZV5K1",
         "deploymentRefs": [
-          "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
-          "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
-          "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
-          "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
-          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
-          "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
-          "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
-          "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
-          "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+          "solana:BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN"
         ],
         "directMintAbility": "direct",
-        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "threshold": 1,
+        "signerCount": 2,
+        "observedAt": "2026-09-04",
         "sources": [
           {
-            "label": "Solana BRZ mint: FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
-            "url": "https://solscan.io/token/FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+            "label": "Current BRZ Solana mint",
+            "url": "https://solscan.io/token/BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN"
+          },
+          {
+            "label": "Solana mainnet RPC mint and authority reads",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Solana getAccountInfo on SPL mint FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD: mint_authority = ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D (system-program account, Transfero issuer wallet). freeze_authority = None."
+        "evidence": "At Solana slot 444317230, getAccountInfo(jsonParsed) identifies current BRZ Token-2022 mint BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN with mintAuthority DzZjd63zf674JCbQcGD7mZ8AXxrAfFE2of5coe2ZV5K1; at slot 444317569, getAccountInfo(jsonParsed) identifies that authority as an initialized Token-2022 multisig requiring 1 of 2 signers."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -155,7 +138,7 @@
           "url": "https://www.finma.ch/en/supervision/self-regulatory-organisations-sros/"
         }
       ],
-      "evidence": "Ethereum at block 25294823: owner() = 0xaf24 (2-of-3 GnosisSafe proxy, masterCopy=0xd9db GnosisSafe 1.3.0 singleton). Safe storage: ownerCount=3, threshold=2, nonce=5. Three EOA owners confirmed via linked-list traversal. Modules sentinel = 0x1 (no modules). masterMinter 0x2c64 is an identical 2-of-3 Safe (nonce=15). ProxyAdmin 0x478e owned by same Safe. BSC owner is EOA 0x01455c. Solana mint authority ACvei6 is a system-program wallet. Polygon and Base owners are also 2-of-3 Safes (threshold=2, ownerCount=3). BRZ is issued by Transfero Swiss AG (Zug); the only dated third-party reserve review located is a ~2020 law-firm report, and current transparency relies on Parsiq blockchain analytics rather than a recurring named accounting-firm attestation, so reconciliation is unknown. Transfero Swiss AG's Swiss oversight is VQF membership, a FINMA-recognised AML self-regulatory organisation that is explicitly not prudential supervision, and no FINMA banking/EMI licence for the BRZ issuer was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: issuer Safes and EOAs directly control minting across chains without an economic cap; current disclosures do not reconcile whole supply and VQF AML membership is not prudential supervision. Reconciliation finding 2026-08-15: Transfero's 2024-03-31 issuer transparency PDF gives a dated reserve and circulation snapshot, but no recurring named third-party reconciliation of BRZ liabilities against BRL reserves was located, so reconciliation remains unknown.",
+      "evidence": "Ethereum at block 25294823: owner() = 0xaf24 (2-of-3 GnosisSafe proxy, masterCopy=0xd9db GnosisSafe 1.3.0 singleton). Safe storage: ownerCount=3, threshold=2, nonce=5. Three EOA owners confirmed via linked-list traversal. Modules sentinel = 0x1 (no modules). masterMinter 0x2c64 is an identical 2-of-3 Safe (nonce=15). ProxyAdmin 0x478e owned by same Safe. The legacy BSC owner observation was EOA 0x01455c for superseded 0x71be; current owner() on BRZ 0x0295afd3D7E86068050d64509e515f2Db71b4914 returned 0xd66f8ebda47ec5ec549ecc00fd4bbe102aa4989a, and eth_getCode on that address returned non-empty bytecode, so the current owner is a contract authority. The legacy Solana mint authority ACvei6 was a system-program wallet for superseded FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD; current BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN is a Token-2022 mint with mintAuthority DzZjd63zf674JCbQcGD7mZ8AXxrAfFE2of5coe2ZV5K1, whose authority account is an initialized 1-of-2 Token-2022 multisig by Solana RPC reads. Polygon and Base owners are also 2-of-3 Safes (threshold=2, ownerCount=3). BRZ is issued by Transfero Swiss AG (Zug); the only dated third-party reserve review located is a ~2020 law-firm report, and current transparency relies on Parsiq blockchain analytics rather than a recurring named accounting-firm attestation, so reconciliation is unknown. Transfero Swiss AG's Swiss oversight is VQF membership, a FINMA-recognised AML self-regulatory organisation that is explicitly not prudential supervision, and no FINMA banking/EMI licence for the BRZ issuer was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: issuer Safes and EOAs directly control minting across chains without an economic cap; current disclosures do not reconcile whole supply and VQF AML membership is not prudential supervision. Reconciliation finding 2026-08-15: Transfero's 2024-03-31 issuer transparency PDF gives a dated reserve and circulation snapshot, but no recurring named third-party reconciliation of BRZ liabilities against BRL reserves was located, so reconciliation remains unknown.",
       "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

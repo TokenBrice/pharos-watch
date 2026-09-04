@@ -79,7 +79,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x067823401127ca6647481c68011805b90d42231e",
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
             "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
             "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
             "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
@@ -98,18 +98,21 @@
         "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
       },
       {
-        "chain": "ethereum",
+        "chain": "multichain",
         "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
         "deploymentRefs": [
-          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
         ],
-        "label": "Ripio WPEN Ethereum minter-router contract",
+        "label": "Ripio WPEN multichain LimitedMinter contract",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WPEN token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
+        "evidence": "At latest state, LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 has non-empty code and WPEN.hasRole(MINTER_ROLE) returned true on Ethereum, BSC, Polygon, and Gnosis. Base and Worldchain returned no code and false role results."
       }
     ],
     "economicCapSemantics": "unbounded",

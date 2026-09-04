@@ -458,10 +458,9 @@
         ],
         "authorityType": "safe",
         "threshold": 4,
-        "signerCount": 8,
+        "signerCount": 7,
         "safe": {
           "owners": [
-            "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
             "0x7a823623b18335a9c1284ac45315fe89972fd421",
             "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
             "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",

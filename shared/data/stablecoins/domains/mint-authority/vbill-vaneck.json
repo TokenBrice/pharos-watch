@@ -67,7 +67,7 @@
         "sources": [
           {
             "label": "Sourcify DSToken source",
-            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156/sources/contracts/token/DSToken.sol"
+            "url": "https://sourcify.dev/server/v2/contract/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156?fields=sources"
           },
           {
             "label": "Securitize VBILL",

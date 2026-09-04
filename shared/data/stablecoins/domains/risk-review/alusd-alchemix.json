@@ -86,6 +86,17 @@
           "lockbox",
           "externalMessaging"
         ]
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFTBridge",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "bridgeTypes": [
+          "messagePassing",
+          "burn-mint",
+          "lock-mint"
+        ]
       }
     ],
     "sources": [

@@ -1939,7 +1939,7 @@
     "sources": [
       {
         "label": "River bridge docs",
-        "url": "https://docs.river.inc/products/editor/bridge"
+        "url": "https://docs.riverai.inc/products/editor/bridge.md"
       },
       {
         "label": "L2BEAT LayerZero",
@@ -2408,7 +2408,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At Ethereum block 25771252, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2456,7 +2456,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At Arbitrum block 495310633, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The reviewed DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2504,7 +2504,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At Base block 50068609, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2552,7 +2552,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At BSC block 116368532, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2600,7 +2600,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At Sonic block 77635658, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2648,7 +2648,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At BOB block 37032292, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2696,7 +2696,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At Bitlayer block 24883067, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2744,7 +2744,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At Hemi block 5088321, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2789,7 +2789,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "The reviewed fixed-block route inventory identifies the BEVM DebtTokenWithLz OFT path and recorded River owner controller. Current BEVM endpoint, implementation, peer, delegate, and DVN/executor reads were not available in the 2026-08-16 pass, so this owner control retains only the route's documented burn/mint semantics and administrative identity; unresolved implementation paths are not claimed."
@@ -2837,7 +2837,7 @@
           },
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ],
         "evidence": "At X Layer block 68157538, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
@@ -2877,7 +2877,7 @@
         "sources": [
           {
             "label": "River bridge documentation",
-            "url": "https://docs.river.inc/products/editor/bridge"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "L2BEAT LayerZero",

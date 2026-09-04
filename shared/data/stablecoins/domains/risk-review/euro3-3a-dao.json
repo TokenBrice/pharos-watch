@@ -421,7 +421,7 @@
       {
         "id": "polygon:0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
         "destinationChain": "polygon",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "polygon",
         "contractAddress": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
         "protocol": "3A DAO native issuance",
         "issuanceModel": "native-issuance",
@@ -447,7 +447,7 @@
       {
         "id": "linea:0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
         "destinationChain": "linea",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "linea",
         "contractAddress": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
         "protocol": "3A DAO native issuance",
         "issuanceModel": "native-issuance",

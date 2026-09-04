@@ -17,7 +17,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://fusd.finchain.global/#reserves",
-    "provider": "FinChain reserve dashboard (reserve section is captioned 'as of February 2026' and figures do not render statically - no live feed observed as of 2026-08-08)",
+    "provider": "FinChain reserve dashboard (reserve section captioned 'as of August 2026'; figures do not render in the static page response). Keep cadence and assurance classification subject to separate verification of the advertised Chainlink PoR feed.",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Bermuda"
@@ -65,6 +65,11 @@
       "chain": "monad",
       "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+      "decimals": 9
     }
   ],
   "collateralQuality": "rwa",

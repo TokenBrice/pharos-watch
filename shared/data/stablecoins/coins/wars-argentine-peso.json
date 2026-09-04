@@ -3,7 +3,7 @@
   "llamaId": "379",
   "detailProvider": "defillama",
   "name": "Argentine Peso",
-  "symbol": "WARS",
+  "symbol": "wARS",
   "oneLiner": "WARS is Ripio's wrapped Argentine peso stablecoin targeting 1 WARS = 1 ARS, backed by ARS bank deposits and local-currency instruments via wFIAT.",
   "flags": {
     "backing": "rwa-backed",
@@ -77,6 +77,11 @@
     },
     {
       "chain": "gnosis",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
       "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
       "decimals": 18
     }

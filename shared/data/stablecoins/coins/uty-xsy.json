@@ -2,12 +2,12 @@
   "id": "uty-xsy",
   "name": "Unity",
   "symbol": "UTY",
-  "oneLiner": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: USDC deposits hedged by long AVAX spot and short perps, with a 7-day redemption unbonding.",
+  "oneLiner": "UTY is YieldPoint's market-neutral synthetic dollar: USDC on Base mints UTY 1:1; Avalanche and Katana are spokes; redemption is Base-only after 7 days.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
+  "collateral": "USDC deposits swept to managed custody and allocated across strategy modules that may include long-spot/short-perpetual hedges, on-chain lending, liquidity provision, and structured yield; current asset and hedge weights are not publicly itemized.",
   "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
   "proofOfReserves": {
     "type": "real-time",

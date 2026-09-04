@@ -3,7 +3,7 @@
   "llamaId": "382",
   "detailProvider": "defillama",
   "name": "Ripio wCOP",
-  "symbol": "WCOP",
+  "symbol": "wCOP",
   "oneLiner": "WCOP is Ripio's Colombian-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
@@ -54,9 +54,6 @@
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
     }
   ],
-  "jurisdiction": {
-    "country": "Colombia"
-  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -85,6 +82,11 @@
     },
     {
       "chain": "gnosis",
+      "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
       "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
       "decimals": 18
     }

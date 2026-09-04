@@ -2,7 +2,7 @@
   "id": "usdkg-gold-dollar",
   "name": "USDKG",
   "symbol": "USDKG",
-  "oneLiner": "USDKG is Gold Dollar's Kyrgyz-Republic-licensed dollar stablecoin backed by ~376 kg of physical LBMA gold bars custodied via state enterprise Kyrgyzaltyn.",
+  "oneLiner": "USDKG is Gold Dollar's Kyrgyz-licensed stablecoin backed by about 376 kg gold in sealed boxes at an unnamed bank under LLC Virelint Group's storage agreement.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -18,7 +18,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.usdkg.com/transparency",
-    "provider": "Kreston Digital Assets Ltd (the signing entity per the report's letter of engagement - 'Kreston Global' is the network brand; entity registration and audit licence unconfirmed; only two reserve reports have ever been published, January and November 2025, so the quarterly claim is unsupported and the series is ~8 months stale)",
+    "provider": "Kreston Digital Assets Ltd (ISRS 4400 agreed-upon-procedures provider; the transparency portal currently indexes one reserve report, for 28 November 2025; the January 2025 document is a Consensys smart-contract audit).",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "latestReport": {
@@ -53,7 +53,7 @@
   ],
   "jurisdiction": {
     "country": "Kyrgyz Republic",
-    "regulator": "Ministry of Finance",
+    "regulator": "Financial Market Regulatory and Supervisory Service under the Ministry of Economy and Commerce of the Kyrgyz Republic",
     "license": "Law on Virtual Assets (2022) / Cabinet Resolution No. 514"
   },
   "contracts": [

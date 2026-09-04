@@ -155,6 +155,31 @@
             "url": "https://rpc.monad.xyz"
           }
         ]
+      },
+      {
+        "id": "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+        "destinationChain": "solana",
+        "contractAddress": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "FinChain's official deployment table identifies this Solana SPL mint and the reviewed Solana token-supply read confirms 9 decimals, but no reviewed source establishes whether it is issuer-native or a supply-conserving bridge representation, its controller, or route scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedBlock": 444308524,
+        "sources": [
+          {
+            "label": "FinChain FUSD token docs",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+          },
+          {
+            "label": "Solana mainnet FUSD mint supply read",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
       }
     ],
     "controls": [

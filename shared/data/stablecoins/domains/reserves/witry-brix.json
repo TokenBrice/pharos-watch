@@ -19,7 +19,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Grok wave-8 reserve research; Pharos reserve research refresh",
     "confidence": "verified",
     "sources": [
@@ -32,13 +32,13 @@
         "url": "https://docs.brix.money/itry/proof-of-reserves"
       },
       {
-        "label": "Brix Accountable dashboard API (2026-08-29 snapshot)",
+        "label": "Brix Accountable dashboard API (2026-09-04 snapshot)",
         "url": "https://accountable.brix.money:8443/dashboard"
       }
     ],
-    "rationale": "Re-opened 2026-08-29: the Brix Accountable dashboard reports verifiability 100, total reserves of TRY 436,095,876.77, total supply of TRY 436,095,746.04, and collateralization 1.0; the latest timeline entries are dated 2026-08-29. The tokens_split identifies iTRY and wiTRY, while reserves_split exposes only an Ethereum venue and does not disclose the underlying Digital Liquidity Fund holdings. Brix backing documentation states that iTRY is backed by Digital Liquidity Fund shares representing a regulated basket of Turkish money-market funds and that wiTRY is the ERC-4626 claim path. The aggregate DLF fund-share reserve is therefore retained, but its underlying fund constituents, weights, and maturity/liquidity allocation remain undisclosed.",
+    "rationale": "Re-opened 2026-09-04: the Brix Accountable dashboard reports verifiability 100, total reserves of TRY 427,241,804.04, total supply of TRY 427,241,673.32, and signed snapshot/ZKP sections for both collateral and liabilities; the latest timeline entries are dated 2026-09-04. The tokens_split identifies iTRY and wiTRY, while reserves_split exposes only an Ethereum venue and does not disclose the underlying Digital Liquidity Fund holdings. Brix backing documentation states that iTRY is backed by Digital Liquidity Fund shares representing a regulated basket of Turkish money-market funds and that wiTRY is the ERC-4626 claim path. The aggregate DLF fund-share reserve is therefore retained, but its underlying fund constituents, weights, and maturity/liquidity allocation remain undisclosed.",
     "compositionBasis": "Brix DLF backing disclosure plus current Accountable assets-and-liabilities snapshot; DLF constituent allocation undisclosed",
-    "compositionAsOf": "2026-08-29",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
     "knownUnknownExposure": "The Digital Liquidity Fund identity and aggregate NAV/supply are verified, but its current underlying Turkish money-market funds, constituent weights, issuers, maturities, and liquidity allocations are not published.",
     "knownUnknownExposurePct": 100,

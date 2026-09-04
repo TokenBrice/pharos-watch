@@ -4,7 +4,7 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "Ethereum is the only native issuance deployment. Its MinterV0 and OZ AccessManager path requires beneficiary-signed orders, maximum-mint and rolling-rate checks, and a four-hour token-mint delay; the 3/6 operator Safe can raise the native cap after one day and replace mint logic after three days. Base and BSC are CCIP bridge representations: their pool-gated mint/burn, caps, pool rotation, pause, and UUPS controls are assessed only in Bridge Risk and do not expand native Mint Authority. The Ethereum native mint remains economically unbounded, periodically reconciled, and attestation-supervised.",
+    "summary": "Ethereum is the only native issuance deployment. Its MinterV0 and OZ AccessManager path requires beneficiary-signed orders, maximum-mint and rolling-rate checks, and a four-hour token-mint delay; the 4/7 operator Safe can raise the native cap after one day and replace mint logic after three days. Base and BSC are CCIP bridge representations: their pool-gated mint/burn, caps, pool rotation, pause, and UUPS controls are assessed only in Bridge Risk and do not expand native Mint Authority. The Ethereum native mint remains economically unbounded, periodically reconciled, and attestation-supervised.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -21,7 +21,7 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 259200,
-      "controlRef": "Apyx Ethereum UUPS/cap authority — 3/6 Safe",
+      "controlRef": "Apyx Ethereum UUPS/cap authority — 4/7 Safe",
       "observedAt": "2026-08-16",
       "observedBlock": 25770531,
       "sources": [
@@ -95,8 +95,8 @@
           "ethereum:0x98a878b1cd98131b271883b390f68d2c90674665"
         ],
         "canRaiseCap": true,
-        "threshold": 3,
-        "signerCount": 6,
+        "threshold": 4,
+        "signerCount": 7,
         "timelockDelaySec": 14400,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
@@ -106,9 +106,10 @@
             "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
             "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
             "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
-            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839",
+            "0x6c927E5B7B895E7f41fBE8B35328Ad2d5E324e79"
           ],
-          "threshold": 3,
+          "threshold": 4,
           "enabledModules": [],
           "guard": null,
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
@@ -119,9 +120,9 @@
         "observedAt": "2026-08-16",
         "observedBlock": 25770531,
         "failureDomainKeys": [
-          "operator:apyx-3-of-6-safe"
+          "operator:apyx-4-of-7-safe"
         ],
-        "evidence": "At Ethereum block 25770531, getOwners() returned the six listed addresses, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and slot 0 resolved to the Safe 1.4.1 master copy. AccessManager hasRole(2) returned true with zero caller delay; the Safe can request and execute MinterV0 orders after its 3-of-6 threshold, with the downstream token mint delayed four hours. It can raise the Ethereum token supply cap through role 23 after a one-day delay and holds operational roles 21-25, including the three-day UUPS upgrade role, while role 0 has no current external holder.",
+        "evidence": "At Ethereum block 25770531, getOwners() returned the seven listed addresses, getThreshold() returned 4, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and slot 0 resolved to the Safe 1.4.1 master copy. AccessManager hasRole(2) returned true with zero caller delay; the Safe can request and execute MinterV0 orders after its 4-of-7 threshold, with the downstream token mint delayed four hours. It can raise the Ethereum token supply cap through role 23 after a one-day delay and holds operational roles 21-25, including the three-day UUPS upgrade role, while role 0 has no current external holder.",
         "sources": [
           {
             "label": "Apyx ROLE_MINTER Safe on Etherscan",
@@ -130,7 +131,7 @@
         ]
       },
       {
-        "label": "Apyx Ethereum UUPS/cap authority — 3/6 Safe",
+        "label": "Apyx Ethereum UUPS/cap authority — 4/7 Safe",
         "role": "proxy-admin",
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
@@ -139,8 +140,8 @@
         "deploymentRefs": [
           "ethereum:0x98a878b1cd98131b271883b390f68d2c90674665"
         ],
-        "threshold": 3,
-        "signerCount": 6,
+        "threshold": 4,
+        "signerCount": 7,
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
@@ -196,7 +197,7 @@
           "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
         }
       ],
-      "evidence": "Current fixed-block reads on 2026-08-16 resolved Ethereum's native UUPS implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4, AccessManager 0xe167330e2eac88666de253e9607c6d9ae0ca2824, 750,000,000 native cap, and MinterV0 delayed mint path at block 25770531. Base block 50064463 and BSC block 116350114 resolved their separate bridged-token implementations, AccessManagers, configured CCIP pools, and destination caps; those token-level mint/burn and upgrade/cap/pause controls are Bridge Risk representations, not native issuance. The Ethereum Safe remains 3-of-6 with no enabled modules, and the one-day cap delay plus three-day upgrade delay leave native issuance economically unbounded. Apyx's periodic Wolf & Company attestations and the BVI service-entity model support periodic reconciliation under attestation-only supervision.",
+      "evidence": "Current fixed-block reads on 2026-08-16 resolved Ethereum's native UUPS implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4, AccessManager 0xe167330e2eac88666de253e9607c6d9ae0ca2824, 750,000,000 native cap, and MinterV0 delayed mint path at block 25770531. Base block 50064463 and BSC block 116350114 resolved their separate bridged-token implementations, AccessManagers, configured CCIP pools, and destination caps; those token-level mint/burn and upgrade/cap/pause controls are Bridge Risk representations, not native issuance. The Ethereum Safe remains 4-of-7 with no enabled modules, and the one-day cap delay plus three-day upgrade delay leave native issuance economically unbounded. Apyx's periodic Wolf & Company attestations and the BVI service-entity model support periodic reconciliation under attestation-only supervision.",
       "reviewer": "OpenAI Codex control review / SOL-IV calibration",
       "reviewedAt": "2026-08-16"
     }

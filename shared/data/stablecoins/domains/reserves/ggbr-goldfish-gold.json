@@ -2,11 +2,11 @@
   "id": "ggbr-goldfish-gold",
   "reserves": [
     {
-      "name": "In-situ gold-reserve-backed ION.au securities",
+      "name": "In-situ gold in Happy 2 mining claims held by GGBR Trust (1,000,000 disclosed troy oz)",
       "pct": 100,
       "risk": "high",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "I-ON Digital Corp and GGBR Ltd",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "GGBR Trust (precise issuer, obligor, and trustee identities unresolved)",
       "riskFactors": [
         "market",
         "counterparty",
@@ -18,63 +18,70 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-28",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Codex Goldfish designated-wallet verification",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Goldfish collateral model and designated collateral wallet (accessed 2026-08-27)",
+        "label": "Goldfish current collateral and trust disclosure (accessed 2026-09-04)",
         "url": "https://goldfishgold.com/collateral"
       },
       {
-        "label": "ION.au balance in the designated Goldfish collateral wallet (block 25849423 on 2026-08-27)",
-        "url": "https://etherscan.io/token/0xd051c326c9aef673428e6f01eb65d2c52de95d30?a=0x2F371Ba19F89874689a91bA322194F9967Cb640D"
+        "label": "Goldfish current risk disclosures (accessed 2026-09-04)",
+        "url": "https://goldfishgold.com/risk-disclosures"
       },
       {
-        "label": "GGBR Ethereum supply (block 25849423 on 2026-08-27)",
-        "url": "https://etherscan.io/token/0x7e2ac793f3E692f388e66c7DC28F739d13B0B71A"
+        "label": "Goldfish current terms (accessed 2026-09-04)",
+        "url": "https://goldfishgold.com/terms-of-service"
       }
     ],
-    "rationale": "Refresh 2026-08-28: Goldfish identifies ION.au as GGBR's direct reserve instrument and designates Ethereum wallet 0x2F371Ba19F89874689a91bA322194F9967Cb640D as the collateral wallet. Pinned Ethereum RPC reads at block 25849423 on 2026-08-27T22:02:23Z returned 25,000 ION.au in that wallet and 25,000,000 GGBR total supply, exactly one ION.au per 1,000 GGBR and consistent with the disclosed direct-backing ratio. The evidence remains assets-only: it does not independently attest the underlying gold quantity or reconcile contractual liabilities.",
-    "compositionBasis": "Official Goldfish collateral model reconciled to exact Ethereum balances at block 25849423",
-    "compositionAsOf": "2026-08-27",
+    "rationale": "Fresh review of Goldfish's current collateral disclosure accessed 2026-09-04 identifies 1,000,000 troy ounces of in-situ gold in the Happy 2 mining claims held by the GGBR Trust for GGBR holders, behind 25,000,000 GGBR (approximately 40:1). The trust disclosure does not identify the precise issuer, trustee, or custody provider.",
+    "compositionBasis": "Goldfish current collateral and trust disclosures: Happy 2 in-situ gold claims held by GGBR Trust for GGBR holders",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve instrument and its on-chain quantity are resolved. ION.au's underlying in-situ gold claims, legal enforceability, and off-chain custody remain upstream instrument-quality risks rather than an unidentified GGBR reserve slice.",
+    "knownUnknownExposure": "The direct reserve asset and disclosed trust holder are identified; precise issuer, obligor, trustee, custody-provider identity, legal enforceability, custody, and reconciliation remain unresolved.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "In-situ gold-reserve-backed ION.au securities",
+        "reserveName": "In-situ gold in Happy 2 mining claims held by GGBR Trust (1,000,000 disclosed troy oz)",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "ION.au is an untracked tokenized security; its exact current balance in Goldfish's designated collateral wallet is independently readable on Ethereum."
+        "rationale": "Happy 2 in-situ gold is an external commodity reserve held by the GGBR Trust, not a tracked stablecoin dependency; the disclosed quantity is 1,000,000 troy ounces."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "ION Treasury and Fireblocks MPC custody",
+        "name": "GGBR Trust (disclosed Happy 2 claims holder)",
         "role": "custodian"
       },
       {
-        "name": "GGBR Ltd",
-        "role": "other",
-        "jurisdiction": "British Virgin Islands"
+        "name": "Unnamed/unknown trustee",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-22",
+    "reviewedAt": "2026-09-04",
     "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Goldfish Gold official website (accessed 2026-07-22)",
-        "url": "https://goldfishgold.com/"
+        "label": "Goldfish current collateral and trust disclosure (accessed 2026-09-04)",
+        "url": "https://goldfishgold.com/collateral"
+      },
+      {
+        "label": "Goldfish current risk disclosures (accessed 2026-09-04)",
+        "url": "https://goldfishgold.com/risk-disclosures"
+      },
+      {
+        "label": "Goldfish current terms (accessed 2026-09-04)",
+        "url": "https://goldfishgold.com/terms-of-service"
       }
     ],
-    "uncertainty": "Goldfish names ION Treasury and Fireblocks MPC custody for the underlying gold-backed securities but does not disclose segregation, bankruptcy remoteness, rehypothecation, or current custody shares."
+    "uncertainty": "The GGBR Trust is disclosed as holding the Happy 2 in-situ gold claims for GGBR holders, but the trustee identity, any separate custody provider, segregation, bankruptcy remoteness, and rehypothecation terms are not disclosed in the reviewed current sources."
   }
 }

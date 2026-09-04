@@ -9,7 +9,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
+  "collateral": "South African rand cash and equivalents held in the Old Mutual Wealth Trust Company account and ZARP's Standard Bank accounts, tested by Kempen Audit under ISRS 4400 agreed-upon procedures.",
   "pegMechanism": "Mint/burn 1:1 with ZAR through ZARP Stablecoin (Pty) Ltd issuing partners; reserves may not be used for any purpose other than redemption",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
@@ -27,7 +27,7 @@
       "publishedAt": "2026-08-12",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
+      "liabilityReconciliation": "partial",
       "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
       "confidence": "verified",
       "sources": [
@@ -90,26 +90,5 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "zarp-zarp",
-    "display": {
-      "url": "https://www.zarpstablecoin.com/",
-      "label": "ZARP Stablecoin"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "ZAR fiat reserves",
-      "risk": "low"
-    }
-  },
   "launchDate": "2021-11-15"
 }

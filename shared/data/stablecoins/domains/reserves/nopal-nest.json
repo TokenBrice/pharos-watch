@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Nest private and structured credit vaults",
-      "pct": 94.5359,
+      "pct": 95.1817,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "BlackOpal LiquidStone II FIDC (Brazilian credit-card receivables) via Nest vault",
@@ -14,11 +14,11 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Nest Treasury vault (nTBILL)",
-      "pct": 2.9355,
+      "pct": 4.2769,
       "risk": "low",
       "coinId": "ntbill-nest",
       "assetClass": "tokenized-security",
@@ -33,23 +33,8 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "Nest NAV reconciliation residual",
-      "pct": 1.5217,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Nest vault accounting and unclassified positions",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "Liquid USDT balances",
-      "pct": 0.3701,
+      "pct": 0.2333,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -66,7 +51,7 @@
     },
     {
       "name": "Liquid USDC balances",
-      "pct": 0.5784,
+      "pct": 0.2325,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -83,7 +68,7 @@
     },
     {
       "name": "pUSD liquid balance",
-      "pct": 0.0584,
+      "pct": 0.0756,
       "risk": "high",
       "coinId": "pusd-plume",
       "depType": "collateral",
@@ -97,30 +82,23 @@
         "smart-contract"
       ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Nest pending deposits",
-      "pct": 0.2,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Nest vault pending-deposit queue"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-01",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Codex Nest current nOPAL reserve refresh; Claude ODR-E9 live-name join repair",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Nest vault positions API (re-opened 2026-08-29)",
+        "label": "Nest vault positions API (re-opened 2026-09-04)",
         "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
       },
       {
-        "label": "Nest vault price/NAV API (re-opened 2026-08-29)",
+        "label": "Nest vault price/NAV API (re-opened 2026-09-04)",
         "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/price"
       },
       {
-        "label": "Nest vault last-price-update API (re-opened 2026-08-29)",
+        "label": "Nest vault last-price-update API (re-opened 2026-09-04)",
         "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
       },
       {
@@ -140,26 +118,19 @@
         "url": "https://www.blackopal.finance/"
       }
     ],
-    "rationale": "Re-opened 2026-08-29. Nest's positions API reports settled holdings of $73,341,323.55 in LiquidStone II/OALS2T, $2,277,342.34 in nTBILL, $448,715.37 in USDC, $287,140.97 in USDT/USDT0, and $45,317.59 in pUSD. The NAV endpoint reports $77,580,402.06; the $1,180,562.25 difference is carried as an explicit NAV reconciliation residual rather than allocated to an invented asset. The positions payload also contains a $1.2m pending OALS2T withdrawal; the production nest-vault-positions adapter intentionally rejects positive pending withdrawals, so this current snapshot cannot be treated as a successful live-reserve observation. nBASIS is zero. Percentages are normalized to NAV and retain the fund-level private-credit unknown. Re-opened again 2026-09-01 against the current production live-reserve capture: the nest-vault-positions adapter emits the private-credit position under the exact name \"Nest private and structured credit vaults\", so the reviewed row's trailing \"(LiquidStone II / OALS2T)\" qualifier prevented it from joining the live exposure and left the largest slice unclassified. The qualifier was moved out of the row name; the LiquidStone II / OALS2T identification is unchanged and carried by issuerOrObligor and this rationale. Weights remain the 2026-08-29 reading and are not identity for the join. The private-credit row's liquidityHorizon was also corrected from seven-days to over-seven-days, because the join repair is what first makes that field score and the previously curated value had no source behind it: Nest's liquidity and redemptions page (re-opened 2026-09-01) states the maximum settlement window for most strategies is T+2 to T+5 but that strategies holding longer-duration real-world assets run 30 to 90 days, LiquidStone II is a Brazilian FIDC receivables sub-fund in that longer-duration class, the positions payload carries a pending OALS2T withdrawal rather than a settled one, and the two sibling Nest vault entries (inalpha-nest, nwisdom-nest) already classify the identically named live exposure as over-seven-days. The same 2026-08-29 positions payload also reports pending-deposit transactions; the adapter's exact \"Nest pending deposits\" row is classified as an explicit Nest vault queue exposure, without asserting an underlying asset class or adding unsupported liquidity terms.",
-    "compositionBasis": "Nest positions and NAV APIs fetched 2026-08-29, normalized to reported nOPAL NAV; settled positions plus explicit reconciliation residual",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "Re-opened 2026-09-04 against Nest's positions and NAV APIs. The current settled holdings are $81,864,352.06 in OALS2T/LiquidStone II, $3,678,528.83 in nTBILL, $200,663.00 in USDT/USDT0, $199,983.79 in USDC, and $64,994.90 in pUSD, with no pending transactions. Normalization produces 95.1817%, 4.2769%, 0.2333%, 0.2325%, and 0.0756%, respectively; stale residual and pending-deposit rows are omitted. OALS2T's obligor-level receivable composition and fund service providers remain undisclosed.",
+    "compositionBasis": "Nest positions and NAV APIs fetched 2026-09-04, normalized to the current nOPAL NAV; settled positions only",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "LiquidStone II's obligor-level receivable composition, the $1,180,562.25 NAV residual, the pending OALS2T withdrawal state, fund service providers, and any fund-level financial audit are not public. Stablecoin and nTBILL legs are identified. nBASIS has zero balance.",
-    "knownUnknownExposurePct": 96.0576,
+    "knownUnknownExposure": "OALS2T's obligor-level receivable composition, fund service providers, and any fund-level financial audit are not public. Stablecoin and nTBILL legs are identified.",
+    "knownUnknownExposurePct": 95.1817,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Nest private and structured credit vaults",
-        "pct": 94.5359,
+        "pct": 95.1817,
         "disposition": "insufficient-evidence",
         "rationale": "The positions API identifies LiquidStone II/OALS2T and reports token value, but no current position-level receivable or obligor composition is published."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Nest NAV reconciliation residual",
-        "pct": 1.5217,
-        "disposition": "insufficient-evidence",
-        "rationale": "The current NAV exceeds the settled positions by $1,180,562.25 while a $1.2m OALS2T withdrawal is pending; the source does not identify the accounting or asset basis for this residual."
       }
     ]
   },

@@ -2,7 +2,7 @@
   "id": "xtusd-xt",
   "reserves": [
     {
-      "name": "XT.com issuer-managed reserve assets",
+      "name": "XTDao vault collateral (current composition unverified)",
       "pct": 100,
       "risk": "very-high",
       "assetClass": "other",
@@ -45,7 +45,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "XT.com issuer-managed reserve assets",
+        "reserveName": "XTDao vault collateral (current composition unverified)",
         "pct": 100,
         "disposition": "insufficient-evidence",
         "rationale": "The official source describes XTDao collateral mechanics but does not provide a current reserve composition or verifiable XSC state."
@@ -55,7 +55,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "XTDao vault contracts on XSC and XT.com issuer operations",
+        "name": "XTDao vault contracts on XSC",
         "role": "other"
       }
     ],

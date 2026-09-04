@@ -116,7 +116,7 @@
         "canRaiseCap": true,
         "threshold": 2,
         "signerCount": 3,
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
             "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
@@ -125,8 +125,8 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
           "observedBlock": 25295003,
           "source": "onchain"
@@ -147,7 +147,7 @@
         "canRaiseCap": true,
         "threshold": 2,
         "signerCount": 3,
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
             "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
@@ -156,8 +156,8 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
           "observedBlock": 47200682,
           "source": "onchain"
@@ -183,7 +183,7 @@
         "canRaiseCap": true,
         "threshold": 2,
         "signerCount": 3,
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
             "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
@@ -192,8 +192,8 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0-L2",
           "observedBlock": 25295003,
           "source": "onchain"
@@ -214,7 +214,7 @@
         "canRaiseCap": true,
         "threshold": 2,
         "signerCount": 3,
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
             "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
@@ -223,8 +223,8 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0-L2",
           "observedBlock": 25295003,
           "source": "onchain"
@@ -325,12 +325,15 @@
         "address": "5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw",
         "label": "CADC Solana SPL mint authority",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 2,
         "directMintAbility": "direct",
         "deploymentRefs": [
           "solana:9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7"
         ],
         "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "observedAt": "2026-08-16",
         "observedBlock": 439727154,
         "sources": [

@@ -2,89 +2,64 @@
   "id": "nwisdom-nest",
   "reserves": [
     {
-      "name": "Liquid USDC balances",
-      "pct": 0.4,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle USDC held in the Nest Wisdom Vault liquidity sleeve",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "name": "Nest private and structured credit vaults",
-      "pct": 99.2,
-      "risk": "high",
-      "assetClass": "private-credit",
-      "issuerOrObligor": "WisdomTree and Nest Credit strategy counterparties",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "over-seven-days"
+      "pct": 99.764903,
+      "risk": "high"
     },
     {
       "name": "pUSD liquid balance",
-      "pct": 0.4,
-      "risk": "medium",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Nest pUSD liquidity sleeve",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
+      "pct": 0.119008,
+      "risk": "high",
+      "coinId": "pusd-plume"
+    },
+    {
+      "name": "Liquid USDC balances",
+      "pct": 0.078625,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Nest Treasury vault (nTBILL)",
+      "pct": 0.035732,
+      "risk": "low",
+      "coinId": "ntbill-nest"
+    },
+    {
+      "name": "Liquid USDT balances",
+      "pct": 0.001485,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "Liquid USDT0 balances",
+      "pct": 0.000246,
+      "risk": "low",
+      "coinId": "usdt-tether"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-09-04",
     "reviewer": "OpenAI Codex Safety Score V9 curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Nest nWISDOM positions API",
+        "label": "Nest nWISDOM positions API (2026-09-04 capture)",
         "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
-      },
-      {
-        "label": "Nest smart contracts",
-        "url": "https://docs.nest.credit/developers/smart-contracts/"
-      },
-      {
-        "label": "Nest vault architecture",
-        "url": "https://docs.nest.credit/about/cross-chain/"
       }
     ],
-    "rationale": "The current Nest positions capture reports 99.2% Nest private and structured credit vaults, 0.4% liquid USDC balances, and 0.4% pUSD liquid balance for the nWISDOM vault. Those three rows cover the live exposure envelope; the structured-credit and pUSD rows remain unlinked because the current adapter does not resolve them to tracked asset IDs.",
-    "compositionBasis": "Current Nest nWISDOM positions API snapshot",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Nest nWISDOM positions API capture on 2026-09-04 reports settled positions totaling $2,872,121.569325337: xCRDYX $2,865,369.3106900565; pUSD $3,418.0454; USDC $2,258.20306 across two nonzero rows; nTBILL $1,026.2702312804502; USDT $42.660927; and USDT0 $7.079017. The reviewed percentages normalize these six positive positions to 100%; xCRDYX remains an unlinked opaque structured position because the capture provides no underlying security, obligor, custody, or strategy-level allocation.",
+    "compositionBasis": "Nest nWISDOM positions API snapshot captured 2026-09-04",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live API identifies the aggregate structured-credit and pUSD slices but does not publish the underlying security, obligor, custody, or strategy-level allocation required for further decomposition.",
-    "knownUnknownExposurePct": 99.2,
+    "knownUnknownExposure": "The positions API identifies xCRDYX, nTBILL, pUSD, USDC, USDT, and USDT0 balances, but does not publish xCRDYX's underlying securities, obligors, custody, or strategy-level allocation; those unknowns cover the xCRDYX slice.",
+    "knownUnknownExposurePct": 99.764903,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
+        "reserveIndex": 0,
         "reserveName": "Nest private and structured credit vaults",
-        "pct": 99.2,
+        "pct": 99.764903,
         "disposition": "basket-needs-split",
-        "rationale": "The current adapter exposes an aggregate private/structured-credit position without tracked underlying IDs or current constituent weights."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "pUSD liquid balance",
-        "pct": 0.4,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The live adapter identifies pUSD but does not resolve a tracked asset ID for this vault position."
+        "rationale": "The positions API identifies xCRDYX as the structured position but does not provide a tracked asset ID or underlying security, obligor, custody, or strategy-level allocation."
       }
     ]
   }

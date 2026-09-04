@@ -53,7 +53,7 @@
     {
       "chain": "hyperliquid",
       "address": "0xf448c3cad413cdf0feb1746d7b057967",
-      "decimals": 8
+      "decimals": 7
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",

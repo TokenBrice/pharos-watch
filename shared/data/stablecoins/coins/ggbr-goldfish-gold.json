@@ -9,7 +9,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Each GGBR token represents 1/1000th of a troy ounce of LBMA-priced physical gold, sourced from I-ON Digital Corp's ION.au gold reserve and reported as 5:1 overcollateralized, with the underlying gold secured via UCC-1 liens in ION Treasury and reserves held in Fireblocks MPC custody",
+  "collateral": "Each GGBR token represents 1/1000th of a troy ounce of gold held by the GGBR Trust: 1,000,000 troy ounces of in-situ gold from the Happy 2 claims (Pinal County, Arizona), independently verified under NI 43-101 / S-K 1300 standards by a Qualified Person, with roughly 40:1 coverage against 25,000,000 GGBR outstanding (issuer collateral page, read 2026-09-04).",
   "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.001,
@@ -20,30 +20,7 @@
     "url": "https://goldfishgold.com/collateral",
     "provider": "Goldfish designated collateral wallet on Ethereum (proves only a related-party ION.au token balance versus GGBR supply; underlying in-situ gold quantity and extractability are not independently attested)",
     "attestorTier": "self",
-    "cadence": "real-time",
-    "latestReport": {
-      "periodEnd": "2026-08-27",
-      "publishedAt": "2026-08-27",
-      "assuranceMethod": "onchain-proof",
-      "scope": "assets-only",
-      "liabilityReconciliation": "none",
-      "reviewer": "PoR remediation pass 2026-08 (downgraded from full/verified: wallet ratio check does not reconcile gold to liabilities)",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "Goldfish collateral model and designated wallet (accessed 2026-08-27)",
-          "url": "https://goldfishgold.com/collateral"
-        },
-        {
-          "label": "ION.au collateral-wallet balance at Ethereum block 25849423 (2026-08-27)",
-          "url": "https://etherscan.io/token/0xd051c326c9aef673428e6f01eb65d2c52de95d30?a=0x2F371Ba19F89874689a91bA322194F9967Cb640D"
-        },
-        {
-          "label": "GGBR total supply at Ethereum block 25849423 (2026-08-27)",
-          "url": "https://etherscan.io/token/0x7e2ac793f3E692f388e66c7DC28F739d13B0B71A"
-        }
-      ]
-    }
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -95,10 +72,6 @@
     "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
     "rationale": "GGBR is a commodity claim rather than a fiat-cash claim: the whitepaper and collateral disclosure state that each token represents 1/1000th of a troy ounce of LBMA-priced gold, over-collateralized up to 5:1 by a segregated portion of I-ON Digital Corp's ION.au treasury with a perfected UCC-1 lien on the underlying mineral asset rights. Migrated to commodity-claim under methodology v9.14. The claim chain is indirect (GGBR to ION.au security to an in-situ gold lien), which the title and allocation component grades; the archetype records what the token references, not how well.",
     "sources": [
-      {
-        "label": "Goldfish GGBR whitepaper (1/1000 oz claim, over-collateralization, UCC-1 lien)",
-        "url": "https://goldfishgold.com/whitepaper"
-      },
       {
         "label": "Goldfish collateral disclosure (ION.au backing, published on-chain reserve wallets)",
         "url": "https://goldfishgold.com/collateral"

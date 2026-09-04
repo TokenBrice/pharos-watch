@@ -16,7 +16,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://river.inc/"
+      "url": "https://riverai.inc/"
     },
     {
       "label": "Twitter",
@@ -24,7 +24,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.river.inc"
+      "url": "https://docs.riverai.inc/"
     }
   ],
   "contracts": [
@@ -101,9 +101,9 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api.river.inc/protocol-info"
+        "url": "https://api.riverai.inc/protocol-info"
       }
     }
   },
-  "launchDate": "2025-02-12"
+  "launchDate": "2024-03-28"
 }

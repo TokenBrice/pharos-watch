@@ -6,7 +6,6 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
-      "issuerOrObligor": "United States government and undisclosed FDIC-insured reserve banks",
       "riskFactors": [
         "counterparty",
         "duration",

@@ -10,7 +10,7 @@
     "pegCurrency": "PEN",
     "governance": "centralized"
   },
-  "collateral": "Each wPEN is backed 1:1 by liquid instruments denominated in Peruvian sol (PEN) held in Peruvian bank accounts, with reserves periodically attested by local public accountants per Ripio's wFIAT framework",
+  "collateral": "Each wPEN is described by Ripio as backed 1:1 by regulated liquid instruments denominated in Peruvian sol (PEN) held in Peruvian bank accounts under its wFIAT framework; no wPEN-specific reserve bank, composition, or public per-token attestation has been disclosed (published certifications cover only wARS, wBRL, and wCOP)",
   "pegMechanism": "Fiat-backed 1:1 PEN stablecoin under Ripio's wFIAT framework: a Ripio subsidiary mints and burns supply via role-based access control (DEFAULT_ADMIN_ROLE / MINTER_ROLE) against PEN collateral, with mint and redeem routed through Ripio's PEN on/off-ramp; the contract is a UUPS-upgradeable, pausable ERC-20 with EIP-2612 permit",
   "mechanismArchetype": "fiat-cash",
   "geckoId": "peruvian-sol",

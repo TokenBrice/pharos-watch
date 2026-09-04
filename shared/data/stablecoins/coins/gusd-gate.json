@@ -16,13 +16,6 @@
   "detailProvider": "defillama",
   "geckoId": "gusd",
   "cmcSlug": "gusd",
-  "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://www.gate.com/proof-of-reserves",
-    "provider": "Gate exchange-wide zk-Merkle proof-of-reserves publishes customer and platform balances for GUSD, but this demonstrates Gate's custody of customer GUSD tokens rather than identifying or reconciling the assets backing all issued GUSD; no token-backing attestor is named",
-    "attestorTier": "undisclosed",
-    "cadence": "undisclosed"
-  },
   "links": [
     {
       "label": "Product",

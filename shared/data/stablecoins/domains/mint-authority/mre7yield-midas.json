@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "mRe7YIELD is issuer-native on Ethereum and Etherlink: Ethereum authorizes two EOAs and a deposit-vault proxy, while Etherlink authorizes one shared EOA and its chain-local vault. The tracked Starknet address is a canonical StarkGate lock-mint representation of the Ethereum token and is excluded from Mint Authority. Both native EVM proxy paths use two-day timelocks; the native issuance posture remains unbounded and periodically reconciled.",
+    "summary": "mRe7YIELD is issuer-native on Ethereum and Etherlink: the remaining controls are one shared direct-minter EOA and deposit-vault minters, plus chain-local admin Safes and an admin EOA. The tracked Starknet address is a canonical StarkGate lock-mint representation of the Ethereum token and is excluded from Mint Authority. Both native EVM proxy paths use two-day timelocks; the native issuance posture remains unbounded and periodically reconciled.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -49,32 +49,6 @@
       ]
     },
     "controls": [
-      {
-        "chain": "ethereum",
-        "label": "mRe7YIELD Ethereum-only mint operator EOA",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; this role can call the token mint path directly.",
-        "address": "0x11e58b044b04eca3230c67217c482f24bdb90a72",
-        "deploymentRefs": [
-          "ethereum:0x87c9053c819bb28e0d73d33059e1b3da80afb0cf"
-        ],
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "ethereum:0x11e58b044b04eca3230c67217c482f24bdb90a72"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527148,
-        "sources": [
-          {
-            "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
-          }
-        ],
-        "evidence": "At Ethereum block 25527148, M_RE7_MINT_OPERATOR_ROLE history and pinned state retained EOA 0x11e58b044b04eca3230c67217c482f24bdb90a72. Exact-block eth_getCode returned no bytecode."
-      },
       {
         "chain": "ethereum",
         "label": "mRe7YIELD Ethereum and Etherlink mint operator EOA",
@@ -206,7 +180,7 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Boundary review on 2026-08-17 scopes Mint Authority to the Ethereum and Etherlink issuer-native mint operators, deposit vaults, admins, and EVM upgrade paths. The tracked Starknet address is excluded from native issuance: at Starknet block 13408053 the separate StarkGate L2 bridge mapped the token to Ethereum mRe7YIELD, and the accepted L1_HANDLER transaction 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 at Starknet block 2105929 emitted the token's mint Transfer after Ethereum escrow. The token class's own permissioned_mint/permissioned_burn and zero-delay governance facts are retained in Bridge Risk with the bridge route. Ethereum block 25770949 and Etherlink block 51161116 reconfirmed the chain-local M_RE7_MINT_OPERATOR_ROLE holders and two-day EVM upgrade paths. Economic-control evidence reviewed 2026-07-15: Midas publishes recurring NAV and reserve checkpoints through its Attestation Engine, with source notarization and independent LlamaRisk or Canary verification; this product retains its documented weekly reporting cadence. FMA prospectus approval is not issuer prudential licensing. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
+      "evidence": "Boundary review on 2026-08-17 scopes Mint Authority to the Ethereum and Etherlink issuer-native mint operators, deposit vaults, admins, and EVM upgrade paths. The tracked Starknet address is excluded from native issuance: at Starknet block 13408053 the separate StarkGate L2 bridge mapped the token to Ethereum mRe7YIELD, and the accepted L1_HANDLER transaction 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 at Starknet block 2105929 emitted the token's mint Transfer after Ethereum escrow. The token class's own permissioned_mint/permissioned_burn and zero-delay governance facts are retained in Bridge Risk with the bridge route. Ethereum block 25770949 and Etherlink block 51161116 reconfirmed the chain-local M_RE7_MINT_OPERATOR_ROLE holders and two-day EVM upgrade paths. The 2026-09-03 Ethereum role revocation removed former direct-minter EOA 0x11e58b044b04eca3230c67217c482f24bdb90a72, so the remaining native controls are the shared direct-minter EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d, deposit-vault minters, chain-local admin Safes, and admin EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227; the revoked EOA is not counted. Economic-control evidence reviewed 2026-07-15: Midas publishes recurring NAV and reserve checkpoints through its Attestation Engine, with source notarization and independent LlamaRisk or Canary verification; this product retains its documented weekly reporting cadence. FMA prospectus approval is not issuer prudential licensing. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
       "reviewer": "Codex Safety Score V9 Midas multichain audit; Sol economic-posture batch 2026-08-15; Codex Mint/Bridge boundary migration RELOC-10",
       "reviewedAt": "2026-08-17",
       "disposition": "scoreable",

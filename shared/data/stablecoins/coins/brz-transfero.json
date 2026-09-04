@@ -44,21 +44,17 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://transfero.com/brz"
+      "url": "https://transfero.com/brz-stablecoin"
     },
     {
       "label": "Twitter",
       "url": "https://x.com/BrzToken"
-    },
-    {
-      "label": "Docs",
-      "url": "https://docs.transfero.com/"
     }
   ],
   "jurisdiction": {
-    "country": "Switzerland",
-    "regulator": "VQF (FINMA-recognized SRO)",
-    "license": "SRO Member"
+    "country": "Bahamas",
+    "regulator": "Securities Commission of The Bahamas (investment-fund role only)",
+    "license": "Registered investment fund manager; no BRZ-specific DARE authorization evidenced"
   },
   "contracts": [
     {
@@ -73,8 +69,8 @@
     },
     {
       "chain": "bsc",
-      "address": "0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
-      "decimals": 4
+      "address": "0x0295afd3D7E86068050d64509e515f2Db71b4914",
+      "decimals": 18
     },
     {
       "chain": "gnosis",
@@ -98,13 +94,33 @@
     },
     {
       "chain": "avalanche",
-      "address": "0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
-      "decimals": 4
+      "address": "0x05539F021b66Fd01d1FB1ff8E167CdD09bf7c2D0",
+      "decimals": 18
     },
     {
       "chain": "solana",
-      "address": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
+      "address": "BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN",
+      "decimals": 6
+    },
+    {
+      "chain": "celo",
+      "address": "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
+      "decimals": 18
+    },
+    {
+      "chain": "moonbeam",
+      "address": "0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b",
+      "decimals": 18
+    },
+    {
+      "chain": "algorand",
+      "address": "112866019",
       "decimals": 4
+    },
+    {
+      "chain": "stellar",
+      "address": "BRZ-GABMA6FPH3OJXNTGWO7PROF7I5WPQUZOB4BLTBTP4FK6QV7HWISLIEO2",
+      "decimals": 7
     }
   ],
   "custodyModel": "institutional-regulated",

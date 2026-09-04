@@ -37,14 +37,14 @@
     "url": "https://chroniclelabs.org/dashboard/proof-of-asset/anemoy-tokenized-apollo-acrdx",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
-    "cadence": "real-time",
+    "cadence": "daily",
     "latestReport": {
-      "periodEnd": "2026-07-27",
-      "publishedAt": "2026-07-28",
+      "periodEnd": "2026-09-04",
+      "publishedAt": "2026-09-04",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Chronicle dashboard holdings observed at the 2026-07-27/28 review",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Chronicle dashboard holdings observed at the 2026-09-04 review",
       "confidence": "verified",
       "sources": [
         {

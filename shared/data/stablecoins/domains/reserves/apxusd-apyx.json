@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "STRC (Strategy preferred equity, BTC-linked)",
-      "pct": 59.1,
+      "pct": 58.4,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Strategy, Inc.",
@@ -17,7 +17,7 @@
     },
     {
       "name": "Inventory",
-      "pct": 15.9,
+      "pct": 17.0,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
@@ -31,7 +31,7 @@
     },
     {
       "name": "Protocol Owned Liquidity",
-      "pct": 15.5,
+      "pct": 17.3,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
@@ -45,7 +45,7 @@
     },
     {
       "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-      "pct": 9.5,
+      "pct": 7.3,
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
@@ -58,7 +58,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Codex Apyx current Accountable reserve review",
     "confidence": "verified",
     "sources": [
@@ -83,38 +83,38 @@
         "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FtNc7XacuhGCSgnQRH8wB%2FJuly%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=fbbfb1d4-ca86-4186-93d9-400fe5a36be7"
       }
     ],
-    "rationale": "Re-opened 2026-08-29 with the Accountable dashboard response timestamped 1788032164478 (2026-08-29T19:36:04.478Z). The reserves_split values are STRC $182,766,520.57, Inventory $49,117,020.71, Protocol Owned Liquidity $48,028,974.73, Cash & Equivalents $29,358,512.37, and Other $6,209.75 against total reserves $309,277,238.14 and total supply $312,073,514.82. The live accountable adapter emits the four positive buckets at one decimal (59.1%, 15.9%, 15.5%, and 9.5%); the $6,209.75 Other bucket is below the adapter's one-decimal output threshold. Gross reserve coverage is 99.104%, while the dashboard's net-of-protocol-owned collateralization is 0.98699. STRC is corroborated by the linked July Wolf & Company examination, but Inventory and Protocol Owned Liquidity remain opaque and Cash & Equivalents combines USDC with Treasury bills.",
-    "compositionBasis": "Timestamped Accountable reserves_split snapshot (2026-08-29) normalized by the current accountable live-reserve adapter",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "Refreshed 2026-09-04 with the Accountable dashboard snapshot observed at 2026-09-04T17:29:34.519Z. The reserves_split values are STRC $181,854,291.20, Protocol Owned Liquidity $53,866,845.43, Inventory $53,025,264.62, Cash & Equivalents $22,822,968.30, and Other $6,613.04 against total reserves $311,575,982.58. The live accountable adapter emits the four positive buckets at one decimal (58.4%, 17.3%, 17.0%, and 7.3%); the Other bucket is below the adapter's one-decimal output threshold. STRC remains corroborated by the linked July Wolf & Company examination, while Inventory and Protocol Owned Liquidity remain opaque and Cash & Equivalents combines USDC with Treasury bills.",
+    "compositionBasis": "Timestamped Accountable reserves_split snapshot (2026-09-04) normalized by the current accountable live-reserve adapter",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
     "knownUnknownExposure": "Inventory and Protocol Owned Liquidity do not disclose constituent assets; Cash & Equivalents cannot be split between USDC and Treasury bills; and the adapter-suppressed Other bucket is not itemized. The July 2026 Wolf & Company report corroborates Preference Foundation securities but does not reconcile all apxUSD liabilities.",
-    "knownUnknownExposurePct": 40.9,
+    "knownUnknownExposurePct": 41.6,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "STRC (Strategy preferred equity, BTC-linked)",
-        "pct": 59.1,
+        "pct": 58.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "STRC is preferred equity issued by Strategy rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Inventory",
-        "pct": 15.9,
+        "pct": 17.0,
         "disposition": "insufficient-evidence",
         "rationale": "The current Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Protocol Owned Liquidity",
-        "pct": 15.5,
+        "pct": 17.3,
         "disposition": "insufficient-evidence",
         "rationale": "The current Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 9.5,
+        "pct": 7.3,
         "disposition": "basket-needs-split",
         "rationale": "The source reports one combined cash-and-Treasury category and does not publish its USDC/Treasury split.",
         "candidateCoinIds": [
@@ -126,8 +126,12 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed custodian(s) attested monthly by Wolf & Company",
+        "name": "Alpaca (STRC and SATA; July 2026 attestation)",
         "role": "custodian"
+      },
+      {
+        "name": "Preference Foundation or subsidiary-controlled self-custodied wallets (STRCx; July 2026 attestation)",
+        "role": "other"
       },
       {
         "name": "Apyx protocol contracts and accounts (Protocol Owned Liquidity and Inventory buckets)",
@@ -155,6 +159,6 @@
         "url": "https://accountable.apyx.fi/"
       }
     ],
-    "uncertainty": "Apyx states it works with custodians monthly to obtain attestations that backing assets exist and remain under custody control (Wolf & Company opinions published for March-June 2026 on the third-party attestation index), but the custodian identities, account segregation terms, bankruptcy-remoteness structure, and rehypothecation permissions are not disclosed in the reviewed documentation. The refreshed 2026-08-27 reserves_split places the protocol-controlled Inventory (15.5%) and Protocol Owned Liquidity (15.4%) buckets at 30.9% combined, with no stated custody arrangement."
+    "uncertainty": "The July 2026 Wolf & Company examination identifies Alpaca as holding STRC and SATA and Preference Foundation or a subsidiary as controlling self-custodied STRCx wallets for the July attested securities. Custody arrangements for Inventory, Protocol Owned Liquidity, Cash & Equivalents, and Other remain undisclosed; account segregation, bankruptcy remoteness, and rehypothecation terms remain unknown."
   }
 }

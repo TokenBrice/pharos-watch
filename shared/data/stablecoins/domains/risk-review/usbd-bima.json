@@ -307,7 +307,7 @@
         "reviewNote": "At Hemi blocks 5,087,661 and 5,087,665 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented iBTC collateral market; the DebtToken totalSupply was 5,447,824,812,365,803,018,146,460 while aggregate local Trove-manager debt was nonzero but not reconciled to the full destination balance. The same byte-identical DebtToken is a regular LayerZero OFT: endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30329), peers(30101) was nonzero, and owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. Because the local liability ledger does not isolate all destination supply from authenticated OFT delivery, this route is conservatively a bridge representation; the documented local CDP path is retained as evidence but is not admitted to Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "hemi",
-        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "controllerAddress": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:hemi:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
@@ -342,7 +342,7 @@
         "reviewNote": "At Plume blocks 87,682,495 and 87,682,632 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented enzoBTC collateral market, but the local TroveManager getEntireSystemDebt() was 0 while DebtToken.totalSupply was 30,479,000,000,000,000. The same byte-identical DebtToken is a regular LayerZero OFT: endpoint() = 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (EID 30370), peers(30101) was nonzero, and owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. The nonzero balance without local Trove debt is direct evidence that the destination balance cannot be treated as independently native; this route remains a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plume",
-        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "controllerAddress": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:plume:0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36",
@@ -377,7 +377,7 @@
         "reviewNote": "At Sonic blocks 77,632,123 and 77,632,147 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented LBTC collateral market, but the local TroveManager getEntireSystemDebt() was 0 while DebtToken.totalSupply was 9,182,000,000,000,000. The same byte-identical DebtToken is a regular LayerZero OFT: endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30332), the Ethereum token's peers(30332) was nonzero, and owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. The nonzero balance without local Trove debt is direct evidence that the destination balance cannot be treated as independently native; this route remains a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "sonic",
-        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "controllerAddress": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
@@ -412,7 +412,7 @@
         "reviewNote": "At BSC blocks 116,350,940 and 116,351,071 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented bfBTC collateral market; the Ethereum peer for EID 30102 was zero. A latest 2026-08-17 read at BSC block 116,455,172 returned DebtToken.totalSupply() = 0 and local TroveManager debt = 0. The same byte-identical DebtToken is a regular LayerZero OFT with endpoint() = 0x1a44076050125825900e736c501f859c50fe728c (EID 30102), owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, and no fixed-block evidence proving an independent native liability ledger. This route remains conservatively a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
-        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "controllerAddress": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:bsc:0x1a44076050125825900e736c501f859c50fe728c",
@@ -447,7 +447,7 @@
         "reviewNote": "At Nibiru blocks 44,572,760 and 44,572,793 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented uBTC collateral market; the Ethereum peer for EID 30369 was zero. A latest 2026-08-17 read at Nibiru block 44,599,106 returned DebtToken.totalSupply() = 0 and local TroveManager debt = 0. The same byte-identical DebtToken is a regular LayerZero OFT with endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (EID 30369), owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, and no fixed-block evidence proving an independent native liability ledger. This route remains conservatively a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "nibiru",
-        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "controllerAddress": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:nibiru:0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd",

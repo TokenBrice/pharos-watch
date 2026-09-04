@@ -121,7 +121,7 @@
         "0x14913815bcfde78baead2111f463d038ac9c2949"
       ],
       "implementationAddresses": [
-        "0x7b28d7ba50280cc3b7649866843e49d554af3580"
+        "0xf145789b4ec62542f1fce6350fed7b42ea0818b2"
       ],
       "adminAddresses": [
         "0xe7a6d045ddd40087e027139351fdd9abc557f236",
@@ -129,8 +129,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Beacon upgrade admin Safe (7/2)",
-      "observedAt": "2026-07-15",
-      "observedBlock": 25295003,
+      "observedAt": "2026-09-04",
+      "observedBlock": 25905192,
       "sources": [
         {
           "label": "eUSD Ethereum BeaconProxy",

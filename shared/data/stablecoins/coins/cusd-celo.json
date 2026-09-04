@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Mento reserve holding AUSD, sUSDS, CELO, USDT, EURC, USDC, stETH, and ETH; reserve composition is pulled from the live Mento reserve API and changes over time.",
+  "collateral": "Mento reserve backing is based on the live Mento reserve API composition, which changes over time.",
   "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
   "llamaId": "24",
   "detailProvider": "defillama",
@@ -20,8 +20,8 @@
     "cadence": "real-time",
     "provider": "Mento Reserve dashboard",
     "latestReport": {
-      "periodEnd": "2026-07-27",
-      "publishedAt": "2026-07-27",
+      "periodEnd": "2026-09-04",
+      "publishedAt": "2026-09-04",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -29,11 +29,11 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Mento reserve overview as of July 15, 2026",
+          "label": "Mento reserve overview as of September 4, 2026",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
         },
         {
-          "label": "Mento reserve asset ledger as of July 15, 2026",
+          "label": "Mento reserve asset ledger as of September 4, 2026",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {

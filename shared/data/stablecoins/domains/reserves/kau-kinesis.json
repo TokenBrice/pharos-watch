@@ -2,15 +2,16 @@
   "id": "kau-kinesis",
   "reserves": [
     {
-      "name": "Physical gold reserves",
+      "name": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "commodity-allocated",
-      "issuerOrObligor": "Kinesis Monetary System and Allocated Bullion Exchange",
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "KMS Labs S.A. (reserve administrator) and Kinesis Monetary System (native KAU issuer)",
       "riskFactors": [
         "market",
         "custody",
         "liquidity",
+        "counterparty",
         "legal",
         "concentration"
       ],
@@ -18,67 +19,71 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-09-04",
     "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Kinesis trust and security",
-        "url": "https://kinesis.money/trust-security/"
+        "label": "KMS Labs ERC-20 KAU backing and reserve wallet",
+        "url": "https://kmslabs.money/"
       },
       {
-        "label": "Kinesis April 2026 audit page",
-        "url": "https://kinesis.money/audit-april-2026/"
+        "label": "KMS Labs terms, section 8 reserve composition",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
       }
     ],
-    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): gold 2,567,133.466g fine equivalent (6,051 items across 13 vaults) as at ledger date 20 April 2026 vs 2,565,133.465 KAU per the issuer cover letter (excess matches the two 1kg reserve bars). BV reconciles physical holdings to vault records only; the token comparison is the issuer's cover-letter assertion. Composition is a single allocated-gold category.",
-    "compositionBasis": "Bureau Veritas April 2026 physical audit (ledger date 20 April 2026)",
-    "compositionAsOf": "2026-04-20",
+    "rationale": "KMS Labs states each ERC-20 KAU is backed 1:1 by Kinesis-native KAU held in segregated wallets maintained by KMS Labs; native KAU's allocated physical-gold backing is a second-layer asset and not the ERC-20 token's direct reserve.",
+    "compositionBasis": "KMS Labs ERC-20 KAU backing and reserve-wallet disclosure, including terms section 8",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve category is fully allocated physical gold, but the reviewed page does not expose current KAU-only bar quantities, vault-level shares, or redemption inventory.",
+    "knownUnknownExposure": "The direct reserve is identified as native KAU, but the reviewed disclosure does not publish a current ERC-20-to-native-KAU balance reconciliation, wallet balance, or independent digital-asset custodian.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Physical gold reserves",
+        "reserveName": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Allocated physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency. Kinesis discloses LBMA-approved bullion held in ABX/Brink's/Loomis vault networks; the slice name matches the live captured exposure key."
+        "rationale": "Kinesis-native KAU is an external reserve token rather than a tracked stablecoin dependency; its allocated physical-gold backing is the second-layer native-KAU asset."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Allocated Bullion Exchange vault network",
+        "name": "KMS Labs S.A. (administrator of segregated native-KAU reserve wallet; no independent digital-asset custodian disclosed)",
+        "role": "other"
+      },
+      {
+        "name": "Allocated Bullion Exchange vault network (underlying native-KAU bullion custody only)",
         "role": "custodian"
       },
       {
-        "name": "Brinks",
+        "name": "Brinks (underlying native-KAU bullion custody only)",
         "role": "subcustodian"
       },
       {
-        "name": "Loomis Zurich",
+        "name": "Loomis Zurich (underlying native-KAU bullion custody only)",
         "role": "subcustodian",
         "jurisdiction": "Switzerland"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-09-04",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Kinesis trust and security",
-        "url": "https://kinesis.money/trust-security/"
+        "label": "KMS Labs custody scope and disclaimer",
+        "url": "https://kmslabs.money/"
       },
       {
-        "label": "Kinesis April 2026 audit page",
-        "url": "https://kinesis.money/audit-april-2026/"
+        "label": "KMS Labs terms, segregation and custody clause",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
       }
     ],
-    "uncertainty": "Kinesis describes fully allocated bullion, legal ownership, and vault partners, but the reviewed materials do not establish a statutory bankruptcy-remote vehicle or rehypothecation prohibition."
+    "uncertainty": "KMS Labs is disclosed as administrator of segregated native-KAU reserve wallets; no independent digital-asset custodian or wallet-level allocation is disclosed. ABX, Brinks, and Loomis are underlying native-KAU bullion custody context, not direct ERC-20 reserve custodians; statutory bankruptcy remoteness and rehypothecation prohibition are not established."
   }
 }

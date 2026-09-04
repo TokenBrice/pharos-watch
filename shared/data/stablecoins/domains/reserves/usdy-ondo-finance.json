@@ -2,14 +2,40 @@
   "id": "usdy-ondo-finance",
   "reserves": [
     {
-      "name": "Short-term U.S. Treasuries and bank deposits",
-      "pct": 100,
+      "name": "US Treasuries",
+      "pct": 97.36,
       "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "United States Treasury, iShares SHV, and U.S. bank counterparties",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
       "riskFactors": [
-        "counterparty",
+        "credit",
         "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Ondo Stocks issued USDY - USD Value",
+      "pct": 2.62,
+      "risk": "low",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Ondo Stocks",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Silicon Valley Bank - Bank Deposits",
+      "pct": 0.02,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Silicon Valley Bank",
+      "riskFactors": [
+        "credit",
         "liquidity",
         "custody"
       ],
@@ -17,32 +43,46 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-09-04",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ondo USDY basics",
-        "url": "https://docs.ondo.finance/general-access-products/usdy/basics"
+        "label": "Ondo USDY holdings and transparency page",
+        "url": "https://ondo.finance/usdy"
       },
       {
-        "label": "Ondo trust and security",
-        "url": "https://docs.ondo.finance/trust-and-security"
+        "label": "Ondo USDY portfolio overview",
+        "url": "https://ondo.finance/usdy"
       }
     ],
-    "rationale": "Current Ondo documentation identifies the USDY collateral envelope as short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and U.S. bank demand deposits, but does not publish a durable current category allocation. The reviewed row preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
-    "compositionBasis": "Current Ondo USDY collateral and legal-structure disclosures",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Ondo's USDY holdings page reports a portfolio overview as of September 3, 2026 at 7:59:59pm EDT totaling $2,205,052,977: US Treasuries 97.36%, Ondo Stocks issued USDY - USD Value 2.62%, and Silicon Valley Bank - Bank Deposits 0.02%. Other Cash and Cash Equivalents is reported only as <0.01% and is omitted from point-valued rows rather than assigned invented precision.",
+    "compositionBasis": "Ondo daily USDY holdings disclosure",
+    "compositionAsOf": "2026-09-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current allocation among Treasury bills, SHV shares, and bank demand deposits and the bank identities are not disclosed in the reviewed public materials.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The issuer publishes the three point-valued categories totaling 100.00%; Other Cash and Cash Equivalents is reported only as <0.01% and is retained as an unquantified residual rather than assigned an invented point percentage.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Short-term U.S. Treasuries and bank deposits",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The public collateral envelope identifies eligible asset categories but not current category weights."
+        "reserveName": "US Treasuries",
+        "pct": 97.36,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "U.S. Treasury bills are external reserve assets rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Ondo Stocks issued USDY - USD Value",
+        "pct": 2.62,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Ondo Stocks position is an external portfolio asset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Silicon Valley Bank - Bank Deposits",
+        "pct": 0.02,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Silicon Valley Bank deposits are external reserve assets rather than tracked stablecoin dependencies."
       }
     ]
   },
@@ -54,12 +94,22 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "US-registered custodial broker-dealers (not publicly identified)",
+        "name": "StoneX",
         "role": "custodian",
         "jurisdiction": "United States"
       },
       {
-        "name": "U.S. bank counterparties (not publicly identified)",
+        "name": "First Citizens / Silicon Valley Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Additional U.S.-registered custodial broker-dealers (not publicly identified)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Additional U.S. bank counterparties (not publicly identified)",
         "role": "bank",
         "jurisdiction": "United States"
       }

@@ -189,8 +189,8 @@
           "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
         ],
         "authorityType": "safe",
-        "threshold": 3,
-        "signerCount": 6,
+        "threshold": 4,
+        "signerCount": 7,
         "safe": {
           "owners": [
             "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
@@ -198,9 +198,10 @@
             "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
             "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
             "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
-            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839",
+            "0x6c927E5B7B895E7f41fBE8B35328Ad2d5E324e79"
           ],
-          "threshold": 3,
+          "threshold": 4,
           "enabledModules": [],
           "guard": null,
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",

@@ -25,7 +25,7 @@
     "sources": [
       {
         "label": "USDD sUSDD mechanism documentation",
-        "url": "https://docs.usdd.io/susdd-mechanism"
+        "url": "https://docs.usdd.io/system-architecture/susdd-mechanism"
       },
       {
         "label": "USDD collateral and contract registry",

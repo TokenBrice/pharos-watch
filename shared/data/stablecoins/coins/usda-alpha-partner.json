@@ -12,7 +12,6 @@
   "detailProvider": "defillama",
   "geckoId": "usda-3",
   "llamaId": "405",
-  "protocolSlug": "alpha-partners",
   "links": [
     {
       "label": "Website",
@@ -34,6 +33,7 @@
       "decimals": 18
     }
   ],
+  "collateralQuality": "exotic",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",
