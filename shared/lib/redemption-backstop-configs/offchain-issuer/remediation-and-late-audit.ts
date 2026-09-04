@@ -165,8 +165,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Avenia establishes a KYC-gated BRLA redemption mechanism, but no dated BRLA-to-BRL terms establish the scored notional's executable limit, bank settlement SLA, or all-in fee.",
-      reviewedAt: "2026-08-24",
+        "Avenia establishes a KYC-gated BRLA redemption mechanism, but its quote/ticket documentation re-opened on 2026-09-04 provides illustrative fee fields rather than a dated binding BRLA-to-BRL limit, bank settlement SLA, or all-in route cost.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
         sourceRefRouteCapacityFees(
@@ -208,8 +208,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["settlement"],
       rationale:
-        "MoonPay's dated terms verify the current 0 bps issuer redemption fee, but refer to an unpublished redemption schedule, so no settlement SLA can receive score credit.",
-      reviewedAt: "2026-08-24",
+        "MoonPay Stablecoin Terms retain the documented 0 bps redemption charge but refer to an unpublished redemption schedule and expose no publication/update date; the 2026-09-04 re-open found no dated end-to-end settlement SLA, so settlement remains withheld.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef("MoonPay Stablecoin Terms", "https://www.moonpay.com/legal/stablecoin_terms", [
           "route",

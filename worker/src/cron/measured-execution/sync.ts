@@ -125,7 +125,8 @@ function applyQuoteOutcome(
   outcome: { point?: DexMeasuredRawQuotePoint; failureReason?: string },
 ): void {
   if (!outcome.point) {
-    state.failedReason = outcome.failureReason ?? "quote-failed";
+    const failureReason = outcome.failureReason?.trim();
+    state.failedReason = failureReason || "quote-failed";
     return;
   }
   state.points.push(outcome.point);
@@ -156,7 +157,9 @@ function applyQuoteOutcomes(
   requests: readonly MeasuredQuoteAdapterRequest[],
   outcomes: readonly { point?: DexMeasuredRawQuotePoint; failureReason?: string }[],
 ): void {
-  outcomes.forEach((outcome, index) => applyQuoteOutcome(requests[index]!.state, outcome));
+  for (let index = 0; index < requests.length; index += 1) {
+    applyQuoteOutcome(requests[index]!.state, outcomes[index] ?? { failureReason: "quote-failed" });
+  }
 }
 
 /**

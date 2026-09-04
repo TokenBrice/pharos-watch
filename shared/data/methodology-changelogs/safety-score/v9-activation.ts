@@ -1,5 +1,24 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_BRIDGE_AND_COMMODITY_DEFECT_CORRECTIONS: MethodologyChangelogEntry = {
+  version: "9.461",
+  title: "Bridge joins and commodity outputs are resolved without synthetic coverage",
+  date: "2026-09-04",
+  effectiveAt: 1788509806,
+  summary:
+    "Two evaluator mapping defects are corrected without claiming new evidence. Native issuance rows no longer enter the bridge-exposure completeness join, and physical GOLD/SILVER delivery outputs no longer enter the fiat valuation path. The fixed-input replay therefore closes nine wrongly emitted bridge facts and adds five honest unresolved exit facts; this is an accounting correction and an honest loss of false coverage, not evidence Pharos newly acquired.",
+  impact: [
+    "Bridge completeness now excludes reviewed-native selected supply rows from `bridgeControlsByDeployment` in `evaluateV9SubthresholdUnresolvedBridgeJoins` (`shared/lib/safety-score-v9/control.ts`). The route predicate and native-liability boundary are already explicit in `worker/src/lib/safety-score-v9/extension-bridge.ts:116-118` (`isBridgeRepresentationRoute`) and `:975-1008`: native controls remain umbrella facts, but native liability does not create bridge materiality and `bridgeClaimControls` excludes native route ids. This fixes a wrong join; Pharos learned nothing new.",
+    "On replay of `agents/v9-captures/capture-20260904-1100.json` at clock `1788509806`, the bridge correction closed 9 facts (`nonmaterial-bridge-supply-unmatched` on `ausd-agora`, `pyusd-paypal`, `reusd-re-protocol`, `usbd-bima`, `fusd-finchain`, `cusd-celo`, `frxusd-frax`, `usdy-ondo-finance`, plus `missing-bridge-route-rows` on `fusd-finchain`), with 0 replacements and exactly 1 mover: `fusd-finchain` NR -> 46/D. Floors, the completeness predicate, and `unknownBridgeShare` are unchanged.",
+    "Offchain-issuer commodity routes with `outputAssetType: \"bluechip-collateral\"` (physical GOLD/SILVER delivery) now resolve as `unresolved-asset` in `worker/src/lib/redemption-exit-route-observations.ts` instead of being mapped to fiat. The old mapping allowed `buildOutputReview` to imply a synthetic $1 value for a physical bar; removing that false valuation adds uncertainty rather than evidence. Pharos learned nothing new.",
+    "On the same fixed capture, the commodity correction ADDED 5 facts (`unresolved-exit-output` and `missing-runtime-route-evidence` on `gldt-gold-dao`, `paxg-paxos`, `xnk-kinka`) and moved 2 grades: `gldt-gold-dao` 47/D -> NR and `xnk-kinka` 41/D -> 39/F. This is an honest loss of false coverage, not a newly discovered adverse fact.",
+    "The affected asset set is `cgo-comtech`, `dgld-gold-token-sa`, `ggbr-goldfish-gold`, `gldt-gold-dao`, `gldy-streamex`, `kag-kinesis`, `kau-kinesis`, `paxg-paxos`, `pgold-pleasing`, `xagm-matrixdock`, `xaum-matrixdock`, `xaut-tether`, `xnk-kinka`.",
+    "All measured counts and movers above come from the replay of `capture-20260904-1100.json` at clock `1788509806`. Producer-side repairs in these waves cannot manifest in a frozen replay; they require a real producer cycle before any live observation can change. No external evidence was added by either correction.",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_VALIDATOR_QUORUM_AUTHORITY: MethodologyChangelogEntry = {
   version: "9.46",
   title: "An external validator quorum is a named authority, not an unknown one",

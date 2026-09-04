@@ -58,7 +58,7 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
-    const clockSec = Date.UTC(2026, 7, 26) / 1_000;
+    const clockSec = Date.UTC(2026, 8, 5) / 1_000;
     const reviewed = entries.filter(([, config]) => config.v9RouteReviewTerms?.settlementModel != null);
     expect(reviewed.length).toBeGreaterThan(0);
     for (const [id, config] of reviewed) {

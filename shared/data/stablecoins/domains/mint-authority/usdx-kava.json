@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDX is minted by Kava's x/cdp module account (minter/burner) when users draw against overcollateralized CDPs, bounded by per-collateral debt limits and an 8,723,000 USDX global debt limit. Caps and collateral params are raiseable by the 5-member Kava Stability Committee (3-of-5, 7-day proposal) and by KAVA stake governance. There is no proxy: mint logic changes via a Cosmos x/upgrade software upgrade whose authority is the gov module account, reachable by stake vote (20% quorum, 50% threshold, 33.4% veto, 7-day) and by the 1-member Kava Safety Committee holding SoftwareUpgradePermission, though enactment still requires validator binary adoption. The native Kava usdx bank denom is not an addressable EVM contract row, so no kava:usdx deployment reference is asserted in the catalog.",
+    "summary": "USDX is minted by Kava's x/cdp module account (minter/burner) when users draw against overcollateralized CDPs, bounded by per-collateral debt limits and an 8,723,000 USDX global debt limit. Caps and collateral params are raiseable by the 5-member Kava Stability Committee (3-of-5, 7-day proposal) and by KAVA stake governance. There is no proxy: mint logic changes via a Cosmos x/upgrade software upgrade whose authority is the gov module account, reachable by stake vote (20% quorum, 50% threshold, 33.4% veto, 7-day) and by the 1-member Kava Safety Committee holding SoftwareUpgradePermission, though enactment still requires validator binary adoption. The native Kava usdx bank denom is authored as the canonical kava/usdx deployment in the catalog and tied to the reviewed Kava x/cdp issuance route.",
     "upgradeability": {
       "model": "custom",
       "adminAddresses": [
@@ -43,8 +43,8 @@
         "failureDomainKeys": [
           "module:kava:cdp"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 21631632,
+        "observedAt": "2026-09-04",
+        "observedBlock": 22415285,
         "sources": [
           {
             "label": "Kava module accounts API",
@@ -59,7 +59,7 @@
             "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
           }
         ],
-        "evidence": "At Kava height 21631632, /cosmos/auth/v1beta1/module_accounts returned module cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with permissions [minter, burner]. /kava/cdp/v1beta1/params returned debt_param denom usdx (conversion_factor 6, debt_floor 10000000), global_debt_limit 8723000000000 uusdx, and 10 collateral params each with its own debt limit. The module mints USDX only on CDP draw within those bounds and cannot raise its own limit."
+        "evidence": "At Kava height 22415285 on 2026-09-04, /cosmos/auth/v1beta1/module_accounts returned cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with permissions [minter, burner]. /kava/cdp/v1beta1/params returned debt_param denom usdx with conversion factor 6, global_debt_limit 8723000000000 uusdx, and 10 collateral parameter sets. /cosmos/bank/v1beta1/supply/by_denom?denom=usdx returned 10013573129816 base units. The module mints USDX only on CDP draw within those bounds and cannot raise its own limit; the current usdx native deployment is the Kava x/cdp liability path."
       },
       {
         "chain": "kava",
@@ -150,18 +150,34 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "All facts read from the Kava LCD https://api.data.kava.io at height 21631632 (chain_id kava_2222-10) on 2026-07-14: x/cdp params (debt denom usdx, global debt limit 8723000000000 uusdx, 10 collateral debt limits); module accounts (cdp = kava1wq9ts6l7... with minter/burner, gov = kava10d07y265...); committees (id 1 Stability, 3-of-5, holds cdp GlobalDebtLimit/CollateralParams/DebtParam param rights; id 2 Safety, 1-of-1, holds SoftwareUpgradePermission); x/upgrade authority = gov module account; gov tally quorum 0.2 / threshold 0.5 / veto 0.334 / 7-day voting. /kava/evmutil/v1beta1/params lists no usdx conversion pair, so USDX has no ERC-20 representation and no EIP-1967 proxy surface to review. Economic-posture fields reviewed 2026-08-15: CDP debt caps can rise only through the chain-enforced seven-day committee or broad stake-governance process, while issuance is fully on-chain collateral-gated with no off-chain attestor or prudential supervisor. The native kava/usdx module denom is retained as Mint Authority evidence but cannot be authored as a contracts[] EVM deployment; no kava:usdx route or deployment reference is claimed, leaving addressable canonical route identity as an explicit catalog evidence gap.",
-      "reviewer": "Codex CTRL batch; Sol economic-posture batch 2026-08-15; migration FIX2-14",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Primary Kava LCD reads on 2026-09-04 at height 22415285 (chain_id kava_2222-10) identify the native USDX issuance path: x/cdp debt_param denom usdx with conversion factor 6 and global debt limit 8723000000000 uusdx; module accounts identify cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with [minter, burner]; the bank supply endpoint returned 10013573129816 usdx base units; evmutil parameters expose no USDX conversion pair; send_enabled?denoms=usdx returned no override, so transfers were enabled while the governance-wired bank keeper retains MsgSetSendEnabled restriction capability. The observed native Kava issuance cannot currently be authored in the catalog because CHAIN_META.kava is type \"evm\" and contracts[]/tradedContracts require a 0x...40 EVM address. The authored deployment is therefore the reviewed Osmosis ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE representation, with its transfer rail reviewed under Bridge Risk.",
+      "reviewer": "Codex CTRL batch; Kava native-control observation 2026-09-04",
+      "reviewedAt": "2026-09-04",
       "noLocalIssuance": {
         "kind": "external-only-representation",
-        "reviewedAt": "2026-08-16",
-        "reviewer": "mint-bridge-boundary migration",
-        "rationale": "USDX is minted natively by the Kava x/cdp module account on Kava, which has no addressable token contract this catalog can track. The only authored deployment is the reviewed Osmosis IBC voucher (ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE), a bridge representation, so no reviewed native-issuance deployment exists locally. Mint Authority therefore describes the untracked Kava-native issuance controls without deployment refs, and the IBC transfer rail is scored under Bridge Risk.",
+        "reviewedAt": "2026-09-04",
+        "reviewer": "Kava native topology reconciliation 2026-09-04",
+        "rationale": "USDX is observed as minted natively by the Kava x/cdp module account, but no authored local deployment can be represented in the catalog today: CHAIN_META.kava is type \"evm\" and both contracts[] and tradedContracts require a 0x...40 EVM address. The only authored deployment is the reviewed Osmosis IBC voucher, so Mint Authority records the observed Kava-native issuance controls without deployment refs while Bridge Risk owns the Osmosis transfer representation.",
         "sources": [
           {
-            "label": "Kava CDP module documentation",
-            "url": "https://docs.kava.io/docs/cdp/"
+            "label": "Kava x/cdp params API at height 22415285",
+            "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Kava module accounts API at height 22415285",
+            "url": "https://api.data.kava.io/cosmos/auth/v1beta1/module_accounts"
+          },
+          {
+            "label": "Kava latest block observation",
+            "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
+          },
+          {
+            "label": "Kava USDX bank supply at height 22415285",
+            "url": "https://api.data.kava.io/cosmos/bank/v1beta1/supply/by_denom?denom=usdx"
+          },
+          {
+            "label": "Kava USDX send-enabled state at height 22415285",
+            "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
           }
         ]
       },
@@ -189,6 +205,14 @@
         {
           "label": "Kava evmutil params",
           "url": "https://api.data.kava.io/kava/evmutil/v1beta1/params"
+        },
+        {
+          "label": "Kava latest block observation",
+          "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
+        },
+        {
+          "label": "Kava USDX bank supply at height 22415285",
+          "url": "https://api.data.kava.io/cosmos/bank/v1beta1/supply/by_denom?denom=usdx"
         },
         {
           "label": "Kava CDP module docs",

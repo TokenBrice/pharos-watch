@@ -4887,48 +4887,27 @@
     },
     {
       "assetId": "usdx-kava",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-04",
       "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
-          "chainId": "kava",
-          "contractOrTokenId": "usdx",
-          "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At Kava height 22013136, USDX was the native bank denom usdx and the live send_enabled query returned no override, so transfers were enabled. Kava wires the governance authority into the bank keeper, however, and Cosmos SDK MsgSetSendEnabled lets that authority disable ordinary sends for the individual denom. The currently enabled but governance-pausable denom is therefore restrictable.",
-          "sources": [
-            {
-              "label": "Kava x/cdp params API (live read at height 21878704)",
-              "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
-            },
-            {
-              "label": "Kava evmutil params API (no USDX conversion pair)",
-              "url": "https://api.data.kava.io/kava/evmutil/v1beta1/params"
-            },
-            {
-              "label": "Kava CDP module docs",
-              "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
-            },
-            {
-              "label": "Kava application bank-keeper governance wiring",
-              "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/app/app.go#L462-L468"
-            },
-            {
-              "label": "Kava USDX bank send-enabled state",
-              "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
-            }
-          ]
-        },
-        {
           "chainId": "osmosis",
           "contractOrTokenId": "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
-          "scope": "material-bridge",
+          "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The only tracked off-chain USDX representation is this ibc-go transfer voucher on Osmosis; ibc-go x/transfer vouchers are bank denoms with no issuer freeze, denylist, pause, or transfer-hook authority.",
+          "evidence": "The tracked off-chain USDX representation is the ibc-go transfer voucher identified by the official Osmosis denom trace; Cosmos bank vouchers have no issuer freeze, denylist, pause, or transfer-hook authority in this route.",
           "sources": [
             {
               "label": "Mintscan Osmosis IBC USDX denom",
               "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+            },
+            {
+              "label": "Osmosis USDX denom trace",
+              "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+            },
+            {
+              "label": "Osmosis transfer module account at height 69885664",
+              "url": "https://lcd.osmosis.zone/cosmos/auth/v1beta1/module_accounts"
             }
           ]
         }

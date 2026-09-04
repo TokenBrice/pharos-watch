@@ -49,6 +49,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDtb coinId would overstate the dependency.",
   ],
   [
+    "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDC",
+    "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDC coinId would overstate the dependency.",
+  ],
+  [
+    "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDT",
+    "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDT coinId would overstate the dependency.",
+  ],
+  [
     "gho-aave::GhoDirectFacilitator GSMs Mainnet::GHO",
     "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
   ],

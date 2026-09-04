@@ -309,9 +309,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "HyperCore FEUSD is a noncanonical Hyperliquid representation linked by the official spotMeta registry to the HyperEVM native feUSD token. The representation boundary is verified, but the primary-source inventory does not identify the Hyperliquid system asset-linkage controller or its validator, upgrade, pause, withdrawal, peer, or rate-limit controls; the aggregate bridge tier therefore remains fail-closed opaque-or-unknown.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex feUSD bridge-route correction",
+    "summary": "HyperCore FEUSD is a noncanonical Hyperliquid representation linked by the current official spotMeta registry to the HyperEVM native feUSD token. The representation boundary and current EVM proxy identity are verified, but the primary-source inventory does not identify the Hyperliquid system asset-linkage controller or its validator, upgrade, pause, withdrawal, peer, or rate-limit controls; the aggregate bridge tier therefore remains fail-closed opaque-or-unknown.",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "Codex FEUSD HyperCore linkage refresh",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -381,14 +381,14 @@
         "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Resolved 2026-08-16 from the Hyperliquid operator info API (POST /info, type spotMeta): HyperCore spot token FEUSD sits at index 241 with tokenId 0x88102bea0bbad5f301f6e9e4dacdf979, weiDecimals 8 (matching this profile's contracts[] entry), isCanonical false, and fullName 'Felix USD'. Its evmContract field links directly to the HyperEVM feUSD token 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70 with evm_extra_wei_decimals 10, so 8 + 10 = the 18 decimals read on HyperEVM. This is a noncanonical HyperCore representation of the HyperEVM native token, not an independent Felix native issuance deployment. The registry and official HyperCore interaction documentation do not expose a separate FEUSD issuer minter or the exact system asset-linkage controller, validator, upgrade, pause, withdrawal, peer, or rate-limit controls; those controls remain unknown and no Felix Safe is substituted as a HyperCore controller.",
+        "reviewNote": "Refreshed 2026-09-04 from the Hyperliquid operator info API (POST /info, type spotMeta): HyperCore spot token FEUSD sits at index 241 with tokenId 0x88102bea0bbad5f301f6e9e4dacdf979, weiDecimals 8, isCanonical false, fullName 'Felix USD', and evmContract address 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70 with evm_extra_wei_decimals 10. At HyperEVM block 45001141, the linked EVM token returned name()='feUSD', symbol()='feUSD', decimals()=18, owner()=0x0000000000000000000000000000000000000000000000, and EIP-1967 implementation/admin slots resolving to 0x444322c3c54908fa5a7842a4f3ff085ec67f2598 and 0x44a600c031dbdf652500f4a6d84b168056f13692. The HyperCore/HyperEVM interaction documentation does not publish the system asset-linkage controller, validator, upgrade, pause, withdrawal, peer, or rate-limit authority; the EVM proxy admin does not identify that separate system controller. The route therefore remains reviewed for identity but unresolved for controller semantics.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:hyperliquid-hypercore-evm-linkage",
           "contract:hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
           "system:hyperliquid-feusd-asset-linkage-unknown"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-09-04",
         "sources": [
           {
             "label": "Hyperliquid info API spotMeta",
@@ -401,6 +401,10 @@
           {
             "label": "feUSD token on HyperEVM",
             "url": "https://explorer.hyperliquid.xyz/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+          },
+          {
+            "label": "Hyperliquid EVM JSON-RPC fixed token read",
+            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ]
       }

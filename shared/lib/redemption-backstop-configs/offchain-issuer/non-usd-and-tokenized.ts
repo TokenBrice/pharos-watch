@@ -102,8 +102,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "AnchorX establishes a direct CNH redemption mechanism, but reviewed public materials do not establish executable capacity, bank-credit settlement timing, or all-in redemption cost.",
-      reviewedAt: "2026-08-24",
+        "AnchorX's official site re-opened on 2026-09-04 still establishes only a direct CNH redemption mechanism; no dated public terms establish executable capacity at the scoring notional, bank-credit settlement timing, or all-in redemption cost.",
+      reviewedAt: "2026-09-04",
       docs: [sourceRefRouteCapacity("AnchorX website", "https://www.anchorx.org/")],
     },
     docs: [sourceRefRouteCapacity("AnchorX website", "https://www.anchorx.org/")],
@@ -222,10 +222,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Brale's agreement preserves private limits and delay rights, while public pricing does not establish the scored notional's executable capacity, settlement SLA, or all-in payout-rail cost.",
-      reviewedAt: "2026-08-24",
+        "Brale's Business User Agreement (updated 2026-05-27) permits discretionary redemption delays and account transaction limits, while fees are described inside the account; the 2026-09-04 review found no public scored-notional capacity, settlement SLA, or all-in payout-rail cost.",
+      reviewedAt: "2026-09-04",
       docs: [
-        sourceRef("Brale business user agreement", "https://brale.xyz/legal/business-user-agreement", [
+        sourceRef("Brale business user agreement (updated 2026-05-27)", "https://brale.xyz/legal/business-user-agreement", [
           "route",
           "capacity",
           "access",
@@ -314,8 +314,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement"],
       rationale:
-        "The reviewed 7 bps redemption fee is retained, but the published atomic-capacity percentage is a target and the 1-7-business-day fallback does not establish a binding calendar-day SLA.",
-      reviewedAt: "2026-08-24",
+        "The reviewed 7 bps redemption fee is retained, but the Midas atomic-redemptions and transparency URLs checked on 2026-09-04 still publish a dynamic atomic-capacity target rather than a current lower bound, and the stated 1-7-business-day fallback remains nonbinding; capacity and settlement therefore stay withheld.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", [
           "route",
@@ -483,11 +483,12 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Noble materials establish the USDN architecture and a secondary StableSwap venue, but dated issuer terms do not establish a holder redemption commitment and the venue lacks measured capacity, cost, and settlement evidence.",
-      reviewedAt: "2026-08-24",
+        "The NASD terms page is last revised 2025-02-26 but governs site use rather than a holder redemption commitment; the current USDN overview and architecture re-opened on 2026-09-04 still provide no dated issuer terms for capacity, settlement, or cost, while StableSwap has no measured bounds.",
+      reviewedAt: "2026-09-04",
       docs: [
-        sourceRef("NASD terms", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
-        sourceRefRouteCapacity("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn"),
+        sourceRef("NASD terms (last revised 2025-02-26)", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
+        sourceRef("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn", ["route"]),
+        sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route"]),
       ],
     },
     docs: [

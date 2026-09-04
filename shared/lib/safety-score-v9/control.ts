@@ -376,9 +376,17 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return incomplete("supply-partition-unreconciled");
 
+  // Native issuance rows are not bridge exposure. A profile may still carry
+  // canonical-side adapter controls for one, but those controls belong to the
+  // umbrella control inventory rather than this bridge-join proof.
+  const reviewedNativeDeploymentKeys = new Set(
+    rows
+      .filter((route) => route.reviewState === "selected-reviewed" && route.reviewedRouteKind === "native")
+      .map((route) => route.deploymentRouteKey),
+  );
   const bridgeControlsByDeployment = new Map<string, V9DeploymentControlFactV2[]>();
   for (const control of controls) {
-    if (control.controlKind !== "bridge") continue;
+    if (control.controlKind !== "bridge" || reviewedNativeDeploymentKeys.has(control.deploymentKey)) continue;
     bridgeControlsByDeployment.set(control.deploymentKey, [
       ...(bridgeControlsByDeployment.get(control.deploymentKey) ?? []),
       control,

@@ -2,8 +2,9 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
+import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
-const CURRENT_CLOCK_SEC = 1_786_579_200;
+const CURRENT_CLOCK_SEC = v9TestClockSec();
 const FAR_FUTURE_CLOCK_SEC = 2_000_000_000;
 
 function createUsdcFixedInput(clockSec: number) {

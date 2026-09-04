@@ -670,7 +670,7 @@ describe("adaptAccountableDashboard", () => {
           "[MegaEth]_USDm": { value: 10 },
           "[Maple]_syrupUSDC_Loop": { value: 10 },
           "[Maple]_syrupUSDT": { value: 10 },
-          "[Sky]_SUSDS_Loop": { value: 10 },
+          "[Sky]_PT_sUSDS_Loop": { value: 10 },
           "Rest_of_Assets": { value: 10 },
           "[Aave]_Gho_Savings": { value: 10 },
           "[Paxos]_USDG": { value: 10 },
@@ -691,7 +691,7 @@ describe("adaptAccountableDashboard", () => {
     expect(result.slices).toContainEqual(expect.objectContaining({ name: "Aave GHO", pct: 5.9, risk: "medium", coinId: "gho-aave", depType: "collateral" }));
     expect(result.slices).toContainEqual(expect.objectContaining({ name: "MegaETH USDm", pct: 5.9, risk: "low", coinId: "usdm-mega", depType: "collateral" }));
     expect(result.slices).toContainEqual(expect.objectContaining({ name: "Maple syrupUSDT", pct: 5.9, risk: "medium", coinId: "syrupusdt-maple", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Sky sUSDS loop", pct: 5.9, risk: "high", coinId: "susds-sky", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Sky PT sUSDS loop", pct: 5.9, risk: "high", coinId: "susds-sky", depType: "collateral" }));
     expect(result.slices).toContainEqual(expect.objectContaining({ name: "Paxos USDG", pct: 5.9, risk: "low", coinId: "usdg-paxos", depType: "collateral" }));
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,

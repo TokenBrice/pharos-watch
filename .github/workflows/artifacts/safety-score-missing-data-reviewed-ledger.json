@@ -16,6 +16,638 @@
     "nextReviewTrigger",
     "factsClosed"
   ],
-  "allowedDecisions": ["promote", "reject", "defer"],
-  "decisions": []
+  "allowedDecisions": [
+    "promote",
+    "reject",
+    "defer"
+  ],
+  "decisions": [
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:ausd-agora+pyusd-paypal+reusd-re-protocol+usbd-bima+fusd-finchain+cusd-celo+frxusd-frax+usdy-ondo-finance",
+      "taskIds": [
+        "V9S-713151392e3a44e0",
+        "V9S-7bd0461ae246a420",
+        "V9S-b0a51cb31c862a7f",
+        "V9S-20e376fd18e8cf61",
+        "V9S-8036f3fdd15c5271"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Existing dated reviewed route profiles (AUSD 2026-08-16, PYUSD 2026-08-16, REUSD 2026-08-19, USBD 2026-08-28, FUSD 2026-08-16); strict-replay diagnostics show every unprovenRouteJoin is a reviewed-native row"
+      ],
+      "rationale": "Root cause was a join defect, not missing evidence: evaluateV9SubthresholdUnresolvedBridgeJoins counted reviewed-native issuance rows as bridge controls, so the completeness proof could never clear. Native issuance is not bridge exposure (extension-bridge.ts:116-118,975-1008). Materiality floors, completeness predicate and unknownBridgeShare untouched.",
+      "changeRefs": [
+        "shared/lib/safety-score-v9/control.ts"
+      ],
+      "sentinels": [
+        "nonmaterial-bridge-supply-unmatched at control:bridge:supply (8 assets)",
+        "missing-bridge-route-rows at control:bridge:routes (fusd-finchain)"
+      ],
+      "nextReviewTrigger": "Re-review if a native-issuance route is ever reclassified as bridge-representing, or if unknownBridgeShare regresses on these assets.",
+      "factsClosed": 9
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:frax-frax+nopal-nest+usdcv-societe-generale-forge+bc3m-backed",
+      "taskIds": [
+        "V9G-5bfdfe591d288f89",
+        "V9G-59e1bed6559d801b",
+        "V9G-91486a1a6c01f643",
+        "V9G-1fb00e61b0473a11"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "docs.velodrome.finance/tokenomics (2023-06-22)",
+        "api.nest.credit/v1/vaults/nest-opal-vault/positions (2026-08-29)",
+        "sgforge.com/product/coinvertible + USDCV white paper iXBRL 202508 (2026-08-23)",
+        "assets.backed.fi/products/bc3m + api.backed.fi/graphql (2026-07-21)"
+      ],
+      "rationale": "Producer-observed slices were unclassified or mis-shaped against the issuer's published granularity. Classified each to the issuer's exact row identity with assetClass plus obligor/failure-domain; no riskFactors or liquidityHorizon invented where unpublished.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/{frax-frax,nopal-nest,usdcv-societe-generale-forge,bc3m-backed}.json"
+      ],
+      "sentinels": [
+        "material-reserve-slice-unstructured on frax-frax, nopal-nest, usdcv-societe-generale-forge, bc3m-backed and the two fpi-frax upstream projections"
+      ],
+      "nextReviewTrigger": "Re-review when either issuer changes published slice granularity, or if a new unclassified producer row appears.",
+      "factsClosed": 6
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:usdx-kava",
+      "taskIds": [
+        "V9G-6cbead153db2b56b",
+        "V9G-0bbfadddabb70851",
+        "V9G-07df5ecc8fb96763"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "api.data.kava.io block/latest + bank supply by_denom + send_enabled (2026-09-04, height 22415285)",
+        "lcd.osmosis.zone denom_traces/C78F65E1... + module_accounts (2026-09-04)"
+      ],
+      "rationale": "Osmosis IBC voucher deployment rescoped to canonical with dated transfer/module evidence, which made bridge materiality computable. Native Kava issuance was observed but is not authorable (see the deferred decision below), so the review documents the limitation rather than asserting a topology it cannot express.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdx-kava.json",
+        "shared/data/stablecoins/domains/mint-authority/usdx-kava.json",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "runtime-bridge-materiality-unavailable on usdx-kava"
+      ],
+      "nextReviewTrigger": "Re-review with the catalog schema ruling on Cosmos-native identifiers.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdat-saturn+fpi-frax",
+      "taskIds": [
+        "V9G-5733a44bc67c4375",
+        "V9G-a6c17b2e73fb6b5c",
+        "V9G-336b4c867fc51e40",
+        "V9G-6945944a337ba8bd"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "USDat: pinned repo commit 67a27eba src/USDat.sol + migration runbook, Etherscan tx 0x489450d4... block 25789911 (2026-08-19), m0.org PYUSDx release (2026-02-27), app.saturn.credit dashboard (2026-09-04)",
+        "FPI: docs.frax.com fpi/overview + controller_pool, FIP-341 (2024-03-21), api.frax.finance fpi-collateral at block 25627253, FPIControllerPool.sol commit 30532c8"
+      ],
+      "rationale": "Reviews are curated and correct but cannot be admitted yet: both carry reviewedAt 2026-09-04, and the exact admission policy rejects a date-only review until its UTC day has fully elapsed. Replay confirms the seven affected facts (fpi-frax 1, usdat-saturn 3, rusd-reservoir 3 projected from USDat) flip from issuer-undisclosed to method-unsupported with the same-UTC-day message, so nothing closed. USDat claimAndSegregation and custodyContinuity are measured and should close on the next cycle; assuranceAndReconciliation and FPI lossRecovery are reviewed-unavailable and stay open under methodology 9.451.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "usdat-saturn:gap:mechanism-review:{claimAndSegregation,custodyContinuity} expected absent after 2026-09-05",
+        "usdat-saturn:gap:mechanism-review:assuranceAndReconciliation and fpi-frax:gap:mechanism-review:lossRecovery remain open"
+      ],
+      "nextReviewTrigger": "Re-replay after 2026-09-05 00:00 UTC to confirm admission and book the two measured components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:moveusd-cfx+dgld-gold-token-sa+cngn-compliant-naira+isc-international-stable-currency+xnk-kinka",
+      "taskIds": [
+        "V9G-ceb6f2d3a73e4e88",
+        "V9G-387030d2814f5936",
+        "V9G-630fd456ab2aeb60",
+        "V9G-15d810d87d232896",
+        "V9G-12713254df1e1309"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Negative searches dated 2026-09-04 recorded per asset in each sidecar: cfx.to + docs.cfx.to (2025-10-21) + PR (2025-04-01); dgld.ch + General Terms + explorer + litepaper (2025-11-17); cngn.co/transparency (metrics as of 2026-08-31, activity only); isc.money/api/reserve-balances (itemized but undated/mutable); kinka-gold.com whitepaper (2024) + terms (2022-12-01)"
+      ],
+      "rationale": "The plan's 'five evidence-ready compositions' was wrong. moveusd-cfx and dgld-gold-token-sa sit 38.345 days from the capture clock against a 38-day effective bound, 0.345 day over, with no newer dated publication. cNGN publishes activity metrics, not itemized reserves. ISC's API is undated and mutable, so adopting the retrieval date would be a date bump. XNK publishes only static 2022-2024 documents. No confidence or date was altered.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/{moveusd-cfx,dgld-gold-token-sa,cngn-compliant-naira,isc-international-stable-currency,xnk-kinka}.json"
+      ],
+      "sentinels": [
+        "<asset>:gap:reserve-composition for all five"
+      ],
+      "nextReviewTrigger": "moveusd-cfx and dgld-gold-token-sa on the next issuer publication (they are 0.345 day over the bound); the other three on first dated itemized disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:spiko-family",
+      "taskIds": [
+        "V9G-564e6cdf6efdb058",
+        "V9G-cf4eacebe9b42967",
+        "V9G-56d85947bbbd8884",
+        "V9G-b80876b35d9effa9",
+        "V9G-bd8663b411bff847",
+        "V9G-cd7ea1348fe33eab",
+        "V9G-720ced295f1c0869",
+        "V9G-44f119a399079d71"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "reject",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Aquarius amm-api.aqua.network/api/tickers/ returned HTTP 200 with zero matches for all eight exact Soroban identities (2026-09-04); v2 pools pagination returned 346 rows, zero matches",
+        "Soroswap api.soroswap.finance/pools returned HTTP 403 without credentials (2026-09-04)",
+        "Aquarius registered supplemental at shared/lib/dex-deployment-coverage.ts:384-386"
+      ],
+      "rationale": "These were the campaign's only 8 facts labelled as a proven producer outage. They are not a Pharos transport failure: Aquarius is a registered supplemental (non-exhaustive) provider and a successful empty response is encoded as deploymentCensusProviderOutage, while no chain-wide exhaustive Stellar/Soroban provider is publicly available. Nothing can be honestly repaired producer-side, so no closure is claimed.",
+      "changeRefs": [
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "<asset>:gap:exit-portfolio-coverage for all eight Spiko assets"
+      ],
+      "nextReviewTrigger": "Re-review if an exhaustive Soroban route provider becomes available or Soroswap grants pool access; separately, the outage-vs-non-exhaustive encoding needs an owner ruling.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdx-kava-native-authorability",
+      "taskIds": [
+        "V9G-07df5ecc8fb96763"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "methodology-capability",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Observed native Kava issuance: cdp module account with [minter,burner], x/cdp debt denom usdx, global limit 8723000000000 uusdx, bank supply 10013573129816 base units, all at height 22415285 (2026-09-04)",
+        "Catalog validator requires /^0x[0-9a-f]{40}$/ for any CHAIN_META type 'evm' chain; CHAIN_META.kava is type 'evm'",
+        "bridgeRouteRisk route requires an exactly matching authored contract deployment"
+      ],
+      "rationale": "Kava's real Cosmos-native issuance cannot be represented today: the chain is typed EVM because of Kava EVM, so contracts[]/tradedContracts reject a bank denom, and a bridge route without an authored contract fails validation. The wave authored it, hit both gates, and reverted to the only expressible topology, keeping the observations and an explicit written limitation. noLocalIssuance is restored and now knowingly under-describes reality.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/usdx-kava.json",
+        "shared/data/stablecoins/coins/usdx-kava.json"
+      ],
+      "sentinels": [
+        "No sentinel: this is a schema-capability gap, not a fact"
+      ],
+      "nextReviewTrigger": "Owner ruling on a distinct chain entry or non-EVM identifier path for dual-VM chains.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:jusd-juicedollar+vcred-vcred+vusd-virtue",
+      "taskIds": [
+        "V9G-dcf7198d6770505c"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Existing dated transfer overlays cover these assets; capture shows chainCirculatingById empty so totalSupplyUsd resolves 0 and materialScopeComplete is false regardless of overlay content"
+      ],
+      "rationale": "Not an access-review evidence gap. The scope-completeness predicate cannot certify a deployment set it has no chain-supply observation for, and it is correct to refuse. Weakening it would manufacture a closure; the missing input is chain-supply producer coverage.",
+      "changeRefs": [],
+      "sentinels": [
+        "<asset>:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Route to the chain-supply producer lane, then re-review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:hyusd-hylo",
+      "taskIds": [
+        "V9G-c27f481a55eda949"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "docs.hylo.so/security/onchain-addresses (2026-09-04)",
+        "api.mainnet-beta.solana.com ProgramData: exchange last deployed slot 442014867, router 439863765, finalized slot 444214646 (2026-09-04)",
+        "Accretion HyloV2 audit July 2026",
+        "docs.hylo.so multi-asset-architecture"
+      ],
+      "rationale": "A docs-only V1 branch inventory was drafted and then reverted: fresh ProgramData reads showed both programs redeployed after the documented V1 state, so the deployed branch topology could not be certified. branchApplicability stays unresolved with the negative-search scope recorded rather than asserting an inventory that on-chain state contradicts.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/hyusd-hylo.json"
+      ],
+      "sentinels": [
+        "hyusd-hylo:gap:economic-control:oracle"
+      ],
+      "nextReviewTrigger": "Re-review when Hylo publishes a V2 deployed-program directory matching on-chain ProgramData.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:kag-kinesis+cngn-native-upgrade+hlusd-scoped-control",
+      "taskIds": [
+        "V9G-2a0ba3b6b1eadc20"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Kinesis materials expose the KAG issuance narrative but no native-ledger mint authority or EVM/native reconciliation",
+        "cNGN: Bantu native ledger publishes no software-upgrade executor; Base ProxyAdmin and Solana ProgramData authorities already belong to bridge-route risk",
+        "HLUSD: documented RPC/CLI negative scope, HeLa runtime upgrade executor/quorum unresolved"
+      ],
+      "rationale": "Three control facts left open deliberately rather than misattributing destination-chain admin controls to native authority. Reusing bridge-side upgrade records as native mint authority would be a category error and would double-count controls.",
+      "changeRefs": [],
+      "sentinels": [
+        "kag-kinesis:gap:economic-control:mint",
+        "cngn-compliant-naira unknown-upgrade-authority",
+        "hlusd-hela scoped-control-question"
+      ],
+      "nextReviewTrigger": "Re-review on issuer disclosure of native ledger authority, or on a HeLa runtime explorer becoming available.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "INTER_CYCLE:usdk-kast+usdn-noble+xo-exodus",
+      "taskIds": [],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-1",
+      "evidence": [
+        "Live publication asOfSec 1788513392 reports 664 open facts against the 667 baseline at asOfSec 1788507978, with no material-reserve-slice-unstructured reason for these three assets"
+      ],
+      "rationale": "Production-confirmed closures that happened between captures, not campaign work. Recorded so the baseline is not double-credited.",
+      "changeRefs": [],
+      "sentinels": [
+        "material-reserve-slice-unstructured on usdk-kast, usdn-noble, xo-exodus"
+      ],
+      "nextReviewTrigger": "None; already closed in production.",
+      "factsClosed": 3
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:commodity-physical-redemption-valuation",
+      "taskIds": [
+        "V9G-4ec9b5cba466b25c",
+        "V9G-aa32b72aa496ac15",
+        "V9G-00dbff8c7ecde22d",
+        "V9G-0789df08e7afc117",
+        "V9G-788215a9038d8ad7",
+        "V9G-dfcab98d8f5a8913",
+        "V9G-b4ac063b52b95d85"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-2",
+      "evidence": [
+        "Focused smoke: all 13 strict-replay commodity routes now resolve {kind:'unresolved-asset'} with scoreEligible false; a USDC offchain fiat route still resolves {kind:'fiat',currency:'USD'}",
+        "Replay of capture-20260904-1100 at clock 1788509806: 5 facts added, movers gldt-gold-dao 47/D -> NR and xnk-kinka 41/D -> 39/F"
+      ],
+      "rationale": "Defect fix, not a closure: offchain-issuer commodity outputs (physical GOLD/SILVER delivery) were mapped onto the fiat path, letting buildOutputReview imply a $1 valuation for a physical bar. A gold bar is not a dollar, and an implied-par output could make a physical route appear same-notional-satisfying with nothing establishing USD value. Removing the synthetic valuation ADDS 5 honest open facts and lowers two grades. Affected assets: cgo-comtech, dgld-gold-token-sa, ggbr-goldfish-gold, gldt-gold-dao, gldy-streamex, kag-kinesis, kau-kinesis, paxg-paxos, pgold-pleasing, xagm-matrixdock, xaum-matrixdock, xaut-tether, xnk-kinka.",
+      "changeRefs": [
+        "worker/src/lib/redemption-exit-route-observations.ts"
+      ],
+      "sentinels": [
+        "unresolved-exit-output added on gldt-gold-dao, paxg-paxos, xnk-kinka; missing-runtime-route-evidence added on gldt-gold-dao, xnk-kinka"
+      ],
+      "nextReviewTrigger": "Closes only when an issuer publishes a tracked, priceable output identity with a USD valuation for physical delivery.",
+      "factsClosed": -5
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:quote-failure-taxonomy",
+      "taskIds": [
+        "V9G-quote-taxonomy-18-rows"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-2",
+      "evidence": [
+        "Capture Q counts per asset (quote-failed, target-unresolved, quote-missing) recorded in lane F; every evidenced exact venue across the 18 assets is already pinned (UniV3 Ethereum/Arbitrum/Polygon, Pancake Ethereum/Base)",
+        "Normalized capture exposes only aggregate unsupportedReasons, not failed-pool chain/protocol identity"
+      ],
+      "rationale": "join.ts now marks an atomic packet budget-deferred only when every direction is deferred, so mixed/attempted failures stay quote-failed and remain in the budget denominator; sync.ts fails closed to quote-failed for a missing adapter outcome instead of falling through to deployment-unavailable. No registry pin was added because no unpinned venue could be verified from the capture: pinning an unverified quoter address was refused. Closures require a real producer cycle; a frozen replay cannot manifest them.",
+      "changeRefs": [
+        "worker/src/cron/measured-execution/join.ts",
+        "worker/src/cron/measured-execution/sync.ts"
+      ],
+      "sentinels": [
+        "<asset>:gap:exit-portfolio-coverage for the 15 candidate assets; usdt-tether, xaut-tether and frxusd-frax remain open on other gates"
+      ],
+      "nextReviewTrigger": "Re-replay after the next measured-execution producer cycle; separately, resolve USDT quote-missing 133 and DAI quote-missing 2 pool identities.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:capability-exact-identity",
+      "taskIds": [
+        "V9G-ffd82d791a606ced",
+        "V9G-610a8d48cba1f70a",
+        "V9G-aa243acc67eb9808",
+        "V9G-a78a2a7c0f2fcd6f",
+        "V9G-74ccd41a950bec34",
+        "V9G-709770c3aece0e5e",
+        "V9G-659b2ecc31289b80",
+        "V9G-85e519d1b10ad3bd",
+        "V9G-68ac2ab06824f113",
+        "V9G-f224ede74544d0e0",
+        "V9G-6d319b4d06b0ef42",
+        "V9G-234126578f30ba32",
+        "V9G-6ac8380f2198fe5f",
+        "V9G-e16e347d01693aa7",
+        "V9G-4f3825fc75d82a23",
+        "V9G-09843c3a37e089c2",
+        "V9G-5d3c2ee99e43e006",
+        "V9G-5922233783aa6a62",
+        "V9G-14b126554953f47f",
+        "V9G-79742df833842566",
+        "V9G-96f5d3c7a9059eff",
+        "V9G-b8880f843ca59100",
+        "V9G-eaeaa51bd7262c3a",
+        "V9G-e193ed6f2d1e043a",
+        "V9G-a4f15b491c94774c"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-2",
+      "evidence": [
+        "Regression test added: reversed candidate order [XAUt(6), KAG(18)] against actual pair [KAG, XAUt] asserts correct balances/decimals and capacity; it fails on both the original candidate-order mapping and on naive index rebinding",
+        "710 tests pass across dex-liquidity, measured-execution and exit suites; RPC calls per pool unchanged at 6 in one multicall batch"
+      ],
+      "rationale": "Two producer defects fixed. First, exact pool-id candidate resolution for UniV3/V4 with fee-enrichment fallback, measured target precedence over registry output, and Aerodrome isStable propagation. Second and more serious, a decimals inversion: decimals were read in candidate order and bound positionally, so any reversed-order pool had reserves mis-scaled by 10^(d0-d1) with no gate firing. Now decimals are keyed by lowercased token address and resolved against the identity-validated actual token0/token1. Absent chainRpcs emits incomplete-exact-capture instead of silently clearing the candidate. Closures need a real producer cycle.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/process-pool-execution-capability.ts",
+        "worker/src/cron/dex-liquidity/constant-product-v2.ts",
+        "worker/src/cron/dex-liquidity/__tests__/constant-product-v2.test.ts",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "<asset>:gap:exit-portfolio-coverage for slvon-ondo, syrupusdc-maple, eusd-telcoin, meusd-mezo, syrupusdt-maple, dgld-gold-token-sa, ceur-celo, euri-banking-circle, musd-metamask, pgold-pleasing, susdd-tron-dao-reserve, susn-noon, thbill-theo, usdd-tron-dao-reserve"
+      ],
+      "nextReviewTrigger": "Re-replay after the next dex-liquidity producer cycle; shadow/unsupported target cohorts and Slipstream-only rows stay open pending reviewed models.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:census-rotation-21-rows",
+      "taskIds": [
+        "V9G-e532a88bfcb5168d",
+        "V9G-a01704fb1da892b0",
+        "V9G-b167b4dca8eeec2d",
+        "V9G-bc60d0b79baf3700",
+        "V9G-8bde6b6c18f5305c",
+        "V9G-b599e0c3209da086",
+        "V9G-f7d874098ca07511",
+        "V9G-a64561e1cbc20123",
+        "V9G-67e639a5dd48d1ba",
+        "V9G-7db62e097d600c86",
+        "V9G-23785a09996778e9",
+        "V9G-23063e075f33b368",
+        "V9G-813d93633367e9bd",
+        "V9G-c07f6fd13c5772d6",
+        "V9G-b9cbe34f1cc6b78d",
+        "V9G-b66ab0d012e3bd6e",
+        "V9G-ca143cc5e3dfed91",
+        "V9G-5a69553e78216444",
+        "V9G-bd389d29b0837016",
+        "V9G-9bfceab3cfd93b28",
+        "V9G-709144d059e4b015"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-2",
+      "evidence": [
+        "Per-asset window arithmetic recorded: DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC = 2h x T3_MODULO84 = 7d; sweep/max-age per asset (m-m0 4 windows/28d/42d; jtrsy 3/21d/31.5d; single-window assets 1/7d/2d); all provider-backed targets unique",
+        "Noble: live API confirms pool with liquidity 1/1 and null TVL; hasInvalidTvl drops it fail-closed",
+        "rusd-reservoir: discovery staging cleanup deletes rows >30h while merge reads ~24h, so a current census observation can outlive its staged payload across rotated windows"
+      ],
+      "rationale": "No code fix was warranted and none was made. The 19 pending rows are genuine not-yet-visited rotation windows: the selector rotates fairly over unique targets and the simulated sweeps cover every provider-backed key, so these close as the rotation completes rather than through work. This corrects the plan's optimistic '19 conditional census closures'. Admitting Noble's null TVL as 0 was refused: it would reclassify a producer gap as method-unsupported and launder a missing measurement as a zero. The complete-empty invariant and all scheduling are unchanged.",
+      "changeRefs": [],
+      "sentinels": [
+        "<asset>:gap:exit-portfolio-coverage for all 21"
+      ],
+      "nextReviewTrigger": "Re-replay after rotation completes; revisit rusd-reservoir if staging retention versus census max-age is ever redesigned.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "PARENT_RATEABILITY:syzusd-yuzu",
+      "taskIds": [
+        "V9S-1f266bdcd0f9565b",
+        "V9S-2efd07bb8495d43d",
+        "V9G-3568508e398ddf62"
+      ],
+      "workType": "PARENT_RATEABILITY",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-2",
+      "evidence": [
+        "Project Node+tsx smoke against the live Accountable endpoint: 18 slices, zero warnings, canonical names Sky USDS staking and Sky PT sUSDS loop, no unmapped slice",
+        "Existing yzusd reserve sidecar dated to Accountable exposure_split 2026-08-28 09:26:05 UTC, reviewed 2026-08-29",
+        "Runtime price/market-cap gate passes for both yuzu assets"
+      ],
+      "rationale": "Stale Accountable Sky source keys were replaced with the current [Sky]_USDS_Staking and [Sky]_PT_sUSDS_Loop keys so the adapter maps every current slice. The parent is NR only because a would-be D grade (published 48.2681, quality 52.4035) lacks causal attribution, which its two ceiling-treated facts cannot supply; the sole lever is lifting published score to the C- floor of 50, needing +1.7319. Reserve mapping alone is estimated to yield 49.65-50.57, so the sibling DEX repair is required for a deterministic outcome. The corpus's only critical fact therefore stays open for now.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/yzusd-yuzu.json"
+      ],
+      "sentinels": [
+        "yzusd-yuzu reserve-composition gap; then syzusd-yuzu missing-parent-score (the corpus's only critical fact)"
+      ],
+      "nextReviewTrigger": "Re-replay after the next producer cycle carries both the refreshed reserve mapping and the DEX capability repair.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:nusd-nexus+frxusd-frax",
+      "taskIds": [
+        "V9G-33bf0ddec8b30990",
+        "V9G-de5a2396b80ed8cb"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-3",
+      "evidence": [
+        "NUSD Harmony: official Synapse deployment record + SynapseERC20 source; api.harmony.one block 93360067 (2026-09-04) shows MINTER_ROLE(SynapseBridge 0xaf41a65f786339e7911f4acdad6bd49426f2dc6b)=true and getRoleAdmin(MINTER_ROLE)=DEFAULT_ADMIN_ROLE; EIP-1167 nUSD at 0xed2a...ab66; supply 11,267.815860007464282776",
+        "FRXUSD Tempo: docs.frax.com crosschain addresses/overview/tempo + tempo.xyz TIP-20 spec; rpc.tempo.xyz block 37947940 (2026-09-04) resolves TIP-20 0x20c...f3c2, mintable adapter 0x000...f1e5, owner Safe 0x1ba...2bee 3-of-6, policy admin 0x766...2969"
+      ],
+      "rationale": "Two of the six route-identity facts closed with block-pinned on-chain observations joined to official deployment records. Replay confirms both unresolved-control-identity facts absent with no adverse replacement and zero score/grade movers. The Frax docs disagreement (architecture page says Mainnet Coming Soon while the addresses page lists the route live) is retained in the review rather than resolved silently.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/nusd-nexus.json",
+        "shared/data/stablecoins/domains/risk-review/frxusd-frax.json"
+      ],
+      "sentinels": [
+        "nusd-nexus:gap:deployment-control:bridge-meta:nusd-nexus:f35ba7a2e964c151cc14",
+        "frxusd-frax:gap:deployment-control:bridge-meta:frxusd-frax:514650e48ee0303ce2d2"
+      ],
+      "nextReviewTrigger": "Re-review if either bridge controller or role admin changes.",
+      "factsClosed": 2
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdc-circle+usde-ethena+feusd-felix+cusd-celo",
+      "taskIds": [
+        "V9G-usdc-corn",
+        "V9G-usde-tempo",
+        "V9G-feusd-hypercore",
+        "V9G-074dda593aabd6f0"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-3",
+      "evidence": [
+        "USDC Corn: official Known Assets/Bridges mapping + Cornscan proxy implementation 0x5019...72c5 (FiatTokenV2_2), decimals 6, supply 6,353.003033 at indexed head 1711897; documented node RPC returns 404 and explorer proxy calls yielded no owner/admin/masterMinter/pauser state (2026-09-04)",
+        "USDe Tempo: rpc.tempo.xyz block 37948550 resolves OFT proxy 0x5d3...ef34, implementation 0xbd78...ad8a, EIP-1967 admin zero, endpoint 0x20bb...dcc9c, linked TIP-20 0x20c...207b, paused false, approvalRequired true",
+        "FEUSD: HyperCore spotMeta 2026-09-04 index 241, tokenId 0x881...f979, noncanonical, evmContract 0x02c6...c70, HyperEVM block 45001141 EIP-1967 impl/admin; docs expose no asset-linkage controller, validator set, upgrade, pause, withdrawal, peer or limit semantics",
+        "cUSD legacy Klaytn oCUSD via Kaia RPC block 226318240: name/symbol/decimals confirmed, supply 5.52022037288, and owner/minter/paused/isMinter/admin/masterMinter all revert; Orbit Bridge defunct"
+      ],
+      "rationale": "Route identity was established for all four but control semantics remain unpublished, so the facts stay open by design. No controller was inferred from documentation where on-chain state could not confirm it, and no route was written off despite defunct infrastructure while residual supply exists. Reviewing the USDe Tempo route surfaced one new nonmaterial-bridge-supply-unmatched residual — an honest consequence of newly recognising the route.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdc-circle.json",
+        "shared/data/stablecoins/domains/risk-review/usde-ethena.json",
+        "shared/data/stablecoins/domains/risk-review/feusd-felix.json",
+        "shared/data/stablecoins/domains/risk-review/cusd-celo.json"
+      ],
+      "sentinels": [
+        "usdc-circle, usde-ethena, feusd-felix and cusd-celo deployment-control bridge-meta sentinels remain open"
+      ],
+      "nextReviewTrigger": "Re-review when Corn publishes a working RPC, when Tempo publishes OFT delegate/peer governance, when Hyperliquid documents HyperCore asset-linkage control, or on any admissible cUSD delisting record.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:eventual-redemption-terms-16-rows",
+      "taskIds": [
+        "V9S-3e6671e23386b171",
+        "V9S-122c7985b4af0c1a",
+        "V9G-a302f8b5bd0e2691",
+        "V9S-d4ee0ca481494eea",
+        "V9S-03a27e9e1bb1412c",
+        "V9G-bd8663b411bff847",
+        "V9G-4285bf6f3799821d",
+        "V9S-3f1d362844bca3b2",
+        "V9G-4f3825fc75d82a23",
+        "V9S-0dc86860fa597501",
+        "V9G-6ef0d3dc9b11bed7",
+        "V9G-52e7e0c2d5b718ea",
+        "V9S-f92584ed5494ea40",
+        "V9G-2e51dffc0e65a55f",
+        "V9G-9bfceab3cfd93b28",
+        "V9G-1326b5d37043e9ff"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-3",
+      "evidence": [
+        "GBPSAFO: Spiko prospectus published 2026-09-01 establishes same-day D settlement and no redemption fees; the 10% gate is not a capacity lower bound and investor DLT/technical charges up to EUR500+VAT leave cost unbounded",
+        "USD1: BitGo coin-minting terms last updated 2026-03-25 call two-business-day processing a target estimate with no SLA",
+        "QCAD transparency published 2026-08-21; SBC Brale agreement updated 2026-05-27 (discretionary delay/limits/fees); wARS attestation 2026-03-31 is reserve-only; JAAA launch 2025-06-05; VBILL release 2025-05-13; Midas/AXCNH/mTBILL/USDN/BRLA/XO re-checked 2026-09-04"
+      ],
+      "rationale": "No route became scoreable. GBPSAFO gained a dated governing settlement term but keeps capacity and cost open. USD1's previously credited two-business-day delay was REMOVED because the issuer explicitly disclaims it as an SLA — the review got conservatively weaker, which is the correct direction when the prior assumption was unsupported. Risk-review sidecars were untouched: their strict schemas carry no redemption-terms field, so adding one would have violated the schema.",
+      "changeRefs": [
+        "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "exit:missing-same-notional-route for all 16"
+      ],
+      "nextReviewTrigger": "Re-review per issuer on publication of a binding settlement SLA plus an executable capacity bound.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:wrapper-cohort-d",
+      "taskIds": [
+        "V9G-cc0ae30fedcc4614",
+        "V9G-ab0a6fbb6d76fcf9",
+        "V9G-6d7c41292d5db2f7",
+        "V9G-74d506a14232b0ae"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-3",
+      "evidence": [
+        "Lorenzo launch publication 2025-07-21 (re-opened 2026-09-04) lists USD1, USDT and USDC deposits across RWA/CeFi-quant/DeFi sleeves with USD1-only redemption settlement",
+        "Pareto live-vault docs (2026-09-04): FalconX private-credit receivable with only an unlent USDC slice",
+        "Hyperbeat vault docs (reviewed 2026-07-30): USDT0, USDe and USR inputs, dynamically allocated, no weights",
+        "asUSDF: Aster docs + pinned asUSDFEarn source, BSC block 118819303 (2026-08-29); iUSD: Initia FAQ + block 21248472 (2026-08-29); stUSD: StoneYield contract-design docs (2026-07-30)"
+      ],
+      "rationale": "Zero closures, and one correction that made the corpus more honest: sUSD1+ carried a 100% USD1 parent link the issuer's own documentation contradicts, so it is now a 100% unlinked fund-share basket with knownUnknownExposurePct 100 and a basket-needs-split disposition. AA and hbUSDT fail the single-parent condition outright (a private-credit receivable and a multi-input dynamic basket). asUSDF, iUSD and stUSD already carry verified exact 100% parent links and are blocked only by the absence of a live-reserves producer config — integration-blocked, not evidence-blocked. No live adapter was wired from a curation lane.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/susd1plus-lorenzo.json"
+      ],
+      "sentinels": [
+        "Six child *:gap:reserve-composition sentinels and their paired inherited partial-reserve-review facts all remain open"
+      ],
+      "nextReviewTrigger": "asUSDF/iUSD/stUSD when a verified live-reserves adapter is wired and observed; AA and hbUSDT only on issuer publication of exact allocations.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "METHODOLOGY:9.461-defect-corrections",
+      "taskIds": [],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "methodology-capability",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wave-3",
+      "evidence": [
+        "Replays of capture-20260904-1100 at clock 1788509806 measured both effects; typecheck plus 27 methodology-version tests pass; evaluation-build manifest, client registry, report-card fingerprint and OG artifacts regenerated and current"
+      ],
+      "rationale": "Methodology bumped 9.46 -> 9.461 under ADR-3 for two defect corrections landed by this campaign: the bridge-join completeness fix (9 facts closed, 0 replacements, 1 mover: fusd-finchain NR -> 46/D) and the commodity exit-output fix (5 facts ADDED, movers gldt-gold-dao 47/D -> NR and xnk-kinka 41/D -> 39/F). The changelog states plainly that Pharos learned nothing new in either case: one was a wrong join, the other removed a synthetic par valuation. All four ADR-3 targets, the version wiring, the policy releaseVersion (identity only, semantics untouched) and both public surfaces were updated.",
+      "changeRefs": [
+        "shared/data/methodology-changelogs/safety-score/v9-activation.ts",
+        "shared/lib/methodology-versions/safety-score.ts",
+        "shared/lib/methodology-versions/current-version.json",
+        "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+        "docs/report-cards.md",
+        "src/app/methodology/sections/core/safety-scores-overview.tsx",
+        "src/lib/methodology-content.ts",
+        "src/app/methodology/[slug]/route-parity.fixture.ts",
+        "docs/api-reference.md",
+        "docs/testing.md"
+      ],
+      "sentinels": [
+        "No sentinel: methodology identity and disclosure"
+      ],
+      "nextReviewTrigger": "Next methodology change.",
+      "factsClosed": 0
+    }
+  ]
 }

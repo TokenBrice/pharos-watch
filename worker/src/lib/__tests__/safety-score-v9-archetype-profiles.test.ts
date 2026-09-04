@@ -4,7 +4,6 @@ import sboldAsset from "@shared/data/stablecoins/coins/sbold-k3-capital.json";
 import sdaiAsset from "@shared/data/stablecoins/coins/sdai-sky.json";
 import susdaiAsset from "@shared/data/stablecoins/coins/susdai-usd-ai.json";
 import wmAsset from "@shared/data/stablecoins/coins/wm-m0.json";
-import { projectV9MechanismProfile } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
 import { resolveWrapperForm } from "../safety-score-v9/fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -23,9 +22,9 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-// 2026-08-30: past the 2026-08-29 curation batch, with the overlay same-day
-// admission gate fully elapsed.
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 30) / 1_000;
+// 2026-09-05: one UTC day past the 2026-09-04 curation batch, with the
+// overlay same-day admission gate fully elapsed.
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 8, 5) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -139,27 +138,33 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
 
   it("gives FPI a CPI-hybrid review without erasing FRAX/reflexive exposure", () => {
     const overlay = namedOverlay("fpi-frax");
-    expect(overlay.profileReview?.profile).toBe("inflation-index-hybrid");
-    const profile = projectV9MechanismProfile(overlay.profileReview!);
+    expect(overlay.profileReview).toBeUndefined();
+    expect(overlay).toMatchObject({
+      archetype: "algorithmic",
+      metrics: {
+        exogenousBackingShare: 0.871,
+        reflexiveBackingShare: 0.0,
+        contractionCapacityRatio: 0.871,
+      },
+      components: {
+        contractionCapacity: { applicability: "measured", quality: "adequate" },
+        confidenceAndIncentives: { applicability: "measured", quality: "limited" },
+        oracleAndControlAssumptions: { applicability: "measured", quality: "adequate" },
+        emergencyRecovery: { applicability: "measured", quality: "limited" },
+        lossRecovery: {
+          applicability: "unavailable",
+          sourceUrl: "https://docs.frax.com/protocol/assets/fpi/overview",
+        },
+      },
+    });
     const review = buildSafetyScoreV9MechanismReview(
       PROFILE_FIXED_INPUT,
       { id: "fpi-frax" } as MechanismMeta,
       "algorithmic",
     );
-    if (review?.archetype !== "algorithmic") throw new Error("expected the production FPI profile review");
+    if (review?.archetype !== "algorithmic") throw new Error("expected the production FPI mechanism review");
 
-    expect(profile.metrics).toEqual({
-      exogenousBackingShare: 0.871,
-      reflexiveBackingShare: 0.0,
-      contractionCapacityRatio: 0.871,
-    });
-    expect(getSafetyScoreV9MechanismExitFacts("fpi-frax", "algorithmic", PROFILE_CLOCK_SEC)).toEqual([
-      {
-        factKey: "protocol-redemption",
-        disposition: "supported",
-        quality: "adequate",
-      },
-    ]);
+    expect(getSafetyScoreV9MechanismExitFacts("fpi-frax", "algorithmic", PROFILE_CLOCK_SEC)).toEqual([]);
     expect(review).toMatchObject({
       archetype: "algorithmic",
       exogenousBackingShare: 0.871,

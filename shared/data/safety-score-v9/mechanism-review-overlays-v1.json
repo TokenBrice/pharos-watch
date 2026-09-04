@@ -2372,67 +2372,62 @@
     {
       "assetId": "fpi-frax",
       "archetype": "algorithmic",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-04",
       "sources": [
         {
-          "label": "Frax FPI overview (CPI target, 100% collateral-ratio design, FPIS backstop with documented phase-out to FRAX conversion on 2028-03-22, and monthly Chainlink oracle updates)",
+          "label": "Frax FPI overview (reviewed 2026-09-04; CPI-U peg, 100% collateral-ratio design, FPIS mint-and-sell response to AMO yield shortfall, and FPIS phase-out)",
           "url": "https://docs.frax.com/protocol/assets/fpi/overview"
         },
         {
-          "label": "Frax FPI Controller Pool (FRAX mint and redemption path)",
+          "label": "Frax FPI Controller Pool documentation (reviewed 2026-09-04; FRAX mint/redeem and AMO controls)",
           "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
         },
         {
-          "label": "Frax FPI collateral API (reviewed reserve composition snapshot at Ethereum block 25627253, 2026-07-27T22:51:47Z)",
+          "label": "FIP-341 Frax Singularity Roadmap Part 1 (proposal dated 2024-03-21; FPIS resolution)",
+          "url": "https://gov.frax.finance/t/fip-341-frax-singularity-roadmap-part-1/2987"
+        },
+        {
+          "label": "Frax FPI collateral API snapshot at Ethereum block 25627253 (updatedAt 2026-07-27T22:51:47Z; fetched 2026-07-27T22:52:02Z)",
           "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
         },
         {
-          "label": "Frax FPIControllerPool Solidity source pinned at frax-solidity commit 30532c8 (direct mint/redemption, peg bands, manual TWAMM, FPI burn, AMO FRAX give/return, and governance pause controls)",
-          "url": "https://github.com/FraxFinance/frax-solidity/blob/30532c8cefcbf5c7efafcff4369261bd435a4859/src/hardhat/contracts/FPI/FPIControllerPool.sol"
+          "label": "Ethereum JSON-RPC batch at block 25638254 (active Controller Pool state; reviewed 2026-08-08)",
+          "url": "https://ethereum-rpc.publicnode.com"
         },
         {
-          "label": "Ethereum JSON-RPC batch at block 25638254 (active Controller Pool redemption state, quote, liquid FRAX balance, owner, and 3-of-5 Safe threshold/owners)",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "FPIControllerPool Solidity source pinned at frax-solidity commit 30532c8 (commit dated 2025-10-03; reviewed 2026-09-04)",
+          "url": "https://github.com/FraxFinance/frax-solidity/blob/30532c8cefcbf5c7efafcff4369261bd435a4859/src/hardhat/contracts/FPI/FPIControllerPool.sol"
         }
       ],
-      "notes": "FPI is an inflation-index hybrid, not an uncollateralized reflexive dollar. Frax documents a CPI-U target updated through a specialized Chainlink oracle on each monthly BLS release, a 100%-collateral-ratio design, FRAX mint and redemption through the Controller Pool (0.30% fee), and FPIS sales via TWAMM when AMO yield trails the target inflation rate; the overview now also documents the community-approved FPIS phase-out, with FPIS convertible to FRAX at 2.5:1 on 2028-03-22. The reviewed 2026-07-27 collateral API snapshot (updatedAtBlock 25627253, updatedAtTimestampSec 1785192707, fetched 2026-07-27T22:52:02Z) identifies, over the non-FPI collateral base of $1,090,519.52: 87.1% FRAX ($949,391.42 across the Ethereum Comptroller, a second Ethereum wallet balance, and Fraxtal), 12.9% LP positions (staked Convex FPI/FRAX at $124,758.08 and Fraxswap V2 FRAX/FPIS FRAX-portion at $16,370.02), and a de minimis FXS remainder (~$0.005). The profile therefore records 0.871 directly identified exogenous stablecoin backing, 0.000 explicitly reflexive FXS/FPIS exposure (down from 0.076 as the Comptroller FXS balance ran down to dust), and leaves the LP remainder outside either claim instead of pretending it is cash, unchanged in method from the 2026-07-23 review. The API separately lists $6.32M of Comptroller-held FPI against 5,855,654.51 FPI total supply, but per the established profile method the backing shares are computed over the non-FPI collateral only. Collateral coverage, the oracle path, the reflexive backstop, and protocol redemption remain supported; a re-check of docs.frax.com FPI pages on 2026-07-27 found reserve unwind depth, emergency recovery, and a holder loss-recovery waterfall still issuer-undisclosed, so those facts keep their prior dispositions. No grade target is encoded: those unavailable facts remain bounded in their own mechanism components, and the 87.1% FRAX reserve dependency remains separately evaluated. 2026-07-29 delta: the official Controller Pool documentation and its linked Solidity source establish direct FPI-for-FRAX redemption, a 5% oracle peg band, manual TWAMM peg operations, FPI burning, AMO FRAX give/return, and governance mint/redemption pause controls. At Ethereum block 25638254 (2026-07-29T11:40:59Z), a raw JSON-RPC batch independently verified that minting and redemption were unpaused, the mint/redeem peg check was in range, the redemption fee was 0.30%, one FPI quoted 1.154462263410036891 FRAX, the Controller held 621,116.754320155679341723 liquid FRAX, and the Controller owner was a 3-of-5 Safe. The same-block issuer API snapshot reported 5,855,654.505980514 aggregate FPI supply, exactly 5,500,387 FPI in the two FraxFerry contracts, and 0.09 other protocol-held FPI, leaving 355,267.41598051396 external FPI; the direct Controller balance could quote about 538,013.91 FPI, or 1.514x that external amount. This last ratio is context-only evidence for current direct redemption headroom, not an overlay metric. The established profile metrics remain unchanged at exogenousBackingShare 0.871, reflexiveBackingShare 0, and contractionCapacityRatio 0.871; no proxy or method change is introduced. contractionLiquidity is adequate because the documented direct route was active, unthrottled by a quota, and independently verified with liquid contract-held FRAX exceeding external FPI at the pinned block; strong is not claimed because redemption is governance-pausable, limited to the peg band, dependent on Legacy FRAX, and cross-chain holders depend on ferry availability. emergencyRecovery is limited because the linked deployed design exposes pause, manual-TWAMM, burn, and AMO-return intervention levers under a verified 3-of-5 Safe, but publishes no emergency trigger matrix, shutdown/global-settlement runbook, response-time commitment, or independent control test. lossRecovery remains issuer-undisclosed: documented FPIS sales address AMO yield falling below CPI, not realized reserve losses or holder loss allocation, and the reviewed sources establish no holder waterfall, insurance, make-whole, or post-loss recapitalization obligation.",
-      "metrics": {},
-      "profileReview": {
-        "profile": "inflation-index-hybrid",
+      "notes": "Reviewed 2026-09-04. Frax's current FPI overview documents FPIS mint-and-sale only as a response to AMO yield falling below CPI and the dated FIP-341 governance proposal documents FPIS absorption and conversion. The Controller Pool documentation and pinned implementation establish FRAX mint/redeem, TWAMM peg operations, AMO lending, and governance pause controls, but the reviewed source set publishes no post-loss holder waterfall, reserve-loss allocation, reserve draw priority, insurance, sponsor support, or enforceable recapitalization/recovery commitment. Those peg and shortfall controls are not a loss-recovery promise, so lossRecovery is recorded as reviewed unavailable rather than as a measured weakness. The 2026-07-27 collateral snapshot and 2026-08-08 fixed-block contract reads retain the existing measured profile inputs.",
+      "metrics": {
         "exogenousBackingShare": 0.871,
         "reflexiveBackingShare": 0,
-        "contractionCapacityRatio": 0.871,
-        "facts": {
-          "collateralCoverage": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "contractionLiquidity": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "indexOracle": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "reflexiveBackstop": {
-            "disposition": "supported",
-            "quality": "limited"
-          },
-          "emergencyRecovery": {
-            "disposition": "supported",
-            "quality": "limited"
-          },
-          "lossRecovery": {
-            "disposition": "issuer-undisclosed"
-          },
-          "protocolRedemption": {
-            "disposition": "supported",
-            "quality": "adequate"
-          }
-        }
+        "contractionCapacityRatio": 0.871
       },
-      "components": {}
+      "components": {
+        "contractionCapacity": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "confidenceAndIncentives": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "oracleAndControlAssumptions": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "emergencyRecovery": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "lossRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Reviewed 2026-09-04: the FPI overview, Controller Pool documentation, and FIP-341 proposal describe FPIS issuance and sale for an AMO yield shortfall and later FPIS conversion, but publish no post-loss holder waterfall, reserve-loss allocation, reserve draw priority, insurance, sponsor support, or enforceable recapitalization/recovery commitment. This is reviewed issuer non-disclosure, not a measured weakness.",
+          "sourceUrl": "https://docs.frax.com/protocol/assets/fpi/overview"
+        }
+      }
     },
     {
       "assetId": "ausd-agora",
@@ -10346,52 +10341,49 @@
     },
     {
       "assetId": "usdat-saturn",
-      "archetype": "tbill",
-      "reviewedAt": "2026-07-29",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-09-04",
       "sources": [
         {
-          "label": "Saturn USDat overview (reserves 100% M at launch; permissioned access)",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview.md"
+          "label": "Saturn USDat implementation pinned at commit 67a27eba (repository commit dated 2026-08-25)",
+          "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/src/USDat.sol"
         },
         {
-          "label": "Saturn mint-and-redeem mechanics through the M0 Swap Facility",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md"
+          "label": "Saturn USDat PYUSDx migration runbook pinned at commit 67a27eba (runbook last updated 2026-08-20; repository commit dated 2026-08-25)",
+          "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
         },
         {
-          "label": "Saturn transparency disclosure (USDat capital held directly in the USDat smart contract, verifiable onchain)",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+          "label": "USDat migration execution transaction 0x489450d4 (finalized Ethereum block 25789911 at 2026-08-19T15:00:11Z)",
+          "url": "https://etherscan.io/tx/0x489450d4a23d076918ce70adbc4c5693b6634728269ba5991f355447c699b51f"
         },
         {
-          "label": "Saturn key contract addresses (USDat token and M0 Swap Facility)",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          "label": "Ethereum block 25789911 (finalized 2026-08-19T15:00:11Z; migration execution block)",
+          "url": "https://etherscan.io/block/25789911"
         },
         {
-          "label": "Ethereum public RPC endpoint used for pinned eth_call reads at block 25,572,262",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "M0 and MoonPay PYUSDx backing announcement (dated 2026-02-27; PYUSDx application-specific stablecoin framework backed by PYUSD)",
+          "url": "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
         },
         {
-          "label": "M0 protocol roles and independent Validator collateral attestations",
-          "url": "https://docs.m0.org/protocol/roles"
-        },
-        {
-          "label": "M0 MinterGateway collateral verification, expiry, and short-term Treasury design",
-          "url": "https://docs.m0.org/protocol/minting-burning"
+          "label": "Saturn live reserve analytics (checked 2026-09-04; issuer dashboard reports 100.00% USDat reserve ratio and 100.0% PYUSDx allocation)",
+          "url": "https://app.saturn.credit/insights/saturn-protocol"
         }
       ],
-      "notes": "USDat is Saturn's permissioned M0-extension stablecoin; Saturn documents that reserves at launch are 100% M (M0) and that all USDat capital is held directly in the USDat smart contract (0x23238f20b894f29041f48D88eE91131C395Aaa71), verifiable onchain. Mint and redemption are KYC-gated 1:1 through the M0 Swap Facility (USDC routed via wM on a Uniswap V3 1bps pool), so holders have an issuer-documented wrapper claim on M, not a direct share or senior claim on M0 Minter SPV Treasuries; this supports limited fund claim and seniority. On-chain verification 2026-07-20 via eth_call through https://ethereum-rpc.publicnode.com at Ethereum block 25,572,262: USDat totalSupply() = 106,923,086.62 vs M (0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b) balanceOf(USDat contract) = 106,973,897.77, i.e. 100.05% coverage on the Ethereum branch (wM balance of the contract is zero; reserves are native M). However, the BSC USDat contract (13,794,598.93 supply near BSC block 111,049,630) and the Monad USDat contract (14,096,549.85 supply near Monad block 88,944,845) hold no local M or wM, and no bridge escrow or other documented account reconciling those branches was established, so the on-chain proof does not reconcile complete cross-chain liabilities; lossRecoveryDesign is limited rather than adequate, mirroring the branch-reconciliation standard applied to USD0. No independent reserve attestation was established (Accountable and Chainlink NAV integrations are documented as in progress for sUSDat, not USDat), and USDat is a par wrapper with no fund NAV process and no portfolio maturity/WAM disclosure; navValuation and durationAndLiquidity remain uncurated. 2026-07-29 preparation-only candidate: durationAndLiquidity=known/limited, navValuation=known/limited. Every candidate conclusion remains non-score-bearing pending independent review and later authorization; no existing non-target component or source is removed.",
+      "notes": "Reviewed 2026-09-04 against Saturn's implementation and migration runbook pinned at commit 67a27eba, the finalized 2026-08-19 migration transaction, the dated M0/MoonPay PYUSDx announcement, and Saturn's live reserve analytics. The implementation makes PYUSDx the current MultiMint backing path and preserves permissioned wrap/unwrap and compliance controls; the migration transaction records the deployed implementation upgrade at block 25789911. M0 and MoonPay describe PYUSDx as an application-specific stablecoin framework backed by PYUSD, while Saturn's dashboard reports a 100.00% USDat reserve ratio and 100.0% PYUSDx allocation on the review date. This issuer-published structured data, corroborated by the immutable on-chain migration record and pinned implementation, supports limited claimAndSegregation and custodyContinuity; it does not establish a legal senior reserve claim, named provider-failure succession, or independent assurance. The current USDat catalog has proofOfReserves without latestReport, so assuranceAndReconciliation is deliberately reviewed unavailable rather than asserted from the compiler shortcut.",
       "metrics": {},
       "components": {
-        "fundClaimAndSeniority": {
+        "claimAndSegregation": {
+          "applicability": "measured",
           "quality": "limited"
         },
-        "lossRecoveryDesign": {
+        "custodyContinuity": {
+          "applicability": "measured",
           "quality": "limited"
         },
-        "durationAndLiquidity": {
-          "quality": "limited"
-        },
-        "navValuation": {
-          "quality": "limited"
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Reviewed 2026-09-04: Saturn's reserve analytics page reports a current reserve ratio and PYUSDx allocation but is self-published dashboard data, not a dated independent reserve-to-liability attestation or examination. No current USDat-specific independent reconciliation was found, and the catalog's proofOfReserves entry has no latestReport for the compiler auto-known rule. This is reviewed issuer non-disclosure, not a measured weakness.",
+          "sourceUrl": "https://app.saturn.credit/insights/saturn-protocol"
         }
       }
     },
