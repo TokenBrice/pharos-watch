@@ -357,6 +357,24 @@ describe("derived supply-model route observations", () => {
       kind: "unresolved-asset",
     });
   });
+  it("keeps offchain commodity delivery unresolved instead of assigning fiat par", () => {
+    const observation = deriveSupplyModelExitRouteObservation(
+      {
+        ...supplyFullEntry,
+        stablecoinId: "paxg-paxos",
+        settlementModel: "days",
+        outputAssetType: "bluechip-collateral",
+      },
+      now,
+    );
+
+    expect(observation).toMatchObject({
+      output: { kind: "unresolved-asset" },
+      scoreEligible: false,
+    });
+    expect(observation?.output).not.toMatchObject({ kind: "fiat" });
+    expect(observation?.output).not.toHaveProperty("currency");
+  });
 
   it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
     "resolves the composed %s redemption route to its final USDC output",

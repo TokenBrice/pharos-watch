@@ -107,6 +107,19 @@ function resolveOutput(
   outputValuation?: LiveReserveRedemptionOutputValuation | null,
 ): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  // Commodity issuer routes deliver physical metal, not fiat. Keeping them on
+  // the offchain fiat branch would let buildOutputReview assign an implied
+  // $1 par valuation to GOLD/SILVER even though no USD output valuation was
+  // published. Leave the physical output unresolved until the producer has a
+  // real, priceable output identity and valuation.
+  if (config.routeFamily === "offchain-issuer" && config.outputAssetType === "bluechip-collateral") {
+    return {
+      kind: "unresolved-asset",
+      ...(config.unresolvedOutputAssetKeys?.length
+        ? { assetKeys: [...config.unresolvedOutputAssetKeys] }
+        : {}),
+    };
+  }
   if (config.routeFamily === "offchain-issuer") {
     return { kind: "fiat", ...(meta?.flags.pegCurrency ? { currency: meta.flags.pegCurrency } : {}) };
   }
