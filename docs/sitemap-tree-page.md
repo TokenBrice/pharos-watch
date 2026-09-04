@@ -18,7 +18,7 @@ The route is static, indexable, and fetches nothing. It is linked from the foote
 
 ## Information Architecture
 
-The page authors no navigation tree of its own. Three of its six tier columns are looked up from `NAV_GROUPS` by key (`markets`, `risk`, `tools`); the other three are the labeled columns of the `more` group (`learn`, `updates`, `pharos`), and the closing quick-access section renders `QUICK_NAV_ITEMS` and `BOTTOM_NAV_ITEMS`. Adding, removing, or reordering a nav item therefore reshapes this public page in the same change.
+The page authors no navigation tree of its own. Three of its six tier columns are looked up from `NAV_GROUPS` by key (`markets`, `risk`, `tools`); the other three are the labeled columns of the `more` group (`research`, `watch`, `pharos`), and the closing quick-access section renders `QUICK_NAV_ITEMS` and `BOTTOM_NAV_ITEMS`. Adding, removing, or reordering a nav item therefore reshapes this public page in the same change.
 
 Three lookups are deliberately tolerant and fail silently rather than at build time:
 
