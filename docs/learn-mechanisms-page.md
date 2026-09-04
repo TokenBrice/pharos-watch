@@ -88,13 +88,13 @@ These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og
 
 ## Inbound Surfaces
 
-- **Shared navigation:** `src/lib/nav-config.ts` LEARN group → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
+- **Shared navigation:** `src/lib/nav-config.ts` `More` menu → `Learn` column → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
 - **Coin detail (`src/components/stablecoin-detail/peg-stability-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, plus the header info affordance, both gated on the resolved mechanism archetype.
 - **Mechanism review panel (`src/components/stablecoin-detail/mechanism-review-panel.tsx`):** "How <archetype> stablecoins work" link, rendered in both the compact rail card and the embedded risk-context fold, gated on a resolved mechanism review.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`PegStabilityCard` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn how each stablecoin design produces its peg" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
-- **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn / Reference group.
+- **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn group.
 
 No footer entry. The hub is the only entry in the header/mobile nav rail; per-archetype pages are reachable from the command palette's `Mechanism archetypes` section (`PALETTE_MECHANISMS` in `src/components/command-palette-model.ts`) and from in-page links on methodology, cemetery, and coin-detail surfaces.
 

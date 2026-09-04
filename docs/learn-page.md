@@ -82,7 +82,7 @@ Glossary entries live in `src/lib/glossary-content.ts`. Each entry owns:
 
 Primary inbound surfaces:
 
-- Top-nav Learn group in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
+- Top-nav `More` menu, `Learn` column in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
 - Start Here content in `src/lib/start-here-content.ts`
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`

@@ -68,7 +68,28 @@ describe("TopNav", () => {
     });
   });
 
-  it("opens the lighthouse overflow on desktop hover and places API Access before status", async () => {
+  it("promotes the highest-traffic routes to direct links instead of menu items", async () => {
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+
+    const rail = document.querySelector('nav[aria-label="Quick links"]');
+    const railLinks = [...(rail?.querySelectorAll("a") ?? [])];
+
+    // next/link normalizes the trailing slash away in the rendered anchor.
+    expect(railLinks.map((link) => link.getAttribute("href"))).toEqual([
+      "/",
+      "/safety-scores",
+      "/yield",
+      "/depeg",
+      "/stability-index",
+    ]);
+    // Icons are the affordance that separates a direct link from a menu trigger.
+    expect(railLinks.every((link) => link.querySelector("svg") !== null)).toBe(true);
+    expect(railLinks[0].getAttribute("aria-current")).toBe("page");
+  });
+
+  it("opens the More panel on hover with the tail grouped into columns", async () => {
     const matchMedia = installMatchMediaMock(true);
 
     render(<TopNav />);
@@ -79,12 +100,16 @@ describe("TopNav", () => {
 
     fireEvent.mouseEnter(screen.getByRole("button", { name: "More" }));
 
-    const whatsNew = screen.getByText("What's New");
+    const columnHeadings = [...document.querySelectorAll("p.pharos-kicker")].map((node) => node.textContent);
+    expect(columnHeadings).toEqual(["Learn", "Updates", "Pharos"]);
+
+    const changelog = screen.getByText("Changelog");
     const apiAccess = screen.getByText("API Access");
     const status = screen.getByText("Pharos is Healthy");
 
-    expect(whatsNew.compareDocumentPosition(apiAccess) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(changelog.compareDocumentPosition(apiAccess) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(apiAccess.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Health must stay gated to the open panel: no /api/health poll per page view.
     expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: true });
   });
 
@@ -99,7 +124,8 @@ describe("TopNav", () => {
     fireEvent.mouseEnter(screen.getByRole("button", { name: "More" }));
 
     const status = await screen.findByText("Pharos is Degraded");
-    expect(status.nextElementSibling?.classList.contains("bg-[var(--severity-mild)]")).toBe(true);
+    const dot = status.closest("a")?.querySelector("span.rounded-full");
+    expect(dot?.classList.contains("bg-[var(--severity-mild)]")).toBe(true);
   });
 
   it("uses a neutral label when public health cannot be loaded", async () => {

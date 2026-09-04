@@ -20,7 +20,7 @@ describe("ShortcutsSection", () => {
       const links = screen.getAllByRole("link");
       expect(links).toHaveLength(12);
       expect(links[0].textContent).toContain("Chains");
-      expect(links[1].textContent).toContain("Portfolio Audit");
+      expect(links[1].textContent).toContain("Portfolio");
     });
 
     fireEvent.click(screen.getByRole("button", { name: /edit/i }));
