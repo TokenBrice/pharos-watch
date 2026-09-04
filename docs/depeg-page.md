@@ -37,14 +37,18 @@ The order is deliberate; changing it changes the route's answer sequence.
 1. `QueryFreshnessNotices`
 2. **`DepegOutlookHero`** (`src/components/depeg-outlook-hero.tsx`) — the signature hero
 3. `DepegResolverModule` — bounded recovery-forecast worklist
-4. `DepegControlBoard` — the universe workbench
-5. `DepegFeed` + Timeline link — recent resolved events
-6. Forecast-grading disclosure wrapping `DepegResolverReviewerModule`
+4. Forecast-grading disclosure (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
+5. `DepegControlBoard` — the universe workbench
+6. `DepegFeed` + Timeline link — recent resolved events
 7. `DepegEventArchivePreview` (server) — latest month of permanent event pages
 8. `FaqSection` (server)
 
 The board deliberately follows the forecast worklist rather than preceding it: a visitor arriving
 during an incident needs the verdict on the live incidents before scanning every tracked asset.
+
+Grading sits directly under the worklist it grades, not at the end of the route. It stays collapsed
+because its ledger is heavy DOM, but a reader who has just seen a forecast should find "how accurate
+are these?" in the next breath — and the hero's track-record figure links to `#forecast-grading`.
 
 ---
 

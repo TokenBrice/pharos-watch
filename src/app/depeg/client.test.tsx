@@ -253,7 +253,7 @@ describe("DepegClient", () => {
     expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
     expect(screen.getByTestId("freshness-notices").textContent).toContain("DDR Reviewer");
 
-    fireEvent.click(screen.getByRole("button", { name: "Show how these forecasts scored" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show forecast grading · DDRR" }));
 
     expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
   });

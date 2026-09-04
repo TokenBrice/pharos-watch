@@ -310,6 +310,31 @@ export function DepegClient() {
         </SectionErrorBoundary>
       ) : null}
 
+      {/* Model accountability, kept beside the forecasts it grades. The ledger
+          is heavy DOM, so it opens on demand; the hero's track-record figure
+          links here. */}
+      {resolverReviewerEnabled ? (
+        <SectionErrorBoundary name="depeg-resolver-reviewer">
+          <section id="forecast-grading" aria-label="Forecast grading" className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setGradingOpen((open) => !open)}
+              aria-expanded={gradingOpen}
+              className="pharos-focus-ring pharos-control-pill"
+            >
+              {gradingOpen ? "Hide forecast grading · DDRR" : "Show forecast grading · DDRR"}
+            </button>
+            {gradingOpen ? (
+              <DepegResolverReviewerModule
+                data={resolverReviewData}
+                error={resolverReview.error}
+                logos={logos}
+              />
+            ) : null}
+          </section>
+        </SectionErrorBoundary>
+      ) : null}
+
       {/* The universe workbench: filters, sorts, exact per-coin values. */}
       <SectionErrorBoundary name="depeg-table">
         <DepegControlBoard
@@ -347,29 +372,6 @@ export function DepegClient() {
         </div>
       </SectionErrorBoundary>
 
-      {/* Model accountability: how these forecasts scored. Opt-in, because the
-          payload is large and the question is a methodology question. */}
-      {resolverReviewerEnabled ? (
-        <SectionErrorBoundary name="depeg-resolver-reviewer">
-          <section aria-label="Forecast grading" className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setGradingOpen((open) => !open)}
-              aria-expanded={gradingOpen}
-              className="pharos-focus-ring pharos-control-pill"
-            >
-              {gradingOpen ? "Hide forecast grading" : "Show how these forecasts scored"}
-            </button>
-            {gradingOpen ? (
-              <DepegResolverReviewerModule
-                data={resolverReviewData}
-                error={resolverReview.error}
-                logos={logos}
-              />
-            ) : null}
-          </section>
-        </SectionErrorBoundary>
-      ) : null}
     </div>
   );
 }

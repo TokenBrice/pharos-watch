@@ -181,7 +181,10 @@ export function DepegOutlookHero({
                 </span>
               </p>
               <p className="pharos-meta mt-1">
-                {review?.headlineLabel ?? headline.accuracyDenominatorLabel}
+                {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
+                <a href="#forecast-grading" className="pharos-prose-link">
+                  see the grading
+                </a>
               </p>
             </RailGroup>
           ) : null}
