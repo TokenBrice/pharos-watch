@@ -861,6 +861,15 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
     const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const baseDollar = psiEligibleMocks.defaultStablecoins.find((coin) => coin.id === "bd-basedollar");
+    expect(baseDollar).toMatchObject({
+      detailProvider: "defillama",
+      llamaId: "434",
+    });
+    expect(baseDollar?.geckoId).toBeUndefined();
+    // The corrected DefiLlama identity must not disable this allowlisted on-chain
+    // totalSupply fixture; no CoinGecko detail request is available for BD.
+
     const day1 = Math.floor(Date.UTC(2026, 7, 4) / 1000);
     const day2 = Math.floor(Date.UTC(2026, 7, 5) / 1000);
     const blockNumber = 49_507_741;

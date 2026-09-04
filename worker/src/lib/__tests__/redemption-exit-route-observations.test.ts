@@ -466,7 +466,8 @@ describe("derived supply-model route observations", () => {
       assetKeys: ["asset:itry"],
     });
     expect(buildConfigured("aznd-mu-digital")?.output).toEqual({
-      kind: "unresolved-asset",
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle"],
     });
     expect(buildConfigured("zys-zephyr-protocol")?.output).toEqual({
       kind: "tracked-stablecoin",

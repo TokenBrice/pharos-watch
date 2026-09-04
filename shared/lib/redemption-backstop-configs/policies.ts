@@ -134,14 +134,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-23",
   },
-  {
-    kind: "unused-live-redemption-telemetry",
-    stablecoinId: "pht-pht",
-    reason:
-      "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-05-23",
-  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(

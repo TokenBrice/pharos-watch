@@ -10,11 +10,47 @@ import apxusdReserves from "@shared/data/stablecoins/domains/reserves/apxusd-apy
 import usdu from "@shared/data/stablecoins/coins/usdu-unitas.json";
 import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
-import nusd from "@shared/data/stablecoins/coins/nusd-neutrl.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 
 const signal = AbortSignal.timeout(5_000);
+// Production removed NUSD's live config after its endpoint stopped resolving.
+// Keep this inline mapping fixture to exercise the reviewed historical
+// Accountable shape without re-enabling that production feed.
+const NEUTRL_ACCOUNTABLE_TEST_CONFIG: LiveReservesConfig = {
+  adapter: "accountable",
+  version: 1,
+  semantics: "protocol-reserve",
+  breakerScope: "nusd-neutrl",
+  display: {
+    url: "https://accountable.neutrl.finance/",
+    label: "Accountable Dashboard",
+  },
+  inputs: {
+    primary: {
+      kind: "http-json",
+      url: "https://cache.accountable.capital/dashboard/neutrl",
+    },
+  },
+  params: {
+    bucket: "type_split",
+    riskMap: {
+      Stablecoin: "low",
+      ETH: "very-low",
+      "OTC Aggregate": "high",
+      Other: "high",
+      JLP: "high",
+      "Protocol Owned Liquidity": "high",
+    },
+    renameMap: {
+      Stablecoin: "Stablecoin reserves",
+      ETH: "ETH collateral",
+      "OTC Aggregate": "OTC aggregate positions",
+      Other: "Other reserve assets",
+      JLP: "JLP (Jupiter Perps LP token)",
+    },
+  },
+};
 
 function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
   const primary = config.inputs.primary;
@@ -454,19 +490,22 @@ describe("adaptAccountableDashboard", () => {
   it("maps the reviewed Apyx Accountable reserves_split into STRC-heavy apxUSD slices", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
 
+    // Corrected Accountable capture: 2026-09-04T17:29:34.519Z.
     const result = await runAccountablePayload(config, {
+      // Keep the undercollateralized headline as a behavior fixture; the
+      // reserve composition below is the corrected same-day capture.
       collateralization: 0.98699,
-      ts: "1788032164478",
+      ts: "1788542974519",
       reserves: {
         interval: "live",
         verifiability: "100",
-        total_reserves: { value: 309_277_238.14, name: "Total Reserves" },
+        total_reserves: { value: 311_575_982.58, name: "Total Reserves" },
         reserves_split: [
-          { value: 182_766_520.57, name: "STRC" },
-          { value: 49_117_020.71, name: "Inventory" },
-          { value: 48_028_974.73, name: "Protocol Owned Liquidity" },
-          { value: 29_358_512.37, name: "Cash & Equivalents" },
-          { value: 6_209.75, name: "Other" },
+          { value: 181_854_291.20, name: "STRC" },
+          { value: 53_025_264.62, name: "Inventory" },
+          { value: 53_866_845.43, name: "Protocol Owned Liquidity" },
+          { value: 22_822_968.30, name: "Cash & Equivalents" },
+          { value: 6_613.04, name: "Other" },
         ],
       },
     });
@@ -481,20 +520,24 @@ describe("adaptAccountableDashboard", () => {
       bucket: "reserves_split",
       breakdownCount: 5,
       mappedBucketCount: 5,
-      totalReserves: 309_277_238.14,
+      totalReserves: 311_575_982.58,
       collateralization: 0.98699,
       collateralizationRatio: 0.98699,
     });
     expect(result.slices).toEqual([
-      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 59.1, risk: "high" },
-      { name: "Inventory", pct: 15.9, risk: "high" },
-      { name: "Protocol Owned Liquidity", pct: 15.5, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 9.5, risk: "very-low" },
+      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 58.4, risk: "high" },
+      { name: "Protocol Owned Liquidity", pct: 17.3, risk: "high" },
+      { name: "Inventory", pct: 17.0, risk: "high" },
+      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 7.3, risk: "very-low" },
     ]);
-    expect(apxusdReserves.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
+    expect(
+      apxusdReserves.reserves
+        .map(({ name, pct, risk }) => ({ name, pct, risk }))
+        .sort((a, b) => b.pct - a.pct),
+    ).toEqual(result.slices);
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 7, 29, 23) / 1000,
+      now: Date.UTC(2026, 8, 4, 23) / 1000,
     }).valid).toBe(true);
   });
 
@@ -944,19 +987,23 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps the current Neutrl Accountable type_split buckets including JLP and Protocol Owned Liquidity without unknown exposure warnings", async () => {
-    const config = nusd.liveReservesConfig as LiveReservesConfig;
+    const config = NEUTRL_ACCOUNTABLE_TEST_CONFIG;
 
+    // Latest verifiable Neutrl type_split snapshot: 2026-08-13T11:02:37.520Z.
     const result = await runAccountablePayload(config, {
       collateralization: 1.02,
-      ts: "1781945117382",
+      ts: "1786618957520",
       reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: 54_437_465.43,
         type_split: {
-          Stablecoin: 800,
-          ETH: 50,
-          "OTC Aggregate": 34,
-          Other: 31,
-          JLP: 60,
-          "Protocol Owned Liquidity": 25,
+          Stablecoin: 31_317_867.09,
+          JLP: 9_230_249.65,
+          "OTC Aggregate": 9_803_139.04,
+          Other: 1_937_498.13,
+          "Protocol Owned Liquidity": 2_145_062.40,
+          ETH: 3_649.13,
         },
       },
     });
@@ -979,7 +1026,7 @@ describe("adaptAccountableDashboard", () => {
     }));
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 20, 10) / 1000,
+      now: Date.UTC(2026, 7, 13, 12) / 1000,
     }).valid).toBe(true);
   });
 

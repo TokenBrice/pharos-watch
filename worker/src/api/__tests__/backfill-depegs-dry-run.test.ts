@@ -485,7 +485,8 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
   });
 
-  it("limits commodity median price history to the replay window", async () => {
+  it("rejects delisted commodity assets before requesting median price history", async () => {
+    vi.mocked(buildCommodityMedianSeriesFromCg).mockClear();
     const db = mockD1([
       {
         match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
@@ -493,7 +494,6 @@ describe("handleBackfillDepegs replay windows", () => {
         rows: [],
       },
     ]);
-    const startDay = Math.floor(Date.UTC(2026, 4, 1) / 1000);
     const req = makeApiRequest(
       "/api/backfill-depegs?stablecoin=xnk-kinka&dry-run=true&startDay=2026-05-01&endDay=2026-05-01&contextDays=1",
       {
@@ -503,15 +503,7 @@ describe("handleBackfillDepegs replay windows", () => {
     );
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url), coingeckoApiKey: "cg-test-key" });
-    expect(res.status).toBe(200);
-
-    expect(buildCommodityMedianSeriesFromCg).toHaveBeenCalledWith(
-      {
-        startSec: startDay - 86_400,
-        endSec: startDay + 86_399 + 86_400,
-      },
-      "cg-test-key",
-      ["GOLD"],
-    );
+    expect(await readJsonResponse(res, 404)).toEqual({ error: "Stablecoin not found" });
+    expect(buildCommodityMedianSeriesFromCg).not.toHaveBeenCalled();
   });
 });

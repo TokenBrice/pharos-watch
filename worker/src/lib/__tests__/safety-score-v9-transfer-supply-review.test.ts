@@ -105,13 +105,13 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain("vusd-virtue");
   });
 
-  it("allocates aggregate sfrxUSD USD across its exact eight-route raw-unit packet", () => {
+  it("allocates aggregate sfrxUSD USD across its exact thirty-route raw-unit packet", () => {
     const result = review("sfrxusd-frax", generation("sfrxusd-frax"));
 
     expect(result).not.toBeNull();
-    expect(result!.selectedBridgeRoutes).toHaveLength(8);
+    expect(result!.selectedBridgeRoutes).toHaveLength(30);
     expect(result!.selectedBridgeRoutes.filter((row) => row.reviewedRouteKind === "native")).toHaveLength(2);
-    expect(result!.selectedBridgeRoutes.filter((row) => row.reviewedRouteKind === "controlled")).toHaveLength(6);
+    expect(result!.selectedBridgeRoutes.filter((row) => row.reviewedRouteKind === "controlled")).toHaveLength(28);
     expect(result!.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyUsd, 0)).toBeCloseTo(
       AGGREGATE_SUPPLY_USD,
       6,
@@ -163,7 +163,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(after.economicControlReview.bridge.status.gapIds).toEqual([]);
     expect(before.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(1);
     expect(after.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(0);
-    expect(after.supply.selectedBridgeRoutes).toHaveLength(8);
+    expect(after.supply.selectedBridgeRoutes).toHaveLength(30);
   });
 
   it.each([
@@ -182,7 +182,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     [
       "route shares",
       (supplyReview: NonNullable<ReturnType<typeof buildSafetyScoreV9SupplyReview>>) => {
-        supplyReview.selectedBridgeRoutes[0]!.supplyShare -= 0.1;
+        supplyReview.selectedBridgeRoutes[0]!.supplyShare -= 0.01;
       },
     ],
     [
@@ -277,7 +277,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(review("wsrusd-reservoir", generation("wsrusd-reservoir", rows))).toBeNull();
   });
 
-  it("leaves all seventeen wsrUSD public materiality reasons and its bridge gap unresolved", () => {
+  it("leaves all twenty wsrUSD public materiality reasons and its bridge gap unresolved", () => {
     const assetId = "wsrusd-reservoir";
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const replayInput = makeV9FixedInput({
@@ -310,7 +310,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       .assets[0]!.scoreInput.pillars.control.reasons;
 
     expect(extension.assets[0]!.supplyReview).toBeNull();
-    expect(reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(17);
+    expect(reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(20);
     expect(compiled.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(1);
     expect(compiled.supply.selectedBridgeRoutes).toEqual([]);
   });

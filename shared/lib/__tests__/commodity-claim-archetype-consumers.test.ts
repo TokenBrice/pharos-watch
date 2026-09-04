@@ -23,7 +23,8 @@ describe("commodity-claim archetype consumers", () => {
   );
 
   it("covers the migrated set", () => {
-    expect(migrated.length).toBe(13);
+    // XNK's sourced 2026-08-18 wind-down moved it out of the active migrated set.
+    expect(migrated.length).toBe(12);
     expect(migrated.every((meta) => meta.flags?.pegCurrency === "GOLD" || meta.flags?.pegCurrency === "SILVER")).toBe(
       true,
     );
