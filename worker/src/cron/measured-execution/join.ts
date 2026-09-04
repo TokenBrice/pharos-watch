@@ -102,6 +102,14 @@ export async function loadDexMeasuredExecutionJoinEvidence(
   }
 }
 
+function quoteFailureGateReason(
+  failureReasons: readonly (string | null | undefined)[],
+): Extract<DexExecutionCapabilityGate["reason"], "budget-deferred" | "quote-failed"> {
+  return failureReasons.length > 0 && failureReasons.every((reason) => reason === "budget-deferred")
+    ? "budget-deferred"
+    : "quote-failed";
+}
+
 function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
   if (
     profile.adapterProfileId === "uniswap-v3-quoter-v2" ||
@@ -533,9 +541,14 @@ export function joinDexMeasuredExecutionEvidence(input: {
           entry.profile = entry.quote ? materializeDexMeasuredQuoteProfile(entry.quote) : null;
         }
         if (packet.some(({ quote, profile }) => quote!.status !== "measured" || !profile)) {
+          const failureReasons = packet.map(
+            ({ quote }) => quote!.failureReason?.trim() || "profile-missing",
+          );
           failPacket(
-            "quote-failed",
-            packet.map(({ target, quote }) => `${target.targetId}:${quote!.failureReason ?? "profile-missing"}`).join(","),
+            quoteFailureGateReason(failureReasons),
+            packet
+              .map(({ target }, index) => `${target.targetId}:${failureReasons[index]}`)
+              .join(","),
           );
           continue;
         }
@@ -616,8 +629,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
       const profile = materializeDexMeasuredQuoteProfile(quote);
       if (quote.status !== "measured" || !profile) {
         fail(
-          quote.failureReason === "budget-deferred" ? "budget-deferred" : "quote-failed",
-          quote.failureReason ?? undefined,
+          quoteFailureGateReason([quote.failureReason]),
+          quote.failureReason?.trim() || undefined,
         );
         continue;
       }
