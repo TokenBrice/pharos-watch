@@ -59,6 +59,12 @@ export interface NavItem {
   shortLabel?: string;
   icon: LucideIcon;
   description?: string;
+  /**
+   * Extra search terms for the command palette. Lets a route stay findable by
+   * the acronyms people actually type without forcing them into the visible
+   * label or description.
+   */
+  keywords?: string;
   external?: boolean;
 }
 
@@ -113,6 +119,10 @@ const DEPEG_NAV_ITEM: NavItem = {
   label: "Depeg & Recovery",
   icon: Activity,
   description: "Live peg incidents and recovery outlooks",
+  // The visible description is deliberately short; these are the acronyms
+  // people type in the palette (DDR = Depeg Duration Resolver, DEWS = Depeg
+  // Early Warning System) and this route is where both live.
+  keywords: "ddr dews depeg duration resolver early warning",
 };
 
 /**
