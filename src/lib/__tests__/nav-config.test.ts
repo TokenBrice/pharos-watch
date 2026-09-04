@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   BOTTOM_NAV_ITEMS,
-  DEFAULT_EXPANDED,
   NAV_GROUPS,
   NAV_ITEMS,
   QUICK_NAV_ITEMS,
@@ -143,14 +142,5 @@ describe("nav-config", () => {
       expect(item.description ?? "", item.label).toBeTruthy();
       expect((item.description ?? "").length, item.label).toBeLessThanOrEqual(40);
     }
-  });
-
-  it("opens the mobile drawer as labeled headers now that the rail carries the hot routes", () => {
-    expect(DEFAULT_EXPANDED).toEqual({
-      markets: false,
-      risk: false,
-      tools: false,
-      more: false,
-    });
   });
 });

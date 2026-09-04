@@ -230,19 +230,6 @@ export function stickyChromeTopOffsetClass(pathname: string | null | undefined):
   return pathname === "/" ? "top-0" : "top-[3px]";
 }
 
-/**
- * Mobile drawer defaults. Every group starts collapsed now that the quick rail
- * carries the highest-traffic routes above them: the drawer opens as four
- * labeled headers instead of eleven pre-expanded rows. `useNavCollapse` still
- * force-expands whichever group owns the active route.
- */
-export const DEFAULT_EXPANDED: Record<string, boolean> = {
-  markets: false,
-  risk: false,
-  tools: false,
-  more: false,
-};
-
 /** Bottom items (always shown at sidebar bottom) */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: "/start/", label: "Start Here", icon: Compass, description: "The fastest way into Pharos" },
