@@ -2,6 +2,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../../src/lib/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
+import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import {
   analyzeV9Calibration,
   captureMovements,
@@ -18,7 +19,7 @@ import {
 // within its review windows so calibration assertions exercise current evidence.
 // The score-trace reconciliation suite separately owns the far-future aged-review
 // regression.
-const BASE_CLOCK_SEC = Date.UTC(2026, 8, 1) / 1_000; // 2026-09-01T00:00:00Z, after the newest curated review dates
+const BASE_CLOCK_SEC = v9TestClockSec();
 
 // The adversarial tests need to mutate a JSON replay after the production
 // builder freezes it. JSON round-tripping gives the test a deliberately mutable
