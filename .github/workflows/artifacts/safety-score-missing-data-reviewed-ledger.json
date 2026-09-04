@@ -648,6 +648,98 @@
       ],
       "nextReviewTrigger": "Next methodology change.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:iusd-initia",
+      "taskIds": [
+        "V9G-iusd-initia-live-reserves"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wrapper-live-integration",
+      "evidence": [
+        "New adapter initia-wrapper-vault reads Initia's LCD: POST /initia/move/v1/view/json calling 0x1::primary_fungible_store::balance for the vault's AUSD0 balance, GET /cosmos/bank/v1beta1/supply/by_denom for iUSD supply, and two GET resources/by_struct_tag reads pinning the iUSD ObjectCore owner edge and AUSD0's metadata identity",
+        "Live at interwoven-1 height 21471755 (2026-09-04): vault AUSD0 balance 2,519,552.759503; iUSD supply 2,519,552.759503; iUSD ObjectCore owner 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a; AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef with symbol AUSD0, decimals 6, project_uri agora.finance",
+        "Adapter invoked through its own code path against the live LCD returns exactly one slice: 100%, coinId ausd-agora, depType wrapper, zero warnings"
+      ],
+      "rationale": "No Initia read path existed anywhere in the codebase before this: the only reference was chain metadata typed 'other'. This is a genuine new-chain integration, not a configuration change. Four reads run as plain sequential awaits so peak concurrency is one connection against the trigger-wide six-connection ceiling; a comment at the fetch site records that a parallel refactor would consume four slots. Every identity leg is observed each cycle rather than asserted from config, which is what makes the inherited parent exposure a live observation. Dust tolerance is 5 AUSD0 with the exact ratio preserved and an info warning inside it; a shortfall or a larger surplus throws.",
+      "changeRefs": [
+        "worker/src/cron/reserve-adapters/initia-wrapper-vault.ts",
+        "worker/src/cron/reserve-adapters/__tests__/initia-wrapper-vault.test.ts",
+        "shared/data/stablecoins/coins/iusd-initia.json",
+        "shared/types/live-reserve-adapter-declarations.ts",
+        "shared/lib/live-reserve-adapter-param-schemas.ts",
+        "worker/src/cron/reserve-adapters/index.ts"
+      ],
+      "sentinels": [
+        "iusd-initia:gap:reserve-composition",
+        "backing:reserve:inherited-backing:ausd-agora:cause:iusd-initia%3Agap%3Areserve-composition"
+      ],
+      "nextReviewTrigger": "Confirm both sentinels absent on the first production replay after the live-reserves producer runs with this adapter; a frozen-capture replay cannot show it.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:stusd-stoneyield",
+      "taskIds": [
+        "V9G-stusd-stoneyield-live-reserves"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "reject",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wrapper-live-integration",
+      "evidence": [
+        "SUSDC.getProtocolStats at BSC block 119929458: totalSupply 10,020,010; totalUSDCDeposited 10; totalRewardsDistributed 10,020,000; activeStakers 3; contractUSDCBalance 0.05; isPaused false",
+        "Every observed USDC egress from SUSDC: 4.95 at block 69663673 (tx 0x84a1b79ea68fd482b71f837233887ab21d0762d1e2464c4da004330c656b9bec) and 5 at block 69664002 (tx 0x2133146f3effcb99d864d6f293d225ab797cfd96b1eebb75612a37f521cd5abd), both to StrategyRouter 0x563f48aad50a75ef3662827a4d536dbd46abb5a2",
+        "Identity chain confirmed: SUSDC.USDC 0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d; STUSDWrapper.susdcToken 0xad66385c6db496258771b5fd8ac376e3dd0d1536; STUSDWrapper.stusd 0x806dd21af6de051fb811760a5768d04a99160eb9; STUSD.wrapper 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a; StrategyRouter.asset canonical USDC; VenusUSDCVault.asset vUSDC 0xeca88125a5adbe82614ffc12d0db554e2e2867c8; strategyCount 1 with strategies(0) the Venus vault, weight 10000, active",
+        "Pool look-through at block 119927831: 0.05 idle in SUSDC + 4.95 idle in router + 5.098725768562729 Venus position = 10.098725768562728 USDC against STUSD supply 2,894,743.271428093, i.e. coverage 0.0000034886429716375584"
+      ],
+      "rationale": "The adapter was built and works, but wiring it was refused. An honest live read shows the reviewed sidecar's 100% usdc-circle row is contradicted by on-chain state by six orders of magnitude: sUSDC supply is essentially entirely reward-minted (10 deposited against 10,020,000 in rewards) and STUSD is a 1:1 wrap of that. Publishing a 0.0003% coverage slice off a finding this large, before curation adjudicates it, risked either cratering the asset's backing score on an unexplained result or publishing a false adverse if our address set were incomplete. The address set was checked exhaustively via transfer history and the router's strategy accounting, so this is a measured asset contradiction rather than a producer limitation. The adapter is registered with provenance 'staged' so the registry stays consistent while no coin configures it.",
+      "changeRefs": [
+        "worker/src/cron/reserve-adapters/stoneyield-router-pool.ts",
+        "worker/src/cron/reserve-adapters/__tests__/stoneyield-router-pool.test.ts",
+        "shared/types/live-reserve-adapter-declarations.ts"
+      ],
+      "sentinels": [
+        "stusd-stoneyield:gap:reserve-composition",
+        "backing:reserve:inherited-backing:usdc-circle:cause:stusd-stoneyield%3Agap%3Areserve-composition"
+      ],
+      "nextReviewTrigger": "Reserve-composition curation must adjudicate the contradicted 100% USDC row; unstage the adapter only once verified backing or corrected supply evidence exists.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:asusdf-astherus",
+      "taskIds": [
+        "V9G-asusdf-astherus-live-reserves"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "orchestrated-campaign/wrapper-live-integration",
+      "evidence": [
+        "New adapter astherus-earn-wrapper batches seven reads into one Multicall3 aggregate3 against the custom asUSDFEarn contract 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695: USDF(), asUSDF(), USDF.balanceOf(earn), asUSDF.totalSupply(), exchangePrice(), getUnvestedAmount() and paused() (allowFailure)",
+        "Selectors verified by keccak and by raw eth_call, each returning data: USDF() 0xb249b35d, asUSDF() 0x1d30e266, exchangePrice() 0x9e65741e, getUnvestedAmount() 0xe7c2a608, paused() 0x5c975abb, balanceOf(address) 0x70a08231, totalSupply() 0x18160ddd",
+        "Adapter invoked through its own code path against live BSC at head 119935044 returns exactly one slice: 100%, coinId usdf-astherus, depType wrapper, no warnings; metadata netBackingRaw 3006437306119132214300320, totalSupplyRaw 2820142388657760830716610, collateralizationRatio 1.0660586920045687, proofKind astherus-earn-wrapper-net-usdf-balance",
+        "asUSDF is not ERC-4626: asset() and totalAssets() revert, so no existing adapter could be reused"
+      ],
+      "rationale": "Backing is the net USDF balance, raw balance minus getUnvestedAmount, because unvested strategy yield is not yet attributable to shares. The pinned-source invariant (balance minus unvested, over share supply, equals exchangePrice) is cross-checked every cycle with a degraded divergence warning above 10 bps. Two defects were found and fixed while building this: the aggregate3 call labels did not match the result-lookup keys, so the adapter would have thrown an identity-read failure on every production cycle; and the exchangePrice selector constant was referenced but never declared. Both were caught only by exercising the adapter through its own path, not by the standalone read script.",
+      "changeRefs": [
+        "worker/src/cron/reserve-adapters/astherus-earn-wrapper.ts",
+        "worker/src/cron/reserve-adapters/__tests__/astherus-earn-wrapper.test.ts",
+        "shared/data/stablecoins/coins/asusdf-astherus.json",
+        "shared/types/live-reserve-adapter-declarations.ts",
+        "shared/lib/live-reserve-adapter-param-schemas.ts",
+        "worker/src/cron/reserve-adapters/index.ts"
+      ],
+      "sentinels": [
+        "asusdf-astherus:gap:reserve-composition",
+        "backing:reserve:inherited-backing:usdf-astherus:cause:asusdf-astherus%3Agap%3Areserve-composition"
+      ],
+      "nextReviewTrigger": "Confirm both sentinels absent on the first production replay after the live-reserves producer runs with this adapter.",
+      "factsClosed": 0
     }
   ]
 }
