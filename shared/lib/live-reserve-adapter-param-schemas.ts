@@ -1352,15 +1352,15 @@ const astherusEarnWrapperParamsSchema = z
   })
   .strict();
 
-const initiaAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
-
+// A 100% parent-inheritance claim must not be repointable by a catalog edit alone.
+// A genuine Initia object migration therefore requires a code change and review.
 const initiaWrapperVaultParamsSchema = z
   .object({
     lcdUrl: AbsoluteUrlSchema,
-    iusdDenom: z.string().regex(/^move\/[0-9a-fA-F]{64}$/),
-    iusdMetadataAddress: initiaAddressSchema,
-    vaultOwnerAddress: initiaAddressSchema,
-    ausd0MetadataAddress: initiaAddressSchema,
+    iusdDenom: z.literal("move/6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"),
+    iusdMetadataAddress: z.literal("0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"),
+    vaultOwnerAddress: z.literal("0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a"),
+    ausd0MetadataAddress: z.literal("0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef"),
     decimals: z.literal(6),
     slice: reserveSliceDescriptorSchema.extend({
       coinId: z.literal("ausd-agora"),

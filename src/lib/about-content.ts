@@ -77,7 +77,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> CHFAU StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation, Starknet RPC reads, and DFINITY ICRC REST indexer reads for ICP), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> CHFAU StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation, Starknet RPC reads, and DFINITY ICRC REST indexer reads for ICP), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage; Astherus asUSDF's public BSC (BNB Chain) EVM RPC with a Multicall3 aggregate3 read of the custom asUSDFEarn contract (not ERC-4626) to observe USDF backing net of unvested yield; and Initia interwoven-1 LCD REST reads at /cosmos/bank/v1beta1/supply/by_denom, /initia/move/v1/view/json, and /initia/move/v1/accounts/{address}/resources/by_struct_tag to observe iUSD's AUSD0 vault backing and pin vault/metadata identities (Pharos's first Initia read path)",
   },
   {
     label: "Ratings & Reference",

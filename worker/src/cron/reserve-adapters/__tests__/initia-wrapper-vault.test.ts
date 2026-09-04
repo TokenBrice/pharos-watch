@@ -66,17 +66,20 @@ function resource(address: string, structTag: string, data: Record<string, unkno
   };
 }
 
-function mockHealthyReads(vaultBalance = IUSD_SUPPLY): void {
+function mockHealthyReads(
+  vaultBalance = IUSD_SUPPLY,
+  ausd0Metadata: Record<string, unknown> = {
+    name: "AUSD0",
+    symbol: "AUSD0",
+    decimals: 6,
+    project_uri: "https://www.agora.finance",
+  },
+): void {
   vi.mocked(fetchJsonPostWithRetry).mockResolvedValue({ data: JSON.stringify(vaultBalance), events: [], gas_used: "7553" });
   vi.mocked(fetchJsonWithRetry)
     .mockResolvedValueOnce({ amount: { denom: IUSD_DENOM, amount: IUSD_SUPPLY } })
     .mockResolvedValueOnce(resource(IUSD_METADATA, MOVE_OBJECT_CORE_TYPE, { owner: VAULT_OWNER }))
-    .mockResolvedValueOnce(resource(AUSD0_METADATA, MOVE_METADATA_TYPE, {
-      name: "AUSD0",
-      symbol: "AUSD0",
-      decimals: 6,
-      project_uri: "https://www.agora.finance",
-    }));
+    .mockResolvedValueOnce(resource(AUSD0_METADATA, MOVE_METADATA_TYPE, ausd0Metadata));
 }
 
 beforeEach(() => {
@@ -139,5 +142,29 @@ describe("fetchInitiaWrapperVaultReserves", () => {
       .rejects.toThrow("iUSD metadata owner mismatch");
     expect(fetchJsonPostWithRetry).toHaveBeenCalledTimes(1);
     expect(fetchJsonWithRetry).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails closed when AUSD0 metadata has the wrong symbol", async () => {
+    mockHealthyReads(IUSD_SUPPLY, {
+      name: "AUSD0",
+      symbol: "NOT-AUSD0",
+      decimals: 6,
+      project_uri: "https://www.agora.finance",
+    });
+
+    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
+      .rejects.toThrow("AUSD0 metadata symbol/name mismatch");
+  });
+
+  it("fails closed when AUSD0 metadata has the wrong project_uri", async () => {
+    mockHealthyReads(IUSD_SUPPLY, {
+      name: "AUSD0",
+      symbol: "AUSD0",
+      decimals: 6,
+      project_uri: "https://example.invalid",
+    });
+
+    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
+      .rejects.toThrow("AUSD0 metadata project_uri mismatch");
   });
 });
