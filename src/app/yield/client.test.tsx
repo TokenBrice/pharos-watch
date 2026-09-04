@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldClient } from "@/components/yield/yield-client";
@@ -171,6 +171,38 @@ describe("YieldClient", () => {
     expect(useYieldRankingsSummaryMock).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
+  });
+
+  it("shows the top three PYS rows as a ranked hero podium", () => {
+    const podiumRows = [
+      makeYieldRanking({ id: "rank-three", name: "Third Coin", symbol: "THREE", pharosYieldScore: 63 }),
+      makeYieldRanking({ id: "rank-one", name: "First Coin", symbol: "ONE", pharosYieldScore: 91 }),
+      makeYieldRanking({ id: "rank-four", name: "Fourth Coin", symbol: "FOUR", pharosYieldScore: 42 }),
+      makeYieldRanking({ id: "rank-two", name: "Second Coin", symbol: "TWO", pharosYieldScore: 78 }),
+    ];
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: projectYieldRankingsSummary({
+        rankings: podiumRows,
+        riskFreeRate: 4.25,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+      }),
+      meta: null,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
+    });
+
+    render(<YieldClient />);
+
+    const podium = screen.getByRole("group", { name: "Top three Pharos Yield Scores" });
+    expect(within(podium).getByRole("button", { name: "Rank 1: First Coin (ONE), PYS 91.0" })).toBeTruthy();
+    expect(within(podium).getByRole("button", { name: "Rank 2: Second Coin (TWO), PYS 78.0" })).toBeTruthy();
+    expect(within(podium).getByRole("button", { name: "Rank 3: Third Coin (THREE), PYS 63.0" })).toBeTruthy();
+    expect(within(podium).queryByText("FOUR")).toBeNull();
   });
 
   it("passes every filtered opportunity to the scatter plot", () => {

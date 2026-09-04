@@ -52,6 +52,71 @@ interface HeroHighlightRowProps {
   onClick: () => void;
 }
 
+interface HeroPysPodiumProps {
+  rows: YieldViewModelRow[];
+  logos: Record<string, string>;
+  onSelect: (id: string) => void;
+}
+
+const HERO_PYS_PODIUM_PLACES = [
+  { rank: 1, orderClass: "order-2 -translate-y-3", logoSize: 64 },
+  { rank: 2, orderClass: "order-1", logoSize: 52 },
+  { rank: 3, orderClass: "order-3 translate-y-1", logoSize: 44 },
+] as const;
+
+function HeroPysPodium({ rows, logos, onSelect }: HeroPysPodiumProps) {
+  const winner = rows[0];
+
+  return (
+    <>
+      {winner && winner.pharosYieldScore != null ? (
+        <button
+          type="button"
+          aria-label={`Best Pharos Yield Score: ${winner.name} (${winner.symbol}), PYS ${winner.pharosYieldScore.toFixed(1)}`}
+          title={`${winner.symbol} · PYS ${winner.pharosYieldScore.toFixed(1)}`}
+          onClick={() => onSelect(winner.id)}
+          className="pharos-focus-ring flex shrink-0 flex-col items-center gap-1 rounded-md px-1 py-1 text-[9px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:hidden"
+        >
+          <StablecoinLogo src={logos[winner.id]} name={winner.name} size={44} />
+          <span className="max-w-12 truncate">{winner.symbol}</span>
+        </button>
+      ) : null}
+      <span
+        role="group"
+        aria-label="Top three Pharos Yield Scores"
+        className="hidden shrink-0 items-end gap-2 pr-8 sm:flex"
+      >
+        {rows.map((row, index) => {
+          const place = HERO_PYS_PODIUM_PLACES[index];
+          if (!place || row.pharosYieldScore == null) return null;
+
+          return (
+            <button
+              key={row.id}
+              type="button"
+              aria-label={`Rank ${place.rank}: ${row.name} (${row.symbol}), PYS ${row.pharosYieldScore.toFixed(1)}`}
+              title={`${row.symbol} · PYS ${row.pharosYieldScore.toFixed(1)}`}
+              onClick={() => onSelect(row.id)}
+              className={`pharos-focus-ring ${place.orderClass} group/podium flex min-w-11 flex-col items-center gap-1 rounded-md px-0.5 py-1 text-[10px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground`}
+            >
+              <span className="relative">
+                <StablecoinLogo src={logos[row.id]} name={row.name} size={place.logoSize} />
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-1 -right-1 inline-flex size-5 items-center justify-center rounded-full border border-border bg-background font-mono text-[10px] font-bold text-foreground"
+                >
+                  {place.rank}
+                </span>
+              </span>
+              <span className="max-w-14 truncate">{row.symbol}</span>
+            </button>
+          );
+        })}
+      </span>
+    </>
+  );
+}
+
 // A folded KPI tile: the standalone interchangeable-tile grid is retired in
 // favour of these compact, click-to-scroll metric rows in the hero sub-slot.
 function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, onClick }: HeroHighlightRowProps) {
@@ -257,16 +322,13 @@ export function YieldClient() {
   // The hero beam ("One Beam" frost figure) is the headline APY of the best
   // risk-adjusted opportunity in the current view — the row with the highest
   // Pharos Yield Score, not the highest raw APY.
-  const topPysRow = useMemo<YieldViewModelRow | null>(() => {
-    let best: YieldViewModelRow | null = null;
-    for (const row of visibleRows) {
-      if (row.pharosYieldScore == null) continue;
-      if (best === null || row.pharosYieldScore > (best.pharosYieldScore ?? Number.NEGATIVE_INFINITY)) {
-        best = row;
-      }
-    }
-    return best;
+  const topPysRows = useMemo<YieldViewModelRow[]>(() => {
+    return visibleRows
+      .filter((row) => row.pharosYieldScore != null)
+      .toSorted((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
+      .slice(0, 3);
   }, [visibleRows]);
+  const topPysRow = topPysRows[0] ?? null;
 
   const handleScrollToRow = useCallback((id: string) => {
     const el = document.getElementById(`yield-row-${id}`);
@@ -485,7 +547,16 @@ export function YieldClient() {
                 "Top risk-adjusted yield"
               )
             }
-            beamValue={topPysRow ? formatPercent(topPysRow.apy30d) : "—"}
+            beamValue={
+              topPysRow ? (
+                <span className="flex w-full items-end justify-between gap-2">
+                  <span>{formatPercent(topPysRow.apy30d)}</span>
+                  <HeroPysPodium rows={topPysRows} logos={logos} onSelect={handleScrollToRow} />
+                </span>
+              ) : (
+                "—"
+              )
+            }
             beamTitle={
               topPysRow && topPysRow.pharosYieldScore != null
                 ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)}`
