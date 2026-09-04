@@ -114,6 +114,7 @@
 688aa4125e02f2b260839f4e49f376366c86bb15:docs/plans/implemented/CCIP-mint-burn-processing.md:generic-api-key:36
 69519d679c69096cca4386cec834bbbf9eb89d50:shared/data/stablecoins/coins.generated.json:generic-api-key:66373
 6d0cc50a02bf6966aed87319aaaa064cbe82d9ce:worker/wrangler.toml:generic-api-key:55
+709ffa5ca190d80f4c39331923d0bc828a9e4265:worker/src/cron/dex-liquidity/process-pool-execution-capability.ts:generic-api-key:877
 74c034a3d8c6ea084a6c2e61338e1846e25666b1:shared/data/stablecoins/coins/ggbr-goldfish-gold.json:generic-api-key:59
 75000268fb411124118a66f5420b92d485f2a238:docs/api-reference.md:generic-api-key:2617
 80167254da7dcb282114ecbdf3d4d4436dfa6938:agents/plans/historical/2026-04-03-api-key-gating-implementation-plan.md:curl-auth-header:918
