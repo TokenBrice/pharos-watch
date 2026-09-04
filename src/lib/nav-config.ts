@@ -117,10 +117,8 @@ const DEPEG_NAV_ITEM: NavItem = {
 
 /**
  * Desktop quick rail: the five highest-traffic routes, promoted out of the
- * dropdowns so they cost one click instead of hover-then-scan. They stay
- * listed inside their owning menu as well — the rail is a shortcut layer, not
- * a sibling section, so "I opened Risk and Safety Scores wasn't there" can't
- * happen.
+ * dropdowns so they cost one click instead of hover-then-scan. Apart from the
+ * dashboard, the rail is their sole desktop navigation surface.
  */
 export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   DASHBOARD_NAV_ITEM,
@@ -134,27 +132,26 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "PSI" },
 ];
 
-/* ── "More" columns — the low-traffic tail, organized instead of dumped ─── */
+/* ── Resources columns — reference, monitoring, and product links ───── */
 
 const MORE_COLUMNS: readonly NavColumn[] = [
   {
-    key: "learn",
-    label: "Learn",
+    key: "research",
+    label: "Research",
     items: [
       { href: "/learn/", label: "Learn", icon: BookOpen, description: "Mechanisms, case studies, and glossary" },
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs" },
       { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined" },
+      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions" },
     ],
   },
   {
-    key: "updates",
-    label: "Updates",
+    key: "watch",
+    label: "Watch",
     items: [
       { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market" },
       { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change" },
-      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
-      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
       { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches" },
     ],
   },
@@ -162,8 +159,9 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     key: "pharos",
     label: "Pharos",
     items: [
-      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions" },
       { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists" },
+      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
+      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
       { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference" },
       { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
       {
@@ -182,8 +180,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     key: "markets",
     label: "Markets",
     items: [
-      STABILITY_INDEX_NAV_ITEM,
-      YIELD_NAV_ITEM,
       { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and peg support" },
       { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Mint and burn pressure by chain" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Stablecoin share and health by chain" },
@@ -195,8 +191,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     key: "risk",
     label: "Risk",
     items: [
-      SAFETY_SCORES_NAV_ITEM,
-      DEPEG_NAV_ITEM,
       { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer power to freeze your balance" },
       { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA and GENIUS status, coin by coin" },
       { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph of upstream risk" },
@@ -215,7 +209,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   },
   {
     key: "more",
-    label: "More",
+    label: "Resources",
     columns: MORE_COLUMNS,
     items: MORE_COLUMNS.flatMap((column) => column.items),
   },
@@ -256,13 +250,25 @@ export const BOTTOM_NAV_ITEMS: NavItem[] = [
 
 /**
  * Flat list for the command palette, 404 route-guess, and homepage shortcuts.
- * Group items come first so the rail's presentation-only `shortLabel` aliases
- * never win the dedupe: search must offer "Yield Intelligence", not "Yield".
+ * Canonical rail items are seeded before their presentation-only quick-rail
+ * aliases so search offers "Yield Intelligence", not "Yield".
  */
 export const NAV_ITEMS: NavItem[] = (() => {
   const seen = new Set<string>();
   const flat: NavItem[] = [];
-  for (const item of [...NAV_GROUPS.flatMap((group) => group.items), ...QUICK_NAV_ITEMS, ...BOTTOM_NAV_ITEMS]) {
+  const canonicalRailItems = [
+    DASHBOARD_NAV_ITEM,
+    SAFETY_SCORES_NAV_ITEM,
+    YIELD_NAV_ITEM,
+    DEPEG_NAV_ITEM,
+    STABILITY_INDEX_NAV_ITEM,
+  ];
+  for (const item of [
+    ...NAV_GROUPS.flatMap((group) => group.items),
+    ...canonicalRailItems,
+    ...QUICK_NAV_ITEMS,
+    ...BOTTOM_NAV_ITEMS,
+  ]) {
     const key = normalizeNavPath(item.href);
     if (seen.has(key)) continue;
     seen.add(key);

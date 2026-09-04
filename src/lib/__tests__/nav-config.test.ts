@@ -19,23 +19,36 @@ describe("nav-config", () => {
     ]);
 
     expect(NAV_GROUPS.map((group) => group.key)).toEqual(["markets", "risk", "tools", "more"]);
-    expect(NAV_GROUPS.map((group) => group.label)).toEqual(["Markets", "Risk", "Tools", "More"]);
+    expect(NAV_GROUPS.map((group) => group.label)).toEqual(["Markets", "Risk", "Tools", "Resources"]);
   });
 
-  it("keeps every rail route inside its owning menu so the section still answers for it", () => {
+  it("keeps promoted routes out of groups while indexing their canonical entries", () => {
     const marketsHrefs = NAV_GROUPS.find((group) => group.key === "markets")?.items.map((item) => item.href);
     const riskHrefs = NAV_GROUPS.find((group) => group.key === "risk")?.items.map((item) => item.href);
+    const promotedRoutes = [
+      { href: "/stability-index/", label: "Stability Index" },
+      { href: "/yield/", label: "Yield Intelligence" },
+      { href: "/safety-scores/", label: "Safety Scores" },
+      { href: "/depeg/", label: "Depeg & Recovery" },
+    ];
 
-    expect(marketsHrefs).toContain("/stability-index/");
-    expect(marketsHrefs).toContain("/yield/");
-    expect(riskHrefs).toContain("/safety-scores/");
-    expect(riskHrefs).toContain("/depeg/");
+    // The rail is now the sole desktop surface for promoted routes. Their
+    // canonical entries remain in NAV_ITEMS for search and sitemap consumers.
+    expect(marketsHrefs).not.toContain("/stability-index/");
+    expect(marketsHrefs).not.toContain("/yield/");
+    expect(riskHrefs).not.toContain("/safety-scores/");
+    expect(riskHrefs).not.toContain("/depeg/");
+    for (const { href, label } of promotedRoutes) {
+      expect(QUICK_NAV_ITEMS.map((item) => item.href)).toContain(href);
+      const indexedItems = NAV_ITEMS.filter((item) => item.href === href);
+      expect(indexedItems).toHaveLength(1);
+      expect(indexedItems[0]).toEqual(expect.objectContaining({ href, label }));
+      expect(indexedItems[0]?.shortLabel).toBeUndefined();
+    }
   });
 
   it("splits market structure, failure modes, and interactive tools", () => {
     expect(NAV_GROUPS.find((group) => group.key === "markets")?.items.map((item) => item.href)).toEqual([
-      "/stability-index/",
-      "/yield/",
       "/liquidity/",
       "/flows/",
       "/chains/",
@@ -44,8 +57,6 @@ describe("nav-config", () => {
     ]);
 
     expect(NAV_GROUPS.find((group) => group.key === "risk")?.items.map((item) => item.href)).toEqual([
-      "/safety-scores/",
-      "/depeg/",
       "/freezewatch/",
       "/compliance/",
       "/dependency-map/",
@@ -60,11 +71,17 @@ describe("nav-config", () => {
     ]);
   });
 
-  it("organizes the low-traffic tail into labeled More columns", () => {
+  it("organizes Resources into research, monitoring, and product columns", () => {
     const more = NAV_GROUPS.find((group) => group.key === "more");
 
-    expect(more?.columns?.map((column) => column.key)).toEqual(["learn", "updates", "pharos"]);
-    expect(more?.columns?.map((column) => column.label)).toEqual(["Learn", "Updates", "Pharos"]);
+    expect(more?.label).toBe("Resources");
+    expect(more?.columns?.map((column) => column.key)).toEqual(["research", "watch", "pharos"]);
+    expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Watch", "Pharos"]);
+    expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
+      ["Learn", "Mechanisms", "Case Studies", "Glossary", "Methodology"],
+      ["Daily Digest", "Timeline", "Alert Bot"],
+      ["About", "Changelog", "Blog", "API Access", "System Status", "PharosVille"],
+    ]);
     // `items` must stay the exact flattening, or the mobile drawer and
     // /sitemap-tree/ silently drop rows the desktop panel still shows.
     expect(more?.items).toEqual(more?.columns?.flatMap((column) => column.items));
