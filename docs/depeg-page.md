@@ -46,9 +46,10 @@ The order is deliberate; changing it changes the route's answer sequence.
 The board deliberately follows the forecast worklist rather than preceding it: a visitor arriving
 during an incident needs the verdict on the live incidents before scanning every tracked asset.
 
-Grading sits directly under the worklist it grades, not at the end of the route. It stays collapsed
-because its ledger is heavy DOM, but a reader who has just seen a forecast should find "how accurate
-are these?" in the next breath — and the hero's track-record figure links to `#forecast-grading`.
+Grading sits directly under the worklist it grades, not at the end of the route, and renders open —
+a reader who has just seen a forecast should find "how accurate are these?" in the next breath. The
+hero's track-record figure links to `#forecast-grading`, which lands on rendered content rather than
+a closed control. See [Forecast Grading](#forecast-grading) for the collapse behavior.
 
 ---
 
