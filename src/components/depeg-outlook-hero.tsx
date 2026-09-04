@@ -87,8 +87,11 @@ export function DepegOutlookHero({
 
   return (
     <section aria-label="Live depeg outlook" className="pharos-card-shell overflow-hidden">
-      <div className="grid gap-x-8 gap-y-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.85fr)]">
-        <div className="flex flex-col gap-3">
+      {/* Static column utilities on purpose: an arbitrary `grid-cols-[minmax(...)]`
+          track is a one-off Tailwind class, and a dev server whose CSS predates it
+          silently collapses this hero to a single column. */}
+      <div className="grid gap-x-8 gap-y-6 p-5 sm:p-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-3 lg:col-span-1">
           <div>
             <p className="pharos-kicker">
               <MethodologyLabel topic="activeDepegs">Active depegs</MethodologyLabel>
@@ -184,8 +187,7 @@ export function DepegOutlookHero({
           ) : null}
           {alertQueue ? <div className="border-t border-border/60 pt-3">{alertQueue}</div> : null}
         </div>
-
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2 lg:col-span-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="pharos-section-title">
               <MethodologyLabel topic="dews">DEWS early warning</MethodologyLabel>
