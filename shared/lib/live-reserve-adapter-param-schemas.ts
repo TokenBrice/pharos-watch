@@ -1340,9 +1340,52 @@ const abracadabraParamsSchema = z
   })
   .strict();
 
+const astherusEarnWrapperParamsSchema = z
+  .object({
+    earnAddress: EvmAddressSchema,
+    expectedUnderlyingAddress: EvmAddressSchema,
+    expectedShareAddress: EvmAddressSchema,
+    underlyingDecimals: z.number().int().nonnegative().max(36),
+    shareDecimals: z.number().int().nonnegative().max(36),
+    slice: reserveSliceDescriptorSchema,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
+const initiaAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+
+const initiaWrapperVaultParamsSchema = z
+  .object({
+    lcdUrl: AbsoluteUrlSchema,
+    iusdDenom: z.string().regex(/^move\/[0-9a-fA-F]{64}$/),
+    iusdMetadataAddress: initiaAddressSchema,
+    vaultOwnerAddress: initiaAddressSchema,
+    ausd0MetadataAddress: initiaAddressSchema,
+    decimals: z.literal(6),
+    slice: reserveSliceDescriptorSchema.extend({
+      coinId: z.literal("ausd-agora"),
+      depType: z.literal("wrapper"),
+    }),
+  })
+  .strict();
+
+const stoneyieldRouterPoolParamsSchema = z
+  .object({
+    slice: reserveSliceDescriptorSchema,
+    stusdAddress: EvmAddressSchema,
+    usdcAddress: EvmAddressSchema,
+    susdcAddress: EvmAddressSchema,
+    routerAddress: EvmAddressSchema,
+    venusVaultAddress: EvmAddressSchema,
+    venusVTokenAddress: EvmAddressSchema,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
 export const LIVE_RESERVE_PARAM_SCHEMAS = {
   none: noParamsSchema,
   abracadabra: abracadabraParamsSchema,
+  astherusEarnWrapper: astherusEarnWrapperParamsSchema,
   accountable: accountableParamsSchema,
   attestationPdfIndex: attestationPdfIndexParamsSchema,
   audxAssurance: audxAssuranceParamsSchema,
@@ -1362,6 +1405,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   fraxFpiCollateral: fraxFpiCollateralParamsSchema,
   fx: fxParamsSchema,
   gho: ghoParamsSchema,
+  initiaWrapperVault: initiaWrapperVaultParamsSchema,
   jupusd: jupusdParamsSchema,
   liquityNativeActivePool: liquityNativeActivePoolParamsSchema,
   liquityV1: liquityV1ParamsSchema,
@@ -1377,6 +1421,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   reserveProtocolDtf: reserveProtocolDtfParamsSchema,
   resupplyPairs: resupplyPairsParamsSchema,
   sgForgeCoinvertible: sgForgeCoinvertibleParamsSchema,
+  stoneyieldRouterPool: stoneyieldRouterPoolParamsSchema,
   singleAsset: singleAssetParamsSchema,
   spikoApi: spikoApiParamsSchema,
   superstateLiquidity: superstateLiquidityParamsSchema,

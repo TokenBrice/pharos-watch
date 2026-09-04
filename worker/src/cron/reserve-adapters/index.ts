@@ -53,6 +53,9 @@ import { fetchReservoirReserves } from "./reservoir";
 import { fetchRippleTransparencyReserves } from "./ripple-transparency";
 import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
+import { fetchAstherusEarnWrapperReserves } from "./astherus-earn-wrapper";
+import { fetchInitiaWrapperVaultReserves } from "./initia-wrapper-vault";
+import { fetchStoneyieldRouterPoolReserves } from "./stoneyield-router-pool";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSghoWrapperReserves } from "./sgho-wrapper";
 import { fetchSingleAssetReserves } from "./single-asset";
@@ -97,6 +100,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   crvusd: fetchCrvUsdReserves,
   "curated-validated": fetchCuratedValidatedReserves,
   "dola-inverse": fetchDolaInverseReserves,
+  "astherus-earn-wrapper": fetchAstherusEarnWrapperReserves,
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "escrow-balance": fetchEscrowBalanceReserves,
   ethena: fetchEthenaReserves,
@@ -112,6 +116,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "hive-hbd-protocol": fetchHiveHbdProtocolReserves,
   "idle-cdo-epoch-variant": fetchIdleCdoEpochVariantReserves,
   infinifi: fetchInfiniFiReserves,
+  "initia-wrapper-vault": fetchInitiaWrapperVaultReserves,
+  "stoneyield-router-pool": fetchStoneyieldRouterPoolReserves,
   jupusd: fetchJupUsdReserves,
   lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,

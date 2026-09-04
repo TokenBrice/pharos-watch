@@ -53,5 +53,35 @@
     "yieldSource": "Aster Earn asUSDF",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "astherus-earn-wrapper",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "asusdf-astherus",
+    "display": {
+      "url": "https://docs.asterdex.com/earn/overview/mint-asusdf",
+      "label": "Aster: mint asUSDF"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDF staking wrapper shares",
+        "risk": "medium",
+        "coinId": "usdf-astherus",
+        "depType": "wrapper"
+      },
+      "earnAddress": "0xdb57a53c428a9fafcbfeffb6dd80d0f427543695",
+      "expectedUnderlyingAddress": "0x5a110fc00474038f6c02e89c707d638602ea44b5",
+      "expectedShareAddress": "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb",
+      "underlyingDecimals": 18,
+      "shareDecimals": 18
+    }
+  },
   "launchDate": "2024-11-21"
 }
