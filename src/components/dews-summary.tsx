@@ -31,7 +31,6 @@ import {
   type CalmDot,
   type ElevatedCoin,
 } from "@/components/dews-summary-model";
-import { MethodologyLabel } from "@/components/methodology-hint";
 import { useSvgId } from "@/components/chart-primitives/axes";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
@@ -81,6 +80,7 @@ function DEWSDot({
   onFocusDot,
   onArrowKey,
   isSelected,
+  isActiveDepeg,
   tabIndex,
   ariaLabel,
   registerRef,
@@ -91,6 +91,7 @@ function DEWSDot({
   onFocusDot: (id: string) => void;
   onArrowKey: (direction: 1 | -1 | "first" | "last") => void;
   isSelected?: boolean;
+  isActiveDepeg?: boolean;
   tabIndex: 0 | -1;
   ariaLabel: string;
   registerRef: (id: string, node: SVGGElement | null) => void;
@@ -175,6 +176,16 @@ function DEWSDot({
         className="dews-glow-r"
         style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }}
       />
+      {/* Confirmed-depeg halo: a double ring outside the glow. Binary state
+          from the peg summary, not a DEWS band — shape carries it so the
+          meaning does not rest on colour alone. */}
+      {isActiveDepeg && (
+        <>
+          <circle r={visualR + 9} fill="none" stroke="var(--color-background)" strokeWidth={3} />
+          <circle r={visualR + 9} fill="none" stroke={hex} strokeWidth={1.5} />
+          <circle r={visualR + 12.5} fill="none" stroke={hex} strokeWidth={1.5} strokeOpacity={0.55} />
+        </>
+      )}
       {showLogo ? (
         <>
           <defs>
@@ -266,7 +277,7 @@ function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
 function DEWSCenter({ highest, totalCount, sweepDur }: { highest: ThreatBand; totalCount: number; sweepDur: number }) {
   const hex = THREAT_BAND_HEX[highest];
   const label = "SCANNING";
-  const sublabel = `${totalCount} monitored`;
+  const sublabel = `${totalCount} DEWS-covered`;
 
   return (
     <g>
@@ -333,12 +344,16 @@ function DEWSRadar({
   calmDots,
   highest,
   totalCount,
+  activeDepegIds,
+  maxHeight,
   onCoinClick,
 }: {
   elevated: ElevatedCoin[];
   calmDots: CalmDot[];
   highest: ThreatBand;
   totalCount: number;
+  activeDepegIds?: ReadonlySet<string>;
+  maxHeight: number;
   onCoinClick: (id: string) => void;
 }) {
   const uid = useId();
@@ -404,9 +419,10 @@ function DEWSRadar({
       const idx = rovingOrder.findIndex((c) => c.id === coin.id);
       const position = idx >= 0 ? `${idx + 1} of ${rovingOrder.length}` : `${rovingOrder.length}`;
       const mcap = coin.mcap && coin.mcap > 0 ? `, ${formatCompactUsd(coin.mcap)} market cap` : "";
-      return `${position}: ${coin.symbol}, ${THREAT_BAND_LABELS[coin.band]} band${mcap}`;
+      const depeg = activeDepegIds?.has(coin.id) ? ", in confirmed depeg" : "";
+      return `${position}: ${coin.symbol}, ${THREAT_BAND_LABELS[coin.band]} band${depeg}${mcap}`;
     },
-    [rovingOrder],
+    [rovingOrder, activeDepegIds],
   );
 
   const handleFocusDot = useCallback(
@@ -436,7 +452,7 @@ function DEWSRadar({
       className="mx-auto block"
       viewBox="0 0 560 500"
       width="100%"
-      style={{ maxHeight: 440 }}
+      style={{ maxHeight }}
       aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}. Use arrow keys to navigate elevated coins.`}`}
       aria-describedby={liveMessageId}
       // group, not img: the radar contains focusable role="button" blips, and
@@ -523,6 +539,7 @@ function DEWSRadar({
           key={coin.id}
           coin={coin}
           isSelected={hoveredId === coin.id}
+          isActiveDepeg={activeDepegIds?.has(coin.id) ?? false}
           tabIndex={coin.id === effectiveRovingId ? 0 : -1}
           ariaLabel={buildAnnouncement(coin)}
           registerRef={registerRef}
@@ -560,9 +577,11 @@ function DEWSRadar({
 function DEWSLegend({
   bandCounts,
   updatedAtLabel,
+  activeDepegCount,
 }: {
   bandCounts: BandCounts;
   updatedAtLabel: string;
+  activeDepegCount: number;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-y-1 border-t gap-x-4 pt-3">
@@ -583,11 +602,16 @@ function DEWSLegend({
           </span>
         </div>
       ))}
-      <span
-        className="pharos-numeric text-xs text-muted-foreground/70 ml-auto"
-      >
-        Updated {updatedAtLabel}
-      </span>
+      {activeDepegCount > 0 ? (
+        <div className="flex items-center gap-1.5">
+          <svg width={20} height={12} aria-hidden="true">
+            <circle cx={10} cy={6} r={3} fill="var(--color-muted-foreground)" />
+            <circle cx={10} cy={6} r={5.5} fill="none" stroke="var(--color-muted-foreground)" strokeWidth={1.25} />
+          </svg>
+          <span className="text-xs text-muted-foreground">Elevated, in depeg ({activeDepegCount})</span>
+        </div>
+      ) : null}
+      <span className="pharos-meta ml-auto">Updated {updatedAtLabel}</span>
     </div>
   );
 }
@@ -596,12 +620,24 @@ function DEWSLegend({
 // Public component
 // ---------------------------------------------------------------------------
 
-interface DEWSSummaryProps {
+interface DEWSRadarPanelProps {
   logos?: Record<string, string>;
   className?: string;
+  /** Coins in a confirmed live depeg, drawn as a halo on their radar mark. */
+  activeDepegIds?: ReadonlySet<string>;
+  /** Cap for the radar stage, so a hero can run it more compactly. */
+  maxHeight?: number;
 }
 
-export function DEWSSummary({ logos, className }: DEWSSummaryProps) {
+/**
+ * The DEWS radar as an embeddable panel: chart stage plus legend, no card shell
+ * and no heading. The owning surface supplies the header and methodology link.
+ *
+ * Its universe is every DEWS-covered asset, which is wider than the tracked
+ * peg-status universe the surrounding peg-summary figures use. The centre
+ * caption and legend name that scope so the two counts are not read as one.
+ */
+export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 440 }: DEWSRadarPanelProps) {
   const { data, isLoading, error } = useStressSignals();
   const { data: stablecoinsData } = useStablecoins();
   const router = useRouter();
@@ -619,11 +655,8 @@ export function DEWSSummary({ logos, className }: DEWSSummaryProps) {
 
   if (isLoading) {
     return (
-      <div className={cn("pharos-card-shell flex flex-col p-4 sm:p-5", className)}>
-        <h2 className="mb-3 text-base font-semibold leading-none">
-          <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-        </h2>
-        <div aria-busy="true" className="h-[440px] rounded-lg bg-muted animate-pulse" />
+      <div className={cn("pharos-chart-stage flex flex-col", className)}>
+        <div aria-busy="true" className="rounded-lg bg-muted animate-pulse" style={{ height: maxHeight }} />
       </div>
     );
   }
@@ -643,30 +676,29 @@ export function DEWSSummary({ logos, className }: DEWSSummaryProps) {
     updatedAtLabel,
   } = viewModel;
 
+  // Calm marks are anonymous positions, so a coin in a confirmed depeg that is
+  // still CALM on DEWS gets no halo. Count the halos actually drawn rather than
+  // every active depeg, or the key promises marks the radar never renders.
+  const haloCount = activeDepegIds ? elevated.filter((coin) => activeDepegIds.has(coin.id)).length : 0;
+
   return (
-    <div className={cn("pharos-card-shell flex flex-col p-4 sm:p-5", className)}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold leading-none">
-          <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-        </h2>
-        <span className="pharos-numeric text-xs text-muted-foreground">
-          {elevated.length > 0
-            ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
-            : `All ${totalCount} coins calm`}
-        </span>
+    <div className={cn("pharos-chart-stage flex flex-col", className)}>
+      <div className="flex-1">
+        <DEWSRadar
+          elevated={elevated}
+          calmDots={calmDots}
+          highest={highest}
+          totalCount={totalCount}
+          activeDepegIds={activeDepegIds}
+          maxHeight={maxHeight}
+          onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
+        />
       </div>
-      <div className="pharos-chart-stage flex flex-1 flex-col">
-        <div>
-          <DEWSRadar
-            elevated={elevated}
-            calmDots={calmDots}
-            highest={highest}
-            totalCount={totalCount}
-            onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
-          />
-        </div>
-        <DEWSLegend bandCounts={bandCounts} updatedAtLabel={updatedAtLabel} />
-      </div>
+      <DEWSLegend
+        bandCounts={bandCounts}
+        updatedAtLabel={updatedAtLabel}
+        activeDepegCount={haloCount}
+      />
     </div>
   );
 }

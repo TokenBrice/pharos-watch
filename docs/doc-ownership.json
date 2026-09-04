@@ -371,6 +371,31 @@
       ]
     },
     {
+      "id": "depeg-page",
+      "label": "Depeg & Recovery route composition",
+      "risk": "medium",
+      "sources": [
+        "src/app/depeg/**",
+        "src/components/depeg-outlook-hero.tsx",
+        "src/components/depeg-control-board.tsx",
+        "src/components/depeg-feed.tsx",
+        "src/components/depeg-resolver-module.tsx",
+        "src/components/depeg-resolver-reviewer-module.tsx",
+        "src/components/dews-summary.tsx",
+        "src/components/dews-alert-feed.tsx",
+        "src/hooks/use-depeg-resolver-surfaces.ts"
+      ],
+      "docs": ["docs/depeg-page.md"],
+      "background": [{ "path": "docs/design-language.md", "anchor": "context" }],
+      "alsoRead": ["src/app/AGENTS.md"],
+      "rules": [
+        "The hero block is the sole owner of the route's headline figures; no module below it restates the active count, worst live move, at-peg split, or tracked DEWS alert count.",
+        "Label every figure's universe: tracked peg-status set, DEWS-covered assets, and open resolver rows are three different denominators.",
+        "Keep the event archive server-rendered; it is the crawlable link hub for permanent event pages."
+      ],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/depeg"]
+    },
+    {
       "id": "frontend-routes",
       "label": "Frontend page or route behavior",
       "risk": "medium",

@@ -42,7 +42,7 @@ export const PUBLIC_PRIMARY_ROUTE_PATHS = [
 ] as const;
 
 export const PUBLIC_REFERENCE_ROUTE_PATHS = [
-  "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/learn/",
+  "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/depeg/archive/", "/learn/",
   "/learn/glossary/", "/sitemap-tree/", "/api/", "/stablecoins/", "/stablecoins/backing/",
   "/stablecoins/governance/", "/stablecoins/infrastructure/", "/privacy/", "/docs/",
 ] as const;

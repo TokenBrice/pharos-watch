@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import DepegPage from "@/app/depeg/page";
+import DepegArchivePage, { metadata as archiveMetadata } from "@/app/depeg/archive/page";
+import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -15,6 +17,13 @@ vi.mock("next/dynamic", () => ({
     };
   },
 }));
+
+function permanentEventHrefs(html: string): string[] {
+  return Array.from(
+    html.matchAll(/href="(\/depeg\/[^"]+\/)"/g),
+    (match) => match[1]!,
+  ).filter((href) => href !== "/depeg/archive/");
+}
 
 describe("DepegPage", () => {
   it("renders FAQ copy that matches the shipped peg-score and confirmation contract", () => {
@@ -36,5 +45,37 @@ describe("DepegPage", () => {
     expect(matches).toHaveLength(1);
     expect(html).toContain('href="/pharoswatchbot/#bot"');
     expect(html).toContain("Set up alerts");
+  });
+
+  it("renders only the latest calendar month as a server-side archive preview", () => {
+    const html = renderToStaticMarkup(<DepegPage />);
+    const newestMonth = new Date(DEPEG_EVENT_ENTRIES[0]!.startedAt * 1000)
+      .toISOString()
+      .slice(0, 7);
+    const expectedHrefs = DEPEG_EVENT_ENTRIES
+      .filter((event) =>
+        new Date(event.startedAt * 1000).toISOString().startsWith(newestMonth))
+      .map((event) => `/depeg/${event.slug}/`);
+
+    expect(permanentEventHrefs(html)).toEqual(expectedHrefs);
+    expect(expectedHrefs.length).toBeLessThan(DEPEG_EVENT_ENTRIES.length);
+    expect(html).toContain('href="/depeg/archive/"');
+  });
+});
+
+describe("DepegArchivePage", () => {
+  it("server-renders every permanent event link exactly once", () => {
+    const html = renderToStaticMarkup(<DepegArchivePage />);
+    const hrefs = permanentEventHrefs(html);
+
+    expect(hrefs).toEqual(
+      DEPEG_EVENT_ENTRIES.map((event) => `/depeg/${event.slug}/`),
+    );
+  });
+
+  it("publishes canonical archive metadata", () => {
+    expect(archiveMetadata.alternates?.canonical).toBe("/depeg/archive/");
+    expect(archiveMetadata.title).toBe("Depeg Event Archive");
+    expect(archiveMetadata.description).toBeTruthy();
   });
 });

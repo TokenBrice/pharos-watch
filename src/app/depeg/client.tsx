@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
@@ -12,63 +12,75 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
+import { DepegOutlookHero } from "@/components/depeg-outlook-hero";
 import { DepegControlBoard } from "@/components/depeg-control-board";
-import { DEWSSummary } from "@/components/dews-summary";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { DepegFeed } from "@/components/depeg-feed";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
-import { DepegResolverPostureModule } from "@/components/depeg-resolver-posture-module";
 import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
+import { summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { cn } from "@/lib/utils";
-import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { DepegContentLoadingState } from "./loading";
 
+/** DEWS publishes every 30 minutes, so anything past two cycles is worth saying out loud. */
+const STALE_DEWS_AGE_SEC = 60 * 60;
+
 interface DepegCoverageMetrics {
-  dewsCoverageCount: number;
   oldestAgeSec: number | null;
   malformedRows: number;
-  coverageLimitedCount: number;
-  activeCount: number;
-  pendingCount: number;
 }
 
-function DepegCoverageBand({ reliability }: { reliability: DepegCoverageMetrics }) {
-  const items: Array<{ value: string; label: string }> = [
-    { value: String(reliability.activeCount), label: "live confirmed" },
-    { value: String(reliability.pendingCount), label: "pending" },
-    { value: String(reliability.dewsCoverageCount), label: "DEWS current" },
-    {
-      value: reliability.oldestAgeSec != null ? formatElapsedSeconds(reliability.oldestAgeSec) : "—",
-      label: "oldest DEWS",
-    },
-    { value: String(reliability.coverageLimitedCount), label: "event floor" },
-    { value: String(reliability.malformedRows), label: "malformed" },
-  ];
+/** Caveat text for each degraded-reliability condition, in reading order. */
+function reliabilityNotes(reliability: DepegCoverageMetrics): string[] {
+  const notes: string[] = [];
+  if (reliability.oldestAgeSec != null && reliability.oldestAgeSec > STALE_DEWS_AGE_SEC) {
+    notes.push(`oldest DEWS signal ${formatElapsedSeconds(reliability.oldestAgeSec)} old`);
+  }
+  if (reliability.malformedRows > 0) {
+    notes.push(`${reliability.malformedRows} malformed DEWS ${reliability.malformedRows === 1 ? "row" : "rows"}`);
+  }
+  return notes;
+}
+
+/**
+ * Degraded-reliability caveats only, announced when they appear.
+ *
+ * The caller decides whether to mount it: a component that returns `null` is
+ * still a truthy element, which would leave an empty bordered strip under the
+ * hero in the healthy state.
+ *
+ * The healthy-state counts this band used to carry (live confirmed, pending,
+ * DEWS population) are owned by the hero and the radar. The event-history floor
+ * count also left: it is stable methodology eligibility, not a data fault, so it
+ * belongs to the board that lists those assets.
+ */
+function DepegReliabilityNote({ notes }: { notes: string[] }) {
   return (
-    <div className="pharos-subtle-band flex flex-wrap items-center gap-x-5 gap-y-1.5 sm:justify-between">
-      <h2 className="pharos-kicker mr-1">Coverage</h2>
-      {items.map((item) => (
-        <span key={item.label} className="text-xs text-muted-foreground">
-          <span className="pharos-numeric font-semibold text-foreground">{item.value}</span>{" "}
-          {item.label}
-        </span>
-      ))}
-    </div>
+    <p className="pharos-subtle-band pharos-meta" role="status">
+      <span className="font-semibold uppercase tracking-wide">Coverage caveats</span> · {notes.join(" · ")}
+    </p>
   );
 }
 
-
 export function DepegClient() {
-  const [nowSeconds] = useState(() => Math.floor(Date.now() / 1000));
+  // Ticks so an open session can actually cross the staleness threshold; a
+  // mount-time timestamp would freeze the caveat in whatever state it loaded in.
+  const [nowSeconds, setNowSeconds] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const timer = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  // The reviewer's full ledger is heavy DOM, so the module stays behind a
+  // disclosure. Its headline accuracy is a hero figure, so the query itself is
+  // not gated.
+  const [gradingOpen, setGradingOpen] = useState(false);
   const {
     data: pegData,
     isLoading: isPegLoading,
@@ -90,9 +102,6 @@ export function DepegClient() {
     dataUpdatedAt: eventsUpdatedAt,
     meta: eventsMeta,
     refetch: refetchEvents,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
   } = useInfiniteDepegEvents({ includePending: true });
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const { resolverSlice, resolverReviewSlice } = useQuerySlices({
@@ -104,7 +113,7 @@ export function DepegClient() {
   const logos = logosById;
   const router = useRouter();
 
-  // Unified filter state (shared by table + heatmap)
+  // Unified filter state (shared by the control board's filters and its rows)
   const { getParam, setParam, setParams } = useUrlFilters();
   const rawPeg = getParam("peg", "all");
   const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
@@ -158,14 +167,17 @@ export function DepegClient() {
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
   );
-  // Coins currently in an active depeg — same source as the activeDepegCount headline, so the
-  // hero logo cluster always matches the count. Worst deviation first.
-  const activeDepegCoins = useMemo(
-    () =>
-      (pegData?.coins ?? [])
-        .filter((coin) => coin.activeDepeg)
-        .sort((a, b) => Math.abs(b.currentDeviationBps ?? 0) - Math.abs(a.currentDeviationBps ?? 0))
-        .map((coin) => ({ id: coin.id, symbol: coin.symbol })),
+  // Coins in a confirmed live depeg. Same response as the hero's headline count,
+  // though the headline excludes NAV tokens while this set does not — see the
+  // eligibility note in docs/depeg-page.md.
+  const activeDepegIds = useMemo(
+    () => new Set((pegData?.coins ?? []).filter((coin) => coin.activeDepeg).map((coin) => coin.id)),
+    [pegData],
+  );
+  // Methodology eligibility, not a data fault: it belongs beside the board that
+  // lists these assets, not in the hero's degraded-reliability caveats.
+  const eventFloorCount = useMemo(
+    () => pegData?.coins?.filter((coin) => coin.depegEventCoverageLimited).length ?? 0,
     [pegData],
   );
   const recentClosedEvents = useMemo(
@@ -180,16 +192,19 @@ export function DepegClient() {
     }, null);
     const oldestAgeSec = oldestComputedAt ? Math.max(0, nowSeconds - oldestComputedAt) : null;
     return {
-      dewsCoverageCount: signals.length,
       oldestAgeSec,
       malformedRows: dewsData?.malformedRows ?? 0,
-      coverageLimitedCount: pegData?.coins?.filter((coin) => coin.depegEventCoverageLimited).length ?? 0,
-      activeCount: pegData?.summary?.activeDepegCount ?? 0,
-      pendingCount: pendingIncidents.length,
     };
-  }, [dewsData, nowSeconds, pegData, pendingIncidents.length]);
+  }, [dewsData, nowSeconds]);
+  const caveats = useMemo(() => reliabilityNotes(reliability), [reliability]);
+  // One derivation of the resolver book, shared with the module's own header so
+  // the hero's posture and that header can never disagree.
+  const resolverBook = useMemo(
+    () => (resolverData?.rows ? summarizeResolverBook(resolverData.rows) : null),
+    [resolverData],
+  );
 
-  // Coins at ALERT+ on DEWS — the hero's early-warning sub-metric, scoped to tracked ids.
+  // Coins at ALERT+ on DEWS, scoped to the peg-catalog ids the route tracks.
   const dewsAlertCount = useMemo(() => {
     const signals = dewsData?.signals;
     if (!signals) return 0;
@@ -258,7 +273,7 @@ export function DepegClient() {
   }
 
   return (
-      <div className="space-y-6">
+    <div className="space-y-6">
       <QueryFreshnessNotices
         error={globalError}
         hasData={!!pegData?.coins?.length}
@@ -266,109 +281,39 @@ export function DepegClient() {
         queries={freshnessQueries}
       />
 
-      {/* Hero beam — the live depeg outlook. The DDR forecast timeline renders as
-          a sibling below (not inside this card) so its per-event row cards stay
-          flat top-level surfaces rather than nesting inside the beam card. */}
-      <section aria-label="Live depeg outlook" className="pharos-card-shell overflow-hidden">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 p-5 sm:p-6">
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Active depegs</p>
-            <div className="flex items-baseline gap-2.5">
-              <span className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-                {reliability.activeCount}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {reliability.activeCount === 0
-                  ? "All pegs holding"
-                  : `ongoing ${reliability.activeCount === 1 ? "event" : "events"}`}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div className="text-right">
-              <p className="pharos-kicker">DEWS alerts</p>
-              <p className="pharos-numeric mt-0.5 text-lg font-semibold text-foreground">
-                {dewsAlertCount}
-              </p>
-            </div>
-            {pegData?.summary?.worstCurrent ? (
-              <div className="text-right">
-                <p className="pharos-kicker">Worst live</p>
-                <span
-                  className={cn(
-                    "mt-1 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-                    deviationBorderClass(Math.abs(pegData.summary.worstCurrent.bps)),
-                    deviationColorClass(Math.abs(pegData.summary.worstCurrent.bps)),
-                  )}
-                >
-                  <span className="pharos-numeric">
-                    {Math.abs(pegData.summary.worstCurrent.bps)} bps
-                  </span>
-                  <span className="opacity-80">{pegData.summary.worstCurrent.symbol}</span>
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </section>
+      {/* Signature hero: everything the route knows right now in one block —
+          confirmed incidents, early warning, recovery posture, forecast track
+          record — with the alert queue as the radar's detail layer. It is the
+          single owner of every one of those headline figures; no module below
+          restates them. */}
+      <DepegOutlookHero
+        stats={pegData?.summary}
+        activeDepegIds={activeDepegIds}
+        pendingCount={pendingIncidents.length}
+        dewsAlertCount={dewsAlertCount}
+        book={resolverEnabled ? resolverBook : null}
+        lineage={resolverEnabled ? resolverData?._meta.lineage ?? null : null}
+        review={resolverReviewerEnabled ? resolverReviewData?.summary ?? null : null}
+        logos={logos}
+        alertQueue={
+          <SectionErrorBoundary name="dews-alert-feed">
+            <DEWSAlertFeed signals={dewsData?.signals} logos={logos} allowedIds={trackedIds} embedded />
+          </SectionErrorBoundary>
+        }
+        footer={caveats.length > 0 ? <DepegReliabilityNote notes={caveats} /> : null}
+      />
 
-      {/* Depeg Duration Resolver — the forecast-timeline metaphor, directly beneath
-          the beam (sibling of the hero card, so its row cards don't nest). */}
+      {/* Recovery forecasts: the most urgent incidents, full book on demand. */}
       {resolverEnabled ? (
         <SectionErrorBoundary name="depeg-resolver">
           <DepegResolverModule data={resolverData} logos={logos} />
         </SectionErrorBoundary>
       ) : null}
 
-      {/* DEWS radar (left) + prioritized stats and alert queue (right) — demoted secondary band */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
-        <SectionErrorBoundary name="dews">
-          <DEWSSummary logos={logos} className="xl:h-full" />
-        </SectionErrorBoundary>
-        <div className="flex flex-col gap-6 xl:self-stretch">
-          {pegData?.summary && (
-            <SectionErrorBoundary name="depeg-stats">
-              <DepegTrackerStats stats={pegData.summary} activeDepegCoins={activeDepegCoins} logos={logos} />
-            </SectionErrorBoundary>
-          )}
-          <SectionErrorBoundary name="dews-alert-feed">
-            <DEWSAlertFeed
-              signals={dewsData?.signals}
-              logos={logos}
-              allowedIds={trackedIds}
-              className="flex-1 min-h-0"
-            />
-          </SectionErrorBoundary>
-        </div>
-      </div>
-
-      {/* Coverage — full-width, low-prominence reliability band */}
-      <DepegCoverageBand reliability={reliability} />
-
-      {/* Outlook Posture — the whole live book aggregated by recovery verdict */}
-      {resolverEnabled ? (
-        <SectionErrorBoundary name="depeg-posture">
-          <DepegResolverPostureModule data={resolverData} logos={logos} />
-        </SectionErrorBoundary>
-      ) : null}
-      {resolverEnabled && resolverReviewerEnabled ? (
-        <div className="flex items-center justify-center gap-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
-          <span className="h-px w-10 bg-gradient-to-r from-transparent to-border" aria-hidden="true" />
-          <span>Live forecasts above · graded below</span>
-          <span className="h-px w-10 bg-gradient-to-l from-transparent to-border" aria-hidden="true" />
-        </div>
-      ) : null}
-      {resolverReviewerEnabled ? (
-        <SectionErrorBoundary name="depeg-resolver-reviewer">
-          <DepegResolverReviewerModule data={resolverReviewData} error={resolverReview.error} logos={logos} />
-        </SectionErrorBoundary>
-      ) : null}
-
-      {/* Control board: filters + heatmap + ranked instrument rows */}
+      {/* The universe workbench: filters, sorts, exact per-coin values. */}
       <SectionErrorBoundary name="depeg-table">
         <DepegControlBoard
           rows={tableRows}
-          stats={pegData?.summary}
           logos={logos}
           pegFilter={pegFilter}
           typeFilter={typeFilter}
@@ -379,29 +324,52 @@ export function DepegClient() {
           onClearFilters={clearBoardFilters}
           onRowClick={handleRowClick}
           nowSeconds={nowSeconds}
+          eventFloorCount={eventFloorCount}
         />
       </SectionErrorBoundary>
 
-      {/* Recent Depeg Events */}
+      {/* History handoff. The permanent archive preview and FAQ follow as server
+          content from page.tsx. */}
       <SectionErrorBoundary name="depeg-feed">
         <DepegFeed
+          title="Recent resolved detections"
           events={recentClosedEvents}
           logos={logos}
           emptyMessage="No confirmed depeg history in this view."
-          hasMore={!!hasNextPage}
-          isLoadingMore={isFetchingNextPage}
-          onLoadMore={() => void fetchNextPage()}
         />
         <div className="mt-2 flex justify-end">
           <Link
             href="/timeline/?type=depeg.*"
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
           >
-            See all depeg events on the Timeline →
+            Open the full Timeline stream →
           </Link>
         </div>
       </SectionErrorBoundary>
 
+      {/* Model accountability: how these forecasts scored. Opt-in, because the
+          payload is large and the question is a methodology question. */}
+      {resolverReviewerEnabled ? (
+        <SectionErrorBoundary name="depeg-resolver-reviewer">
+          <section aria-label="Forecast grading" className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setGradingOpen((open) => !open)}
+              aria-expanded={gradingOpen}
+              className="pharos-focus-ring pharos-control-pill"
+            >
+              {gradingOpen ? "Hide forecast grading" : "Show how these forecasts scored"}
+            </button>
+            {gradingOpen ? (
+              <DepegResolverReviewerModule
+                data={resolverReviewData}
+                error={resolverReview.error}
+                logos={logos}
+              />
+            ) : null}
+          </section>
+        </SectionErrorBoundary>
+      ) : null}
     </div>
   );
 }

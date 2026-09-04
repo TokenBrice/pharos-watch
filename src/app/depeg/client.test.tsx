@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DepegClient } from "@/app/depeg/client";
 import type { ReactNode } from "react";
 
@@ -54,12 +54,26 @@ vi.mock("@/components/section-error-boundary", () => ({
   SectionErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/dews-summary", () => ({
-  DEWSSummary: () => <div data-testid="dews-summary" />,
-}));
-
-vi.mock("@/components/depeg-tracker-stats", () => ({
-  DepegTrackerStats: () => <div data-testid="depeg-stats" />,
+vi.mock("@/components/depeg-outlook-hero", () => ({
+  DepegOutlookHero: (props: {
+    logos?: Record<string, string>;
+    activeDepegIds?: ReadonlySet<string>;
+    pendingCount?: number;
+    dewsAlertCount?: number;
+    footer?: ReactNode;
+    alertQueue?: ReactNode;
+  }) => (
+    <div
+      data-testid="depeg-hero"
+      data-has-logos={String(Boolean(props.logos && Object.keys(props.logos).length > 0))}
+      data-active-ids={[...(props.activeDepegIds ?? [])].join(",")}
+      data-pending={String(props.pendingCount)}
+      data-alerts={String(props.dewsAlertCount)}
+      data-has-footer={String(props.footer != null)}
+    >
+      {props.alertQueue}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/dews-alert-feed", () => ({
@@ -117,10 +131,10 @@ function makeCoin(id: string, symbol: string) {
 }
 
 describe("DepegClient", () => {
-  it("keeps filters scoped to the leaderboard/heatmap without rendering standalone active or pending feeds", () => {
+  it("keeps filters scoped to the control board without rendering standalone active or pending feeds", () => {
     mocks.usePegSummary.mockReturnValue({
       data: {
-        coins: [makeCoin("coin-a", "A"), makeCoin("coin-b", "B")],
+        coins: [makeCoin("coin-a", "A"), { ...makeCoin("coin-b", "B"), activeDepeg: true }],
         summary: { activeDepegCount: 1, medianDeviationBps: 0, worstCurrent: null, coinsAtPeg: 2, totalTracked: 2, depegEventsToday: 0, depegEventsYesterday: 0 },
       },
       isLoading: false,
@@ -218,12 +232,30 @@ describe("DepegClient", () => {
     expect(screen.getByText("Leaderboard controls")).toBeTruthy();
     expect(screen.getByTestId("depeg-control-board").textContent).toContain("pending rows 1");
     expect(screen.queryByTestId("feed-Active Incidents")).toBeNull();
-    expect(screen.getByTestId("feed-Recent Depeg Events").textContent).toBe("1");
+    expect(screen.getByTestId("feed-Recent resolved detections").textContent).toBe("1");
     expect(screen.queryByTestId("pending-incidents")).toBeNull();
     expect(screen.getByTestId("depeg-resolver")).toBeTruthy();
-    expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
     expect(screen.getByTestId("freshness-notices").textContent).toContain("Depeg Resolver");
+
+    // The hero is the route's only owner of these figures, so the client has to
+    // hand it the logo map (the radar draws coin marks from it), the active-depeg
+    // id set behind the halos, and both scoped counts. A dropped prop here is
+    // invisible on the page until a mark or a number silently disappears.
+    const hero = screen.getByTestId("depeg-hero");
+    expect(hero.dataset.hasLogos).toBe("true");
+    expect(hero.dataset.activeIds).toBe("coin-b");
+    expect(hero.dataset.pending).toBe("1");
+    expect(hero.dataset.alerts).toBe("0");
+
+    // The reviewer's ledger is disclosure-gated for DOM weight, while its
+    // headline accuracy is a hero figure, so the query stays eager and its
+    // freshness entry is always present.
+    expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
     expect(screen.getByTestId("freshness-notices").textContent).toContain("DDR Reviewer");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show how these forecasts scored" }));
+
+    expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
   });
 
   it("does not fetch or render DDR freshness when the rollback flag is disabled", () => {

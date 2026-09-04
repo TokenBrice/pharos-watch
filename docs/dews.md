@@ -276,7 +276,7 @@ Repair modes:
 | ------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
 | `DEWSBadge`   | `src/components/dews-badge.tsx`   | Table rows (hidden when CALM)                                                         |
 | `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
-| `DEWSSummary` | `src/components/dews-summary.tsx` | Depeg-page hero radar; title-level contextual methodology hint                         |
+| `DEWSRadarPanel` | `src/components/dews-summary.tsx` | Embedded in the `/depeg/` hero (`DepegOutlookHero`), which supplies the heading and contextual methodology hint |
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/api-hooks.ts`
 
@@ -284,13 +284,13 @@ Repair modes:
 
 **Design tokens:** `--dews-calm` through `--dews-danger`, plus radar contrast tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`, `--dews-radar-band-ring-opacity`, `--dews-radar-outer-ring-opacity`, `--dews-radar-calm-dot-bloom`, `--dews-radar-calm-dot-core`) in `src/styles/tokens/semantic.css`
 
-### Radar Layout (`DEWSSummary`)
+### Radar Layout (`DEWSRadarPanel`)
 
 The radar is center-is-danger: higher threat bands occupy inner rings, CALM coins form an ambient starfield at the periphery.
 
 | Zone           | Radius range | Description                                                                     |
 | -------------- | ------------ | ------------------------------------------------------------------------------- |
-| Center label   | r 0–38       | `SCANNING` status label + total monitored count                                 |
+| Center label   | r 0–38       | `SCANNING` status label + total DEWS-covered count                              |
 | DANGER         | r 45–90      | Innermost elevated ring                                                         |
 | WARNING        | r 95–140     |                                                                                 |
 | ALERT          | r 143–175    |                                                                                 |

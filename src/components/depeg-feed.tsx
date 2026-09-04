@@ -99,12 +99,12 @@ export function DepegFeed({
 
   return (
     <div className="pharos-card-shell flex flex-col p-4">
-      <h2 className="pharos-kicker pb-3">
+      <h2 className="pharos-section-title pb-3">
         {title}
       </h2>
       <div className="flex-1 overflow-y-auto grid grid-cols-1 items-start gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
         {events.length === 0 ? (
-          <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-3 text-sm text-emerald-700 dark:text-emerald-400 lg:col-span-3">
+          <p className="pharos-empty-note lg:col-span-3">
             {emptyMessage}
           </p>
         ) : visible.map((evt) => {

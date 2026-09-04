@@ -20,9 +20,9 @@ function readDepegEventEntries(): readonly DepegEventEntry[] {
 }
 
 /**
- * Every generated event page is linked from the archive, listed in the sitemap,
- * and served `index,follow` — the static page set and the indexable set are the
- * same set by construction (`selectStaticDepegEventPages`).
+ * Every generated event page is linked from `/depeg/archive/`, listed in the
+ * sitemap, and served `index,follow` — the static page set and the indexable
+ * set are the same set by construction (`selectStaticDepegEventPages`).
  */
 export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = selectStaticDepegEventPages(readDepegEventEntries());
 
