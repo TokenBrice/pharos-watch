@@ -155,11 +155,15 @@ Unrelated query parameters are preserved by the shared hook.
 
 ## Forecast Grading
 
-`DepegResolverReviewerModule` is accountability content, not incident response, so its full ledger
-sits behind a disclosure and mounts only when opened — that keeps roughly 1,300px and its DOM out of
-the default route. Its **query is not gated**: the hero's forecast track record reads
-`summary.headline` from the same response, so the payload is needed on first paint regardless. Its
-freshness entry and error therefore always join the route-level notices.
+`DepegResolverReviewerModule` renders **open by default**, directly under the worklist it grades, in
+a `#forecast-grading` section. Its control collapses roughly 1,300px of ledger for a reader heading
+to the board, and the collapsed state unmounts the module rather than hiding it, so the DOM cost
+goes with it. It was previously collapsed by default and placed after the history handoff; readers
+could not find it, which is the failure this placement fixes.
+
+Its **query is not gated**: the hero's forecast track record reads `summary.headline` from the same
+response, so the payload is needed on first paint regardless. Its freshness entry and error
+therefore always join the route-level notices.
 
 ---
 

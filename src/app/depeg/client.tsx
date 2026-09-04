@@ -77,10 +77,10 @@ export function DepegClient() {
     const timer = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
     return () => clearInterval(timer);
   }, []);
-  // The reviewer's full ledger is heavy DOM, so the module stays behind a
-  // disclosure. Its headline accuracy is a hero figure, so the query itself is
-  // not gated.
-  const [gradingOpen, setGradingOpen] = useState(false);
+  // The grading ledger renders open: it is the accountability half of the
+  // forecast story and readers went looking for it. The control stays so a
+  // reader scanning to the board can collapse ~1,300px of ledger out of the way.
+  const [gradingOpen, setGradingOpen] = useState(true);
   const {
     data: pegData,
     isLoading: isPegLoading,

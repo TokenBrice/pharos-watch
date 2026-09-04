@@ -247,15 +247,15 @@ describe("DepegClient", () => {
     expect(hero.dataset.pending).toBe("1");
     expect(hero.dataset.alerts).toBe("0");
 
-    // The reviewer's ledger is disclosure-gated for DOM weight, while its
-    // headline accuracy is a hero figure, so the query stays eager and its
-    // freshness entry is always present.
-    expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
+    // Grading renders with the forecasts it grades, and its freshness entry is
+    // always present because the hero reads the same response. The control only
+    // collapses it back out of the way.
+    expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
     expect(screen.getByTestId("freshness-notices").textContent).toContain("DDR Reviewer");
 
-    fireEvent.click(screen.getByRole("button", { name: "Show forecast grading · DDRR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide forecast grading · DDRR" }));
 
-    expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
+    expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
   });
 
   it("does not fetch or render DDR freshness when the rollback flag is disabled", () => {
