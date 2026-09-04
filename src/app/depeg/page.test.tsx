@@ -75,7 +75,7 @@ describe("DepegArchivePage", () => {
 
   it("publishes canonical archive metadata", () => {
     expect(archiveMetadata.alternates?.canonical).toBe("/depeg/archive/");
-    expect(archiveMetadata.title).toBe("Depeg Event Archive");
+    expect(archiveMetadata.title).toBe("Stablecoin Depeg Event Archive | Pharos");
     expect(archiveMetadata.description).toBeTruthy();
   });
 });
