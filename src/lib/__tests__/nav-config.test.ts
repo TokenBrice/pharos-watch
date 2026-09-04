@@ -117,6 +117,17 @@ describe("nav-config", () => {
     }
   });
 
+  it("keeps every menu description to a single rendered line", () => {
+    // The section panels are `w-[19rem]` with a 244px text column at
+    // `text-xs`; measured in the browser, 40 characters is the last width
+    // that still renders on one line. Two-line rows are what made the panels
+    // tall and slow to scan, so the budget is a test, not a convention.
+    for (const item of NAV_ITEMS) {
+      expect(item.description ?? "", item.label).toBeTruthy();
+      expect((item.description ?? "").length, item.label).toBeLessThanOrEqual(40);
+    }
+  });
+
   it("opens the mobile drawer as labeled headers now that the rail carries the hot routes", () => {
     expect(DEFAULT_EXPANDED).toEqual({
       markets: false,

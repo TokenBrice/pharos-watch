@@ -56,9 +56,11 @@ const UNAVAILABLE_STATUS_MENU = {
 
 /**
  * Single menu row. Section menus render the authored `description` on a second
- * line — the copy already exists in nav-config and is what turns DDR, DEWS, and
- * FreezeWatch from jargon into a decision. The `More` columns stay single-line
- * so three columns of tail routes fit one panel.
+ * line: the copy is what turns DDR, DEWS, and FreezeWatch from jargon into a
+ * decision. Every description is written to fit that line at this panel width
+ * (see the budget test in `nav-config.test.ts`), so a row is a fixed two-line
+ * block and the panel scans as an even column. The `More` columns drop the
+ * description entirely so three columns of tail routes fit one panel.
  */
 function NavMenuItem({
   item,

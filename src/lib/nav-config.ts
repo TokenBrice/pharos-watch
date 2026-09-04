@@ -84,35 +84,35 @@ const DASHBOARD_NAV_ITEM: NavItem = {
   href: "/",
   label: "Dashboard",
   icon: LayoutDashboard,
-  description: "Live triage surface for market stress, rankings, and first-pass research",
+  description: "Market stress, rankings, and triage",
 };
 
 const STABILITY_INDEX_NAV_ITEM: NavItem = {
   href: "/stability-index/",
   label: "Stability Index",
   icon: LighthouseIcon,
-  description: "Market-regime read for the stablecoin system",
+  description: "Market-regime read for stablecoins",
 };
 
 const SAFETY_SCORES_NAV_ITEM: NavItem = {
   href: "/safety-scores/",
   label: "Safety Scores",
   icon: ShieldCheck,
-  description: "Cross-market safety grades and contagion scenarios",
+  description: "Safety grades and contagion scenarios",
 };
 
 const YIELD_NAV_ITEM: NavItem = {
   href: "/yield/",
   label: "Yield Intelligence",
   icon: CircleDollarSign,
-  description: "Yield ranked after adjusting for stablecoin risk",
+  description: "Yield ranked after adjusting for risk",
 };
 
 const DEPEG_NAV_ITEM: NavItem = {
   href: "/depeg/",
   label: "Depeg & Recovery",
   icon: Activity,
-  description: "Live peg incidents, DEWS early warnings, DDR recovery outlooks, and reviews",
+  description: "Live peg incidents and recovery outlooks",
 };
 
 /**
@@ -141,36 +141,36 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     key: "learn",
     label: "Learn",
     items: [
-      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Stablecoin mechanisms, case studies, and glossary definitions" },
-      { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each stablecoin design produces its peg" },
-      { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Long-form retrospectives of major depegs and failures" },
-      { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined and version-pinned" },
+      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Mechanisms, case studies, and glossary" },
+      { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg" },
+      { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs" },
+      { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined" },
     ],
   },
   {
     key: "updates",
     label: "Updates",
     items: [
-      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
-      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
-      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and feature updates" },
-      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the story of Pharos" },
-      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "PharosWatchBot push alerts for depegs, DEWS shifts, launches, and the daily digest" },
+      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market" },
+      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change" },
+      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
+      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
+      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches" },
     ],
   },
   {
     key: "pharos",
     label: "Pharos",
     items: [
-      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
-      { href: "/about/", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
-      { href: "/api/", label: "API Access", icon: KeyRound, description: "Request a public API key and open the endpoint reference" },
-      { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline and cron sync" },
+      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions" },
+      { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists" },
+      { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference" },
+      { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
       {
         href: "https://pharosville.pharos.watch/",
         label: "PharosVille",
         icon: Ship,
-        description: "The stablecoin universe as a working harbor — DEWS zones at a glance",
+        description: "The stablecoin universe as a harbor",
         external: true,
       },
     ],
@@ -184,11 +184,11 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       STABILITY_INDEX_NAV_ITEM,
       YIELD_NAV_ITEM,
-      { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and market support" },
-      { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
-      { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
-      { href: "/alt-pegs/", label: "Non-USD Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
-      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
+      { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and peg support" },
+      { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Mint and burn pressure by chain" },
+      { href: "/chains/", label: "Chains", icon: Layers, description: "Stablecoin share and health by chain" },
+      { href: "/alt-pegs/", label: "Non-USD Pegs", icon: Globe, description: "Market structure beyond the dollar" },
+      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch dates" },
     ],
   },
   {
@@ -197,20 +197,20 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       SAFETY_SCORES_NAV_ITEM,
       DEPEG_NAV_ITEM,
-      { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
-      { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA authorization and GENIUS implementation status across tracked stablecoins" },
-      { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
-      { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
+      { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer power to freeze your balance" },
+      { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA and GENIUS status, coin by coin" },
+      { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph of upstream risk" },
+      { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and their lessons" },
     ],
   },
   {
     key: "tools",
     label: "Tools",
     items: [
-      { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Multi-axis filter across every tracked stablecoin" },
-      { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
-      { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
-      { href: "/stablecoins/", label: "Stablecoin Directory", icon: Coins, description: "Every tracked stablecoin, browsable by peg, backing, governance, and infrastructure" },
+      { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Filter every stablecoin on any axis" },
+      { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Peer sets and substitutes side by side" },
+      { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Your holdings as one stablecoin book" },
+      { href: "/stablecoins/", label: "Stablecoin Directory", icon: Coins, description: "Browse every tracked stablecoin" },
     ],
   },
   {
@@ -251,7 +251,7 @@ export const DEFAULT_EXPANDED: Record<string, boolean> = {
 
 /** Bottom items (always shown at sidebar bottom) */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
-  { href: "/start/", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
+  { href: "/start/", label: "Start Here", icon: Compass, description: "The fastest way into Pharos" },
 ];
 
 /**
