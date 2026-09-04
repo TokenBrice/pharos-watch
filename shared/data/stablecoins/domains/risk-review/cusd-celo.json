@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDm has one canonical native issuance route on Celo. The Celo-to-Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. Klaytn remains an opaque unresolved route and is not used to infer any controller for the verified routes.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex cusd-celo bridge-route boundary migration",
+    "summary": "USDm has one canonical native issuance route on Celo. The Celo-to-Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. The legacy Klaytn oCUSD route is now re-read through Kaia's replacement public RPC, but its Orbit controller and route-state authority remain unresolved.",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "Codex Kaia oCUSD route-controller refresh",
     "confidence": "verified",
     "protocols": [
       {
@@ -296,13 +296,21 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "At Klaytn block 224722493 on 2026-08-16, the Orbit Bridge oCUSD representation had supply 5.52022037288, but owner(), minter(), and isMinter(address) probes reverted. Orbit Bridge has been defunct since its December 2023 exploit; the exact residual controller and route state remain unresolved, so no controller is inferred by analogy.",
+        "reviewNote": "Re-read at Kaia block 226318240 on 2026-09-04 through the official replacement RPC for the discontinued Klaytn endpoint. The legacy Orbit representation 0x08745bee17026ed2e0e39a98f81189b9e14ab1b3 returned name()='Orbit Bridge Klaytn CUSD', symbol()='oCUSD', decimals()=18, and totalSupply()=5.52022037288. owner(), minter(), paused(), isMinter(address), admin(), and masterMinter() all reverted; Orbit Bridge has been defunct since its December 2023 exploit. The current token identity and residual supply are therefore evidenced, but no controller, route-liability boundary, or admissible delisting/zero-supply fact is established, so no controller is inferred by analogy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 224722493,
+        "observedAt": "2026-09-04",
+        "observedBlock": 226318240,
         "sources": [
           {
-            "label": "Klaytnscope oCUSD token",
+            "label": "Kaia public JSON-RPC endpoint documentation",
+            "url": "https://docs.kaia.io/references/public-en/"
+          },
+          {
+            "label": "Kaia Foundation JSON-RPC fixed route read",
+            "url": "https://public-en.node.kaia.io"
+          },
+          {
+            "label": "Klaytnscope oCUSD token (legacy explorer reference)",
             "url": "https://klaytnscope.com/token/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3"
           },
           {

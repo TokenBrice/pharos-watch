@@ -368,6 +368,13 @@
         "smart-contract"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "VELO (locked veNFT #4976)",
+      "pct": 0.1,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Velodrome Finance"
     }
   ],
   "reserveReview": {
@@ -394,9 +401,13 @@
       {
         "label": "Fraxtal block 39699558",
         "url": "https://fraxscan.com/block/39699558"
+      },
+      {
+        "label": "Velodrome Finance tokenomics (published 2023-06-22)",
+        "url": "https://docs.velodrome.finance/tokenomics"
       }
     ],
-    "rationale": "Reconciled to the live Frax balance-sheet adapter snapshot fetched on 2026-08-12. The reviewed scaffold mirrors all 26 captured adapter names and one-decimal weights exactly. Every displayed source symbol is now joined to a reviewed classification; WBNB is retained as its dedicated 0.1% cryptoasset slice and no residual displayed bucket remains.",
+    "rationale": "Reconciled to the live Frax balance-sheet adapter snapshot fetched on 2026-08-12. The reviewed scaffold mirrors the 26 adapter names and one-decimal weights captured on that date. Every displayed source symbol in that review is joined to a reviewed classification; WBNB is retained as its dedicated 0.1% cryptoasset slice and no residual displayed bucket remains. The current producer also reports the exact row \"VELO (locked veNFT #4976)\". The 2023-06-22 Velodrome Finance tokenomics page identifies VELO's vote-escrowed veVELO as a governance position, so the row is classified as a Velodrome Finance protocol-position. The adapter's very-high risk value is retained, while no liquidity horizon or risk-factor detail is added because the source does not publish those terms.",
     "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
     "compositionAsOf": "2026-08-12",
     "scope": "full-composition",

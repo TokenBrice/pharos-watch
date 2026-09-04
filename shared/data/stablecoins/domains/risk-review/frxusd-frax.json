@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "frxUSD has native issuance on Ethereum and Fraxtal, Fraxtal canonical-side lockbox and L2 bridge machinery, and established LayerZero/FraxZero OFT representations on other chains. The reviewed cross-chain routes depend on external messaging, endpoint configuration, peer/DVN/rate-limit settings, and lock/mint or burn/mint contracts outside issuer-native redemption, so Pharos scores the overall route as external lock/mint. The Tempo deployment is retained but fail-closed as unresolved because its native-versus-bridge architecture and production status are not reconciled by the reviewed primary sources.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary FIX2-07",
+    "summary": "frxUSD has native issuance on Ethereum and Fraxtal, Fraxtal canonical-side lockbox and L2 bridge machinery, and established LayerZero/FraxZero OFT representations on other chains. The reviewed cross-chain routes depend on external messaging, endpoint configuration, peer/DVN/rate-limit settings, and lock/mint or burn/mint contracts outside issuer-native redemption, so Pharos scores the overall route as external lock/mint. The Tempo deployment is now reviewed as a FraxOFTMintableAdapterTIP20 bridge representation; the conflicting Tempo architecture-page status is retained as an evidence note rather than silently resolved.",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "Codex Tempo frxUSD route-controller refresh",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -945,40 +945,109 @@
       },
       {
         "id": "tempo:0x20c0000000000000000000003554d28269e0f3c2",
+        "sourceChain": "ethereum",
         "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x20c0000000000000000000003554d28269e0f3c2",
-        "protocol": "Frax (Tempo TIP-20)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Tempo frxUSD is live at the observed TIP-20 address and exposes Frax USD metadata, but its classification is fail-closed. Frax's current Tempo architecture documents FraxOFTMintableAdapterTIP20, FraxOFTUpgradeableTempo, LayerZero, supply-tracking, and a Mainnet (Presto) status of Coming Soon, while a separate Frax project update reports a Tempo mainnet launch. The reviewed evidence therefore does not establish whether this address is a canonical native issuance route, a bridge representation, or a staged deployment; no native mint authority or bridge controller is inferred.",
+        "protocol": "FraxOFTMintableAdapterTIP20",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Tempo block 37947940 on 2026-09-04, the TIP-20 route token 0x20c0000000000000000000003554d28269e0f3c2 returned name()='Frax USD', symbol()='frxUSD', decimals()=6, paused()=false, transferPolicyId()=5, supplyCap()=2^128-1, and totalSupply()=44.527234. Frax's current cross-chain addresses page names the Tempo TIP-20 and the Tempo FraxOFTMintableAdapterTIP20 at 0x00000000d61733e7a393a10a5b48c311abe8f1e5; the adapter token() returned this TIP-20 address, endpoint() returned 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, and owner() returned Frax Tempo Safe 0x1ba19a54a01ae967f5e3895764caaa6919fd2bee. The adapter and FrxUSDPolicyAdminTempo (0x766c2bd9c6ddc5bee9acd7d4c8add5b969952969, policyId 5) share that Safe owner; the Safe read returned a 3-of-6 threshold. EIP-1967 implementation/admin slots were observed for both proxies. TIP-20's pause/policy controls and the adapter's bridge mint/burn are therefore bridge-route controls, not a native issuer-mint claim. The Tempo architecture page still says Mainnet (Presto) Coming Soon while the addresses page publishes these live contracts; that source disagreement is retained.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 35101154,
+        "observedAt": "2026-09-04",
+        "observedBlock": 37947940,
+        "controllerChain": "tempo",
+        "controllerAddress": "0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:tempo:0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+          "contract:tempo:0x20c0000000000000000000003554d28269e0f3c2",
+          "contract:tempo:0x766c2bd9c6ddc5bee9acd7d4c8add5b969952969"
+        ],
         "sources": [
+          {
+            "label": "Frax cross-chain addresses",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
           {
             "label": "Frax Tempo cross-chain architecture",
             "url": "https://docs.frax.com/protocol/crosschain/tempo"
           },
           {
-            "label": "Frax Tempo project update",
-            "url": "https://news.frax.com/p/frax-finance-biweekly-project-update-b19"
+            "label": "Tempo TIP-20 specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
           },
           {
-            "label": "frxUSD on the Tempo explorer (supply probed 2026-08-16)",
-            "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000003554d28269e0f3c2"
-          },
-          {
-            "label": "Tempo RPC",
+            "label": "Tempo JSON-RPC fixed route/controller read",
             "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "frxUSD on the Tempo explorer",
+            "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000003554d28269e0f3c2"
           }
         ]
       }
     ],
     "controls": [
+      {
+        "id": "tempo-frxusd-mintable-adapter",
+        "label": "Tempo frxUSD FraxOFTMintableAdapterTIP20",
+        "routeRefs": [
+          "tempo:0x20c0000000000000000000003554d28269e0f3c2"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "tempo",
+        "controllerAddress": "0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+        "authorityType": "contract",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:tempo:0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+          "contract:tempo:0x20c0000000000000000000003554d28269e0f3c2",
+          "contract:tempo:0x766c2bd9c6ddc5bee9acd7d4c8add5b969952969"
+        ],
+        "capDescription": "The FraxOFTMintableAdapterTIP20 is the Tempo bridge mint/burn adapter for the TIP-20 frxUSD route. Frax's addresses page describes the mintable adapter as a lockbox that holds no running reserve balance; its owner-controlled configuration is separate from TIP-20 policy and role controls.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "Frax documents the Tempo adapter as a mint/burn lockbox with no running balance; this is an external bridge representation and is not treated as native frxUSD reserve custody.",
+          "trustedPeerOrRemote": "The adapter endpoint is 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c; peer, DVN, and enforced-option configuration were not independently decoded.",
+          "rateLimits": "The adapter's rate-limit and supply-accounting configuration were not independently decoded.",
+          "pausersAdminsUpgraders": "At Tempo block 37947940, adapter owner() and FrxUSDPolicyAdminTempo owner() both returned Frax Tempo Safe 0x1ba19a54a01ae967f5e3895764caaa6919fd2bee; getThreshold() returned 3 and getOwners() returned six owners. The TIP-20 route returned paused()=false and transferPolicyId()=5. Proxy admin ownership and TIP-20 issuer-role holders were not enumerated."
+        },
+        "observedAt": "2026-09-04",
+        "observedBlock": 37947940,
+        "sources": [
+          {
+            "label": "Frax cross-chain addresses",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Frax Tempo cross-chain architecture",
+            "url": "https://docs.frax.com/protocol/crosschain/tempo"
+          },
+          {
+            "label": "Tempo TIP-20 specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo JSON-RPC fixed route/controller read",
+            "url": "https://rpc.tempo.xyz"
+          }
+        ],
+        "evidence": "At Tempo block 37947940 on 2026-09-04, adapter 0x00000000d61733e7a393a10a5b48c311abe8f1e5 returned token()=0x20c0000000000000000000003554d28269e0f3c2, endpoint()=0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, and owner()=0x1ba19a54a01ae967f5e3895764caaa6919fd2bee. The linked TIP-20 returned name()='Frax USD', symbol()='frxUSD', decimals()=6, paused()=false, transferPolicyId()=5, and totalSupply()=44.527234; the policy admin 0x766c2bd9c6ddc5bee9acd7d4c8add5b969952969 returned the same Safe owner and policyId()=5. EIP-1967 implementation/admin slots were read for adapter and policy proxies. The Tempo architecture page says Mainnet (Presto) Coming Soon, while the addresses page publishes these live contracts; the disagreement remains recorded."
+      },
       {
         "id": "ethereum-frxusd-fraxtal-lockbox",
         "label": "Ethereum frxUSD/Fraxtal canonical lockbox",

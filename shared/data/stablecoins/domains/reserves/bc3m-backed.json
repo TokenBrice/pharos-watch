@@ -2,7 +2,7 @@
   "id": "bc3m-backed",
   "reserves": [
     {
-      "name": "Amundi C3M 0-6 month Eurozone government-bill ETF shares",
+      "name": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares",
       "pct": 100,
       "risk": "low",
       "assetClass": "fund-share",
@@ -29,7 +29,7 @@
         "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
       }
     ],
-    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings.",
+    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. The live chainlink-por adapter emits the source's exact assetLabel \"AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares\"; the reviewed sidecar preserves that identity and classifies it as one fund-share position with Amundi as issuer/obligor. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings.",
     "compositionBasis": "Backed bC3M product disclosure and Chainlink/The Network Firm reserve proof",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
@@ -38,7 +38,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Amundi C3M 0-6 month Eurozone government-bill ETF shares",
+        "reserveName": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The reserve is a regulated ETF share rather than another tracked stablecoin."

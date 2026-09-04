@@ -272,8 +272,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "USDX has a native Kava x/cdp issuance surface and one authored Osmosis ICS-20 IBC representation. The native kava/usdx module denom is retained as reviewed issuance evidence but cannot be authored as a contracts[] EVM deployment, so no native route row or Mint Authority deployment reference is claimed. The Kava transfer/channel-1 to Osmosis transfer/channel-143 route identity, denom trace, and escrow derivation are verified; the Osmosis transfer module is the voucher bridge-mint path, but the derived Kava escrow balance was empty while Osmosis reported 679,033,913 voucher units. The route is therefore held for manual bridge-accounting review and is not treated as a conservatively reconciled 1:1 route; no token-level bridge admin or Safe is evidenced.",
-    "reviewedAt": "2026-08-17",
+    "summary": "USDX has a native Kava x/cdp issuance surface observed on-chain and one authored Osmosis ICS-20 IBC representation. The observed native Kava issuance cannot currently be authored in the catalog: CHAIN_META.kava is type \"evm\" and both contracts[] and tradedContracts require a 0x...40 EVM address, so only the reviewed Osmosis voucher is represented as an authored deployment. At Kava height 22415285 on 2026-09-04, usdx supply was 10,013,573.129816 units and the derived ICS-20 escrow address held zero usdx; at Osmosis height 69885664, the tracked voucher supply was 707,818,078 base units. The route remains open for packet-history and keeper-accounting review, not as a conservatively reconciled 1:1 claim.",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Codex bridge route review; migration FIX2-14",
     "confidence": "manual-review",
     "protocols": [
@@ -291,6 +291,10 @@
       {
         "label": "Kava latest block",
         "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
+      },
+      {
+        "label": "Kava USDX escrow balance at height 22415285",
+        "url": "https://api.data.kava.io/cosmos/bank/v1beta1/balances/kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y/by_denom?denom=usdx"
       },
       {
         "label": "Kava IBC channel inventory",
@@ -327,7 +331,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The official Osmosis denom trace resolves the tracked hash to path transfer/channel-143 and base_denom usdx; Kava's official channel inventory reports transfer/channel-1 OPEN with that Osmosis counterparty. The route identity and ICS-20 lock/mint semantics are verified, but accounting remains manual-review: the derived Kava channel-1 escrow address had no reported balance while Osmosis reported 679,033,913 voucher units at block 68689813. Do not treat the route as a conservatively reconciled 1:1 representation until Kava keeper escrow state and packet history explain the difference.",
+        "reviewNote": "The official Osmosis denom trace resolves the tracked hash to path transfer/channel-143 and base_denom usdx; Kava's official channel inventory reports transfer/channel-1 OPEN with that Osmosis counterparty. The route identity and ICS-20 lock/mint semantics are verified, but accounting remains manual-review: the derived Kava channel-1 escrow address held 0 usdx at Kava height 22415285 while Osmosis reported 707,818,078 voucher base units at height 69885664. Do not treat the route as a conservatively reconciled 1:1 representation until Kava keeper escrow state and packet history explain the difference.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:ibc-ics20",
@@ -336,8 +340,8 @@
           "light-client:kava-osmosis",
           "escrow:kava:kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y"
         ],
-        "observedAt": "2026-08-17",
-        "observedBlock": 68689813,
+        "observedAt": "2026-09-04",
+        "observedBlock": 69885664,
         "sources": [
           {
             "label": "Osmosis IBC denom trace",
@@ -378,11 +382,11 @@
         ],
         "authorityType": "contract",
         "routeChecks": {
-          "lockboxOrEscrow": "Official ibc-go ICS-20 derivation from ics20-1, NUL, and transfer/channel-1 gives kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y. The live Kava bank query returned no usdx balance for that address at block 22144079, while Osmosis reported 679033913 tracked-voucher units at block 68689813; Kava keeper escrow state and packet history remain unverified.",
-          "onchainAmountBounds": "The Osmosis voucher supply observation is 679033913 base units at block 68689813; it is not treated as a reconciled 1:1 claim against Kava source escrow."
+          "lockboxOrEscrow": "Official ibc-go ICS-20 derivation from ics20-1, NUL, and transfer/channel-1 gives kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y. The live Kava bank query returned 0 usdx at height 22415285, while Osmosis reported 707818078 tracked-voucher units at height 69885664; Kava keeper escrow state and packet history remain unverified.",
+          "onchainAmountBounds": "The Osmosis voucher supply observation is 707818078 base units at height 69885664; it is not treated as a reconciled 1:1 claim against Kava source escrow."
         },
-        "observedAt": "2026-08-17",
-        "observedBlock": 22144079,
+        "observedAt": "2026-09-04",
+        "observedBlock": 22415285,
         "sources": [
           {
             "label": "IBC-go ICS-20 escrow derivation",
@@ -393,11 +397,15 @@
             "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
           },
           {
+            "label": "Kava USDX escrow balance at height 22415285",
+            "url": "https://api.data.kava.io/cosmos/bank/v1beta1/balances/kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y/by_denom?denom=usdx"
+          },
+          {
             "label": "Osmosis USDX voucher supply",
             "url": "https://lcd.osmosis.zone/cosmos/bank/v1beta1/supply/by_denom?denom=ibc%2FC78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
           }
         ],
-        "evidence": "The ICS-20 source-side escrow address derived from Kava transfer/channel-1 is kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y. At Kava block 22144079 the live bank query returned no usdx balance for that address, while the Osmosis bank supply query at block 68689813 reported 679033913 units of the tracked voucher. This control preserves the escrow accounting exposure without asserting that the discrepancy is a bridge failure or that the route is 1:1 backed."
+        "evidence": "The ICS-20 source-side escrow address derived from Kava transfer/channel-1 is kava1ydj44xvukx0u02wyseql99dkqszs2ypxn6sf3y. At Kava height 22415285 on 2026-09-04 the live bank query returned 0 usdx, while the Osmosis bank supply query at height 69885664 reported 707818078 units of the tracked voucher. This control preserves the escrow accounting exposure without asserting that the discrepancy is a bridge failure or that the route is 1:1 backed."
       },
       {
         "id": "usdx-kava-ics20-destination-mint-module",
@@ -415,13 +423,14 @@
           "channel:kava:transfer/channel-1",
           "channel:osmosis:transfer/channel-143"
         ],
-        "authorityType": "unknown",
+        "controllerAddress": "osmo1yl6hdjhmkf37639730gffanpzndzdpmhxy9ep3",
+        "authorityType": "contract",
         "routeChecks": {
-          "onchainAmountBounds": "Osmosis ibc-go ICS-20 OnRecvPacket mints the destination voucher through the transfer module's BankKeeper.MintCoins path; the source-side lock/escrow accounting and packet/ack history that should constrain the route remain unverified.",
-          "unsupportedReason": "The Osmosis LCD exposes the transfer module account with minter/burner permissions but omits an address, and no separate token-level bridge minter or administrator is evidenced."
+          "onchainAmountBounds": "Osmosis ibc-go ICS-20 OnRecvPacket mints the destination voucher through the transfer module's BankKeeper.MintCoins path. The official Osmosis module-account read identifies transfer at osmo1yl6hdjhmkf37639730gffanpzndzdpmhxy9ep3 with minter/burner permissions; source-side lock/escrow accounting and packet/ack history remain unverified.",
+          "unsupportedReason": "The transfer module account is the system bridge-mint identity; no separate token-level bridge administrator is evidenced, and the conservation bound remains the Kava escrow plus IBC packet state."
         },
-        "observedAt": "2026-08-17",
-        "observedBlock": 68689813,
+        "observedAt": "2026-09-04",
+        "observedBlock": 69885664,
         "sources": [
           {
             "label": "ibc-go ICS-20 relay source",
@@ -436,7 +445,7 @@
             "url": "https://lcd.osmosis.zone/cosmos/base/tendermint/v1beta1/blocks/latest"
           }
         ],
-        "evidence": "The official ibc-go ICS-20 receive path calls BankKeeper.MintCoins with the transfer module name before sending the voucher to the receiver. Osmosis module-account data identifies transfer as a minter/burner module account, but the API omits its address. This is the real bridge-mint path for the Osmosis representation; its address-level controller and packet-level conservation state remain evidence gaps."
+        "evidence": "The official ibc-go ICS-20 receive path calls BankKeeper.MintCoins with the transfer module name before sending the voucher to the receiver. The current Osmosis module-account response identifies transfer at osmo1yl6hdjhmkf37639730gffanpzndzdpmhxy9ep3 as a minter/burner module account. This is the real bridge-mint identity for the Osmosis representation; source-side escrow and packet-level conservation remain open."
       },
       {
         "id": "usdx-kava-ics20-light-client-channel",
@@ -454,13 +463,13 @@
           "channel:kava:transfer/channel-1",
           "channel:osmosis:transfer/channel-143"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "routeChecks": {
-          "trustedPeerOrRemote": "Kava's official channel inventory reports transfer/channel-1 OPEN with counterparty transfer/channel-143 on Osmosis. Packet authenticity and finality depend on the Kava/Osmosis IBC light-client, validator, connection, and channel state.",
-          "unsupportedReason": "No single token-level bridge administrator, validator multisig, or Safe is evidenced for standard Cosmos IBC/ICS-20. Current client consensus state and packet/ack history were not independently enumerated."
+          "trustedPeerOrRemote": "Kava's official channel inventory reports transfer/channel-1 OPEN with counterparty transfer/channel-143 on Osmosis. Packet authenticity and finality depend on the Kava/Osmosis IBC light-client and validator consensus state.",
+          "unsupportedReason": "Standard Cosmos IBC/ICS-20 has no token-level administrator or fixed validator multisig; its control identity is the rotating validator/light-client consensus. Current client consensus state and packet/ack history were not independently enumerated."
         },
-        "observedAt": "2026-08-17",
-        "observedBlock": 22144079,
+        "observedAt": "2026-09-04",
+        "observedBlock": 22415285,
         "sources": [
           {
             "label": "Kava IBC channel inventory",
@@ -475,7 +484,7 @@
             "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
           }
         ],
-        "evidence": "The verified route depends on standard IBC light-client and validator finality across Kava and Osmosis, plus the live channel/connection/peer state for Kava transfer/channel-1 and Osmosis transfer/channel-143. The route has no evidenced issuer-controlled destination-token admin or Safe; the exact current client and packet state remains an evidence gap and is retained as manual-review risk."
+        "evidence": "The verified route depends on standard IBC light-client and validator finality across Kava and Osmosis, plus the live channel/connection/peer state for Kava transfer/channel-1 and Osmosis transfer/channel-143. The route's validator/light-client control identity is therefore represented as validator-quorum rather than an issuer-controlled token administrator; current packet conservation remains an evidence gap retained as manual-review risk."
       }
     ]
   }

@@ -23,19 +23,19 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Kinka whitepaper ver2 (re-opened 2026-07-31)",
+        "label": "Kinka whitepaper ver2 (re-opened 2026-07-31; retrieved 2026-09-04; dated 2024 document, no current composition date)",
         "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
       },
       {
-        "label": "Kinka terms of use ver1 (re-opened 2026-07-31)",
+        "label": "Kinka terms of use ver1 (re-opened 2026-07-31; retrieved 2026-09-04; last updated 2022-12-01, no current composition date)",
         "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
       },
       {
-        "label": "Kinka website product claims (re-opened 2026-07-31)",
+        "label": "Kinka website product claims (retrieved 2026-09-04; August 18, 2026 notice, no reserve composition date)",
         "url": "https://kinka-gold.com/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-31: the 2023 whitepaper still states each XNK equals one troy fine ounce of 99.99% Japanese-brand LBMA Good Delivery gold, stored in Loomis International warehouses, with 321.5 XNK minimum physical redemption; it also describes Gold Management (GM) custody and bankruptcy isolation. The 2022 Terms of Use independently restate the one-ounce gold backing, GM/storage-company redemption path, and transfer of bullion ownership to GM LLC. The live Kinka site continues to describe vaulted gold. No published bar-level inventory, dated independent XNK-specific reserve attestation, or redemption settlement SLA was found, so composition stays a single physical-gold slice at medium risk with liquidityHorizon unknown.",
+    "rationale": "Negative search 2026-09-04: the 2024 whitepaper and terms last updated December 1, 2022 state one-troy-ounce 99.99% Japanese-brand LBMA Good Delivery gold backing, Loomis/Gold Management custody, and physical redemption, but are static historical documents. The live Kinka site includes an August 18, 2026 delisting notice and continues to describe vaulted gold, yet publishes no reserve balance, bar-level inventory, or composition report date. No dated independent XNK-specific reserve attestation was found on the site or in the cited documents. The structured composition remains the single physical-gold slice at 100% with compositionAsOf 2026-07-31 and confidence probable; the undated current claim cannot be used to date-bump that composition.",
     "compositionBasis": "Kinka whitepaper and Terms of Use physical-gold backing and redemption disclosures, re-opened 2026-07-31",
     "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
