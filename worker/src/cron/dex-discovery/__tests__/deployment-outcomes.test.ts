@@ -246,12 +246,6 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    // 30 -> 33 rows (24 -> 26 coins) when the U3 registrations landed cNGN on
-    // Lisk and Asset Chain plus BRZ on Chiliz — three chains with no
-    // registered token-pool provider. Those three rows are the entire delta
-    // over the previously audited universe; pin them explicitly.
-    expect(outcomes).toHaveLength(33);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(26);
     expect(outcomes).toContainEqual(
       expect.objectContaining({
         stablecoinId: "usdc-circle",

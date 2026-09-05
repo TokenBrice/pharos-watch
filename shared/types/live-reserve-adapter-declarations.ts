@@ -592,6 +592,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "parked",
+      rationale: "The complete Lista GemJoin census contains positive unpriced assets and a non-unit-rate receipt that the branch adapter cannot value exactly. No active config is retained until every positive branch has a supported valuation path.",
+      parkedSince: "2026-09-05",
+      nextReview: "2026-10-05",
+    },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   "liquity-v1": declareAdapter("liquityV1", ONCHAIN_SINGLE_ASSET_V2),
