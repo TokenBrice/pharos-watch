@@ -93,8 +93,13 @@ export function accumulatePoolMetrics(
     (metric.chainTvl[pool.chain] ?? 0) + rawContribTvl;
 
   const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
+  // Preserve the native physical identity after a proven address/unique-token join.
+  // A two-token discovery row cannot dedupe a three-token Curve fingerprint.
+  const exactCurveAddress = enrichment.curveAddressMatch ? curveData?.poolAddress : undefined;
   metric.topPools.push({
-    poolId: isTrustworthyExactPoolId(pool.pool, pool.project)
+    poolId: exactCurveAddress
+      ? canonicalExitRouteAssetKey(chainNorm, exactCurveAddress)
+      : isTrustworthyExactPoolId(pool.pool, pool.project)
       ? canonicalExitRouteAssetKey(pool.chain, pool.pool)
       : (buildPoolFingerprint(
           chainNorm,

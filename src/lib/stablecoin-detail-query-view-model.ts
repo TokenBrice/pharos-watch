@@ -161,11 +161,21 @@ function staleQueryFrom<T>(
 export function buildDetailStaleQueries(
   queries: StablecoinDetailViewModelQueryInputs,
   supplemental: StablecoinDetailViewModelSupplementalInputs,
+  stablecoinId: string,
 ): StablecoinDetailStaleQuery[] {
+  const liquidity = staleQueryFrom("dexLiquidity", queries.dexLiquidity, (data) => Boolean(data));
+  const coinWarning = queries.dexLiquidity.data?.[stablecoinId]?.warning;
+  if (coinWarning !== undefined) {
+    // Older responses omit the field; keep their global advisory conservatively.
+    // Preserve the producer clock so a coin-scoped advisory never hides old data.
+    liquidity.meta = liquidity.meta?.updatedAt != null
+      ? { ...liquidity.meta, warning: coinWarning }
+      : coinWarning ? { status: "degraded", warning: coinWarning } : null;
+  }
   const result: StablecoinDetailStaleQuery[] = [
     staleQueryFrom("stablecoins", queries.stablecoinList, (data) => Boolean(data?.peggedAssets?.length)),
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => Boolean(data?.coins?.length)),
-    staleQueryFrom("dexLiquidity", queries.dexLiquidity, (data) => Boolean(data)),
+    liquidity,
     staleQueryFrom("reportCards", queries.reportCards, (data) => Boolean(data?.cards?.length)),
     staleQueryFrom("redemptionBackstops", queries.redemptionBackstops, (data) => Boolean(data?.coins)),
     staleQueryFrom("yieldRankings", supplemental.yieldRankings, (data) => Boolean(data)),

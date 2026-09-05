@@ -172,7 +172,7 @@ describe("FlowsPage", () => {
 
     const html = renderToStaticMarkup(<FlowsPage />);
 
-    expect(html).toContain("Live refresh is running behind");
+    expect(html).toContain("Refresh failed; showing saved data");
     expect(html).not.toContain("Showing an older snapshot");
   });
 

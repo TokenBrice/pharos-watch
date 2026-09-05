@@ -93,6 +93,8 @@ Endpoints backed by the cron cache include these additional headers:
 
 Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
 
+DEX liquidity keeps its dataset-wide advisory in `Warning` and also emits a nullable `warning` on each coin row. Coin-specific TVL cliffs or pool-count drops from an otherwise successful run apply only to affected coins; provider failures and unscoped findings remain global. The advisory comes from the latest liquidity producer outcome, excluding neutral/locked skips and hourly price-only runs that reuse the current liquidity generation. Coin detail consumers use the row advisory while retaining the producer timestamp for independent freshness checks; older responses without the field retain their global warning.
+
 ---
 
 ## Response Body Freshness (`_meta`)

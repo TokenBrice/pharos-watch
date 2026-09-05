@@ -15,6 +15,7 @@ interface CollateralizationCardProps {
   /** Live committed liquidation capital as a share of supply, when measured. */
   liveLiquidationCapacityRatio?: number | null;
   liveAtSec?: number | null;
+  liveFreshnessLabel?: string;
 }
 
 function formatRatioPct(ratio: number): string {
@@ -47,6 +48,7 @@ export function CollateralizationCard({
   liveRatio = null,
   liveLiquidationCapacityRatio = null,
   liveAtSec = null,
+  liveFreshnessLabel,
 }: CollateralizationCardProps) {
   const live = typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio >= 0 ? liveRatio : null;
   const liveBackstop =
@@ -68,9 +70,9 @@ export function CollateralizationCard({
   // meaning between coins, reading `Live · 3h ago` on USDT and BOLD but
   // `Reviewed <date>` on ZCHF for the same card.
   const freshness = hasLiveMetrics
-    ? liveAtSec != null
+    ? liveFreshnessLabel ?? (liveAtSec != null
       ? `Live · ${timeAgo(liveAtSec)}`
-      : "Live"
+      : "Live")
     : reviewed != null
       ? `Reviewed ${reviewed.reviewedAt}`
       : undefined;

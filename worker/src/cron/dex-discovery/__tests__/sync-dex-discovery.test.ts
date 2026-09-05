@@ -152,6 +152,14 @@ const db = makeNoopD1({
 });
 
 describe("syncDexDiscovery", () => {
+  it("prioritizes due supplemental refresh even when the weekly cohort is ineligible", async () => {
+    const refreshDb = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [
+      { stablecoin_id: "coin-b", pool_count: 20, chain_count: 4, has_supplemental_coverage: 1 },
+    ] }) }) });
+    await syncDexDiscovery(refreshDb, null);
+    expect(vi.mocked(crawlCoin).mock.calls[0]?.[1]).toBe("coin-b");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);

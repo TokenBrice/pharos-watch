@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
 import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
+import { formatReserveSnapshotLabel } from "@/components/stablecoin-detail/reserve-presentation";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
 import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
@@ -94,6 +95,7 @@ export function buildDetailSharedModules({
         liveRatio={liveCollateralizationRatio}
         liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
         liveAtSec={viewModel.reserves?.liveAt ?? null}
+        liveFreshnessLabel={viewModel.reserves ? formatReserveSnapshotLabel(viewModel.reserves) : undefined}
       />
     ),
     failureDomains: <FailureDomainsCard view={failureDomainsView} />,

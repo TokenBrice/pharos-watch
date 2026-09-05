@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -29,6 +30,7 @@ import {
   DEX_DISCOVERY_PER_COIN_BUDGET_MS,
   discoveryTargetCursorKey,
   selectDiscoveryTargetWindow,
+  estimateDiscoverySweepWindowCount,
 } from "./target-window";
 import {
   buildFailedCrawlDeploymentOutcomes,
@@ -39,17 +41,19 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
 
-export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";
+export type EffectiveTier = "refresh" | "t1" | "t2" | "t3" | "dormant" | "skip";
 
 interface LiquidityCoverageRow {
   stablecoin_id: string;
   pool_count: number | null;
   chain_count: number | null;
+  has_supplemental_coverage?: number;
 }
 
 interface DiscoveryCoverage {
   poolCount: number;
   chainCount: number;
+  hasSupplementalCoverage: boolean;
 }
 
 interface DiscoveryCandidate {
@@ -144,7 +148,7 @@ function cadenceEligible(
   runSeq: number,
   stablecoinId?: string,
 ): boolean {
-  if (tier === "t1") return true;
+  if (tier === "t1" || tier === "refresh") return true;
   if (!stablecoinId) {
     if (tier === "t2") return runSeq % DISCOVERY_TIERS.T2_MODULO === 0;
     return runSeq % DISCOVERY_TIERS.T3_MODULO === 0;
@@ -187,7 +191,9 @@ export function computeEffectiveTier(
   runSeq: number,
   nowSec: number,
   censusVerifiedEmpty = false,
+  supplementalRefreshDue = false,
 ): EffectiveTier {
+  if (supplementalRefreshDue) return "refresh";
   let tier: Exclude<EffectiveTier, "skip">;
 
   // No pools discovered yet → highest crawl priority (priority inversion: zero means t1, not "empty").
@@ -233,21 +239,40 @@ export function compareDiscoveryMeta(
 
 function discoveryTierPriority(tier: Exclude<EffectiveTier, "skip">): number {
   switch (tier) {
-    case "t1":
+    case "refresh":
       return 0;
-    case "t2":
+    case "t1":
       return 1;
-    case "t3":
+    case "t2":
       return 2;
-    case "dormant":
+    case "t3":
       return 3;
+    case "dormant":
+      return 4;
   }
+}
+
+/** Refresh admitted supplemental evidence inside its 24h lifetime, with an 18h sweep target.
+ * Existing windows and the run deadline remain hard bounds; oversized footprints
+ * get every existing tick rather than extending the evidence freshness window.
+ */
+export function isSupplementalRefreshDue(
+  targets: readonly ContractDeployment[],
+  meta: DiscoveryMeta | undefined,
+  nowSec: number,
+): boolean {
+  const windows = Math.max(1, estimateDiscoverySweepWindowCount(targets));
+  const tick = CRON_INTERVALS["sync-dex-discovery"];
+  const interval = Math.max(tick, Math.floor((18 * 3600) / windows / tick) * tick);
+  return meta == null || nowSec - meta.lastCrawlAt >= interval;
 }
 
 async function readLiquidityCoverage(db: D1Database): Promise<Map<string, DiscoveryCoverage>> {
   const rows = await db
     .prepare(
-      `SELECT stablecoin_id, pool_count, chain_count
+      `SELECT stablecoin_id, pool_count, chain_count,
+         EXISTS (SELECT 1 FROM json_each(COALESCE(source_mix_json, '{}'))
+           WHERE key NOT IN ('dl', 'direct_api') AND json_extract(value, '$.tvlUsd') > 0) AS has_supplemental_coverage
        FROM dex_liquidity
        WHERE stablecoin_id != '__global__'
          AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
@@ -259,6 +284,7 @@ async function readLiquidityCoverage(db: D1Database): Promise<Map<string, Discov
     coverage.set(row.stablecoin_id, {
       poolCount: row.pool_count ?? 0,
       chainCount: row.chain_count ?? 0,
+      hasSupplementalCoverage: row.has_supplemental_coverage === 1,
     });
   }
   return coverage;
@@ -281,7 +307,7 @@ export async function syncDexDiscovery(
   let deploymentOutcomesWritten = 0;
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
-  const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
+  const tierBreakdown = { refresh: 0, t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
   // Coins the verified-empty census held above dormant this run. Observability
   // for the cadence rule: a green deploy proves nothing about a 20h cadence.
   let censusCadenceHolds = 0;
@@ -361,6 +387,7 @@ export async function syncDexDiscovery(
         runSeq,
         nowSec,
         censusVerifiedEmpty,
+        coverage?.hasSupplementalCoverage === true && isSupplementalRefreshDue(targets, metaById.get(coin.id), nowSec),
       );
 
       if (tier === "skip") {

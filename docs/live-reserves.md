@@ -340,12 +340,12 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 | Mode                | Meaning                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------ |
 | `live`              | Fresh live snapshot from `reserve_composition`                                             |
-| `live-stale`        | Live snapshot exists, but its stored fetch time—or, for `metadata.freshnessMode === "verified"`, its upstream `metadata.sourceTimestamp`—is older than 48 hours |
+| `live-stale`        | Stored fetch is older than 48 hours, or verified source evidence exceeds its configured/adapter reporting allowance (48-hour fallback only when neither declares one) |
 | `curated-fallback`  | Live snapshot unavailable; falling back to curated `StablecoinMeta.reserves`               |
 | `template-fallback` | Live snapshot unavailable; falling back to reserve templates from `getReserves()`          |
 | `unavailable`       | Coin is live-enabled, but neither live data nor fallback reserve presentation is available |
 
-`live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state by `fetched_at` / `attempt_id` and passes strict integrity validation. Staleness uses the stored fetch time and, for verified metadata, the upstream source timestamp. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
+`live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state by `fetched_at` / `attempt_id` and passes strict integrity validation. Staleness independently checks the stored fetch time against 48 hours and verified upstream source age against the source-specific allowance. The detail response, overview freshness counts, and scoring snapshot loader share this decision; refreshing an old document never resets its source age. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
 
 `StablecoinReservesResponseSchema` in `shared/types/live-reserves.ts` is the runtime contract for successful `200` responses, including `unavailable`, and is used by the frontend reserve API client. Adapter-specific `metadata`, `metadata.details`, and nested redemption telemetry remain passthrough so feed telemetry can evolve without breaking consumers.
 
@@ -354,7 +354,7 @@ Cache control:
 | Response mode                | Cache-Control                        |
 | ---------------------------- | ------------------------------------ |
 | `live`                       | `public, s-maxage=3600, max-age=300` |
-| `live-stale`                 | `public, s-maxage=1800, max-age=120` |
+| `live-stale`        | Stored fetch is older than 48 hours, or verified source evidence exceeds its configured/adapter reporting allowance (48-hour fallback only when neither declares one) |
 | fallback / unavailable modes | `public, s-maxage=300, max-age=60`   |
 
 The optional `provenance` object is present only when the response is serving an authoritative `live` or `live-stale` snapshot:
@@ -638,6 +638,8 @@ export async function fetchMyAdapterReserves(
 ---
 
 ## Frontend Consumers
+
+Reserve composition and collateralization footers separate the source/report-as-of date from the last checked time, retain a stale label for out-of-window evidence, and never label a refreshed historical attestation as a new live measurement. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; collection failures retain their separate sync-error notice.
 
 - `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses follow the 4-hour reserve producer cadence (`staleTime = 4 hours` / `refetchInterval = 8 hours`), while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model

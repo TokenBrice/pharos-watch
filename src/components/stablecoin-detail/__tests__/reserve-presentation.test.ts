@@ -133,7 +133,7 @@ describe("buildReserveFootnoteModel", () => {
       true,
       "rwa backed",
     );
-    expect(result?.text).toContain("Updated");
+    expect(result?.text).toContain("Checked");
     expect(result?.references).toEqual([
       { label: "Source", url: "https://src" },
       { label: "Evidence", url: "https://e1" },
@@ -148,7 +148,7 @@ describe("buildReserveFootnoteModel", () => {
       true,
       "rwa backed",
     );
-    expect(result?.text).toContain("Curated-validated as of");
+    expect(result?.text).toContain("Source date unavailable · Checked");
   });
 
   it("live-stale → stale label", () => {
@@ -157,7 +157,7 @@ describe("buildReserveFootnoteModel", () => {
       true,
       "rwa backed",
     );
-    expect(result?.text).toContain("Live snapshot stale");
+    expect(result?.text).toContain("Stale · Checked");
   });
 
   it("curated-fallback with live enabled → live-sync-unavailable text, no references", () => {
@@ -340,5 +340,25 @@ describe("buildReserveSyncNotice", () => {
     expect(notice?.title).toBe("Live reserve sync degraded");
     expect(notice?.rows).toContain("Upstream reserve source timestamp exceeds the accepted age");
     expect(notice?.toneClass).toBe(AMBER);
+  });
+});
+
+
+describe("dated reserve disclosures", () => {
+  it("separates old report evidence from successful collection", () => {
+    const reserves = makeReserves({
+      mode: "live-stale", liveAt: Date.parse("2026-09-05T12:14:32Z") / 1000,
+      metadata: { sourceTimestamp: Date.parse("2026-06-30T15:59:00Z") / 1000,
+        details: { assurance: { reportDate: "2026-06-30" } } },
+      sync: { enabled: true, status: "degraded", stale: true, bootstrap: false,
+        warnings: ["Upstream reserve source timestamp is 5775332s old for dynamic-mix/independent (max 4000000s)"] },
+    });
+    const footnote = buildReserveFootnoteModel(reserves, true, "rwa backed");
+    expect(footnote?.text).toContain("Report as of 2026-06-30 · Stale · Checked");
+    const notice = buildReserveSyncNotice(reserves);
+    expect(notice?.title).toBe("Reserve evidence is out of date");
+    expect(notice?.rows.join(" ")).not.toContain("5775332");
+    expect(buildReserveSyncNotice({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } })?.title)
+      .toBe("Live reserve sync error");
   });
 });

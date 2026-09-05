@@ -109,26 +109,17 @@ function formatReserveUpdatedAt(timestamp: number | undefined): string {
     : "the previous successful run";
 }
 
-function formatReserveSnapshotFreshLabel(reserves: ReserveResult): string {
-  switch (reserves.displayBadge?.kind) {
-    case "curated-validated":
-      return `Curated-validated as of ${formatReserveUpdatedAt(reserves.liveAt)}`;
-    case "proof":
-      return `Proof refreshed ${formatReserveUpdatedAt(reserves.liveAt)}`;
-    default:
-      return `Updated ${formatReserveUpdatedAt(reserves.liveAt)}`;
-  }
-}
-
-function formatReserveSnapshotStaleLabel(reserves: ReserveResult): string {
-  switch (reserves.displayBadge?.kind) {
-    case "curated-validated":
-      return `Curated-validated snapshot stale; showing last successful sync from ${formatReserveUpdatedAt(reserves.liveAt)}`;
-    case "proof":
-      return `Proof snapshot stale; showing last successful sync from ${formatReserveUpdatedAt(reserves.liveAt)}`;
-    default:
-      return `Live snapshot stale; showing last successful sync from ${formatReserveUpdatedAt(reserves.liveAt)}`;
-  }
+export function formatReserveSnapshotLabel(reserves: ReserveResult): string {
+  const sourceTimestamp = reserves.metadata?.sourceTimestamp;
+  const sourceDate = typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp)
+    ? new Date(sourceTimestamp * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
+    : null;
+  const assurance = reserves.metadata?.details?.assurance;
+  const reportDate = assurance && typeof assurance === "object" && "reportDate" in assurance
+    && typeof assurance.reportDate === "string" ? assurance.reportDate : null;
+  const asOf = reportDate ? `Report as of ${reportDate}` : sourceDate ? `Source as of ${sourceDate}` : "Source date unavailable";
+  const stale = reserves.mode === "live-stale" ? " · Stale" : "";
+  return `${asOf}${stale} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
 }
 
 function reserveReferenceLinks(reserves: ReserveResult): ReserveReferenceLink[] {
@@ -151,12 +142,12 @@ export function buildReserveFootnoteModel(
   switch (reserves.mode) {
     case "live":
       return {
-        text: formatReserveSnapshotFreshLabel(reserves),
+        text: formatReserveSnapshotLabel(reserves),
         references,
       };
     case "live-stale":
       return {
-        text: formatReserveSnapshotStaleLabel(reserves),
+        text: formatReserveSnapshotLabel(reserves),
         references,
       };
     case "curated-fallback":
@@ -221,8 +212,8 @@ export function buildReserveProvenanceNotice(
 
   if (reserves.displayBadge?.kind === "proof") {
     return {
-      title: "Proof-based reserve view",
-      message: "This reserve view reflects a live proof, attestation, or liveness check rather than a full live reserve composition feed.",
+      title: "Reserve evidence",
+      message: "This reserve view reflects a dated attestation, proof, or liveness check. The checked date records collection; it does not advance the underlying evidence date.",
       toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
     };
   }
@@ -263,6 +254,19 @@ export function buildReserveSyncNotice(
     return null;
   }
 
+  const staleSourceWarnings = (sync.warnings ?? []).filter((warning) => warning.startsWith("Upstream reserve source timestamp is ") && warning.includes("s old"));
+  const sourceAgeOnly = sync.status === "degraded" && !sync.lastError && !sync.uncertainWrite
+    && staleSourceWarnings.length > 0 && staleSourceWarnings.length === sync.warnings?.length;
+  if (sourceAgeOnly) {
+    return {
+      title: "Reserve evidence is out of date",
+      rows: [
+        "The latest collected disclosure is older than this source’s accepted reporting window.",
+        formatReserveSnapshotLabel(reserves!),
+      ],
+      toneClass: SEVERITY_TONE_CLASS.watch.pill,
+    };
+  }
   const rows = [`Status: ${sync.status}`];
   if (sync.failureCategory) rows.push(`Failure category: ${sync.failureCategory}`);
   if (sync.lastError) rows.push(`Last error: ${sync.lastError}`);

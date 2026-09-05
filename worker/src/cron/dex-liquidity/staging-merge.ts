@@ -195,6 +195,7 @@ function registerRetainedPoolExactStablecoins(
         poolAddressOrId: pool.poolId,
         tokenAddresses: [],
       });
+      if (identity.exactPoolKey) knownPoolIndex.exactKeys.add(identity.exactPoolKey);
       registerKnownPoolExactStablecoin(knownPoolIndex, identity, stablecoinId);
     }
   }
