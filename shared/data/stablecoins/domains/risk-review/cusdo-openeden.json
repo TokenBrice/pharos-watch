@@ -26,9 +26,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "cUSDO has a native Ethereum wrapper and native Solana Token-2022 route, while Base and BSC are peripheral representations built on Chainlink CCIP USDO underneath plus OpenEden cUSDO ERC-4626 wrappers. cUSDO itself has no token-level CCIP pool: Base/BSC bridge mint/burn, rate limits, peers, pool owners, and representation UPGRADE_ROLE/DEFAULT_ADMIN_ROLE/PAUSE_ROLE are scored here. The external-validated-network tier is inherited from USDO's Chainlink CCIP route.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "OpenAI Codex mint-bridge-boundary migration",
+    "summary": "cUSDO has a native Ethereum wrapper and native Solana Token-2022 route, while Base, BSC, and Kaia are peripheral representations built on Chainlink CCIP USDO underneath plus OpenEden cUSDO ERC-4626 wrappers. cUSDO itself has no token-level CCIP pool: inherited USDO bridge controls are scored here. The external-validated-network tier is inherited from USDO's Chainlink CCIP route.",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "OpenAI Codex bridge-route closeout",
     "confidence": "verified",
     "protocols": [
       {
@@ -38,7 +38,7 @@
         "bridgeTypes": [
           "burnAndMint"
         ],
-        "note": "OpenEden announced USDO interoperability through Chainlink CCIP. The inherited USDO route underlies Base/BSC cUSDO ERC-4626 wrappers; cUSDO itself has no token-level CCIP pool."
+        "note": "OpenEden announced USDO interoperability through Chainlink CCIP. The inherited USDO route underlies Base, BSC, and Kaia cUSDO ERC-4626 wrappers; cUSDO itself has no token-level CCIP pool."
       }
     ],
     "sources": [
@@ -160,6 +160,53 @@
         ]
       },
       {
+        "id": "klaytn:0xbeee5862649ef24c1f1d5e799505f67f1e7bab9a",
+        "destinationChain": "klaytn",
+        "contractAddress": "0xbeee5862649ef24c1f1d5e799505f67f1e7bab9a",
+        "protocol": "Chainlink CCIP USDO underlying + OpenEden cUSDO ERC-4626 wrapper",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Kaia RPC identifies this deployed 18-decimal token as Compounding Open Dollar (cUSDO); asset() returns the issuer-registered Kaia USDO 0x87e617c7484ade79fcd90db58beb82b057facb48. At block 226390775, the Chainlink-directory Kaia pool reports that same getToken() and typeAndVersion() USDO BurnMintTokenPool 1.5.1. As on Base/BSC, issuer-native network support does not remove the inherited USDO CCIP bridge dependency.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "observedBlock": 226390775,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:klaytn:0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+          "router:klaytn:0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9"
+        ],
+        "sources": [
+          {
+            "label": "OpenEden FAQ: native Kaia network support",
+            "url": "https://docs.openeden.com/usdo/faq"
+          },
+          {
+            "label": "OpenEden official Kaia USDO contract",
+            "url": "https://docs.openeden.com/usdo/developers/contracts"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "Kaia cUSDO deployment",
+            "url": "https://kaiascan.io/token/0xbeee5862649ef24c1f1d5e799505f67f1e7bab9a"
+          },
+          {
+            "label": "Kaia official JSON-RPC",
+            "url": "https://public-en.node.kaia.io"
+          }
+        ]
+      },
+      {
         "id": "solana:BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
         "destinationChain": "solana",
         "contractAddress": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
@@ -191,6 +238,43 @@
       }
     ],
     "controls": [
+      {
+        "id": "cusdo-klaytn-usdo-ccip-pool",
+        "label": "cUSDO Kaia underlying USDO BurnMintTokenPool 1.5.1",
+        "routeRefs": [
+          "klaytn:0xbeee5862649ef24c1f1d5e799505f67f1e7bab9a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:klaytn:0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+          "router:klaytn:0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 226390775,
+        "sources": [
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "Kaia USDO BurnMintTokenPool",
+            "url": "https://kaiascan.io/address/0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018"
+          },
+          {
+            "label": "Kaia official JSON-RPC",
+            "url": "https://public-en.node.kaia.io"
+          }
+        ],
+        "evidence": "At Kaia block 226390775, the directory-listed pool returned getToken() = 0x87e617c7484ade79fcd90db58beb82b057facb48, typeAndVersion() = USDO BurnMintTokenPool 1.5.1, owner() = 0x19902b456e57224aecbe9ad8827cff50a05b73ae, and getRouter() = 0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9. This pool supplies the inherited USDO burn/mint route; the local cUSDO wrapper holds that USDO. Owner authority type, remote peers, and current rate-limit buckets were not established in this observation."
+      },
       {
         "id": "cusdo-base-usdo-ccip-pool",
         "label": "cUSDO Base underlying USDO BurnMintTokenPool 1.5.1",

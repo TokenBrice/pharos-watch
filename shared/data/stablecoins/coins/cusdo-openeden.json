@@ -58,6 +58,11 @@
       "decimals": 18
     },
     {
+      "chain": "klaytn",
+      "address": "0xbeee5862649ef24c1f1d5e799505f67f1e7bab9a",
+      "decimals": 18
+    },
+    {
       "chain": "solana",
       "address": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
       "decimals": 6
