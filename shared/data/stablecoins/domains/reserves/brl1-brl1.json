@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Brazilian federal LFT government bonds",
-      "pct": 86.16,
+      "pct": 47.17,
       "risk": "low",
       "assetClass": "government-security",
       "issuerOrObligor": "Federative Republic of Brazil",
@@ -16,11 +16,11 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "BRL bank-account balance at regulated Brazilian financial institutions",
-      "pct": 0.09,
+      "name": "BRL bank-account balance at Banco XP S.A.",
+      "pct": 6.71,
       "risk": "medium",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed regulated Brazilian financial institutions",
+      "issuerOrObligor": "Banco XP S.A.",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -31,7 +31,7 @@
     },
     {
       "name": "BRL repurchase agreements",
-      "pct": 13.75,
+      "pct": 46.12,
       "risk": "medium",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed repo counterparty",
@@ -44,44 +44,52 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (R11 revisit; no newer report found)",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Codex parallel Backing reserve research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "BRL1 proof-of-reserves report - May 2026 (Google Drive, sign-in gated)",
-        "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+        "label": "BRL1 issuer proof-of-reserves report, August 1, 2026 (public direct download; observed September 5)",
+        "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD"
       },
       {
-        "label": "BRL1 reserve and redemption disclosures",
+        "label": "BRL1 issuer report index (English footer links current report)",
         "url": "https://brl1.io/en/como_funciona"
+      },
+      {
+        "label": "Polygon block 91256109 (12:59:44 UTC, one second after the report timestamp)",
+        "url": "https://polygonscan.com/block/91256109"
+      },
+      {
+        "label": "Polygon archival RPC used to verify BRL1 totalSupply at report block 91256109",
+        "url": "https://polygon.drpc.org"
       }
     ],
-    "rationale": "Re-checked 2026-08-08: the latest linked proof-of-reserves report remains the May 2026 self-published PDF (Google Drive sign-in gated). It discloses R$5,820,958.93 of LFTs, R$5,923.85 of bank balance, and R$929,250.86 of repos, or 86.16%, 0.09%, and 13.75% of the reported R$6,756,133.64 reserve. No newer public report was located. The report is issuer-produced and not independently audited, so the exact composition retains probable confidence.",
-    "compositionBasis": "BRL1 issuer proof-of-reserves report (May 2026)",
-    "compositionAsOf": "2026-05-01",
+    "rationale": "The publicly downloadable August 1, 2026 issuer report discloses R$6,177,240 of LFTs, R$878,069 of bank balance, and R$6,039,473 of repos, totaling R$13,094,782. Its published percentages are 47.17%, 6.71%, and 46.12%. All reserves are reported in a segregated account at Banco XP S.A. owned by BRL1 CONSORTIUM S.A. The issuer reconciles them internally to 12,725,909.54 BRL1 at Polygon block 91256109, stated timestamp August 1, 2026 12:59:43 UTC. The report is internally prepared, board-approved and explicitly unaudited; verified review confidence refers to the exact, fully itemized primary disclosure, not independent assurance. PDF SHA-256 5b3eb3a0dba8731947887ef0b66047cef3e361cb7bc980b97d0e5abb09199312. Observation September 5 is not the reserve or publication date. An independent historical eth_call at block 91256109 exactly returned 12,725,909.54 BRL1 totalSupply; two RPC endpoints agree that the block timestamp is 12:59:44 UTC, one second after the issuer-stated observation time. This checks the reported liability quantity, not the off-chain bank balances.",
+    "compositionBasis": "BRL1 issuer proof-of-reserves report with reference date August 1, 2026; disclosed category percentages",
+    "compositionAsOf": "2026-08-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reported reserve categories are classified; the repo counterparty and current post-report allocation changes are not disclosed.",
+    "knownUnknownExposure": "All reserve categories and the sole reported custodian are identified. Repo counterparty, individual LFT securities and maturities, account terms, and subsequent allocation changes are not disclosed; reserve amounts are issuer assertions without independent assurance.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Brazilian federal LFT government bonds",
-        "pct": 86.16,
+        "pct": 47.17,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Brazilian federal government securities are off-chain reserve assets rather than tracked stablecoins."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "BRL bank-account balance at regulated Brazilian financial institutions",
-        "pct": 0.09,
+        "reserveName": "BRL bank-account balance at Banco XP S.A.",
+        "pct": 6.71,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The bank balance is off-chain BRL cash rather than a tracked stablecoin."
       },
       {
         "reserveIndex": 2,
         "reserveName": "BRL repurchase agreements",
-        "pct": 13.75,
+        "pct": 46.12,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The repo position is an off-chain financial instrument rather than a tracked stablecoin."
       }
@@ -90,24 +98,24 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed regulated Brazilian financial institutions",
+        "name": "Banco XP S.A.",
         "role": "custodian",
         "jurisdiction": "Brazil",
         "sharePct": 100
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
-    "rehypothecation": "prohibited",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (R11 revisit; no newer report found)",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Codex parallel Backing reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "BRL1 proof-of-reserves report - May 2026",
-        "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+        "label": "BRL1 issuer proof-of-reserves report, August 1, 2026 (public direct download; observed September 5)",
+        "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD"
       }
     ],
-    "uncertainty": "The issuer report says all assets are held in a segregated, unencumbered account owned by BRL1 Consortium at regulated Brazilian financial institutions, but it does not name those institutions, disclose provider shares, or establish statutory bankruptcy remoteness."
+    "uncertainty": "The August 1, 2026 issuer report attributes all reserves to a segregated, unencumbered consortium-owned account at Banco XP S.A. It does not publish the account agreement, statutory insolvency protection, holder-priority or trust instrument, prospective reuse restrictions, or a replacement/successor-custody process. These safeguards remain issuer-described; no independent custody examination is supplied."
   }
 }

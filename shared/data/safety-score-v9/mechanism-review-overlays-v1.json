@@ -12536,7 +12536,7 @@
     {
       "assetId": "brl1-brl1",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-05",
       "sources": [
         {
           "label": "BRL1 How It Works page and current proof-of-reserves link",
@@ -12547,33 +12547,29 @@
           "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr"
         },
         {
-          "label": "BRL1 self-produced proof-of-reserves report dated 2025-04-14",
-          "url": "https://drive.google.com/uc?export=download&id=1q6arJKrt3wWta7kYCnppD1awhgzsz8AW"
+          "label": "BRL1 issuer-produced August 1, 2026 reserve report (observed September 5; publication and separate signature dates unestablished)",
+          "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD"
         },
         {
-          "label": "BRL1 self-produced proof-of-reserves report dated 2025-11-01",
-          "url": "https://docs.google.com/document/d/1GCDXJ0r7HP2D1AChim1MUCxq44Ukai79/export?format=txt"
+          "label": "Polygon block 91256109 (August 1, 2026 12:59:44 UTC)",
+          "url": "https://polygonscan.com/block/91256109"
         },
         {
-          "label": "BRL1 May 2026 proof-of-reserves file searched but Google-sign-in gated",
-          "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+          "label": "Polygon archival RPC used to verify BRL1 totalSupply at block 91256109",
+          "url": "https://polygon.drpc.org"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08. BRL1's whitepaper and product page document 1:1 partner redemption and reserves in LFT federal bonds, repos, and cash. The 2025 reports provide structured asset/liability figures and Polygon block anchors, supporting limited claim and segregation, but no trust, bankruptcy-remoteness, or holder-priority instrument is published. The 2025-04 report named Banco XP; the later 2025-11 report anonymized providers, and the current May 2026 report link is Google-sign-in gated. The current reserve review records 86.16% LFTs, 13.75% repos, and 0.09% bank balances from the inaccessible issuer file, but it cannot be independently pinned as a mechanism overlay source. Current provider identity/allocations and continuity terms are therefore unavailable. Every reviewed report is self-produced and expressly not independently audited, while the current report cannot be publicly re-verified, so assurance is unavailable rather than weak.",
+      "notes": "Reviewed 2026-09-05. The issuer-linked August 1 reserve report is publicly downloadable (PDF SHA-256 5b3eb3a0dba8731947887ef0b66047cef3e361cb7bc980b97d0e5abb09199312). It itemizes R$878,069 bank cash, R$6,177,240 LFTs and R$6,039,473 repos, totaling R$13,094,782, and identifies Banco XP S.A. as custodian of all reserves in a segregated, unencumbered account owned by BRL1 CONSORTIUM S.A. The report describes internal bank-balance/investment reconciliation, board approval and no independent audit. An archival eth_call at Polygon block 91256109 exactly reproduced the reported 12,725,909.54 BRL1 totalSupply; both queried block-header sources return hash 0x8cafd922ed5cf037c09ceae8f37b465f568eed85a9cedf0a84ff17afd77b2e68 and timestamp 12:59:44 UTC, one second after the issuer-stated 12:59:43 observation. The itemized issuer report plus external liability anchor supports limited assuranceAndReconciliation; it does not independently prove off-chain balances or support an adequate assurance grade. Current sole-provider attribution and segregated own-account custody support limited custodyContinuity, with no successor-custodian process, enforceable insolvency protections or prospective reuse prohibition established. claimAndSegregation remains limited: issuer reserve ownership and partner redemption are documented, but no trust or holder-priority instrument is supplied. Actual publication and separate signature dates are unknown; September 5 is the observation/review date, not a refreshed composition date. Review admission begins only after the reviewed UTC day ends.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "Searched the BRL1 product page, whitepaper, April and November 2025 reports, and current May 2026 report link. Banco XP appears only in the stale April report; the later accessible report anonymizes institutions and the current file is sign-in gated. No current provider set or allocation, anti-rehypothecation terms, or failure/replacement/successor-custody process is publicly verifiable.",
-          "sourceUrl": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+          "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Searched the BRL1 product page and its current report link, whitepaper, and April/November 2025 reports. The accessible reports are issuer-produced and expressly unaudited; the May 2026 file requires Google sign-in. No publicly pin-able dated independent attestation, audit, or third-party assets-and-liabilities reconciliation was found.",
-          "sourceUrl": "https://brl1.io/en/como_funciona"
+          "quality": "limited"
         }
       }
     },
