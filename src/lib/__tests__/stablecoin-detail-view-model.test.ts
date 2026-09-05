@@ -16,7 +16,10 @@ import {
   buildMintAuthorityDetailViewModel,
 } from "../stablecoin-detail-mint-authority-view-model";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
-import { buildDetailPegPriceSnapshot } from "../stablecoin-detail-query-view-model";
+import { buildDetailPegPriceSnapshot, buildDetailStaleQueries } from "../stablecoin-detail-query-view-model";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
+import { deriveDataHealth } from "../data-health";
+import { DATA_HEALTH_PRESETS } from "../data-health-config";
 
 function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return makeStablecoin({
@@ -38,6 +41,28 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("uses coin-scoped liquidity warnings without hiding stale producer data or legacy advisories", () => {
+    const now = Date.now();
+    const globalWarning = '199 - "Quality drift: major-tvl-cliff:crvusd-curve"';
+    const params = makeBuildStablecoinDetailViewModelParams({ queries: { dexLiquidity: {
+      data: { "xsgd-straitsx": makeDexLiquidityData({ warning: null }) },
+      dataUpdatedAt: now,
+      meta: { updatedAt: now / 1000 - 60, ageSeconds: 60, status: "fresh", warning: globalWarning },
+    } } });
+    const health = () => {
+      const query = buildDetailStaleQueries(params.queries, params.supplemental, "xsgd-straitsx")
+        .find((entry) => entry.preset === "dexLiquidity")!;
+      return deriveDataHealth({ ...DATA_HEALTH_PRESETS.dexLiquidity, ...query });
+    };
+    expect(health().state).toBe("fresh");
+    params.queries.dexLiquidity.data!["xsgd-straitsx"].warning = globalWarning;
+    expect(health().state).toBe("degraded");
+    delete params.queries.dexLiquidity.data!["xsgd-straitsx"].warning;
+    expect(health().state).toBe("degraded");
+    params.queries.dexLiquidity.data!["xsgd-straitsx"].warning = null;
+    params.queries.dexLiquidity.meta!.updatedAt = now / 1000 - 13 * 4 * 3600;
+    expect(health().state).toBe("stale");
+  });
   it.each([
     ["USD", "usdt-tether", "peggedUSD", 1, -200, false],
     ["non-USD", "eurc-circle", "peggedEUR", 1.2, -1000, false],

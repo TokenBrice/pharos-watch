@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -35,26 +36,22 @@ export function DepegFeed({
   onLoadMore,
 }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
-  const [pageSize, setPageSize] = useState(MOBILE_PAGE_SIZE);
+  // Desktop/mobile page size from the live breakpoint; `false` keeps SSR and
+  // first-paint markup on the mobile default until hydration confirms the
+  // viewport, matching the previous post-mount matchMedia sync.
+  const pageSize = useMediaQuery("(min-width: 1024px)", false)
+    ? DESKTOP_PAGE_SIZE
+    : MOBILE_PAGE_SIZE;
   const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
 
   // Track seen event IDs so only genuinely new arrivals animate.
   // Seed with initial events to prevent animation on first render.
   const [seenIds, setSeenIds] = useState<Set<number>>(() => new Set(events.map((e) => e.id)));
 
-  useEffect(() => {
-    const mql = window.matchMedia("(min-width: 1024px)");
-    const syncPageSize = () => {
-      const nextPageSize = mql.matches ? DESKTOP_PAGE_SIZE : MOBILE_PAGE_SIZE;
-      setPageSize(nextPageSize);
-      // Keep already-loaded rows visible, but ensure a larger desktop default when expanding.
-      setVisibleCount((current) => (current < nextPageSize ? nextPageSize : current));
-    };
-
-    syncPageSize();
-    mql.addEventListener("change", syncPageSize);
-    return () => mql.removeEventListener("change", syncPageSize);
-  }, []);
+  // Raise the floor before commit; a passive effect would briefly leave the desktop view at three rows.
+  if (visibleCount < pageSize) {
+    setVisibleCount(pageSize);
+  }
 
   const sorted = useMemo(
     () => [...events].sort((a, b) => {

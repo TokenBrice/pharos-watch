@@ -23,6 +23,7 @@ import {
   buildPayloadWithObservedAt,
   makeBenchmarkMeta,
   makeEvaluatedSource,
+  makePublicationViews,
   makeSafetySnapshotMeta,
   makeYieldSourceMeta,
 } from "./yield-publication.test-support";
@@ -284,7 +285,11 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 
     const payload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [selected, previous],
-      bestSourceKeyByCoin: new Map([[selected.id, selected.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [selected, previous],
+        new Map([[selected.id, selected.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map(),
       riskFreeRate: benchmark.rate,
       riskFreeRateMeta: benchmark,
@@ -431,7 +436,11 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 
     const payload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [best, altA, altB],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [best, altA, altB],
+        new Map([[best.id, best.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map([
         [
           buildHistoryKey(best.id, best.sourceKey),
@@ -523,7 +532,11 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 
     const payload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [best, lowerRankedDuplicate, richerDuplicate],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [best, lowerRankedDuplicate, richerDuplicate],
+        new Map([[best.id, best.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map(),
       riskFreeRate: benchmark.rate,
       riskFreeRateMeta: benchmark,
@@ -586,7 +599,11 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 
     const payload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [selected, alternate],
-      bestSourceKeyByCoin: new Map([[selected.id, selected.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [selected, alternate],
+        new Map([[selected.id, selected.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map(),
       riskFreeRate: benchmark.rate,
       riskFreeRateMeta: benchmark,
@@ -627,7 +644,11 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 
     const payload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [best, alt],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [best, alt],
+        new Map([[best.id, best.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map(),
       riskFreeRate: benchmark.rate,
       riskFreeRateMeta: benchmark,

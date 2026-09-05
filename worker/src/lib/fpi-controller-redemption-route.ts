@@ -1,6 +1,6 @@
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
-import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
+import { buildExitRouteCapacityPoint, REDEMPTION_EXIT_CURVE_REQUESTS_USD } from "@shared/lib/exit-route-capacity-point";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { z } from "zod";
 
@@ -187,8 +187,6 @@ export const FpiControllerV9RouteAttemptSchema = z.discriminatedUnion("status", 
 ]);
 export type FpiControllerV9RouteAttempt = z.infer<typeof FpiControllerV9RouteAttemptSchema>;
 
-const ROUTE_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 25_000_000] as const;
-
 export function parseAcceptedFpiControllerV9RouteState(value: unknown): FpiControllerV9RouteState | null {
   const parsed = FpiControllerV9RouteAttemptSchema.safeParse(value);
   return parsed.success && parsed.data.status === "accepted" ? parsed.data.state : null;
@@ -212,7 +210,7 @@ export function buildFpiControllerV9ExitRouteObservation(args: {
   }
 
   const state = parsed.data;
-  const requests = [...new Set([...ROUTE_REQUESTS_USD, args.modeledExitSizeUsd])]
+  const requests = [...new Set([...REDEMPTION_EXIT_CURVE_REQUESTS_USD, args.modeledExitSizeUsd])]
     .filter((request) => Number.isFinite(request) && request > 0)
     .sort((left, right) => left - right);
   const withinCost = state.allInCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;

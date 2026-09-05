@@ -241,7 +241,6 @@ function updateConcreteFeeVariantIndex(
   const variantKey = buildConcreteFeeVariantKey(derivedKey);
   if (!variantKey) return;
 
-  known.concreteFeeVariantKeys ??= new Map<string, Set<string>>();
   const existing = known.concreteFeeVariantKeys.get(variantKey) ?? new Set<string>();
   if (previousDerivedCount === 0) {
     existing.add(derivedKey);

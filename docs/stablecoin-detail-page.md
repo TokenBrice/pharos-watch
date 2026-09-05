@@ -52,6 +52,8 @@ In addition to the pre-launch dossier sections (banner, timeline, milestones, fe
 
 `useStablecoinDetailViewModel()` gathers the detail page's shared query state, then delegates all derived formatting and fallback logic to `buildStablecoinDetailViewModel(...)`.
 
+The health banner distinguishes an old producer snapshot, a failed refresh using saved data, and a source/quality advisory on otherwise fresh data. Liquidity advisories use the selected coin's nullable `warning` field; an unrelated coin's TVL cliff does not degrade this page. Global source failures and legacy responses without coin-scoped metadata remain visible, and suppressing an unrelated advisory never resets the producer clock.
+
 ### Query inputs
 
 The hook currently wires these sources:

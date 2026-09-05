@@ -23,6 +23,7 @@ import {
   buildPayloadWithObservedAt,
   makeBenchmarkMeta,
   makeEvaluatedSource,
+  makePublicationViews,
   makeSafetySnapshotMeta,
   makeYieldSourceMeta,
   mockD1,
@@ -101,10 +102,12 @@ describe("publishYieldCoordinatorResults", () => {
       signal: overrides.signal,
       previewRankingsPayload: overrides.previewRankingsPayload ?? buildPayloadWithObservedAt(startSec),
       evaluatedSources,
-      bestSourceKeyByCoin: overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
+      publicationViews: makePublicationViews(
+        evaluatedSources,
+        overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
+        startSec,
+      ),
       startSec,
-      medianApy: 4.5,
-      dlPoolsMeta: makeYieldSourceMeta(),
       degradationReasons: overrides.degradationReasons ?? [],
       resolvedCount: 1,
       rowsRejected: 0,
@@ -396,7 +399,11 @@ describe("publishYieldCoordinatorResults", () => {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const previewRankingsPayload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [best, altA, altB, altC],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [best, altA, altB, altC],
+        new Map([[best.id, best.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map(),
       riskFreeRate: makeBenchmarkMeta().rate,
       riskFreeRateMeta: makeBenchmarkMeta(),

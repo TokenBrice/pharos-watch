@@ -17,6 +17,37 @@ import {
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 
 describe("live-reserves-store", () => {
+  it.each([
+    ["fdusd-first-digital", "fdusd-transparency", 36 * 86400, 60, false],
+    ["xsgd-straitsx", "straitsx-independent-assurance", 67 * 86400, 60, true],
+    ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_000, 60, false],
+    ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_001, 60, true],
+    ["xsgd-straitsx", "straitsx-independent-assurance", 86400, 3 * 86400, true],
+  ])("aligns detail, scoring and overview source/fetch freshness for %s (%i, %i)", async (id, adapter, sourceAge, fetchAge, stale) => {
+    const now = 1_800_000_000;
+    const composition = reserveCompositionRow({
+      stablecoin_id: id, source: adapter, fetched_at: now - fetchAge,
+      metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now - sourceAge }),
+      adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent",
+    });
+    const syncState = reserveSyncRow({
+      stablecoin_id: id, adapter_key: adapter,
+      last_success_at: now - fetchAge, last_attempted_at: now - fetchAge,
+    });
+    const db = mockD1([
+      { match: "reserve_composition", rows: [composition], first: composition },
+      { match: "reserve_sync_state", rows: [syncState], first: syncState },
+    ]);
+    const detail = await resolveReserveResult(db, id, now);
+    expect(detail?.mode).toBe(stale ? "live-stale" : "live");
+    expect(detail?.provenance?.scoringEligible).toBe(!stale);
+    expect(detail?.displayBadge).toEqual({ kind: "proof", label: "Attestation" });
+    expect((await loadFreshIndependentLiveReserveMap(db, now)).has(id)).toBe(!stale);
+    const overview = await computeReserveCompositionOverview(db, now);
+    expect(overview.freshCoins).toBe(stale ? 0 : 1);
+    expect(overview.staleCoins).toBe(stale ? 1 : 0);
+  });
+
   it("computes max sync age from the oldest required reserve attempt", async () => {
     const db = mockD1([
       {
@@ -105,12 +136,12 @@ describe("live-reserves-store", () => {
     };
     const staleSourceDb = makeReservesDb({
       composition: {
-        fetched_at: 1_100,
+        fetched_at: 4_999_900,
         metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: 700 }),
       },
       syncState: {
-        last_attempted_at: 1_100,
-        last_success_at: 1_100,
+        last_attempted_at: 4_999_900,
+        last_success_at: 4_999_900,
         last_status: "degraded",
         warning_count: 1,
         warnings: JSON.stringify([staleSourceWarning]),
@@ -119,7 +150,7 @@ describe("live-reserves-store", () => {
     // RDP-01: a stale upstream observation must demote the card to live-stale rather
     // than being presented as fresh. It stays visible -- the snapshot was validly
     // observed, and V9 excludes it separately by requiring lastStatus "ok".
-    const staleSourceResult = await resolveReserveResult(staleSourceDb, "iusd-infinifi", 1_200, 300);
+    const staleSourceResult = await resolveReserveResult(staleSourceDb, "iusd-infinifi", 5_000_000, 300);
     expect(staleSourceResult).toMatchObject({
       mode: "live-stale",
       sync: {
@@ -134,13 +165,13 @@ describe("live-reserves-store", () => {
     // even when the sync status is ok: the effective observation age governs.
     const staleObservationWithOkStatus = makeReservesDb({
       composition: {
-        fetched_at: 1_100,
+        fetched_at: 4_999_900,
         metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: 700 }),
       },
-      syncState: { last_attempted_at: 1_100, last_success_at: 1_100 },
+      syncState: { last_attempted_at: 4_999_900, last_success_at: 4_999_900 },
     });
     await expect(
-      resolveReserveResult(staleObservationWithOkStatus, "iusd-infinifi", 1_200, 300),
+      resolveReserveResult(staleObservationWithOkStatus, "iusd-infinifi", 5_000_000, 300),
     ).resolves.toMatchObject({ mode: "live-stale", sync: { stale: true } });
 
     // A degraded current attempt does not hide a still-fresh prior snapshot.

@@ -9,7 +9,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/l
  */
 // The five job graphs (alert dispatch, recap planner/store, pulse snapshot,
 // degradation watchdog, disambiguation cleanup) are loaded via dynamic
-// import() at dispatch time — mirroring SLOT_RUNNER_BY_KEY in ../scheduled.ts —
+// import() at dispatch time — mirroring SLOT_RUNNER_LOADER_BY_KEY in ../scheduled.ts —
 // so their module graphs never sit on the heap of isolates that only run the
 // heavy data lanes. Only types may be imported statically from them.
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";

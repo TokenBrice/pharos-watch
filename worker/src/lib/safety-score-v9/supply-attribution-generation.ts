@@ -20,12 +20,14 @@ import {
 } from "./supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
+  XAUT_ASSET_ID,
 } from "./xaut-supply-attribution-contract";
 import type {
   SafetyScoreV9SupplyAttributionCapture,
 } from "./supply-attribution";
 import {
   aggregateSupplyUsd,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./supply-attribution";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
@@ -269,12 +271,14 @@ function expectedJournalSourceId(
   attribution: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"][string],
 ): SupplyAttributionJournalV1["sourceId"] | null {
   if (attribution.model === "canonical-lock-mint-group-partition-v2") {
-    return "xaut.canonical-lock-mint-group-partition.v2";
+    // Bound to the XAUT asset alone; other assets fail closed at the caller.
+    return expectedJournalSourceIdForAsset(XAUT_ASSET_ID);
   }
   if (attribution.model === "reviewed-deployment-unit-partition-v1") {
-    return assetId === "wm-m0"
-      ? "wm.reviewed-deployment-unit-partition.v1"
-      : "centrifuge.reviewed-deployment-unit-partition.v1";
+    // wM keeps its own binding; every other asset is held to the centrifuge one.
+    return expectedJournalSourceIdForAsset(
+      assetId === "wm-m0" ? "wm-m0" : CENTRIFUGE_BURN_MINT_ASSET_IDS[0],
+    );
   }
   return null;
 }
@@ -282,17 +286,17 @@ function expectedJournalSourceId(
 function expectedJournalSourceIdForAsset(
   assetId: string,
 ): SupplyAttributionJournalV1["sourceId"] | null {
-  if (assetId === "xaut-tether") {
-    return "xaut.canonical-lock-mint-group-partition.v2";
+  // Own-key lookup so prototype names resolve to no binding, like any other
+  // unknown asset id.
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET,
+      assetId,
+    )
+  ) {
+    return null;
   }
-  if (assetId === "wm-m0") {
-    return "wm.reviewed-deployment-unit-partition.v1";
-  }
-  return CENTRIFUGE_BURN_MINT_ASSET_IDS.some(
-    (candidate) => candidate === assetId,
-  )
-    ? "centrifuge.reviewed-deployment-unit-partition.v1"
-    : null;
+  return SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET[assetId];
 }
 
 function assertCaptureBindings(input: {

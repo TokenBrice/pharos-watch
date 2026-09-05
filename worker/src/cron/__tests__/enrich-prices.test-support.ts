@@ -10,16 +10,18 @@ vi.mock("../../lib/abort", async (importOriginal) => {
 });
 
 import {
-  isReasonablePrice,
   hasMissingPrice,
   enrichMissingPrices,
   fetchPrimaryPrices,
   applyResolvedPrice,
-  applyPoolChallenge,
 } from "../sync-stablecoins/enrich-prices";
 import { PEG_HARDCODED_PRICE_BOUNDS } from "@shared/lib/peg-taxonomy";
-import { applyListAggregatorDowngrade } from "../sync-stablecoins/enrich-prices-primary";
-import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
+import {
+  applyListAggregatorDowngrade,
+  applyPoolChallenge,
+} from "../sync-stablecoins/enrich-prices-primary-hardening";
+import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+import type { PriceValidationStats } from "../sync-stablecoins/enrich-prices-primary-shared";
 import {
   runCmcPass,
   runDexScreenerPass,
@@ -29,7 +31,7 @@ import {
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
+import { isReasonablePrice, type PriceValidationContext, type PriceValidationReferences } from "../../lib/price-validation";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;

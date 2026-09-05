@@ -382,6 +382,18 @@ function unresolvedFactAffectedScore(
   );
 }
 
+/** The C- floor is the lowest still-rated grade boundary; bounded-uncertainty
+ * attribution and the wrapper parent gate both compare against it. */
+export function v9CMinusFloor(policy: V9ValidatedPolicyEnvelope): number {
+  const floor =
+    policy.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")
+      ?.minScore;
+  if (floor === undefined) {
+    throw new Error("Safety Score v9 policy has no C- grade threshold");
+  }
+  return floor;
+}
+
 function boundedUncertaintyForFact(
   fact: V9UnresolvedFact,
   pillars: V9ScoringInput["pillars"],
@@ -410,11 +422,7 @@ function boundedUncertaintyForFact(
   ) {
     return null;
   }
-  const cMinusFloor =
-    policy.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore;
-  if (cMinusFloor === undefined) {
-    throw new Error("Safety Score v9 policy has no C- grade threshold");
-  }
+  const cMinusFloor = v9CMinusFloor(policy);
   const pillarReasonAffectedScore = pillarReasonProvenance.some(
     (candidate) =>
       candidate.fact.code === fact.code &&
@@ -1133,12 +1141,15 @@ function scoreV9InputWithCaps(
   // score whenever the rounded uncapped score would exceed the floored cap
   // limit, even if the raw score sits below the fractional limit (VER-001).
   const quantizedUncapped = preCapScoreRaw === null ? null : roundTo(preCapScoreRaw, formula.scoreDecimals);
+  // canonicalUniqueBy already returns candidates ordered by compareCapCandidates
+  // with this policy, so the first candidate under the quantized score is the
+  // binding one without re-sorting the filtered view.
   const bindingCandidate =
     preCapScoreRaw === null || quantizedUncapped === null
       ? null
-      : ([...dedupedCandidates]
-          .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-          .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null);
+      : (dedupedCandidates.find(
+          (cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped,
+        ) ?? null);
   const caps = dedupedCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
   const rateable = nrReasons.length === 0 && preCapScoreRaw !== null;
   const rawFinal = rateable ? Math.min(preCapScoreRaw!, bindingCandidate?.limit ?? SCORE_MAX) : null;

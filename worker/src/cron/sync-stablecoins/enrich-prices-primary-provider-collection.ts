@@ -25,7 +25,6 @@ import {
   getRedstoneMetaSymbolForStablecoinId,
   REDSTONE_TRACKED_STABLECOIN_IDS,
 } from "../../lib/redstone";
-import type { AddressPriceQuote } from "../../lib/address-price-providers";
 import {
   createDexPriceSourceLoadTelemetry,
   loadDexPriceRows,
@@ -58,7 +57,6 @@ interface ReserveNavRow {
   fetched_at: number;
   source: string;
   metadata: string;
-  last_success_at: number | null;
 }
 
 const NAV_TELEMETRY_PRICE_SOURCES = new Set<NavTelemetryPriceSource>(["chainlink-nav", "superstate-liquidity"]);
@@ -109,7 +107,6 @@ export interface PrimaryConsensusQuoteMaps {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
-  addressProviderQuotes: Map<string, AddressPriceQuote[]>;
 }
 
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
@@ -134,7 +131,6 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     curveOraclePrice: null,
     curveOracleObservedAt: null,
     navPrices: new Map(),
-    addressProviderQuotes: new Map(),
   };
 }
 
@@ -185,19 +181,20 @@ function resolveNavUsdRate(params: {
 async function loadReserveNavPriceQuotes(params: {
   db: D1Database;
   candidates: PeggedAsset[];
+  navPriceIds: string[];
   references?: PriceValidationReferences;
   metaById?: Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
 }): Promise<Map<string, NavTelemetryQuote>> {
   const metaById = params.metaById ?? new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
-  const eligibleIds = new Set(
-    params.candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
-  );
+  // NAV-eligible IDs were collected during the plan's candidate pass; every
+  // eligible asset is a candidate by construction, so no re-filtering here.
+  const eligibleIds = new Set(params.navPriceIds);
   if (eligibleIds.size === 0) return new Map();
 
   try {
     const rows = await runWithOverloadRetry(() => params.db
       .prepare(
-        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata, s.last_success_at
+        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata
            FROM reserve_composition c
            JOIN reserve_sync_state s
              ON s.stablecoin_id = c.stablecoin_id
@@ -210,7 +207,8 @@ async function loadReserveNavPriceQuotes(params: {
     const quotes = new Map<string, NavTelemetryQuote>();
     for (const row of rows.results ?? []) {
       if (!eligibleIds.has(row.stablecoin_id)) continue;
-      if (row.last_success_at !== row.fetched_at) continue;
+      // last_success_at/fetched_at agreement is enforced by the query's
+      // `s.last_success_at = c.fetched_at` equality — the only data path here.
       if (!isNavTelemetryPriceSource(row.source)) continue;
 
       const asset = assetById.get(row.stablecoin_id);
@@ -287,10 +285,16 @@ export async function buildPrimaryPricePlan(
   const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
   curveEligibleIds.add("crvusd-curve");
 
-  const candidates = assets.filter((asset) => {
+  const candidates: PeggedAsset[] = [];
+  const navPriceIds: string[] = [];
+  for (const asset of assets) {
     const symbolUpper = asset.symbol.toUpperCase();
     const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
-    return (
+    // NAV telemetry eligibility implies candidacy (a disjunct below), so the
+    // eligible ID list is collected in this same pass instead of re-filtering.
+    const navEligible = isNavTelemetryPriceEligible(asset.id, metaById);
+    if (navEligible) navPriceIds.push(asset.id);
+    if (
       hasValidGeckoId ||
       (dlListPrices?.has(asset.id) ?? false) ||
       coinbaseKnownSet.has(symbolUpper) ||
@@ -298,11 +302,13 @@ export async function buildPrimaryPricePlan(
       bitstampKnownSet.has(symbolUpper) ||
       redstoneStablecoinIdSet.has(asset.id) ||
       curveEligibleIds.has(asset.id) ||
-      isNavTelemetryPriceEligible(asset.id, metaById) ||
+      navEligible ||
       dexRows.has(asset.id) ||
       dexPriceSources.has(asset.id)
-    );
-  });
+    ) {
+      candidates.push(asset);
+    }
+  }
 
   if (candidates.length === 0) {
     return {
@@ -316,7 +322,7 @@ export async function buildPrimaryPricePlan(
       krakenSymbols: [],
       shouldFetchBitstamp: false,
       redstoneSymbols: [],
-      navPriceIds: [],
+      navPriceIds,
       sourceAllowed: {
         cg: false,
         cgTicker: false,
@@ -392,7 +398,7 @@ export async function buildPrimaryPricePlan(
     krakenSymbols,
     shouldFetchBitstamp,
     redstoneSymbols,
-    navPriceIds: candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
+    navPriceIds,
     sourceAllowed: {
       cg: cgAllowed,
       cgTicker: cgTickerAllowed,
@@ -447,7 +453,6 @@ export async function collectPrimaryProviderQuotes(params: {
     bitstampObservedAtBySymbol,
     coinbaseObservedAtBySymbol,
     navPrices,
-    addressProviderQuotes,
   } = emptyQuoteMaps;
 
   let curveOraclePrice: number | null = null;
@@ -468,6 +473,7 @@ export async function collectPrimaryProviderQuotes(params: {
       const quotes = await loadReserveNavPriceQuotes({
         db,
         candidates: plan.candidates,
+        navPriceIds,
         references,
       });
       for (const [coinId, quote] of quotes) {
@@ -668,7 +674,6 @@ export async function collectPrimaryProviderQuotes(params: {
       curveOraclePrice,
       curveOracleObservedAt,
       navPrices,
-      addressProviderQuotes,
     },
     providerDiagnostics,
   };

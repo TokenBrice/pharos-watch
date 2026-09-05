@@ -117,9 +117,9 @@ export function buildCriticalCoverageArgs(
 ): string[] {
   const selectedSources = selectCriticalCoverageFiles(options);
   const ownership = options.ownership ?? generatedCriticalOwnership;
-  // A touched source pays only for tests that import it; full runs pass all
-  // enrolled sources and therefore retain the complete derived owner set.
-  const selectedTests = collectOwningTests(selectedSources, ownership);
+  // Keep the execution suite comparable to the checked-in full-suite baseline:
+  // other critical owners can exercise a touched source through indirect imports.
+  const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
   return [
     "run",
     ...buildCriticalCoverageOptions(selectedSources),
@@ -132,9 +132,8 @@ export function countCriticalCoverageShards(
   options: CriticalCoverageBuildOptions = {},
   maxShards = 4,
 ): number {
-  const selectedSources = selectCriticalCoverageFiles(options);
   const ownership = options.ownership ?? generatedCriticalOwnership;
-  const selectedTests = collectOwningTests(selectedSources, ownership);
+  const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
   return Math.max(1, Math.min(maxShards, selectedTests.length));
 }
 

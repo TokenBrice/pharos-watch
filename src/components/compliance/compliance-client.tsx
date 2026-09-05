@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
@@ -89,42 +90,6 @@ const COMPLIANCE_URL_SCHEMA: UrlStateSchema<ComplianceUrlState> = {
     allowedValues: COMPLIANCE_PEG_VALUES,
   },
 };
-
-function CompliancePillGroup<T extends string>({
-  value,
-  options,
-  ariaLabel,
-  className = "flex flex-wrap gap-1.5",
-  onChange,
-}: {
-  value: T;
-  options: readonly { value: T; label: string }[];
-  ariaLabel: string;
-  className?: string;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div role="group" aria-label={ariaLabel} className={className}>
-      {options.map((option) => {
-        const isActive = option.value === value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={isActive}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "pharos-focus-ring pharos-control-pill min-h-[44px] text-xs md:min-h-0",
-              isActive && "pharos-control-pill-active",
-            )}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function ComplianceViewTabs({
   value,
@@ -274,26 +239,32 @@ export function ComplianceClient() {
             </div>
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
               {regimeFilter !== "all" ? (
-                <CompliancePillGroup
-                  value={statusFilter}
-                  options={statusOptions}
+                <ControlPillToggle
+                  className="flex flex-wrap gap-1.5"
                   ariaLabel={`Filter by ${regimeFilter === "mica" ? "MiCA" : "GENIUS"} status`}
+                  options={statusOptions}
+                  value={statusFilter}
                   onChange={setStatusFilter}
+                  buttonClassName="min-h-[44px] text-xs md:min-h-0"
                 />
               ) : null}
               {regimeFilter === "mica" ? (
-                <CompliancePillGroup
-                  value={tokenTypeFilter}
-                  options={MICA_TOKEN_TYPE_FILTER_OPTIONS}
+                <ControlPillToggle
+                  className="flex flex-wrap gap-1.5"
                   ariaLabel="Filter by MiCA token type"
+                  options={MICA_TOKEN_TYPE_FILTER_OPTIONS}
+                  value={tokenTypeFilter}
                   onChange={setTokenTypeFilter}
+                  buttonClassName="min-h-[44px] text-xs md:min-h-0"
                 />
               ) : null}
-              <CompliancePillGroup
-                value={pegFilter}
-                options={PEG_FILTER_OPTIONS}
+              <ControlPillToggle
+                className="flex flex-wrap gap-1.5"
                 ariaLabel="Filter by peg currency"
+                options={PEG_FILTER_OPTIONS}
+                value={pegFilter}
                 onChange={setPegFilter}
+                buttonClassName="min-h-[44px] text-xs md:min-h-0"
               />
               <FilterSearchInput
                 value={searchInput}

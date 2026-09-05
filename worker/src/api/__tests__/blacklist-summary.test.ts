@@ -401,7 +401,7 @@ describe("handleBlacklistSummary", () => {
     expect(body.stats.perCoinQuarterlyEventTypes.USDT).toHaveLength(1);
     expect(body.stats.perCoinQuarterlyEventTypes.USDT[0]).toMatchObject({ blacklist: 1, unblacklist: 0, destroy: 0 });
     expect(body.stats.perCoinQuarterlyEventTypes.USDC[0]).toMatchObject({ blacklist: 0, unblacklist: 0, destroy: 1 });
-    // Per-coin 7d event-type counts back the detail-page RecentBlacklistBanner.
+    // The public summary retains per-coin 7d event-type counts.
     expect(body.stats.perCoinRecentEventTypes.USDT).toEqual({ freezes: 2, destroys: 1, releases: 0 });
     expect(body.stats.perCoinRecentEventTypes.USDC).toEqual({ freezes: 0, destroys: 0, releases: 3 });
     // Coins without 7d events get zero-default records so clients don't need presence checks.

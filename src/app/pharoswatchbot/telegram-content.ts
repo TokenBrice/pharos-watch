@@ -5,6 +5,10 @@ import {
   TELEGRAM_ALERT_FAMILIES,
   TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS,
 } from "@shared/lib/telegram-alert-families";
+import {
+  TELEGRAM_COMMAND_REFERENCE,
+  type TelegramCommandVariant,
+} from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
@@ -48,8 +52,6 @@ export const TELEGRAM_ACTIONS = [
     isPrimary: false,
   },
 ] as const;
-
-export type TelegramActionKey = (typeof TELEGRAM_ACTIONS)[number]["key"];
 
 export const MINI_APP_FEATURES = [
   { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
@@ -160,204 +162,156 @@ export const TELEGRAM_ALERT_EXAMPLES = TELEGRAM_ALERT_FAMILIES.map((family) => (
   content: TELEGRAM_PUBLIC_ALERT_SAMPLES[family.key].message,
 }));
 
+// Public command reference. Syntax and examples derive from the shared
+// command manifest; this file owns the grouping, ordering, and the long
+// explanatory prose for each row.
+const singleCommandVariant = (command: keyof typeof TELEGRAM_COMMAND_REFERENCE): TelegramCommandVariant =>
+  TELEGRAM_COMMAND_REFERENCE[command].variants[0];
+
+const [subscribeTypes, subscribeAll, subscribeStep] = TELEGRAM_COMMAND_REFERENCE.subscribe.variants;
+const [unsubscribeTargets, unsubscribeAll] = TELEGRAM_COMMAND_REFERENCE.unsubscribe.variants;
+const [setCoin, setAll] = TELEGRAM_COMMAND_REFERENCE.set.variants;
+const [recapToggle, recapTime] = TELEGRAM_COMMAND_REFERENCE.recap.variants;
+
+function commandRow(variant: TelegramCommandVariant, description: string) {
+  return { command: variant.syntax, description, example: variant.example };
+}
+
 export const TELEGRAM_COMMAND_GROUPS = [
   {
     label: "Subscribe",
     commands: [
-      {
-        command: "/subscribe <types> <targets>",
-        description:
-          "Enable alert types for one or more coins, coin-ids, or presets. <types> is comma-separated.",
-        example: "/subscribe dews,depeg usd-top25",
-      },
-      {
-        command: "/subscribe <types> all",
-        description:
-          "Enable alert types across every tracked coin. safety all sends downgrades only and applies a 3-point filter when scored.",
-        example: "/subscribe depeg,safety all",
-      },
-      {
-        command: "/subscribe <targets> depeg-step <value>",
-        description:
-          "Enable depeg alerts, gate them by severity, and re-alert on each worsening milestone. <value> must be 100, 250, or 500 bps.",
-        example: "/subscribe usd-top50 depeg-step 250",
-      },
-      {
-        command: "/presets",
-        description:
-          "Browse preset watchlists (usd-top25, non-usd-top25, mcap-ge-1b, ...). Subscribing to a preset expands to its current member coins.",
-        example: "/presets",
-      },
+      commandRow(
+        subscribeTypes,
+        "Enable alert types for one or more coins, coin-ids, or presets. <types> is comma-separated.",
+      ),
+      commandRow(
+        subscribeAll,
+        "Enable alert types across every tracked coin. safety all sends downgrades only and applies a 3-point filter when scored.",
+      ),
+      commandRow(
+        subscribeStep,
+        "Enable depeg alerts, gate them by severity, and re-alert on each worsening milestone. <value> must be 100, 250, or 500 bps.",
+      ),
+      commandRow(
+        singleCommandVariant("presets"),
+        "Browse preset watchlists (usd-top25, non-usd-top25, mcap-ge-1b, ...). Subscribing to a preset expands to its current member coins.",
+      ),
     ],
   },
   {
     label: "Unsubscribe",
     commands: [
-      {
-        command: "/unsubscribe <targets>",
-        description:
-          "Remove coins by ticker, coin-id, or preset. Preset removal expands to its current member coins.",
-        example: "/unsubscribe usd-top25",
-      },
-      {
-        command: "/unsubscribe all",
-        description:
-          "Clear every per-coin, preset, and all-stablecoin subscription. Operational chat metadata can remain until inactive cleanup.",
-        example: null,
-      },
+      commandRow(
+        unsubscribeTargets,
+        "Remove coins by ticker, coin-id, or preset. Preset removal expands to its current member coins.",
+      ),
+      commandRow(
+        unsubscribeAll,
+        "Clear every per-coin, preset, and all-stablecoin subscription. Operational chat metadata can remain until inactive cleanup.",
+      ),
     ],
   },
   {
     label: "Tune",
     commands: [
-      {
-        command: "/set <ticker> <setting> <value>",
-        description:
-          "Tune one coin. <setting> is dews <band> (WARNING/ALERT/DANGER/off), depeg on|off, depeg-step <bps> (100/250/500), safety <mode> (downgrade-only/upgrade-only/all/off), launch on|off, reserve on|off, or freeze on|off.",
-        example: "/set USDT dews WARNING",
-      },
-      {
-        command: "/set all <setting> <value>",
-        description:
-          "Global toggle for dews, depeg, safety, launch, reserve, or freeze. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global severity gate and worsening step.",
-        example: "/set all depeg-step 250",
-      },
-      {
-        command: "/mute <start>-<end>",
-        description:
-          "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone (UTC if none is set). Notifications are silenced; messages still deliver. Use alert toggles or unsubscribes for all-day silence.",
-        example: "/mute 22-07",
-      },
-      {
-        command: "/timezone <IANA-zone>",
-        description:
-          "Set the chat's IANA timezone used to resolve /mute quiet hours locally (e.g. Europe/Paris, America/New_York). Sending /timezone with no argument shows the current zone and an inline keyboard of common zones.",
-        example: "/timezone Europe/Paris",
-      },
-      {
-        command: "/recap [on|off]",
-        description:
-          "Show, enable, or disable the private daily watchlist recap. Enabling requires a confirmed /timezone. A recap sends at most once per local day and only when watched assets materially changed.",
-        example: "/recap on",
-      },
-      {
-        command: "/recap time <hour>",
-        description:
-          "Set the recap delivery hour from 0 to 23 in your confirmed IANA timezone. Personalized recaps are private-chat only.",
-        example: "/recap time 9",
-      },
-      {
-        command: "/settings",
-        description:
-          "Open an inline-keyboard panel for chat-level settings (quiet hours, snooze clear, global DEWS/depeg/safety/launch/reserve/freeze toggles). Add a ticker (e.g. /settings USDC) to open the per-coin panel with DEWS floor, depeg step, safety mode, launch, reserve, and freeze toggles.",
-        example: "/settings USDC",
-      },
-      {
-        command: "/pause [off|1h|4h|24h]",
-        description: "Pause all alerts indefinitely, resume with off, or apply a timed 1h, 4h, or 24h snooze.",
-        example: "/pause 4h",
-      },
-      {
-        command: "/unmutehours",
-        description: "Disable quiet hours.",
-        example: null,
-      },
-      {
-        command: "/unsnooze",
-        description: "Clear active alert snooze immediately.",
-        example: null,
-      },
+      commandRow(
+        setCoin,
+        "Tune one coin. <setting> is dews <band> (WARNING/ALERT/DANGER/off), depeg on|off, depeg-step <bps> (100/250/500), safety <mode> (downgrade-only/upgrade-only/all/off), launch on|off, reserve on|off, or freeze on|off.",
+      ),
+      commandRow(
+        setAll,
+        "Global toggle for dews, depeg, safety, launch, reserve, or freeze. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global severity gate and worsening step.",
+      ),
+      commandRow(
+        singleCommandVariant("mute"),
+        "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone (UTC if none is set). Notifications are silenced; messages still deliver. Use alert toggles or unsubscribes for all-day silence.",
+      ),
+      commandRow(
+        singleCommandVariant("timezone"),
+        "Set the chat's IANA timezone used to resolve /mute quiet hours locally (e.g. Europe/Paris, America/New_York). Sending /timezone with no argument shows the current zone and an inline keyboard of common zones.",
+      ),
+      commandRow(
+        recapToggle,
+        "Show, enable, or disable the private daily watchlist recap. Enabling requires a confirmed /timezone. A recap sends at most once per local day and only when watched assets materially changed.",
+      ),
+      commandRow(
+        recapTime,
+        "Set the recap delivery hour from 0 to 23 in your confirmed IANA timezone. Personalized recaps are private-chat only.",
+      ),
+      commandRow(
+        singleCommandVariant("settings"),
+        "Open an inline-keyboard panel for chat-level settings (quiet hours, snooze clear, global DEWS/depeg/safety/launch/reserve/freeze toggles). Add a ticker (e.g. /settings USDC) to open the per-coin panel with DEWS floor, depeg step, safety mode, launch, reserve, and freeze toggles.",
+      ),
+      commandRow(
+        singleCommandVariant("pause"),
+        "Pause all alerts indefinitely, resume with off, or apply a timed 1h, 4h, or 24h snooze.",
+      ),
+      commandRow(singleCommandVariant("unmutehours"), "Disable quiet hours."),
+      commandRow(singleCommandVariant("unsnooze"), "Clear active alert snooze immediately."),
     ],
   },
   {
     label: "Query",
     commands: [
-      {
-        command: "/status <ticker>",
-        description:
-          "Snapshot for one coin: price with age, supply, DEWS band, safety grade, active depeg, liquidity score with TVL, and 30d yield.",
-        example: "/status USDC",
-      },
-      {
-        command: "/brief",
-        description:
-          "Latest market brief: peg deviations, supply shifts, liquidity changes, and what changed overnight. /market is a deprecated compatibility alias.",
-        example: "/brief",
-      },
-      {
-        command: "/sample",
-        description:
-          "Private-chat-only preview of a synthetic USDC DEWS alert so you can inspect the alert format before subscribing.",
-        example: "/sample",
-      },
-      {
-        command: "/top <view>",
-        description:
-          "Rank current views. <view> is one of: depeg, dews, yield, liquidity, chains, safety.",
-        example: "/top depeg",
-      },
-      {
-        command: "/why <ticker>",
-        description:
-          "Plain-language breakdown of one coin's Safety Score: top weak dimensions and contributing report-card factors.",
-        example: "/why USDC",
-      },
-      {
-        command: "/coverage <ticker>",
-        description:
-          "List which Pharos modules cover one coin: price, DEWS, safety, liquidity, yield, mint/burn, reserves.",
-        example: "/coverage USDC",
-      },
+      commandRow(
+        singleCommandVariant("status"),
+        "Snapshot for one coin: price with age, supply, DEWS band, safety grade, active depeg, liquidity score with TVL, and 30d yield.",
+      ),
+      commandRow(
+        singleCommandVariant("brief"),
+        "Latest market brief: peg deviations, supply shifts, liquidity changes, and what changed overnight. /market is a deprecated compatibility alias.",
+      ),
+      commandRow(
+        singleCommandVariant("sample"),
+        "Private-chat-only preview of a synthetic USDC DEWS alert so you can inspect the alert format before subscribing.",
+      ),
+      commandRow(
+        singleCommandVariant("top"),
+        "Rank current views. <view> is one of: depeg, dews, yield, liquidity, chains, safety.",
+      ),
+      commandRow(
+        singleCommandVariant("why"),
+        "Plain-language breakdown of one coin's Safety Score: top weak dimensions and contributing report-card factors.",
+      ),
+      commandRow(
+        singleCommandVariant("coverage"),
+        "List which Pharos modules cover one coin: price, DEWS, safety, liquidity, yield, mint/burn, reserves.",
+      ),
     ],
   },
   {
     label: "Meta",
     commands: [
-      {
-        command: "/start",
-        description: "Open the guided setup flow or process a supported Telegram deep-link payload.",
-        example: "/start",
-      },
-      {
-        command: "/list",
-        description:
-          "Audit your state: global alerts, dynamic preset follows, per-coin subscriptions with settings, quiet hours, and active snooze.",
-        example: null,
-      },
-      {
-        command: "/health",
-        description:
-          "Self-diagnostic for this chat: last successful delivery, queued alerts, quiet hours, snooze, and recent failure class.",
-        example: null,
-      },
-      {
-        command: "/cancel",
-        description: "Cancel a pending ticker-selection prompt (when a symbol matches multiple coins).",
-        example: null,
-      },
-      {
-        command: "/help",
-        description: "Show command reference.",
-        example: null,
-      },
-      {
-        command: "/forget",
-        description:
-          "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, live delivery diagnostics, and chat-linked delivery audit rows.",
-        example: null,
-      },
-      {
-        command: "/export",
-        description:
-          "Create a portable watchlist token containing explicit follows, alert types, and followed presets. Quiet hours and snooze are excluded.",
-        example: "/export",
-      },
-      {
-        command: "/import <token>",
-        description:
-          "Validate a token from /export and stage its watchlist behind a confirmation. Group imports require an admin.",
-        example: "/import eyJ2IjoxLC4uLn0",
-      },
+      commandRow(
+        singleCommandVariant("start"),
+        "Open the guided setup flow or process a supported Telegram deep-link payload.",
+      ),
+      commandRow(
+        singleCommandVariant("list"),
+        "Audit your state: global alerts, dynamic preset follows, per-coin subscriptions with settings, quiet hours, and active snooze.",
+      ),
+      commandRow(
+        singleCommandVariant("health"),
+        "Self-diagnostic for this chat: last successful delivery, queued alerts, quiet hours, snooze, and recent failure class.",
+      ),
+      commandRow(
+        singleCommandVariant("cancel"),
+        "Cancel a pending ticker-selection prompt (when a symbol matches multiple coins).",
+      ),
+      commandRow(singleCommandVariant("help"), "Show command reference."),
+      commandRow(
+        singleCommandVariant("forget"),
+        "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, live delivery diagnostics, and chat-linked delivery audit rows.",
+      ),
+      commandRow(
+        singleCommandVariant("export"),
+        "Create a portable watchlist token containing explicit follows, alert types, and followed presets. Quiet hours and snooze are excluded.",
+      ),
+      commandRow(
+        singleCommandVariant("import"),
+        "Validate a token from /export and stage its watchlist behind a confirmation. Group imports require an admin.",
+      ),
     ],
   },
 ] as const;

@@ -1,8 +1,17 @@
 import type { PriceObservedAtMode } from "../types/core";
+import type { PricingSourceTrustTier } from "./pricing-source-registry-types";
 import { getPricingSourceRegistryEntry } from "./pricing-source-registry";
 import { normalizePricingSourceKeys } from "./pricing-sources";
 
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
+
+/**
+ * Single owner of the hard-tier membership question. Callers must not
+ * re-enumerate the hard trust tiers; a future tier addition is decided here.
+ */
+export function isHardPricingTrustTier(tier: PricingSourceTrustTier | null | undefined): boolean {
+  return tier === "hard_market" || tier === "hard_oracle" || tier === "hard_protocol";
+}
 
 export function isPoolChallengeEligibleConsensus(sources: string[]): boolean {
   const sourceParts = normalizePricingSourceKeys(sources);
@@ -13,10 +22,6 @@ export function isPoolChallengeEligibleConsensus(sources: string[]): boolean {
       return entry != null && !entry.isPoolChallengeExempt;
     })
   );
-}
-
-export function isGtProbeEligibleSingleSource(source: string): boolean {
-  return !!getPricingSourceRegistryEntry(source)?.isGtProbeEligible;
 }
 
 export function isReplaySafePriceSource(source: string | null | undefined): boolean {

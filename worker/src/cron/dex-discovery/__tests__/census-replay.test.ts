@@ -9,7 +9,7 @@ import {
   createDexCensusReplayVisit,
   replayDexCensusSweep,
   type DexCensusReplayVisit,
-} from "../census-replay";
+} from "./census-replay.test-support";
 import { discoveryTargetCursorKey, estimateDiscoverySweepWindowCount } from "../target-window";
 
 const START_SEC = 1_800_000_000;

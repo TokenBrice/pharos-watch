@@ -388,6 +388,7 @@ const DexDeploymentCoverageSchema = z.object({
 
 const DexLiquidityDataSchema = z
   .object({
+    warning: z.string().nullable().optional(),
     totalTvlUsd: z.number(),
     totalVolume24hUsd: z.number(),
     totalVolume7dUsd: z.number().nullable(),

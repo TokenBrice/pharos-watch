@@ -50,6 +50,9 @@ export function buildPrimaryConsensusResults(params: {
   logDexPriceSourceLoadTelemetry(params.dexPriceSourceTelemetry);
 
   for (const asset of params.candidates) {
+    // Resolved once per asset: the caller's resolver is a pure dlListPrices
+    // read, so the quote feeds both candidate building and the dlPrice field.
+    const dlListQuote = params.resolveDlListQuote(asset.id);
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cgPrice = geckoId ? (params.quoteMaps.cgPrices.get(geckoId) ?? null) : null;
     const cgObservedAtForAsset =
@@ -68,7 +71,7 @@ export function buildPrimaryConsensusResults(params: {
       cgObservedAtMode: cgObservedAtModeForAsset,
       cgTickerPrice: params.quoteMaps.cgTickerPrices.get(asset.id) ?? null,
       cgTickerObservedAt: params.quoteMaps.cgTickerObservedAt,
-      dlListQuote: params.resolveDlListQuote(asset.id),
+      dlListQuote,
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
       krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
@@ -83,7 +86,6 @@ export function buildPrimaryConsensusResults(params: {
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       navQuote: params.quoteMaps.navPrices.get(asset.id),
-      addressProviderQuotes: params.quoteMaps.addressProviderQuotes.get(asset.id),
       protocolSources: params.dexPriceSources.get(asset.id),
       dexAggregateQuote: (() => {
         const dexRow = params.dexRows.get(asset.id);
@@ -128,7 +130,7 @@ export function buildPrimaryConsensusResults(params: {
       selectedSource: consensus.selectedSource,
       priceEstimator: consensus.priceEstimator,
       confidence: consensus.confidence,
-      dlPrice: params.resolveDlListQuote(asset.id)?.price ?? null,
+      dlPrice: dlListQuote?.price ?? null,
       cgPrice,
       candidateSources: Object.keys(consensus.allPrices),
       agreeSources: consensus.agreeSources,

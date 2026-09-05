@@ -139,7 +139,13 @@ const SfrxusdRouteProtocolCostPointSchema = z
     }
   });
 
-function raw18ToNumber(value: bigint): number {
+/**
+ * Exact 18-decimal raw amount → number: the integer and fractional halves are
+ * converted separately at 1e18 and recombined. Shared by this packet schema
+ * and the sfrxUSD producer so packet acceptance and packet construction
+ * cannot drift apart.
+ */
+export function raw18ToNumber(value: bigint): number {
   return Number(value / E18) + Number(value % E18) / 1e18;
 }
 

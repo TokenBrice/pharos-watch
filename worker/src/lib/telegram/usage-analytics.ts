@@ -3,6 +3,11 @@ import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@share
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 import { formatIsoDate } from "@shared/lib/format";
 import {
+  ACTIVE_PRESET_FLAGS_SQL,
+  ACTIVE_SUBSCRIPTION_FLAGS_SQL,
+  ACTIVE_WATCHER_SQL_CONDITION,
+} from "./active-watcher-sql";
+import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "./presets";
@@ -103,18 +108,9 @@ export interface TelegramChatHealthDiagnostics {
 }
 
 const SNAPSHOT_REFRESH_INTERVAL_SEC = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS;
-const ACTIVE_SUBSCRIPTION_FLAGS = `alert_dews = 1
-  OR alert_depeg = 1
-  OR alert_safety = 1
-  OR alert_launch = 1
-  OR alert_reserve = 1
-  OR alert_freeze = 1`;
-const ACTIVE_PRESET_FLAGS = `alert_dews = 1
-  OR alert_depeg = 1
-  OR alert_safety = 1`;
 
 const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = `SELECT chat_id,
-        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS} THEN 1 ELSE 0 END) AS active_sub_count,
+        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count,
         MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
@@ -130,17 +126,8 @@ const ACTIVE_PRESETS_BY_CHAT_SQL = `SELECT chat_id,
         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled
    FROM telegram_preset_subscriptions
-  WHERE ${ACTIVE_PRESET_FLAGS}
+  WHERE ${ACTIVE_PRESET_FLAGS_SQL}
   GROUP BY chat_id`;
-
-const ACTIVE_WATCHER_CONDITION = `s.global_alert_dews = 1
-  OR s.global_alert_depeg = 1
-  OR s.global_alert_safety = 1
-  OR s.global_alert_launch = 1
-  OR s.global_alert_reserve = 1
-  OR s.global_alert_freeze = 1
-  OR COALESCE(sub.active_sub_count, 0) > 0
-  OR COALESCE(preset.active_preset_count, 0) > 0`;
 
 export function coerceCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value ?? 0);
@@ -169,7 +156,7 @@ async function loadActivePresetFollowerRows(db: D1Database): Promise<PresetFollo
       .prepare(
         `SELECT preset_id, COUNT(DISTINCT chat_id) AS followers
            FROM telegram_preset_subscriptions
-          WHERE ${ACTIVE_PRESET_FLAGS}
+          WHERE ${ACTIVE_PRESET_FLAGS_SQL}
           GROUP BY preset_id`,
       )
       .all<PresetFollowerRow>();
@@ -262,10 +249,10 @@ export async function computeTelegramCurrentLifecycleSnapshot(
     db
       .prepare(
         `SELECT
-           SUM(CASE WHEN ${ACTIVE_WATCHER_CONDITION} THEN 1 ELSE 0 END) AS active_watchers,
+           SUM(CASE WHEN ${ACTIVE_WATCHER_SQL_CONDITION} THEN 1 ELSE 0 END) AS active_watchers,
            SUM(
              CASE
-               WHEN (${ACTIVE_WATCHER_CONDITION}) AND s.created_at >= ? AND s.created_at < ?
+               WHEN (${ACTIVE_WATCHER_SQL_CONDITION}) AND s.created_at >= ? AND s.created_at < ?
                THEN 1 ELSE 0
              END
            ) AS new_watchers,
@@ -539,7 +526,7 @@ export async function loadTelegramTopFollowedCoins(
       .prepare(
         `SELECT stablecoin_id, COUNT(DISTINCT chat_id) AS subscribers
            FROM telegram_subscriptions
-          WHERE ${ACTIVE_SUBSCRIPTION_FLAGS}
+          WHERE ${ACTIVE_SUBSCRIPTION_FLAGS_SQL}
           GROUP BY stablecoin_id`,
       )
       .all<ExplicitTopCoinRow>()

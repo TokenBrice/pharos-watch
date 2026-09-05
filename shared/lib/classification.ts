@@ -1,4 +1,4 @@
-import type { GovernanceType, PegCurrency } from "../types";
+import type { GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
@@ -16,6 +16,14 @@ export * from "./classification/resolve-implementation-launch-date";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
+
+export const RESEARCH_REVIEW_CONFIDENCE_LABELS: Readonly<Record<ResearchReviewConfidence, string>> = {
+  verified: "Verified",
+  probable: "Probable",
+  "manual-review": "Manual review",
+  unknown: "Unknown",
+};
+
 export { PEG_TAXONOMY } from "./peg-taxonomy";
 
 export function getProfilePegLabel(

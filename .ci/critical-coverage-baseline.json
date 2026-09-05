@@ -54,6 +54,7 @@
     "worker/src/cron/depeg-resolver/constants.ts": 100,
     "worker/src/cron/depeg-resolver/incident-resolution.ts": 100,
     "worker/src/cron/depeg-resolver/incident-state.ts": 97.1,
+    "worker/src/cron/depeg-resolver/mint-burn-coverage.ts": 100,
     "worker/src/cron/depeg-resolver/options.ts": 100,
     "worker/src/cron/depeg-resolver/persistence.ts": 100,
     "worker/src/cron/depeg-resolver/public-projection.ts": 100,

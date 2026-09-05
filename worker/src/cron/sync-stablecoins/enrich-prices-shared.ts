@@ -1,4 +1,5 @@
 import type { ContractDeployment, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import { stampPriceMetadata } from "./shared";
 
 export interface PrimaryPriceResult {
   price: number;
@@ -70,12 +71,5 @@ export function applyResolvedPrice(
   observedAtMode: PriceObservedAtMode = "local_fetch",
 ): void {
   asset.price = price;
-  asset.priceSource = source;
-  asset.priceSelectedSource = source;
-  asset.priceConfidence = confidence;
-  asset.priceUpdatedAt = updatedAtSec;
-  asset.priceObservedAt = updatedAtSec;
-  asset.priceObservedAtMode = observedAtMode;
-  asset.priceSyncedAt = updatedAtSec;
-  asset.consensusSources = [source];
+  stampPriceMetadata(asset, source, confidence, updatedAtSec, observedAtMode, [source], undefined, updatedAtSec, source);
 }

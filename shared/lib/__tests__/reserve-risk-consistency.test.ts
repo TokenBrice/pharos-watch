@@ -78,7 +78,7 @@ function isStrategySlice(sliceName: string): boolean {
  */
 function extractCanonicalSymbol(sliceName: string): string | null {
   // Only match against the primary name, not the parenthetical description
-  const primary = sliceName.replace(/\s*\(.*\)$/, "").toUpperCase();
+  const primary = sliceName.split("(", 1)[0].toUpperCase();
   for (const sym of SORTED_SYMBOLS) {
     // eslint-disable-next-line security/detect-non-literal-regexp -- sym comes from curated tracked stablecoin symbols.
     const re = new RegExp(`(?:^|[^A-Z0-9])${sym}(?:[^A-Z0-9]|$)`);
@@ -88,6 +88,11 @@ function extractCanonicalSymbol(sliceName: string): string | null {
 }
 
 describe("curated reserve risk tier consistency", () => {
+  it("does not infer underlying asset risk from explanatory parentheses", () => {
+    expect(extractCanonicalSymbol("ezETH (Renzo ETH LRT) GemJoin")).not.toBe("ETH");
+    expect(extractCanonicalSymbol("ETH (native collateral) GemJoin")).toBe("ETH");
+  });
+
   it("curated reserve slices use canonical risk tiers for known assets", () => {
     const mismatches: string[] = [];
 

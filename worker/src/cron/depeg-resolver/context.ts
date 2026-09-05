@@ -27,13 +27,13 @@ import {
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
   DAY,
   HISTORICAL_ROW_CAP,
   TRAINING_WINDOW_SEC,
 } from "./constants";
+import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
 import type {
   CurrentDeviationMapResult,
   DdrEventDbRow,
@@ -76,8 +76,6 @@ export type DdrContextLoadResult =
 type DdrDexHistoryRow = DexHistoryRow & {
   total_volume_24h_usd: number;
 };
-
-const MINT_BURN_COVERED_COIN_IDS = new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 
 export function emptyDdrLineage(nowSec: number): DdrLineage {
   return {

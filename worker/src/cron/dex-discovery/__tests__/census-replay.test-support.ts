@@ -12,16 +12,16 @@ import {
   DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC,
   estimateDeploymentCrawlCostMs,
   selectDiscoveryTargetWindow,
-} from "./target-window";
-import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
+} from "../target-window";
+import { getRuntimeDexDiscoveryProviders } from "../provider-registry";
 import {
   classifyStoredDexCensusState,
   isCurrentDexCensusStateComplete,
   resolveDexCensusAttempt,
   type DexCensusAttemptSignals,
   type DexStoredCensusState,
-} from "./census-state-machine";
-import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
+} from "../census-state-machine";
+import type { DexDeploymentCensusRow } from "../../dex-liquidity/deployment-census-coverage";
 
 export type DexCensusReplayPersistence = "outcome" | "fence-only" | "retain";
 export type DexCensusReplayCursorMode = "normal" | "failed-window" | "hold";

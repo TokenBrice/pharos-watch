@@ -71,6 +71,9 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         `SELECT status, metadata
          FROM cron_runs
          WHERE job = 'sync-dex-liquidity'
+           AND status IN ('ok', 'degraded', 'error')
+           AND COALESCE(CASE WHEN json_valid(metadata)
+             THEN json_extract(metadata, '$.persistence.skippedReason') END, '') != 'liquidity-cadence-reuse'
          ORDER BY started_at DESC
          LIMIT 1`,
       )
@@ -97,6 +100,13 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const oneDayAgo = nowSec - 86_400;
   const sevenDaysAgo = nowSec - 7 * 86_400;
   const { day: trend24hToleranceSec, week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
+  const rows = result.results ?? [];
+  const freshnessTs = rows.length > 0 ? Math.max(...rows.map((row) => row.updated_at)) : nowSec;
+  const headers = addFreshnessHeaders(
+    { "Cache-Control": CACHE_PROFILES.custom },
+    freshnessTs,
+    API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+  );
 
   const map: Record<string, unknown> = {};
   for (const row of result.results ?? []) {
@@ -136,6 +146,8 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       : inferred7dMeasured;
 
     map[id] = {
+      warning: [headers.Warning, buildDexLiquidityWarning(latestCron, id === "__global__" ? undefined : id)]
+        .filter(Boolean).join(", ") || null,
       totalTvlUsd: currentTvl,
       totalVolume24hUsd: row.total_volume_24h_usd,
       totalVolume7dUsd: totalVolume7dMeasured ? row.total_volume_7d_usd : null,
@@ -191,18 +203,6 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     };
   }
 
-  const rows = result.results ?? [];
-  const latestRowUpdate =
-    rows.length > 0 ? rows.reduce((m, r) => Math.max(m, r.updated_at), 0) : Math.floor(Date.now() / 1000);
-  const freshnessTs = latestRowUpdate;
-
-  const headers = addFreshnessHeaders(
-    {
-      "Cache-Control": CACHE_PROFILES.custom,
-    },
-    freshnessTs,
-    API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-  );
   const degradedWarning = buildDexLiquidityWarning(latestCron);
   if (degradedWarning) {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;

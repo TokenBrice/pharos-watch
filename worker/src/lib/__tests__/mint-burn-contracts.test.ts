@@ -11,6 +11,7 @@ import {
   validateMintBurnBridgeDetection,
 } from "../mint-burn-contracts";
 import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
+import { MINT_BURN_COVERED_COIN_IDS } from "../../cron/depeg-resolver/mint-burn-coverage";
 
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -111,9 +112,8 @@ describe("mint-burn-contracts Base Dollar config", () => {
 
 describe("mint-burn-contracts removals", () => {
   it("does not track explicitly removed no-signal tokens", () => {
-    const trackedIds = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
     for (const removedId of REMOVED_STABLECOIN_IDS) {
-      expect(trackedIds.has(removedId)).toBe(false);
+      expect(MINT_BURN_COVERED_COIN_IDS.has(removedId)).toBe(false);
     }
   });
 });

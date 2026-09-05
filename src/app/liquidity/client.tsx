@@ -12,6 +12,7 @@ import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { PegCurrency } from "@shared/types";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
@@ -85,23 +86,14 @@ export function LiquidityClient() {
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 className="pharos-kicker">Liquidity Leaderboard</h2>
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Filter by peg currency" className="flex flex-wrap gap-1.5">
-          {PEG_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setPegFilter(f.value)}
-              aria-pressed={pegFilter === f.value}
-              className={
-                pegFilter === f.value
-                  ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11 md:min-h-9"
-                  : "pharos-focus-ring pharos-control-pill min-h-11 md:min-h-9"
-              }
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <ControlPillToggle
+          className="flex flex-wrap gap-1.5"
+          ariaLabel="Filter by peg currency"
+          options={PEG_FILTERS}
+          value={pegFilter}
+          onChange={setPegFilter}
+          buttonClassName="min-h-11 md:min-h-9"
+        />
         <FilterSearchInput
           value={searchInput}
           onValueChange={setSearchInput}

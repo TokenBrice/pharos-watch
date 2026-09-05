@@ -18,7 +18,7 @@ Each flag's default and `expiresAt` are owned by `src/lib/feature-flags.ts`; rea
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Retained configuration only; the unmounted recent blacklist banner was removed     |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR + Outlook Posture on `/depeg/`, detail DDR card; master-gates DDRR (rollback)   |
@@ -43,9 +43,7 @@ What must be true before turning each flag on in production:
 
 ### `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`
 
-- [x] Frozen-asset suppression in place.
-- [x] `useRecentBlacklist7d` reads the worker's pre-aggregated `stats.perCoinRecentEventTypes` slice off the existing summary endpoint, sharing its query key (no extra worker round-trips).
-- [ ] iOS Safari sticky check on a coin with active freezes.
+The unmounted banner and its query hook have been removed. This flag remains in the configuration contract pending an explicit retirement decision; enabling it does not render a banner. The blacklist summary endpoint and its seven-day per-coin counters remain available.
 
 ## 2026-07-29 lifecycle review
 
@@ -57,7 +55,7 @@ has been completed.
 | --- | --- | --- | --- | --- |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); `src/lib/__tests__/severity-colors.test.ts` passes. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | tokenbrice | `src/components/stablecoin-detail/__tests__/mobile-sticky-summary.test.tsx` verifies height publication; `src/components/__tests__/longform-scrollspy-nav.test.tsx` verifies the reactive `scroll-margin-top` calculation. | A real device must verify mounted-summary scrollspy behavior in iOS Safari and Android Chrome. | 2026-09-01 |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | tokenbrice | `src/components/stablecoin-detail/__tests__/recent-blacklist-banner.test.tsx` verifies rendering and frozen-asset suppression; `src/hooks/__tests__/use-recent-blacklist-7d.test.tsx` verifies gating and summary aggregation. | A real iOS Safari device must check sticky behavior for a coin with active freezes. | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | tokenbrice | Historical rendering/suppression and aggregation tests were retired with the unmounted banner and hook. | Configuration retirement is a separate owner decision; there is no current render site. | 2026-09-01 |
 
 ### `NEXT_PUBLIC_PHAROS_HERO_VERDICT`
 
@@ -149,7 +147,7 @@ likely to be needed.
 | --- | --- | --- |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Human visual review of USDC, USDe, and an active depeg still outstanding. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Real-device iOS Safari and Android Chrome scrollspy review still outstanding. | 2026-12-01 |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Real-device iOS Safari sticky check on a coin with active freezes still outstanding. | 2026-12-01 |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Configuration retained; the unmounted banner and hook have since been removed. Retirement requires a separate owner decision. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | No curation owner or cadence assigned; product decision, not a QA gap. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER` | Rollback lever for `/depeg/` retained through the DDR 4.3 continuity release. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Rollback lever for the DDRR module retained through the DDR 4.3 continuity release. | 2026-12-01 |

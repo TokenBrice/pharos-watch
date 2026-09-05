@@ -2,7 +2,8 @@
  * PYS (Pharos Yield Score) formula — shared between worker computation
  * and frontend breakdown display.
  *
- * Worker: uses computePYS() for the final score.
+ * Worker evaluation: derives the score via computePYSFromComponents() from
+ * components it already computed once; other callers use computePYS().
  * Frontend: uses computePysComponents() for breakdown tooltip display.
  */
 
@@ -242,7 +243,22 @@ interface PysComponentInput {
   sourceRiskPenalty?: number | null;
 }
 
-export function computePysComponents(input: PysComponentInput) {
+/** Per-source PYS intermediate values (see {@link computePysComponents}). */
+export interface PysComponents {
+  riskPenalty: number;
+  adjustedRiskPenalty: number;
+  sourceRiskPenalty: number;
+  sourceRiskPenaltyReason: PysSourceRiskPenaltyReason;
+  sourceRiskPenaltyProvided: boolean;
+  benchmarkSpread: number | null;
+  benchmarkAdjustment: number;
+  effectiveYield: number;
+  rowUtility: number;
+  yieldEfficiency: number;
+  sustainabilityMultiplier: number;
+}
+
+export function computePysComponents(input: PysComponentInput): PysComponents {
   const apy30d = numberValue(input.apy30d) ?? 0;
   const effectiveSafety = numberValue(input.safetyScore) ?? PYS_DEFAULT_SAFETY_SCORE;
   const riskPenalty = Math.max(PYS_RISK_PENALTY_FLOOR, (101 - effectiveSafety) / 20);
@@ -280,16 +296,36 @@ interface PYSInput {
   sourceRiskPenalty?: number | null;
 }
 
+// Raw apy30d/scalingFactor accompany the components because computePysComponents
+// folds a non-finite apy30d to 0 (finite negatives survive to the effectiveYield
+// clamp), so the finite/positive guards are unrecoverable from the components.
+export function computePYSFromComponents(
+  apy30d: number,
+  scalingFactor: number,
+  components: PysComponents,
+): number {
+  if (!Number.isFinite(apy30d) || apy30d <= 0) return 0;
+  if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
+  if (components.effectiveYield <= 0) return 0;
+  return clamp(
+    Math.round(components.yieldEfficiency * components.sustainabilityMultiplier * scalingFactor),
+    0,
+    100,
+  );
+}
+
 export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor, benchmarkRate, sourceRiskPenalty }: PYSInput): number {
   if (!Number.isFinite(apy30d) || apy30d <= 0) return 0;
   if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
-  const { effectiveYield, yieldEfficiency, sustainabilityMultiplier } = computePysComponents({
+  return computePYSFromComponents(
     apy30d,
-    safetyScore,
-    apyVarianceScore,
-    benchmarkRate,
-    sourceRiskPenalty,
-  });
-  if (effectiveYield <= 0) return 0;
-  return clamp(Math.round(yieldEfficiency * sustainabilityMultiplier * scalingFactor), 0, 100);
+    scalingFactor,
+    computePysComponents({
+      apy30d,
+      safetyScore,
+      apyVarianceScore,
+      benchmarkRate,
+      sourceRiskPenalty,
+    }),
+  );
 }

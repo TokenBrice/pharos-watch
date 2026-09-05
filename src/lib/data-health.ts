@@ -21,6 +21,7 @@ export interface DataHealthInfo {
   ageMs: number | null;
   staleTime: number;
   meta: ApiMeta | null;
+  degradationReason?: "age" | "source" | "refresh";
 }
 
 interface MergedDataHealth {
@@ -109,6 +110,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
       label: input.label,
       state,
       message: "Using last successful data while refresh retries.",
+      degradationReason: "refresh",
       dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,
@@ -134,6 +136,11 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
     label: input.label,
     state: baseState,
     message,
+    ...(baseState === "degraded" ? {
+      degradationReason: classifiedState === "degraded" || input.meta?.warning?.startsWith("110 ")
+        ? "age" as const
+        : "source" as const,
+    } : {}),
     dataUpdatedAt: updatedAtMs,
     ageMs,
     staleTime: input.staleTime,

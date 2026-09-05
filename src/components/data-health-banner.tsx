@@ -45,8 +45,16 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
   let title = "";
   let message = "";
   if (merged.state === "degraded") {
-    title = "Live refresh is running behind";
-    message = `${affected} refreshed later than expected.`;
+    if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "refresh")) {
+      title = "Refresh failed; showing saved data";
+      message = `${affected} remains available while refresh retries.`;
+    } else if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "source")) {
+      title = "Data quality warning";
+      message = `${affected} is available, but a source or quality check needs attention.`;
+    } else {
+      title = "Live refresh is running behind";
+      message = `${affected} refreshed later than expected.`;
+    }
   } else if (merged.state === "stale") {
     const age = worstAge != null ? formatElapsedSeconds(worstAge / 1000) : "unknown";
     title = "Showing an older snapshot";

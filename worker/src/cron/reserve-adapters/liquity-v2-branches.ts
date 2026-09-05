@@ -491,10 +491,8 @@ function decodeRequiredUint256(
   raw: `0x${string}` | undefined,
   label: string,
 ): bigint {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) {
-    throw new Error(`missing or invalid ${label} result`);
-  }
-  const value = BigInt(raw);
+  const value = decodeRequiredOptionalUint256(raw);
+  if (value == null) throw new Error(`missing or invalid ${label} result`);
   if (value < 0n) throw new Error(`${label} result is negative`);
   return value;
 }

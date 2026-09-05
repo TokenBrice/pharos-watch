@@ -23,13 +23,9 @@ import {
 } from "./store-shared";
 import {
   hasConsistentSnapshotState,
+  isReserveSnapshotStale,
   hasScoringEligibleLiveReserveFreshness,
 } from "./store-snapshot-state";
-
-function effectiveObservedAt(record: Pick<ReserveCompositionRecord, "fetchedAt" | "metadata">): number {
-  const sourceTimestamp = record.metadata.freshnessMode === "verified" ? record.metadata.sourceTimestamp : undefined;
-  return typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp) ? sourceTimestamp : record.fetchedAt;
-}
 
 function buildReserveProvenanceView(
   record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,
@@ -164,7 +160,7 @@ export async function resolveReserveResult(
         : syncState?.lastSuccessAt ?? null
     );
   const stale = (liveAtCandidate != null && now - liveAtCandidate > freshnessSec)
-    || (liveSnapshot != null && now - effectiveObservedAt(liveSnapshot) > freshnessSec);
+    || (liveSnapshot != null && isReserveSnapshotStale(liveSnapshot, meta, now, freshnessSec));
 
   // Prior live detail deliberately stays visible when the *current* sync attempt
   // failed: the earlier snapshot was validly observed, and scoring already
@@ -173,7 +169,10 @@ export async function resolveReserveResult(
   // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
   if (liveSnapshot) {
     const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
-    const displayBadge = buildReserveDisplayBadgeView(liveSnapshot);
+    const adapterBadge = buildReserveDisplayBadgeView(liveSnapshot);
+    const displayBadge = meta.liveReservesConfig?.semantics === "attestation-mix" && adapterBadge.kind === "live"
+      ? { ...buildReserveDisplayBadge("proof"), label: "Attestation" }
+      : adapterBadge;
     const evidenceUrls = extractReserveEvidenceUrls(liveSnapshot.metadata, displayUrl);
     return {
       reserves: liveSnapshot.slices,

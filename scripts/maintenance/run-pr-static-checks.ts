@@ -101,7 +101,10 @@ export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckComma
 }
 
 
-export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
+export function buildPrStaticCheckPlan(
+  changedFiles: readonly string[],
+  { skipDocSync = false }: { skipDocSync?: boolean } = {},
+) {
   const classification = classifyChangedFiles(changedFiles);
   const commands: PrStaticCheckCommand[] = [
     { name: "lint:changed" },
@@ -116,7 +119,10 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
     commands.push({ name: "audit:deps" });
   }
 
-  if (hasOwnedDocsImpact(changedFiles)) {
+  // `skipDocSync` is the composition-context option passed by `check:pr` and
+  // the CI matrix when the docs lane already owns `check:doc-sync` in the same
+  // plan; standalone runs never set it, so source-owned docs stay validated.
+  if (!skipDocSync && hasOwnedDocsImpact(changedFiles)) {
     commands.push({ name: "check:doc-sync" });
   }
 
@@ -136,11 +142,7 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
   }
 
   if (classification.pagesChanged) {
-    commands.push(
-      { name: "check:client-registry-imports" },
-      { name: "check:site-csp-sync" },
-      { name: "check:stablecoin-data" },
-    );
+    commands.push({ name: "check:site-csp-sync" }, { name: "check:stablecoin-data" });
   }
 
   // A generated artifact must be regenerated in the same commit as the source
@@ -184,15 +186,17 @@ export async function runPrStaticChecks({
   const startedAt = Date.now();
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   const json = rest.includes("--json");
-  const unknownOptions = rest.filter((arg) => arg !== "--json");
+  const skipDocSync = rest.includes("--skip-doc-sync");
+  const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== "--skip-doc-sync");
   if (unknownOptions.length > 0) throw new Error(`Unknown option(s): ${unknownOptions.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });
-  const { classification, commands } = buildPrStaticCheckPlan(changedFiles);
+  const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { skipDocSync });
   const logOutput = json ? stderr : stdout;
   const log = (message: string) => logOutput.write(message + "\n");
   log(
     `[check:pr:static] ${changedFiles.length} changed file(s); ` +
-      `pages=${classification.pagesChanged}, worker=${classification.workerChanged}.`,
+      `pages=${classification.pagesChanged}, worker=${classification.workerChanged}` +
+      `${skipDocSync ? ", doc-sync owned by the docs lane" : ""}.`,
   );
   const runnableCommands = commands.map((command) => ({
     ...command,

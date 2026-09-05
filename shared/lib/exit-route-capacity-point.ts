@@ -75,6 +75,19 @@ export function buildExitRouteCapacityPoint(
   };
 }
 
+/** Redemption curve ladder, distinct from the V9 stress grid's additional 10M rung. */
+export const REDEMPTION_EXIT_CURVE_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 25_000_000] as const;
+
+export function mergeExitCurveRequests(
+  modeledExitSizeUsd: number,
+  upperBoundUsd: number,
+): number[] {
+  const horizonUsd = Math.max(modeledExitSizeUsd, upperBoundUsd);
+  return [...new Set([...REDEMPTION_EXIT_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
+    .filter((request) => request <= horizonUsd)
+    .sort((left, right) => left - right);
+}
+
 export function validateExitRouteCapacityCurve(points: readonly ExitRouteCapacityPoint[]): string[] {
   const issues: string[] = [];
   const byCost = new Map<number, ExitRouteCapacityPoint[]>();

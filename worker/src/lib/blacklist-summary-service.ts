@@ -473,10 +473,8 @@ async function buildBlacklistSummaryPayload(
       )
       .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>(),
 
-    // Per-coin, per-event-type counts for the last 7 days. Powers the
-    // detail-page RecentBlacklistBanner without forcing the client to fetch
-    // a 250-row event payload just to compute three counters. Time window
-    // mirrors the 7d cutoff applied client-side previously.
+    // Public summary contract: per-coin event-type counts over the last 7 days,
+    // without requiring clients to fetch and aggregate the event payload.
     db
       .prepare(
         `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */

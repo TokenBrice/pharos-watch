@@ -3,12 +3,19 @@
 import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { ChartLegendChip } from "@/components/chart-primitives/axes";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
 import type { SupplySeriesEntry } from "@/lib/compare-derive";
+// Raw boolean options keep the normalization toggle free of a per-render
+// descriptor array; labels come from the hoisted formatter below.
+const NORMALIZATION_OPTIONS = [false, true] as const;
+
+const formatNormalizationLabel = (normalized: boolean): string =>
+  normalized ? "Normalized %" : "Absolute";
 
 interface ComparisonChartProps {
   title: string;
@@ -100,26 +107,14 @@ export function ComparisonChart({
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:items-end">
           {normalizable && (
-            <div className="flex gap-1">
-              <button type="button"
-                onClick={() => setNormalized(false)}
-                aria-pressed={!normalized}
-                className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 ${
-                  !normalized ? "pharos-control-pill-active" : ""
-                }`}
-              >
-                Absolute
-              </button>
-              <button type="button"
-                onClick={() => setNormalized(true)}
-                aria-pressed={normalized}
-                className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 ${
-                  normalized ? "pharos-control-pill-active" : ""
-                }`}
-              >
-                Normalized %
-              </button>
-            </div>
+            <ControlPillToggle
+              className="flex gap-1"
+              buttonClassName="px-2.5 py-1"
+              options={NORMALIZATION_OPTIONS}
+              value={normalized}
+              onChange={setNormalized}
+              formatLabel={formatNormalizationLabel}
+            />
           )}
           <TimeRangeButtons options={options} value={activeRange} onChange={handleRangeChange} />
         </div>

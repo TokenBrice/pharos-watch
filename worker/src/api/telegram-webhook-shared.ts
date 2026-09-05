@@ -1,6 +1,10 @@
 import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
+import type { TelegramAlertType } from "@shared/types/status/telegram";
+import { TELEGRAM_COMMAND_REFERENCE } from "@shared/lib/telegram-bot-registration";
 import type { ResolvedCoin } from "../lib/telegram/alerts";
 import { DISAMBIGUATION_TTL_SEC } from "../lib/telegram/constants";
+import { escapeHtml } from "../lib/telegram/html";
 
 // Re-export so existing callers importing this constant from this module keep working.
 export { DISAMBIGUATION_TTL_SEC };
@@ -11,6 +15,18 @@ I send opt-in stablecoin alerts into this chat. Pick a path below — you can ch
 
 Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and <a href="https://t.me/pharoswatchers">@pharoswatchers</a> for community discussion about Pharos.`;
 
+// Per-family one-line meaning for the START onboarding copy. Keyed by the
+// canonical family manifest so a new family fails compilation until it has
+// onboarding copy here.
+const START_ALERT_TYPE_LINES: Record<TelegramAlertType, string> = {
+  dews: "DEWS reaches ALERT, WARNING, or DANGER",
+  depeg: "Depeg triggered, worsened, or resolved",
+  safety: "Safety grade changes",
+  launch: "Pre-launch stablecoin goes live on Pharos",
+  reserve: "Live reserve-mix drift begins diverging from the curated profile",
+  freeze: "Issuer freeze, unfreeze, or destroy event on the verified tape",
+};
+
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
 I send opt-in stablecoin alerts into this chat. Start with a quiet preset, then tune thresholds only where you need more detail.
@@ -18,10 +34,7 @@ I send opt-in stablecoin alerts into this chat. Start with a quiet preset, then 
 Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and <a href="https://t.me/pharoswatchers">@pharoswatchers</a> for community discussion about Pharos.
 
 <b>Alert types</b>
-- <b>dews</b> — DEWS reaches ALERT, WARNING, or DANGER
-- <b>depeg</b> — Depeg triggered, worsened, or resolved
-- <b>safety</b> — Safety grade changes
-- <b>launch</b> — Pre-launch stablecoin goes live on Pharos
+${TELEGRAM_ALERT_FAMILIES.map((family) => `- <b>${family.key}</b> — ${START_ALERT_TYPE_LINES[family.key]}`).join("\n")}
 
 <b>Quick start</b>
 Recommended first setup:
@@ -57,88 +70,47 @@ Add the bot to a group and use addressed commands such as <code>/subscribe@Pharo
 
 Use /help for commands and /presets for preset watchlists.`;
 
+// /help lists every command except /start and /help themselves, in the
+// subscription-first order the message has always used. Rows (syntax + one
+// line) come from the shared command reference; this file owns only order,
+// framing, and the preset/group footnotes.
+const HELP_COMMAND_SEQUENCE = [
+  "subscribe",
+  "presets",
+  "sample",
+  "unsubscribe",
+  "forget",
+  "set",
+  "status",
+  "brief",
+  "recap",
+  "top",
+  "why",
+  "coverage",
+  "settings",
+  "health",
+  "mute",
+  "pause",
+  "timezone",
+  "unsnooze",
+  "unmutehours",
+  "list",
+  "cancel",
+  "export",
+  "import",
+] as const satisfies readonly (keyof typeof TELEGRAM_COMMAND_REFERENCE)[];
+
+const HELP_COMMAND_ROWS = HELP_COMMAND_SEQUENCE.flatMap((command) =>
+  TELEGRAM_COMMAND_REFERENCE[command].variants.map(
+    (variant) => `<code>${escapeHtml(variant.syntax)}</code>\n${escapeHtml(variant.help)}`,
+  ),
+).join("\n\n");
+
 export const HELP_MESSAGE = `<b>Commands</b>
 
-<code>/subscribe &lt;types&gt; &lt;targets&gt;</code>
-Enable alert types (dews, depeg, safety, launch) for one or more coins or preset watchlists
+${HELP_COMMAND_ROWS}
 
-<code>/subscribe &lt;targets&gt; depeg-step 250</code>
-Enable depeg alerts for coins or preset watchlists and alert again when worsening crosses 250 bps
-
-<code>/subscribe &lt;types&gt; all</code>
-Enable alert types across all tracked stablecoins
-
-When used with <code>safety</code>, all-stablecoin follows deliver downgrades only and require a score drop of at least 3 points when scores are present.
-
-<code>/presets</code>
-Show the preset watchlist catalog and examples
-
-<code>/sample</code>
-Preview a sample DEWS alert without changing subscriptions
-
-<code>/unsubscribe &lt;targets&gt;</code>
-Remove specific coin subscriptions or preset-expanded coins
-
-<code>/unsubscribe all</code>
-Remove all per-coin and all-stablecoin subscriptions
-
-<code>/forget</code>
-Delete all your subscriber data
-
-<code>/set &lt;ticker&gt; &lt;setting&gt; &lt;value&gt;</code>
-Examples:
-<code>/set USDT dews WARNING</code>
-<code>/set all depeg off</code>
-<code>/set DAI safety downgrade-only</code>
-<code>/set USDC depeg-step 250</code>
-<code>/set all depeg-step 250</code>
-
-<code>/status &lt;ticker&gt;</code>
-Current peg, DEWS band, and safety grade for one coin — no subscription needed
-
-<code>/brief</code>
-Latest market brief from the daily digest inputs
-
-<code>/recap</code>
-Show your private daily watchlist recap status and controls (private chat only)
-
-<code>/recap on</code> / <code>/recap off</code> / <code>/recap time &lt;0-23&gt;</code>
-Enable, disable, or schedule the private daily recap
-
-<code>/top &lt;view&gt;</code>
-Rank current views: depeg, dews, yield, liquidity, chains, or safety
-
-<code>/why &lt;ticker&gt;</code>
-Explain the current Safety Score in plain language
-
-<code>/coverage &lt;ticker&gt;</code>
-Show which Pharos data surfaces currently cover one coin
-
-<code>/settings</code>
-Review and edit chat-level alert settings
-
-<code>/health</code>
-Show delivery diagnostics for this chat: queued alerts, quiet hours, snooze, and recent failure class
-
-<code>/mute 22-07</code>
-Quiet hours in your <code>/timezone</code> (defaults to UTC; notifications silenced, messages still delivered)
-
-<code>/timezone Europe/Paris</code>
-Set chat timezone for quiet hours, or send <code>/timezone</code> alone to pick from common zones
-
-<code>/unsnooze</code>
-Clear an active alert snooze immediately
-
-<code>/unmutehours</code>
-Disable quiet hours
-
-<code>/list</code>
-Show current subscriptions and settings
-
-<code>/cancel</code>
-Cancel a pending selection
-
-Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers or coin ids.
+Preset watchlists follow dynamic coin sets and support DEWS, depeg, and safety only. Launch, reserve, and freeze alerts require explicit tickers, coin ids, or <code>all</code>.
 Preset aliases accept compact or dashed top-N spelling, e.g. <code>usd-top25</code> or <code>non-usd-top-25</code>.
 
 In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-top25</code>. Settings apply to the current chat, and pending ticker selections can only be completed by the user who started them.`;

@@ -15,7 +15,7 @@ import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
 } from "../../../lib/public-dataset-snapshot-budget";
-import { SLOT_RUNNER_BY_KEY } from "../../scheduled";
+import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -24,11 +24,11 @@ function sorted(values: Iterable<string>): string[] {
 describe("scheduled runner contract", () => {
   it("keeps scheduled plans, slot runners, and cron definitions in sync", () => {
     const planKeys = Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[];
-    const runnerKeys = Object.keys(SLOT_RUNNER_BY_KEY) as CronScheduleKey[];
+    const runnerKeys = Object.keys(SLOT_RUNNER_LOADER_BY_KEY) as CronScheduleKey[];
 
     expect(sorted(runnerKeys)).toEqual(sorted(planKeys));
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
-      expect(SLOT_RUNNER_BY_KEY[plan.runnerKey]).toEqual(expect.any(Function));
+      expect(SLOT_RUNNER_LOADER_BY_KEY[plan.runnerKey]).toEqual(expect.any(Function));
     }
 
     const plannedStatusJobs = new Set(

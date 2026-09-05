@@ -1,3 +1,4 @@
+import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import { buildUniqueEvmV2ExecutionCandidateFingerprintIndex } from "./constant-product-v2";
@@ -97,6 +98,7 @@ export function processPoolMetrics(
   const context = buildProcessingContext(input);
   const metrics = new Map<string, LiquidityMetrics>();
   const rejectionMap = new Map<string, PoolProcessingRejection>();
+  const seenCurvePoolAssets = new Set<string>();
   const enforceDexProjectFilter = context.dexProjects.size > 0;
   if (!enforceDexProjectFilter) {
     logWorkerEventArgs("handler", "warn",
@@ -121,6 +123,11 @@ export function processPoolMetrics(
 
     const enrichment = enrichPoolProtocol(context, identity);
     for (const stablecoinId of identity.matchedIds) {
+      if (enrichment.curveAddressMatch && enrichment.curveData?.poolAddress) {
+        const key = `${canonicalExitRouteAssetKey(identity.chainNorm, enrichment.curveData.poolAddress)}:${stablecoinId}`;
+        if (seenCurvePoolAssets.has(key)) continue;
+        seenCurvePoolAssets.add(key);
+      }
       const capability = buildPoolExecutionCapability(
         context,
         identity,

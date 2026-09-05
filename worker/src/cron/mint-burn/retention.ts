@@ -4,16 +4,39 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { deleteCapped } from "../shared/capped-delete";
+import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
 
 export const MINT_BURN_EVENT_RETENTION_SEC = 8 * DAY_SECONDS;
 export const MINT_BURN_HOURLY_RETENTION_SEC = 95 * DAY_SECONDS;
 
-const MINT_BURN_TAPE_CURSOR_KEY = "tape-projector:cursor:mint_burn.large_flow";
+const MINT_BURN_TAPE_CURSOR_KEY = tapeProjectorCursorKey("mint_burn.large_flow");
 const DEFAULT_DELETE_BATCH_LIMIT = 10_000;
 const DEFAULT_EVENT_DELETE_RUN_LIMIT = 50_000;
 const DEFAULT_HOURLY_DELETE_RUN_LIMIT = 25_000;
 const DEFAULT_REPAIR_CANDIDATE_EVENT_LIMIT = 50_000;
 const DEFAULT_HOURLY_REPAIR_RUN_LIMIT = 5_000;
+
+/**
+ * Retention-eligibility predicate shared by all four retention statements
+ * (repair candidates, oldest-repairable, event delete, oldest-eligible).
+ * An event row may only leave `mint_burn_events` once its price is final
+ * (`amount_usd` present or repair settled as recovered/irreducible), it is
+ * not awaiting aggregation, and the mint-burn tape projector has consumed
+ * past it. Bind order at every consumer: cutoff first, then
+ * MINT_BURN_TAPE_CURSOR_KEY. A missing cursor cache row fails closed via
+ * COALESCE 0 — nothing is eligible for deletion or repair.
+ */
+const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
+  AND (
+    event.amount_usd IS NOT NULL
+    OR event.price_repair_status IN ('recovered', 'irreducible')
+  )
+  AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
+  AND event.timestamp <= COALESCE((
+    SELECT CAST(value AS INTEGER)
+      FROM cache
+     WHERE key = ?
+  ), 0)`;
 
 export interface MintBurnRetentionFamilyResult {
   cutoff: number;
@@ -86,17 +109,7 @@ async function repairMissingHourlyRows(
                (event.timestamp / 3600) * 3600 AS hour_ts,
                event.timestamp
              FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-             WHERE event.timestamp < ?
-               AND (
-                 event.amount_usd IS NOT NULL
-                 OR event.price_repair_status IN ('recovered', 'irreducible')
-               )
-               AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
-               AND event.timestamp <= COALESCE((
-                 SELECT CAST(value AS INTEGER)
-                   FROM cache
-                  WHERE key = ?
-               ), 0)
+             WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
                AND NOT EXISTS (
                  SELECT 1
                    FROM mint_burn_hourly hourly
@@ -165,17 +178,7 @@ async function repairMissingHourlyRows(
           `/* pharos:mint-burn:aggregation-evidence-oldest-repairable */
            SELECT event.timestamp AS oldest_repairable_at
              FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-            WHERE event.timestamp < ?
-              AND (
-                event.amount_usd IS NOT NULL
-                OR event.price_repair_status IN ('recovered', 'irreducible')
-              )
-              AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
-              AND event.timestamp <= COALESCE((
-                SELECT CAST(value AS INTEGER)
-                  FROM cache
-                 WHERE key = ?
-              ), 0)
+            WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
               AND NOT EXISTS (
                 SELECT 1
                   FROM mint_burn_hourly hourly
@@ -244,17 +247,7 @@ async function pruneEventRows(
         WHERE id IN (
           SELECT event.id
             FROM mint_burn_events event
-           WHERE event.timestamp < ?
-             AND (
-               event.amount_usd IS NOT NULL
-               OR event.price_repair_status IN ('recovered', 'irreducible')
-             )
-             AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
-             AND event.timestamp <= COALESCE((
-               SELECT CAST(value AS INTEGER)
-                 FROM cache
-                WHERE key = ?
-             ), 0)
+           WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
              AND EXISTS (
                SELECT 1
                  FROM mint_burn_hourly hourly
@@ -288,17 +281,7 @@ async function pruneEventRows(
           `/* pharos:mint-burn:event-retention-oldest-eligible */
            SELECT event.timestamp AS oldest_eligible_at
              FROM mint_burn_events event
-            WHERE event.timestamp < ?
-              AND (
-                event.amount_usd IS NOT NULL
-                OR event.price_repair_status IN ('recovered', 'irreducible')
-              )
-              AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
-              AND event.timestamp <= COALESCE((
-                SELECT CAST(value AS INTEGER)
-                  FROM cache
-                 WHERE key = ?
-              ), 0)
+            WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
               AND EXISTS (
                 SELECT 1
                   FROM mint_burn_hourly hourly

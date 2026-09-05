@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { recordProducerOutcome } from "./producer-history";
+import { recordProducerOutcome, type ProducerOutcome } from "./producer-history";
 import { cronEventCacheKey, logCronEvent } from "./cron-logger";
 import {
   getWorkerVersionActivatedAt,
@@ -238,6 +238,130 @@ async function readWorkerVersionMarker(
   }
 }
 
+/**
+ * Path-decided contents of one synthetic `cron_runs` write. `startedAt` is
+ * both the `cron_runs.started_at` and the producer-history `invokedAt`.
+ */
+type SyntheticCronRunSpec = {
+  job: string;
+  idempotencyKey: string;
+  startedAt: number;
+  durationMs: number;
+  status: string;
+  error: string | null;
+  itemCount: number | null;
+  metadata: string;
+  outcome: ProducerOutcome;
+  completedAt: number;
+  productivityReason: string;
+};
+
+/**
+ * The one synthetic `cron_runs` insertion shared by the stale-progress and
+ * not-started reconciliation paths: ownership pre-check, the guarded INSERT
+ * (existing terminal run, existing durable progress, optional fence ownership,
+ * conflict no-op), idempotency post-verification, and the producer-outcome
+ * tail. The guards must never drift between the paths, so they live only
+ * here; callers keep every classification decision (status, error, duration,
+ * metadata, outcome, terminal clock, productivity reason).
+ */
+async function insertSyntheticCronRun(
+  db: D1Database,
+  slot: StaleSlotExecutionArtifact,
+  spec: SyntheticCronRunSpec,
+  fence?: StaleSlotReconciliationFence,
+): Promise<boolean> {
+  const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, spec.job);
+  const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
+  if (
+    !(await canPersistSyntheticProducerOutcome(db, {
+      scheduleKey: slot.slot_key,
+      job: spec.job,
+      producerPath: descriptor.producerPath,
+      invocationId,
+      idempotencyKey: spec.idempotencyKey,
+    }))
+  ) {
+    return false;
+  }
+
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO cron_runs
+           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
+            schedule_key, producer_path, producer_kind, invocation_id, worker_version,
+            productive, publication_count, calendar_period)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
+          WHERE NOT EXISTS (
+            SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
+          )
+            AND NOT EXISTS (
+              SELECT 1 FROM cron_run_progress WHERE job = ? AND slot_started_at = ?
+            )
+            AND (
+              ? IS NULL OR EXISTS (
+                SELECT 1 FROM cron_slot_executions
+                 WHERE slot_key = ?
+                   AND slot_started_at = ?
+                   AND state = ?
+                   AND execution_owner = ?
+                   AND execution_generation = ?
+              )
+            )
+         ON CONFLICT DO NOTHING`,
+      )
+      .bind(
+        spec.job,
+        spec.startedAt,
+        spec.durationMs,
+        spec.status,
+        spec.error,
+        spec.itemCount,
+        spec.metadata,
+        slot.slot_started_at,
+        spec.idempotencyKey,
+        slot.slot_key,
+        descriptor.producerPath,
+        invocationId,
+        slot.worker_version ?? null,
+        spec.job,
+        slot.slot_started_at,
+        spec.job,
+        slot.slot_started_at,
+        fence?.owner ?? null,
+        slot.slot_key,
+        slot.slot_started_at,
+        fence?.state ?? null,
+        fence?.owner ?? null,
+        fence?.generation ?? null,
+      )
+      .run(),
+  );
+  const inserted = (result.meta.changes ?? 0) === 1;
+  if (!inserted && !(await hasCronRunWithIdempotencyKey(db, spec.job, slot.slot_started_at, spec.idempotencyKey))) {
+    return false;
+  }
+  await recordProducerOutcome(db, {
+    scheduleKey: slot.slot_key,
+    job: spec.job,
+    producerPath: descriptor.producerPath,
+    producerKind: "scheduled-job",
+    invocationId,
+    workerVersion: slot.worker_version ?? null,
+    slotStartedAt: slot.slot_started_at,
+    idempotencyKey: spec.idempotencyKey,
+    invokedAt: spec.startedAt,
+    completedAt: spec.completedAt,
+    outcome: spec.outcome,
+    itemCount: spec.itemCount,
+    metadata: spec.metadata,
+    error: spec.error,
+    productivity: { productive: false, reason: spec.productivityReason },
+  });
+  return inserted;
+}
+
 async function insertSyntheticStaleCronRun(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
@@ -286,128 +410,50 @@ async function insertSyntheticStaleCronRun(
     && progress.updated_at <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
     && reconcilerWorkerVersionActivatedAt <= nowSec;
   const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && activationWithinDeathWindow;
-  const status = interruptedByWorkerDeploy ? "skipped_neutral" : "error";
-  const outcome = interruptedByWorkerDeploy ? "skipped_neutral" : "abandoned";
-  const error = interruptedByWorkerDeploy ? null : "scheduled slot heartbeat stale; child job progress abandoned";
-  const metadata = JSON.stringify({
-    reason: "stale-slot-reconciled",
-    failureCategory: interruptedByWorkerDeploy ? "platform-interrupted" : "platform-abandoned",
-    childDisposition: interruptedByWorkerDeploy ? "interrupted-by-deploy" : "abandoned",
-    interruptedByWorkerVersionChange: interruptedByWorkerDeploy,
-    slotKey: slot.slot_key,
-    slotStartedAt: slot.slot_started_at,
-    slotOwner: slot.execution_owner,
-    progressStage: progress.stage,
-    progressUpdatedAt: progress.updated_at,
-    leaseOwner: progress.lease_owner,
-    leaseUntil: lease?.lease_until ?? null,
-    reconciledAt: nowSec,
-    activeDurationMs,
-    reconciliationDelayMs,
-    // Dead isolate's version rides the worker_version column; recording the
-    // reconciler's version alongside makes deploy-eviction (versions differ at
-    // time of death) vs in-place kill (e.g. OOM) decidable from this row.
-    slotWorkerVersion: slotWorkerVersion,
-    reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
-    reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,
-    reconciledByWorkerVersionActivatedAt: reconcilerWorkerVersionActivatedAt,
-  });
-  const idempotencyKey = ["scheduled-slot-stale", slot.slot_key, slot.slot_started_at, progress.job, startedAt].join(
-    ":",
-  );
-  const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, progress.job);
-  const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
-  if (
-    !(await canPersistSyntheticProducerOutcome(db, {
-      scheduleKey: slot.slot_key,
+  return insertSyntheticCronRun(
+    db,
+    slot,
+    {
       job: progress.job,
-      producerPath: descriptor.producerPath,
-      invocationId,
-      idempotencyKey,
-    }))
-  ) {
-    return false;
-  }
-
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `INSERT INTO cron_runs
-           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
-            schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-            productive, publication_count, calendar_period)
-         SELECT ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
-          WHERE NOT EXISTS (
-            SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
-          )
-            AND NOT EXISTS (
-              SELECT 1 FROM cron_run_progress WHERE job = ? AND slot_started_at = ?
-            )
-            AND (
-              ? IS NULL OR EXISTS (
-                SELECT 1 FROM cron_slot_executions
-                 WHERE slot_key = ?
-                   AND slot_started_at = ?
-                   AND state = ?
-                   AND execution_owner = ?
-                   AND execution_generation = ?
-              )
-            )
-         ON CONFLICT DO NOTHING`,
-      )
-      .bind(
-        progress.job,
-        startedAt,
+      idempotencyKey: ["scheduled-slot-stale", slot.slot_key, slot.slot_started_at, progress.job, startedAt].join(
+        ":",
+      ),
+      startedAt,
+      durationMs: activeDurationMs,
+      status: interruptedByWorkerDeploy ? "skipped_neutral" : "error",
+      error: interruptedByWorkerDeploy ? null : "scheduled slot heartbeat stale; child job progress abandoned",
+      itemCount: null,
+      metadata: JSON.stringify({
+        reason: "stale-slot-reconciled",
+        failureCategory: interruptedByWorkerDeploy ? "platform-interrupted" : "platform-abandoned",
+        childDisposition: interruptedByWorkerDeploy ? "interrupted-by-deploy" : "abandoned",
+        interruptedByWorkerVersionChange: interruptedByWorkerDeploy,
+        slotKey: slot.slot_key,
+        slotStartedAt: slot.slot_started_at,
+        slotOwner: slot.execution_owner,
+        progressStage: progress.stage,
+        progressUpdatedAt: progress.updated_at,
+        leaseOwner: progress.lease_owner,
+        leaseUntil: lease?.lease_until ?? null,
+        reconciledAt: nowSec,
         activeDurationMs,
-        status,
-        error,
-        metadata,
-        slot.slot_started_at,
-        idempotencyKey,
-        slot.slot_key,
-        descriptor.producerPath,
-        invocationId,
-        slot.worker_version ?? null,
-        progress.job,
-        slot.slot_started_at,
-        progress.job,
-        slot.slot_started_at,
-        fence?.owner ?? null,
-        slot.slot_key,
-        slot.slot_started_at,
-        fence?.state ?? null,
-        fence?.owner ?? null,
-        fence?.generation ?? null,
-      )
-      .run(),
-  );
-  const inserted = (result.meta.changes ?? 0) === 1;
-  if (!inserted && !(await hasCronRunWithIdempotencyKey(db, progress.job, slot.slot_started_at, idempotencyKey))) {
-    return false;
-  }
-  await recordProducerOutcome(db, {
-    scheduleKey: slot.slot_key,
-    job: progress.job,
-    producerPath: descriptor.producerPath,
-    producerKind: "scheduled-job",
-    invocationId,
-    workerVersion: slot.worker_version ?? null,
-    slotStartedAt: slot.slot_started_at,
-    idempotencyKey,
-    invokedAt: startedAt,
-    // Preserve the last durable child heartbeat as the logical terminal time.
-    // Reconciliation time stays in metadata and must not outrank a newer run.
-    completedAt: progress.updated_at,
-    outcome,
-    itemCount: null,
-    metadata,
-    error,
-    productivity: {
-      productive: false,
-      reason: interruptedByWorkerDeploy ? "platform-interrupted-by-deploy" : "platform-abandoned",
+        reconciliationDelayMs,
+        // Dead isolate's version rides the worker_version column; recording the
+        // reconciler's version alongside makes deploy-eviction (versions differ at
+        // time of death) vs in-place kill (e.g. OOM) decidable from this row.
+        slotWorkerVersion: slotWorkerVersion,
+        reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
+        reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,
+        reconciledByWorkerVersionActivatedAt: reconcilerWorkerVersionActivatedAt,
+      }),
+      outcome: interruptedByWorkerDeploy ? "skipped_neutral" : "abandoned",
+      // Preserve the last durable child heartbeat as the logical terminal time.
+      // Reconciliation time stays in metadata and must not outrank a newer run.
+      completedAt: progress.updated_at,
+      productivityReason: interruptedByWorkerDeploy ? "platform-interrupted-by-deploy" : "platform-abandoned",
     },
-  });
-  return inserted;
+    fence,
+  );
 }
 
 async function insertSyntheticNotStartedCronRun(
@@ -418,106 +464,35 @@ async function insertSyntheticNotStartedCronRun(
   fence?: StaleSlotReconciliationFence,
   reconcilerWorkerVersion?: string | null,
 ): Promise<boolean> {
-  const idempotencyKey = ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":");
-  const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, job);
-  const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
-  if (
-    !(await canPersistSyntheticProducerOutcome(db, {
-      scheduleKey: slot.slot_key,
-      job,
-      producerPath: descriptor.producerPath,
-      invocationId,
-      idempotencyKey,
-    }))
-  ) {
-    return false;
-  }
-  const error = "scheduled slot abandoned before child job started";
   const invokedAt = slot.started_at || slot.slot_started_at;
-  const completedAt = Math.max(invokedAt, slot.updated_at);
-  const metadata = JSON.stringify({
-    reason: "stale-slot-reconciled",
-    failureCategory: "platform-abandoned",
-    childDisposition: "not_started",
-    slotKey: slot.slot_key,
-    slotStartedAt: slot.slot_started_at,
-    slotOwner: slot.execution_owner,
-    reconciledAt: nowSec,
-    slotWorkerVersion: slot.worker_version ?? null,
-    reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
-  });
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `INSERT INTO cron_runs
-           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
-            schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-            productive, publication_count, calendar_period)
-         SELECT ?, ?, 0, 'error', ?, 0, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
-          WHERE NOT EXISTS (
-            SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
-          )
-            AND NOT EXISTS (
-              SELECT 1 FROM cron_run_progress WHERE job = ? AND slot_started_at = ?
-            )
-            AND (
-              ? IS NULL OR EXISTS (
-                SELECT 1 FROM cron_slot_executions
-                 WHERE slot_key = ?
-                   AND slot_started_at = ?
-                   AND state = ?
-                   AND execution_owner = ?
-                   AND execution_generation = ?
-              )
-            )
-         ON CONFLICT DO NOTHING`,
-      )
-      .bind(
-        job,
-        invokedAt,
-        error,
-        metadata,
-        slot.slot_started_at,
-        idempotencyKey,
-        slot.slot_key,
-        descriptor.producerPath,
-        invocationId,
-        slot.worker_version ?? null,
-        job,
-        slot.slot_started_at,
-        job,
-        slot.slot_started_at,
-        fence?.owner ?? null,
-        slot.slot_key,
-        slot.slot_started_at,
-        fence?.state ?? null,
-        fence?.owner ?? null,
-        fence?.generation ?? null,
-      )
-      .run(),
+  return insertSyntheticCronRun(
+    db,
+    slot,
+    {
+      job,
+      idempotencyKey: ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":"),
+      startedAt: invokedAt,
+      durationMs: 0,
+      status: "error",
+      error: "scheduled slot abandoned before child job started",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "stale-slot-reconciled",
+        failureCategory: "platform-abandoned",
+        childDisposition: "not_started",
+        slotKey: slot.slot_key,
+        slotStartedAt: slot.slot_started_at,
+        slotOwner: slot.execution_owner,
+        reconciledAt: nowSec,
+        slotWorkerVersion: slot.worker_version ?? null,
+        reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
+      }),
+      outcome: "not_started",
+      completedAt: Math.max(invokedAt, slot.updated_at),
+      productivityReason: "platform-abandoned-before-start",
+    },
+    fence,
   );
-  const inserted = (result.meta.changes ?? 0) === 1;
-  if (!inserted && !(await hasCronRunWithIdempotencyKey(db, job, slot.slot_started_at, idempotencyKey))) {
-    return false;
-  }
-  await recordProducerOutcome(db, {
-    scheduleKey: slot.slot_key,
-    job,
-    producerPath: descriptor.producerPath,
-    producerKind: "scheduled-job",
-    invocationId,
-    workerVersion: slot.worker_version ?? null,
-    slotStartedAt: slot.slot_started_at,
-    idempotencyKey,
-    invokedAt,
-    completedAt,
-    outcome: "not_started",
-    itemCount: 0,
-    metadata,
-    error,
-    productivity: { productive: false, reason: "platform-abandoned-before-start" },
-  });
-  return inserted;
 }
 
 async function reconcileStaleSlotArtifacts(
