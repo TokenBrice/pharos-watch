@@ -4,11 +4,12 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { deleteCapped } from "../shared/capped-delete";
+import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
 
 export const MINT_BURN_EVENT_RETENTION_SEC = 8 * DAY_SECONDS;
 export const MINT_BURN_HOURLY_RETENTION_SEC = 95 * DAY_SECONDS;
 
-const MINT_BURN_TAPE_CURSOR_KEY = "tape-projector:cursor:mint_burn.large_flow";
+const MINT_BURN_TAPE_CURSOR_KEY = tapeProjectorCursorKey("mint_burn.large_flow");
 const DEFAULT_DELETE_BATCH_LIMIT = 10_000;
 const DEFAULT_EVENT_DELETE_RUN_LIMIT = 50_000;
 const DEFAULT_HOURLY_DELETE_RUN_LIMIT = 25_000;

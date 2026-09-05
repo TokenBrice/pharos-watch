@@ -16,13 +16,12 @@ import {
 import {
   decodeFunctionResult,
   encodeFunctionData,
-  keccak256,
   parseAbi,
 } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
-import { multicallResultByLabel } from "./onchain-identity";
+import { multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
 
 type FpiParams = LiveReserveAdapterParamsByKey["frax-fpi-collateral"];
 type Hex = `0x${string}`;
@@ -112,22 +111,31 @@ type ControllerFunctionName =
   | "getFRAXPriceE18"
   | "getFPIPriceE18";
 
-function decodeResult(
+function decodeWithAbi(
+  abi: Parameters<typeof decodeFunctionResult>[0]["abi"],
   results: readonly EvmMulticall3Result[],
   label: string,
-  functionName: ControllerFunctionName,
+  functionName: string,
 ): unknown {
   const data = multicallResultByLabel(results, label);
   if (!data) return null;
   try {
     return decodeFunctionResult({
-      abi: CONTROLLER_ABI,
+      abi,
       functionName,
       data,
     } as Parameters<typeof decodeFunctionResult>[0]);
   } catch {
     return null;
   }
+}
+
+function decodeResult(
+  results: readonly EvmMulticall3Result[],
+  label: string,
+  functionName: ControllerFunctionName,
+): unknown {
+  return decodeWithAbi(CONTROLLER_ABI, results, label, functionName);
 }
 
 function decodePriceFeedResult(
@@ -135,17 +143,7 @@ function decodePriceFeedResult(
   label: string,
   functionName: "decimals" | "latestRoundData",
 ): unknown {
-  const data = multicallResultByLabel(results, label);
-  if (!data) return null;
-  try {
-    return decodeFunctionResult({
-      abi: PRICE_FEED_ABI,
-      functionName,
-      data,
-    } as Parameters<typeof decodeFunctionResult>[0]);
-  } catch {
-    return null;
-  }
+  return decodeWithAbi(PRICE_FEED_ABI, results, label, functionName);
 }
 
 function decodeCpiTrackerResult(
@@ -153,32 +151,12 @@ function decodeCpiTrackerResult(
   label: string,
   functionName: "currPegPrice" | "lastUpdateTime",
 ): unknown {
-  const data = multicallResultByLabel(results, label);
-  if (!data) return null;
-  try {
-    return decodeFunctionResult({
-      abi: CPI_TRACKER_ABI,
-      functionName,
-      data,
-    } as Parameters<typeof decodeFunctionResult>[0]);
-  } catch {
-    return null;
-  }
+  return decodeWithAbi(CPI_TRACKER_ABI, results, label, functionName);
 }
 
 function decodeBalance(results: readonly EvmMulticall3Result[]): bigint | null {
-  const data = multicallResultByLabel(results, "controller-frax-balance");
-  if (!data) return null;
-  try {
-    const decoded = decodeFunctionResult({
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      data,
-    });
-    return typeof decoded === "bigint" ? decoded : null;
-  } catch {
-    return null;
-  }
+  const decoded = decodeWithAbi(ERC20_ABI, results, "controller-frax-balance", "balanceOf");
+  return typeof decoded === "bigint" ? decoded : null;
 }
 
 function expectedRedeemOutput(inputRaw: bigint, pegPriceRaw: bigint, feeRaw: bigint): bigint | null {
@@ -457,7 +435,7 @@ async function observeWithClient(
   if (!controllerCode) {
     return rejected(attemptedAtSec, "controller-code-unavailable", blockNumber);
   }
-  const controllerCodeHash = keccak256(controllerCode).toLowerCase();
+  const controllerCodeHash = runtimeCodeHash(controllerCode);
   if (controllerCodeHash !== params.expectedControllerCodeHash.toLowerCase()) {
     return rejected(attemptedAtSec, "controller-code-drift", blockNumber);
   }
@@ -485,9 +463,9 @@ async function observeWithClient(
   if (!fraxPriceFeedCode || !fpiPriceFeedCode || !cpiTrackerCode) {
     return rejected(attemptedAtSec, "dependency-code-unavailable", blockNumber);
   }
-  const fraxPriceFeedCodeHash = keccak256(fraxPriceFeedCode).toLowerCase();
-  const fpiPriceFeedCodeHash = keccak256(fpiPriceFeedCode).toLowerCase();
-  const cpiTrackerCodeHash = keccak256(cpiTrackerCode).toLowerCase();
+  const fraxPriceFeedCodeHash = runtimeCodeHash(fraxPriceFeedCode);
+  const fpiPriceFeedCodeHash = runtimeCodeHash(fpiPriceFeedCode);
+  const cpiTrackerCodeHash = runtimeCodeHash(cpiTrackerCode);
   if (
     fraxPriceFeedCodeHash !== params.expectedFraxPriceFeedCodeHash.toLowerCase() ||
     fpiPriceFeedCodeHash !== params.expectedFpiPriceFeedCodeHash.toLowerCase() ||

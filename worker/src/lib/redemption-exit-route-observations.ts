@@ -4,15 +4,13 @@ import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@sha
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
-import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
+import { buildExitRouteCapacityPoint, mergeExitCurveRequests } from "@shared/lib/exit-route-capacity-point";
 import type {
   RedemptionBackstopEntry,
   RedemptionCapacityProfile,
   RedemptionLiveCapacityKind,
   RedemptionLiveFreshnessKind,
 } from "@shared/types/redemption";
-
-const REDEMPTION_CAPACITY_CURVE_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 25_000_000] as const;
 
 // Conservative documented ceilings for projecting a reviewed settlement model
 // onto an observation horizon. Only "atomic" satisfies the same-notional
@@ -269,9 +267,7 @@ export function buildRedemptionExitRouteObservation(
     mainCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps &&
     (allInCostBps == null || allInCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps);
   const maxCurveRequest = input.supplyUsd != null && input.supplyUsd > 0 ? input.supplyUsd : modeledExitSizeUsd;
-  const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
-    .filter((request) => request <= Math.max(modeledExitSizeUsd, maxCurveRequest))
-    .sort((left, right) => left - right);
+  const requests = mergeExitCurveRequests(modeledExitSizeUsd, maxCurveRequest);
   const scoringCapacityUsd = input.scoringCapacityUsd;
   const capacityCurve =
     scoringCapacityUsd == null
@@ -413,9 +409,7 @@ export function deriveSupplyModelExitRouteObservation(
       entry.feeModelKind === "documented-variable" ||
       entry.feeModelKind === "formula"
     );
-  const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
-    .filter((request) => request <= Math.max(modeledExitSizeUsd, eventualUsd))
-    .sort((left, right) => left - right);
+  const requests = mergeExitCurveRequests(modeledExitSizeUsd, eventualUsd);
   const capacityCurve = requests.map((request) =>
     buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,

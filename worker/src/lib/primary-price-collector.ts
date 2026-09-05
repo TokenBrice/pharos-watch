@@ -1,6 +1,7 @@
 import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
 import { pricesAgreeWithinBps } from "./price-divergence";
 import type { SourcePrice } from "./price-consensus";
 import { validatePricingSourceFreshness, type PricingSourceFreshnessRejectReason } from "./pricing-source-freshness";
@@ -382,24 +383,19 @@ export function buildPrimarySourceCandidates(
   }
 
   const hasPromotedDexProtocolSource = promotedDexProtocolCandidates.length > 0;
-  const hardTrustTiers = new Set(["hard_market", "hard_oracle", "hard_protocol"]);
-  const hasHardCorroborator = sources.some((source) => {
-    const tier = getPricingSourceRegistryEntry(source.source)?.trustTier;
-    return tier != null && hardTrustTiers.has(tier);
-  });
+  const hasHardCorroborator = sources.some(
+    (source) => isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier),
+  );
   const hasDexCorroboration =
     promotedDexProtocolCandidates.length > 1 ||
     sources.length === 0 ||
     (hasHardCorroborator &&
       promotedDexProtocolCandidates.some((dexSource) =>
-        sources.some((source) => {
-          const tier = getPricingSourceRegistryEntry(source.source)?.trustTier;
-          return (
-            tier != null &&
-            hardTrustTiers.has(tier) &&
-            pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps)
-          );
-        }),
+        sources.some(
+          (source) =>
+            isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier) &&
+            pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps),
+        ),
       ));
   const acceptedPromotedDexProtocolSources =
     hasPromotedDexProtocolSource && hasDexCorroboration ? promotedDexProtocolCandidates : [];

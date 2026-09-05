@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { isPoolChallengeEligibleConsensus } from "@shared/lib/pricing-source-policy";
+import { isHardPricingTrustTier, isPoolChallengeEligibleConsensus } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
@@ -17,6 +17,7 @@ import {
 } from "../../lib/constants";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
+import { midDivergenceBps } from "../../lib/price-divergence";
 import type { ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";
@@ -145,7 +146,7 @@ export function applyPoolChallenge(
     // A rogue pool inside an otherwise agreeing protocol should not count as
     // independent corroboration for replacing the published price.
     const divergingProtocolGroups = challengeableProtocolGroups.filter((group) => {
-      return pricePairDivergenceBps(result.price, group.price) >= poolChallengeBps;
+      return midDivergenceBps(result.price, group.price) >= poolChallengeBps;
     });
     const replacementProtocolGroups = selectReplacementProtocolGroups({
       result,
@@ -247,7 +248,7 @@ function selectReplacementProtocolGroups(params: {
   return params.protocolGroups.filter((group) => (
     group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
     Math.abs(priceDeviationBps(group.price, pegRef)) >= depegThresholdBps &&
-    pricePairDivergenceBps(params.result.price, group.price) >= depegThresholdBps &&
+    midDivergenceBps(params.result.price, group.price) >= depegThresholdBps &&
     hasHardCandidateAgreement(params.result, group.price)
   ));
 }
@@ -262,7 +263,7 @@ function selectHighTvlDirectionalReplacementGroups(params: {
   const eligibleGroups = params.protocolGroups.filter((group) => (
     group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
     Math.abs(priceDeviationBps(group.price, params.pegRef)) >= params.depegThresholdBps &&
-    pricePairDivergenceBps(params.resultPrice, group.price) >= params.depegThresholdBps
+    midDivergenceBps(params.resultPrice, group.price) >= params.depegThresholdBps
   ));
   if (eligibleGroups.length < 2) return [];
 
@@ -313,7 +314,7 @@ function selectLargestCoherentProtocolGroup<T extends { price: number; tvl: numb
     }
 
     const group = groups[index]!;
-    if (candidate.every((existing) => pricePairDivergenceBps(existing.price, group.price) <= thresholdBps)) {
+    if (candidate.every((existing) => midDivergenceBps(existing.price, group.price) <= thresholdBps)) {
       visit(index + 1, [...candidate, group]);
     }
     visit(index + 1, candidate);
@@ -326,12 +327,8 @@ function selectLargestCoherentProtocolGroup<T extends { price: number; tvl: numb
 function hasHardCandidateAgreement(result: PrimaryPriceResult, price: number): boolean {
   const candidatePrices = result.allPrices ?? {};
   return Object.entries(candidatePrices).some(([source, candidatePrice]) => {
-    const trustTier = getPricingSourceRegistryEntry(source)?.trustTier;
-    const isHard =
-      trustTier === "hard_market" ||
-      trustTier === "hard_oracle" ||
-      trustTier === "hard_protocol";
-    return isHard && pricePairDivergenceBps(price, candidatePrice) <= DIVERGENCE_THRESHOLD_BPS;
+    const isHard = isHardPricingTrustTier(getPricingSourceRegistryEntry(source)?.trustTier);
+    return isHard && midDivergenceBps(price, candidatePrice) <= DIVERGENCE_THRESHOLD_BPS;
   });
 }
 
@@ -357,12 +354,6 @@ function getCurrentPegReference(
 
 function priceDeviationBps(price: number, pegRef: number): number {
   return ((price / pegRef) - 1) * 10_000;
-}
-
-function pricePairDivergenceBps(left: number, right: number): number {
-  const mid = (left + right) / 2;
-  if (mid <= 0) return Number.POSITIVE_INFINITY;
-  return (Math.abs(left - right) / mid) * 10_000;
 }
 
 function hasCorroboratedSevereDownsideCandidate(

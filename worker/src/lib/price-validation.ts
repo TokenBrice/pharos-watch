@@ -244,7 +244,7 @@ function getHardcodedBounds(context: PriceValidationContext): { min: number; max
   return null;
 }
 
-function isFixedPegContext(context: PriceValidationContext): boolean {
+export function isFixedPegContext(context: PriceValidationContext): boolean {
   return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
 }
 

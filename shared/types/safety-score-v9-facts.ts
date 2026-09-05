@@ -502,6 +502,19 @@ const V9RouteOutputV2Schema = z
     }
   });
 
+/**
+ * Settlement-limit fragments shared by the compiled exit-route fact
+ * (`V9ExitRouteFactV2`) and the producer-side route review
+ * (`worker/src/lib/safety-score-v9/fact-set-schema.ts`), so the producer's
+ * accepted/rejected set cannot drift from the published fact contract.
+ */
+
+/** Reviewed SLA bound on settlement completion; null encodes a reviewed "no SLA evidence". */
+export const V9RouteSettlementSlaSecSchema = z.number().int().nonnegative().nullable();
+
+/** Reviewed USD settlement quantity; absent when unreviewed, null when reviewed as unavailable. */
+export const V9RouteSettlementUsdAmountSchema = NonNegativeUsdSchema.nullable().optional();
+
 const V9ExitRouteFactV2Schema = z
   .object({
     routeKey: CanonicalTextSchema,
@@ -529,10 +542,10 @@ const V9ExitRouteFactV2Schema = z
     settlementBoundUnproven: z.boolean().optional(),
     capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
     settlementModel: V9RouteSettlementModelSchema,
-    settlementSlaSec: z.number().int().nonnegative().nullable(),
-    queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
-    dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
-    minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
+    settlementSlaSec: V9RouteSettlementSlaSecSchema,
+    queueDepthUsd: V9RouteSettlementUsdAmountSchema,
+    dailyLimitUsd: V9RouteSettlementUsdAmountSchema,
+    minRedeemUsd: V9RouteSettlementUsdAmountSchema,
     settlementEvidenceRefIds: CanonicalStringArraySchema,
     physicalResourceKeys: CanonicalStringArraySchema,
     status: V9FactStatusV2Schema,
@@ -608,6 +621,50 @@ const V9ExitRouteFactV2Schema = z
   });
 export type V9ExitRouteFactV2 = z.infer<typeof V9ExitRouteFactV2Schema>;
 
+/**
+ * Authority and custody fragments shared by the compiled control fact
+ * (`V9DeploymentControlFactV2`) and the producer-side control review overlay
+ * (`worker/src/lib/safety-score-v9/fact-set-schema.ts`), so a new
+ * authority-ladder rung cannot diverge between review validation and the
+ * published fact contract.
+ */
+export const V9ControlAuthoritySchema = z
+  .object({
+    authorityKey: CanonicalTextSchema,
+    // AUTHORITY-LADDER 9.46: `validator-quorum` is an external
+    // message-validation quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP
+    // group, IBC light-client validator set). Known-but-weak: it grades at or
+    // below `issuer-backend` and never above a named multisig.
+    model: z.enum([
+      "none",
+      "eoa",
+      "multisig",
+      "governance",
+      "contract",
+      "issuer-backend",
+      "validator-quorum",
+      "unknown",
+    ]),
+    threshold: z
+      .object({ required: z.number().int().positive(), total: z.number().int().positive() })
+      .strict()
+      .nullable(),
+  })
+  .strict()
+  .nullable();
+
+/** Reviewed key-custody attestation for the authority holding this control. An
+ * attested MPC/HSM key is an operationally different object from a bare
+ * externally-owned key even though both present as one address on chain. */
+export const V9KeyCustodySchema = z.enum(["mpc", "hsm", "unknown"]).default("unknown");
+
+/** Reviewed Safe module/guard surface. "none-detected" is positive evidence that
+ * no side-door module bypasses the quorum; "present" is a reviewed extension
+ * surface; "unknown" fails conservative. */
+export const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown");
+
+export const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
+
 const V9DeploymentControlFactV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
@@ -623,45 +680,16 @@ const V9DeploymentControlFactV2Schema = z
     capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
-    authority: z
-      .object({
-        authorityKey: CanonicalTextSchema,
-        // AUTHORITY-LADDER 9.46: `validator-quorum` is an external
-        // message-validation quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP
-        // group, IBC light-client validator set). Known-but-weak: it grades at or
-        // below `issuer-backend` and never above a named multisig.
-        model: z.enum([
-          "none",
-          "eoa",
-          "multisig",
-          "governance",
-          "contract",
-          "issuer-backend",
-          "validator-quorum",
-          "unknown",
-        ]),
-        threshold: z
-          .object({ required: z.number().int().positive(), total: z.number().int().positive() })
-          .strict()
-          .nullable(),
-      })
-      .strict()
-      .nullable(),
+    authority: V9ControlAuthoritySchema,
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
     // A reviewer authored a scoped open question naming this control, and that
     // review is fresh at compile time. Grants the bounded scoped-gap ceiling
     // instead of the control-unverified ceiling while the question stays open.
     scopedQuestionFresh: z.boolean().optional(),
-    // Reviewed key-custody attestation for the authority holding this control.
-    // An attested MPC/HSM key is an operationally different object from a bare
-    // externally-owned key even though both present as one address on chain.
-    keyCustody: z.enum(["mpc", "hsm", "unknown"]).default("unknown"),
-    // Reviewed Safe module/guard surface. "none-detected" is positive evidence
-    // that no side-door module bypasses the quorum; "present" is a reviewed
-    // extension surface; "unknown" fails conservative.
-    modulesOrGuards: z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown"),
-    incidentState: z.enum(["none", "active", "resolved", "unknown"]),
+    keyCustody: V9KeyCustodySchema,
+    modulesOrGuards: V9ModulesOrGuardsSchema,
+    incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict()

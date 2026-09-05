@@ -23,9 +23,8 @@ export function buildCompareSelectionInsights({
   if (selectedIds.length < 2) return null;
 
   const selectedLinks = selectedCoins.filter((coin): coin is CoinOption => coin !== null);
-  const peerCoins = comparisonCoins.length >= 2 ? comparisonCoins : selectedLinks;
 
-  if (peerCoins.length < 2) {
+  if (comparisonCoins.length < 2) {
     return {
       lens: "Build the peer set first, then read peg behavior, liquidity, and safety in the same frame instead of hopping between detail pages.",
       cohort: "Live metadata is still loading for the selected set.",
@@ -34,15 +33,7 @@ export function buildCompareSelectionInsights({
     };
   }
 
-  const comparisonMeta = comparisonCoins.length >= 2 ? comparisonCoins : null;
-  if (!comparisonMeta) {
-    return {
-      lens: "Build the peer set first, then read peg behavior, liquidity, and safety in the same frame instead of hopping between detail pages.",
-      cohort: "Live metadata is still loading for the selected set.",
-      structure: "The comparison panels below will sharpen once the full dataset lands.",
-      links: peerCoins,
-    };
-  }
+  const comparisonMeta = comparisonCoins;
 
   const pegSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.pegCurrency));
   const governanceSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.governance));

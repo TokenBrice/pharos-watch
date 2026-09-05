@@ -227,7 +227,10 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         yieldFreshnessAgeSec: row.yieldFreshness?.ageSeconds ?? null,
         effectiveTvlUsd: row.effectiveTvlUsd,
         concentrationHhi: row.concentrationHhi,
-        chainTvl: sortRecord(row.chainTvl),
+        // No pre-sort: canonicalizeForDatasetHash recursively sorts object
+        // keys before hashing. The explicit sorts around this object sort
+        // arrays, which are order-bearing in the canonical form.
+        chainTvl: row.chainTvl,
         bluechipGrade: row.bluechipGrade,
         supplyUsd: row.supplyUsd,
         isRecentListing: row.isRecentListing,
@@ -387,8 +390,4 @@ function joinVersions(...versions: Array<string | null | undefined>): string {
   const present = versions.filter((version): version is string => Boolean(version));
   if (present.length === 0) return "unversioned";
   return Array.from(new Set(present)).join("+");
-}
-
-function sortRecord(record: Record<string, number>): Record<string, number> {
-  return Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b)));
 }

@@ -84,7 +84,7 @@ the pinned runtimes, PoolManager bindings, exact PoolId state, and current quote
 hooked pools and every other V4 chain remain unsupported. The separate shadow
 surfaces remain available for future cohorts and rollback comparison.
 
-The private `report-cards:fixed-input:exact` row is the deterministic compiler-input bridge. It retains the exact V8-shaped input schema only because V9 compilation and replay consume that structure; it is never served as a V8 rating.
+The private `report-cards:fixed-input:exact` row is the deterministic compiler-input bridge. Cache envelope v2 carries the native V9 schema-v4 capture (`model: "v9-input"`), containing the current compiler inputs and V9 evaluation-build identity. The retained `report-cards-input:v1:` generation prefix is a format namespace, not a V8-shaped rating schema.
 
 Safety Score V9 supply attribution runs on the dedicated `+8` trigger, exact input preparation runs serially after each successful `16,46` DEX consumer result, and canonical compilation runs at `22,52`. Lane ordering, leases, capture-clock ordering, and the publication-admission fences are owned by [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling).
 
