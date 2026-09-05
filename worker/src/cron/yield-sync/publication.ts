@@ -3,6 +3,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 
 export {
   derivePreviousYieldRankingsCount,
@@ -135,7 +136,17 @@ export async function pruneYieldTables(
   startSec: number,
   options?: {
     allowDestructiveCleanup?: boolean;
+    signal?: AbortSignal;
   },
+): Promise<void> {
+  // Cleanup is idempotent; retry transient overload without replaying publication.
+  await runWithOverloadRetry(() => pruneYieldTablesOnce(db, startSec, options), 3, options?.signal);
+}
+
+async function pruneYieldTablesOnce(
+  db: D1Database,
+  startSec: number,
+  options?: { allowDestructiveCleanup?: boolean },
 ): Promise<void> {
   const allowDestructiveCleanup = options?.allowDestructiveCleanup ?? true;
   const managedYieldIds = ACTIVE_STABLECOINS.map((meta) => meta.id);

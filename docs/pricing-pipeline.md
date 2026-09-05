@@ -13,7 +13,7 @@ Supply fallback behavior is owned by [Supply Snapshot: Supply Pipeline](./supply
 Pharos separates critical publication from best-effort corroboration:
 
 1. **15-minute publication** runs the full primary consensus: DefiLlama and CoinGecko, the curated CoinGecko ticker and CEX lanes, RedStone, Curve on-chain/oracle, reserve NAV telemetry, promoted DEX observations, and the post-consensus pool challenge. Registered authoritative overrides then run before publication.
-2. **Hourly corroboration** runs `enrichMissingPrices()` and the explicitly enabled exact-address provider against only the latest missing or low-depth rows, then stages provenance in `price_cache` for a later publication to revalidate.
+2. **Hourly corroboration** runs `enrichMissingPrices()` and the explicitly enabled exact-address provider against only the latest missing or low-depth rows. It stages actual fetched observations in `price:corroboration-observations:v1` for a later publication to revalidate, separately from ordinary `price_cache` replay provenance.
 
 The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, optional `priceSourceConfidenceProfile`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
 
@@ -350,6 +350,8 @@ The same registry also supports historical replay for backfills where a provider
 ---
 
 ## Fallback Enrichment
+
+The hourly observation handoff expires after one hour plus one 15-minute publication interval, allowing the next hourly primary to consume it before replacement corroboration runs. It independently enforces each source's existing observation-age limit, including the reviewed seven-day CoinGecko low-volume window. Only freshly collected provider observations enter it; published references and cached replays never do. A missing-price consumer revalidates candidates with the normal fallback and severe-downside corroboration guards, preserves their source and observation time, and publishes only `fallback` confidence. The existing `cachedFallbackCount` includes this D1 handoff and ordinary replay recovery. Empty successful collections clear the handoff; older writers cannot replace newer snapshots. Ordinary replay lifetime and trust rules are unchanged.
 
 Fallbacks are detached from the critical publication. On the existing quarter-hour trigger's top-of-hour invocation, `runPriceCorroboration()` reads the just-published `stablecoins` cache, selects only rows that are missing a price or have fewer than three consensus sources, and runs `enrichMissingPrices()` against isolated probe copies. A fallback error cannot change the completed `sync-stablecoins` result or block its canonical cache write. Successful probes update `price_cache`; the next 15-minute publication revalidates those entries before using them as continuity. The hourly pass order is:
 

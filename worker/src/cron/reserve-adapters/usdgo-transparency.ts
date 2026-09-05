@@ -3,15 +3,11 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { keccak256, toBytes } from "viem/utils";
-import { fetchEvmRpcBatch } from "../../lib/evm-rpc";
-import { encodeAddressCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
   reserveInfoWarning,
 } from "./helpers";
-import { runAdapterIo } from "./concurrency";
 import {
   fetchIndependentAssuranceReserves,
   type IndependentAssuranceProfile,
@@ -19,13 +15,8 @@ import {
 import { formatValidIsoDate } from "./report-date";
 
 const ADAPTER_KEY = "usdgo-transparency";
-const BUIDL_DECIMALS = 6;
-const BUIDL_REPORT_AMOUNT_USD = 170_977_843;
-const BUIDL_MAX_ROUNDING_DIVERGENCE_USD = 1;
 const SAME_PERIOD_CROSS_CHECK_MAX_AGE_SEC = 3 * 24 * 60 * 60;
 const CROSS_CHECK_TOLERANCE_PCT = 1;
-const BUIDL_BALANCE_OF_SELECTOR = "0x70a08231";
-const BUIDL_DECIMALS_SELECTOR = "0x313ce567";
 
 export const USDGO_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: ADAPTER_KEY,
@@ -77,16 +68,6 @@ interface UsdgoIssuerCrossCheckPayload {
   data?: Record<string, unknown>;
 }
 
-interface BuidlObservation {
-  blockNumber: number;
-  blockHash: string;
-  blockTimestamp: number;
-  balanceUsd: number;
-  balanceRaw: bigint;
-  decimals: number;
-  codeHash: string;
-}
-
 function usdgoReportDate(href: string): string | null {
   const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
   const match = fileName.match(/^(\d{2})[.](\d{2})[.](\d{2})_USDGO[-_]Stablecoin[-_]Attestation[-_]Report/i);
@@ -95,106 +76,6 @@ function usdgoReportDate(href: string): string | null {
   const day = Number(match[2]);
   const year = 2000 + Number(match[3]);
   return formatValidIsoDate(year, month, day, 2000);
-}
-
-function requireHex(value: unknown, label: string): string {
-  if (typeof value !== "string" || !/^0x[0-9a-fA-F]+$/.test(value)) {
-    throw new Error(`${ADAPTER_KEY}: ${label} is not a hex result`);
-  }
-  return value;
-}
-
-function requireUint(value: unknown, label: string): bigint {
-  const raw = requireHex(value, label);
-  try {
-    return BigInt(raw);
-  } catch {
-    throw new Error(`${ADAPTER_KEY}: ${label} is not an integer`);
-  }
-}
-
-function requireBlock(value: unknown, expectedNumber: number, expectedHash: string): {
-  number: number;
-  hash: string;
-  timestamp: number;
-} {
-  if (!value || typeof value !== "object") throw new Error(`${ADAPTER_KEY}: BUIDL block header is missing`);
-  const block = value as { number?: unknown; hash?: unknown; timestamp?: unknown };
-  const numberRaw = requireHex(block.number, "BUIDL block number");
-  const hash = requireHex(block.hash, "BUIDL block hash");
-  const timestampRaw = requireHex(block.timestamp, "BUIDL block timestamp");
-  const number = Number(BigInt(numberRaw));
-  const timestamp = Number(BigInt(timestampRaw));
-  if (!Number.isSafeInteger(number) || number !== expectedNumber) {
-    throw new Error(`${ADAPTER_KEY}: BUIDL block number drifted`);
-  }
-  if (!/^0x[0-9a-fA-F]{64}$/.test(hash) || hash.toLowerCase() !== expectedHash.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: BUIDL block hash drifted`);
-  }
-  if (!Number.isSafeInteger(timestamp) || timestamp <= 0) {
-    throw new Error(`${ADAPTER_KEY}: BUIDL block timestamp is invalid`);
-  }
-  return { number, hash, timestamp };
-}
-
-async function readBuidlObservation(
-  params: LiveReserveAdapterParamsByKey["usdgo-transparency"],
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<BuidlObservation> {
-  const blockTag = `0x${params.avalancheBuidlBlock.toString(16)}`;
-  const results = await runAdapterIo(
-    ctx,
-    `${ADAPTER_KEY}:buidl-rpc`,
-    () => fetchEvmRpcBatch("avalanche", [
-      { method: "eth_getBlockByNumber", params: [blockTag, false] },
-      { method: "eth_getCode", params: [params.avalancheBuidlToken, blockTag] },
-      {
-        method: "eth_call",
-        params: [{ to: params.avalancheBuidlToken, data: encodeAddressCallData(BUIDL_BALANCE_OF_SELECTOR, params.avalancheBuidlWallet) }, blockTag],
-      },
-      {
-        method: "eth_call",
-        params: [{ to: params.avalancheBuidlToken, data: BUIDL_DECIMALS_SELECTOR }, blockTag],
-      },
-    ], {
-      extraRpcUrls: [params.avalancheRpcUrl],
-      signal,
-      timeoutMs: 8_000,
-      maxRetries: 0,
-      chainRpcs: ctx?.chainRpcs,
-    }),
-    { signal },
-  );
-  if (!results) throw new Error(`${ADAPTER_KEY}: Avalanche BUIDL RPC batch failed`);
-
-  const block = requireBlock(results[0], params.avalancheBuidlBlock, params.avalancheBuidlBlockHash);
-  const code = requireHex(results[1], "BUIDL token code");
-  if (code === "0x" || keccak256(toBytes(code)).toLowerCase() !== params.expectedBuidlCodeHash.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: BUIDL token code hash drifted`);
-  }
-  const balanceRaw = requireUint(results[2], "BUIDL balanceOf");
-  const decimals = Number(requireUint(results[3], "BUIDL decimals"));
-  if (decimals !== BUIDL_DECIMALS) throw new Error(`${ADAPTER_KEY}: BUIDL decimals drifted`);
-
-  const balanceUsd = Number(balanceRaw) / 10 ** decimals;
-  if (balanceRaw <= 0n || balanceRaw > BigInt(Number.MAX_SAFE_INTEGER) || !Number.isFinite(balanceUsd) || balanceUsd <= 0) {
-    throw new Error(`${ADAPTER_KEY}: BUIDL balance is invalid`);
-  }
-  const divergenceUsd = Math.abs(balanceUsd - BUIDL_REPORT_AMOUNT_USD);
-  if (divergenceUsd > BUIDL_MAX_ROUNDING_DIVERGENCE_USD) {
-    throw new Error(`${ADAPTER_KEY}: BUIDL chain balance diverges from Deloitte report by $${divergenceUsd.toFixed(2)}`);
-  }
-
-  return {
-    blockNumber: block.number,
-    blockHash: block.hash,
-    blockTimestamp: block.timestamp,
-    balanceUsd,
-    balanceRaw,
-    decimals,
-    codeHash: keccak256(toBytes(code)),
-  };
 }
 
 function parseMillionUsd(value: unknown, label: string): number {
@@ -317,11 +198,10 @@ export async function fetchUsdgoTransparencyReserves(
     params,
     ctx,
   );
-  const buidlPromise = readBuidlObservation(params, signal, ctx);
   const crossCheckPromise = readIssuerCrossCheck(params.issuerCrossCheckUrl, signal, ctx).catch((error: unknown) => ({
     error: toErrorMessage(error),
   }));
-  const [assurance, buidl, crossCheck] = await Promise.all([assurancePromise, buidlPromise, crossCheckPromise]);
+  const [assurance, crossCheck] = await Promise.all([assurancePromise, crossCheckPromise]);
 
   const warnings = [...(assurance.warnings ?? [])];
   let issuerCrossCheckDetails: Record<string, unknown> | undefined;
@@ -356,20 +236,6 @@ export async function fetchUsdgoTransparencyReserves(
       supplyUsd: reportValues.supplyUsd,
       shareholderEquityUsd: reportSurplusUsd,
       collateralizationRatio: reportValues.totalReserveUsd / reportValues.supplyUsd,
-      buidlOnchain: {
-        chain: "avalanche",
-        tokenAddress: params.avalancheBuidlToken,
-        walletAddress: params.avalancheBuidlWallet,
-        blockNumber: buidl.blockNumber,
-        blockHash: buidl.blockHash,
-        blockTimestamp: buidl.blockTimestamp,
-        balanceRaw: buidl.balanceRaw.toString(),
-        decimals: buidl.decimals,
-        balanceUsd: buidl.balanceUsd,
-        reportBalanceUsd: BUIDL_REPORT_AMOUNT_USD,
-        divergenceUsd: buidl.balanceUsd - BUIDL_REPORT_AMOUNT_USD,
-        codeHash: buidl.codeHash,
-      },
       ...(issuerCrossCheckDetails ? { issuerCrossCheck: issuerCrossCheckDetails } : {}),
       details: {
         ...assuranceDetails,

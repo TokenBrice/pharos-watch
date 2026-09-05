@@ -932,7 +932,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
-  "usdgo-transparency": declareAdapter("usdgoAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
+  "usdgo-transparency": declareAdapter("usdgoAssurance", HTTP_DISCLOSURE_ATTESTATION_V2, {
+    configValidation: configPolicy(["attestation-mix"], [3]),
+  }),
   "usdh-native-markets": {
     primaryInputKinds: ["http-html"],
     paramsSchema: "none",
