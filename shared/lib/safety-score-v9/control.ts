@@ -1251,14 +1251,12 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   // with an empty partition had null shares. "Partitioned but empty" is not a
   // reachable state, so treating null as zero would only ever license scoring an
   // inventory whose residual was never measured.
+  const unknownRouteSupplyShare = args.facts.supply.unknownRouteSupplyShare;
+  const unreviewedRouteSupplyShare = args.facts.supply.unreviewedRouteSupplyShare;
   const unattributedBridgeShare =
-    args.facts.supply.unknownRouteSupplyShare === null ||
-    args.facts.supply.unreviewedRouteSupplyShare === null
+    unknownRouteSupplyShare === null || unreviewedRouteSupplyShare === null
       ? null
-      : Math.min(
-          1,
-          args.facts.supply.unknownRouteSupplyShare + args.facts.supply.unreviewedRouteSupplyShare,
-        );
+      : Math.min(1, unknownRouteSupplyShare + unreviewedRouteSupplyShare);
   const boundedBridgeGapIsImmaterial =
     unattributedBridgeShare !== null && unattributedBridgeShare < materialShareThreshold;
 
@@ -1300,12 +1298,9 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       materialShareThreshold,
       policy.materiality.commonModeShareThreshold,
     ).complete;
-    const unresolvedBridgeShare =
-      args.facts.supply.unknownRouteSupplyShare === null || args.facts.supply.unreviewedRouteSupplyShare === null
-        ? null
-        : Math.min(1, args.facts.supply.unknownRouteSupplyShare + args.facts.supply.unreviewedRouteSupplyShare);
     const unresolvedBridgeResidueBinds =
-      unresolvedBridgeShare === null || (unresolvedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
+      unattributedBridgeShare === null ||
+      (unattributedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
     const hasUnresolvedSupplyRows = args.facts.supply.selectedBridgeRoutes.some(
       (route) => route.reviewState !== "selected-reviewed",
     );
@@ -1379,9 +1374,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         });
       }
     }
+    // Deliberately null-as-zero, unlike the null-as-unknown residual above: a
+    // missing partition never fires the aggregate-residue reasons itself — the
+    // non-known observation branches above already carry the fail-closed
+    // runtime reason for that case.
     const unknownBridgeShare = Math.min(
       1,
-      (args.facts.supply.unknownRouteSupplyShare ?? 0) + (args.facts.supply.unreviewedRouteSupplyShare ?? 0),
+      (unknownRouteSupplyShare ?? 0) + (unreviewedRouteSupplyShare ?? 0),
     );
     // The aggregate residue is graded on the same deployment-materiality floor the
     // per-row branch above already applies, which is what the reason's own name

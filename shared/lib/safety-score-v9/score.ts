@@ -503,10 +503,8 @@ export function scoreV9EvaluatedAsset(
   // a strong-backing asset is assessable (we know it is backed) even if exit
   // and control are limited, so it must be scored, never withheld to NR.
   const backingLimited = input.pillars.backing.evidenceLevel === "limited";
-  const normalizedScoreBearingReasons = normalizeReasonList(
-    scoreBearingReasons(input, envelope),
-    envelope,
-  );
+  const baseScoreBearingReasons = scoreBearingReasons(input, envelope);
+  const normalizedScoreBearingReasons = normalizeReasonList(baseScoreBearingReasons, envelope);
   const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap(
     (pillar) =>
       normalizeReasonList(input.pillars[pillar].reasons, envelope).map((fact) => ({
@@ -553,10 +551,7 @@ export function scoreV9EvaluatedAsset(
     wrapperParentLimit: input.parent.wrapperParentLimit ?? null,
     unresolvedFacts: reconcileBoundedAttributionFacts(
       normalizeReasonList(
-        [
-          ...scoreBearingReasons(input, envelope),
-          ...(input.unresolvedEvidence ?? []),
-        ],
+        [...baseScoreBearingReasons, ...(input.unresolvedEvidence ?? [])],
         envelope,
       ),
       normalizedScoreBearingReasons,
