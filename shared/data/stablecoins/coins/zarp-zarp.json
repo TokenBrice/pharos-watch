@@ -15,7 +15,7 @@
   "detailProvider": "coingecko",
   "geckoId": "zarp-stablecoin",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://www.zarpstablecoin.com/transparency/",
     "provider": "Kempen Audit (restricted-use agreed-upon-procedures reports that state they are not an assurance engagement; observed publication history is irregular — roughly quarterly to early 2025, then ~5-month gaps — so no fixed cadence is claimed)",
     "attestorTier": "niche",

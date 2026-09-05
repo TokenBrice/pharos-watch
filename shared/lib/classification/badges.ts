@@ -38,6 +38,17 @@ export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
     label: "Independent Audit",
     cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
   },
+  // A third-party engagement that expresses no assurance opinion: neutral
+  // tone, never audit-blue.
+  "agreed-upon-procedures": {
+    label: "Agreed-Upon Procedures",
+    cls: "bg-muted/40 text-muted-foreground border-border/60",
+  },
+  // Independent verification-agent report: below audit-grade assurance.
+  attestation: {
+    label: "Independent Attestation",
+    cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+  },
   "real-time": {
     label: "Real-Time PoR",
     cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",

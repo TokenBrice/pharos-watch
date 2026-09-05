@@ -338,6 +338,23 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(eligibleReserveMeta(), CLOCK_SEC)).toBeNull();
   });
 
+  it.each(["agreed-upon-procedures", "attestation"] as const)(
+    "keeps %s proof types out of audit-grade reserve admission",
+    (type) => {
+      const base = eligibleReserveMeta();
+      const supervised = eligibleReserveMeta({
+        proofOfReserves: { ...base.proofOfReserves!, type },
+      });
+      const unsupervised = eligibleReserveMeta({
+        mintAuthority: { ...base.mintAuthority!, supervision: "attestation-only" },
+        proofOfReserves: { ...base.proofOfReserves!, type },
+      });
+
+      expect(buildSafetyScoreV9ReviewedStaticReserveRows(supervised, CLOCK_SEC)).toBeNull();
+      expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC)).toBeNull();
+    },
+  );
+
   it("keeps the issuer and report dates on audited fallback evidence", () => {
     // This is what makes an expired composition resolve to
     // `published-evidence-expired` rather than `issuer-undisclosed`: emitting

@@ -13,7 +13,7 @@
   "collateral": "Brazilian-real fiat cash deposited in a Brazilian bank account, backing Ripio wBRL one-to-one against the Brazilian real per Ripio's wFIAT token certifications",
   "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
     "provider": "Pablo Eduardo Soto (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",

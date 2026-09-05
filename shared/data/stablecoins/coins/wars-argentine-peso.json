@@ -90,7 +90,7 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
     "provider": "Pablo Eduardo Soto, Contador Público, CPCECABA T.275 F.153 (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",

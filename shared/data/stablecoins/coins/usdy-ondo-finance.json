@@ -17,7 +17,7 @@
   "detailProvider": "defillama",
   "geckoId": "ondo-us-dollar-yield",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://ondo.finance/usdy",
     "provider": "Ankura Trust",
     "attestorTier": "niche",
