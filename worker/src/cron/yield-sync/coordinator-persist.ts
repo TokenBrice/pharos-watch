@@ -199,6 +199,7 @@ export async function publishYieldCoordinatorResults(params: {
     });
     await pruneYieldTables(params.db, params.startSec, {
       allowDestructiveCleanup: false,
+      signal: params.signal,
     });
     return {
       ok: true,
@@ -226,6 +227,7 @@ export async function publishYieldCoordinatorResults(params: {
   throwIfAborted(params.signal);
   await pruneYieldTables(params.db, params.startSec, {
     allowDestructiveCleanup: params.degradationReasons.length === 0,
+    signal: params.signal,
   });
 
   return {

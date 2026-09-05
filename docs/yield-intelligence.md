@@ -586,7 +586,7 @@ The methodology above is the durable public contract. Runtime topology, storage 
 - `yield_publication_generations` and `yield_source_decisions` record publication state and bounded source-selection evidence. Repeated unchanged anomaly evidence is 30-day audit data; source switches and anomaly-episode boundaries remain durable.
 - Public rankings expose only a validated published generation. Failed validation, stale-writer, or publication attempts leave the previous public snapshot intact.
 - The final resolve-stage eligibility pass removes null, non-finite, or thin measured venue-TVL candidates in the three deposit-venue classes before evaluation and arbitration, across tracked, explicit, auto-discovered, supplemental, and linked-variant paths. Only eligible candidates can reach a validated published generation.
-- History retention is enforced by the producer. Legacy rows remain explicitly partial rather than receiving invented evidence.
+- History retention is enforced by the producer. Idempotent cleanup retries transient D1 overloads with the shared bounded, abort-aware retry policy; exhausted retries and schema errors still fail visibly without replaying publication. Legacy rows remain explicitly partial rather than receiving invented evidence.
 
 ### Producers And Consumers
 

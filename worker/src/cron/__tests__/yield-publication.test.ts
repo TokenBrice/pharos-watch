@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -555,6 +555,24 @@ describe("publishYieldCoordinatorResults", () => {
 });
 
 describe("pruneYieldTables", () => {
+  it("retries transient retention overload without dropping cleanup", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const prepare = db.prepare.bind(db);
+    let retentionAttempts = 0;
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      if (sql.includes("pharos:yield-sync:daily-history-retention-delete") && ++retentionAttempts === 1) {
+        throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+      }
+      return prepare(sql);
+    });
+    try {
+      await pruneYieldTables(db, Math.floor(FIXED_NOW.getTime() / 1000));
+      expect(retentionAttempts).toBe(2);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("surfaces a missing mandatory daily-history table during materialization", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
