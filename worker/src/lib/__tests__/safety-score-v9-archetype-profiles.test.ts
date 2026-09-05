@@ -22,9 +22,9 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-// 2026-09-05: one UTC day past the 2026-09-04 curation batch, with the
+// 2026-09-06: one UTC day past the 2026-09-05 curation batch, with the
 // overlay same-day admission gate fully elapsed.
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 8, 5) / 1_000;
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 8, 6) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -109,12 +109,9 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         quality: "limited",
       },
     ]);
-    // The nine profile facts fold onto four components without losing a grade:
-    // title takes the weakest of holderTitle / physicalAllocation /
-    // custodianSegregation / bankruptcyRemoteness, custody stays the sourced
-    // nondisclosure that covered custodyContinuity and insurance, assurance
-    // takes the weaker of auditCadence / reserveReconciliation, and redemption
-    // is the fact the profile could only express as an exit declaration.
+    // The September 5 custody review adds the contractual oversight and
+    // holder-funded recovery limitations. Title, assurance and physical
+    // redemption retain their previously reviewed qualities.
     expect(review).toMatchObject({
       archetype: "commodity-claim",
       titleAndAllocation: {
@@ -122,8 +119,8 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         quality: "limited",
       },
       custodyContinuity: {
-        status: { observationState: "bounded-unknown" },
-        quality: null,
+        status: { observationState: "known" },
+        quality: "weak",
       },
       assuranceAndReconciliation: {
         status: { observationState: "known" },

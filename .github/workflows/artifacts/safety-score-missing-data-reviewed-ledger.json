@@ -3177,6 +3177,819 @@
       ],
       "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:sfrxusd-frax",
+      "taskIds": [
+        "V9G-05cc6915fd0c70bd",
+        "V9G-891d5e408c719eee",
+        "V9G-8e7ac4180a24317f"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "Codex sfrxUSD non-EVM controller campaign",
+      "evidence": [
+        "https://api.mainnet-beta.solana.com",
+        "https://explorer.solana.com/address/EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV",
+        "https://explorer.solana.com/address/6RFQU3SWewB2KbS46AYKEtRWSVzzpb9xPpCNJHgVJoCM",
+        "https://github.com/FraxFinance/frax-oft-upgradeable/blob/ee70909f21bbbd42b8fbc844967e72ca7f26b9ee/programs/oft/src/state/oft.rs",
+        "https://github.com/FraxFinance/frax-oft-upgradeable/blob/ee70909f21bbbd42b8fbc844967e72ca7f26b9ee/programs/oft/src/instructions/lz_receive.rs",
+        "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources?ledger_version=7093662389",
+        "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2/resources?ledger_version=7093662389",
+        "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/modules?ledger_version=7093662389",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources?ledger_version=206671185",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2/resources?ledger_version=206671185",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/modules?ledger_version=206671185",
+        "Aptos ledger 7093662389: exact sfrxUSD OFT holds mint_ref for metadata 0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2; OApp admin/delegate and code-object owner 0x6f9e27569fb34873f13a6868b3732b384f81c89fb525a623a969fdba155de21c.",
+        "Movement ledger 206671185: exact sfrxUSD OFT holds mint_ref for the same metadata identity on Movement; OApp admin/delegate and code-object owner 0xda80fe6404a059e99569ba06f8d87814b3a9521c8d6c78ac5ed4ca75ad867ab3.",
+        "Solana finalized slot 444567038: mint DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45 names SPL Token mint/freeze authority EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV. Its 1-of-2 signers are OFTStore A28EK6j1euK4e6taP1KLFpGEoR1mDpXR4vtfiyCE1Nxv and FSRTW4KPGifKL8yKcZ8mfoR9mKtAjwZiTHbHwgix8AQo; FSRT is also the decoded OFT administrator and observed program upgrade authority."
+      ],
+      "rationale": "New asset-specific fixed-version resource and finalized-slot account reads establish the three representation mint-controller identities. Move records the deployed OFT mint-capability holder with each distinct observed administrator failure domain. Solana records the actual 1-of-2 mint-authority account and its OFT program/admin upgrade paths; this is not two-party protection. Conservative contract authority remains, with no inferred multisig strength, ultimate signer topology, custody, endpoint/DVN, limit or delay proposition. No sibling frxUSD authority was copied. Only the three exact deployment-control gaps are candidates; umbrella, loss-recovery, bridge materiality and exit gaps receive no credit.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json"
+      ],
+      "sentinels": [
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:3fc84295e9860ede5eb3",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:64f6b3cb726885ae9888",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:70d3ddefaac44043af2f"
+      ],
+      "nextReviewTrigger": "Root campaign owner: independently review the pinned source and raw authority proofs, regenerate the catalog, perform an attributed replay, then confirm fresh post-deploy production publication removes these three exact sentinels without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:brl1-brl1",
+      "taskIds": [
+        "V9G-eb7f18beb30188da",
+        "V9G-a0c9710cf25d7368"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/brl1-onchain-1.json"
+      ],
+      "rationale": "Public August1 itemized issuer report and exact historical Polygon liability check support static-validated reserves and limited custody/reconciliation. Off-chain reserves remain issuer assertions. Frozen A net closure zero from same-day overlay withholding. Actual publication date unestablished, so latestReport omitted.",
+      "changeRefs": [
+        "sha:dee44d5e5"
+      ],
+      "sentinels": [
+        "brl1-brl1:gap:mechanism-review:assuranceAndReconciliation",
+        "brl1-brl1:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Matching accepted publication after September6 00:00 UTC must admit exact facts without replacement. New composition report required before September8 00:00:01 UTC expiry. Actual publication-date proof needed for latestReport.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:brl1-brl1",
+      "taskIds": [
+        "V9G-6734a490201d34c6"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/brl1-onchain-1.json"
+      ],
+      "rationale": "Public August1 itemized issuer report and exact historical Polygon liability check support static-validated reserves and limited custody/reconciliation. Off-chain reserves remain issuer assertions. Frozen A net closure zero from same-day overlay withholding. Actual publication date unestablished, so latestReport omitted.",
+      "changeRefs": [
+        "sha:dee44d5e5"
+      ],
+      "sentinels": [
+        "brl1-brl1:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Matching accepted publication after September6 00:00 UTC must admit exact facts without replacement. New composition report required before September8 00:00:01 UTC expiry. Actual publication-date proof needed for latestReport.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:aid-gaib",
+      "taskIds": [
+        "V9G-c5bb5bc109940980",
+        "V9G-2490e6da5c30998a"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/transparency",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/llms.txt",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "New issuer-linked public viewer exposes McMillan Woods limited assurance over three Spiceflow GPU-financing transactions at July 31, signed August 10. No AID liabilities or complete AID reserve allocation; no claim/segregation or custody continuity terms. Product/transparency pages identify Treasury and stable-asset backing plus mint/redeem rules, but still do not publish AID-specific reserve recourse or custody continuity. GAIB Terms deny fiduciary duties broadly, while the unsecured-creditor disclosure expressly concerns underlying GPU assets; applying it to AID would conflate AID with the sAID financing strategy. GAIB Select SPV terms cover a separate product and are not an AID holder claim.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:mechanism-review:claimAndSegregation",
+        "aid-gaib:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Publish full AID reserve allocation and liability reconciliation, or full multichain holdings proof; asset-deployment report alone cannot close composition. AID-specific reserve terms/custody agreement or segregated reserve vehicle is published; do not import sAID or GAIB Select recourse into AID.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:aid-gaib",
+      "taskIds": [
+        "V9G-2003772d52ddf679"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/transparency",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/llms.txt",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "New issuer-linked public viewer exposes McMillan Woods limited assurance over three Spiceflow GPU-financing transactions at July 31, signed August 10. No AID liabilities or complete AID reserve allocation; no claim/segregation or custody continuity terms.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Publish full AID reserve allocation and liability reconciliation, or full multichain holdings proof; asset-deployment report alone cannot close composition.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:apxusd-apyx",
+      "taskIds": [
+        "V9G-c95ffa5b464972cb"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Current index still lists July 2026 as newest Wolf opinion. Existing current Accountable itemization retains opaque Inventory/POL and combined cash/Treasuries buckets; no fresh full apxUSD reserve/liability examination found.",
+      "changeRefs": [],
+      "sentinels": [
+        "apxusd-apyx:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Publish complete dated reserve allocation with opaque buckets split and same-scope liabilities, or allow existing supported live producer to supply its exact rows through its existing gates.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:myrc-blox",
+      "taskIds": [
+        "V9G-b81179acf51189a3"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://api.blox.my/blox-admin/attestations",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Discovered public API used by current transparency page; newest entry remains June 2026, created July 23 and updated August 16. The August update timestamp does not change June reserve period. Guessed July report URL returns 403 and was not treated as evidence.",
+      "changeRefs": [],
+      "sentinels": [
+        "myrc-blox:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: API publishes July 2026 or later reserve examination; read exact PDF, preserve signature/publication/period dates separately.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:audf-forte",
+      "taskIds": [
+        "V9G-8cca73ccc24932b1"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://www.forteaud.com/transparency",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Current transparency page contains general 100% AUD backing and regulated-institution claims; no dated allocation or report link. /reserves returns 404. Existing May report remains stale.",
+      "changeRefs": [],
+      "sentinels": [
+        "audf-forte:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Issuer links a dated report with current reserve balances/composition; dated assets-and-liabilities scope preferred.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdglo-glo",
+      "taskIds": [
+        "V9G-aba8b644e869b472"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://brale.xyz/stablecoins/USDGLO",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Current Brale USDGLO report index still ends June 2026 despite marketing of independent monthly attestations; no newer primary composition report found.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdglo-glo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Brale publishes July 2026 or later complete reserve report; inspect actual engagement rather than marketing.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:syrupusdc-maple",
+      "taskIds": [
+        "V9G-84de9ae6a2a53c8a"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md",
+        "https://maple.finance/insights/introducing-proof-of-reserves",
+        "https://maple.finance/transparency",
+        "https://raw.githubusercontent.com/maple-labs/maple-docs/master/SUMMARY.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "The current lender FAQ still does not name syrupUSDC custodians. The live transparency page publishes protocol/treasury/yield data without an exposed custody report; the May 7 PoR announcement still leaves the loan-book collateralization answer coming soon. app.maple.finance/earn returned HTTP403, so no claim about inaccessible report content is made. The old search-index FAQ naming example providers is stale versus current source and is not admitted.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdc-maple:gap:mechanism-review:custody"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Maple publishes an accessible dated report or current portfolio-specific custody/provider disclosure with an external anchor; directly inspect any Network Firm report rather than reusing its launch announcement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:yusd-aegis",
+      "taskIds": [
+        "V9G-ad83c4b1d931af4a",
+        "V9G-d5ae7949719896f2"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "https://aegis.im/",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "The live Accountable API still exposes aggregate reserves, supply and custodian/venue buckets without venue account equity, margin thresholds, hedge positions, liquidation distance, executable market depth or measured unwind time. The current docs/llms/sitemap return HTTP403. Aggregate reserve surplus is not margin headroom and signed/ZK totals do not prove omitted data.",
+      "changeRefs": [],
+      "sentinels": [
+        "yusd-aegis:gap:mechanism-review:marginAndLiquidation",
+        "yusd-aegis:gap:mechanism-review:unwindCapacity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Aegis or Accountable exposes current position/margin details or a bounded liquidation/unwind model, or accessible official docs provide exact margin rules tied to the deployed strategy.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:ussd-sonic-labs",
+      "taskIds": [
+        "V9G-f7f637f922ec4670",
+        "V9G-810def66512a2b64"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.soniclabs.com/sonic/ussd",
+        "https://docs.frax.com/fraxnet/branded-stablecoins",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "Current Sonic/Frax SaaS documentation confirms a 1:1 frxUSD wrapper and names its contracts. The fresh balance-sheet API itemizes reserve categories, not an administered USSD NAV, aggregate WAM/WAL/duration, maturity ladder or quantified stress liquidity horizon. Onchain parity and underlying-fund identities do not measure the missing component.",
+      "changeRefs": [],
+      "sentinels": [
+        "ussd-sonic-labs:gap:mechanism-review:durationAndLiquidity",
+        "ussd-sonic-labs:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: A dated administrator NAV/reconciliation or aggregate frxUSD/USSD maturity and measured liquidity disclosure is published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:xaut-tether",
+      "taskIds": [
+        "V9G-11fa59eededb8f78"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://gold.tether.to/assets/index-CzdxJ7of.js",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/riskdisclosurestatement",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/XAUT-REVIEW.md"
+      ],
+      "rationale": "Current binding terms explicitly limit issuer custody oversight and place recovery costs and claims on holders. Independent review supports custodyContinuity weak under the existing standard while retaining allocated title and the BDO assurance grade. Implemented locally in 5e185cb65; same-day whole-overlay withholding adds three temporary open facts across XAUT and inherited ZCHF in the isolated frozen-input replay. Review admits September 6 UTC; no deployed closure is claimed.",
+      "changeRefs": [
+        "sha:5e185cb65"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reconcile full attributed replay and exact XAUT/ZCHF paths after September 6 UTC admission, then a matching accepted production publication after a separately authorized release. Preserve existing assurance/title evidence; local-only user constraint currently applies.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:dusd-dtrinity",
+      "taskIds": [
+        "V9G-fb721ad1fa04f3fc"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/security/addresses",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "Current docs expose chain-isolated vaults, reserve eligibility and AMO accounting design. They still publish no dated full reserve-to-liability reconciliation across the Ethereum, Fraxtal and Katana deployments. Idle balances omit AMO positions and preminted dUSD inside AMOs must be reconciled, so no assurance grade follows from eligible-asset tables.",
+      "changeRefs": [],
+      "sentinels": [
+        "dusd-dtrinity:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Issuer publishes complete dated per-chain vault/AMO assets and liabilities or a reproducible full onchain balance-sheet surface with validated receipt accounting.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:zchf-frankencoin",
+      "taskIds": [
+        "V9S-58ffb84c6fa4a3e6"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://gold.tether.to/assets/index-CzdxJ7of.js",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/riskdisclosurestatement",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/XAUT-REVIEW.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/propagation-reconciliation.json"
+      ],
+      "rationale": "ZCHF inherits the reviewed XAUT custody weakness through its 1.6% XAUt reserve exposure. Its original public path has a null sourceGapId, so source-gap-only matching would miss it. No ZCHF source edit was required. Local XAUT change 5e185cb65 passed independent review; same-day whole-overlay withholding changes the inherited paths and adds temporary unknowns until September 6 UTC. No deployed closure is claimed.",
+      "changeRefs": [
+        "sha:5e185cb65"
+      ],
+      "sentinels": [
+        "backing:reserve:reserve:7d3d360c142b6cf80ebf3f45"
+      ],
+      "nextReviewTrigger": "Parent replay and matching production publication after XAUT Sep5 review becomes admissible must reconcile this exact ZCHF score path; mismatched baseline generations are not exact-production evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:bib01-backed",
+      "taskIds": [
+        "V9G-32486befbedfe36c"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://assets.backed.fi/products/bib01",
+        "https://assets.backed.fi/legal-documentation",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/backed/REVIEW.md"
+      ],
+      "rationale": "Current issuer charts expose underlying ETF market prices. Chainlink IB01 feed is an underlying reference price. Legal prospectus assigns issuer valuations to sources in product Final Terms. No product-specific NAV administration/cadence or dated certificate-level reconciliation established.",
+      "changeRefs": [],
+      "sentinels": [
+        "bib01-backed:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Current product Final Terms plus dated certificate NAV/reconciliation or independent product-specific feed proving valuation method and cadence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:bc3m-backed",
+      "taskIds": [
+        "V9G-dd551c224bbd6ff7"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/backed/REVIEW.md"
+      ],
+      "rationale": "Current issuer charts expose underlying ETF market prices. Chainlink IB01 feed is an underlying reference price. Legal prospectus assigns issuer valuations to sources in product Final Terms. No product-specific NAV administration/cadence or dated certificate-level reconciliation established.",
+      "changeRefs": [],
+      "sentinels": [
+        "bc3m-backed:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Current product Final Terms plus dated certificate NAV/reconciliation or independent product-specific feed proving valuation method and cadence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:nopal-nest",
+      "taskIds": [
+        "V9G-0c861d6e721b43f6",
+        "V9G-6cca175d6adc57a9",
+        "V9G-c6b5fc2aaa17b42b"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-nest-controller-review",
+      "evidence": [
+        "https://docs.nest.credit/developers/integration-guides/nopal/",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "https://api.mainnet-beta.solana.com",
+        "https://explorer.solana.com/address/2Q755RWTf9Wbw3JSY3zwmpLv7k2pfezsTbVmrsMjKoSM",
+        "https://github.com/plumenetwork/nest-protocol/blob/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/state/oft.rs",
+        "https://github.com/plumenetwork/nest-protocol/blob/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/instructions/set_oft_config.rs",
+        "https://explorer.solana.com/address/6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs",
+        "Finalized getMultipleAccounts at slot 444571340 binds this exact mint to initialized SPL Token mint authority 2Q755RWTf9Wbw3JSY3zwmpLv7k2pfezsTbVmrsMjKoSM, requiring one of two signers: OFTStore FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq or J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. The store is owned by executable program ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th; its discriminator and independently pinned Nest source layout decode token_mint to GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq, endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6, OFTType::Native (mint/burn representation mode), and admin J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. ProgramData 6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs names that same admin as program upgrade authority. These distinct mint and admin/upgrade branches preserve the 1-of-2 risk; no two-party protection or ultimate signer topology is asserted. Controller identity conservatively records the exact mint-authority account as a contract. Endpoint/DVN configuration, limits, custody and recovery remain unverified. Finalized block time 2026-09-05T17:01:48+00:00, blockhash 8cPg6qCu2PXxqnjKFZbuiaHjjAyewozzP4cDvp2NKUQn; program binary SHA-256 8f008fc54b603b42eb64dedb27cb1622588076c3f8fb55c5b20e8ab21ff4d738. Layout decoding does not assert a reproducible program build. Raw account/read export SHA-256 09e0baad7ebb8062999827ff712c0a76048d814207d66766eda74e12820cb96e.",
+        "https://worldchain-mainnet.explorer.alchemy.com/api/v2/addresses/0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "https://worldchain-mainnet.g.alchemy.com/public",
+        "https://worldchain-mainnet.explorer.alchemy.com/api/v2/smart-contracts/0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb",
+        "At worldchain block 34645982 (2026-09-05T17:00:03.000Z, hash 0x07a5129b27fca11df9e8a4a73d001992a673e01e540e7f53e8c431d9757db487), the exact NestShareOFT proxy owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; EIP-1967 slots identify implementation 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 172800 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 9cad6178eb3db3c314e7539c0b1dbd2ed7b20cfebb42eaa6a195201e3c345567; raw block/read/simulation export SHA-256 389ad4220296f7e430aafb6db990a1b484a8cff3dc874f4b53f4ab671cf5b907. Deployed implementation bytecode exactly matches the explorer verified-source record.",
+        "https://snowscan.xyz/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "https://api.avax.network/ext/bc/C/rpc",
+        "At avalanche block 94543958 (2026-09-05T17:00:02.000Z, hash 0xadc42641e7043b845342ad03175bd4c6752ebd3e2bc495b0faf2479b3f3cc2e9), the exact NestShareOFT proxy owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; EIP-1967 slots identify implementation 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34 and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 172800 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 0ed3c45e173218032fa98a702ee8f9e4fd66e6d9cb763af5321a1eec64e77d53; raw block/read/simulation export SHA-256 6554d2db922c085300b9ce56ccc71d4e9e07ba92ab4ad022e780f36d0fc0d090."
+      ],
+      "rationale": "Independent review verified exact fixed-block EVM owner and ProxyAdmin authority paths with successful authorized and rejected unauthorized simulations, and finalized Solana mint/store/program authority bindings. Only conservative controller identities are promoted. Solana is explicitly one-of-two, not two-party protection; EVM delay reads do not establish effective timelock strength. Four native issuance routes are unchanged. No full peer/DVN configuration, custody, limits, recovery, signer topology or runtime materiality is inferred. Umbrella tasks receive no separate credit.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/nopal-nest.json"
+      ],
+      "sentinels": [
+        "nopal-nest:gap:deployment-control:bridge-meta:nopal-nest:0b3a4d61c6bf0702d847",
+        "nopal-nest:gap:deployment-control:bridge-meta:nopal-nest:34b8a78823fbef6aa6ab",
+        "nopal-nest:gap:deployment-control:bridge-meta:nopal-nest:b54bb12d1801bc94acdb"
+      ],
+      "nextReviewTrigger": "Root campaign owner: verify attributed current-source replay and, after a separately authorized release, a matching accepted production publication removes these exact deployment-control sentinels without replacement. User currently requires local commits only.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:nbasis-nest",
+      "taskIds": [
+        "V9G-7d7ed389447fe110",
+        "V9G-dda051748a0fa4b0"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-nest-controller-review",
+      "evidence": [
+        "https://worldchain-mainnet.explorer.alchemy.com/api/v2/addresses/0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "https://worldchain-mainnet.g.alchemy.com/public",
+        "https://worldchain-mainnet.explorer.alchemy.com/api/v2/smart-contracts/0x0c136b12a59ff92b9254323bfd01d558de36a10a",
+        "At worldchain block 34645983 (2026-09-05T17:00:05.000Z, hash 0x45e619240ed1f1454b75ab126b3a521c3f2d459f1acc989d3173052bb2ca70b4), the exact NestShareOFT proxy owner() returned 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; EIP-1967 slots identify implementation 0x0c136b12a59ff92b9254323bfd01d558de36a10a and ProxyAdmin 0x310ab0d41a240e760c10e95030f05649da8c18ff, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 30 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 9cad6178eb3db3c314e7539c0b1dbd2ed7b20cfebb42eaa6a195201e3c345567; raw block/read/simulation export SHA-256 5d0f696a8a37bf34a6035d65bd8bdef821e54605cb4b240ad18efca0d8b93bf8. Deployed implementation bytecode exactly matches the explorer verified-source record.",
+        "https://docs.nest.credit/developers/smart-contracts",
+        "https://api.mainnet-beta.solana.com",
+        "https://explorer.solana.com/address/DXbM6M4mxgAEm1rWhXi9a8jFnhjC7UB8Gj1JzX3amZss",
+        "https://github.com/plumenetwork/nest-protocol/blob/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/state/oft.rs",
+        "https://github.com/plumenetwork/nest-protocol/blob/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/instructions/set_oft_config.rs",
+        "https://explorer.solana.com/address/6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs",
+        "Finalized getMultipleAccounts at slot 444571341 binds this exact mint to initialized SPL Token mint authority DXbM6M4mxgAEm1rWhXi9a8jFnhjC7UB8Gj1JzX3amZss, requiring one of two signers: OFTStore HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG or J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. The store is owned by executable program ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th; its discriminator and independently pinned Nest source layout decode token_mint to G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n, endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6, OFTType::Native (mint/burn representation mode), and admin J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. ProgramData 6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs names that same admin as program upgrade authority. These distinct mint and admin/upgrade branches preserve the 1-of-2 risk; no two-party protection or ultimate signer topology is asserted. Controller identity conservatively records the exact mint-authority account as a contract. Endpoint/DVN configuration, limits, custody and recovery remain unverified. Finalized block time 2026-09-05T17:01:48+00:00, blockhash FYP5uBdfZrYUCPSBZvMMxwkyAwE6EmKs57zkUY7yBk7m; program binary SHA-256 8f008fc54b603b42eb64dedb27cb1622588076c3f8fb55c5b20e8ab21ff4d738. Layout decoding does not assert a reproducible program build. Raw account/read export SHA-256 342433ab86f7011e82fb9a19b269b9795dcf9dd0f990f44004afc40a8bf6c839."
+      ],
+      "rationale": "Independent review verified exact fixed-block EVM owner and ProxyAdmin authority paths with successful authorized and rejected unauthorized simulations, and finalized Solana mint/store/program authority bindings. Only conservative controller identities are promoted. Solana is explicitly one-of-two, not two-party protection; EVM delay reads do not establish effective timelock strength. Four native issuance routes are unchanged. No full peer/DVN configuration, custody, limits, recovery, signer topology or runtime materiality is inferred. Umbrella tasks receive no separate credit.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/nbasis-nest.json"
+      ],
+      "sentinels": [
+        "nbasis-nest:gap:deployment-control:bridge-meta:nbasis-nest:9ed85ac2f6806949ac1b",
+        "nbasis-nest:gap:deployment-control:bridge-meta:nbasis-nest:fc9ac78be2cabe7c29d7"
+      ],
+      "nextReviewTrigger": "Root campaign owner: verify attributed current-source replay and, after a separately authorized release, a matching accepted production publication removes these exact deployment-control sentinels without replacement. User currently requires local commits only.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:aznd-mu-digital",
+      "taskIds": [
+        "V9G-cf562aa0a3b0f245"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code",
+        "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code",
+        "https://monadscan.com/block/102222519",
+        "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x2e49c14a73210356de9f23a46a98de777b8a0db6",
+        "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code",
+        "https://etherscan.io/block/25912083",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 49/D. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "gap:control:local-component:aznd-mu-digital:gap:access:transfer",
+        "aznd-mu-digital:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:usda-anzens",
+      "taskIds": [
+        "V9G-6c9da7164582cf48"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json",
+        "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 39/F. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "gap:control:local-component:usda-anzens:gap:access:transfer",
+        "usda-anzens:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:usdm-moneta",
+      "taskIds": [
+        "V9G-49068cbb410130aa"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d.json",
+        "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 30/F. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "gap:control:local-component:usdm-moneta:gap:access:transfer",
+        "usdm-moneta:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:kag-kinesis",
+      "taskIds": [
+        "V9G-2a0ba3b6b1eadc20"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://kinesis.money/silver/",
+        "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+        "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 2 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 47/D. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/domains/mint-authority/kag-kinesis.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "control:mint",
+        "gap:control:local-component:kag-kinesis:gap:economic-control:mint",
+        "kag-kinesis:gap:economic-control:mint"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 2
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:sfrxusd-frax",
+      "taskIds": [
+        "V9G-16ce05de8b7d6ec5",
+        "V9G-6694c7709c37a346",
+        "V9G-cfcf377815bb3da1",
+        "V9G-0725c55b49a7d2d0",
+        "V9G-50796f5b2e2da192",
+        "V9G-451aee9844312f0d",
+        "V9G-92177255d43cf4e9",
+        "V9G-e069204de8bf1e85",
+        "V9G-f062e87f3949278c",
+        "V9G-029c206facf407a4",
+        "V9G-a9d5ed5c0c0bf544",
+        "V9G-d43cece3c13db82a",
+        "V9G-e71fb662430ad407",
+        "V9G-220c2183666e4ac2",
+        "V9G-16f167b84e4e46f5",
+        "V9G-1ff643bf053c7d19",
+        "V9G-d478f017488f9d0f",
+        "V9G-4a30cd2b18f4b54a",
+        "V9G-154bd2ad75da461c"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://docs.frax.com/protocol/crosschain/addresses",
+        "https://docs.frax.com/protocol/crosschain/overview",
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json: 19 per-chain fixed-block owner, ProxyAdmin, implementation/code and authorized/unauthorized eth_call observations; exact blocks, RPC URLs and export SHA-256 pins in each route note",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 19 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 41/D. Count uses public fact paths, not task count. Only the 19 deployed EVM controller sentinels receive credit; three non-EVM and umbrella gaps remain open in this publication.",
+      "changeRefs": [
+        "ce8710fcc",
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "control:control:bridge-meta:sfrxusd-frax:06750749b74ff7456b2b:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A06750749b74ff7456b2b",
+        "control:control:bridge-meta:sfrxusd-frax:151c28400468f34d7140:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A151c28400468f34d7140",
+        "control:control:bridge-meta:sfrxusd-frax:2a2d43c2dc73dba166dc:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A2a2d43c2dc73dba166dc",
+        "control:control:bridge-meta:sfrxusd-frax:48e394732656bd8ff645:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A48e394732656bd8ff645",
+        "control:control:bridge-meta:sfrxusd-frax:4d6cead671ebe0fcd1f1:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A4d6cead671ebe0fcd1f1",
+        "control:control:bridge-meta:sfrxusd-frax:58082f9c0d080c55980f:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A58082f9c0d080c55980f",
+        "control:control:bridge-meta:sfrxusd-frax:68f1337b8d49bf9a08e9:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A68f1337b8d49bf9a08e9",
+        "control:control:bridge-meta:sfrxusd-frax:6ce797702f79fc93e1c8:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A6ce797702f79fc93e1c8",
+        "control:control:bridge-meta:sfrxusd-frax:715603f58e8e0d3ef8a3:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A715603f58e8e0d3ef8a3",
+        "control:control:bridge-meta:sfrxusd-frax:7c5c49c6f079623347cf:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A7c5c49c6f079623347cf",
+        "control:control:bridge-meta:sfrxusd-frax:85fefcf813765b0d97d8:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A85fefcf813765b0d97d8",
+        "control:control:bridge-meta:sfrxusd-frax:91b75d90f1c3a8647108:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A91b75d90f1c3a8647108",
+        "control:control:bridge-meta:sfrxusd-frax:a64bd8f6a9bf35be5221:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aa64bd8f6a9bf35be5221",
+        "control:control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aa8214d27941f8b110c99",
+        "control:control:bridge-meta:sfrxusd-frax:aa1b290fd2f8e93ab0ac:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aaa1b290fd2f8e93ab0ac",
+        "control:control:bridge-meta:sfrxusd-frax:d3a670affb2abf6792cd:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Ad3a670affb2abf6792cd",
+        "control:control:bridge-meta:sfrxusd-frax:e31b8fb898a20c9f7271:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Ae31b8fb898a20c9f7271",
+        "control:control:bridge-meta:sfrxusd-frax:edde7242f8e24502a72a:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aedde7242f8e24502a72a",
+        "control:control:bridge-meta:sfrxusd-frax:f844dbd201a57e50577a:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Af844dbd201a57e50577a",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:06750749b74ff7456b2b",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:151c28400468f34d7140",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:2a2d43c2dc73dba166dc",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:48e394732656bd8ff645",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:4d6cead671ebe0fcd1f1",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:58082f9c0d080c55980f",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:68f1337b8d49bf9a08e9",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:6ce797702f79fc93e1c8",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:715603f58e8e0d3ef8a3",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:7c5c49c6f079623347cf",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:85fefcf813765b0d97d8",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:91b75d90f1c3a8647108",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:a64bd8f6a9bf35be5221",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:aa1b290fd2f8e93ab0ac",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:d3a670affb2abf6792cd",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:e31b8fb898a20c9f7271",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:edde7242f8e24502a72a",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:f844dbd201a57e50577a"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 19
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-8172c0427f231b42"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://ondo.finance/usdy",
+        "35e690d44",
+        "shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: null/NR. Count uses public fact paths, not task count. Actual PREPARE excludes scalar USDY live maps and uses separately dated reviewed composition. Public NR/null remains NR/null; original metadata on the new producer snapshot yields a cross-registry D/41 counterfactual artifact, not a live grade transition.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/coins/usdy-ondo-finance.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "backing:reserve-envelope:cause:usdy-ondo-finance%3Agap%3Areserve%3Areserve%3A75e2f5a8f9b0e270a49c8c3f",
+        "usdy-ondo-finance:gap:reserve:reserve:75e2f5a8f9b0e270a49c8c3f"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdc-maple",
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "taskIds": [
+        "V9G-610a8d48cba1f70a"
+      ],
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-runtime-followup",
+      "evidence": [
+        "https://api.pharos.watch/api/stablecoins",
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Production stablecoins cache updated_at 1788629466; both Maple assets have fresh upstream priceObservedAt 1788628910, priceConfidence single-source, priceSource coingecko+defillama-list and both agreement labels. Bounded read-only cache export SHA-256 ea75c2384cdb0cc97263139557849d30489fcefa4e7adf4dde88b160ae40382d.",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/v4-opportunities/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/maple-prices/HANDOFF.md"
+      ],
+      "rationale": "Exact V4 pool identities are present, but structurally eligible directions lack an admitted NAV input price. Current producer observations have two source labels with single-source confidence; existing trust rules reject that combination. Correlated-source semantics may justify rejection, so no normalization defect or safe broad relaxation is established. The later cache read explains a possible path and is not claimed as the exact historical stage price decision. Existing ERC4626 yield rates are not yet proven as an authorized USD-price source. Other pool directions retain legitimate liquidity, TVL, hook and price-coherence gates.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdc-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX owner: resume when a source-provenance fixture proves incorrect rejection of one independently authoritative price with truthful observation time, or fresh independent authoritative agreement is available. Then verify exact target admission, measured quotes and accepted publication. Never use pool spot as its own NAV reference.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdt-maple",
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "taskIds": [
+        "V9G-74ccd41a950bec34"
+      ],
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-runtime-followup",
+      "evidence": [
+        "https://api.pharos.watch/api/stablecoins",
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Production stablecoins cache updated_at 1788629466; both Maple assets have fresh upstream priceObservedAt 1788628910, priceConfidence single-source, priceSource coingecko+defillama-list and both agreement labels. Bounded read-only cache export SHA-256 ea75c2384cdb0cc97263139557849d30489fcefa4e7adf4dde88b160ae40382d.",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/v4-opportunities/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/maple-prices/HANDOFF.md"
+      ],
+      "rationale": "Exact V4 pool identities are present, but structurally eligible directions lack an admitted NAV input price. Current producer observations have two source labels with single-source confidence; existing trust rules reject that combination. Correlated-source semantics may justify rejection, so no normalization defect or safe broad relaxation is established. The later cache read explains a possible path and is not claimed as the exact historical stage price decision. Existing ERC4626 yield rates are not yet proven as an authorized USD-price source. Other pool directions retain legitimate liquidity, TVL, hook and price-coherence gates.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdt-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX owner: resume when a source-provenance fixture proves incorrect rejection of one independently authoritative price with truthful observation time, or fresh independent authoritative agreement is available. Then verify exact target admission, measured quotes and accepted publication. Never use pool spot as its own NAV reference.",
+      "factsClosed": 0
     }
   ]
 }

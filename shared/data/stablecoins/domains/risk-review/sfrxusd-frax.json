@@ -1344,9 +1344,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the solana sfrxUSD deployment, and current review reads identified its live OFT representation (9 decimals). Frax documents direct connectivity for this non-EVM deployment to both Fraxtal and Ethereum; it is bridge representation machinery rather than a native issuance route.",
+        "reviewNote": "Direct finalized Solana getMultipleAccounts at slot 444567038 binds the exact sfrxUSD mint to mint/freeze authority EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV, an initialized SPL Token multisig requiring one of two signers: OFTStore A28EK6j1euK4e6taP1KLFpGEoR1mDpXR4vtfiyCE1Nxv and FSRTW4KPGifKL8yKcZ8mfoR9mKtAjwZiTHbHwgix8AQo. The OFTStore is owned by executable program E1ht9dUh1ZkgWWRRPCuN3kExEoF2FXiyADXeN3XyMHaQ; its discriminator and pinned Frax source layout decode token_mint to this exact sfrxUSD mint, OFTType::Native (mint/burn representation mode), endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 and admin FSRTW4KPGifKL8yKcZ8mfoR9mKtAjwZiTHbHwgix8AQo. ProgramData 6RFQU3SWewB2KbS46AYKEtRWSVzzpb9xPpCNJHgVJoCM names that same admin as upgrade authority. Both authorization branches are retained: this is a 1-of-2 mint rail, not a claim of two-party protection. Controller identity records the exact mint-authority account conservatively as a contract; the administrator's ultimate signer topology, endpoint/DVN configuration, limits and custody remain unverified. Finalized block time 2026-09-05T16:39:06+00:00, blockhash Ar24GevvJX7Ft34E7RL3vqcSsNzw9KhvJ1G3gfaZNPST; program binary SHA-256 d94d5689963095c6b9c0c78d551aa68ef44923d28fdf4c7a61ce069bd7f7d347. Source-layout decoding does not claim a reproducible program build. Raw six-account response export SHA-256 5f2052f7c64903326e4c9aa75307328938a47569b5169a33c4604ee9e4bcaed9.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -1359,8 +1359,37 @@
           {
             "label": "Solscan sfrxUSD Solana mint",
             "url": "https://solscan.io/token/DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45"
+          },
+          {
+            "label": "Finalized single-slot mint, authority, OFTStore and upgrade-program reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Exact sfrxUSD mint authority",
+            "url": "https://explorer.solana.com/address/EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV"
+          },
+          {
+            "label": "Frax OFTStore source layout pinned for decoding",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/ee70909f21bbbd42b8fbc844967e72ca7f26b9ee/programs/oft/src/state/oft.rs"
+          },
+          {
+            "label": "Frax OFT receive mint-authority and 1-of-n source",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/ee70909f21bbbd42b8fbc844967e72ca7f26b9ee/programs/oft/src/instructions/lz_receive.rs"
+          },
+          {
+            "label": "Observed OFT program upgrade state",
+            "url": "https://explorer.solana.com/address/6RFQU3SWewB2KbS46AYKEtRWSVzzpb9xPpCNJHgVJoCM"
           }
-        ]
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:solana:EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV",
+          "program:solana:E1ht9dUh1ZkgWWRRPCuN3kExEoF2FXiyADXeN3XyMHaQ",
+          "account:solana:FSRTW4KPGifKL8yKcZ8mfoR9mKtAjwZiTHbHwgix8AQo"
+        ],
+        "observedBlock": 444567038
       },
       {
         "id": "aptos:0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
@@ -1373,9 +1402,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the aptos sfrxUSD deployment, and current review reads identified its live OFT representation (6 decimals). Frax documents direct connectivity for this non-EVM deployment to both Fraxtal and Ethereum; it is bridge representation machinery rather than a native issuance route.",
+        "reviewNote": "Direct fixed-version aptos review on 2026-09-05 at ledger version 7093662389, block 1023829314, chain ID 1: this exact deployed OFT module holds the mint_ref and burn_ref for metadata 0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2, whose on-chain symbol is sfrxUSD, decimals 6 and ObjectCore owner is this OFT account. Ledger timestamp 2026-09-05T16:36:43.973982+00:00; deployed-module response SHA-256 687838f284107810503440d2efd02cc501269db00b5bd56e2bebe536eff26349. Module bytecode and PackageRegistry are present. OAppStore admin/delegate and the OFT code object's ObjectCore owner all equal 0x6f9e27569fb34873f13a6868b3732b384f81c89fb525a623a969fdba155de21c; that address hosts a native MultisigAccount resource. Embedded oapp_core source guards peer/delegate administration with assert_admin; package upgrade_policy is 1. Controller identity records the OFT mint-capability holder conservatively as a contract; no multisig-strength, custody, DVN, limit or delay claim is inferred. Every resource/module read uses the same ledger_version. Raw response export SHA-256 db23ea69ca9ab35b25b9f34b59d7861a56411751cd9fb0fa08c8d770acae9efb.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -1388,8 +1417,32 @@
           {
             "label": "Aptos sfrxUSD OFT resources",
             "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources"
+          },
+          {
+            "label": "Pinned sfrxUSD OFT capabilities, owner and OApp administration",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources?ledger_version=7093662389"
+          },
+          {
+            "label": "Pinned sfrxUSD fungible-asset identity",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2/resources?ledger_version=7093662389"
+          },
+          {
+            "label": "Pinned deployed OFT modules",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/modules?ledger_version=7093662389"
+          },
+          {
+            "label": "Pinned administrator account resources",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x6f9e27569fb34873f13a6868b3732b384f81c89fb525a623a969fdba155de21c/resources?ledger_version=7093662389"
           }
-        ]
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:aptos:0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+          "account:aptos:0x6f9e27569fb34873f13a6868b3732b384f81c89fb525a623a969fdba155de21c"
+        ],
+        "observedBlock": 1023829314
       },
       {
         "id": "movement:0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
@@ -1402,9 +1455,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the movement sfrxUSD deployment, and current review reads identified its live OFT representation (6 decimals). Frax documents direct connectivity for this non-EVM deployment to both Fraxtal and Ethereum; it is bridge representation machinery rather than a native issuance route.",
+        "reviewNote": "Direct fixed-version movement review on 2026-09-05 at ledger version 206671185, block 90566761, chain ID 126: this exact deployed OFT module holds the mint_ref and burn_ref for metadata 0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2, whose on-chain symbol is sfrxUSD, decimals 6 and ObjectCore owner is this OFT account. Ledger timestamp 2026-09-05T16:36:43.884535+00:00; deployed-module response SHA-256 633f70fb51fefc527b970afd6faa87273925647f2f3802979927928e0cea3c1e. Module bytecode and PackageRegistry are present. OAppStore admin/delegate and the OFT code object's ObjectCore owner all equal 0xda80fe6404a059e99569ba06f8d87814b3a9521c8d6c78ac5ed4ca75ad867ab3; that address hosts a native MultisigAccount resource. Embedded oapp_core source guards peer/delegate administration with assert_admin; package upgrade_policy is 1. Controller identity records the OFT mint-capability holder conservatively as a contract; no multisig-strength, custody, DVN, limit or delay claim is inferred. Every resource/module read uses the same ledger_version. Raw response export SHA-256 5b674f5b8a1187114f95dc24b511a436e32040614a6344657e5de1fcf44eaa3c.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -1417,8 +1470,32 @@
           {
             "label": "Movement sfrxUSD OFT resources",
             "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources"
+          },
+          {
+            "label": "Pinned sfrxUSD OFT capabilities, owner and OApp administration",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources?ledger_version=206671185"
+          },
+          {
+            "label": "Pinned sfrxUSD fungible-asset identity",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2/resources?ledger_version=206671185"
+          },
+          {
+            "label": "Pinned deployed OFT modules",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/modules?ledger_version=206671185"
+          },
+          {
+            "label": "Pinned administrator account resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xda80fe6404a059e99569ba06f8d87814b3a9521c8d6c78ac5ed4ca75ad867ab3/resources?ledger_version=206671185"
           }
-        ]
+        ],
+        "controllerChain": "movement",
+        "controllerAddress": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:movement:0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+          "account:movement:0xda80fe6404a059e99569ba06f8d87814b3a9521c8d6c78ac5ed4ca75ad867ab3"
+        ],
+        "observedBlock": 90566761
       }
     ],
     "controls": [

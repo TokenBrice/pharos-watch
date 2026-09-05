@@ -45,7 +45,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nBASIS has four reviewed native-issuance routes on Ethereum, Plume, Plasma, and BSC, where local Nest vault deposits mint shares through Nest Tellers; the BSC deployment uses the issuer's 18-decimal share configuration and a local BNB USDT NestVault. Nest's current registry and on-chain reads on 2026-09-05 also establish two LayerZero OFT representations: the World Chain NestShareOFT proxy (verified implementation byte-identical to the nOPAL World Chain NestShareOFT) and the Solana OFT mint with OFT store HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG routed through the Plume composer. LayerZero peer wiring and upgrade controls on the OFT representations were not verified.",
+    "summary": "nBASIS has four reviewed native-issuance routes on Ethereum, Plume, Plasma, and BSC, where local Nest vault deposits mint shares through Nest Tellers; the BSC deployment uses the issuer's 18-decimal share configuration and a local BNB USDT NestVault. Nest's current registry and on-chain reads on 2026-09-05 also establish two LayerZero OFT representations: the World Chain NestShareOFT proxy (verified implementation byte-identical to the nOPAL World Chain NestShareOFT) and the Solana OFT mint with OFT store HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG routed through the Plume composer. The peripheral OFT controller identities and proxy/program upgrade authority paths were verified at fixed blocks on 2026-09-05; complete LayerZero peer/DVN configuration, controller signer topology, limits and recovery remain unverified.",
     "reviewedAt": "2026-09-05",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); U5 Nest rail closeout 2026-09-05",
     "confidence": "verified",
@@ -179,11 +179,11 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "LayerZero OFT representation on World Chain. At World Chain block 34628731 on 2026-09-05, name() was 'Nest Basis', symbol() nBASIS, decimals() 6, totalSupply() 27.708875, and owner() is VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062. The EIP-1967 implementation slot resolves to 0x0c136b12a59ff92b9254323bfd01d558de36a10a, whose verified source name on the World Chain explorer is 'NestShareOFT' and whose runtime bytecode is byte-identical to the nOPAL World Chain NestShareOFT implementation 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb. LayerZero peer wiring and upgrade controls were not verified.",
+        "reviewNote": "At worldchain block 34645983 (2026-09-05T17:00:05.000Z, hash 0x45e619240ed1f1454b75ab126b3a521c3f2d459f1acc989d3173052bb2ca70b4), the exact NestShareOFT proxy owner() returned 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; EIP-1967 slots identify implementation 0x0c136b12a59ff92b9254323bfd01d558de36a10a and ProxyAdmin 0x310ab0d41a240e760c10e95030f05649da8c18ff, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 30 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 9cad6178eb3db3c314e7539c0b1dbd2ed7b20cfebb42eaa6a195201e3c345567; raw block/read/simulation export SHA-256 5d0f696a8a37bf34a6035d65bd8bdef821e54605cb4b240ad18efca0d8b93bf8. Deployed implementation bytecode exactly matches the explorer verified-source record.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-09-05",
         "canonicalChain": "ethereum",
-        "observedBlock": 34628731,
+        "observedBlock": 34645983,
         "sources": [
           {
             "label": "World Chain explorer address record (verified NestShareOFT implementation)",
@@ -196,7 +196,22 @@
           {
             "label": "LayerZero OFT technical reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Block-pinned Nest OFT owner, proxy slots, code and authorization simulations",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "Verified exact NestShareOFT implementation",
+            "url": "https://worldchain-mainnet.explorer.alchemy.com/api/v2/smart-contracts/0x0c136b12a59ff92b9254323bfd01d558de36a10a"
           }
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:worldchain:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+          "contract:worldchain:0x310ab0d41a240e760c10e95030f05649da8c18ff"
         ]
       },
       {
@@ -213,7 +228,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Solana LayerZero OFT representation mirroring the reviewed nOPAL Solana route. Nest's registry gives Solana mint G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n, OFT store HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG, and decimals 6; a Solana mainnet RPC read on 2026-09-05 confirms an initialized SPL mint with decimals 6 and supply 135.316656 nBASIS, and the OFT store account exists owned by program ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th, the same program that owns the nOPAL OFT store. Nest's Plume composer 0x22b41d16c935fab4c2b807ebb72899f0715c42ee routes the Solana flow. Peer wiring was not verified.",
+        "reviewNote": "Finalized getMultipleAccounts at slot 444571341 binds this exact mint to initialized SPL Token mint authority DXbM6M4mxgAEm1rWhXi9a8jFnhjC7UB8Gj1JzX3amZss, requiring one of two signers: OFTStore HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG or J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. The store is owned by executable program ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th; its discriminator and independently pinned Nest source layout decode token_mint to G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n, endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6, OFTType::Native (mint/burn representation mode), and admin J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. ProgramData 6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs names that same admin as program upgrade authority. These distinct mint and admin/upgrade branches preserve the 1-of-2 risk; no two-party protection or ultimate signer topology is asserted. Controller identity conservatively records the exact mint-authority account as a contract. Endpoint/DVN configuration, limits, custody and recovery remain unverified. Finalized block time 2026-09-05T17:01:48+00:00, blockhash FYP5uBdfZrYUCPSBZvMMxwkyAwE6EmKs57zkUY7yBk7m; program binary SHA-256 8f008fc54b603b42eb64dedb27cb1622588076c3f8fb55c5b20e8ab21ff4d738. Layout decoding does not assert a reproducible program build. Raw account/read export SHA-256 342433ab86f7011e82fb9a19b269b9795dcf9dd0f990f44004afc40a8bf6c839.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-09-05",
         "sources": [
@@ -228,7 +243,36 @@
           {
             "label": "LayerZero OFT technical reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Finalized single-slot mint, authority, store and program reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Exact Nest mint authority",
+            "url": "https://explorer.solana.com/address/DXbM6M4mxgAEm1rWhXi9a8jFnhjC7UB8Gj1JzX3amZss"
+          },
+          {
+            "label": "Nest OFTStore source layout pinned for decoding",
+            "url": "https://github.com/plumenetwork/nest-protocol/blob/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/state/oft.rs"
+          },
+          {
+            "label": "Nest OFT admin authorization source",
+            "url": "https://github.com/plumenetwork/nest-protocol/blob/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/instructions/set_oft_config.rs"
+          },
+          {
+            "label": "Observed Nest OFT program upgrade state",
+            "url": "https://explorer.solana.com/address/6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs"
           }
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "DXbM6M4mxgAEm1rWhXi9a8jFnhjC7UB8Gj1JzX3amZss",
+        "observedBlock": 444571341,
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:solana:DXbM6M4mxgAEm1rWhXi9a8jFnhjC7UB8Gj1JzX3amZss",
+          "program:solana:ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th",
+          "account:solana:J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J"
         ]
       }
     ]
