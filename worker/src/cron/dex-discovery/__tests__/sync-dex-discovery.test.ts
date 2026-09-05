@@ -160,6 +160,19 @@ describe("syncDexDiscovery", () => {
     expect(vi.mocked(crawlCoin).mock.calls[0]?.[1]).toBe("coin-b");
   });
 
+  it("refreshes a zero-pool census before two-day expiry despite weekly miss backoff", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map([
+      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: 6,
+        lastCrawlAt: nowSec - 36 * 3600, lastHitAt: null }],
+    ]));
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a"]);
+    expect(JSON.parse(result.metadata ?? "{}").tierBreakdown).toMatchObject({ refresh: 1, t3: 0 });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
@@ -208,7 +221,8 @@ describe("syncDexDiscovery", () => {
       runSeq: 2,
       failedCoins: [],
       tierBreakdown: {
-        t1: 1,
+        refresh: 1,
+        t1: 0,
         t2: 0,
         t3: 0,
         dormant: 0,
@@ -257,7 +271,8 @@ describe("syncDexDiscovery", () => {
       finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
       runSeq: 1,
       tierBreakdown: {
-        t1: 1,
+        refresh: 1,
+        t1: 0,
         t2: 0,
         t3: 0,
         dormant: 0,
