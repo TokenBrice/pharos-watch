@@ -3217,6 +3217,407 @@
       ],
       "nextReviewTrigger": "Root campaign owner: independently review the pinned source and raw authority proofs, regenerate the catalog, perform an attributed replay, then confirm fresh post-deploy production publication removes these three exact sentinels without adverse replacement.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:brl1-brl1",
+      "taskIds": [
+        "V9G-eb7f18beb30188da",
+        "V9G-a0c9710cf25d7368"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/brl1-onchain-1.json"
+      ],
+      "rationale": "Public August1 itemized issuer report and exact historical Polygon liability check support static-validated reserves and limited custody/reconciliation. Off-chain reserves remain issuer assertions. Frozen A net closure zero from same-day overlay withholding. Actual publication date unestablished, so latestReport omitted.",
+      "changeRefs": [
+        "sha:dee44d5e5"
+      ],
+      "sentinels": [
+        "brl1-brl1:gap:mechanism-review:assuranceAndReconciliation",
+        "brl1-brl1:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Matching accepted publication after September6 00:00 UTC must admit exact facts without replacement. New composition report required before September8 00:00:01 UTC expiry. Actual publication-date proof needed for latestReport.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:brl1-brl1",
+      "taskIds": [
+        "V9G-6734a490201d34c6"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/brl1-onchain-1.json"
+      ],
+      "rationale": "Public August1 itemized issuer report and exact historical Polygon liability check support static-validated reserves and limited custody/reconciliation. Off-chain reserves remain issuer assertions. Frozen A net closure zero from same-day overlay withholding. Actual publication date unestablished, so latestReport omitted.",
+      "changeRefs": [
+        "sha:dee44d5e5"
+      ],
+      "sentinels": [
+        "brl1-brl1:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Matching accepted publication after September6 00:00 UTC must admit exact facts without replacement. New composition report required before September8 00:00:01 UTC expiry. Actual publication-date proof needed for latestReport.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:aid-gaib",
+      "taskIds": [
+        "V9G-c5bb5bc109940980",
+        "V9G-2490e6da5c30998a"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/transparency",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/llms.txt",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "New issuer-linked public viewer exposes McMillan Woods limited assurance over three Spiceflow GPU-financing transactions at July 31, signed August 10. No AID liabilities or complete AID reserve allocation; no claim/segregation or custody continuity terms. Product/transparency pages identify Treasury and stable-asset backing plus mint/redeem rules, but still do not publish AID-specific reserve recourse or custody continuity. GAIB Terms deny fiduciary duties broadly, while the unsecured-creditor disclosure expressly concerns underlying GPU assets; applying it to AID would conflate AID with the sAID financing strategy. GAIB Select SPV terms cover a separate product and are not an AID holder claim.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:mechanism-review:claimAndSegregation",
+        "aid-gaib:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Publish full AID reserve allocation and liability reconciliation, or full multichain holdings proof; asset-deployment report alone cannot close composition. AID-specific reserve terms/custody agreement or segregated reserve vehicle is published; do not import sAID or GAIB Select recourse into AID.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:aid-gaib",
+      "taskIds": [
+        "V9G-2003772d52ddf679"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/transparency",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/llms.txt",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "New issuer-linked public viewer exposes McMillan Woods limited assurance over three Spiceflow GPU-financing transactions at July 31, signed August 10. No AID liabilities or complete AID reserve allocation; no claim/segregation or custody continuity terms.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Publish full AID reserve allocation and liability reconciliation, or full multichain holdings proof; asset-deployment report alone cannot close composition.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:apxusd-apyx",
+      "taskIds": [
+        "V9G-c95ffa5b464972cb"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Current index still lists July 2026 as newest Wolf opinion. Existing current Accountable itemization retains opaque Inventory/POL and combined cash/Treasuries buckets; no fresh full apxUSD reserve/liability examination found.",
+      "changeRefs": [],
+      "sentinels": [
+        "apxusd-apyx:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Publish complete dated reserve allocation with opaque buckets split and same-scope liabilities, or allow existing supported live producer to supply its exact rows through its existing gates.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:myrc-blox",
+      "taskIds": [
+        "V9G-b81179acf51189a3"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://api.blox.my/blox-admin/attestations",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Discovered public API used by current transparency page; newest entry remains June 2026, created July 23 and updated August 16. The August update timestamp does not change June reserve period. Guessed July report URL returns 403 and was not treated as evidence.",
+      "changeRefs": [],
+      "sentinels": [
+        "myrc-blox:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: API publishes July 2026 or later reserve examination; read exact PDF, preserve signature/publication/period dates separately.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:audf-forte",
+      "taskIds": [
+        "V9G-8cca73ccc24932b1"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://www.forteaud.com/transparency",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Current transparency page contains general 100% AUD backing and regulated-institution claims; no dated allocation or report link. /reserves returns 404. Existing May report remains stale.",
+      "changeRefs": [],
+      "sentinels": [
+        "audf-forte:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Issuer links a dated report with current reserve balances/composition; dated assets-and-liabilities scope preferred.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdglo-glo",
+      "taskIds": [
+        "V9G-aba8b644e869b472"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://brale.xyz/stablecoins/USDGLO",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/reserve-research/HANDOFF.md"
+      ],
+      "rationale": "Current Brale USDGLO report index still ends June 2026 despite marketing of independent monthly attestations; no newer primary composition report found.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdglo-glo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Brale publishes July 2026 or later complete reserve report; inspect actual engagement rather than marketing.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:syrupusdc-maple",
+      "taskIds": [
+        "V9G-84de9ae6a2a53c8a"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md",
+        "https://maple.finance/insights/introducing-proof-of-reserves",
+        "https://maple.finance/transparency",
+        "https://raw.githubusercontent.com/maple-labs/maple-docs/master/SUMMARY.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "The current lender FAQ still does not name syrupUSDC custodians. The live transparency page publishes protocol/treasury/yield data without an exposed custody report; the May 7 PoR announcement still leaves the loan-book collateralization answer coming soon. app.maple.finance/earn returned HTTP403, so no claim about inaccessible report content is made. The old search-index FAQ naming example providers is stale versus current source and is not admitted.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdc-maple:gap:mechanism-review:custody"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Maple publishes an accessible dated report or current portfolio-specific custody/provider disclosure with an external anchor; directly inspect any Network Firm report rather than reusing its launch announcement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:yusd-aegis",
+      "taskIds": [
+        "V9G-ad83c4b1d931af4a",
+        "V9G-d5ae7949719896f2"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "https://aegis.im/",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "The live Accountable API still exposes aggregate reserves, supply and custodian/venue buckets without venue account equity, margin thresholds, hedge positions, liquidation distance, executable market depth or measured unwind time. The current docs/llms/sitemap return HTTP403. Aggregate reserve surplus is not margin headroom and signed/ZK totals do not prove omitted data.",
+      "changeRefs": [],
+      "sentinels": [
+        "yusd-aegis:gap:mechanism-review:marginAndLiquidation",
+        "yusd-aegis:gap:mechanism-review:unwindCapacity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Aegis or Accountable exposes current position/margin details or a bounded liquidation/unwind model, or accessible official docs provide exact margin rules tied to the deployed strategy.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:ussd-sonic-labs",
+      "taskIds": [
+        "V9G-f7f637f922ec4670",
+        "V9G-810def66512a2b64"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.soniclabs.com/sonic/ussd",
+        "https://docs.frax.com/fraxnet/branded-stablecoins",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "Current Sonic/Frax SaaS documentation confirms a 1:1 frxUSD wrapper and names its contracts. The fresh balance-sheet API itemizes reserve categories, not an administered USSD NAV, aggregate WAM/WAL/duration, maturity ladder or quantified stress liquidity horizon. Onchain parity and underlying-fund identities do not measure the missing component.",
+      "changeRefs": [],
+      "sentinels": [
+        "ussd-sonic-labs:gap:mechanism-review:durationAndLiquidity",
+        "ussd-sonic-labs:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: A dated administrator NAV/reconciliation or aggregate frxUSD/USSD maturity and measured liquidity disclosure is published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:xaut-tether",
+      "taskIds": [
+        "V9G-11fa59eededb8f78"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://gold.tether.to/assets/index-CzdxJ7of.js",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/riskdisclosurestatement",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/XAUT-REVIEW.md"
+      ],
+      "rationale": "Current binding terms explicitly limit issuer custody oversight and place recovery costs and claims on holders. Independent review supports custodyContinuity weak under the existing standard while retaining allocated title and the BDO assurance grade. Implemented locally in 5e185cb65; same-day whole-overlay withholding adds three temporary open facts across XAUT and inherited ZCHF in the isolated frozen-input replay. Review admits September 6 UTC; no deployed closure is claimed.",
+      "changeRefs": [
+        "sha:5e185cb65"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reconcile full attributed replay and exact XAUT/ZCHF paths after September 6 UTC admission, then a matching accepted production publication after a separately authorized release. Preserve existing assurance/title evidence; local-only user constraint currently applies.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:dusd-dtrinity",
+      "taskIds": [
+        "V9G-fb721ad1fa04f3fc"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/security/addresses",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/source-pins.json",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/REPORT.md"
+      ],
+      "rationale": "Current docs expose chain-isolated vaults, reserve eligibility and AMO accounting design. They still publish no dated full reserve-to-liability reconciliation across the Ethereum, Fraxtal and Katana deployments. Idle balances omit AMO positions and preminted dUSD inside AMOs must be reconciled, so no assurance grade follows from eligible-asset tables.",
+      "changeRefs": [],
+      "sentinels": [
+        "dusd-dtrinity:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Issuer publishes complete dated per-chain vault/AMO assets and liabilities or a reproducible full onchain balance-sheet surface with validated receipt accounting.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:zchf-frankencoin",
+      "taskIds": [
+        "V9S-58ffb84c6fa4a3e6"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://gold.tether.to/assets/index-CzdxJ7of.js",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/riskdisclosurestatement",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/XAUT-REVIEW.md",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/mechanism-research/propagation-reconciliation.json"
+      ],
+      "rationale": "ZCHF inherits the reviewed XAUT custody weakness through its 1.6% XAUt reserve exposure. Its original public path has a null sourceGapId, so source-gap-only matching would miss it. No ZCHF source edit was required. Local XAUT change 5e185cb65 passed independent review; same-day whole-overlay withholding changes the inherited paths and adds temporary unknowns until September 6 UTC. No deployed closure is claimed.",
+      "changeRefs": [
+        "sha:5e185cb65"
+      ],
+      "sentinels": [
+        "backing:reserve:reserve:7d3d360c142b6cf80ebf3f45"
+      ],
+      "nextReviewTrigger": "Parent replay and matching production publication after XAUT Sep5 review becomes admissible must reconcile this exact ZCHF score path; mismatched baseline generations are not exact-production evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:bib01-backed",
+      "taskIds": [
+        "V9G-32486befbedfe36c"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://assets.backed.fi/products/bib01",
+        "https://assets.backed.fi/legal-documentation",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/backed/REVIEW.md"
+      ],
+      "rationale": "Current issuer charts expose underlying ETF market prices. Chainlink IB01 feed is an underlying reference price. Legal prospectus assigns issuer valuations to sources in product Final Terms. No product-specific NAV administration/cadence or dated certificate-level reconciliation established.",
+      "changeRefs": [],
+      "sentinels": [
+        "bib01-backed:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Current product Final Terms plus dated certificate NAV/reconciliation or independent product-specific feed proving valuation method and cadence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:bc3m-backed",
+      "taskIds": [
+        "V9G-dd551c224bbd6ff7"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-backing-integration",
+      "evidence": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "agents/2026-09-05-safety-score-gap-campaign/parallel-backing/backed/REVIEW.md"
+      ],
+      "rationale": "Current issuer charts expose underlying ETF market prices. Chainlink IB01 feed is an underlying reference price. Legal prospectus assigns issuer valuations to sources in product Final Terms. No product-specific NAV administration/cadence or dated certificate-level reconciliation established.",
+      "changeRefs": [],
+      "sentinels": [
+        "bc3m-backed:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Root campaign owner: Current product Final Terms plus dated certificate NAV/reconciliation or independent product-specific feed proving valuation method and cadence.",
+      "factsClosed": 0
     }
   ]
 }
