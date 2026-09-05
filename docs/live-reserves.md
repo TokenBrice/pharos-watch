@@ -545,6 +545,8 @@ Yuzu's Fasanara `mGLO` loop remains a high-risk named reserve slice but carries 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
 
+USDY's scalar NAV configuration is suspended: its price and token-supply reads do not measure the multi-asset holdings published by Ondo. Scoring uses the separately dated reviewed holdings composition with the existing static-evidence admission and freshness limits; resumption requires a producer that consumes the holdings themselves. Felix's kHYPE branch uses the reviewed Kinetiq label so the next live observation joins its existing collateral classification.
+
 Chronicle NAV note:
 `chronicle-nav` reads Chronicle Labs Proof-of-Asset VAO consumer contracts via `readWithAge()` (value + age), validating the value, rejecting stale or future-dated ages, and reading the coin token's on-chain supply with its actual decimals. The v1 path is scalar-only: it emits one configured 100% NAV slice with verified freshness from the consumer age, mirroring `chainlink-nav`'s single-bucket model. Chronicle's IPFS `UPoked` proof objects (position-level composition) are a documented future enhancement, not consumed today. ACRDX and STAC bind this adapter.
 

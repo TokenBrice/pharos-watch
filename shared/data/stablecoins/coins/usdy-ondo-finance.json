@@ -124,6 +124,11 @@
     "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
+    "suspended": {
+      "reason": "The NAV oracle measures USDY price and token supply, not the holdings or weights of its multi-asset reserve portfolio. Use the separately dated reviewed Ondo holdings composition until a holdings producer is integrated.",
+      "since": "2026-09-05",
+      "reviewBy": "2026-09-12"
+    },
     "scoring": {
       "maxSourceAgeSec": 4000000
     },
