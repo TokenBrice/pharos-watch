@@ -15,10 +15,11 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "status-self-check",
           errorMessage: "[cron] status-self-check failed in isolated slot:",
-          run: (signal) =>
+          run: (signal, reportProgress) =>
             runStatusSelfCheck(runtime.db, {
               selfUrl: runtime.env.SELF_URL,
               signal,
+              reportProgress,
               ctx: runtime.ctx,
               mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
               siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,

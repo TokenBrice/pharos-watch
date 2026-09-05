@@ -481,7 +481,7 @@ Cloudflare invocation analytics attributed the 2026-09-03 aligned `:00` failures
 
 ### Safety Score V9 Workflow Shadow Pilot
 
-The `safety-score-v9-publication` Workflow is a shadow-only execution substrate for the existing `compute-safety-score-v9` compiler. `WORKER_V9_WORKFLOW_MODE=shadow` is checked in for the pilot; changing it to `off` is the kill switch that preserves the cron-only path. In shadow mode the authoritative `v9PublicationOffset` cron creates the deterministic instance `v9-publication-<slotStartedAt>` only after the cron publication settles; the hyphenated form stays inside Cloudflare's accepted instance-id grammar. A duplicate create is treated as an existing instance, while other trigger errors are warnings and cannot undo or replace the live cron result.
+The `safety-score-v9-publication` Workflow is a shadow-only execution substrate for the existing `compute-safety-score-v9` compiler. `WORKER_V9_WORKFLOW_MODE=shadow` is checked in for the pilot; changing it to `off` is the kill switch that preserves the cron-only path. In shadow mode the authoritative `v9PublicationOffset` cron creates the deterministic instance `v9-publication-<slotStartedAt>` only after the cron compiler settles successfully or degraded with both source and base-input generation IDs. Early input-load exits, neutral cadence deferrals, skipped execution windows, and failed finalization do not start a shadow; evaluated held publications remain eligible. The hyphenated form stays inside Cloudflare's accepted instance-id grammar. A duplicate create is treated as an existing instance, while other trigger errors are warnings and cannot undo or replace the live cron result.
 
 The Workflow runs four replay-safe steps: load the fixed-input identity, compile through the existing publication runner against a D1 facade that permits reads but captures and suppresses all canonical cache writes, gate the captured result against the loaded generation, then atomically write `safety-score-v9:shadow:<generation>` plus a `cron_runs`-compatible terminal row for `compute-safety-score-v9-workflow`. Each step has three exponential-backoff retries and a 14-minute per-attempt timeout; compiler work performs no outbound fetch. The shadow value retains the exact canonical publication storage envelope and assessment sidecars needed to compare publication identities and digests. It never writes `report-cards:v9`, publication health, attempt, alert-source, or any other live cache key.
 
@@ -865,6 +865,10 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 | Bluechip ratings     | `worker/src/cron/sync-bluechip.ts`             | [Bluechip Ratings](./bluechip-ratings.md)         |
 
 ## Health & Status Endpoints
+
+`status-self-check` records bounded progress before capacity/table-growth monitoring, each route probe, external probes, probe persistence, raw-status computation, supplements, and snapshot publication. Each selected registry path has a distinct `route-probe:<path>` stage so progress coalescing cannot retain the preceding probe; metadata includes only the path and probe counts. This adds at most 21 progress writes per run and leaves the last entered phase in the existing cron progress ledger after platform termination. A phase identifies the work in progress; it does not prove which allocation exceeded the isolate memory limit.
+
+The V9 route probe shares the public projection path: the storage decoder checks integrity and validates the full publication, then the projector validates the constructed public response without reparsing and deep-copying the already-validated publication first.
 
 ### GET /api/health
 

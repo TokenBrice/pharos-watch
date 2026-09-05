@@ -28,6 +28,23 @@ describe("Safety Score V9 publication codec", () => {
     ).resolves.toEqual(publication);
   });
 
+  it("rejects invalid evidence inside a compressed publication with a valid payload digest", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(publication));
+    publication.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
+    const payload = stableJsonStringifyV1(publication);
+    const compressed = gzipSync(Buffer.from(payload));
+    const stored = stableJsonStringifyV1({
+      ...envelope,
+      payloadSha256: createHash("sha256").update(payload).digest("hex"),
+      uncompressedBytes: Buffer.byteLength(payload),
+      compressedBytes: compressed.byteLength,
+      payload: Buffer.from(compressed).toString("base64"),
+    });
+
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/totalFactCount/);
+  });
+
   it("reads the last V5 publication emitted before stressStateDigest retired", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const envelope = JSON.parse(
