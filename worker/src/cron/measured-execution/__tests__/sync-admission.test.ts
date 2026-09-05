@@ -8,7 +8,6 @@ import type { DexExitRouteObservation } from "@shared/types/market";
 import {
   MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   admitTargetsWithinBudget,
-  collectScoreBearingTargetIds,
   estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
   estimateAdmissionRotationCycles,
@@ -367,22 +366,20 @@ describe("measured execution overflow admission", () => {
       ),
     ).toBeNull();
   });
-  it("rejects targets outside the current score-bearing route set", () => {
+  it("admits fresh targets without a published route while protecting measured-route priority", () => {
     const scored = target("coin-scored", 100_000, "scored");
-    const outside = target("coin-outside", 100_000, "outside");
-    const scoreBearingTargetIds = collectScoreBearingTargetIds(
-      [scored, outside],
-      [publishedRoute(scored, 1_000)],
-    );
-    const admission = admitTargetsWithinBudget([scored, outside], {
+    const fresh = target("coin-new", 100_000, "fresh");
+    const priority = selectExpiringScoreBearingPriorityPacket([scored, fresh], [publishedRoute(scored, 1_000)]);
+    const admission = admitTargetsWithinBudget([scored, fresh], {
       maxEstimatedRpcRequests: 20,
-      scoreBearingTargetIds,
+      priorityTargetIds: new Set(priority?.targetIds),
     });
 
-    expect(admission.admitted).toEqual(new Set([scored.targetId]));
-    expect(admission.excluded).toEqual(new Set([outside.targetId]));
+    expect(admission.priorityAdmitted).toEqual(new Set([scored.targetId]));
+    expect(admission.admitted).toEqual(new Set([scored.targetId, fresh.targetId]));
+    expect(admission.estimatedRpcRequests).toBeLessThanOrEqual(20);
+    expect(estimateAdmissionRotationCycles([fresh])).toBe(1);
   });
-
 
   it("admits one bounded priority without letting it advance the tail cursor", () => {
     const priority = target("coin-priority", 100_000);

@@ -525,22 +525,6 @@ function isScoreBearingRoute(row: PublishedScoreBearingDexRoute): boolean {
   );
 }
 
-export function collectScoreBearingTargetIds(
-  targets: readonly DexMeasuredExecutionTarget[],
-  publishedRoutes: readonly PublishedScoreBearingDexRoute[],
-): Set<string> {
-  const scoreBearingRoutes = publishedRoutes.filter(isScoreBearingRoute);
-  const targetIds = new Set<string>();
-  for (const target of targets) {
-    const matches = scoreBearingRoutes.filter((row) =>
-      publishedRouteMatchesTarget(row, target),
-    );
-    if (matches.length === 1) targetIds.add(target.targetId);
-  }
-  return targetIds;
-}
-
-
 export function admitTargetsWithinBudget(
   targets: readonly DexMeasuredExecutionTarget[],
   options: {
@@ -549,16 +533,10 @@ export function admitTargetsWithinBudget(
     refinementRounds?: number;
     priorityTargetIds?: ReadonlySet<string>;
     priorityMaxEstimatedRpcRequests?: number;
-    /**
-     * Active measured execution is admitted only for targets whose exact route
-     * identity has one current score-bearing published observation.
-     */
-    scoreBearingTargetIds?: ReadonlySet<string>;
   } = {},
 ): {
   admitted: Set<string>;
   deferred: Set<string>;
-  excluded: Set<string>;
   oversized: Set<string>;
   priorityAdmitted: Set<string>;
   oversizedCoinIds: string[];
@@ -567,19 +545,9 @@ export function admitTargetsWithinBudget(
   estimatedQuoteRpcRequests: number;
   nextCursor: string | null;
 } {
-  const targetsForAdmission = options.scoreBearingTargetIds
-    ? targets.filter((target) => options.scoreBearingTargetIds!.has(target.targetId))
-    : targets;
-  const excluded = new Set<string>(
-    options.scoreBearingTargetIds
-      ? targets
-          .filter((target) => !options.scoreBearingTargetIds!.has(target.targetId))
-          .map((target) => target.targetId)
-      : [],
-  );
   const deferred = new Set<string>();
   const byCoin = new Map<string, DexMeasuredExecutionTarget[]>();
-  for (const target of targetsForAdmission) {
+  for (const target of targets) {
     const rows = byCoin.get(target.stablecoinId) ?? [];
     rows.push(target);
     byCoin.set(target.stablecoinId, rows);
@@ -601,7 +569,7 @@ export function admitTargetsWithinBudget(
   let estimatedSetupRpcRequests = 0;
   let estimatedQuoteRpcRequests = 0;
   const admittedTargets: DexMeasuredExecutionTarget[] = [];
-  const priorityTargets = targetsForAdmission.filter((target) =>
+  const priorityTargets = targets.filter((target) =>
     options.priorityTargetIds?.has(target.targetId),
   );
   if (priorityTargets.length > 0) {
@@ -668,7 +636,6 @@ export function admitTargetsWithinBudget(
   return {
     admitted,
     deferred,
-    excluded,
     oversized,
     priorityAdmitted,
     oversizedCoinIds,
@@ -687,24 +654,19 @@ export function estimateAdmissionRotationCycles(
     refinementRounds?: number;
     priorityTargetIds?: ReadonlySet<string>;
     priorityMaxEstimatedRpcRequests?: number;
-    scoreBearingTargetIds?: ReadonlySet<string>;
   } = {},
 ): number | null {
   if (targets.length === 0) return 0;
-  const targetsForRotation = options.scoreBearingTargetIds
-    ? targets.filter((target) => options.scoreBearingTargetIds!.has(target.targetId))
-    : targets;
-  const uncovered = new Set(targetsForRotation.map((target) => target.targetId));
-  if (targetsForRotation.length === 0) return 0;
+  const uncovered = new Set(targets.map((target) => target.targetId));
   const seenCursors = new Set<string>();
   let cursor = options.cursor ?? null;
-  const maximumCycles = new Set(targetsForRotation.map((target) => target.stablecoinId)).size + 1;
+  const maximumCycles = new Set(targets.map((target) => target.stablecoinId)).size + 1;
 
   for (let cycle = 1; cycle <= maximumCycles; cycle++) {
     const cursorKey = cursor ?? "<start>";
     if (seenCursors.has(cursorKey)) return null;
     seenCursors.add(cursorKey);
-    const admission = admitTargetsWithinBudget(targetsForRotation, {
+    const admission = admitTargetsWithinBudget(targets, {
       ...options,
       cursor,
     });

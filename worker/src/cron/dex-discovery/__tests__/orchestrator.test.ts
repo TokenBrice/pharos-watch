@@ -10,7 +10,7 @@ import {
   computeEffectiveTier,
   hasVerifiedEmptyCensus,
   isEligibleThisRun,
-  isSupplementalRefreshDue,
+  isDiscoveryEvidenceRefreshDue,
 } from "../orchestrator";
 
 const nowSec = 1710000000;
@@ -20,14 +20,14 @@ describe("computeEffectiveTier", () => {
     const target = { chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 };
     const meta: DiscoveryMeta = { stablecoinId: "coin-a", consecutiveMisses: 0,
       lastCrawlAt: nowSec - 18 * 3600, lastHitAt: nowSec - 18 * 3600 };
-    expect(isSupplementalRefreshDue([target], meta, nowSec - 1)).toBe(false);
-    expect(isSupplementalRefreshDue([target], meta, nowSec)).toBe(true);
+    expect(isDiscoveryEvidenceRefreshDue([target], meta, nowSec - 1)).toBe(false);
+    expect(isDiscoveryEvidenceRefreshDue([target], meta, nowSec)).toBe(true);
     expect(computeEffectiveTier("coin-a", 20, 4, meta, 1, nowSec, false, true)).toBe("refresh");
     expect(computeEffectiveTier("coin-a", 20, 4, meta, 1, nowSec)).toBe("skip");
     const footprint = Array.from({ length: 30 }, (_, index) => ({ ...target,
       address: `0x${(index + 1).toString(16).padStart(40, "0")}` }));
-    expect(isSupplementalRefreshDue(footprint, { ...meta, lastCrawlAt: nowSec - 2 * 3600 }, nowSec)).toBe(true);
-    expect(isSupplementalRefreshDue(footprint, { ...meta, lastCrawlAt: nowSec - 3600 }, nowSec)).toBe(false);
+    expect(isDiscoveryEvidenceRefreshDue(footprint, { ...meta, lastCrawlAt: nowSec - 2 * 3600 }, nowSec)).toBe(true);
+    expect(isDiscoveryEvidenceRefreshDue(footprint, { ...meta, lastCrawlAt: nowSec - 3600 }, nowSec)).toBe(false);
   });
 
   it("applies base tiers and weekly cadence gating", () => {
