@@ -3940,6 +3940,56 @@
       ],
       "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
       "factsClosed": 1
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdc-maple",
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "taskIds": [
+        "V9G-610a8d48cba1f70a"
+      ],
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-runtime-followup",
+      "evidence": [
+        "https://api.pharos.watch/api/stablecoins",
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Production stablecoins cache updated_at 1788629466; both Maple assets have fresh upstream priceObservedAt 1788628910, priceConfidence single-source, priceSource coingecko+defillama-list and both agreement labels. Bounded read-only cache export SHA-256 ea75c2384cdb0cc97263139557849d30489fcefa4e7adf4dde88b160ae40382d.",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/v4-opportunities/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/maple-prices/HANDOFF.md"
+      ],
+      "rationale": "Exact V4 pool identities are present, but structurally eligible directions lack an admitted NAV input price. Current producer observations have two source labels with single-source confidence; existing trust rules reject that combination. Correlated-source semantics may justify rejection, so no normalization defect or safe broad relaxation is established. The later cache read explains a possible path and is not claimed as the exact historical stage price decision. Existing ERC4626 yield rates are not yet proven as an authorized USD-price source. Other pool directions retain legitimate liquidity, TVL, hook and price-coherence gates.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdc-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX owner: resume when a source-provenance fixture proves incorrect rejection of one independently authoritative price with truthful observation time, or fresh independent authoritative agreement is available. Then verify exact target admission, measured quotes and accepted publication. Never use pool spot as its own NAV reference.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdt-maple",
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "taskIds": [
+        "V9G-74ccd41a950bec34"
+      ],
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-runtime-followup",
+      "evidence": [
+        "https://api.pharos.watch/api/stablecoins",
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Production stablecoins cache updated_at 1788629466; both Maple assets have fresh upstream priceObservedAt 1788628910, priceConfidence single-source, priceSource coingecko+defillama-list and both agreement labels. Bounded read-only cache export SHA-256 ea75c2384cdb0cc97263139557849d30489fcefa4e7adf4dde88b160ae40382d.",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/v4-opportunities/HANDOFF.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/runtime-acceptance/maple-prices/HANDOFF.md"
+      ],
+      "rationale": "Exact V4 pool identities are present, but structurally eligible directions lack an admitted NAV input price. Current producer observations have two source labels with single-source confidence; existing trust rules reject that combination. Correlated-source semantics may justify rejection, so no normalization defect or safe broad relaxation is established. The later cache read explains a possible path and is not claimed as the exact historical stage price decision. Existing ERC4626 yield rates are not yet proven as an authorized USD-price source. Other pool directions retain legitimate liquidity, TVL, hook and price-coherence gates.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdt-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX owner: resume when a source-provenance fixture proves incorrect rejection of one independently authoritative price with truthful observation time, or fresh independent authoritative agreement is available. Then verify exact target admission, measured quotes and accepted publication. Never use pool spot as its own NAV reference.",
+      "factsClosed": 0
     }
   ]
 }
