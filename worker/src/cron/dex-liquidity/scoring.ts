@@ -59,6 +59,46 @@ interface ScoreDiagnostics {
 
 export type MeasuredTargetPublicationMode = "none" | "active" | "active-and-shadow";
 
+interface MeasuredTargetInventory {
+  mode: MeasuredTargetPublicationMode;
+  active: DexMeasuredExecutionTarget[];
+  shadow: DexMeasuredExecutionTarget[];
+}
+
+/** Publish only after the owning liquidity candidate has passed its guards and persisted. */
+export async function publishStablecoinScoreTargets(
+  db: D1Database,
+  inventory: MeasuredTargetInventory,
+  diagnostics: ScoreDiagnostics,
+  capturedAt: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    if (inventory.mode !== "none" && inventory.active.length > 0) {
+      try {
+        const publication = await publishDexMeasuredTargetInventory({ db, targets: inventory.active, capturedAt, signal });
+        diagnostics.measuredExecution.targetPublication = { status: "published", ...publication };
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        diagnostics.measuredExecution.targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+      }
+    }
+    inventory.active.length = 0;
+    if (inventory.mode === "active-and-shadow" && inventory.shadow.length > 0) {
+      try {
+        const publication = await publishDexShadowMeasuredTargetInventory({ db, targets: inventory.shadow, capturedAt, signal });
+        diagnostics.measuredExecution.shadowTargetPublication = { status: "published", ...publication };
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        diagnostics.measuredExecution.shadowTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+      }
+    }
+  } finally {
+    inventory.active.length = 0;
+    inventory.shadow.length = 0;
+  }
+}
+
 type P4aFullScoreResult = FullScoreResult & {
   exitRouteObservations: ExitRouteObservation[];
   exitRouteObservationCoverage: ExitRouteObservationCoverage;
@@ -85,6 +125,7 @@ export async function computeStablecoinScores(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   tvlStabilityMap: Map<string, number>;
   diagnostics: ScoreDiagnostics;
+  measuredTargetInventory: MeasuredTargetInventory;
 }> {
   const { tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db);
 
@@ -241,48 +282,24 @@ export async function computeStablecoinScores(
   );
   const inventoryTargetCount = activeTargetInventory.length;
   const shadowInventoryTargetCount = shadowTargetInventory.length;
-  let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
-  if (measuredTargetPublicationMode === "none") {
-    targetPublication = { status: "skipped", reason: "publication-not-due" };
-  } else if (inventoryTargetCount === 0) {
-    targetPublication = { status: "skipped", reason: "no-score-eligible-targets" };
-  } else {
-    try {
-      const publication = await publishDexMeasuredTargetInventory({
-        db,
-        targets: activeTargetInventory,
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      targetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    } finally {
-      targetInventoryById.clear();
-    }
-  }
-  let shadowTargetPublication: ScoreDiagnostics["measuredExecution"]["shadowTargetPublication"];
-  if (measuredTargetPublicationMode !== "active-and-shadow") {
-    shadowTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
-  } else if (shadowInventoryTargetCount === 0) {
-    shadowTargetPublication = { status: "skipped", reason: "no-shadow-targets" };
-  } else {
-    try {
-      const publication = await publishDexShadowMeasuredTargetInventory({
-        db,
-        targets: shadowTargetInventory,
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      shadowTargetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      shadowTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    }
-  }
+  const targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"] = {
+    status: "skipped",
+    reason: measuredTargetPublicationMode === "none"
+      ? "publication-not-due"
+      : inventoryTargetCount === 0 ? "no-score-eligible-targets" : "liquidity-candidate-not-published",
+  };
+  const shadowTargetPublication: ScoreDiagnostics["measuredExecution"]["shadowTargetPublication"] = {
+    status: "skipped",
+    reason: measuredTargetPublicationMode !== "active-and-shadow"
+      ? "daily-shadow-publication-not-due"
+      : shadowInventoryTargetCount === 0 ? "no-shadow-targets" : "liquidity-candidate-not-published",
+  };
+  const measuredTargetInventory: MeasuredTargetInventory = {
+    mode: measuredTargetPublicationMode,
+    active: measuredTargetPublicationMode === "none" ? [] : activeTargetInventory,
+    shadow: measuredTargetPublicationMode === "active-and-shadow" ? shadowTargetInventory : [],
+  };
   targetInventoryById.clear();
-
 
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
@@ -438,6 +455,7 @@ export async function computeStablecoinScores(
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,
+    measuredTargetInventory,
     diagnostics: {
       protocolCapReductions: {
         cappedPoolCount: protocolCapDiagnostics.cappedPoolCount,

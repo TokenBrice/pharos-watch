@@ -24,6 +24,7 @@ import {
 import { mergeStagedPools } from "./staging-merge";
 import {
   computeStablecoinScores,
+  publishStablecoinScoreTargets,
   computeDepthStability,
   computeDexPrices,
   loadCurrentDexScoringGenerationId,
@@ -423,6 +424,7 @@ interface DexLiquidityScoreState {
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   tvlStabilityMap: Map<string, number>;
   diagnostics: Awaited<ReturnType<typeof computeStablecoinScores>>["diagnostics"];
+  measuredTargetInventory: Awaited<ReturnType<typeof computeStablecoinScores>>["measuredTargetInventory"];
   analysis: DexLiquidityAnalysis;
 }
 
@@ -917,6 +919,7 @@ async function scoreDexLiquidityPoolState(
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,
+    measuredTargetInventory,
     diagnostics,
   } = await computeStablecoinScores(
     ctx.db,
@@ -990,6 +993,7 @@ async function scoreDexLiquidityPoolState(
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,
+    measuredTargetInventory,
     diagnostics,
     analysis,
   };
@@ -1004,6 +1008,8 @@ async function persistDexLiquidityScoreState(
 ): Promise<DexLiquidityPersistenceState> {
   const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
   if (skippedReason) {
+    scoreState.measuredTargetInventory.active.length = 0;
+    scoreState.measuredTargetInventory.shadow.length = 0;
     await ctx.reportDexProgress("persistence-skipped", {
       message: `Skipping DEX liquidity publication: ${skippedReason}`, providerFamily: "d1", total: scoreState.scoreResults.size,
       metadata: { skippedReason, failedSources: sourceState.failedSources }, counts: { candidateRows: scoreState.scoreResults.size },
@@ -1077,6 +1083,15 @@ async function persistDexLiquidityScoreState(
     throw new Error("DEX liquidity persistence completed without a publication generation id");
   }
   poolState.metrics.clear();
+  if (options.publishLiquidity) {
+    await publishStablecoinScoreTargets(
+      ctx.db,
+      scoreState.measuredTargetInventory,
+      scoreState.diagnostics,
+      ctx.syncStartSec,
+      ctx.signal,
+    );
+  }
   await ctx.reportDexProgress(
     options.publishLiquidity ? "persistence-generation-complete" : "persistence-generation-reused",
     {
