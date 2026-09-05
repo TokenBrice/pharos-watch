@@ -22,7 +22,7 @@
         "sources": [
           {
             "label": "BIMA Mainnet Addresses",
-            "url": "https://docs.bima.money/security/mainnet-addresses"
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/docs/mainnet.md"
           },
           {
             "label": "BorrowerOperations on Etherscan",
@@ -111,7 +111,7 @@
         },
         {
           "label": "BIMA Mainnet Addresses",
-          "url": "https://docs.bima.money/security/mainnet-addresses"
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/docs/mainnet.md"
         }
       ]
     },

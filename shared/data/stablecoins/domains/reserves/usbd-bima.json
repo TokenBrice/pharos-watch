@@ -24,12 +24,8 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "BIMA mainnet address registry",
-        "url": "https://docs.bima.money/security/mainnet-addresses"
-      },
-      {
-        "label": "BIMA minting documentation",
-        "url": "https://docs.bima.money/minting-usbd"
+        "label": "BIMA per-chain contract registry (GitHub bima-v1-core)",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/docs/mainnet.md"
       },
       {
         "label": "WBTC BIMA collateral wrapper",

@@ -114,22 +114,5 @@
       "message": "MAI continues to trade below its $1 target across supported venues; CoinGecko showed about $0.991 on June 28, 2026, while CDP redemption pressure has not consistently restored parity."
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "mai-qidao",
-    "display": {
-      "url": "https://docs.mai.finance/",
-      "label": "QiDao docs"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "polygon",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "launchDate": "2021-05-02"
 }

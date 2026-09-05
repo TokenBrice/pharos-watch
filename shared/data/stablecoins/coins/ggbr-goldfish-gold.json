@@ -44,27 +44,6 @@
   ],
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "ggbr-goldfish-gold",
-    "display": {
-      "url": "https://goldfishgold.com/",
-      "label": "Goldfish Gold"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "In-situ gold-reserve-backed ION.au securities",
-      "risk": "high"
-    }
-  },
   "launchDate": "2025-10-21",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
