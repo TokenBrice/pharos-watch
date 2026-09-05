@@ -17,13 +17,23 @@ describe("liquidity coverage", () => {
         );
       }
     }
-    // 51 -> 50 when the SILK quarantine (#892) removed silk-shade-protocol
-    // from the active registry.
-    // 50 -> 40 when wave-3 census providers (aquarius/tezos/icon-balanced/kava-swap)
-    // covered 10 formerly no-provider deployments.
     // 40 -> 30 when the Osmosis SQS and Noble swap providers covered another
     // 10 Cosmos deployments.
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(30);
+    // 30 -> 33 when the U3 registrations landed cNGN on Lisk and Asset Chain
+    // plus BRZ on Chiliz — three chains with no registered token-pool
+    // provider and no bridge-coverage provider.
+    const inaccessible = classified.filter((row) => row.endsWith(":provider-inaccessible"));
+    expect(inaccessible).toHaveLength(33);
+    // The three U3 deployments are the entire delta over the previously
+    // audited 30; pin them so a silent composition swap cannot hide behind
+    // the count alone.
+    expect(inaccessible).toEqual(
+      expect.arrayContaining([
+        "cngn-compliant-naira:lisk:provider-inaccessible",
+        "cngn-compliant-naira:assetchain:provider-inaccessible",
+        "brz-transfero:chiliz:provider-inaccessible",
+      ]),
+    );
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {

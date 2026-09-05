@@ -324,7 +324,7 @@ describe("mint-burn-contracts top-100 Ethereum additions", () => {
     { stablecoinId: "usn-noon", symbol: "USN", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
     { stablecoinId: "eusd-electronic-usd", symbol: "EUSD", address: "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f", decimals: 18 },
     { stablecoinId: "meusd-mezo", symbol: "MUSD", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
-    { stablecoinId: "msusd-metronome", symbol: "MSUSD", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
+    { stablecoinId: "msusd-metronome", symbol: "msUSD", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
     { stablecoinId: "nusd-neutrl", symbol: "NUSD", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
     { stablecoinId: "alusd-alchemix", symbol: "alUSD", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
     { stablecoinId: "fidd-fidelity", symbol: "FIDD", address: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d", decimals: 18 },

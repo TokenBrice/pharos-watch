@@ -246,13 +246,41 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(30);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(24);
+    // 30 -> 33 rows (24 -> 26 coins) when the U3 registrations landed cNGN on
+    // Lisk and Asset Chain plus BRZ on Chiliz — three chains with no
+    // registered token-pool provider. Those three rows are the entire delta
+    // over the previously audited universe; pin them explicitly.
+    expect(outcomes).toHaveLength(33);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(26);
     expect(outcomes).toContainEqual(
       expect.objectContaining({
         stablecoinId: "usdc-circle",
         chain: "polkadot",
         address: "1337",
+        providers: [],
+      }),
+    );
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "cngn-compliant-naira",
+        chain: "lisk",
+        address: "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+        providers: [],
+      }),
+    );
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "cngn-compliant-naira",
+        chain: "assetchain",
+        address: "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
+        providers: [],
+      }),
+    );
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "brz-transfero",
+        chain: "chiliz",
+        address: "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
         providers: [],
       }),
     );
