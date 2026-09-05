@@ -338,8 +338,8 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(eligibleReserveMeta(), CLOCK_SEC)).toBeNull();
   });
 
-  it.each(["agreed-upon-procedures", "attestation"] as const)(
-    "keeps %s proof types out of audit-grade reserve admission",
+  it.each(["independent-audit", "agreed-upon-procedures", "attestation"] as const)(
+    "admits %s as audited reserve evidence only when it carries an audit opinion",
     (type) => {
       const base = eligibleReserveMeta();
       const supervised = eligibleReserveMeta({
@@ -350,8 +350,17 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
         proofOfReserves: { ...base.proofOfReserves!, type },
       });
 
-      expect(buildSafetyScoreV9ReviewedStaticReserveRows(supervised, CLOCK_SEC)).toBeNull();
-      expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC)).toBeNull();
+      const audited = type === "independent-audit";
+      const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(supervised, CLOCK_SEC);
+      const fallback = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC);
+      expect(admitted !== null).toBe(audited);
+      expect(fallback !== null).toBe(audited);
+
+      const evidence = new ReviewEvidenceBuilder(supervised.id, CLOCK_SEC);
+      addReviewedStaticReserveEvidence(supervised, admitted, evidence, CLOCK_SEC);
+      expect(evidence.finish().componentEvidence.some(
+        (entry) => entry.componentKey === "reviewed-static-reserves",
+      )).toBe(audited);
     },
   );
 
