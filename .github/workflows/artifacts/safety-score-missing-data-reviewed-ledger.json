@@ -3177,6 +3177,46 @@
       ],
       "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:sfrxusd-frax",
+      "taskIds": [
+        "V9G-05cc6915fd0c70bd",
+        "V9G-891d5e408c719eee",
+        "V9G-8e7ac4180a24317f"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "Codex sfrxUSD non-EVM controller campaign",
+      "evidence": [
+        "https://api.mainnet-beta.solana.com",
+        "https://explorer.solana.com/address/EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV",
+        "https://explorer.solana.com/address/6RFQU3SWewB2KbS46AYKEtRWSVzzpb9xPpCNJHgVJoCM",
+        "https://github.com/FraxFinance/frax-oft-upgradeable/blob/ee70909f21bbbd42b8fbc844967e72ca7f26b9ee/programs/oft/src/state/oft.rs",
+        "https://github.com/FraxFinance/frax-oft-upgradeable/blob/ee70909f21bbbd42b8fbc844967e72ca7f26b9ee/programs/oft/src/instructions/lz_receive.rs",
+        "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources?ledger_version=7093662389",
+        "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2/resources?ledger_version=7093662389",
+        "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/modules?ledger_version=7093662389",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/resources?ledger_version=206671185",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2/resources?ledger_version=206671185",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9/modules?ledger_version=206671185",
+        "Aptos ledger 7093662389: exact sfrxUSD OFT holds mint_ref for metadata 0xbf2efbffbbd7083aaf006379d96b866b73bb4eb9684a7504c62feafe670962c2; OApp admin/delegate and code-object owner 0x6f9e27569fb34873f13a6868b3732b384f81c89fb525a623a969fdba155de21c.",
+        "Movement ledger 206671185: exact sfrxUSD OFT holds mint_ref for the same metadata identity on Movement; OApp admin/delegate and code-object owner 0xda80fe6404a059e99569ba06f8d87814b3a9521c8d6c78ac5ed4ca75ad867ab3.",
+        "Solana finalized slot 444567038: mint DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45 names SPL Token mint/freeze authority EK2qrg4ggSVmxNDU3qSvVcKx7HYpmNT3kWbLHMtL5vaV. Its 1-of-2 signers are OFTStore A28EK6j1euK4e6taP1KLFpGEoR1mDpXR4vtfiyCE1Nxv and FSRTW4KPGifKL8yKcZ8mfoR9mKtAjwZiTHbHwgix8AQo; FSRT is also the decoded OFT administrator and observed program upgrade authority."
+      ],
+      "rationale": "New asset-specific fixed-version resource and finalized-slot account reads establish the three representation mint-controller identities. Move records the deployed OFT mint-capability holder with each distinct observed administrator failure domain. Solana records the actual 1-of-2 mint-authority account and its OFT program/admin upgrade paths; this is not two-party protection. Conservative contract authority remains, with no inferred multisig strength, ultimate signer topology, custody, endpoint/DVN, limit or delay proposition. No sibling frxUSD authority was copied. Only the three exact deployment-control gaps are candidates; umbrella, loss-recovery, bridge materiality and exit gaps receive no credit.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json"
+      ],
+      "sentinels": [
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:3fc84295e9860ede5eb3",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:64f6b3cb726885ae9888",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:70d3ddefaac44043af2f"
+      ],
+      "nextReviewTrigger": "Root campaign owner: independently review the pinned source and raw authority proofs, regenerate the catalog, perform an attributed replay, then confirm fresh post-deploy production publication removes these three exact sentinels without adverse replacement.",
+      "factsClosed": 0
     }
   ]
 }
