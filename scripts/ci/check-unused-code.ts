@@ -920,20 +920,8 @@ function collectRunStepBodies(yamlText: string): string[] {
   };
 
   if ("jobs" in document) visitJobs(document.jobs);
-  if ("steps" in document) visitSteps(document.steps);
   if ("runs" in document && document.runs && typeof document.runs === "object" && "steps" in document.runs) {
     visitSteps(document.runs.steps);
-  }
-  // `on:` parses as the string key under the yaml package's core schema; the
-  // boolean-key fallback keeps a workflow_call block covered under YAML 1.1.
-  for (const key of ["on", "true"]) {
-    if (!(key in document)) continue;
-    const triggers = document[key];
-    if (!triggers || typeof triggers !== "object" || !("workflow_call" in triggers)) continue;
-    const workflowCall = triggers.workflow_call;
-    if (workflowCall && typeof workflowCall === "object" && "jobs" in workflowCall) {
-      visitJobs(workflowCall.jobs);
-    }
   }
   return bodies;
 }

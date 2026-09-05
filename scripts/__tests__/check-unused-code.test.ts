@@ -220,7 +220,7 @@ describe("check-unused-code production reachability", () => {
     const { status, output } = runChecker(
       {
         ".github/workflows/manual-probe.yml":
-          "steps:\n  - run: node --import tsx scripts/smoke/live-probe.ts\n",
+          "jobs:\n  probe:\n    steps:\n      - run: " + "node --import tsx " + "scripts/smoke/live-probe.ts\n",
         "scripts/smoke/live-probe.ts":
           'import { probeValue } from "../../shared/probe-value";\n\nconsole.log(probeValue);\n',
         "shared/probe-value.ts": "export const probeValue = 1;\n",
