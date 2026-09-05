@@ -30,7 +30,6 @@ import {
 import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
-import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
 import { readVaultRateCache, writeVaultRateCache } from "./rate-cache";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
 import { protocolParProvider } from "./protocol-par";
@@ -51,7 +50,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   protocolParProvider,
   azndCurvePoolProvider,
   kavaUsdxPricefeedProvider,
-  jusdStablecoinBridgeProvider,
   erc4626NavProvider,
   previewRedeemProvider,
   idleCdoTrancheProvider,
