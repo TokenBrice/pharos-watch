@@ -3697,6 +3697,249 @@
       ],
       "nextReviewTrigger": "Root campaign owner: verify attributed current-source replay and, after a separately authorized release, a matching accepted production publication removes these exact deployment-control sentinels without replacement. User currently requires local commits only.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:aznd-mu-digital",
+      "taskIds": [
+        "V9G-cf562aa0a3b0f245"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code",
+        "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code",
+        "https://monadscan.com/block/102222519",
+        "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x2e49c14a73210356de9f23a46a98de777b8a0db6",
+        "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code",
+        "https://etherscan.io/block/25912083",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 49/D. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "gap:control:local-component:aznd-mu-digital:gap:access:transfer",
+        "aznd-mu-digital:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:usda-anzens",
+      "taskIds": [
+        "V9G-6c9da7164582cf48"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json",
+        "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 39/F. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "gap:control:local-component:usda-anzens:gap:access:transfer",
+        "usda-anzens:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:usdm-moneta",
+      "taskIds": [
+        "V9G-49068cbb410130aa"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d.json",
+        "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 30/F. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "gap:control:local-component:usdm-moneta:gap:access:transfer",
+        "usdm-moneta:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:kag-kinesis",
+      "taskIds": [
+        "V9G-2a0ba3b6b1eadc20"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://kinesis.money/silver/",
+        "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+        "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 2 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 47/D. Count uses public fact paths, not task count.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/domains/mint-authority/kag-kinesis.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "control:mint",
+        "gap:control:local-component:kag-kinesis:gap:economic-control:mint",
+        "kag-kinesis:gap:economic-control:mint"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 2
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:sfrxusd-frax",
+      "taskIds": [
+        "V9G-16ce05de8b7d6ec5",
+        "V9G-6694c7709c37a346",
+        "V9G-cfcf377815bb3da1",
+        "V9G-0725c55b49a7d2d0",
+        "V9G-50796f5b2e2da192",
+        "V9G-451aee9844312f0d",
+        "V9G-92177255d43cf4e9",
+        "V9G-e069204de8bf1e85",
+        "V9G-f062e87f3949278c",
+        "V9G-029c206facf407a4",
+        "V9G-a9d5ed5c0c0bf544",
+        "V9G-d43cece3c13db82a",
+        "V9G-e71fb662430ad407",
+        "V9G-220c2183666e4ac2",
+        "V9G-16f167b84e4e46f5",
+        "V9G-1ff643bf053c7d19",
+        "V9G-d478f017488f9d0f",
+        "V9G-4a30cd2b18f4b54a",
+        "V9G-154bd2ad75da461c"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://docs.frax.com/protocol/crosschain/addresses",
+        "https://docs.frax.com/protocol/crosschain/overview",
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json: 19 per-chain fixed-block owner, ProxyAdmin, implementation/code and authorized/unauthorized eth_call observations; exact blocks, RPC URLs and export SHA-256 pins in each route note",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 19 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: 41/D. Count uses public fact paths, not task count. Only the 19 deployed EVM controller sentinels receive credit; three non-EVM and umbrella gaps remain open in this publication.",
+      "changeRefs": [
+        "ce8710fcc",
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "control:control:bridge-meta:sfrxusd-frax:06750749b74ff7456b2b:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A06750749b74ff7456b2b",
+        "control:control:bridge-meta:sfrxusd-frax:151c28400468f34d7140:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A151c28400468f34d7140",
+        "control:control:bridge-meta:sfrxusd-frax:2a2d43c2dc73dba166dc:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A2a2d43c2dc73dba166dc",
+        "control:control:bridge-meta:sfrxusd-frax:48e394732656bd8ff645:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A48e394732656bd8ff645",
+        "control:control:bridge-meta:sfrxusd-frax:4d6cead671ebe0fcd1f1:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A4d6cead671ebe0fcd1f1",
+        "control:control:bridge-meta:sfrxusd-frax:58082f9c0d080c55980f:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A58082f9c0d080c55980f",
+        "control:control:bridge-meta:sfrxusd-frax:68f1337b8d49bf9a08e9:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A68f1337b8d49bf9a08e9",
+        "control:control:bridge-meta:sfrxusd-frax:6ce797702f79fc93e1c8:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A6ce797702f79fc93e1c8",
+        "control:control:bridge-meta:sfrxusd-frax:715603f58e8e0d3ef8a3:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A715603f58e8e0d3ef8a3",
+        "control:control:bridge-meta:sfrxusd-frax:7c5c49c6f079623347cf:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A7c5c49c6f079623347cf",
+        "control:control:bridge-meta:sfrxusd-frax:85fefcf813765b0d97d8:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A85fefcf813765b0d97d8",
+        "control:control:bridge-meta:sfrxusd-frax:91b75d90f1c3a8647108:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A91b75d90f1c3a8647108",
+        "control:control:bridge-meta:sfrxusd-frax:a64bd8f6a9bf35be5221:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aa64bd8f6a9bf35be5221",
+        "control:control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aa8214d27941f8b110c99",
+        "control:control:bridge-meta:sfrxusd-frax:aa1b290fd2f8e93ab0ac:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aaa1b290fd2f8e93ab0ac",
+        "control:control:bridge-meta:sfrxusd-frax:d3a670affb2abf6792cd:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Ad3a670affb2abf6792cd",
+        "control:control:bridge-meta:sfrxusd-frax:e31b8fb898a20c9f7271:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Ae31b8fb898a20c9f7271",
+        "control:control:bridge-meta:sfrxusd-frax:edde7242f8e24502a72a:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aedde7242f8e24502a72a",
+        "control:control:bridge-meta:sfrxusd-frax:f844dbd201a57e50577a:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Af844dbd201a57e50577a",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:06750749b74ff7456b2b",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:151c28400468f34d7140",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:2a2d43c2dc73dba166dc",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:48e394732656bd8ff645",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:4d6cead671ebe0fcd1f1",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:58082f9c0d080c55980f",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:68f1337b8d49bf9a08e9",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:6ce797702f79fc93e1c8",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:715603f58e8e0d3ef8a3",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:7c5c49c6f079623347cf",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:85fefcf813765b0d97d8",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:91b75d90f1c3a8647108",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:a64bd8f6a9bf35be5221",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:aa1b290fd2f8e93ab0ac",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:d3a670affb2abf6792cd",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:e31b8fb898a20c9f7271",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:edde7242f8e24502a72a",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:f844dbd201a57e50577a"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 19
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-8172c0427f231b42"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-production-acceptance; independently verified and root reviewed",
+      "evidence": [
+        "https://ondo.finance/usdy",
+        "35e690d44",
+        "shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json",
+        "Accepted deployed source 40efb990ed25ace975c88a9c82b618ca60b740e4; production merge 176b6cafc5496b17886c9ff580d7df2c3af7c105; Worker fa87f6f4-254c-49cf-94dd-b5466567d7aa; base input report-cards-input:v1:aa94c9f102a03f82f573ea3a196882b46cab2a0921b251c00588364d02594398; source report-cards:9.461:1788628558; clock 1788628652. Exact deployed replay matches saved public cards with 0 diff entries; original predeploy replay also matches its own public cards with 0 diff entries.",
+        "Acceptance artifacts: agents/2026-09-05-safety-score-gap-campaign/verification/probe-1622-original.replay.json and agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722-deployed-40efb990.replay.json; both public-diff files equal=true, entries=[].",
+        "Postdeploy companion-aware snapshot SHA-256 221d454ca7ec653ce7916b308f9b3f4bcc1a4221537a1b4f804ec1b55d442f52; retained in agents/2026-09-05-safety-score-gap-campaign/verification/postdeploy-1722.snapshot.json."
+      ],
+      "rationale": "Production acceptance only, appending to the prior immutable zero-credit evidence decision. 1 exact public open fact(s) removed with no replacement or newly measured-adverse fact for this asset. Public score/grade unchanged: null/NR. Count uses public fact paths, not task count. Actual PREPARE excludes scalar USDY live maps and uses separately dated reviewed composition. Public NR/null remains NR/null; original metadata on the new producer snapshot yields a cross-registry D/41 counterfactual artifact, not a live grade transition.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/coins/usdy-ondo-finance.json",
+        "40efb990ed25ace975c88a9c82b618ca60b740e4"
+      ],
+      "sentinels": [
+        "backing:reserve-envelope:cause:usdy-ondo-finance%3Agap%3Areserve%3Areserve%3A75e2f5a8f9b0e270a49c8c3f",
+        "usdy-ondo-finance:gap:reserve:reserve:75e2f5a8f9b0e270a49c8c3f"
+      ],
+      "nextReviewTrigger": "Root campaign owner: reopen on regression of these exact sentinels, provenance expiry or changed controller/producer evidence. Later batches require their own attributed publication acceptance.",
+      "factsClosed": 1
     }
   ]
 }
