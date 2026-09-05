@@ -354,9 +354,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the aurora sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at aurora block 214405247 (2026-09-05T16:20:06.000Z, hash 0xa3ed3ecd739d12b2ad9d4e57514251ee7f12473f08451b31e57114f2c6e622de): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0x73f365d34b81e731825a094c2e722a08574335cd; EIP-1967 implementation=0x192e0c7cc9b263d93fa6d472de47bbefe1fb12ba, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 7b972eaf729a47ef82426966982673595fedd541140bfecbd8feecccf6c25ca4; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -365,8 +365,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block aurora sfrxUSD controller reads, block 214405247",
+            "url": "https://mainnet.aurora.dev"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://aurorascan.dev/address/0x192e0c7cc9b263d93fa6d472de47bbefe1fb12ba"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://aurorascan.dev/address/0x73f365d34b81e731825a094c2e722a08574335cd"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://aurorascan.dev/block/214405247"
           }
-        ]
+        ],
+        "controllerChain": "aurora",
+        "controllerAddress": "0x73f365d34b81e731825a094c2e722a08574335cd",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:aurora:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:aurora:0x73f365d34b81e731825a094c2e722a08574335cd",
+          "contract:aurora:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 214405247
       },
       {
         "id": "avalanche:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -381,9 +406,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the avalanche sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at avalanche block 94541701 (2026-09-05T16:20:07.000Z, hash 0xb9a92f3b8e39a1870ccb23b6948fa4e52415e384099516f3be1e64a413b596e0): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b; EIP-1967 implementation=0x686cabd9b4a41965184fbb95f2ae80c20bef18ab, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 fdd4574aea51657de1dc42a10c086d52557ad6a865d921f9308ea91c11eef4f0; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -392,8 +417,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block avalanche sfrxUSD controller reads, block 94541701",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://snowtrace.io/address/0x686cabd9b4a41965184fbb95f2ae80c20bef18ab"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://snowtrace.io/address/0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://snowtrace.io/block/94541701"
           }
-        ]
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:avalanche:0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b",
+          "contract:avalanche:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 94541701
       },
       {
         "id": "berachain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -408,9 +458,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the berachain sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at berachain block 25805245 (2026-09-05T16:20:06.000Z, hash 0x91e6533b3763b5de2abfcb9b490731732c0a78da21fbb32881a5c5e3ab229d99): symbol()=sfrxUSD, endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner()=0x436b303daf4b95e94ad86ca3821d5e50eb0de3aa; EIP-1967 implementation=0xae47a59bf1012d825135ccd6c2c708588e80b2f7, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x0000000000000000000000000000000000000000) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 b7ac73e776d51f92c91559836c8afc0705aba8a23e77fa68278b82b15d63da96; implementation code hex-text SHA-256 5ed11fac505c1ac4c34392c814a29b42557147089361f1b3bbf0a435127053ca.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -419,8 +469,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block berachain sfrxUSD controller reads, block 25805245",
+            "url": "https://rpc.berachain.com"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://berascan.com/address/0xae47a59bf1012d825135ccd6c2c708588e80b2f7"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://berascan.com/address/0x436b303daf4b95e94ad86ca3821d5e50eb0de3aa"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://berascan.com/block/25805245"
           }
-        ]
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x436b303daf4b95e94ad86ca3821d5e50eb0de3aa",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:berachain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:berachain:0x436b303daf4b95e94ad86ca3821d5e50eb0de3aa",
+          "contract:berachain:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 25805245
       },
       {
         "id": "bsc:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -435,9 +510,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the bsc sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at bsc block 120141480 (2026-09-05T16:20:08.000Z, hash 0x18b94135de4e8bd56dcb8783246aaa78fb3dc1883291cd93cb4a189790c8f4cb): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84; EIP-1967 implementation=0x370dd74dd32d8d47d3cd0abc5fcf2cd1e9912a97, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 3123d54bb314f2154e4dc218810bed30def1417486feed3ee24d75cc19d7de94; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -446,8 +521,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block bsc sfrxUSD controller reads, block 120141480",
+            "url": "https://56.rpc.thirdweb.com"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://bscscan.com/address/0x370dd74dd32d8d47d3cd0abc5fcf2cd1e9912a97"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://bscscan.com/address/0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://bscscan.com/block/120141480"
           }
-        ]
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:bsc:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:bsc:0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84",
+          "contract:bsc:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 120141480
       },
       {
         "id": "hyperevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -462,9 +562,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the hyperevm sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at hyperevm block 45108397 (2026-09-05T16:20:09.000Z, hash 0xee6c3bbfb7fe82d7b0b1110841610d983408745b9bab7a6f6ce2b4667e4dced7): symbol()=sfrxUSD, endpoint()=0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, owner()=0x738ee62157f127c879ff5c4b7102eb0d166c7a6d; EIP-1967 implementation=0x4e7f19d86a81857c46e87182a14b4e894b8ada1a, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 0ef919462d51119c4b7e06ee806b77ff32780dcdb8d01d626ed61b29165585c4; implementation code hex-text SHA-256 e667ba7a2a4f566d1654cedc5c85ae47eae388efe03b40f341cfc0fef5365d74.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -473,8 +573,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block hyperevm sfrxUSD controller reads, block 45108397",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://hyperevmscan.io/address/0x4e7f19d86a81857c46e87182a14b4e894b8ada1a"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://hyperevmscan.io/address/0x738ee62157f127c879ff5c4b7102eb0d166c7a6d"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://hyperevmscan.io/block/45108397"
           }
-        ]
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x738ee62157f127c879ff5c4b7102eb0d166c7a6d",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:hyperevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:hyperevm:0x738ee62157f127c879ff5c4b7102eb0d166c7a6d",
+          "contract:hyperevm:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 45108397
       },
       {
         "id": "ink:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -489,9 +614,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the ink sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at ink block 55126798 (2026-09-05T16:20:09.000Z, hash 0xd08ce2b9ebca444bf8697485742e315773e1463dcac124ed02042534e30bf2b6): symbol()=sfrxUSD, endpoint()=0xca29f3a6f966cb2fc0de625f8f325c0c46dbe958, owner()=0x91ebc17cd330dd694225133455583fbca54b8ec8; EIP-1967 implementation=0x9e951dd846e748e6fcb58bfb76953c4900f819f4, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 9923991bc6e9b29979678244c7640de7e6ee70b6367841292bfbf7bd1590f938; implementation code hex-text SHA-256 caf26cfe95a936ec651113007fa2475186fec2fe76827fdabe665b785f4d6832.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -500,8 +625,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block ink sfrxUSD controller reads, block 55126798",
+            "url": "https://rpc-gel.inkonchain.com"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0x9e951dd846e748e6fcb58bfb76953c4900f819f4"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://explorer.inkonchain.com/address/0x91ebc17cd330dd694225133455583fbca54b8ec8"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://explorer.inkonchain.com/block/55126798"
           }
-        ]
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x91ebc17cd330dd694225133455583fbca54b8ec8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ink:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:ink:0x91ebc17cd330dd694225133455583fbca54b8ec8",
+          "contract:ink:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 55126798
       },
       {
         "id": "optimism:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -516,9 +666,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the optimism sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at optimism block 156513216 (2026-09-05T16:20:09.000Z, hash 0xc85f640c7da772897714cae005a5a25c84b8f59555f1b44f13d3319dd30bd167): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0x419e672d625f998dd07a7ecf2e06b896f8717cb2; EIP-1967 implementation=0x681975ddfebaeeeb7400b2407e4cbfe6c41573ad, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 4a2802ff751e1f7bd8e24068bedcd7ec0f4b221c5a26afa3a5dbe58cb2c340c9; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -527,8 +677,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block optimism sfrxUSD controller reads, block 156513216",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://optimistic.etherscan.io/address/0x681975ddfebaeeeb7400b2407e4cbfe6c41573ad"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://optimistic.etherscan.io/address/0x419e672d625f998dd07a7ecf2e06b896f8717cb2"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://optimistic.etherscan.io/block/156513216"
           }
-        ]
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x419e672d625f998dd07a7ecf2e06b896f8717cb2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:optimism:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:optimism:0x419e672d625f998dd07a7ecf2e06b896f8717cb2",
+          "contract:optimism:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 156513216
       },
       {
         "id": "plume:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -543,9 +718,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the plume sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at plume block 91588359 (2026-09-05T16:20:11.000Z, hash 0xa016f9b2cb82edd0ebffc16d35fd46ebba1263f2c53551e9ededbd77c2ae3303): symbol()=sfrxUSD, endpoint()=0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, owner()=0x77ddd3ec570eeaf2c513de3c833c5e82a721978b; EIP-1967 implementation=0x36c28ef9a8116a64752efd6b9efa3056f24a82ae, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 40b4a3a7d1954f30cb74eb03424c1571d8478cf1cbab13e471c8e3569506bc19; implementation code hex-text SHA-256 bb2e38424e64b2a9f4edeef110de2671e8b296b816cc0ad3c17426e8011c4857.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -554,8 +729,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block plume sfrxUSD controller reads, block 91588359",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://explorer.plume.org/address/0x36c28ef9a8116a64752efd6b9efa3056f24a82ae"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://explorer.plume.org/address/0x77ddd3ec570eeaf2c513de3c833c5e82a721978b"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://explorer.plume.org/block/91588359"
           }
-        ]
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x77ddd3ec570eeaf2c513de3c833c5e82a721978b",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:plume:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:plume:0x77ddd3ec570eeaf2c513de3c833c5e82a721978b",
+          "contract:plume:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 91588359
       },
       {
         "id": "polygon:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -570,9 +770,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the polygon sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at polygon block 93280119 (2026-09-05T16:20:12.000Z, hash 0xce440421f123a4bfb97037e9e1539f6771a8a67bf94ccd2e11efd562742e9dc7): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0xdbf59eda454679bb157b3b048ba54c4d762b559e; EIP-1967 implementation=0x02a7a4bff1edac698bac1a2380a208f2e6a56697, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 823d3680bef93df3258fdbb152d11f12110bad5e422c83db772df338c4adc111; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -581,8 +781,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block polygon sfrxUSD controller reads, block 93280119",
+            "url": "https://polygon.drpc.org"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://polygonscan.com/address/0x02a7a4bff1edac698bac1a2380a208f2e6a56697"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://polygonscan.com/address/0xdbf59eda454679bb157b3b048ba54c4d762b559e"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://polygonscan.com/block/93280119"
           }
-        ]
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xdbf59eda454679bb157b3b048ba54c4d762b559e",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:polygon:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:polygon:0xdbf59eda454679bb157b3b048ba54c4d762b559e",
+          "contract:polygon:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 93280119
       },
       {
         "id": "polygon-zkevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -597,9 +822,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the polygon-zkevm sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at polygon-zkevm block 33391890 (2026-07-03T15:55:44.000Z, hash 0x070c57f81880e78cc8a1bee37c927dd44487e6c42d0c6a475bddc76818224b97): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0x57445fd8d544e5d313e4f715220103b091814df4; EIP-1967 implementation=0x7feda252881b9c6166b387d3d11d1bdfc076d5cb, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x0000000000000000000000000000000000000000) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 62a1e3186a15628e1677cbeae4520c553f6943f5af6706a5405b0ba3d9d24e89; implementation code hex-text SHA-256 bf0b776de1364ff84119bd8d0f76b875b89df30ab4546f4c0d304b647af748d0.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -608,8 +833,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block polygon-zkevm sfrxUSD controller reads, block 33391890",
+            "url": "https://zkevm-rpc.com"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://zkevm.polygonscan.com/address/0x7feda252881b9c6166b387d3d11d1bdfc076d5cb"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://zkevm.polygonscan.com/address/0x57445fd8d544e5d313e4f715220103b091814df4"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://zkevm.polygonscan.com/block/33391890"
           }
-        ]
+        ],
+        "controllerChain": "polygon-zkevm",
+        "controllerAddress": "0x57445fd8d544e5d313e4f715220103b091814df4",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:polygon-zkevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:polygon-zkevm:0x57445fd8d544e5d313e4f715220103b091814df4",
+          "contract:polygon-zkevm:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 33391890
       },
       {
         "id": "stable:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -624,9 +874,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the stable sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at stable block 38251144 (2026-09-05T16:24:25.000Z, hash 0x00074a4a668bae8f1843cd4682398412d34c6926c8a536dd30d6112fabfb7233): symbol()=sfrxUSD, endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner()=0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8; EIP-1967 implementation=0x7feda252881b9c6166b387d3d11d1bdfc076d5cb, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 94f8c762c3174214dff2e94432e90eaeeb5a8b7264261949f6cc450b9decc52c; implementation code hex-text SHA-256 958160664a265b86045e8908df5678ff901227ee591c5d12c044a71341eb44bd.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -635,8 +885,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block stable sfrxUSD controller reads, block 38251144",
+            "url": "https://rpc.stable.xyz"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://stablescan.xyz/address/0x7feda252881b9c6166b387d3d11d1bdfc076d5cb"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://stablescan.xyz/address/0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://stablescan.xyz/block/38251144"
           }
-        ]
+        ],
+        "controllerChain": "stable",
+        "controllerAddress": "0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:stable:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:stable:0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8",
+          "contract:stable:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 38251144
       },
       {
         "id": "unichain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -651,9 +926,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the unichain sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at unichain block 57876852 (2026-09-05T16:20:11.000Z, hash 0x538bc2d516405fa4c9eab76f6af97537f23f03c47b64dcfc9d3c3387b9324a6f): symbol()=sfrxUSD, endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner()=0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d; EIP-1967 implementation=0x4e7f19d86a81857c46e87182a14b4e894b8ada1a, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 8dade0d31cf89d81c3b1a05ec9c0f13a342d46544e99c3effa0f1846fafadeec; implementation code hex-text SHA-256 5ed11fac505c1ac4c34392c814a29b42557147089361f1b3bbf0a435127053ca.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -662,8 +937,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block unichain sfrxUSD controller reads, block 57876852",
+            "url": "https://mainnet.unichain.org/"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://uniscan.xyz/address/0x4e7f19d86a81857c46e87182a14b4e894b8ada1a"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://uniscan.xyz/address/0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://uniscan.xyz/block/57876852"
           }
-        ]
+        ],
+        "controllerChain": "unichain",
+        "controllerAddress": "0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:unichain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:unichain:0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d",
+          "contract:unichain:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 57876852
       },
       {
         "id": "worldchain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
@@ -678,9 +978,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the worldchain sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at worldchain block 34644787 (2026-09-05T16:20:13.000Z, hash 0x4dac94fa1559f2287c607bf1ba150943027f594a0c881df8eabdc263f57a2624): symbol()=sfrxUSD, endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner()=0xf57d47c3ea11c12253dbc0beaf097d5c206e8773; EIP-1967 implementation=0xefdf0dea7048d9784d6289002f65d0f3e9764d6b, admin=0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 763a24591580762f28cb505c197c29809c2d0f13201fb704425f883e6381732e; implementation code hex-text SHA-256 5ed11fac505c1ac4c34392c814a29b42557147089361f1b3bbf0a435127053ca.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -689,8 +989,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block worldchain sfrxUSD controller reads, block 34644787",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://worldscan.org/address/0xefdf0dea7048d9784d6289002f65d0f3e9764d6b"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://worldscan.org/address/0xf57d47c3ea11c12253dbc0beaf097d5c206e8773"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://worldscan.org/block/34644787"
           }
-        ]
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0xf57d47c3ea11c12253dbc0beaf097d5c206e8773",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:worldchain:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "contract:worldchain:0xf57d47c3ea11c12253dbc0beaf097d5c206e8773",
+          "contract:worldchain:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "observedBlock": 34644787
       },
       {
         "id": "monad:0x137643f7b2c189173867b3391f6629cab46f0f1a",
@@ -705,9 +1030,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the monad sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at monad block 102230529 (2026-09-05T16:20:15.000Z, hash 0x98c9583948c741263879c02f94a62de4ab5c6bde2949f41cb7032a7c3bfaa0b9): symbol()=sfrxUSD, endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner()=0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0; EIP-1967 implementation=0x7e93d4ab01c70b78a5449bf3df648c3aa5f4057f, admin=0xc2871eae630640ce1a16b39a17c498f22d76c21a. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 135ac40d29a2c77d47fb3e430498a5b283d00786087fe285f978ee3883392f93; implementation code hex-text SHA-256 ec0a2c4f219e7333e600ce805a6b46457967f75b7f906d950b59590c64b454fa.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -716,8 +1041,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block monad sfrxUSD controller reads, block 102230529",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://monadscan.com/address/0x7e93d4ab01c70b78a5449bf3df648c3aa5f4057f"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://monadscan.com/address/0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://monadscan.com/block/102230529"
           }
-        ]
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x137643f7b2c189173867b3391f6629cab46f0f1a",
+          "contract:monad:0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0",
+          "contract:monad:0xc2871eae630640ce1a16b39a17c498f22d76c21a"
+        ],
+        "observedBlock": 102230529
       },
       {
         "id": "base:0x91a3f8a8d7a881fbdfcfecd7a2dc92a46dcfa14e",
@@ -732,9 +1082,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the base sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at base block 50917934 (2026-09-05T16:20:15.000Z, hash 0xcba22badff8f498428d367e84b0d9592b82c8b06f31bd8a695bb99f814859b64): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53; EIP-1967 implementation=0xdc4944793b86c337a0498e31f6bd0f2f814c0f42, admin=0xf59c41a57ab4565af7424f64981523dfd7a453c5. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 43faea0bf6049da1ed77a4cbed2db94773bb00154ef695c1901cb96f9e21c097; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -743,8 +1093,37 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block base sfrxUSD controller reads, block 50917934",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://basescan.org/address/0xdc4944793b86c337a0498e31f6bd0f2f814c0f42"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://basescan.org/address/0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://basescan.org/block/50917934"
+          },
+          {
+            "label": "Base supplementary fixed-block authority reads",
+            "url": "https://base-rpc.publicnode.com"
           }
-        ]
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:base:0x91a3f8a8d7a881fbdfcfecd7a2dc92a46dcfa14e",
+          "contract:base:0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53",
+          "contract:base:0xf59c41a57ab4565af7424f64981523dfd7a453c5"
+        ],
+        "observedBlock": 50917934
       },
       {
         "id": "linea:0x592a48c0fb9c7f8bf1701cb0136b90dea2a5b7b6",
@@ -759,9 +1138,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the linea sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at linea block 31942641 (2026-09-05T16:20:09.000Z, hash 0x1609e2ffe988748c1725c37df8c03298c2d2c7da5011d63e5fc2e65a93492a62): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd; EIP-1967 implementation=0xc83a8d6d758f52f6226da964cbe80e097b1e534e, admin=0x3cf371c128b092b085b7732069ceaf3fd863f270. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 83c0e925da0ab463f8ada91a6c70f90b3b0f5c4cc0b41c8559dc0c3837a8a17a; implementation code hex-text SHA-256 88bbdf872bdfef81162d6bc829c7535e7c55699c7ed95352d3eeec8c7553eca6.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -770,8 +1149,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block linea sfrxUSD controller reads, block 31942641",
+            "url": "https://rpc.linea.build"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://lineascan.build/address/0xc83a8d6d758f52f6226da964cbe80e097b1e534e"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://lineascan.build/address/0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://lineascan.build/block/31942641"
           }
-        ]
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:linea:0x592a48c0fb9c7f8bf1701cb0136b90dea2a5b7b6",
+          "contract:linea:0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd",
+          "contract:linea:0x3cf371c128b092b085b7732069ceaf3fd863f270"
+        ],
+        "observedBlock": 31942641
       },
       {
         "id": "scroll:0xc6b2be25d65760b826d0c852fd35f364250619c2",
@@ -786,9 +1190,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the scroll sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at scroll block 34922412 (2026-09-05T16:19:30.000Z, hash 0x4e1fd835e58fa397bd79bc7ea6648a46bf8e8961054c1f91f7810ec113f6fa49): symbol()=sfrxUSD, endpoint()=0x1a44076050125825900e736c501f859c50fe728c, owner()=0x73f365d34b81e731825a094c2e722a08574335cd; EIP-1967 implementation=0x36c28ef9a8116a64752efd6b9efa3056f24a82ae, admin=0x8f1b9c1fd67136d525e14d96efb3887a33f16250. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 489526dddf1135716c7e630fa12dbc18470a0a56815bb836226741b13856abff; implementation code hex-text SHA-256 a4e35058049f08f7c475d458f0d0f5cbdb9de4da7e3d5543e995f6ff1a91a829.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -797,8 +1201,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block scroll sfrxUSD controller reads, block 34922412",
+            "url": "https://rpc.scroll.io"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://scrollscan.com/address/0x36c28ef9a8116a64752efd6b9efa3056f24a82ae"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://scrollscan.com/address/0x73f365d34b81e731825a094c2e722a08574335cd"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://scrollscan.com/block/34922412"
           }
-        ]
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x73f365d34b81e731825a094c2e722a08574335cd",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:scroll:0xc6b2be25d65760b826d0c852fd35f364250619c2",
+          "contract:scroll:0x73f365d34b81e731825a094c2e722a08574335cd",
+          "contract:scroll:0x8f1b9c1fd67136d525e14d96efb3887a33f16250"
+        ],
+        "observedBlock": 34922412
       },
       {
         "id": "zksync:0x9f87fbb47c33cd0614e43500b9511018116f79ee",
@@ -813,9 +1242,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the zksync sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at zksync block 71855627 (2026-09-05T16:20:15.000Z, hash 0x1766a5fa52f58442400f63926b46834b7f6ee7c9b11a632122a40fd2a1e68a63): symbol()=sfrxUSD, endpoint()=0xd07c30af3ff30d96bdc9c6044958230eb797ddbf, owner()=0x66716ae60898dd4479b52ac4d92ef16c1821f420; EIP-1967 implementation=0xf559acaa7283c78a7ec244fcf62c6b01f5676442, admin=0xe59dcae52a4ffa39be99588486c84bc2dc1ba52f. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 41d9eb897e09293be39a463ec574302ee2abbf8d29b0de20f565b83d129c0f43; implementation code hex-text SHA-256 204e8f67bb2f7365ff4095d8ceb0bf8d79e0e47803afae74af82757f61e964df.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -824,8 +1253,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block zksync sfrxUSD controller reads, block 71855627",
+            "url": "https://mainnet.era.zksync.io"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://explorer.zksync.io//address/0xf559acaa7283c78a7ec244fcf62c6b01f5676442"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://explorer.zksync.io//address/0x66716ae60898dd4479b52ac4d92ef16c1821f420"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://explorer.zksync.io//block/71855627"
           }
-        ]
+        ],
+        "controllerChain": "zksync",
+        "controllerAddress": "0x66716ae60898dd4479b52ac4d92ef16c1821f420",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:zksync:0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+          "contract:zksync:0x66716ae60898dd4479b52ac4d92ef16c1821f420",
+          "contract:zksync:0xe59dcae52a4ffa39be99588486c84bc2dc1ba52f"
+        ],
+        "observedBlock": 71855627
       },
       {
         "id": "abstract:0x9f87fbb47c33cd0614e43500b9511018116f79ee",
@@ -840,9 +1294,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Frax's official cross-chain inventory lists the abstract sfrxUSD deployment, and current review reads identified deployed sfrxUSD/18 code. Frax documents non-Ethereum/non-Fraxtal deployments as LayerZero OFTs that burn on source and mint on destination; the chain-local controller identity was not separately enumerated.",
+        "reviewNote": "Direct sfrxUSD review at abstract block 82612879 (2026-09-05T16:20:16.000Z, hash 0x7b0c42be53e6d82ab9300ed5fe2fcf8449db200b587cca0703b7a870a7d4b303): symbol()=sfrxUSD, endpoint()=0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7, owner()=0xcc20eae3cdc554e96291708b362df349cc443808; EIP-1967 implementation=0xf559acaa7283c78a7ec244fcf62c6b01f5676442, admin=0xe59dcae52a4ffa39be99588486c84bc2dc1ba52f. ProxyAdmin.owner() equals the OFT owner. Nonempty code was observed for proxy, implementation, endpoint, owner and ProxyAdmin. At the same block, eth_call setPeer(30255, existing peer 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361) from the OFT owner and ProxyAdmin.upgrade(proxy, existing implementation) from that owner succeeded; both calls from address 0x0000000000000000000000000000000000000001 reverted with the owner check. No transaction was sent. Controller identity is admitted conservatively as a contract, without multisig-strength, delay, DVN, rate-limit or custody claims. Raw request/response export SHA-256 dc2952ba19bf7f8b344de18b16789dd5ea259ec29d19e1d68dc0ecf964e1439e; implementation code hex-text SHA-256 204e8f67bb2f7365ff4095d8ceb0bf8d79e0e47803afae74af82757f61e964df.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-09-05",
         "sources": [
           {
             "label": "Frax official cross-chain address inventory",
@@ -851,8 +1305,33 @@
           {
             "label": "Frax cross-chain overview",
             "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "Fixed-block abstract sfrxUSD controller reads, block 82612879",
+            "url": "https://api.mainnet.abs.xyz"
+          },
+          {
+            "label": "Observed sfrxUSD implementation",
+            "url": "https://abscan.org/address/0xf559acaa7283c78a7ec244fcf62c6b01f5676442"
+          },
+          {
+            "label": "Observed controller and ProxyAdmin owner",
+            "url": "https://abscan.org/address/0xcc20eae3cdc554e96291708b362df349cc443808"
+          },
+          {
+            "label": "Observation block",
+            "url": "https://abscan.org/block/82612879"
           }
-        ]
+        ],
+        "controllerChain": "abstract",
+        "controllerAddress": "0xcc20eae3cdc554e96291708b362df349cc443808",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:abstract:0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+          "contract:abstract:0xcc20eae3cdc554e96291708b362df349cc443808",
+          "contract:abstract:0xe59dcae52a4ffa39be99588486c84bc2dc1ba52f"
+        ],
+        "observedBlock": 82612879
       },
       {
         "id": "solana:DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45",
