@@ -1,5 +1,6 @@
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { parseObjectMetadata } from "../../lib/json-metadata";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
@@ -56,6 +57,7 @@ async function triggerSafetyScoreV9ShadowWorkflow(
 export async function runV9PublicationSlot(
   runtime: ScheduledRuntimeContext,
 ) {
+  let hasCompilerIdentity = false;
   const result = await runSingleScheduledJob(
     runtime,
     "fenced V9 publication slot",
@@ -77,17 +79,27 @@ export async function runV9PublicationSlot(
           },
           (windowSignal) =>
             import("../../cron/compute-safety-score-v9").then(
-              ({ computeSafetyScoreV9 }) =>
-                computeSafetyScoreV9(
+              async ({ computeSafetyScoreV9 }) => {
+                const compiled = await computeSafetyScoreV9(
                   runtime.db,
                   windowSignal,
                   reportProgress,
-                ),
+                );
+                const metadata = parseObjectMetadata(compiled.metadata);
+                hasCompilerIdentity =
+                  typeof metadata?.sourceGenerationId === "string" &&
+                  typeof metadata.baseInputGenerationId === "string";
+                return compiled;
+              },
             ),
         ),
     },
   );
-  if (runtime.env.WORKER_V9_WORKFLOW_MODE === "shadow") {
+  if (
+    hasCompilerIdentity &&
+    result.jobsSucceeded + result.jobsDegraded > 0 &&
+    runtime.env.WORKER_V9_WORKFLOW_MODE === "shadow"
+  ) {
     await triggerSafetyScoreV9ShadowWorkflow(runtime);
   }
   return result;
