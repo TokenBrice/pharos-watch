@@ -124,7 +124,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     });
   });
 
-  it("clears exactly seven public materiality reasons and the source bridge gap on a production-shaped sfrxUSD replay", () => {
+  it("clears all reviewed-route materiality reasons and the source bridge gap on a production-shaped sfrxUSD replay", () => {
     const assetId = "sfrxusd-frax";
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const replayInput = makeV9FixedInput({
@@ -157,7 +157,12 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     const afterReasons = evaluateV9FactSet(afterFactSet, V9_CANDIDATE_POLICY_V1)
       .assets[0]!.scoreInput.pillars.control.reasons;
 
-    expect(beforeReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(7);
+    const reviewedControllerCount = meta.bridgeRouteRisk!.routes!.filter(
+      (route) => route.issuanceModel === "bridge-representation" && route.controllerAddress,
+    ).length;
+    // Each identified controller and the aggregate bridge need the same exact supply packet.
+    expect(beforeReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable"))
+      .toHaveLength(reviewedControllerCount + 1);
     expect(afterReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(0);
     expect(before.economicControlReview.bridge.status.gapIds).toContain(`${assetId}:gap:economic-control:bridge`);
     expect(after.economicControlReview.bridge.status.gapIds).toEqual([]);
