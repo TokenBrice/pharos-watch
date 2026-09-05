@@ -131,6 +131,9 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 
 ## Digest
 
+- [USDC's Week Lands In One Day](https://pharos.watch/digest/2026-09-04/): USDC added $775.15M in a session, more than its $562.28M seven-day net, which puts the prior six days at roughly $213M negative. Supply $74.46B, 7% under April's peak.
+- [MSUSD Slips Below Fifty Cents](https://pharos.watch/digest/2026-09-03/): MSUSD widened 927 bps in a day to 5,070 bps off peg, $0.493 on $23.7M of supply, Safety score 0. RLUSD added $271M in a week and lost eight points of DEX liquidity score while its pool TVL rose.
+- [USTB Adds Its Entire Market Cap](https://pharos.watch/digest/2026-09-02/): USTB's 7d supply change is +$637.75M, matching its entire current market cap and doubling its prior weekly record. The whole market added $477.16M over the same week.
 - [DAI Adds Depth, Loses Confidence](https://pharos.watch/digest/2026-09-01/): One day brought $17.15M of DAI against $11.71M for the whole trailing week, and its DEX pools gained 11.4% TVL while the liquidity score slid 73 to 62. A $25M single-day print turns drift into rotation.
 - [USDS Yield Reading Arrives Without Receipts](https://pharos.watch/digest/2026-08-31-weekly/): USDS tops the risk board at 5.68% APY with no evidence to back it, and five yield flags outshouted a shrinking depeg field. USDC added billions, mcap moved +0.15%, and 13 of last week's calls missed.
 - [Small Flows, Maxed Signals](https://pharos.watch/digest/2026-08-30/): USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.
@@ -148,9 +151,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [USDC Sheds, USDe Absorbs](https://pharos.watch/digest/2026-08-19/): USDC lost $359.6M on the week while USDe pulled in $107M, $56M of it yesterday alone; a thinning 10% reward is loosening the incumbent's grip on its float.
 - [USDT Grows Without Paying Up](https://pharos.watch/digest/2026-08-18/): USDT pulled in $964M this week at a flat 4.12% yield; USDC, paying 9.26%, lost $376M. The name offering double the reward is the one bleeding float.
 - [USDT's Yield Reading Won't Hold Still](https://pharos.watch/digest/2026-08-17-weekly/): USDT's top risk flag this week was a data gap, not a depeg: yield printed 0.51%, then 8.29%, then 4.12% on $183B unmoved. Nine names hit DEWS ALERT while PSI shrugged at 92.2.
-- [Nine Names In ALERT](https://pharos.watch/digest/2026-08-17/): DEWS ALERTs climbed from six to nine as RLUSD, XAUT, TUSD and USX all shed liquidity in one session. PSI's 92.2 registers none of it; the Bank Run Gauge, sinking to -12.6, does.
-- [USDf's Score Outruns Its Cash](https://pharos.watch/digest/2026-08-16/): USDf's liquidity score jumped 11 to 58 while $1.9M left its pools; satUSD's fell with its TVL, down 72% to $732K. The grade rewards how depth sits, not how much shows up.
-- [apxUSD Widens, Fifty-Nine Days In](https://pharos.watch/digest/2026-08-15/): apxUSD slid another 206bps to 713 below peg, now $0.928; on a $300M float it edges even pmUSD for the board's largest depeg impact. The STRC drawdown that opened it in June still hasn't closed.
 
 ## Stablecoins Index
 
