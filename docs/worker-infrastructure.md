@@ -866,6 +866,10 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 
 ## Health & Status Endpoints
 
+`status-self-check` records bounded progress before capacity/table-growth monitoring, each route probe, external probes, probe persistence, raw-status computation, supplements, and snapshot publication. Each selected registry path has a distinct `route-probe:<path>` stage so progress coalescing cannot retain the preceding probe; metadata includes only the path and probe counts. This adds at most 21 progress writes per run and leaves the last entered phase in the existing cron progress ledger after platform termination. A phase identifies the work in progress; it does not prove which allocation exceeded the isolate memory limit.
+
+The V9 route probe shares the public projection path: the storage decoder checks integrity and validates the full publication, then the projector validates the constructed public response without reparsing and deep-copying the already-validated publication first.
+
 ### GET /api/health
 
 Returns cache availability for key data sources. The table values are `maxAge` baselines used to calculate age ratios; they are not immediate stale cutoffs. Public health degrades above `8x maxAge` and becomes stale above `12x maxAge`, subject to stricter route-specific checks and other health floors.
