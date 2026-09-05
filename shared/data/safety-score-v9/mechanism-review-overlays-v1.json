@@ -4481,7 +4481,7 @@
     {
       "assetId": "xaut-tether",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-29",
+      "reviewedAt": "2026-09-05",
       "sources": [
         {
           "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026 (report dated 2026-07-31)",
@@ -4494,18 +4494,28 @@
         {
           "label": "Tether Gold FAQ (allocated-bar ownership and physical redemption terms)",
           "url": "https://gold.tether.to/faq"
+        },
+        {
+          "label": "Tether Gold binding Terms of Sale and Service (last updated 2025-09-09, browser-verified 2026-09-05; sections 4.4, 4.7 and 16)",
+          "url": "https://gold.tether.to/legal/termsofservice"
+        },
+        {
+          "label": "Tether Gold incorporated Risk Disclosure Statement (last updated 2025-01-27, browser-verified 2026-09-05; sections 4, 6, 7 and 8)",
+          "url": "https://gold.tether.to/legal/riskdisclosurestatement"
+        },
+        {
+          "label": "Archived current issuer application bundle containing the rendered binding legal texts (observed 2026-09-05)",
+          "url": "https://gold.tether.to/assets/index-CzdxJ7of.js"
         }
       ],
-      "notes": "Re-reviewed 2026-08-29 against BDO's ISAE 3000R reasonable-assurance report dated 2026-07-31 for the 2026-06-30 23:59 UTC reporting point. BDO verified inventory procedures, specialist inventory and quality reports, and management accounting-to-blockchain liability reconciliations, and concluded the Tether Gold-Reserves Report was fairly presented: 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT in circulation. This dated independent reconciliation supports adequate assuranceAndReconciliation only. The BDO report and FAQ do not identify the Swiss custodian, provider shares, rehypothecation or insurance terms, successor custody, or insolvency continuity; title and physical redemption remain at their existing limited grades.",
+      "notes": "Reviewed 2026-09-05 against the current rendered Tether Gold Terms of Sale and Service (last updated 2025-09-09), their incorporated Risk Disclosure Statement (last updated 2025-01-27), and the existing BDO ISAE 3000R report signed 2026-07-31 for the 2026-06-30 reporting point. The custodyContinuity grade is weak because the contract explicitly leaves the holder to finance and pursue custody-loss recovery personally: Terms 4.7 and Risk Statement 6 state that Tether Gold will not pursue claims for holders or indemnify custody loss, while Risk Statement 7 expressly denies any legal obligation to monitor the custodian. Terms 4.4 allocate losses to holders assigned to the affected bullion bars. Terms 4.7 further state that the custodian chooses insurance whose coverage is not expected to cover all Gold Reserves and Tether cannot dictate it; Risk Statement 8 describes potential insolvency access freezes and reductions from unpaid custodian fees. These are affirmative limits to custody oversight and recovery continuity, not an inference that undisclosed provider identities are weak and not a claim that a custody loss or insolvency has occurred. Legal title and intended third-party-beneficiary claims against the custodian are retained under Terms 4.3/4.7; the grading does not erase those rights or treat the missing custody agreement as zero recovery. The June 30 report remains a distinct adequate assurance claim: BDO verified inventory procedures and accounting-to-blockchain liability reconciliation and gave an unmodified reasonable-assurance conclusion; the report itself is point-in-time and expressly refers holders to the risk disclosure. Existing limited title/allocation and physical-redemption grades are retained; Terms 4.3 and 5.1-5.5 support allocated title and conditional Swiss physical delivery without providing an unconditional recovery guarantee. No reserve percentage or report date is refreshed. Issuer legal bundle SHA-256 37cda0e72e00bfe16dbbadf7a44d286798db29f6a5ec0d48dd796bf9adb44442; source-declared legal version dates are separate from the September 5 observation/review date. The date-only overlay becomes admissible after September 5 UTC ends.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed BDO ISAE 3000R report and the Tether Gold reports index refer only to unnamed custodian(s) and do not identify the Swiss vault operator, provider shares, reserve-wide rehypothecation controls, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Carried over from the allocated-commodity-claim profile, where custodyContinuity and insurance were both issuer-undisclosed.",
-          "sourceUrl": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+          "quality": "weak"
         },
         "assuranceAndReconciliation": {
           "quality": "adequate"
