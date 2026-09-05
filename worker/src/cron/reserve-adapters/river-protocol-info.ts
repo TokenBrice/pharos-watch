@@ -157,6 +157,7 @@ async function executeRiverObservation(
       contract: entry.contract,
       data: entry.data,
       allowFailure: entry.allowFailure,
+      optional: entry.allowFailure,
     })),
     read: (planCalls) => fetchOnchainMulticall3({
       calls: planCalls,

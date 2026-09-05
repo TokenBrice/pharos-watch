@@ -112,12 +112,6 @@ const usdgoAssuranceParamsSchema = z
     profile: z.literal("usdgo-v1"),
     ...assuranceParamsShape,
     issuerCrossCheckUrl: z.literal("https://www.usdgo.com/api/lark-bitable"),
-    avalancheRpcUrl: z.literal("https://api.avax.network/ext/bc/C/rpc"),
-    avalancheBuidlToken: z.literal("0x53fc82f14f009009b440a706e31c9021e1196a2f"),
-    avalancheBuidlWallet: z.literal("0xc1d56e817d8f6c53d42ed50ed0d789eeb1495b5e"),
-    avalancheBuidlBlock: z.literal(89166720),
-    avalancheBuidlBlockHash: z.literal("0xf39651e0ea42f8f78d0d375fa39ddd531896083e3f5c1daef7e7efa987ee7939"),
-    expectedBuidlCodeHash: z.literal("0xee8a105971995661291a9f284262a87abf2381b3cdc93b2c8fbeffe4cd636dd9"),
   })
   .strict();
 

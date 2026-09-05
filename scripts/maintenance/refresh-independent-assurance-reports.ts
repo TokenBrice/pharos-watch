@@ -143,11 +143,11 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
         product,
         profile: "usdgo-v1",
         officialIndexUrl: "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-        reportUrl: "https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf",
-        reportDate: "2026-06-30",
-        reportAsOf: "2026-06-30T23:59:59Z",
+        reportUrl: "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf",
+        reportDate: "2026-07-31",
+        reportAsOf: "2026-07-31T23:59:59Z",
         reportTimeZone: "UTC",
-        reportIssuedAt: "2026-07-28T23:59:00Z",
+        reportIssuedAt: "2026-08-28T23:59:00Z",
         attestor: "Deloitte & Touche LLP",
         engagement: "Independent accountant's examination under AICPA attestation standards",
         conclusion: "unmodified",
@@ -165,18 +165,12 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
             code: "solana",
             label: "Solana USDGO redeemable tokens",
             // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
-            pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im,
-          },
-          {
-            code: "morph",
-            label: "Morph USDGO redeemable tokens",
-            // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
-            pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+[0-9][0-9,]*(?:\.[0-9]+)?\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im,
+            pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s+(?:[0-9][0-9,]*(?:\.[0-9]+)?|-)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im,
           },
         ],
         requiredText: [
           { label: "AICPA attestation standards", pattern: /American Institute of Certi(?:f|ﬁ)ied Public Accountants[\s\S]*AICPA/i },
-          { label: "USDGO June 2026 report date", pattern: /June 30, 2026[\s\S]*11:59:59 PM Coordinated Universal Time/i },
+          { label: "USDGO July 2026 report date", pattern: /July 31, 2026[\s\S]*11:59:59 PM Coordinated Universal Time/i },
           { label: "favorable examination conclusion", pattern: /fairly stated, in all material respects/i },
           { label: "USDGO Schedule I", pattern: /Schedule I: Total USDGO Natively Minted Tokens/i },
           { label: "USDGO Schedule II", pattern: /Schedule II: Composition of Reserve Assets/i },
@@ -186,13 +180,16 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
           { label: "qualified/adverse/disclaimed conclusion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i },
         ],
         reportedTotals: [
+          // The reviewed dash is zero; omit the empty chain from positive liability rows.
+          // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over the reviewed offline report.
+          { label: "USDGO Morph liabilities", expected: "0", pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+[0-9][0-9,]*(?:\.[0-9]+)?\s+([0-9][0-9,]*(?:\.[0-9]+)?|-)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im, },
           // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
-          { label: "USDGO redeemable token total", expected: "859224943", pattern: /^\s*Total USDGO redeemable tokens outstanding\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)(?:\s+\(Schedule I\))?\s*$/im },
-          { label: "USDGO reserve asset total", expected: "861072523", pattern: usdgoScheduleAmountPattern("Schedule II:", "Total") },
+          { label: "USDGO redeemable token total", expected: "1112640495", pattern: /^\s*Total USDGO redeemable tokens outstanding\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)(?:\s+\(Schedule I\))?\s*$/im },
+          { label: "USDGO reserve asset total", expected: "1116301304", pattern: usdgoScheduleAmountPattern("Schedule II:", "Total") },
         ],
-        reportedAssetTotal: "861072523",
-        computedAssetTotal: "861072523",
-        reportedLiabilityTotal: "859224943",
+        reportedAssetTotal: "1116301304",
+        computedAssetTotal: "1116301304",
+        reportedLiabilityTotal: "1112640495",
       };
     case "XSGD":
       return straitsxProfile(product, "SGD", "23,674,708", "23,661,169");
@@ -276,7 +273,7 @@ function straitsxProfile(
 function amountFromMatch(match: RegExpMatchArray | null, label: string): string {
   const raw = match?.[1];
   if (!raw) throw new Error(`offline assurance compiler: could not extract ${label}`);
-  return raw.replace(/[$,]/g, "");
+  return raw === "-" ? "0" : raw.replace(/[$,]/g, "");
 }
 
 function assertProfileText(text: string, config: CompilerProfile): void {

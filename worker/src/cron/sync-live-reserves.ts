@@ -291,6 +291,7 @@ async function runAdapterAttempt(
   try {
     const result = await raceWithAbortSignal(
       adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, {
+        nowSec: Math.floor(startedMs / 1_000),
         abortSignal: attemptSignal,
         ioLimiter: instrumentedLimiter,
       })),
@@ -739,7 +740,6 @@ export async function syncLiveReserves(
   const effectiveAdapterCtx: AdapterContext = {
     db,
     ...(adapterCtx ?? {}),
-    nowSec: runStartedAt,
     requestCache,
   };
   const cohortTotal = orderedCoins.length;
