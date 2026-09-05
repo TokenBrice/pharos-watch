@@ -54,9 +54,9 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
         product,
         profile: "audx-v1",
         officialIndexUrl: "https://www.audxtoken.com/transparency",
-        reportUrl: "https://www.audxtoken.com/_files/ugd/539754_f60cd94b9a5148cfafd351f6157c8036.pdf",
-        reportDate: "2026-06-30",
-        reportAsOf: "2026-06-30T23:59:00+11:00",
+        reportUrl: "https://www.audxtoken.com/_files/ugd/539754_d2b6ce0bfdd947bda8375fe3283a0491.pdf",
+        reportDate: "2026-07-31",
+        reportAsOf: "2026-07-31T23:59:00+11:00",
         reportTimeZone: "AEDT (as printed in the report; normalized conservatively to UTC)",
         attestor: "Aura Partners",
         engagement: "Independent limited assurance engagement under ASAE 3000 and ASAE 3100",
@@ -82,19 +82,19 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
           { label: "Aura Partners", pattern: /AURAPARTNERS|Aura Partners/i },
           { label: "ASAE 3000", pattern: /ASAE 3000/i },
           { label: "ASAE 3100", pattern: /ASAE 3100/i },
-          { label: "AUDX report date", pattern: /30(?:th)? of June 2026/i },
+          { label: "AUDX report date", pattern: /31(?:st)? of July 2026/i },
           { label: "favorable AUDX conclusion", pattern: /nothing has come to our[\s\S]*attention/i },
         ],
         rejectedText: [
           { label: "qualified/adverse/disclaimed conclusion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i },
         ],
         reportedTotals: [
-          { label: "AUDX supply total", expected: "3008057.00", pattern: linePattern("TOTAL AUDX Supply") },
-          { label: "AUDX reserve total", expected: "3231280.83", pattern: linePattern("TOTAL Australian Dollar Reserves") },
+          { label: "AUDX supply total", expected: "3208057.00", pattern: linePattern("TOTAL AUDX Supply") },
+          { label: "AUDX reserve total", expected: "3231371.79", pattern: linePattern("TOTAL Australian Dollar Reserves") },
         ],
-        reportedAssetTotal: "3231280.83",
-        computedAssetTotal: "3231280.83",
-        reportedLiabilityTotal: "3008057.00",
+        reportedAssetTotal: "3231371.79",
+        computedAssetTotal: "3231371.79",
+        reportedLiabilityTotal: "3208057.00",
       };
     case "EUROP":
       return {

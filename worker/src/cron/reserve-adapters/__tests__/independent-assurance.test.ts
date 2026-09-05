@@ -287,11 +287,12 @@ describe("independent-assurance manifest framework", () => {
       const product = coin.symbol.toUpperCase() as "XSGD" | "XUSD" | "AUDX";
       const reviewed = getIndependentAssuranceManifest(product);
       const reviewedCandidate = assuranceCandidate(product, reviewed.reportUrl, reviewed.reportDate);
-      const nextDate = `${reviewed.reportDate.slice(0, 5)}07-31`;
+      const nextYear = Number(reviewed.reportDate.slice(0, 4)) + 1;
+      const nextDate = `${nextYear}-07-31`;
       const newerUrl = new URL(
         product === "AUDX"
           ? `report-${nextDate}.pdf`
-          : `${product}-SCS-Reserve-Account-Report-31-July-2026.pdf`,
+          : `${product}-SCS-Reserve-Account-Report-31-July-${nextYear}.pdf`,
         reviewed.reportUrl,
       ).toString();
       const newerCandidate = assuranceCandidate(product, newerUrl, nextDate);
