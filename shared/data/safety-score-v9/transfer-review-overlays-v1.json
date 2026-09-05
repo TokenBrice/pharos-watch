@@ -5006,6 +5006,107 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "usda-anzens",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "OpenAI Codex Safety Score gap campaign",
+      "deployments": [
+        {
+          "chainId": "cardano",
+          "contractOrTokenId": "fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The Cardano Foundation token-registry mapping pinned at commit 8a2cd449b86ac6f27a7de34dd0845160a832266b binds this exact policy ID and asset name to Anzens USDA, its issuer domain, and six decimals. Cardano executes the asset minting policy only when a transaction mints or burns that asset; an ordinary transfer of already-minted native tokens spends the holder UTxO without invoking the policy. The issuer therefore has no token-level holder-transfer hook. Issuer account, custody, and direct-redemption restrictions are separate from transferability of holder-controlled native tokens.",
+          "sources": [
+            {
+              "label": "Pinned Cardano Foundation USDA identity mapping",
+              "url": "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json"
+            },
+            {
+              "label": "Cardano Foundation minting-policy execution semantics (updated July 1, 2026)",
+              "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdm-moneta",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "OpenAI Codex Safety Score gap campaign",
+      "deployments": [
+        {
+          "chainId": "cardano",
+          "contractOrTokenId": "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The Cardano Foundation token-registry mapping pinned at commit 8a2cd449b86ac6f27a7de34dd0845160a832266b binds this exact policy ID and asset name to Moneta USDM, its issuer domain, and six decimals. Cardano executes the asset minting policy only when a transaction mints or burns that asset; an ordinary transfer of already-minted native tokens spends the holder UTxO without invoking the policy. The issuer therefore has no token-level holder-transfer hook. Issuer account, custody, and direct-redemption restrictions are separate from transferability of holder-controlled native tokens.",
+          "sources": [
+            {
+              "label": "Pinned Cardano Foundation USDM identity mapping",
+              "url": "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d.json"
+            },
+            {
+              "label": "Cardano Foundation minting-policy execution semantics (updated July 1, 2026)",
+              "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "aznd-mu-digital",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "OpenAI Codex Safety Score gap campaign",
+      "deployments": [
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At Monad block 102222519, canonical AZND was a direct ERC20 deployment with a zero EIP-1967 implementation slot. Its verified transfer paths have no pause or blacklist, but burn(owner, amount) grants the immutable PRIMARY_MARKET 0xe64730de04aeaf8d38925825d77d7a4c00340c89 authority over an arbitrary holder balance without allowance. The current PrimaryMarket implementation 0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb burns only the redemption caller, but its UUPS replacement is authorized by the AccessManager default admin. At the same block, EOA 0x8b5f269f68d42490dee19fc4ab275cdd80940068 held that role in manager 0x7b14860ecd88fb65a22a1d259d1248bf199fb47f, and read-only eth_call of upgradeToAndCall to the existing implementation succeeded from that EOA. The live upgrade path can replace the holder consent guard around the privileged burn, so transfer posture is restrictable.",
+          "sources": [
+            {
+              "label": "MonadScan verified canonical AZND source",
+              "url": "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code"
+            },
+            {
+              "label": "MonadScan verified PrimaryMarket implementation and UUPS authority",
+              "url": "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code"
+            },
+            {
+              "label": "Monad observation block 102222519",
+              "url": "https://monadscan.com/block/102222519"
+            },
+            {
+              "label": "Mu Digital canonical and representation address registry",
+              "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "At Ethereum block 25912083, the AZND OFT proxy resolved to verified implementation 0x2e49c14a73210356de9f23a46a98de777b8a0db6. ContractBaseUpgradeable authorizes UUPS replacement through the default-admin role of accessManager 0xe683fcd4411dde6fc2be16c2512f9109c907b520. Address 0x8b5f269f68d42490dee19fc4ab275cdd80940068 held that role and a read-only eth_call of upgradeToAndCall to the existing implementation succeeded from that address. Ordinary ERC20 transfers are currently open, but this active token-logic replacement path can change holder transfer behavior, making the representation restrictable.",
+          "sources": [
+            {
+              "label": "Blockscout verified Ethereum AZND OFT implementation and bundled dependencies",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2e49c14a73210356de9f23a46a98de777b8a0db6"
+            },
+            {
+              "label": "Ethereum AZND proxy",
+              "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+            },
+            {
+              "label": "Ethereum observation block 25912083",
+              "url": "https://etherscan.io/block/25912083"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

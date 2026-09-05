@@ -136,9 +136,8 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   // "Yield" reads unambiguously at every width and keeps the rail inside the
   // masthead width budget; search still indexes the canonical group label.
   { ...YIELD_NAV_ITEM, label: "Yield", shortLabel: "Yield" },
-  // Below xl the rail falls back to the in-product shorthand (DDR, PSI); the
-  // five-item rail plus the section menus does not fit 1024px otherwise.
-  { ...DEPEG_NAV_ITEM, shortLabel: "DDR" },
+  // Compact labels keep the rail and section menus within the masthead.
+  { ...DEPEG_NAV_ITEM, shortLabel: "Depeg" },
   { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "PSI" },
 ];
 
@@ -173,7 +172,7 @@ const MORE_COLUMNS: readonly NavColumn[] = [
       { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
       { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
       { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference" },
-      { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
+      { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
       {
         href: "https://pharosville.pharos.watch/",
         label: "PharosVille",

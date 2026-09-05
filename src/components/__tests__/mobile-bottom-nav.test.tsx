@@ -43,9 +43,10 @@ describe("MobileBottomNav", () => {
 
     routeItems.forEach((item, index) => {
       expect(links[index]?.getAttribute("href")).toBe(item.href);
-      const expectedLabel = item.shortLabel === "DDR" ? "Depegs" : (item.shortLabel ?? item.label);
+      const expectedLabel = item.shortLabel ?? item.label;
       expect(links[index]?.textContent).toContain(expectedLabel);
     });
+    expect(screen.getByRole("link", { name: "Depeg" }).getAttribute("href")).toBe("/depeg/");
   });
 
   it("marks the config-derived current route as the current page", () => {

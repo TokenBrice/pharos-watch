@@ -78,7 +78,7 @@ import {
   MAX_ADMISSION_ROTATION_CYCLES, MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
   MEASURED_EXECUTION_RPC_REQUEST_LIMIT, SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
-  admitTargetsWithinBudget, collectScoreBearingTargetIds, estimateAdmissionRotationCycles,
+  admitTargetsWithinBudget, estimateAdmissionRotationCycles,
   hasCompleteDexMeasuredQuoteProgress, selectExpiringScoreBearingPriorityPacket,
   loadPublishedScoreBearingDexRoutes,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
@@ -337,11 +337,6 @@ async function syncDexMeasuredExecutionLane(
       productivity: { productive: false, reason: "score-bearing-route-load-failed" },
     });
   }
-  const scoreBearingTargetIds = lane === "active"
-    ? scoreBearingRoutes
-      ? collectScoreBearingTargetIds(targetGeneration.targets, scoreBearingRoutes)
-      : new Set<string>()
-    : undefined;
   const quoteGenerationId = lane === "shadow"
     ? buildDexShadowMeasuredQuoteGenerationId(startedAt)
     : buildDexMeasuredQuoteGenerationId(startedAt);
@@ -358,7 +353,6 @@ async function syncDexMeasuredExecutionLane(
   const {
     admitted,
     deferred,
-    excluded,
     oversized,
     priorityAdmitted,
     oversizedCoinIds,
@@ -370,13 +364,11 @@ async function syncDexMeasuredExecutionLane(
     cursor: admissionCursor,
     priorityTargetIds,
     priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
-    scoreBearingTargetIds,
   });
   const admissionRotationCycles = estimateAdmissionRotationCycles(targetGeneration.targets, {
     cursor: admissionCursor,
     priorityTargetIds,
     priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
-    scoreBearingTargetIds,
   });
   const budgetDeferredCount = deferred.size - oversized.size;
   const orderedTargets = targetGeneration.targets
@@ -408,13 +400,11 @@ async function syncDexMeasuredExecutionLane(
     curveCompositeProof: null,
     uniswapV4PoolProof: null,
     points: [],
-    failedReason: excluded.has(target.targetId)
-      ? "score-bearing-route-unavailable"
-      : oversized.has(target.targetId)
-        ? "admission-coin-group-oversized"
-        : deferred.has(target.targetId)
-          ? "budget-deferred"
-          : null,
+    failedReason: oversized.has(target.targetId)
+      ? "admission-coin-group-oversized"
+      : deferred.has(target.targetId)
+        ? "budget-deferred"
+        : null,
     stopped: false,
     bracket: null,
   }));

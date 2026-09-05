@@ -79,7 +79,7 @@ describe("nav-config", () => {
     expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
       ["Learn", "Mechanisms", "Case Studies", "Glossary", "Methodology"],
       ["Daily Digest", "Timeline", "Alert Bot"],
-      ["About", "Changelog", "Blog", "API Access", "System Status", "PharosVille"],
+      ["About", "Changelog", "Blog", "API Access", "Status", "PharosVille"],
     ]);
     // `items` must stay the exact flattening, or the mobile drawer and
     // /sitemap-tree/ silently drop rows the desktop panel still shows.

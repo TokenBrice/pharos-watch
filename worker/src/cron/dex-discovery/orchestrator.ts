@@ -252,11 +252,11 @@ function discoveryTierPriority(tier: Exclude<EffectiveTier, "skip">): number {
   }
 }
 
-/** Refresh admitted supplemental evidence inside its 24h lifetime, with an 18h sweep target.
+/** Refresh discovery evidence inside its lifetime, with an 18h sweep target.
  * Existing windows and the run deadline remain hard bounds; oversized footprints
  * get every existing tick rather than extending the evidence freshness window.
  */
-export function isSupplementalRefreshDue(
+export function isDiscoveryEvidenceRefreshDue(
   targets: readonly ContractDeployment[],
   meta: DiscoveryMeta | undefined,
   nowSec: number,
@@ -387,7 +387,10 @@ export async function syncDexDiscovery(
         runSeq,
         nowSec,
         censusVerifiedEmpty,
-        coverage?.hasSupplementalCoverage === true && isSupplementalRefreshDue(targets, metaById.get(coin.id), nowSec),
+        (coverage?.hasSupplementalCoverage === true ||
+          (coverage?.poolCount === 0 && targets.some((target) =>
+            getRuntimeDexDiscoveryProviders(target.chain, target.address).length > 0))) &&
+          isDiscoveryEvidenceRefreshDue(targets, metaById.get(coin.id), nowSec),
       );
 
       if (tier === "skip") {

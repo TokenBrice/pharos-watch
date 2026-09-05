@@ -740,6 +740,2443 @@
       ],
       "nextReviewTrigger": "Confirm both sentinels absent on the first production replay after the live-reserves producer runs with this adapter.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:usda-anzens",
+      "taskIds": [
+        "V9G-6c9da7164582cf48"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json",
+        "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+      ],
+      "rationale": "Cardano registry identity and mint-only policy execution support holder-controlled native transfer permissionlessness; existing measured-adverse freeze facts are NOT closed by this review. Production acceptance pending.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "usda-anzens:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:usdm-moneta",
+      "taskIds": [
+        "V9G-49068cbb410130aa"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d.json",
+        "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+      ],
+      "rationale": "Cardano registry identity and mint-only policy execution support holder-controlled native transfer permissionlessness; issuer onboarding/redemption remain separate. Production acceptance pending.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "usdm-moneta:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:aznd-mu-digital",
+      "taskIds": [
+        "V9G-cf562aa0a3b0f245"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code",
+        "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code",
+        "https://monadscan.com/block/102222519",
+        "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x2e49c14a73210356de9f23a46a98de777b8a0db6",
+        "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code",
+        "https://etherscan.io/block/25912083"
+      ],
+      "rationale": "Verified arbitrary-holder burn plus mutable PrimaryMarket on Monad and mutable OFT on Ethereum support restrictable. Captured role and upgrade simulation results verified. Monad EOA code checked independently; Ethereum EOA wording relies on prior attribution (review RPC 403); posture does not require EOA characterization. Production acceptance pending.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "aznd-mu-digital:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:kag-kinesis",
+      "taskIds": [
+        "V9G-2a0ba3b6b1eadc20"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://kinesis.money/silver/",
+        "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+        "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+      ],
+      "rationale": "External-only representation exception satisfies existing rule; authored sole Ethereum route fully covered and no local mint controls removed. Native parent authority and locking invariant remain explicitly unresolved; bridge materiality/route gaps must remain. Production acceptance pending.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/domains/mint-authority/kag-kinesis.json"
+      ],
+      "sentinels": [
+        "kag-kinesis:gap:economic-control:mint"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:jpysc-sbi-startale",
+      "taskIds": [
+        "V9G-a8361d1714fbc20a"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Trustee page retrieved through web tool. Issuance/deposit-balance section remains dated June 30, 2026; no newer allocation was published in the reviewed source. June 30 composition date retained.",
+      "changeRefs": [],
+      "sentinels": [
+        "jpysc-sbi-startale:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Trustee publishes a newer issuance and reserve-balance disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:brlv-crown",
+      "taskIds": [
+        "V9G-c172097185960c73"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "August 31 memo supports 99.98% bonds and 0.02% Treasury ETFs; cash is below 0.0001%. Fact Finance technical verification is self-reported, not accountant assurance. Actual posting date is unknown, so structured latestReport is omitted. Replay replaces the reserve gap with a mechanism gap: net closure remains zero.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/domains/reserves/brlv-crown.json"
+      ],
+      "sentinels": [
+        "brlv-crown:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:eurq-quantoz",
+      "taskIds": [
+        "V9G-fc87164254d0a2ea"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://www.quantoz.com/transparency",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Transparency page remains explicitly UPDATED June 30th, 2026, EURQ 34% cash / 66% bonds. No newer dated composition surfaced.",
+      "changeRefs": [],
+      "sentinels": [
+        "eurq-quantoz:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes a reserve snapshot newer than June 30.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdq-quantoz",
+      "taskIds": [
+        "V9G-38c5a4c215f01fe3"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://www.quantoz.com/transparency",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Transparency page remains explicitly UPDATED June 30th, 2026, USDQ 30% cash / 70% bonds. No newer dated composition surfaced.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdq-quantoz:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes a reserve snapshot newer than June 30.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:idrx-idrx",
+      "taskIds": [
+        "V9G-a4c56b7692e329c4",
+        "V9G-cf9d467088346069",
+        "V9G-b8609d5d18bafcc2",
+        "V9G-cc65606b9f9ef110",
+        "V9G-c74e85f562aa1537",
+        "V9G-3d06dc3bf557543b",
+        "V9G-bb135af197657cde"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://idrx.co/api/documents?page=1&take=100",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Direct API returns 15 records; newest ID 16 is July 2026 report created August 10. Stored July 28 composition remains newest published report. No August report in index. Raw API saved idrx-index.txt.",
+      "changeRefs": [],
+      "sentinels": [
+        "idrx-idrx:gap:reserve:reserve:2fb48797045babd839df7961:stale",
+        "idrx-idrx:gap:reserve:reserve:a2d69fb3b8126086a91168de:stale",
+        "idrx-idrx:gap:reserve:reserve:2704e3479acc40f38c2b334e:stale",
+        "idrx-idrx:gap:reserve:reserve:e0caabb30a060b194a576bd5:stale",
+        "idrx-idrx:gap:reserve:reserve:6844e403a5152afde98fcc71:stale",
+        "idrx-idrx:gap:reserve:reserve:ff4051fa938807f328287034:stale",
+        "idrx-idrx:gap:reserve:reserve:49785466b99abe3671ca321f:stale"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes August or later reserve report; recheck September 10.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:pgold-pleasing",
+      "taskIds": [
+        "V9G-495b30b9858814a4"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Direct GitBook source still links only June 25, 2026 VISTO report. Page modification age is not a new composition date.",
+      "changeRefs": [],
+      "sentinels": [
+        "pgold-pleasing:gap:reserve:reserve:27a99a64ae19781ce058c42e:stale"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes newer reserve assurance report covering current bullion and token liabilities.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:xagm-matrixdock",
+      "taskIds": [
+        "V9G-7a0cc872e8ecbffb"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Official silver vault audit page links July 17, 2026 certificate SGMSG-26-00478, based on June 30 parcel list; downloaded text confirms 66 silver bars. Current product shows 73 bars / 72,927 oz but asset statement index has no documents and no dated current inventory report, so audit/composition dates remain June 30. Silver PDF ee6eb7b6e2001d4997cf0bbcc2892a9eaa3c0e84d74d536a4d0a63c55004646b.",
+      "changeRefs": [],
+      "sentinels": [
+        "xagm-matrixdock:gap:reserve:reserve:a7d5686cb7b60c4fccb71f16:stale"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes newer dated silver inventory statement or physical audit with full holdings.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdm-moneta",
+      "taskIds": [
+        "V9G-66d3e17db586faa6"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://moneta.global/transparency/",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Current redesigned transparency page lists bank deposits and government MMFs but exposes no allocation percentages or dated composition. Old 20/80 allocation cannot be date-refreshed from aggregate total reserves or a generic today label.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdm-moneta:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes current weighted composition or admissible source payload with allocation/date.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:thbill-theo",
+      "taskIds": [
+        "V9G-9ed8f82b1396ee3f"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://theo.xyz/thbill",
+        "agents/2026-09-05-safety-score-gap-campaign/research/reserves/review-decisions.json"
+      ],
+      "rationale": "Current product discloses ULTRA and FILQ as two underlying funds but no allocation weights or new dated composition. Docs endpoint returned HTTP 403. Existing reserve review already rechecked September 4; June 30 evidence date retained.",
+      "changeRefs": [],
+      "sentinels": [
+        "thbill-theo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Pharos reserve research: Issuer publishes current dated ULTRA/FILQ holdings/allocation or verifiable balance disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdf-falcon",
+      "taskIds": [
+        "V9G-3b83029939d9465f"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Reviewed primary-source search did not establish current component-specific hedge inventory, funding stress or venue margin/liquidation evidence; product mandates and reserve reports cannot substitute.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdf-falcon:gap:mechanism-review:hedgeReconciliation"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Issuer publishes current product-specific hedge, venue-margin or funding-stress disclosure for the unresolved components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:frax-frax",
+      "taskIds": [
+        "V9G-61f6463e7c10ff62",
+        "V9G-e77383553eb537ab",
+        "V9G-ce8f43118667535f"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Bounded review found no admissible new portfolio maturity, NAV valuation or holder loss-recovery evidence; existing unresolved components remain.",
+      "changeRefs": [],
+      "sentinels": [
+        "frax-frax:gap:mechanism-review:durationAndLiquidity",
+        "frax-frax:gap:mechanism-review:lossRecoveryDesign",
+        "frax-frax:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Frax publishes current portfolio maturity, NAV valuation or recovery evidence for the unresolved components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:sfrxusd-frax",
+      "taskIds": [
+        "V9G-90b4f27c6ec94157"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Bounded review found no admissible new portfolio maturity, NAV valuation or holder loss-recovery evidence; existing unresolved components remain.",
+      "changeRefs": [],
+      "sentinels": [
+        "sfrxusd-frax:gap:mechanism-review:lossRecoveryDesign"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Frax publishes current portfolio maturity, NAV valuation or recovery evidence for the unresolved components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:mapollo-midas",
+      "taskIds": [
+        "V9G-e5ccdb5e75cb032c"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Reviewed primary-source search did not establish current component-specific hedge inventory, funding stress or venue margin/liquidation evidence; product mandates and reserve reports cannot substitute.",
+      "changeRefs": [],
+      "sentinels": [
+        "mapollo-midas:gap:mechanism-review:hedgeReconciliation"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Issuer publishes current product-specific hedge, venue-margin or funding-stress disclosure for the unresolved components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:mre7yield-midas",
+      "taskIds": [
+        "V9G-4b572dfbe2cb17cd",
+        "V9G-67373064b8a0253d",
+        "V9G-b749e0ae680fdd20"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Reviewed primary-source search did not establish current component-specific hedge inventory, funding stress or venue margin/liquidation evidence; product mandates and reserve reports cannot substitute.",
+      "changeRefs": [],
+      "sentinels": [
+        "mre7yield-midas:gap:mechanism-review:fundingBasisStress",
+        "mre7yield-midas:gap:mechanism-review:hedgeReconciliation",
+        "mre7yield-midas:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Issuer publishes current product-specific hedge, venue-margin or funding-stress disclosure for the unresolved components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdz-anzen",
+      "taskIds": [
+        "V9G-7ab44e745932b33a",
+        "V9G-6987562b368ec986",
+        "V9G-22063c2df11531a3"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Reviewed primary-source search did not produce new product-specific seniority, recovery or valuation-cadence terms; failed fetches were not treated as evidence.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdz-anzen:gap:mechanism-review:recovery",
+        "usdz-anzen:gap:mechanism-review:seniority",
+        "usdz-anzen:gap:mechanism-review:valuationCadence"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Anzen publishes product-specific seniority, recovery and valuation terms.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:fpi-frax",
+      "taskIds": [
+        "V9G-6945944a337ba8bd"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "FPI primary overview documents FPIS mint/sale and conversion, not a holder post-loss waterfall or enforceable recovery promise; prior unavailable ruling remains.",
+      "changeRefs": [],
+      "sentinels": [
+        "fpi-frax:gap:mechanism-review:lossRecovery"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Frax publishes a post-loss recovery commitment or documented holder waterfall.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:mmev-midas",
+      "taskIds": [
+        "V9G-f10e4cabdc342d3a",
+        "V9G-1af433cb3a8dd0bf",
+        "V9G-3ae62e1a3734ad52"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md"
+      ],
+      "rationale": "Reviewed primary-source search did not establish current component-specific hedge inventory, funding stress or venue margin/liquidation evidence; product mandates and reserve reports cannot substitute.",
+      "changeRefs": [],
+      "sentinels": [
+        "mmev-midas:gap:mechanism-review:fundingBasisStress",
+        "mmev-midas:gap:mechanism-review:hedgeReconciliation",
+        "mmev-midas:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "Pharos mechanism curation: Issuer publishes current product-specific hedge, venue-margin or funding-stress disclosure for the unresolved components.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:zarm-mento",
+      "taskIds": [
+        "V9G-d6e24dc6e8e54820",
+        "V9G-84f14663eb33c947",
+        "V9G-a4fccdb10d2e9b70"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://docs.mento.org/mento-v3/build/deployments/addresses",
+        "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview",
+        "agents/2026-09-05-safety-score-gap-campaign/evidence/mechanism-primary-research.md; pinned reserve API and finalized Celo block 76721442"
+      ],
+      "rationale": "Correct fiat-cash archetype and verified shared-reserve inventory support limited claim, custody and reconciliation components; this is not independent attestation or a full cross-chain liability audit.",
+      "changeRefs": [
+        "1212350c2",
+        "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "zarm-mento:gap:mechanism-review:assuranceAndReconciliation",
+        "zarm-mento:gap:mechanism-review:claimAndSegregation",
+        "zarm-mento:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Root campaign owner: after 2026-09-06T00:00:00Z, verify date-gated admission and exact production sentinel absence without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-8172c0427f231b42"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://ondo.finance/usdy (reviewed 2026-09-05; official September 3 holdings)",
+        "35e690d44",
+        "shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json"
+      ],
+      "rationale": "Suspend scalar NAV feed because price plus supply does not observe holdings. Official September 3 portfolio review remains available as static composition; fresh producer and publication readback are required.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/coins/usdy-ondo-finance.json"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:reserve:reserve:75e2f5a8f9b0e270a49c8c3f"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:feusd-felix",
+      "taskIds": [
+        "V9G-24c2f40510d64936"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp.md (reviewed 2026-09-05)",
+        "35e690d44"
+      ],
+      "rationale": "Correct configured kHYPE label from KittenFinance to Kinetiq, aligning the existing branch with its reviewed classified slice through the unchanged unique-name join. Fresh producer and publication readback are required.",
+      "changeRefs": [
+        "35e690d44",
+        "shared/data/stablecoins/coins/feusd-felix.json"
+      ],
+      "sentinels": [
+        "feusd-felix:gap:reserve:reserve:84ed09f1febc9b5963e9a7df"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:apxusd-apyx",
+      "taskIds": [
+        "V9G-991bf7c6b206f45f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: pancakeswap/Ethereum, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "apxusd-apyx:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:bold-liquity",
+      "taskIds": [
+        "V9G-72f6bdc81575777c"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "bold-liquity:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:cadc-cad-coin",
+      "taskIds": [
+        "V9G-659b2ecc31289b80"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: aerodrome/Base. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "cadc-cad-coin:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:cadd-cad-digital",
+      "taskIds": [
+        "V9G-70d11dcd2af977af"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "cadd-cad-digital:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:ceur-celo",
+      "taskIds": [
+        "V9G-85e519d1b10ad3bd"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/Celo. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "ceur-celo:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:cjpy-yamato",
+      "taskIds": [
+        "V9G-3f3022bc05d8e4d1"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "cjpy-yamato:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:crvusd-curve",
+      "taskIds": [
+        "V9G-767fbb3dd4d6e819"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "crvusd-curve:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:dai-makerdao",
+      "taskIds": [
+        "V9G-7f2f809baecca4a6"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum, uniswap-v4/Polygon. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "dai-makerdao:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:dgld-gold-token-sa",
+      "taskIds": [
+        "V9G-709770c3aece0e5e"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Base, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "dgld-gold-token-sa:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:dola-inverse-finance",
+      "taskIds": [
+        "V9G-e6d0f1f32f14fa20"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "dola-inverse-finance:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:emxn-telcoin",
+      "taskIds": [
+        "V9G-68ac2ab06824f113"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Polygon. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "emxn-telcoin:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:eurau-allunity",
+      "taskIds": [
+        "V9G-f224ede74544d0e0"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: aerodrome/Base. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "eurau-allunity:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:eurc-circle",
+      "taskIds": [
+        "V9G-ee1c7d71768fa809"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: aerodrome/Base, uniswap-v3/Avalanche, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "eurc-circle:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:euri-banking-circle",
+      "taskIds": [
+        "V9G-6d319b4d06b0ef42"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "euri-banking-circle:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:eusd-telcoin",
+      "taskIds": [
+        "V9G-aa243acc67eb9808"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Base, uniswap-v4/Ethereum, uniswap-v4/Polygon. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "eusd-telcoin:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:frax-frax",
+      "taskIds": [
+        "V9G-5932db9bed4e52c5"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v3/Avalanche. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "frax-frax:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:frxusd-frax",
+      "taskIds": [
+        "V9G-956eeb321606d38b"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "frxusd-frax:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:jpyc-jpyc",
+      "taskIds": [
+        "V9G-a39c2ebf8718b737"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum, uniswap-v4/Polygon. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "jpyc-jpyc:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:jpyt-dephaser",
+      "taskIds": [
+        "V9G-234126578f30ba32"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/OP Mainnet. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "jpyt-dephaser:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:krwq-iq",
+      "taskIds": [
+        "V9G-c4fd68cfc2373f3a"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: aerodrome/Base. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "krwq-iq:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:meusd-mezo",
+      "taskIds": [
+        "V9G-a78a2a7c0f2fcd6f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: aerodrome/Base, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "meusd-mezo:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:musd-metamask",
+      "taskIds": [
+        "V9G-6ac8380f2198fe5f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "musd-metamask:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:paxg-paxos",
+      "taskIds": [
+        "V9G-408bb734839eb835"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "paxg-paxos:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:pgold-pleasing",
+      "taskIds": [
+        "V9G-e16e347d01693aa7"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/Arbitrum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "pgold-pleasing:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:pmusd-precious-metals",
+      "taskIds": [
+        "V9G-fa3171f9353c711f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "pmusd-precious-metals:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:pusd-polymarket",
+      "taskIds": [
+        "V9G-b341709ed037ffe8"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/Polygon. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "pusd-polymarket:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:rlusd-ripple",
+      "taskIds": [
+        "V9G-879c4732476dc22c"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "rlusd-ripple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:sbc-brale",
+      "taskIds": [
+        "V9G-4f3825fc75d82a23"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/Base. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "sbc-brale:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:slvon-ondo",
+      "taskIds": [
+        "V9G-ffd82d791a606ced"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/BSC, uniswap-v3/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "slvon-ondo:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:susdd-tron-dao-reserve",
+      "taskIds": [
+        "V9G-09843c3a37e089c2"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "susdd-tron-dao-reserve:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:susde-ethena",
+      "taskIds": [
+        "V9G-c4e3fa3116c9a125"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "susde-ethena:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:susn-noon",
+      "taskIds": [
+        "V9G-5d3c2ee99e43e006"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "susn-noon:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdc-maple",
+      "taskIds": [
+        "V9G-610a8d48cba1f70a"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Arbitrum, uniswap-v4/Base, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdc-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdt-maple",
+      "taskIds": [
+        "V9G-74ccd41a950bec34"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/BSC, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "syrupusdt-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:tgbp-tokenised",
+      "taskIds": [
+        "V9G-2f742c1e5d07edf5"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: aerodrome/Base. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "tgbp-tokenised:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:thbill-theo",
+      "taskIds": [
+        "V9G-5922233783aa6a62"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v3/Arbitrum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "thbill-theo:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:u-united-stables",
+      "taskIds": [
+        "V9G-e193ed6f2d1e043a"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/BSC. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "u-united-stables:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usd1-world-liberty-financial",
+      "taskIds": [
+        "V9G-a66fefdd550addb0"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "usd1-world-liberty-financial:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdc-circle",
+      "taskIds": [
+        "V9G-2c5a8b56f8e9d0a8"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: aerodrome/Base, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "usdc-circle:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdd-tron-dao-reserve",
+      "taskIds": [
+        "V9G-14b126554953f47f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdd-tron-dao-reserve:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usde-ethena",
+      "taskIds": [
+        "V9G-285c106b1fa24e48"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v3/Avalanche, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "usde-ethena:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdq-quantoz",
+      "taskIds": [
+        "V9G-c850e63554c2ff65"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "usdq-quantoz:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usds-sky",
+      "taskIds": [
+        "V9G-fde9ae50fc927734"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "usds-sky:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdt-tether",
+      "taskIds": [
+        "V9G-6ae7863ab7bf117f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "usdt-tether:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:vchf-vnx",
+      "taskIds": [
+        "V9G-79742df833842566"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Unresolved retained families remain: aerodrome/Base. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [],
+      "sentinels": [
+        "vchf-vnx:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Pharos DEX producer owner: capture fresh staged candidates, verify exact physical identity and directional quote eligibility; new chain coverage also requires registry, quote validation and capacity review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:xaut-tether",
+      "taskIds": [
+        "V9G-54a51b8aa3aee3d2"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v4/BSC, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:xusd-straitsx",
+      "taskIds": [
+        "V9G-95bc7d729bc08686"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "xusd-straitsx:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:zchf-frankencoin",
+      "taskIds": [
+        "V9G-a164564ef765dd77"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05",
+      "evidence": [
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-1.md",
+        "agents/2026-09-05-safety-score-gap-campaign/outputs/dex-latest-quote-status.raw.json",
+        "agents/2026-09-05-safety-score-gap-campaign/exit/CHECKPOINT-2-FEASIBILITY.md"
+      ],
+      "rationale": "Fresh activated targets were blocked by the prior published-route admission gate. Repair removes that bootstrap deadlock within unchanged quote budgets and proof checks; no closure is inferred from admission. Unresolved retained families remain: uniswap-v3/OP Mainnet, uniswap-v4/Ethereum. Physical identity, fresh source candidates, directional coherence or supported chain collectors must be proven; no alias, freshness or capacity relaxation was authorized.",
+      "changeRefs": [
+        "a33d6ba42"
+      ],
+      "sentinels": [
+        "zchf-frankencoin:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root campaign owner: confirm exact sentinels disappear without adverse replacement in fresh production publication after deployment and relevant producer refresh. Unresolved physical routes still require exact fresh identity evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:sfrxusd-frax",
+      "taskIds": [
+        "V9G-16ce05de8b7d6ec5",
+        "V9G-6694c7709c37a346",
+        "V9G-cfcf377815bb3da1",
+        "V9G-0725c55b49a7d2d0",
+        "V9G-50796f5b2e2da192",
+        "V9G-451aee9844312f0d",
+        "V9G-92177255d43cf4e9",
+        "V9G-e069204de8bf1e85",
+        "V9G-f062e87f3949278c",
+        "V9G-029c206facf407a4",
+        "V9G-a9d5ed5c0c0bf544",
+        "V9G-d43cece3c13db82a",
+        "V9G-e71fb662430ad407",
+        "V9G-220c2183666e4ac2",
+        "V9G-16f167b84e4e46f5",
+        "V9G-1ff643bf053c7d19",
+        "V9G-d478f017488f9d0f",
+        "V9G-4a30cd2b18f4b54a",
+        "V9G-154bd2ad75da461c"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "Codex sfrxUSD route controller campaign",
+      "evidence": [
+        "https://docs.frax.com/protocol/crosschain/addresses",
+        "https://docs.frax.com/protocol/crosschain/overview",
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json: 19 per-chain fixed-block owner, ProxyAdmin, implementation/code and authorized/unauthorized eth_call observations; exact blocks, RPC URLs and export SHA-256 pins in each route note"
+      ],
+      "rationale": "Nineteen EVM route controller identities were missing from the conservative route-derived bridge controls. Direct reads identify the actual sfrxUSD owner and matching ProxyAdmin owner; same-state owner peer and upgrade simulations succeed while unauthorized controls revert. Populate controller identity and failure domains only: retain contract authority, unbounded bridge impairment, unknown custody/modules/delay and all non-EVM/umbrella blockers. No grade or public closure is inferred. Regenerated explanatory replay reduces sfrxUSD open points from 27 to 8 with its score 41/D unchanged; this is not production acceptance.",
+      "changeRefs": [
+        "ce8710fcc",
+        "shared/data/stablecoins/domains/risk-review/sfrxusd-frax.json"
+      ],
+      "sentinels": [
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:06750749b74ff7456b2b",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:151c28400468f34d7140",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:2a2d43c2dc73dba166dc",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:48e394732656bd8ff645",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:4d6cead671ebe0fcd1f1",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:58082f9c0d080c55980f",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:68f1337b8d49bf9a08e9",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:6ce797702f79fc93e1c8",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:715603f58e8e0d3ef8a3",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:7c5c49c6f079623347cf",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:85fefcf813765b0d97d8",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:91b75d90f1c3a8647108",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:a64bd8f6a9bf35be5221",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:aa1b290fd2f8e93ab0ac",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:d3a670affb2abf6792cd",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:e31b8fb898a20c9f7271",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:edde7242f8e24502a72a",
+        "sfrxusd-frax:gap:deployment-control:bridge-meta:sfrxusd-frax:f844dbd201a57e50577a",
+        "control:control:bridge-meta:sfrxusd-frax:06750749b74ff7456b2b:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A06750749b74ff7456b2b",
+        "control:control:bridge-meta:sfrxusd-frax:151c28400468f34d7140:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A151c28400468f34d7140",
+        "control:control:bridge-meta:sfrxusd-frax:2a2d43c2dc73dba166dc:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A2a2d43c2dc73dba166dc",
+        "control:control:bridge-meta:sfrxusd-frax:48e394732656bd8ff645:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A48e394732656bd8ff645",
+        "control:control:bridge-meta:sfrxusd-frax:4d6cead671ebe0fcd1f1:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A4d6cead671ebe0fcd1f1",
+        "control:control:bridge-meta:sfrxusd-frax:58082f9c0d080c55980f:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A58082f9c0d080c55980f",
+        "control:control:bridge-meta:sfrxusd-frax:68f1337b8d49bf9a08e9:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A68f1337b8d49bf9a08e9",
+        "control:control:bridge-meta:sfrxusd-frax:6ce797702f79fc93e1c8:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A6ce797702f79fc93e1c8",
+        "control:control:bridge-meta:sfrxusd-frax:715603f58e8e0d3ef8a3:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A715603f58e8e0d3ef8a3",
+        "control:control:bridge-meta:sfrxusd-frax:7c5c49c6f079623347cf:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A7c5c49c6f079623347cf",
+        "control:control:bridge-meta:sfrxusd-frax:85fefcf813765b0d97d8:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A85fefcf813765b0d97d8",
+        "control:control:bridge-meta:sfrxusd-frax:91b75d90f1c3a8647108:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3A91b75d90f1c3a8647108",
+        "control:control:bridge-meta:sfrxusd-frax:a64bd8f6a9bf35be5221:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aa64bd8f6a9bf35be5221",
+        "control:control:bridge-meta:sfrxusd-frax:a8214d27941f8b110c99:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aa8214d27941f8b110c99",
+        "control:control:bridge-meta:sfrxusd-frax:aa1b290fd2f8e93ab0ac:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aaa1b290fd2f8e93ab0ac",
+        "control:control:bridge-meta:sfrxusd-frax:d3a670affb2abf6792cd:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Ad3a670affb2abf6792cd",
+        "control:control:bridge-meta:sfrxusd-frax:e31b8fb898a20c9f7271:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Ae31b8fb898a20c9f7271",
+        "control:control:bridge-meta:sfrxusd-frax:edde7242f8e24502a72a:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Aedde7242f8e24502a72a",
+        "control:control:bridge-meta:sfrxusd-frax:f844dbd201a57e50577a:cause:sfrxusd-frax%3Agap%3Adeployment-control%3Abridge-meta%3Asfrxusd-frax%3Af844dbd201a57e50577a"
+      ],
+      "nextReviewTrigger": "Root campaign owner: regenerate the catalog, replay with explicit curation attribution, then verify fresh post-deploy production publication consumes these exact controller identities and removes the corresponding sentinels without adverse replacement. Non-EVM authority-family review remains separately deferred.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:dai-makerdao",
+      "taskIds": [
+        "V9G-7f2f809baecca4a6"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for dai-makerdao: UUID 3f9f64ac-2815-5751-8cd1-eaebafb38016; pool_old 0xf6e8088529094bc485561fa2a03e3d19c9a60f5d99a997e8fe16ab4ca2db277a-ethereum-uniswap-v4; matching Ethereum token contracts 0x6b175474e89094c44da98b954eedeac495271d0f, 0xdac17f958d2ee523a2206206994597c13d831ec7; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xf6e8088529094bc485561fa2a03e3d19c9a60f5d99a997e8fe16ab4ca2db277a",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 7 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "dai-makerdao:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdc-circle",
+      "taskIds": [
+        "V9G-2c5a8b56f8e9d0a8"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for usdc-circle: UUID 3c4132bf-ef75-5162-8558-70fd4fa91c81; pool_old 0xbddcef32a41bb9c9fa37b2442433ddffdd6095c7e6b0aeb1b0b979a5b5529e67-ethereum-uniswap-v4; matching Ethereum token contracts 0x9b525165b10e6da960fdfa6b34544771f442d9c4, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xbddcef32a41bb9c9fa37b2442433ddffdd6095c7e6b0aeb1b0b979a5b5529e67",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 204 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "usdc-circle:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdt-tether",
+      "taskIds": [
+        "V9G-6ae7863ab7bf117f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for usdt-tether: UUID f71737e5-f02e-4964-b23e-19d1a6c7a6bf; pool_old 0x3b1b1f2e775a6db1664f8e7d59ad568605ea2406312c11aef03146c0cf89d5b9-ethereum-uniswap-v4; matching Ethereum token contracts 0xdac17f958d2ee523a2206206994597c13d831ec7, 0xdc035d45d973e3ec169d2276ddab16f1e407384f; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x3b1b1f2e775a6db1664f8e7d59ad568605ea2406312c11aef03146c0cf89d5b9",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js",
+        "https://etherscan.io/tx/0x061cfdf6bfc9f34d81a01f8d8c7dd9d84e51d874fb94e9447cc5c3ddb0528801"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 105 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "usdt-tether:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usds-sky",
+      "taskIds": [
+        "V9G-fde9ae50fc927734"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for usds-sky: UUID 0899ff3d-adc8-4dae-a516-a94998db3332; pool_old 0xe63e32b2ae40601662f760d6bf5d771057324fbd97784fe1d3717069f7b75d45-ethereum-uniswap-v4; matching Ethereum token contracts 0x6c3ea9036406852006290770bedfcaba0e23a0e8, 0xdc035d45d973e3ec169d2276ddab16f1e407384f; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xe63e32b2ae40601662f760d6bf5d771057324fbd97784fe1d3717069f7b75d45",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js",
+        "https://etherscan.io/tx/0x9dfd17310117acc02bcdd9618161fd6377ac3439b2480c20fbcf5ca66ae74dd5"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 4 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "usds-sky:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:rlusd-ripple",
+      "taskIds": [
+        "V9G-879c4732476dc22c"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for rlusd-ripple: UUID 3b22b8c3-1409-5f4b-affb-4a868ecf9a88; pool_old 0x9035721b23481db3888fd201b9c2b26dbc3af60258bca65e669f2ed98dc8eb4f-ethereum-uniswap-v4; matching Ethereum token contracts 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, 0xdc035d45d973e3ec169d2276ddab16f1e407384f; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x9035721b23481db3888fd201b9c2b26dbc3af60258bca65e669f2ed98dc8eb4f",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 2 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "rlusd-ripple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usde-ethena",
+      "taskIds": [
+        "V9G-285c106b1fa24e48"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for usde-ethena: UUID fc8a754a-a8da-48db-aa47-4485d15dbc75; pool_old 0x63bb22f47c7ede6578a25c873e77eb782ec8e4c19778e36ce64d37877b5bd1e7-ethereum-uniswap-v4; matching Ethereum token contracts 0x4c9edd5852cd905f086c759e8383e09bff1e68b3, 0xdac17f958d2ee523a2206206994597c13d831ec7; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x63bb22f47c7ede6578a25c873e77eb782ec8e4c19778e36ce64d37877b5bd1e7",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 3 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "usde-ethena:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:dola-inverse-finance",
+      "taskIds": [
+        "V9G-e6d0f1f32f14fa20"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for dola-inverse-finance: UUID 25876c9f-c801-4c83-adf5-63b6d40998ea; pool_old 0x6ebb515948b39f282ea7a97b5d3cc9e9a1b61efe2796b923ab973ed1c9d4e507-ethereum-uniswap-v4; matching Ethereum token contracts 0x865377367054516e17014ccded1e7d814edc9ce4, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x6ebb515948b39f282ea7a97b5d3cc9e9a1b61efe2796b923ab973ed1c9d4e507",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "dola-inverse-finance:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdc-maple",
+      "taskIds": [
+        "V9G-610a8d48cba1f70a"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for syrupusdc-maple: UUID df8851f0-5b1d-4843-88fd-88468d129c78; pool_old 0xcdb422a853a4fa2deb364317db92ad76d1cb7a8e1b82a32219bcb41720a90228-ethereum-uniswap-v4; matching Ethereum token contracts 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xcdb422a853a4fa2deb364317db92ad76d1cb7a8e1b82a32219bcb41720a90228",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "syrupusdc-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:frxusd-frax",
+      "taskIds": [
+        "V9G-956eeb321606d38b"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for frxusd-frax: UUID 08707ef3-bcfd-5981-8a9c-a5e2f318feb9; pool_old 0x76dbd3b36d5f0a1fa1c38b75984a9ed57aa1a36a6dbab77b9503ef9349dbb617-ethereum-uniswap-v4; matching Ethereum token contracts 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, 0xcacd6fd266af91b8aed52accc382b4e165586e29; source timestamp 2026-09-05T13:02:49.404Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x76dbd3b36d5f0a1fa1c38b75984a9ed57aa1a36a6dbab77b9503ef9349dbb617",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "frxusd-frax:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:syrupusdt-maple",
+      "taskIds": [
+        "V9G-74ccd41a950bec34"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for syrupusdt-maple: UUID db5fbc78-e618-4e05-8ab2-61b7c702051b; pool_old 0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d-ethereum-uniswap-v4; matching Ethereum token contracts 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d, 0xdac17f958d2ee523a2206206994597c13d831ec7; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "syrupusdt-maple:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:xaut-tether",
+      "taskIds": [
+        "V9G-54a51b8aa3aee3d2"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for xaut-tether: UUID eb252614-7a8e-454f-8346-60ebf50dbe62; pool_old 0xa8dd78582e31791c08187169a3343365a1e3282c67bc7f93c1e585ddd0a4c4e0-ethereum-uniswap-v4; matching Ethereum token contracts 0x68749665ff8d2d112fa859aa293f07a622782f38, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xa8dd78582e31791c08187169a3343365a1e3282c67bc7f93c1e585ddd0a4c4e0",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 11 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:apxusd-apyx",
+      "taskIds": [
+        "V9G-991bf7c6b206f45f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for apxusd-apyx: UUID 02d27f9f-e63d-497f-bbd9-826261b0d976; pool_old 0x9f2d9491277a9f2551c1f7533c1789aa6023bba0c5e9397e8a019cac5c10fe7f-ethereum-uniswap-v4; matching Ethereum token contracts 0x98a878b1cd98131b271883b390f68d2c90674665, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x9f2d9491277a9f2551c1f7533c1789aa6023bba0c5e9397e8a019cac5c10fe7f",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 10 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "apxusd-apyx:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:musd-metamask",
+      "taskIds": [
+        "V9G-6ac8380f2198fe5f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for musd-metamask: UUID eac3b5f8-d620-47d6-9f6c-d984d3e653c1; pool_old 0x72daf39b278fab80f18ad2adf73cc8b1ae63de1e508d36aa033285fff506f169-ethereum-uniswap-v4; matching Ethereum token contracts 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, 0xaca92e438df0b2401ff60da7e4337b687a2435da; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x72daf39b278fab80f18ad2adf73cc8b1ae63de1e508d36aa033285fff506f169",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "musd-metamask:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:eurc-circle",
+      "taskIds": [
+        "V9G-ee1c7d71768fa809"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for eurc-circle: UUID 61395c4f-90fc-4a70-851f-86182893705b; pool_old 0x801e07d014537e43d3b2173f241194ef8aa9e877616902f48b274ce807eb52e5-ethereum-uniswap-v4; matching Ethereum token contracts 0x1abaea1f7c830bd89acc67ec4af516284b1bc33c, 0xa3ec40cc9736ad0064630bfd60f2876d7762e3b2; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x801e07d014537e43d3b2173f241194ef8aa9e877616902f48b274ce807eb52e5",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 6 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "eurc-circle:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:zchf-frankencoin",
+      "taskIds": [
+        "V9G-a164564ef765dd77"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for zchf-frankencoin: UUID 57aeb9ec-8200-4156-ae66-679e79416e98; pool_old 0x12718afa3f4488a9ad47a882754c7950611feac52ee7d7f6244e2209066a75aa-ethereum-uniswap-v4; matching Ethereum token contracts 0xb58e61c3098d85632df34eecfb899a1ed80921cb, 0xcedbea37c8872c4171259cdfd5255cb8923cf8e7; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x12718afa3f4488a9ad47a882754c7950611feac52ee7d7f6244e2209066a75aa",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "zchf-frankencoin:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdd-tron-dao-reserve",
+      "taskIds": [
+        "V9G-14b126554953f47f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for usdd-tron-dao-reserve: UUID 05f8a882-6b50-47c2-bbc1-06df0ec0db07; pool_old 0x086c9a92c31c38c6516ec48f91528cb14e72bb69edbdda152722d9f0fc09d49a-ethereum-uniswap-v4; matching Ethereum token contracts 0x4f8e5de400de08b164e7421b3ee387f461becd1a, 0xdac17f958d2ee523a2206206994597c13d831ec7; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x086c9a92c31c38c6516ec48f91528cb14e72bb69edbdda152722d9f0fc09d49a",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "usdd-tron-dao-reserve:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:jpyc-jpyc",
+      "taskIds": [
+        "V9G-a39c2ebf8718b737"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for jpyc-jpyc: UUID 96815256-2c5d-5640-9afa-635206c0e454; pool_old 0x90566efa9eeae5db07880719eef46caf9f42fc623adb9dea4db00a27f04816ba-ethereum-uniswap-v4; matching Ethereum token contracts 0x1abaea1f7c830bd89acc67ec4af516284b1bc33c, 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29; source timestamp 2026-08-30T20:01:58.463Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x90566efa9eeae5db07880719eef46caf9f42fc623adb9dea4db00a27f04816ba",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 5 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "jpyc-jpyc:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:euri-banking-circle",
+      "taskIds": [
+        "V9G-6d319b4d06b0ef42"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for euri-banking-circle: UUID ffa845a8-208b-48cd-908e-54f245938be2; pool_old 0xd85173a34c0567501850854604460efff465b40f3121b9ad17b3bcc705e083f8-ethereum-uniswap-v4; matching Ethereum token contracts 0x9d1a7a3191102e9f900faa10540837ba84dcbae7, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xd85173a34c0567501850854604460efff465b40f3121b9ad17b3bcc705e083f8",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "euri-banking-circle:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:meusd-mezo",
+      "taskIds": [
+        "V9G-a78a2a7c0f2fcd6f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for meusd-mezo: UUID 8b0dcb2f-9dda-4451-8f5d-1c3dfe1e2a4e; pool_old 0xa9bf5691768ef950a99efd74d722961ff2df3fec08d77ec784432c619bd283a0-ethereum-uniswap-v4; matching Ethereum token contracts 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, 0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xa9bf5691768ef950a99efd74d722961ff2df3fec08d77ec784432c619bd283a0",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "meusd-mezo:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:dgld-gold-token-sa",
+      "taskIds": [
+        "V9G-709770c3aece0e5e"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for dgld-gold-token-sa: UUID a26226c4-68b5-426f-8b9f-b237b8b03008; pool_old 0x8a389646a86a483f4ce02a7cff9e3f8a27fd686c1e02c1e38f405dfc553128b9-ethereum-uniswap-v4; matching Ethereum token contracts 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, 0xa9299c296d7830a99414d1e5546f5171fa01e9c8; source timestamp 2026-09-03T08:02:00.799Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0x8a389646a86a483f4ce02a7cff9e3f8a27fd686c1e02c1e38f405dfc553128b9",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 2 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "dgld-gold-token-sa:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:susde-ethena",
+      "taskIds": [
+        "V9G-c4e3fa3116c9a125"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for susde-ethena: UUID 1117725b-721c-40d5-9641-887209b7906c; pool_old 0xb20351bcf606dcc3525d2ed36760a86a5dec7423b77d41125bd4a416ba93448b-ethereum-uniswap-v4; matching Ethereum token contracts 0x9d39a5de30e57443bff2a8307a4256c8797a3497, 0xdac17f958d2ee523a2206206994597c13d831ec7; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xb20351bcf606dcc3525d2ed36760a86a5dec7423b77d41125bd4a416ba93448b",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 3 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "susde-ethena:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:eusd-telcoin",
+      "taskIds": [
+        "V9G-aa243acc67eb9808"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for eusd-telcoin: UUID 79841f80-6103-422e-bb2f-abb87769c86c; pool_old 0xdda3c47e70fb237fb50e3856169019bf26fe4c09d7b6618c4f9d6e2423903870-ethereum-uniswap-v4; matching Ethereum token contracts 0x14913815bcfde78baead2111f463d038ac9c2949, 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; source timestamp 2026-09-05T15:01:49.539Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xdda3c47e70fb237fb50e3856169019bf26fe4c09d7b6618c4f9d6e2423903870",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "eusd-telcoin:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:susdd-tron-dao-reserve",
+      "taskIds": [
+        "V9G-09843c3a37e089c2"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "promote",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "orchestrated-campaign/2026-09-05-v4-identities",
+      "evidence": [
+        "https://yields.llama.fi/poolsPro?project=uniswap-v4",
+        "Primary-response exact identity example for susdd-tron-dao-reserve: UUID ca0646eb-c660-438d-b47a-82ccda7a0b17; pool_old 0xa9ab1284c3c13a2836f1d16b65f0b340e65be81644f85e273d57b45743444368-ethereum-uniswap-v4; matching Ethereum token contracts 0xc5d6a7b61d18afa11435a889557b068bb9f29930, 0xdac17f958d2ee523a2206206994597c13d831ec7; source timestamp 2026-09-03T07:04:04.874Z.",
+        "https://app.uniswap.org/explore/pools/ethereum/0xa9ab1284c3c13a2836f1d16b65f0b340e65be81644f85e273d57b45743444368",
+        "https://raw.githubusercontent.com/DefiLlama/yield-server/master/src/api/controllers/enriched.js"
+      ],
+      "rationale": "Newly reviewed primary poolsPro data supplies physical pool_old identity for 1 current Ethereum V4 source rows involving this asset. The implementation requires exact UUID/project/chain and both token addresses before attaching identity; measurements remain from the main list. This new evidence supports revisiting the earlier fingerprint-only deferral. Identity attachment is only a prerequisite: current registered candidates, supported zero-hook pools, coherent directional prices and successful measured quotes are still required. Other routes and non-Ethereum V4 remain unresolved; no execution or closure count is inferred.",
+      "changeRefs": [
+        "86d78ff1d",
+        "worker/src/cron/dex-liquidity/defillama-v4-identity.ts",
+        "worker/src/cron/dex-liquidity/fetch-primary.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/uniswap-v4.ts"
+      ],
+      "sentinels": [
+        "susdd-tron-dao-reserve:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Root DEX campaign owner: observe defillama-v4-identities attachedPoolCount, fresh target publication and measured quotes for the exact physical IDs, then the next DEX score/V9 publication; count closure only when this exact asset gap disappears without adverse replacement.",
+      "factsClosed": 0
     }
   ]
 }

@@ -528,6 +528,8 @@ the `re-metrics` adapter parses Re Protocol's official metrics page and now extr
 
 `solstice-attestation` and `river-protocol-info` are proof-class reserve-sync adapters. They make current issuer/protocol telemetry visible on reserve detail and status surfaces, but their registry evidence class is `weak-live-probe`, so they do not become V9 Backing reserve evidence. Solstice remains proof-class until its aggregate solvency feed exposes timestamped asset-category composition; River remains proof-class because its protocol-info endpoint exposes aggregate TVL/circulating-supply telemetry rather than asset-level collateral composition. River snapshots degrade when the aggregate TVL is below circulating satUSD, and timestampless protocol-info payloads remain freshness-unverified.
 
+`audx-independent-assurance` uses the reviewed July 31, 2026 report: AUD 3,231,371.79 in designated bank accounts against AUD 3,208,057.00 issued supply. Aura Partners signed its limited-assurance report on August 20, 2026; the posting date is unknown. The manifest retains the report's printed AEDT timestamp and exact PDF hash, with freshness measured from the examined period rather than the signature or fetch date.
+
 `usdgo-transparency` is now independent: the Deloitte examination is the authoritative composition/liability source through the independent-assurance manifest (exact PDF SHA-256 binding), with the Avalanche BUIDL balance pinned on-chain and the issuer transparency API demoted to a cross-check that raises informational warnings on later-period drift.
 
 `anzen-usdz` is now independent: it reads USDz `totalPooledSPCT()` and actual SPCT holdings on-chain and reconciles them against bridge-adjusted USDz liabilities across the five issuance chains, failing closed on shortfall instead of trusting global SPCT supply.
@@ -544,6 +546,8 @@ Yuzu's Fasanara `mGLO` loop remains a high-risk named reserve slice but carries 
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
+
+USDY's scalar NAV configuration is suspended: its price and token-supply reads do not measure the multi-asset holdings published by Ondo. Scoring uses the separately dated reviewed holdings composition with the existing static-evidence admission and freshness limits; resumption requires a producer that consumes the holdings themselves. Felix's kHYPE branch uses the reviewed Kinetiq label so the next live observation joins its existing collateral classification.
 
 Chronicle NAV note:
 `chronicle-nav` reads Chronicle Labs Proof-of-Asset VAO consumer contracts via `readWithAge()` (value + age), validating the value, rejecting stale or future-dated ages, and reading the coin token's on-chain supply with its actual decimals. The v1 path is scalar-only: it emits one configured 100% NAV slice with verified freshness from the consumer age, mirroring `chainlink-nav`'s single-bucket model. Chronicle's IPFS `UPoked` proof objects (position-level composition) are a documented future enhancement, not consumed today. ACRDX and STAC bind this adapter.

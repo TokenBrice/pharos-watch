@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Brazilian federal government bonds",
-      "pct": 99.99,
+      "pct": 99.98,
       "risk": "low",
       "assetClass": "government-security",
       "issuerOrObligor": "Federative Republic of Brazil",
@@ -12,7 +12,7 @@
     },
     {
       "name": "ETFs linked to Brazilian Treasury securities",
-      "pct": 0.01,
+      "pct": 0.02,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Undisclosed Brazilian Treasury ETF issuers",
@@ -21,37 +21,37 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-09-05",
     "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Fact Finance BRLV proof-of-reserves report - May 2026 (re-opened 2026-08-08)",
-        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_af8cfa373d.pdf"
+        "label": "Fact Finance BRLV proof-of-reserves report - August 2026, dated August 31",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf"
       },
       {
-        "label": "Crown BRLV reserve transparency (re-opened 2026-08-08)",
+        "label": "Crown BRLV reserve transparency and monthly-report index (observed 2026-09-05)",
         "url": "https://www.crown-brlv.com/en/transparency/"
       }
     ],
-    "rationale": "Re-opened 2026-08-08. The Crown transparency page still lists report_brlv_5_2026.pdf as the latest BRLV reserve report; no June, July, or August 2026 BRLV PDF is published. The May 31, 2026 Fact Finance report still records Brazilian Treasury Bonds at 99.99% and ETFs linked to Brazilian Treasury securities at 0.01%, with cash rounded to 0.00%. Because the composition as-of date remains 2026-05-31, the curated rows are stale versus the 31-day admission window.",
-    "compositionBasis": "Fact Finance BRLV proof-of-reserves report as of May 31, 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Verified both pages of Fact Finance's technical verification memo dated August 31, 2026, linked by Crown's current monthly-report index alongside the June and July reports. The memo reports R$380,315,618.44 of reserves against R$378,063,743.00 of circulating BRLV (100.60% coverage). Its two Brazilian Treasury bond rows total R$380,258,017.98 and its two Treasury ETF rows total R$57,540.25; R$60.21 is cash. Aggregating the stated balances and rounding to two decimals produces 99.98% government bonds and 0.02% ETFs, with cash below 0.0001%. The report identifies the tracked Base contract 0xd7Ca0e2C36d647446b782D1b72308E598373E2F5. It is signed by Fact Finance's technical lead and carries no accountant assurance standard or opinion; freshness does not upgrade that engagement classification.",
+    "compositionBasis": "Fact Finance BRLV technical verification memo dated August 31, 2026; category percentages computed from its stated reserve balances and rounded to two decimals; PDF SHA-256 68325f70157b6d549f534900917e84d40bdcbc9bc9348de2a717c11f8e01f8cd",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation.",
+    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation. Its August 31 report date is verified; its posting date is undisclosed (PDF creation metadata is September 1, and public availability was first observed September 5). No structured latestReport publication date is asserted.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Brazilian federal government bonds",
-        "pct": 99.99,
+        "pct": 99.98,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Brazilian federal government securities are external reserve assets rather than tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
         "reserveName": "ETFs linked to Brazilian Treasury securities",
-        "pct": 0.01,
+        "pct": 0.02,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Brazilian Treasury-linked ETF shares are external reserve assets rather than tracked stablecoin dependencies."
       }

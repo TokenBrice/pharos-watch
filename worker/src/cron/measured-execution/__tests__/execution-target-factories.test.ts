@@ -147,6 +147,29 @@ describe("registered concentrated execution-target factories", () => {
     });
   });
 
+  it("joins an exact 5-pip V4 pool despite DL rounding its fee to 0.00%", () => {
+    const input = factoryInput("uniswap-v4", V4_POOL);
+    input.identity.pool.poolMeta = "0.00%";
+    const poolId = computeUniswapV4PoolId({
+      currency0: TOKEN0, currency1: TOKEN1, feePips: 5, tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    });
+    input.identity.pool.pool = poolId;
+    input.context.uniswapV4ExecutionCandidates = new Map([[
+      buildUniswapV4ExecutionCandidateKey("ethereum", [TOKEN0, TOKEN1], 5)!,
+      [{ chain: "ethereum", poolId, feePips: 5, tickSpacing: 1,
+        hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, activeLiquidity: "1000000",
+        tvlUsd: 1_000_000, token0Price: 1, token1Price: 1,
+        tokens: [{ address: TOKEN0, symbol: "USDC", decimals: 6 },
+          { address: TOKEN1, symbol: "USDT", decimals: 6 }],
+      }],
+    ]]);
+    expect(buildUniswapV4RegisteredExecutionTarget(input)?.measuredExecutionTarget)
+      .toMatchObject({ feePips: 5, poolId: `ethereum:${poolId}` });
+    input.identity.pool.pool = "unresolved-uuid";
+    expect(buildUniswapV4RegisteredExecutionTarget(input)?.measuredExecutionTarget).toBeUndefined();
+  });
+
   it("selects the exact hook-free V4 PoolKey and rejects a hooked identity", () => {
     const input = factoryInput("uniswap-v4", V4_POOL);
     const hookedPool = computeUniswapV4PoolId({
