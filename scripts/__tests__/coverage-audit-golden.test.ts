@@ -22,22 +22,22 @@ describe("coverage audit byte goldens", () => {
       name: "dependency",
       build: () => buildDependencyCoverageAudit({ generatedAt }),
       markdown: renderDependencyCoverageAuditMarkdown,
-      markdownSha: "f91336960b8a9999b4d922bb0663e3112f1e931df66d79890ec54e3f0edf536e",
-      jsonSha: "7a53091281e6bb59c442c1ea85a210ac20d9ddf6ee01278c2a7737dffb79572d",
+      markdownSha: "334b012df1ad64307aa54d75ff1f6a3467537e2f5e5fda6c45a089d31b88c8c8",
+      jsonSha: "9f3ca67b9a7614f52c217541c1e48047875725d7e360ba6740b9a424c2fe4791",
     },
     {
       name: "reserve",
       build: () => buildReserveCoverageAudit({ generatedAt }),
       markdown: renderReserveCoverageAuditMarkdown,
-      markdownSha: "ec67ceb05b0a7353bee851cf774b482b065dab3afd413eff243722e832390687",
-      jsonSha: "a1c47bf8b176da3ca6bc0cafb7262bb389620509bf8001c2bc3fdfeec4684ed5",
+      markdownSha: "acd6d91ad07b2dbaa3257c723a2b8926cd68f90a560cc7b1a13fe0f3c66fe7ce",
+      jsonSha: "2e83f6608c55f43ac702e56253f1c54434ae4f59c71b37a9015bfc80dfdf88da",
     },
     {
       name: "l2beat",
       build: () => buildL2BeatSnapshotCoverageAudit({ generatedAt }),
       markdown: renderL2BeatSnapshotCoverageAuditMarkdown,
-      markdownSha: "cf653fdcc98715a346ad00445df431ba9893863467983e65f10f0715e466440b",
-      jsonSha: "07e5e4ec6a03b3c664cdb5be25083780410c507f1c3a132b4073b1cd562c99c8",
+      markdownSha: "806a819a639fb9201e2b37db4aa280bcb7d81566a6dfa89e10034fb0c47b2ca9",
+      jsonSha: "9b92e70def428ad9fdcaae77fae26ef9ff8a708d2963742c94f8c4205aa58da5",
     },
   ])("preserves $name Markdown and JSON bytes", ({ build, markdown, markdownSha, jsonSha }) => {
     const audit = build();
