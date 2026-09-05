@@ -153,6 +153,8 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   lisk:           { name: "Lisk",            explorerUrl: "https://blockscout.lisk.com",                  evmChainId: 1135,     type: "evm",   logoPath: "/chains/lisk.png"           },
   assetchain:     { name: "Asset Chain",     explorerUrl: "https://scan.assetchain.org",                  evmChainId: 42420,    type: "evm",   logoPath: "/chains/assetchain.png"     },
   chiliz:         { name: "Chiliz Chain",    explorerUrl: "https://scan.chiliz.com",                      evmChainId: 88888,    type: "evm",   logoPath: "/chains/chiliz.png"         },
+  tac:            { name: "TAC",             explorerUrl: "https://explorer.tac.build",                    evmChainId: 239,      type: "evm",   logoPath: "/chains/tac.png"            },
+  gatelayer:      { name: "Gate Layer",      explorerUrl: "https://www.gatescan.org/gatelayer",             evmChainId: 10088,    type: "evm",   logoPath: "/chains/gatelayer.png"      },
 };
 
 /** Alias chains that share a display name. Map alias -> canonical key. */

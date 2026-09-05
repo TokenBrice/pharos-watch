@@ -48,6 +48,21 @@
       "chain": "plasma",
       "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
       "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",

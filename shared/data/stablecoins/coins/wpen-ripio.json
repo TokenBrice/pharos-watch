@@ -61,6 +61,16 @@
       "chain": "gnosis",
       "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
       "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

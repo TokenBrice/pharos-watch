@@ -70,9 +70,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Plasma is the only reviewed native syzUSD issuance route. Its CCIP LockReleaseTokenPool is cross-chain escrow and remains Bridge Risk rather than native Mint Authority. Ethereum and Monad are bridge representations with active Chainlink CCIP BurnMintTokenPool 1.6.1 routes: each pool is the local token's verified CCIP minter and burner, with the Yuzu owner controlling pool administration and rate limits, configured remote pools/tokens, and Chainlink routers. The historical LayerZero OVault architecture remains evidence only; current LayerZero peers read as zero. Bridge upgrade/admin and pool controls are explicitly scored here, with an external-validated-network tier.",
-    "reviewedAt": "2026-08-17",
-    "reviewer": "OpenAI Codex syzUSD bridge-boundary canonicality verification",
+    "summary": "Plasma is the only reviewed native syzUSD issuance route. Its CCIP LockReleaseTokenPool is cross-chain escrow and remains Bridge Risk rather than native Mint Authority. Ethereum, Monad, HyperEVM, Sei, Pharos, and Berachain are bridge representations with active Chainlink CCIP burn/mint routes: Ethereum, Monad, HyperEVM, Sei, and Pharos run BurnMintTokenPool 1.6.1 pools that are the local token's verified CCIP minter and burner, with the Yuzu owner controlling pool administration and rate limits; Berachain runs BurnMintTokenPool 1.5.1 over a FactoryBurnMintERC20 1.6.2 whose sole minter and burner is the pool, with the Yuzu EOA as token owner and CCIP admin. The canonical Plasma pool now carries six supported CCIP lanes, each mapping back to the canonical Plasma token. The dual-surface BridgeableTokenUpgradeable deployments on HyperEVM, Sei, and Pharos also expose LayerZero OFT machinery, but LayerZero peers read zero on HyperEVM and Sei, and Pharos holds only a one-sided peer to the issuer's Plasma contract 0x0cddd7515586550f16dec1732e0386109e1859e8 whose own peer mapping is empty, so LayerZero remains an exposed surface rather than a live rail; Bridge upgrade/admin and pool controls are explicitly scored here, with an external-validated-network tier.",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "OpenAI Codex syzUSD bridge-boundary canonicality verification; extended 2026-09-05 by Claude YuzuRailsCloseout (HyperEVM/Sei/Pharos/Berachain live RPC rail verification)",
     "confidence": "verified",
     "protocols": [
       {
@@ -107,7 +107,7 @@
           "burnAndMint",
           "lockAndRelease"
         ],
-        "note": "The current syzUSD representations use Chainlink CCIP BurnMintTokenPool 1.6.1 pools. At the 2026-08-17 observations, each pool was the live token CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder, with Yuzu-owned router, remote-pool, and rate-limit configuration verified; LayerZero peers remain zero."
+        "note": "The current syzUSD representations use Chainlink CCIP burn/mint token pools under the issuer-owned CCT standard: BurnMintTokenPool 1.6.1 on Ethereum, Monad, HyperEVM, Sei, and Pharos, and BurnMintTokenPool 1.5.1 over a FactoryBurnMintERC20 1.6.2 token on Berachain. At the 2026-08-17 and 2026-09-05 observations, each pool was the live token's CCIP minter and burner holder, with Yuzu-owned router, remote-pool, and rate-limit configuration verified; LayerZero peers read zero everywhere except a one-sided Pharos-to-Plasma peer whose Plasma-side counterparty holds no peers."
       }
     ],
     "sources": [
@@ -158,6 +158,14 @@
       {
         "label": "Chainlink CCIP Plasma directory",
         "url": "https://docs.chain.link/ccip/directory/mainnet/chain/plasma-mainnet"
+      },
+      {
+        "label": "Yuzu Chainlink CCIP (Transporter Bridge) — syzUSD Token Manager lanes",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/chainlink-ccip-transporter-bridge"
+      },
+      {
+        "label": "Yuzu LayerZero OFT bridge page (DVN configuration, Plasma-Ethereum/Monad/HyperEVM pathways)",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/layerzero-oft-bridge"
       }
     ],
     "routes": [
@@ -288,6 +296,195 @@
           {
             "label": "Monad syzUSD CCIP pool",
             "url": "https://monadscan.com/address/0x012247950ee154dc26d4514b84b3b60336c55ea5"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x34c07f50c4f55b322e85deeb265d278e6af112e4",
+        "sourceChain": "plasma",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x34c07f50c4f55b322e85deeb265d278e6af112e4",
+        "protocol": "Yuzu syzUSD BridgeableTokenUpgradeable representation (Chainlink CCIP CCT with unwired LayerZero OFT surfaces)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At HyperEVM block 45076319 on 2026-09-05, the syzUSD proxy resolves to implementation 0xf8dd5939a0d31c96f1a7f5c0799a5c5d15af7c94, the dual-surface BridgeableTokenUpgradeable contract whose 15,693-byte bytecode carries both LayerZero OFT functions (lzReceive, setPeer, peers, enforcedOptions, endpoint) and OpenZeppelin grantRole machinery; HyperEVMScan shows public tag 'Yuzu: syzUSD Token', historical Set Peer transactions at blocks 33049961 and 39366601, and CCIP role grants at blocks 38838026 and 38838074 by owner 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. Live peers(uint32) reads across EIDs 30100-30400 (including Plasma 30383, Ethereum 30101, Monad 30390) all return zero, so the LayerZero surface is exposed but carries no live peers today; the issuer's current documented transport is Chainlink CCIP, whose security-infrastructure page lists the syzUSD Token Manager lanes 'Plasma <> Monad / Ethereum / HyperEVM / Sei / Pharos' while the LayerZero page documents a Plasma-HyperEVM DVN configuration only. On the CCIP side, TokenAdminRegistry 0xce44363496abc3a9e53b3f404a740f992d977bdf maps this token to BurnMintTokenPool 0xd32ab76a165f1a716986ba8c58344e3df4397f5e (typeAndVersion 1.6.1) whose getToken() returns this token, getRouter() returns 0x13b3332b66389b1467ca6ebd6fa79775ccef65ec matching the Chainlink CCIP HyperEVM directory, owner() and getRateLimitAdmin() return the Yuzu EOA, getSupportedChains() returns only the Plasma selector 9335212494177455608, getRemoteToken(Plasma) returns canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and inbound (capacity 3,300,000 syzUSD, refill 38.19444 syzUSD/s) and outbound (capacity 3,000,000 syzUSD, refill 34.72222 syzUSD/s) rate limits are enabled. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE on the token and the token's default admin role is held by the Yuzu EOA; total supply read 0.21 syzUSD. This is a CCIP burn/mint representation, not a native issuance deployment, and the LayerZero OFT surface is recorded as machinery only, not a verified live rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "protocol:layerzero",
+          "contract:hyperevm:0x34c07f50c4f55b322e85deeb265d278e6af112e4",
+          "contract:hyperevm:0xd32ab76a165f1a716986ba8c58344e3df4397f5e",
+          "proxy-admin:hyperevm:0xeff7f07420365829b00ec4484113a2d9b20c1217",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 45076319,
+        "sources": [
+          {
+            "label": "Yuzu Chainlink CCIP (Transporter Bridge) page",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/chainlink-ccip-transporter-bridge"
+          },
+          {
+            "label": "Yuzu key addresses (HyperEVM syzUSD)",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses"
+          },
+          {
+            "label": "syzUSD HyperEVM token on HyperEVMScan",
+            "url": "https://hyperevmscan.io/token/0x34C07f50c4f55B322E85DEeb265d278E6af112E4"
+          },
+          {
+            "label": "Hyperliquid (HyperEVM) public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "Chainlink CCIP HyperEVM directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/hyperliquid-mainnet"
+          }
+        ]
+      },
+      {
+        "id": "sei:0xb98b14d316d13f012d52f30a3d46641092ac6944",
+        "sourceChain": "plasma",
+        "destinationChain": "sei",
+        "canonicalChain": "plasma",
+        "contractAddress": "0xb98b14d316d13f012d52f30a3d46641092ac6944",
+        "protocol": "Yuzu syzUSD bridgeable representation with Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Sei block 230302908 on 2026-09-05, the syzUSD proxy resolves to implementation 0x78b57cc8dacd63c16290f136c60b403163b8d89e with EIP-1967 admin 0xd25d45c640e25f90d3ab70f69856f5494e9415cd. The implementation is unverified on the Sei explorer, but its runtime bytecode is byte-length identical (15,693 bytes) and selector-identical to the verified HyperEVM BridgeableTokenUpgradeable implementation, including the LayerZero OFT dispatch (lzReceive, setPeer, peers, enforcedOptions, endpoint) and grantRole machinery; live peers(uint32) reads for EIDs 30101, 30367, 30383, and 30390 all return zero, so no LayerZero lane is wired. The issuer's security-infrastructure CCIP page lists Sei on the syzUSD Token Manager lanes 'Plasma <> Monad / Ethereum / HyperEVM / Sei / Pharos'. TokenAdminRegistry 0x910a46ca93e8086bf1d7d65190ee6aee5256bd61 maps this token to BurnMintTokenPool 0xd748f51fb5645b75c2dbd5713b3e8f2259c33771 (typeAndVersion 1.6.1) whose getToken() returns this token, getRouter() returns 0xaba60da7e88f7e8f5868c2b6de06cb759d693af0 matching the Chainlink CCIP Sei directory, owner() and getRateLimitAdmin() return the Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getSupportedChains() returns only the Plasma selector 9335212494177455608, getRemoteToken(Plasma) returns canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and inbound (capacity 3,300,000 syzUSD, refill 38.19444 syzUSD/s) and outbound (capacity 3,000,000 syzUSD, refill 34.72222 syzUSD/s) rate limits are enabled. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE on the token, the token's default admin role is held by the Yuzu EOA, owner() returns the Yuzu EOA, decimals are 18, and total supply read 8,320,758.82 syzUSD. This is a CCIP burn/mint representation, not a native issuance deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sei:0xb98b14d316d13f012d52f30a3d46641092ac6944",
+          "contract:sei:0xd748f51fb5645b75c2dbd5713b3e8f2259c33771",
+          "proxy-admin:sei:0xd25d45c640e25f90d3ab70f69856f5494e9415cd",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 230302908,
+        "sources": [
+          {
+            "label": "Yuzu Chainlink CCIP (Transporter Bridge) page",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/chainlink-ccip-transporter-bridge"
+          },
+          {
+            "label": "Yuzu key addresses (SeiEVM syzUSD)",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses"
+          },
+          {
+            "label": "Sei public RPC",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Chainlink CCIP Sei directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/sei-mainnet"
+          },
+          {
+            "label": "syzUSD Sei token on Seitrace",
+            "url": "https://seitrace.com/token/0xb98b14d316d13f012d52f30a3d46641092ac6944"
+          }
+        ]
+      },
+      {
+        "id": "pharos:0x54df79d8edf36d15cd83fbedbdd90807fc828934",
+        "sourceChain": "plasma",
+        "destinationChain": "pharos",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x54df79d8edf36d15cd83fbedbdd90807fc828934",
+        "protocol": "Yuzu syzUSD bridgeable representation with Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Pharos block 16770324 on 2026-09-05, the syzUSD proxy resolves to implementation 0x7cc8c6fb97139dc884342561ad5d6d671bb0e0fa with EIP-1967 admin 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38, the Yuzu deployer EOA that also owns the Ethereum syzUSD ProxyAdmin. The implementation is unverified on the Pharos explorer, but its runtime bytecode is byte-length identical (15,693 bytes) and selector-identical to the verified HyperEVM BridgeableTokenUpgradeable implementation, including the LayerZero OFT dispatch and grantRole machinery. Unlike HyperEVM and Sei, the LayerZero surface here holds one configured peer: peers(uint32) for Plasma EID 30383 returns 0x0cddd7515586550f16dec1732e0386109e1859e8, the issuer-key-addresses-listed Plasma-side contract (owner() is the Yuzu EOA, no ERC-20 surface); that contract's own peers(uint32) reads return zero across EIDs 30100-30400, so the LayerZero lane is one-sided and not live. The issuer's security-infrastructure CCIP page lists Pharos on the syzUSD Token Manager lanes 'Plasma <> Monad / Ethereum / HyperEVM / Sei / Pharos'. TokenAdminRegistry 0xb79791184973589c38e114d43eb8e4588c283a18 maps this token to BurnMintTokenPool 0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec (typeAndVersion 1.6.1) whose getToken() returns this token, getRouter() returns 0x4e52dd94e9bcfefe3c78153bdfb0ab1d30687297 matching the Chainlink CCIP Pharos directory, owner() and getRateLimitAdmin() return the Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getSupportedChains() returns only the Plasma selector 9335212494177455608, getRemoteToken(Plasma) returns canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and inbound (capacity 3,300,000 syzUSD, refill 38.19444 syzUSD/s) and outbound (capacity 3,000,000 syzUSD, refill 34.72222 syzUSD/s) rate limits are enabled. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE on the token, the token's default admin role is held by the Yuzu EOA, decimals are 18, and total supply read 3,356,487.02 syzUSD. This is a CCIP burn/mint representation, not a native issuance deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "protocol:layerzero",
+          "contract:pharos:0x54df79d8edf36d15cd83fbedbdd90807fc828934",
+          "contract:pharos:0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec",
+          "contract:plasma:0x0cddd7515586550f16dec1732e0386109e1859e8",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 16770324,
+        "sources": [
+          {
+            "label": "Yuzu Chainlink CCIP (Transporter Bridge) page",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/chainlink-ccip-transporter-bridge"
+          },
+          {
+            "label": "Yuzu key addresses (Pharos syzUSD)",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses"
+          },
+          {
+            "label": "Pharos public RPC",
+            "url": "https://pharos.drpc.org"
+          },
+          {
+            "label": "Chainlink CCIP Pharos directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/pharos-mainnet"
+          },
+          {
+            "label": "syzUSD Pharos token on Pharosscan",
+            "url": "https://www.pharosscan.xyz/token/0x54df79d8edf36d15cd83fbedbdd90807fc828934"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60",
+        "sourceChain": "plasma",
+        "destinationChain": "berachain",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60",
+        "protocol": "Yuzu syzUSD FactoryBurnMintERC20 representation with Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Berachain block 25789509 on 2026-09-05, this syzUSD deployment is a direct non-proxy contract (8,899-byte runtime code, zero EIP-1967 implementation and admin storage) whose typeAndVersion() returns 'FactoryBurnMintERC20 1.6.2'; a bytecode dispatch scan resolved the Chainlink BurnMintERC677 function surface (grantMintRole/grantBurnRole/grantMintAndBurnRoles, getMinters, getBurners, isMinter, isBurner, getCCIPAdmin, mint, burn, burnFrom, maxSupply) with no LayerZero selectors present. getMinters() and getBurners() each return exactly the CCIP pool 0xe8a5517adedaebe99eb27633b95d412f81e5cff7, isMinter(pool) and isBurner(pool) both return true, getCCIPAdmin() and owner() return the Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and total supply read 129,781.69 syzUSD at 18 decimals, so the lane carries live supply. TokenAdminRegistry 0x0944c3fb1db7d165336569221995b31cbe6c8a55 maps the token to this BurnMintTokenPool 1.5.1 whose getToken() returns the token, getRouter() returns 0x71a275704c283486fba26dad3dd0db78804426ef matching the Chainlink CCIP Berachain directory, owner() returns the Yuzu EOA while getRateLimitAdmin() returns the zero address (1.5.1 pool; rate-limit administration unset, owner retains reconfiguration), getSupportedChains() returns only the Plasma selector 9335212494177455608, getRemoteToken(Plasma) returns canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and inbound (capacity 3,300,000 syzUSD, refill 38.19444 syzUSD/s) and outbound (capacity 3,000,000 syzUSD, refill 34.72222 syzUSD/s) rate limits are enabled. The issuer key-addresses page lists this token on Berachain chainID 80094, while the CCIP page's Token Manager lane list stops at Pharos; the on-chain TokenAdminRegistry registration, the canonical Plasma LockReleaseTokenPool's supportedChains() now including the Berachain selector 1294465214383781161 with getRemoteToken() mapping to this address, and the live bridged supply establish the CCIP rail regardless of that documentation lag. This is a CCIP burn/mint representation, not a native issuance deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60",
+          "contract:berachain:0xe8a5517adedaebe99eb27633b95d412f81e5cff7",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 25789509,
+        "sources": [
+          {
+            "label": "Yuzu key addresses (Berachain syzUSD)",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses"
+          },
+          {
+            "label": "Berachain public RPC",
+            "url": "https://rpc.berachain.com"
+          },
+          {
+            "label": "Chainlink CCIP Berachain directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/berachain-mainnet"
+          },
+          {
+            "label": "syzUSD Berachain token on Berascan",
+            "url": "https://berascan.com/token/0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60"
+          },
+          {
+            "label": "Plasma public RPC (canonical pool lane reads)",
+            "url": "https://rpc.plasma.to"
           }
         ]
       }
@@ -438,6 +635,202 @@
           }
         ],
         "evidence": "At Monad block 96717731 on 2026-08-17, TokenAdminRegistry 0x11acd984dd680363117b310f6ebdf78fd6c0195f mapped syzUSD 0x484be0540ad49f351eaa04eeb35df0f937d4e73f to BurnMintTokenPool 0x012247950ee154dc26d4514b84b3b60336c55ea5. The pool returned getToken() = this token, typeAndVersion BurnMintTokenPool 1.6.1, getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb, owner()/getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and hasRole(CCIP_MINTER_ROLE/BURNER_ROLE, pool) = true."
+      },
+      {
+        "id": "syzusd-hyperevm-ccip-burn-mint-pool",
+        "label": "syzUSD HyperEVM CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "hyperevm:0x34c07f50c4f55b322e85deeb265d278e6af112e4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xd32ab76a165f1a716986ba8c58344e3df4397f5e",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:hyperevm:0xd32ab76a165f1a716986ba8c58344e3df4397f5e",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:hyperevm:0x13b3332b66389b1467ca6ebd6fa79775ccef65ec",
+          "rmn:hyperevm:0x07f15e9813fbd007d38cf534133c0838f449ecfa"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool 1.6.1 is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At HyperEVM block 45076319, the pool had one supported Plasma route (selector 9335212494177455608) with remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and the canonical Plasma LockReleaseTokenPool's supportedChains() now includes the HyperEVM selector 2442541497099098535 with getRemoteToken() mapping back to this chain's token.",
+          "rateLimits": "At HyperEVM block 45076319, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool is the token's CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder; the token's default admin role is held by the same EOA, and the token proxy's EIP-1967 admin is 0xeff7f07420365829b00ec4484113a2d9b20c1217. The token implementation additionally exposes LayerZero OFT functions, but peers read zero across EIDs 30100-30400, so no LayerZero lane is live."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner can reconfigure the pool, raise or reconfigure those limits, or rewire the dormant LayerZero surface by setting peers.",
+        "canRaiseCap": true,
+        "observedAt": "2026-09-05",
+        "observedBlock": 45076319,
+        "sources": [
+          {
+            "label": "HyperEVM syzUSD CCIP pool on HyperEVMScan",
+            "url": "https://hyperevmscan.io/address/0xD32ab76a165f1a716986bA8c58344E3df4397F5e"
+          },
+          {
+            "label": "Chainlink CCIP HyperEVM directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/hyperliquid-mainnet"
+          },
+          {
+            "label": "Hyperliquid (HyperEVM) public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "At HyperEVM block 45076319 on 2026-09-05, TokenAdminRegistry 0xce44363496abc3a9e53b3f404a740f992d977bdf mapped syzUSD 0x34c07f50c4f55b322e85deeb265d278e6af112e4 to BurnMintTokenPool 0xd32ab76a165f1a716986ba8c58344e3df4397f5e. The pool returned getToken() = this token, typeAndVersion BurnMintTokenPool 1.6.1, getRouter() = 0x13b3332b66389b1467ca6ebd6fa79775ccef65ec, owner()/getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and hasRole(CCIP_MINTER_ROLE/CCIP_BURNER_ROLE, pool) = true."
+      },
+      {
+        "id": "syzusd-sei-ccip-burn-mint-pool",
+        "label": "syzUSD Sei CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "sei:0xb98b14d316d13f012d52f30a3d46641092ac6944"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "sei",
+        "controllerAddress": "0xd748f51fb5645b75c2dbd5713b3e8f2259c33771",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sei:0xd748f51fb5645b75c2dbd5713b3e8f2259c33771",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:sei:0xaba60da7e88f7e8f5868c2b6de06cb759d693af0",
+          "rmn:sei:0x32c67585da17839245c75d80d36c8cbd7d35e1a5"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool 1.6.1 is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At Sei block 230302908, the pool had one supported Plasma route (selector 9335212494177455608) with remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and the canonical Plasma LockReleaseTokenPool's supportedChains() now includes the Sei selector 9027416829622342829 with getRemoteToken() mapping back to this chain's token.",
+          "rateLimits": "At Sei block 230302908, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool is the token's CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder; the token's default admin role is held by the same EOA, and the token proxy's EIP-1967 admin is 0xd25d45c640e25f90d3ab70f69856f5494e9415cd. The unverified implementation matches the dual-surface BridgeableTokenUpgradeable bytecode, but LayerZero peers read zero for EIDs 30101, 30367, 30383, and 30390."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner can reconfigure the pool or raise or reconfigure those limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-09-05",
+        "observedBlock": 230302908,
+        "sources": [
+          {
+            "label": "Sei syzUSD CCIP pool on Seitrace",
+            "url": "https://seitrace.com/address/0xD748F51Fb5645B75C2DBD5713b3E8f2259c33771"
+          },
+          {
+            "label": "Chainlink CCIP Sei directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/sei-mainnet"
+          },
+          {
+            "label": "Sei public RPC",
+            "url": "https://evm-rpc.sei-apis.com"
+          }
+        ],
+        "evidence": "At Sei block 230302908 on 2026-09-05, TokenAdminRegistry 0x910a46ca93e8086bf1d7d65190ee6aee5256bd61 mapped syzUSD 0xb98b14d316d13f012d52f30a3d46641092ac6944 to BurnMintTokenPool 0xd748f51fb5645b75c2dbd5713b3e8f2259c33771. The pool returned getToken() = this token, typeAndVersion BurnMintTokenPool 1.6.1, getRouter() = 0xaba60da7e88f7e8f5868c2b6de06cb759d693af0, owner()/getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and hasRole(CCIP_MINTER_ROLE/CCIP_BURNER_ROLE, pool) = true."
+      },
+      {
+        "id": "syzusd-pharos-ccip-burn-mint-pool",
+        "label": "syzUSD Pharos CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "pharos:0x54df79d8edf36d15cd83fbedbdd90807fc828934"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:pharos:0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:pharos:0x4e52dd94e9bcfefe3c78153bdfb0ab1d30687297",
+          "rmn:pharos:0xf4486d70ebed800204898ec99c812661551471dc"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool 1.6.1 is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At Pharos block 16770324, the pool had one supported Plasma route (selector 9335212494177455608) with remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and the canonical Plasma LockReleaseTokenPool's supportedChains() now includes the Pharos selector 7801139999541420232 with getRemoteToken() mapping back to this chain's token.",
+          "rateLimits": "At Pharos block 16770324, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool is the token's CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder; the token's default admin role is held by the same EOA, and the token proxy's EIP-1967 admin is 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38 (the Yuzu deployer EOA that also owns the Ethereum ProxyAdmin). The unverified implementation matches the dual-surface BridgeableTokenUpgradeable bytecode; its LayerZero surface holds one configured peer, peers(30383) = 0x0cddd7515586550f16dec1732e0386109e1859e8 on Plasma, but that Plasma-side contract's own peers read zero across EIDs 30100-30400, so no LayerZero lane is live."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner can reconfigure the pool, raise or reconfigure those limits, or complete the one-sided LayerZero peer into a live rail.",
+        "canRaiseCap": true,
+        "observedAt": "2026-09-05",
+        "observedBlock": 16770324,
+        "sources": [
+          {
+            "label": "Pharos syzUSD CCIP pool on Pharosscan",
+            "url": "https://www.pharosscan.xyz/address/0x00A495d9ABc6587E06a6A5b1401eB7C20a66D1eC"
+          },
+          {
+            "label": "Chainlink CCIP Pharos directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/pharos-mainnet"
+          },
+          {
+            "label": "Pharos public RPC",
+            "url": "https://pharos.drpc.org"
+          }
+        ],
+        "evidence": "At Pharos block 16770324 on 2026-09-05, TokenAdminRegistry 0xb79791184973589c38e114d43eb8e4588c283a18 mapped syzUSD 0x54df79d8edf36d15cd83fbedbdd90807fc828934 to BurnMintTokenPool 0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec. The pool returned getToken() = this token, typeAndVersion BurnMintTokenPool 1.6.1, getRouter() = 0x4e52dd94e9bcfefe3c78153bdfb0ab1d30687297, owner()/getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and hasRole(CCIP_MINTER_ROLE/CCIP_BURNER_ROLE, pool) = true."
+      },
+      {
+        "id": "syzusd-berachain-ccip-burn-mint-pool",
+        "label": "syzUSD Berachain CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "berachain:0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0xe8a5517adedaebe99eb27633b95d412f81e5cff7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0xe8a5517adedaebe99eb27633b95d412f81e5cff7",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:berachain:0x71a275704c283486fba26dad3dd0db78804426ef",
+          "rmn:berachain:0x25943b8c30c47f4ef09ccf2bae315ebaf591881d"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool 1.5.1 is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At Berachain block 25789509, the pool had one supported Plasma route (selector 9335212494177455608) with remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and the canonical Plasma LockReleaseTokenPool's supportedChains() now includes the Berachain selector 1294465214383781161 with getRemoteToken() mapping back to this chain's token.",
+          "rateLimits": "At Berachain block 25789509, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned the zero address while owner() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, so limit administration rests with the pool owner.",
+          "pausersAdminsUpgraders": "The pool owner is Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The FactoryBurnMintERC20 1.6.2 token is a direct non-proxy deployment whose getMinters() and getBurners() each return exactly this pool, with isMinter(pool) = isBurner(pool) = true; the token's owner() and getCCIPAdmin() both return the same Yuzu EOA, and no LayerZero surface exists in the token bytecode."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner (pool owner, token owner, and CCIP admin) can reconfigure the pool, grant additional minters or burners on the token, or raise or reconfigure those limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-09-05",
+        "observedBlock": 25789509,
+        "sources": [
+          {
+            "label": "Berachain syzUSD CCIP pool on Berascan",
+            "url": "https://berascan.com/address/0xE8A5517adEdAebe99Eb27633b95d412F81E5Cff7"
+          },
+          {
+            "label": "Chainlink CCIP Berachain directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/berachain-mainnet"
+          },
+          {
+            "label": "Berachain public RPC",
+            "url": "https://rpc.berachain.com"
+          }
+        ],
+        "evidence": "At Berachain block 25789509 on 2026-09-05, TokenAdminRegistry 0x0944c3fb1db7d165336569221995b31cbe6c8a55 mapped syzUSD 0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60 to BurnMintTokenPool 0xe8a5517adedaebe99eb27633b95d412f81e5cff7 (typeAndVersion 1.5.1). The pool returned getToken() = this token, getRouter() = 0x71a275704c283486fba26dad3dd0db78804426ef, and owner() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The FactoryBurnMintERC20 1.6.2 token returned getMinters() = getBurners() = [this pool], isMinter(pool) = isBurner(pool) = true, and getCCIPAdmin() = the Yuzu EOA. The issuer's CCIP page Token Manager table does not yet list the Berachain lane; the on-chain registry and canonical Plasma pool configuration establish it."
       },
       {
         "id": "syzusd-ethereum-proxy-admin-owner",

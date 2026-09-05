@@ -4,11 +4,11 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard). The nBASIS BoringVault token is directly deployed and non-upgradeable on Ethereum, Plume, and Plasma.",
+    "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard) on Ethereum, and fresh 2026-09-05 reads show the same ownership on BSC. The nBASIS BoringVault token is directly deployed and non-upgradeable on Ethereum, Plume, Plasma, and BSC; on BSC it carries the issuer's 18-decimal configuration, the same VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 owner (172,800-second minimum delay; the Safe holds proposer and canceller roles on it), and a local BNB USDT NestVault 0xf388e7dc2b8e264b9b4149f3981aa5208bd5f3c3 also owned by the VfiTimelock. The BSC Safe's modules state could not be read this pass, so no BSC Safe control row is authored.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-21",
+      "observedAt": "2026-09-05",
       "observedBlock": 25580348,
       "sources": [
         {
@@ -22,7 +22,17 @@
         {
           "label": "Plasma nBASIS contract at block 27687550",
           "url": "https://plasma-explorer.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        },
+        {
+          "label": "BSC nBASIS direct deployment (EIP-1967 slots zero, block 120070151)",
+          "url": "https://bscscan.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
         }
+      ],
+      "deploymentRefs": [
+        "ethereum:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "plume:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "plasma:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "bsc:0x11113ff3a60c2450f4b22515cb760417259ee94b"
       ]
     },
     "controls": [
@@ -104,15 +114,67 @@
           }
         ],
         "evidence": "At Ethereum block 25295023, getOwners() returned 6 addresses; getThreshold() = 3. modules() returned sentinel only (no modules). guard slot (0x4a204f...) = 0x00. masterCopy slot = 0xfb1bffc9d739b8d520daf37df666da4c687191ea (Safe v1.3.0 L1 mainnet)."
+      },
+      {
+        "label": "Nest Basis Vault Teller (issuance/redemption) — BSC",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b",
+        "deploymentRefs": [
+          "bsc:0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-05",
+        "observedBlock": 120073502,
+        "sources": [
+          {
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+          },
+          {
+            "label": "BNB Chain public JSON-RPC",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BSC block 120073502 on 2026-09-05, owner() on the nBASIS Teller 0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b (deployed at the same address as on Ethereum) returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. On BSC that Safe has threshold 3, six owners, the Safe v1.3.0 L1 singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea at slot 0, and a zero guard slot. Nest's registry lists this Teller with a local BNB USDT NestVault 0xf388e7dc2b8e264b9b4149f3981aa5208bd5f3c3 (chainId 56 USDT 0x55d398326f99059ff775485246999027b3197955) whose owner() is the VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 with getMinDelay() 172800 and the Safe holding PROPOSER_ROLE and CANCELLER_ROLE. A complete Safe modules read on BSC was not obtainable this pass, so no BSC Safe control row is authored."
+      },
+      {
+        "label": "Nest Basis Vault Manager (strategy/admin) — BSC",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0x17767f384cead5182cAaf9056635bAc14aFC24a1",
+        "deploymentRefs": [
+          "bsc:0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-05",
+        "observedBlock": 120073502,
+        "sources": [
+          {
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+          },
+          {
+            "label": "BNB Chain public JSON-RPC",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BSC block 120073502 on 2026-09-05, owner() on the nBASIS Manager 0x17767f384cead5182cAaf9056635bAc14aFC24a1 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the BSC nBASIS deployment 0x11113ff3a60c2450f4b22515cb760417259ee94b, tying the BSC Manager to the BSC share token."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. Upgrade follow-up on 2026-07-21: the nBASIS token at 0x11113ff3a60c2450f4b22515cb760417259ee94b is a directly deployed BoringVault contract, not a proxy. The EIP-1967 implementation, admin, and beacon slots were all zero on Ethereum block 25580348, Plume block 82434036, and Plasma block 27687550. The Ethereum bytecode-derived verified source/ABI has no upgradeTo or upgradeToAndCall entry point; administrative ownership and authority can change permissions and vault parameters but cannot replace the deployed mint-critical bytecode. Nest publishes issuer-operated hourly NAV and live vault composition, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe controls issuance authorization without an independent cap, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nBASIS liabilities across deployments. Wave 1 reconciliation review 2026-08-15: Nest's official live positions endpoint publishes nBASIS portfolio holdings and supplyByChain for the shared vault address, while the accountant price-update endpoint publishes the current hub/spoke share price; Nest's issuer-operated feed therefore continuously reconciles total nBASIS share liabilities (supplyByChain × current share price) to the vault portfolio, although no independent attestor or prudential supervisor is identified.",
-      "reviewer": "Claude Phase 0c continuation; OpenAI Codex upgrade-authority curation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. Upgrade follow-up on 2026-07-21: the nBASIS token at 0x11113ff3a60c2450f4b22515cb760417259ee94b is a directly deployed BoringVault contract, not a proxy. The EIP-1967 implementation, admin, and beacon slots were all zero on Ethereum block 25580348, Plume block 82434036, and Plasma block 27687550. The Ethereum bytecode-derived verified source/ABI has no upgradeTo or upgradeToAndCall entry point; administrative ownership and authority can change permissions and vault parameters but cannot replace the deployed mint-critical bytecode. Nest publishes issuer-operated hourly NAV and live vault composition, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe controls issuance authorization without an independent cap, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nBASIS liabilities across deployments. Wave 1 reconciliation review 2026-08-15: Nest's official live positions endpoint publishes nBASIS portfolio holdings and supplyByChain for the shared vault address, while the accountant price-update endpoint publishes the current hub/spoke share price; Nest's issuer-operated feed therefore continuously reconciles total nBASIS share liabilities (supplyByChain × current share price) to the vault portfolio, although no independent attestor or prudential supervisor is identified. U5 BSC closeout 2026-09-05: BSC native coverage added. At BSC block 120070151 the nBASIS token's EIP-1967 implementation slot read zero (direct non-proxy deployment, name 'Nest Basis', symbol nBASIS, decimals 18, totalSupply 34,278,548.523249) and owner() returned the VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062; at block 120073502 Teller and Manager owner() reads returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, Manager vault() returned the BSC token, the VfiTimelock returned a 172,800-second minimum delay with the Safe as proposer and canceller, and the BSC USDT NestVault 0xf388e7dc2b8e264b9b4149f3981aa5208bd5f3c3 owner() returned the VfiTimelock. The BSC Safe singleton (slot 0) is 0xfb1bffc9d739b8d520daf37df666da4c687191ea (v1.3.0 L1) with a zero guard slot, but getModulesPaginated reads on BSC reverted, so the BSC Safe's modules state is an explicit gap and no BSC Safe control row is authored; bridge-representation chains (World Chain, Solana) are out of mint-authority scope and no bridge-only controls were added.",
+      "reviewer": "Claude Phase 0c continuation; OpenAI Codex upgrade-authority curation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; U5 Nest rail closeout 2026-09-05",
+      "reviewedAt": "2026-09-05",
       "disposition": "scoreable",
       "sources": [
         {
@@ -142,6 +204,14 @@
         {
           "label": "Nest nBASIS accountant price-update API",
           "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
+        },
+        {
+          "label": "BNB Chain public JSON-RPC",
+          "url": "https://bsc-dataseed.binance.org"
+        },
+        {
+          "label": "Nest current vault registry API",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
         }
       ]
     }

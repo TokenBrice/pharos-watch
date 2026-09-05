@@ -39,6 +39,11 @@
       "chain": "ethereum",
       "address": "0xaf6186b3521b60e27396b5d23b48abc34bf585c5",
       "decimals": 6
+    },
+    {
+      "chain": "gatelayer",
+      "address": "0xece3f96198a5e6b9b2278edbea8d548f66050d1c",
+      "decimals": 6
     }
   ],
   "custodyModel": "cex",
@@ -57,11 +62,6 @@
       "type": "info",
       "title": "Jurisdictional access restriction",
       "message": "Gate states that users in the UK and other restricted regions cannot access the GUSD Flexible US Treasury product. GUSD redemption is available only to Gate account holders in permitted jurisdictions."
-    },
-    {
-      "type": "info",
-      "title": "Additional GateLayer representation",
-      "message": "Gate also operates GUSD on GateLayer at 0xece3f96198a5e6b9b2278edbea8d548f66050d1c. Pharos currently tracks contract telemetry only for the Ethereum deployment."
     }
   ],
   "liveReservesConfig": {

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "mRe7YIELD is issuer-native on Ethereum and Etherlink: the remaining controls are one shared direct-minter EOA and deposit-vault minters, plus chain-local admin Safes and an admin EOA. The tracked Starknet address is a canonical StarkGate lock-mint representation of the Ethereum token and is excluded from Mint Authority. Both native EVM proxy paths use two-day timelocks; the native issuance posture remains unbounded and periodically reconciled.",
+    "summary": "mRe7YIELD is issuer-native on Ethereum, Etherlink, and TAC. The direct-minter EOA and deposit-vault paths are reviewed on all three; chain-local admin and upgrade reviews below remain scoped to Ethereum and Etherlink, whose proxy paths use two-day timelocks. Fresh TAC mint-role reads do not extend that delay claim to TAC. The tracked Starknet address is a canonical StarkGate lock-mint representation and is excluded from Mint Authority. Native issuance remains unbounded and periodically reconciled.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -49,6 +49,66 @@
       ]
     },
     "controls": [
+      {
+        "chain": "tac",
+        "label": "mRe7YIELD TAC mint operator EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "Verified mToken mint(address,uint256) is gated by M_RE7_MINT_OPERATOR_ROLE without a token-level supply cap.",
+        "address": "0xb755ff07fd80b38265ae35639568cfcdc874f21d",
+        "deploymentRefs": [
+          "tac:0x0a72ed3c34352ab2dd912b30f2252638c873d6f0"
+        ],
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "tac:0xb755ff07fd80b38265ae35639568cfcdc874f21d"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 24815585,
+        "sources": [
+          {
+            "label": "TAC MidasAccessControl",
+            "url": "https://explorer.tac.build/address/0x2365d68d462e9a5660a3208f817519334a706a45"
+          },
+          {
+            "label": "TAC mRe7YIELD verified implementation",
+            "url": "https://explorer.tac.build/address/0x351530967dc76f398e91c20e050d3d11ea96d663"
+          }
+        ],
+        "evidence": "Pinned hasRole(M_RE7_MINT_OPERATOR_ROLE, address) returned true at TAC block 24815585. The explorer identifies this address as a non-contract account. This is the same operator address already reviewed on Ethereum and Etherlink, but the TAC role was checked independently."
+      },
+      {
+        "chain": "tac",
+        "label": "mRe7YIELD TAC deposit-vault minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "The chain-local deposit vault holds the token's uncapped mint-operator role; no claim is made about vault-level deposit limits.",
+        "address": "0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69",
+        "deploymentRefs": [
+          "tac:0x0a72ed3c34352ab2dd912b30f2252638c873d6f0"
+        ],
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "tac:0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69"
+        ],
+        "observedAt": "2026-09-05",
+        "observedBlock": 24815585,
+        "sources": [
+          {
+            "label": "TAC MRe7DepositVault proxy and implementation",
+            "url": "https://explorer.tac.build/address/0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69"
+          },
+          {
+            "label": "TAC MidasAccessControl",
+            "url": "https://explorer.tac.build/address/0x2365d68d462e9a5660a3208f817519334a706a45"
+          }
+        ],
+        "evidence": "Pinned hasRole(M_RE7_MINT_OPERATOR_ROLE, vault) returned true at TAC block 24815585. The explorer resolves the proxy to verified MRe7DepositVault implementation 0xfcfd8ac397dfbcfa02a6fa830c156b2a6ce7f884. The new deployment's vault administration and upgrade delay are not inferred from the Ethereum or Etherlink reviews."
+      },
       {
         "chain": "ethereum",
         "label": "mRe7YIELD Ethereum and Etherlink mint operator EOA",

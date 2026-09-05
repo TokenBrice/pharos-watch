@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nOPAL has three reviewed independent native-issuance routes on Ethereum, Plume, and BSC. Nest's current registry and fixed-block supply reads establish three live native liability surfaces; the Plume and BSC rows retain Ethereum as the issuer's primary reference but are canonical native issuance, not peripheral bridge representations. Nest's current registry and nOPAL integration guide also identify a Solana LayerZero OFT route via OFT store FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq; its Solana mint and route are authored below. Additional Plasma, World Chain, and Avalanche deployments are not authored because their route mechanics remain unsourced.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); FIX2-09 Mint/Bridge boundary migration 2026-08-16",
+    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma; the Plume, BSC, and Plasma rows retain Ethereum as the issuer's primary reference but are canonical native issuance, not peripheral bridge representations. Nest's current registry and nOPAL integration guide identify a Solana LayerZero OFT route via OFT store FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq, authored below alongside two further LayerZero OFT representations established by fresh on-chain reads on 2026-09-05: the World Chain NestShareOFT proxy and the Avalanche deployment whose implementation bytecode is byte-identical to the verified World Chain NestShareOFT implementation apart from the per-chain LayerZero endpoint constant. The Plasma native deployment is live per the issuer registry but dormant, with zero supply at the reviewed block. LayerZero peer wiring and upgrade controls on the OFT representations were not verified.",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); FIX2-09 Mint/Bridge boundary migration 2026-08-16; U5 Nest rail closeout 2026-09-05",
     "confidence": "verified",
     "sources": [
       {
@@ -126,6 +126,96 @@
           },
           {
             "label": "Nest current nOPAL vault registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "plasma",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native nOPAL issuance on Plasma, not a bridge representation. At Plasma block 31652535 on 2026-09-05, name() was 'Nest BlackOpal LiquidStone II Vault', symbol() nOPAL, decimals() 6, totalSupply() 0, and owner() is the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, the same owner as the Ethereum, Plume, and BSC deployments. The contract is a direct non-proxy deployment whose runtime bytecode is byte-for-byte the Ethereum nOPAL share contract except chain-specific immutables around the chain-id constant, and it contains no LayerZero endpoint, lzReceive, or peer surfaces. The deployment is live per Nest's registry (plasma startBlock 4904024) but dormant, with zero supply at the reviewed block.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 31652535,
+        "sources": [
+          {
+            "label": "Nest current vault registry (plasma chain entry, startBlock 4904024)",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Plasma RPC read (name, symbol, decimals, totalSupply, owner, bytecode comparison)",
+            "url": "https://rpc.plasma.to"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "LayerZero OFT (NestShareOFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT representation on World Chain. At World Chain block 34628731 on 2026-09-05, name() was 'Nest BlackOpal LiquidStone II Vault', symbol() nOPAL, decimals() 6, totalSupply() 11.380243, and owner() is the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. The EIP-1967 implementation slot resolves to 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb, verified on the World Chain explorer as 'NestShareOFT' behind a TransparentUpgradeableProxy; its runtime bytecode is byte-identical to the nBASIS World Chain NestShareOFT implementation 0x0c136b12a59ff92b9254323bfd01d558de36a10a. LayerZero peer wiring and upgrade controls were not verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "canonicalChain": "ethereum",
+        "observedBlock": 34628731,
+        "sources": [
+          {
+            "label": "World Chain explorer address record (verified NestShareOFT implementation)",
+            "url": "https://worldchain-mainnet.explorer.alchemy.com/api/v2/addresses/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+          },
+          {
+            "label": "Nest current vault registry (worldchain chain entry, startBlock 27563362)",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "LayerZero OFT (NestShareOFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT representation on Avalanche. At Avalanche block 94511666 on 2026-09-05, name() was 'Nest BlackOpal LiquidStone II Vault', symbol() nOPAL, decimals() 6, totalSupply() 4,638,457.374315, and owner() is the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. The EIP-1967 implementation slot resolves to 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34, unverified on Snowscan; its runtime bytecode is byte-identical to the verified World Chain NestShareOFT implementation except the per-chain LayerZero EndpointV2 immutable (Avalanche endpoint 0x1a44076050125825900e736c501f859c50fe728c appearing eight times) plus one trailing metadata constant, and it carries the lzReceive dispatch and the peers-mapping slot. The rail is proven by bytecode identity; LayerZero peer wiring and upgrade controls were not verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "canonicalChain": "ethereum",
+        "observedBlock": 94511666,
+        "sources": [
+          {
+            "label": "nOPAL on Avalanche explorer",
+            "url": "https://snowscan.xyz/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+          },
+          {
+            "label": "Nest current vault registry (avalanche chain entry, startBlock 90379027)",
             "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
           },
           {

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WPEN has six reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Native Mint Authority retains the shared issuer EOA's direct MINTER_ROLE and UUPS UPGRADER_ROLE, the Ripio Safe's DEFAULT_ADMIN_ROLE, and the Ethereum-only LimitedMinter; the separate LimitedMinterBridge and BridgeDeposit cross-chain rail is assessed under Bridge Risk.",
+    "summary": "WPEN has reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, and since the 2026-09-05 closeout also Celo and HyperEVM. On the six original deployments Native Mint Authority retains the shared issuer EOA's direct MINTER_ROLE and UUPS UPGRADER_ROLE, the Ripio Safe's DEFAULT_ADMIN_ROLE, and the Ethereum-only LimitedMinter; on Celo and HyperEVM the 4-of-7 Ripio Safe itself holds MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE while the shared EOA held no token roles at the 2026-09-05 fixed reads, and both deployments are dormant (totalSupply 100 wPEN on Celo and 0 on HyperEVM). The separate LimitedMinterBridge and BridgeDeposit cross-chain rail is assessed under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -13,7 +13,9 @@
         "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "celo:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "hyperevm:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
       ],
       "proxyAddresses": [
         "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
@@ -22,7 +24,8 @@
         "0x9d6266a9167f17ff3dd20f63a474812d0cd47969"
       ],
       "adminAddresses": [
-        "0x466c02e2cc67b81a696af5afdb61605c41fe247b"
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Ripio shared WPEN admin and MINTER_ROLE holder (EOA)",
@@ -98,6 +101,80 @@
         "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
       },
       {
+        "chain": "celo",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "celo:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "label": "Ripio WPEN Safe multisig (Celo direct MINTER_ROLE and UPGRADER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 76693382,
+          "observedAt": "2026-09-05",
+          "source": "onchain"
+        },
+        "observedAt": "2026-09-05",
+        "observedBlock": 76693382,
+        "evidence": "In the 2026-09-05 read session (Celo blocks 76692485-76693382) WPEN hasRole reads returned true for this Safe on MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE and false for the shared issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b on all four roles, so the Safe is the observed direct minter and UUPS upgrader on this dormant deployment (totalSupply exactly 100 wPEN) with no timelock observed between it and either role. The proxy's slot-0 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 returned VERSION() 1.4.1 when called directly, getThreshold() returned 4, getOwners() returned the seven owners recorded for the tracked chains, the deprecated getModules() returned an empty array (getModulesPaginated reverted GS105 through the proxy), and the guard storage slot keyed by the Safe address read zero, so no module or guard was detected. LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 also holds MINTER_ROLE here; role-holder enumeration beyond the Safe, the issuer EOA, BridgeDeposit, and LimitedMinterBridge was not performed, and canRaiseCap is unknown."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "hyperevm:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "label": "Ripio WPEN Safe multisig (HyperEVM direct MINTER_ROLE and UPGRADER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 45076875,
+          "observedAt": "2026-09-05",
+          "source": "onchain"
+        },
+        "observedAt": "2026-09-05",
+        "observedBlock": 45076875,
+        "evidence": "In the 2026-09-05 read session (HyperEVM blocks 45075968-45076875) WPEN hasRole reads returned true for this Safe on MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE and false for the shared issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b on all four roles, so the Safe is the observed direct minter and UUPS upgrader on this fully dormant deployment (totalSupply exactly 0) with no timelock observed between it and either role. The proxy's slot-0 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 returned VERSION() 1.4.1 when called directly, getThreshold() returned 4, getOwners() returned the seven owners recorded for the tracked chains, the deprecated getModules() returned an empty array (getModulesPaginated reverted GS105 through the proxy), and the guard storage slot keyed by the Safe address read zero, so no module or guard was detected. Unlike every tracked deployment, neither BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 nor LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 (both deployed on HyperEVM) holds MINTER_ROLE here; role-holder enumeration beyond the Safe, the issuer EOA, and the two bridge contracts was not performed, and canRaiseCap is unknown."
+      },
+      {
         "chain": "multichain",
         "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
         "deploymentRefs": [
@@ -137,9 +214,9 @@
           "url": "https://www.ripio.com/en/wfiat"
         }
       ],
-      "evidence": "Native mint-capable role holders were verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain. On 2026-08-16 the six native deployments resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969; the issuer EOA 0x466c02e2...247b held DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on each deployment, the Ripio Safe held DEFAULT_ADMIN_ROLE, and the Ethereum-only LimitedMinter remained a local issuer minter. The cross-chain LimitedMinterBridge and BridgeDeposit burn/mint rail is intentionally excluded from this native assessment and is recorded under Bridge Risk. The issuer EOA can mint and upgrade without an independent delay, while no wPEN-specific recurring whole-supply attestation or prudential authorization is evidenced. Wave 2 external review 2026-08-15 retained reconciliation as unknown after Ripio's wFIAT, local-stablecoin, security/PoR, and whitepaper materials yielded no wPEN-specific assets-and-liabilities report covering all six deployments. Codex wave 1 review 2026-08-15: the current Ripio wFIAT releases page lists wPEN as a product and records its first mint and dashboard updates, but no dated wPEN reserve certification or recurring liability-to-reserve reconciliation; no prudential supervisor is named.",
-      "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Native mint-capable role holders were verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain. On 2026-08-16 the six native deployments resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969; the issuer EOA 0x466c02e2...247b held DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on each deployment, the Ripio Safe held DEFAULT_ADMIN_ROLE, and the Ethereum-only LimitedMinter remained a local issuer minter. The cross-chain LimitedMinterBridge and BridgeDeposit burn/mint rail is intentionally excluded from this native assessment and is recorded under Bridge Risk. The issuer EOA can mint and upgrade without an independent delay, while no wPEN-specific recurring whole-supply attestation or prudential authorization is evidenced. Wave 2 external review 2026-08-15 retained reconciliation as unknown after Ripio's wFIAT, local-stablecoin, security/PoR, and whitepaper materials yielded no wPEN-specific assets-and-liabilities report covering all six deployments. Codex wave 1 review 2026-08-15: the current Ripio wFIAT releases page lists wPEN as a product and records its first mint and dashboard updates, but no dated wPEN reserve certification or recurring liability-to-reserve reconciliation; no prudential supervisor is named. U5 closeout 2026-09-05 (RipioRailsCloseout): the Celo and HyperEVM native deployments were verified by fixed JSON-RPC reads (Celo blocks 76692485-76693382, HyperEVM blocks 45075968-45076875). Both proxies resolve the tracked implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969; on both chains the 4-of-7 Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 currently holds MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE (Safe v1.4.1, no modules, no guard at the same reads) while the shared issuer EOA holds none. Both deployments are dormant at the reads (totalSupply exactly 100 wPEN on Celo and 0 on HyperEVM against roughly 6,710,969 wPEN on ethereum); on Celo LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 also holds MINTER_ROLE, while on HyperEVM neither BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 nor LimitedMinterBridge holds it. The six-chain legacy role state is unchanged from the 2026-08-16 reads and was not re-audited.",
+      "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; RipioRailsCloseout U5 Celo/HyperEVM closeout 2026-09-05",
+      "reviewedAt": "2026-09-05"
     }
   }
 }
