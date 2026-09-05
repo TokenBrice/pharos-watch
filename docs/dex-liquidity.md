@@ -120,6 +120,9 @@ Shared source-specific helpers now own the duplicate discovery/liquidity normali
 - GeckoTerminal request construction, bounded pagination, pool parsing, and pool-type normalization: `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`
 - CoinGecko onchain parsing, fee-bucket classification, balance-ratio inference, and locked-liquidity parsing: `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`
 - CoinGecko tickers filtering, exchange aggregation, synthetic orderbook TVL, and price-observation gating: `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`
+- Direct EVM recovery queries, ERC-20 calls/decoding, and fixed-point conversion: `worker/src/cron/dex-liquidity/staged-pool-recovery.ts`; callers retain protocol validation, block/retry choices, and failure handling.
+
+GeckoTerminal and CoinGecko Onchain share the GT-shaped pool field projection. Volume parsing and `createdAt` defaults remain in their provider wrappers.
 
 Data sources are split across three scheduled phases: discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) run on `6 */2 * * *` and write `dex_pool_staging`; source loading and pool construction run hourly at `10 * * * *` and write the bounded scoring-stage generation; the `16 * * * *` consumer publishes prices hourly and liquidity scores on even UTC hours, while the retained `:46` slot avoids publication rewrites.
 
