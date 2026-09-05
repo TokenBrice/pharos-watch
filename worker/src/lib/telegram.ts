@@ -608,18 +608,13 @@ export async function editMessage(
   opts?: EditMessageOpts,
 ): Promise<boolean> {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text,
-        parse_mode: "HTML",
-        ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
-        ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
-      }),
-      signal: AbortSignal.timeout(10_000),
+    const res = await postTelegramBotApi(botToken, "editMessageText", {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: "HTML",
+      ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+      ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
     });
     const responseText = await res.text();
     if (res.ok) return true;
@@ -644,19 +639,11 @@ export async function answerCallbackQuery(
   botToken: string,
   options: { text?: string; showAlert?: boolean } = {},
 ): Promise<void> {
-  const res = await fetch(
-    `https://api.telegram.org/bot${botToken}/answerCallbackQuery`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        callback_query_id: callbackQueryId,
-        text: options.text,
-        show_alert: options.showAlert ?? false,
-      }),
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
+  const res = await postTelegramBotApi(botToken, "answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    text: options.text,
+    show_alert: options.showAlert ?? false,
+  });
   await drainResponseBody(res);
   if (!res.ok) {
     logTelegramEvent({
