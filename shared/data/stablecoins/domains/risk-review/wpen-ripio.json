@@ -272,6 +272,58 @@
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           }
         ]
+      },
+      {
+        "id": "celo:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "destinationChain": "celo",
+        "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment, verified by Celo JSON-RPC fixed reads at block 76692485 on 2026-09-05: the wPEN proxy's EIP-1967 implementation slot resolves the LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, name 'Sol Peruano' and symbol wPEN with 18 decimals, and paused() false. totalSupply is exactly 100 wPEN against roughly 6710969 wPEN on ethereum, so the deployment is dormant with no meaningful circulation at the read; no transfer or activity history is claimed beyond this supply observation. Current hasRole reads rather than constructor calldata show Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 — deployed on Celo with threshold 4 of the same seven owners recorded for the tracked chains — holding MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE, while issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b holds none, unlike the six tracked deployments where that EOA holds the token roles. LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 also holds MINTER_ROLE, so the first-party burn/mint rail can mint here; that rail is assessed in the structured Bridge Risk controls, not as this native route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "observedBlock": 76692485,
+        "sources": [
+          {
+            "label": "wPEN celo token",
+            "url": "https://celoscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "destinationChain": "hyperevm",
+        "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment, verified by HyperEVM JSON-RPC fixed reads at block 45075968 on 2026-09-05: the wPEN proxy's EIP-1967 implementation slot resolves the LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, name 'Sol Peruano' and symbol wPEN with 18 decimals, paused() false, and totalSupply exactly 0, so the deployment is verified live but fully dormant pre-launch with zero supply at the read; no transfer or activity history is claimed. Current hasRole reads rather than constructor calldata show Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 — deployed on HyperEVM with threshold 4 of the same seven owners recorded for the tracked chains — as the sole identified authority holding MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE: issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b holds none, and unlike the tracked deployments neither BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 nor LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 (both deployed on HyperEVM) holds MINTER_ROLE, so no first-party bridge mint path is enabled for this deployment yet.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "observedBlock": 45075968,
+        "sources": [
+          {
+            "label": "wPEN hyperevm token",
+            "url": "https://purrsec.com/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       }
     ],
     "controls": [

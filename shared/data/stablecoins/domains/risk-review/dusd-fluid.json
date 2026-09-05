@@ -48,10 +48,6 @@
           {
             "label": "Fluid DUSD token (Arbiscan)",
             "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
-          },
-          {
-            "label": "Fluid docs",
-            "url": "https://docs.fluid.instadapp.io/"
           }
         ]
       }

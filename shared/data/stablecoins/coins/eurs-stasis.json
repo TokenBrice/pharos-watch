@@ -9,7 +9,7 @@
     "pegCurrency": "EUR",
     "governance": "centralized"
   },
-  "collateral": "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts",
+  "collateral": "100% liquid euro balances held at Lietuvos bankas through NexPay UAB, according to the current STASIS transparency allocation.",
   "pegMechanism": "Direct 1:1 redemption through STSS (Malta) Limited; users send EURS to the treasury wallet, euros are transferred from a segregated bank account, and redeemed tokens are frozen or burned",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "51",
@@ -21,22 +21,7 @@
     "provider": "STASIS live reserve transparency page (daily statement)",
     "attestorTier": "self",
     "cadence": "daily-nav",
-    "attestorJurisdiction": "Malta",
-    "latestReport": {
-      "periodEnd": "2026-08-07",
-      "publishedAt": "2026-08-08",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "Kimi Code R08 reserve research",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "STASIS EURS transparency page",
-          "url": "https://stasis.net/transparency"
-        }
-      ]
-    }
+    "attestorJurisdiction": "Malta"
   },
   "links": [
     {

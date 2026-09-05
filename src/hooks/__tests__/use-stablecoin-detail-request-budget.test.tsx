@@ -52,7 +52,7 @@ describe("stablecoin detail request budget", () => {
     expect(queryClient.getQueryData(["supply-history", "usdt-tether", 90])).toEqual([]);
   });
 
-  it("starts at three eager requests and arms a below-fold lane on viewport entry", async () => {
+  it("keeps the hero yield metric eager and below-fold lanes gated", async () => {
     const requests: string[] = [];
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       requests.push(String(input));
@@ -66,7 +66,7 @@ describe("stablecoin detail request budget", () => {
     );
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const { rerender } = renderHook(
-      ({ yieldNear }) => useStablecoinDetailViewModel({
+      ({ flowsNear }) => useStablecoinDetailViewModel({
         id: coin.id,
         coin,
         summary: null,
@@ -74,27 +74,28 @@ describe("stablecoin detail request budget", () => {
           liquidity: false,
           reportCards: false,
           redemption: false,
-          yield: yieldNear,
+          yield: true,
           stress: false,
-          flows: false,
+          flows: flowsNear,
           blacklist: false,
           reserves: false,
         },
       }),
-      { initialProps: { yieldNear: false }, wrapper },
+      { initialProps: { flowsNear: false }, wrapper },
     );
 
-    await waitFor(() => expect(requests).toHaveLength(3));
+    await waitFor(() => expect(requests).toHaveLength(4));
     expect(requests).toEqual(expect.arrayContaining([
       expect.stringContaining("/api/stablecoin/usdt-tether"),
       expect.stringContaining("/api/peg-summary"),
       expect.stringContaining("/api/supply-history?stablecoin=usdt-tether&days=90"),
+      expect.stringContaining("/api/yield-rankings"),
     ]));
 
-    rerender({ yieldNear: true });
+    rerender({ flowsNear: true });
 
-    await waitFor(() => expect(requests).toHaveLength(4));
-    expect(requests[3]).toContain("/api/yield-rankings");
+    await waitFor(() => expect(requests).toHaveLength(5));
+    expect(requests[4]).toContain("/api/mint-burn-flows");
     queryClient.clear();
   });
 

@@ -2,7 +2,7 @@
   "id": "usda-anzens",
   "name": "Anzens USDA",
   "symbol": "USDA",
-  "oneLiner": "USDA is Anzens' U.S.-MSB-licensed dollar stablecoin on Cardano, redeemable 1:1 against USD cash and Treasuries custodied by BitGo Trust.",
+  "oneLiner": "USDA is Anzens' U.S.-MSB-registered dollar stablecoin on Cardano, redeemable 1:1 against USD cash and Treasuries custodied by BitGo Trust.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
@@ -44,7 +44,7 @@
   "jurisdiction": {
     "country": "United States",
     "regulator": "FinCEN",
-    "license": "Money Service Business (MSB)"
+    "license": "FinCEN Money Services Business (MSB) registration"
   },
   "contracts": [
     {

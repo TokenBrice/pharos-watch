@@ -143,6 +143,18 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   icon:           { name: "ICON",            explorerUrl: "https://tracker.icon.community",               evmChainId: null,     type: "other", logoPath: "/chains/icon.png"           },
   archway:        { name: "Archway",         explorerUrl: "https://www.mintscan.io/archway",              evmChainId: null,     type: "other", logoPath: "/chains/archway.png"        },
   havah:          { name: "Havah",           explorerUrl: "https://scan.havah.io",                        evmChainId: null,     type: "other", logoPath: "/chains/havah.png"          },
+  // U3 registrations for verified live deployments: cNGN on Lisk (1135) and
+  // Asset Chain (42420), BRZ on Chiliz (88888). Chain IDs and explorers were
+  // confirmed against each chain's official RPC and documentation. No
+  // `providers` block: no token-pool provider registration was sourced for
+  // these chains, so their deployments read "no registered token-pool
+  // provider supports this chain" rather than claiming a query that cannot
+  // run.
+  lisk:           { name: "Lisk",            explorerUrl: "https://blockscout.lisk.com",                  evmChainId: 1135,     type: "evm",   logoPath: "/chains/lisk.png"           },
+  assetchain:     { name: "Asset Chain",     explorerUrl: "https://scan.assetchain.org",                  evmChainId: 42420,    type: "evm",   logoPath: "/chains/assetchain.png"     },
+  chiliz:         { name: "Chiliz Chain",    explorerUrl: "https://scan.chiliz.com",                      evmChainId: 88888,    type: "evm",   logoPath: "/chains/chiliz.png"         },
+  tac:            { name: "TAC",             explorerUrl: "https://explorer.tac.build",                    evmChainId: 239,      type: "evm",   logoPath: "/chains/tac.png"            },
+  gatelayer:      { name: "Gate Layer",      explorerUrl: "https://www.gatescan.org/gatelayer",             evmChainId: 10088,    type: "evm",   logoPath: "/chains/gatelayer.png"      },
 };
 
 /** Alias chains that share a display name. Map alias -> canonical key. */

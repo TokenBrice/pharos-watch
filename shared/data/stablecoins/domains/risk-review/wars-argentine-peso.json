@@ -54,7 +54,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WARS has six reviewed independent native deployments, each with a separate issuer-operated BridgeDeposit burn path and LimitedMinterBridge destination mint path. Source WARS is burned before an authorized operator fulfills a destination mint; the adapter applies a 30,000,000 WARS per-token daily limit. Bridge admin, pause, fee, route configuration, adapter, and operator powers are structured below rather than counted as global native Mint Authority. A live Celo deployment remains explicitly unlisted pending catalog-owner adjudication; its current outbound-only bridge machinery is recorded against the six reviewed destination routes without adding reverse Celo routes.",
+    "summary": "WARS has six reviewed independent native deployments, each with a separate issuer-operated BridgeDeposit burn path and LimitedMinterBridge destination mint path. Source WARS is burned before an authorized operator fulfills a destination mint; the adapter applies a 30,000,000 WARS per-token daily limit. Bridge admin, pause, fee, route configuration, adapter, and operator powers are structured below rather than counted as global native Mint Authority. The reviewed Celo bridge representation is tracked separately; its current outbound-only bridge machinery is recorded against the six reviewed destination routes without adding reverse Celo routes.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration; verified Ripio bridge review",
     "confidence": "manual-review",
@@ -254,6 +254,50 @@
           {
             "label": "Gnosis current WARS read",
             "url": "https://gnosis-rpc.publicnode.com"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ]
+      },
+      {
+        "id": "celo:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "celo",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio wARS Celo bridge representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ripio's 31 July 2026 Celo launch announcement publishes this WARS deployment. At Celo block 75025526, the reviewed Celo BridgeDeposit and LimitedMinterBridge machinery serves outbound routes to the six authored deployments; matching Ripio Celo route reviews classify this issuer-operated burn/mint deployment as a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "contract:celo:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "observedAt": "2026-09-04",
+        "observedBlock": 75025526,
+        "sources": [
+          {
+            "label": "Ripio Celo launch announcement",
+            "url": "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo"
+          },
+          {
+            "label": "GeckoTerminal Celo token data",
+            "url": "https://api.geckoterminal.com/api/v2/networks/celo/tokens/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+          },
+          {
+            "label": "Celo current bridge read",
+            "url": "https://forno.celo.org"
           },
           {
             "label": "Ripio BridgeDeposit source",

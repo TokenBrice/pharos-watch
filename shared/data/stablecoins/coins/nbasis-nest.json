@@ -2,7 +2,7 @@
   "id": "nbasis-nest",
   "name": "Nest Basis Vault",
   "symbol": "nBASIS",
-  "oneLiner": "nBASIS is Nest's basis-trade vault token combining Superstate T-bill collateral with perpetual shorts; value drifts with funding-rate, not pegged 1:1.",
+  "oneLiner": "nBASIS is Nest's NAV basis vault combining USTB Treasury and Bitwise Crypto Carry Fund (USCC, formerly Superstate USCC); NAV varies and is not a fixed 1:1 peg.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -10,7 +10,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Basis-trade strategy book combining Superstate USCC (CME-futures crypto carry) and Superstate USTB (short-duration U.S. Treasuries), plus Midas mBASIS (delta-neutral basis trade using CEX perpetuals); USCC trades through CFTC-approved CME venues while the mBASIS sleeve uses CEX perpetuals.",
+  "collateral": "Current Nest data shows small liquid USDC/USDT/pUSD plus Superstate USTB and Superstate USCC only; the current USCC fund is presented as the Bitwise Crypto Carry Fund (formerly Superstate USCC). The current page snapshot is 0.63% liquid, 11.7% USTB, and 87.7% USCC.",
   "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
@@ -47,6 +47,21 @@
     {
       "chain": "plasma",
       "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n",
       "decimals": 6
     }
   ],

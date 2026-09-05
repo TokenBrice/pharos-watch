@@ -531,7 +531,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "aid-gaib": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdc-circle"],
-    capacityModel: { kind: "reserve-sync-metadata" },
+    capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
     costModel: fixedFee(
       10,
       "GAIB docs currently show a 10 bps sell fee in the dApp — confirmed by the deployed redeemer's redemptionFeeBps() reading 10 on-chain — while direct AID minting and redemption are reserved for whitelisted users and partners",
@@ -547,7 +547,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Regular users typically exit AID through the GAIB app or DEX liquidity, while the modeled primary redemption rail is the whitelisted direct burn-and-withdraw contract path",
-      "Fresh reserve telemetry reads the redeemer's USDC payout float capped by the remaining daily redemption allowance (identity-gated on stablecoin()/aid() and the pinned beacon implementation) as the live executable bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy",
+      "GAIB documents 1:1 direct AID-to-USDC redemption for whitelisted users and partners; the removed live-reserve read represented only ERC-20 supply liveness as a fixed reserve slice, not the mixed Treasury/stablecoin reserve, and no live payout-float telemetry is available now, so this route models eventual supply redemption without an immediate payout-float claim",
     ],
   }),
   "u-united-stables": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {

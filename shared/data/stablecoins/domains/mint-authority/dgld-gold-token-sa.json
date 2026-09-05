@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "Gold Token SA issues DGLD through two independent native deployments on Ethereum and Base. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither native deployment has a contract-enforced aggregate supply ceiling or execution delay, so issuance remains unbounded subject to issuer-operated gold backing and reconciliation.",
+    "summary": "Gold Token SA's Mint Authority review covers two independent EVM native deployments on Ethereum and Base. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither EVM native deployment has a contract-enforced aggregate supply ceiling or execution delay, so issuance remains unbounded subject to issuer-operated gold backing and reconciliation.",
     "controls": [
       {
         "label": "Gold Token SA issuance backend",

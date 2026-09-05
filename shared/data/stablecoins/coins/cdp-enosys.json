@@ -34,6 +34,7 @@
       "decimals": 18
     }
   ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "liquity-v2-branches",

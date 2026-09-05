@@ -1,7 +1,7 @@
 {
   "id": "hyusd-hylo",
   "name": "Hylo HYUSD",
-  "symbol": "HYUSD",
+  "symbol": "hyUSD",
   "oneLiner": "HYUSD is issued by isolated SOL-LST, cbBTC, and USDC pools whose liabilities reconcile to the live token supply.",
   "flags": {
     "backing": "crypto-backed",

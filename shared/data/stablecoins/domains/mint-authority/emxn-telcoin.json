@@ -54,13 +54,13 @@
             "0xbdb067ceb2f18231c901a7b5e5098cdac19aeeef",
             "0x90213b56b6ccc331f1569d5e17d69198df7be3ed",
             "0xe0c9730bb99cdbdfedcc8450a6f579211da95f18",
-            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538"
+            "0xde37dd797a037fe8fdcdc15eb0f334664509493d"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": null,
-          "version": "1.3.0",
+          "version": "1.4.1",
           "observedBlock": 88324188,
           "source": "onchain"
         },
@@ -95,7 +95,7 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": null,
-          "version": "1.3.0",
+          "version": "1.4.1",
           "observedBlock": 88324188,
           "source": "onchain"
         },

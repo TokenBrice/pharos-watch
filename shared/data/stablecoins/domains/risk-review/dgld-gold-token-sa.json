@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Gold Token SA issues DGLD natively on Ethereum and Base; per-chain token proxies are administered by separate issuer EOAs. No current third-party bridge carries either representation. On February 23, 2026, the former Ethereum-Base bridge allowed phantom deposits and unauthorized unbacked minting on Base; the path was frozen, legacy Base balances were migrated one-for-one, the old Base contract was deprecated, the bridge was closed on June 30, 2026, and the replacement Base token was independently allocated gold-backed. Gold Token SA completed the legacy Base balance reset on July 15, 2026. This retired-bridge incident remains adverse historical Bridge Risk evidence and does not describe current native issuance.",
+    "summary": "Gold Token SA issues DGLD natively on Ethereum, Base, and Solana; the Ethereum and Base token proxies are administered by separate issuer EOAs, while the Solana Token-2022 mint is listed in the issuer registry. No current third-party bridge carries the Ethereum or Base representations; the Solana deployment is reviewed as a native route. On February 23, 2026, the former Ethereum-Base bridge allowed phantom deposits and unauthorized unbacked minting on Base; the path was frozen, legacy Base balances were migrated one-for-one, the old Base contract was deprecated, the bridge was closed on June 30, 2026, and the replacement Base token was independently allocated gold-backed. Gold Token SA completed the legacy Base balance reset on July 15, 2026. This retired-bridge incident remains adverse historical Bridge Risk evidence and does not describe current native issuance.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration review",
     "confidence": "verified",
@@ -71,6 +71,35 @@
           {
             "label": "DGLD website",
             "url": "https://dgld.ch/"
+          }
+        ]
+      },
+      {
+        "id": "solana:dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz",
+        "destinationChain": "solana",
+        "contractAddress": "dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz",
+        "protocol": "Gold Token SA DGLD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Gold Token SA's official contract registry lists this DGLD Token-2022 mint on Solana; Solscan confirms the live mint and CoinGecko maps the DGLD asset to the same address. Reviewed as a native issuer deployment; no third-party bridge route is asserted.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Gold Token SA smart-contract registry",
+            "url": "https://dgld.ch/legal/smart-contract-audits"
+          },
+          {
+            "label": "Solscan DGLD Solana mint",
+            "url": "https://solscan.io/token/dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
+          },
+          {
+            "label": "CoinGecko DGLD asset API",
+            "url": "https://api.coingecko.com/api/v3/coins/gold-token-sa-dgld-tokenized-gold"
           }
         ]
       }

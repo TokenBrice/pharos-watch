@@ -35,7 +35,7 @@ describe("registry universes", () => {
 
   it("QUARANTINED and DELISTED retain readable records without entering active", () => {
     expect(QUARANTINED_STABLECOINS).toHaveLength(12);
-    expect(DELISTED_STABLECOINS).toHaveLength(7);
+    expect(DELISTED_STABLECOINS).toHaveLength(9);
     expect(QUARANTINED_STABLECOINS.every(isQuarantinedStablecoinMeta)).toBe(true);
     expect(DELISTED_STABLECOINS.every(isDelistedStablecoinMeta)).toBe(true);
     for (const coin of [...QUARANTINED_STABLECOINS, ...DELISTED_STABLECOINS]) {

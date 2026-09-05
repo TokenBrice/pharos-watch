@@ -11,7 +11,6 @@
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "TRON DAO Reserve",
-    "issuerDomicile": "Dominica",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -19,7 +18,7 @@
     "reserveDisclosureUrl": "https://usdd.io/data",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDD has self-reported reserve and PSM/redemption disclosures (usdd.io/data), but no formal third-party attestation. No GENIUS PPSI approval, application, or comparability determination for a foreign issuer exception was found. TRON DAO Reserve is Dominica-domiciled; Treasury has not yet finalized criteria for \"comparable foreign regulation\" under GENIUS. The April 2026 OFAC-coordinated Tether USDT freeze on TRON wallets and May 2026 UK sanctions on HTX are not GENIUS Act enforcement actions against USDD or its issuer.",
+    "notes": "USDD has self-reported reserve and PSM/redemption disclosures (usdd.io/data), but no formal third-party attestation. No GENIUS PPSI approval, application, or comparability determination for a foreign issuer exception was found. Treasury has not yet finalized criteria for \"comparable foreign regulation\" under GENIUS. The April 2026 OFAC-coordinated Tether USDT freeze on TRON wallets and May 2026 UK sanctions on HTX are not GENIUS Act enforcement actions against USDD or its issuer.",
     "references": [
       {
         "label": "OCC GENIUS Act NPRM (Bulletin 2026-3)",
@@ -84,6 +83,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-05"
   }
 }

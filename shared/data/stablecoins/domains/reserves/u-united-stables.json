@@ -59,6 +59,10 @@
       {
         "name": "Undisclosed licensed and qualified digital-asset custodians",
         "role": "custodian"
+      },
+      {
+        "name": "Ceffu (digital-asset custodian; MirrorX off-exchange settlement)",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",

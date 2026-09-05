@@ -1,5 +1,18 @@
 {
   "id": "chfau-allunity",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "BaFin",
+    "authorizedEntity": "AllUnity GmbH",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register: CHFAU / AllUnity GmbH",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

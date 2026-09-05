@@ -30,7 +30,8 @@
         "0xefb2e28b69a29a39067b20af633d04a2857a4d9d",
         "0xac5c4dcd870c835f8943e62ab33cdadba850e5e5",
         "0xd9371402379e62e83962fe776ba0ff6318eafa00",
-        "0xa064414d41560ea5f858a313977f3f787f96611e"
+        "0xa064414d41560ea5f858a313977f3f787f96611e8",
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
       ],
       "adminAddresses": [
         "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
@@ -39,7 +40,8 @@
         "0x852c4f1beb54acb5360dbdba7ebbe9940a698f76",
         "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
         "0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
-        "0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
+        "0xdc208d4a8583663575fa548bf6de224bb5ffc26d",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
       ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
@@ -83,7 +85,6 @@
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
           "ethereum:0xe092737d412e0b290380f9c8548cb5a58174704f",
-          "plume:0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c",
           "etherlink:0x577617613c4fac5a7561f8f3f2cb128a560774bc"
         ],
         "observedAt": "2026-07-13",
@@ -116,7 +117,6 @@
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "ethereum:0x2facac0cda0225d7acca792821164b398c26bbd2",
-          "plume:0x2facac0cda0225d7acca792821164b398c26bbd2",
           "etherlink:0x2facac0cda0225d7acca792821164b398c26bbd2"
         ],
         "observedAt": "2026-07-13",
@@ -135,32 +135,6 @@
           }
         ],
         "evidence": "At Ethereum block 25527148, Plume block 80928370, and Etherlink block 48212139, MidasAccessControl retained EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 as a direct M_MEV_MINT_OPERATOR_ROLE holder; exact-block eth_getCode returned no bytecode on each chain."
-      },
-      {
-        "chain": "ethereum",
-        "label": "mMEV Ethereum direct-minter EOA",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; this EOA holds M_MEV_MINT_OPERATOR_ROLE directly on Ethereum.",
-        "address": "0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2",
-        "deploymentRefs": [
-          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3"
-        ],
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "ethereum:0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527148,
-        "sources": [
-          {
-            "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
-          }
-        ],
-        "evidence": "At Ethereum block 25527148, MidasAccessControl retained EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 as a direct M_MEV_MINT_OPERATOR_ROLE holder; exact-block eth_getCode returned no bytecode."
       },
       {
         "chain": "ethereum",

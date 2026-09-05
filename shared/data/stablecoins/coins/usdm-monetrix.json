@@ -70,7 +70,7 @@
       "decimals": 6
     }
   ],
-  "collateralQuality": "native",
+  "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "notices": [

@@ -324,6 +324,35 @@
             "url": "https://celo.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
           }
         ]
+      },
+      {
+        "id": "hyperevm:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "hyperevm",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "HyperEVMScan records successful creation and a verified ERC-20 wCLP at this address; available evidence does not establish mint authority, source chain, or bridge semantics.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "HyperEVMScan wCLP creation",
+            "url": "https://hyperevmscan.io/tx/0x8e80d59f9aa78dc61719852641d3e430179a0cf564f8377aa18892f187ca8906"
+          },
+          {
+            "label": "HyperEVMScan wCLP contract",
+            "url": "https://hyperevmscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+          },
+          {
+            "label": "CoinGecko Chilean Peso platforms",
+            "url": "https://www.coingecko.com/en/coins/chilean-peso"
+          }
+        ]
       }
     ],
     "controls": [

@@ -14,7 +14,7 @@ const EVIDENCE_ONLY_TARGETS = {
   "moveusd-cfx": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "uusd-anything-labs": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "usda-alpha-partner": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
-  "pgold-pleasing": ["assuranceAndReconciliation", "custodyContinuity"],
+  "pgold-pleasing": ["custodyContinuity"],
   "usdon-ondo": [],
   "xaum-matrixdock": [],
   "chfau-allunity": ["assuranceAndReconciliation", "custodyContinuity"],
@@ -58,7 +58,7 @@ const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, 
 describe("Safety Score V9 evidence-only mechanism curation", () => {
   it("keeps every reviewed nondisclosure target bounded and non-scoring", () => {
     expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(34);
-    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(61);
+    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(60);
 
     const overlayById = new Map(
       mechanismReviewOverlaysAsset.overlays.map((overlay) => [overlay.assetId, overlay]),

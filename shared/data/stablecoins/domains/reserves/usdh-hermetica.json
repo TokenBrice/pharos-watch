@@ -2,11 +2,11 @@
   "id": "usdh-hermetica",
   "reserves": [
     {
-      "name": "Ethereum Settlement Wallet (contents not itemized in attestation)",
-      "pct": 94.4,
+      "name": "STRCx",
+      "pct": 94.059174,
       "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Hermetica protocol Ethereum settlement wallet; documented STRC routes include Saturn USDat (Galaxy execution, Clear Street custody) and STRCx (Backed Assets (JE) Limited via Kraken xStocks)",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Backed Assets (JE) Limited via Kraken xStocks; STRCx exposure to Strategy, Inc.",
       "riskFactors": [
         "market",
         "counterparty",
@@ -17,8 +17,23 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Stacks Redeeming Reserve (contents not itemized in attestation)",
-      "pct": 0.4,
+      "name": "Other unitemized Ethereum Settlement Wallet assets",
+      "pct": 0.814359,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hermetica protocol Ethereum settlement wallet",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Stacks Redeeming Reserve",
+      "pct": 0.380820,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Hermetica protocol redemption-liquidity wallet on Stacks",
@@ -30,8 +45,8 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Reserve Fund - USDC portion",
-      "pct": 4.7,
+      "name": "Reserve Fund USDC",
+      "pct": 4.745648,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -42,113 +57,73 @@
         "custody"
       ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Reserve Fund - USDh portion (circular, protocol's own token)",
-      "pct": 0.5,
-      "risk": "high",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Hermetica protocol (Reserve Fund holds its own USDh)",
-      "riskFactors": [
-        "concentration",
-        "counterparty",
-        "liquidity"
-      ],
-      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Kimi T42 unknown-reduction wave-2 2026-07-30; Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hermetica July 2026 custodian attestation",
-        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-july-2026"
-      },
-      {
-        "label": "Hermetica June 2026 custodian attestation",
-        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-june-2026"
-      },
-      {
-        "label": "Hermetica USDh backing design",
-        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
-      },
-      {
-        "label": "Hermetica STRCx backing-asset integration disclosure",
-        "url": "https://www.blog.hermetica.fi/p/strcx-direct-tokenized-strc-exposure-for-usdh"
-      },
-      {
-        "label": "Hermetica STRC second yield engine disclosure",
-        "url": "https://blog.hermetica.fi/p/strc-the-second-yield-engine-for-usdh"
+        "label": "Hermetica August 2026 custodian attestation",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
       }
     ],
-    "rationale": "Re-opened 2026-08-29 against Hermetica's July 2026 custodian attestation, published 2026-08-03: at 07:00 UTC on 2026-07-31, USDh supply was $1,994,097.68; Ethereum Settlement Wallet was $1,996,626.39, Stacks Redeeming Reserve $8,037.52, Reserve Fund $110,600.24 (USDC $100,148.12 and USDh $10,452.12), and Copper, Ceffu, and Mint Wallet were $0.00. Including the Reserve Fund, total reported backing was $2,115,264.15; normalized venue weights are 94.4%, 0.4%, 4.7%, and 0.5%. The attestation does not itemize the Ethereum Settlement Wallet (94.4%) or Stacks Redeeming Reserve (0.4%), including BTC basis margin, short futures, STRC/STRCx credit exposure, and settlement stablecoins. The Reserve Fund USDh portion is circular protocol self-exposure.",
-    "compositionBasis": "Hermetica July 2026 custodian attestation (2026-07-31 07:00 UTC snapshot) with venue weights normalized to total reported backing",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Reviewed 2026-09-04 against Hermetica's August 2026 custodian attestation, published 2026-08-26: at 14:00 UTC on 2026-08-20, total backing was $2,110,315.15, including $2,002,130.54 Ethereum Settlement Wallet, $8,036.50 Stacks Redeeming Reserve, and $100,148.12 Reserve Fund USDC. The report itemizes 20,750 STRCx worth $1,984,945 within the settlement wallet; normalized slices are STRCx 94.059174%, other unitemized Ethereum Settlement Wallet assets 0.814359%, Stacks Redeeming Reserve 0.380820%, and Reserve Fund USDC 4.745648%. Copper, Ceffu, Mint Wallet, and Reserve Fund USDh were $0.",
+    "compositionBasis": "Hermetica August 2026 custodian attestation (2026-08-20 14:00 UTC snapshot) with disclosed STRCx split and venue weights normalized to total reported backing",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The attestation reports venue-level totals but does not itemize the contents of the Ethereum Settlement Wallet (94.4%) or the Stacks Redeeming Reserve (0.4%), including the current spot BTC, short-futures, STRC-route, and stablecoin shares or venue-level counterparty weights.",
-    "knownUnknownExposurePct": 94.8,
+    "knownUnknownExposure": "The August attestation itemizes STRCx at 94.059174% of total backing; the remaining 0.814359% of the Ethereum Settlement Wallet is unitemized, as is the 0.380820% Stacks Redeeming Reserve.",
+    "knownUnknownExposurePct": 1.195179,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "Ethereum Settlement Wallet (contents not itemized in attestation)",
-        "pct": 94.4,
-        "disposition": "basket-needs-split",
-        "rationale": "The July 2026 attestation reports a single aggregate for the Ethereum Settlement Wallet; Hermetica's STRC/STRCx disclosures document the routes but not the live allocation among BTC basis margin, STRC credit exposure, and settlement stables."
-      },
-      {
         "reserveIndex": 1,
-        "reserveName": "Stacks Redeeming Reserve (contents not itemized in attestation)",
-        "pct": 0.4,
+        "reserveName": "Other unitemized Ethereum Settlement Wallet assets",
+        "pct": 0.814359,
         "disposition": "basket-needs-split",
-        "rationale": "The July 2026 attestation reports the redemption-liquidity wallet total without itemizing its token contents."
+        "rationale": "The August 2026 attestation itemizes STRCx within the Ethereum Settlement Wallet but does not itemize the remaining assets."
       },
       {
-        "reserveIndex": 3,
-        "reserveName": "Reserve Fund - USDh portion (circular, protocol's own token)",
-        "pct": 0.5,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The Reserve Fund holds the protocol's own USDh; this circular self-exposure is not a tracked third-party stablecoin dependency."
+        "reserveIndex": 2,
+        "reserveName": "Stacks Redeeming Reserve",
+        "pct": 0.380820,
+        "disposition": "basket-needs-split",
+        "rationale": "The August 2026 attestation reports the redemption-liquidity wallet total without itemizing its token contents."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Copper (off-exchange settlement)",
-        "role": "custodian"
+        "name": "Hermetica Ethereum Settlement Wallet ($2,002,130.54, including 20,750 STRCx worth $1,984,945.00 at 2026-08-20)",
+        "role": "other"
       },
       {
-        "name": "Ceffu (off-exchange settlement; zero balance at the June 2026 attestation)",
-        "role": "custodian"
+        "name": "Hermetica Stacks Redeeming Reserve ($8,036.50 at 2026-08-20)",
+        "role": "other"
       },
       {
-        "name": "Hermetica Ethereum Settlement Wallet (STRC routes via Clear Street prime brokerage and Backed Assets (JE) Limited / Kraken xStocks)",
+        "name": "Hermetica Reserve Fund (USDC $100,148.12; USDh $0.00 at 2026-08-20)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T42 unknown-reduction wave-2 2026-07-30",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "Pharos reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Hermetica June 2026 custodian attestation",
-        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-june-2026"
+        "label": "Hermetica August 2026 custodian attestation",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
       },
       {
         "label": "Hermetica USDh backing design",
         "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
-      },
-      {
-        "label": "Hermetica STRC second yield engine disclosure",
-        "url": "https://blog.hermetica.fi/p/strc-the-second-yield-engine-for-usdh"
       }
     ],
-    "uncertainty": "Hermetica's monthly custodian attestations identify the venue-level allocation (Copper, Ceffu, Stacks Redeeming Reserve, Ethereum Settlement Wallet, Reserve Fund) but do not publish per-venue contents, account-level segregation, or insolvency terms; the STRC disclosures name Galaxy (execution) and Clear Street (custody) for the Saturn USDat route and Backed Assets (JE) Limited/Kraken for STRCx without disclosing shares; collateral is actively deployed as futures margin and credit exposure, so reuse within the strategy is inherent.",
+    "uncertainty": "The August 2026 attestation identifies no funds within Copper or Ceffu and reports backing in the Ethereum Settlement Wallet, Stacks Redeeming Reserve, and Reserve Fund; Mint Wallet and Reserve Fund USDh were $0.00. It does not publish wallet key control, account-level segregation, insolvency terms, or rehypothecation terms. The report itemizes 20,750 STRCx worth $1,984,945 in the settlement wallet, but leaves the remaining wallet assets and Stacks Redeeming Reserve contents unitemized.",
     "knownUnknownExposurePct": 100
   }
 }

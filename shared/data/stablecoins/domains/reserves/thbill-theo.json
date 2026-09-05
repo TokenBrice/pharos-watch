@@ -2,53 +2,55 @@
   "id": "thbill-theo",
   "reserves": [
     {
-      "name": "tULTRA tokenized U.S. Treasury bills",
+      "name": "Wellington ULTRA and Fidelity International FILQ (allocation undisclosed)",
       "pct": 100,
       "risk": "low",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Theo Network / tULTRA (Standard Chartered Libeara tokenized U.S. Treasury bills)",
+      "issuerOrObligor": "Theo Network; Wellington/Libeara ULTRA and Fidelity International FILQ; FILQ may hold government securities and asset-backed commercial paper",
       "riskFactors": [
+        "credit",
         "duration",
         "liquidity",
         "custody",
         "counterparty",
         "smart-contract",
+        "market",
         "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Theo thBILL documentation",
-        "url": "https://docs.theo.xyz/platform/thbill"
-      },
-      {
-        "label": "Theo tULTRA documentation",
-        "url": "https://docs.theo.xyz/platform/thbill/tultra"
-      },
-      {
         "label": "Theo thBILL product page",
         "url": "https://theo.xyz/thbill"
+      },
+      {
+        "label": "Theo FILQ addition announcement",
+        "url": "https://theo.xyz/articles/theo-fidelity-international-filq-thbill-chainlink-integration"
+      },
+      {
+        "label": "Theo thBILL documentation",
+        "url": "https://docs.theo.xyz/products/thbill.md"
       }
     ],
-    "rationale": "Re-verified on 2026-08-08. The thBILL live reserve adapter exposes a single 100% slice labeled 'tULTRA tokenized U.S. Treasury bills'. This review classifies that compiled slice as a fund-share exposure to Theo's tULTRA instrument. Issuer materials also reference a FILQ allocation, but the live adapter does not itemize it separately; scoring follows the adapter's exact normalized name.",
-    "compositionBasis": "Theo thBILL single-asset live adapter label and issuer documentation",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "Theo's current disclosures identify thBILL as a diversified basket of Wellington/Libeara ULTRA and Fidelity International FILQ. Current component weights are undisclosed; FILQ may hold government securities and asset-backed commercial paper, so the full basket is treated as an opaque fund-share exposure rather than all Treasury bills.",
+    "compositionBasis": "Theo current thBILL product page, FILQ addition announcement, and current documentation",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live adapter's single compiled slice is fully classified. Any allocation between tULTRA and FILQ within the issuer's underlying basket is not separately itemized by the adapter.",
+    "knownUnknownExposure": "Current allocation weights between Wellington/Libeara ULTRA and Fidelity International FILQ are undisclosed; FILQ may hold government securities and asset-backed commercial paper.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "tULTRA tokenized U.S. Treasury bills",
+        "reserveName": "Wellington ULTRA and Fidelity International FILQ (allocation undisclosed)",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "tULTRA is a tokenized fund share, not a tracked stablecoin dependency."
+        "rationale": "The ULTRA and FILQ basket is a tokenized fund-share exposure, not a tracked stablecoin dependency; current component allocation is undisclosed."
       }
     ]
   },
@@ -60,9 +62,8 @@
         "jurisdiction": "Singapore"
       },
       {
-        "name": "Sygnum",
-        "role": "custodian",
-        "jurisdiction": "Switzerland"
+        "name": "J.P. Morgan",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",

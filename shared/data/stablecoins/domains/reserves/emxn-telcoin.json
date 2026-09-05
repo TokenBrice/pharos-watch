@@ -60,14 +60,9 @@
       {
         "name": "Undisclosed regulated financial institutions holding eXYZ Segregated Accounts",
         "role": "bank"
-      },
-      {
-        "name": "Telcoin eMXN Polygon contract",
-        "role": "other",
-        "jurisdiction": "Onchain protocol"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-08-08",

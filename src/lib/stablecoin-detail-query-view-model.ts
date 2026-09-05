@@ -154,6 +154,7 @@ function staleQueryFrom<T>(
     error: query.error,
     hasData: hasData(query.data),
     meta: query.meta,
+    enabled: query.enabled,
   };
 }
 
@@ -206,7 +207,7 @@ export function buildDetailStaleQueries(
       meta: null,
     });
   }
-  return result;
+  return result.filter((query) => query.enabled !== false);
 }
 
 function featureState(

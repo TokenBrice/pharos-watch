@@ -1,10 +1,27 @@
 {
   "id": "usda-anzens",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDA resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Cardano minting-policy execution semantics",
+        "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+      },
+      {
+        "label": "Cardano native-token transfer semantics",
+        "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/mint-fungible/"
+      },
+      {
+        "label": "Koios USDA PlutusV2 mint policy record",
+        "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+      },
+      {
+        "label": "Anzens terms and controls",
+        "url": "https://www.anzens.com/landing/terms-and-conditions"
+      }
+    ],
+    "evidence": "Direct review on 2026-09-04: USDA is a Cardano native asset whose PlutusV2 mint policy executes only when minting or burning, so it does not freeze ordinary holder transfers. Anzens' off-chain KYC mint/redemption controls support possible route or account intervention.",
     "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedAt": "2026-09-04"
   }
 }

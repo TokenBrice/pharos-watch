@@ -24,7 +24,7 @@
       {
         "source": "docs",
         "name": "LayerZero V2 OFT",
-        "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart",
         "bridgeTypes": [
           "oft"
         ],
@@ -70,7 +70,7 @@
       },
       {
         "label": "LayerZero OFT reference",
-        "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
       },
       {
         "label": "Ethereum PublicNode JSON-RPC",
@@ -116,7 +116,7 @@
           },
           {
             "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
           },
           {
             "label": "Ethereum PublicNode JSON-RPC",
@@ -154,7 +154,7 @@
           },
           {
             "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
           },
           {
             "label": "Flare official JSON-RPC",
@@ -234,7 +234,7 @@
           },
           {
             "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
           }
         ],
         "evidence": "At Ethereum block 25771176 on 2026-08-16, the USDX proxy's defaultAdmin() returned 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb, the EIP-1967 implementation was 0xce2d107b6046e61a651484b4ee65023d89a42d7b, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, peers(30295) returned the Flare USDX deployment, and the OFT source exposed burn-on-debit and mint-on-credit. This preserves the Ethereum route's LayerZero bridge and upgrade risk without treating the same EOA's native MINTER_ROLE administration as bridge authority."
@@ -279,7 +279,7 @@
           },
           {
             "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
           }
         ],
         "evidence": "At Flare block 67571965 on 2026-08-16, the USDX proxy's defaultAdmin() returned 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb, the EIP-1967 implementation was 0x35151ba1c19b31cc258787a414c93bbe77251147, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, peers(30101) returned the Ethereum USDX deployment, and the OFT source exposed burn-on-debit and mint-on-credit. This preserves the Flare route's LayerZero bridge and upgrade risk without treating the same EOA's native MINTER_ROLE administration as bridge authority."
@@ -393,7 +393,7 @@
           },
           {
             "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
           }
         ],
         "evidence": "The Ethereum and Flare USDX V2 deployments use the identified LayerZero V2 Endpoint contracts and reciprocal OFT peers, so their delivery path is known. The 2026-08-28 review found no primary source in the record that resolves the current USDX-specific DVN/executor roster, quorum, emergency override roster, or controlling authority. A generic Endpoint contract type cannot stand in for those missing validator facts; this validation control therefore remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero V2 DVN/executor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."

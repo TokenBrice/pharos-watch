@@ -36,7 +36,7 @@
     ],
     "rationale": "Negative search 2026-09-04: the Gold Token SA litepaper is explicitly published November 17, 2025 and states one-for-one allocated LBMA-certified PAMP gold in MKS PAMP Swiss vaults, with numbered-bar mapping and independent-audit language, but it is outside the current composition window. The live dgld.ch site and current General Terms & Conditions restate the allocated-gold and custody model but publish no report period, reserve balance, or dated composition; explorer.dgld.ch remains a JavaScript mapper surface without a static inventory export. No newer dated composition report or attestation was found. The 100% allocated-gold slice is retained as the last observed composition: compositionAsOf 2026-07-28 is 38.345 days before fixed capture clock 1788509806 because full dates are midnight UTC, exceeding the 38-day effective bound by 0.345 day; no date bump is admissible.",
     "compositionBasis": "Issuer litepaper and official site bar-mapping / allocated-gold architecture",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The mapper provides bar-level verification architecture, but the static record does not reproduce changing individual bar weights or identifiers.",
     "knownUnknownExposurePct": 0,

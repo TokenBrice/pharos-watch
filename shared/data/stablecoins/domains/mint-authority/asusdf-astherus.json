@@ -101,14 +101,13 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 4,
-        "signerCount": 8,
+        "signerCount": 7,
         "timelockDelaySec": 21600,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.3.0",
           "owners": [
-            "0x7df67339e14fa1b627eaa4b18509d53a940373e3",
             "0xe8a17d35ef62944463b54727a8794c56b9283cf7",
             "0x1b50157cbddc1a10605058c61782be828928b6ee",
             "0xedcb08f3359ebff9079aeeb1988522710e5b5524",
@@ -122,16 +121,16 @@
           "guard": null,
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
-          "observedBlock": 110184782,
-          "observedAt": "2026-07-15",
+          "observedBlock": 119951621,
+          "observedAt": "2026-09-04",
           "source": "onchain"
         },
         "failureDomainKeys": [
           "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
         ],
         "capDescription": "The Safe can schedule timelock operations that grant minters or upgrade the wrapper; no independent on-chain mint cap constrains the upgraded path.",
-        "observedAt": "2026-07-15",
-        "observedBlock": 110184782,
+        "observedAt": "2026-09-04",
+        "observedBlock": 119951621,
         "sources": [
           {
             "label": "BSC Safe account",
@@ -146,7 +145,7 @@
             "url": "https://bscscan.com/block/110184782"
           }
         ],
-        "evidence": "At BSC block 110184782, getOwners() returned the listed eight owners, getThreshold() returned four, getModulesPaginated() returned no modules, and the guard slot was zero. The configured fallback handler is the verified Safe CompatibilityFallbackHandler 1.3.0 at its canonical address; its reviewed source supplies signature, callback, module-enumeration, and reverting simulation helpers rather than an arbitrary Safe transaction executor. Native governance checks preserved from the former routeChecks block: at the observed BSC snapshot, the Safe had eight owners with a four-signature threshold and was the only non-self proposer, executor, and canceller of the timelock. The Safe also holds asUSDF ADMIN_ROLE, which can pause transfers. It controls mint-role and upgrade changes through the timelock's six-hour delay."
+        "evidence": "At BSC block 119951621, getOwners() returned the listed seven owners, getThreshold() returned four, getModulesPaginated() returned no modules, and the guard slot was zero. The configured fallback handler is the verified Safe CompatibilityFallbackHandler 1.3.0 at its canonical address; its reviewed source supplies signature, callback, module-enumeration, and reverting simulation helpers rather than an arbitrary Safe transaction executor. Native governance checks preserved from the former routeChecks block: at the observed BSC snapshot, the Safe had seven owners with a four-signature threshold and was the only non-self proposer, executor, and canceller of the timelock. The Safe also holds asUSDF ADMIN_ROLE, which can pause transfers. It controls mint-role and upgrade changes through the timelock's six-hour delay."
       }
     ],
     "economicCapSemantics": "raiseable",

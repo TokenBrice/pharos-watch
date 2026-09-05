@@ -263,7 +263,7 @@ describe("StablecoinDetailClient", () => {
           liquidity: true,
           reportCards: true,
           redemption: true,
-          yield: false,
+          yield: true,
           stress: true,
           flows: true,
           blacklist: false,
@@ -273,7 +273,7 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  it("keeps supplemental query controls disabled before their sections are near", () => {
+  it("keeps only the hero yield query enabled before interaction", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(false, false, false);
 
@@ -283,7 +283,10 @@ describe("StablecoinDetailClient", () => {
 
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+        supplementalQueryControls: {
+          ...DISABLED_DETAIL_QUERY_CONTROLS,
+          yield: true,
+        },
       }),
     );
   });

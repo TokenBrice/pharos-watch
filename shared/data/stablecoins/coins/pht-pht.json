@@ -8,7 +8,7 @@
     "pegCurrency": "PHP",
     "governance": "centralized-dependent"
   },
-  "collateral": "MakerDAO-style CDP vaults using approved stablecoin collateral, with USDC/USDT described for the initial stage; APACX transparency currently lists apcxUSDT and planned apcxUSDC beta reserve wallets.",
+  "collateral": "All existing PHT is claimed by APACX to have been minted using custodial apcxUSDT backed 1:1 by USDT at the disclosed Tron reserve address TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU; direct USDT, USDC, and other collateral are described as future/instructional, while the unreconciled live ILK conflict remains disclosed.",
   "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit approved collateral to mint PHT; undercollateralized vaults liquidate through independent Dutch auctions; live stablecoin paths divide Chainlink stablecoin/USD numerators by an owner-set APACX PHP/USD denominator; LayerZero OFT supports cross-chain bridging",
   "mechanismArchetype": "cdp",
   "llamaId": "299",
@@ -55,26 +55,5 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "pht-pht",
-    "display": {
-      "url": "https://www.apacx.io/PHT",
-      "label": "APACX"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Current apcxUSDT-referenced collateral envelope (unreconciled)",
-      "risk": "high"
-    }
-  },
   "launchDate": "2025-02-13"
 }

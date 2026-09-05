@@ -2,7 +2,7 @@
   "id": "buck-bucket-protocol",
   "name": "Bucket Protocol BUCK",
   "symbol": "BUCK",
-  "oneLiner": "BUCK is Bucket Protocol's overcollateralized Sui-native dollar stablecoin minted from SUI, BTC, ETH, and LSTs through CDP vaults with PSM stablecoin swaps.",
+  "oneLiner": "BUCK is Bucket Protocol's legacy Sui stablecoin. Bucket's current V2 stablecoin is USDB; the official migration converts BUCK to USDB 1:1.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"

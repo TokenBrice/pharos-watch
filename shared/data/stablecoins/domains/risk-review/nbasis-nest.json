@@ -44,11 +44,11 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "Nest publishes nBASIS through Nest product documentation with Ethereum, Plume, and Plasma deployments. No external bridge protocol evidence was resolved, so the reviewed route is issuer/protocol-native multichain issuance.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "nBASIS has four reviewed native-issuance routes on Ethereum, Plume, Plasma, and BSC, where local Nest vault deposits mint shares through Nest Tellers; the BSC deployment uses the issuer's 18-decimal share configuration and a local BNB USDT NestVault. Nest's current registry and on-chain reads on 2026-09-05 also establish two LayerZero OFT representations: the World Chain NestShareOFT proxy (verified implementation byte-identical to the nOPAL World Chain NestShareOFT) and the Solana OFT mint with OFT store HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG routed through the Plume composer. LayerZero peer wiring and upgrade controls on the OFT representations were not verified.",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); U5 Nest rail closeout 2026-09-05",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Nest docs",
@@ -57,7 +57,11 @@
       {
         "label": "Nest website",
         "url": "https://www.nest.credit/"
-      }
+    },
+    {
+      "label": "Nest current vault registry API",
+      "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+    }
     ],
     "routes": [
       {
@@ -129,6 +133,101 @@
           {
             "label": "NBASIS on plasma explorer (verified 2026-07-20)",
             "url": "https://plasma-explorer.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "bsc",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native nBASIS issuance on BSC, not a bridge representation. At BSC block 120070151 on 2026-09-05, name() was 'Nest Basis', symbol() nBASIS, decimals() 18 (issuer decimalsOverride 56=18), totalSupply() 34,278,548.523249, and owner() is VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062, the same owner as the Ethereum, Plume, and Plasma deployments. The contract is a direct non-proxy deployment with no LayerZero endpoint, lzReceive, or peer surfaces in its runtime bytecode. Nest's registry deploys a local BNB USDT NestVault 0xf388e7dc2b8e264b9b4149f3981aa5208bd5f3c3 accepting BSC USDT 0x55d398326f99059ff775485246999027b3197955, so BNB deposits mint shares natively through the same vault/Teller pattern as the other native chains.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 120070151,
+        "sources": [
+          {
+            "label": "Nest nBASIS integration guide (BNB Chain support, 18 decimals)",
+            "url": "https://docs.nest.credit/developers/integration-guides/nbasis"
+          },
+          {
+            "label": "Nest current vault registry (bsc chain, decimalsOverride 56=18, BNB USDT NestVault)",
+            "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+          },
+          {
+            "label": "NBASIS on BSC explorer (verified 2026-09-05)",
+            "url": "https://bscscan.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "LayerZero OFT (NestShareOFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT representation on World Chain. At World Chain block 34628731 on 2026-09-05, name() was 'Nest Basis', symbol() nBASIS, decimals() 6, totalSupply() 27.708875, and owner() is VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062. The EIP-1967 implementation slot resolves to 0x0c136b12a59ff92b9254323bfd01d558de36a10a, whose verified source name on the World Chain explorer is 'NestShareOFT' and whose runtime bytecode is byte-identical to the nOPAL World Chain NestShareOFT implementation 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb. LayerZero peer wiring and upgrade controls were not verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "canonicalChain": "ethereum",
+        "observedBlock": 34628731,
+        "sources": [
+          {
+            "label": "World Chain explorer address record (verified NestShareOFT implementation)",
+            "url": "https://worldchain-mainnet.explorer.alchemy.com/api/v2/addresses/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+          },
+          {
+            "label": "Nest current vault registry (worldchain chain entry)",
+            "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "solana:G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n",
+        "sourceChain": "plume",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n",
+        "representationId": "solana:HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Solana LayerZero OFT representation mirroring the reviewed nOPAL Solana route. Nest's registry gives Solana mint G6SkPqYTbtVFYU4krZLDgHf5MVMfARG57G1kog4RYH2n, OFT store HYt1o3HF3cN6z19kKvEoYiyD2gxtTPSVJ9xF1hUbFyyG, and decimals 6; a Solana mainnet RPC read on 2026-09-05 confirms an initialized SPL mint with decimals 6 and supply 135.316656 nBASIS, and the OFT store account exists owned by program ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th, the same program that owns the nOPAL OFT store. Nest's Plume composer 0x22b41d16c935fab4c2b807ebb72899f0715c42ee routes the Solana flow. Peer wiring was not verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "sources": [
+          {
+            "label": "Nest current vault registry (solana mint, OFT store, decimals)",
+            "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+          },
+          {
+            "label": "Nest Smart Contracts (nBASIS Solana OFT mint)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ]
       }

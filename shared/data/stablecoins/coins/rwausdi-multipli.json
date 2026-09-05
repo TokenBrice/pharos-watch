@@ -36,8 +36,8 @@
     "attestorTier": "self",
     "cadence": "weekly",
     "latestReport": {
-      "periodEnd": "2026-08-29",
-      "publishedAt": "2026-08-29",
+      "periodEnd": "2026-09-04",
+      "publishedAt": "2026-09-04",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -96,9 +96,25 @@
       "chain": "arbitrum",
       "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
       "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x3b274e3fe48e34f032920f766f750bdeafd80068",
+      "decimals": 6
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x9000123cb195804f35cee9553e2596978227910f",
+      "decimals": 6
+    },
+    {
+      "chain": "pharos",
+      "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+      "decimals": 6
     }
   ],
-  "collateralQuality": "rwa",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",

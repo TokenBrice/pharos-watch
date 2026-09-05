@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "apxUSD uses Chainlink CCIP with Ethereum as the only native issuance deployment and Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as the canonical escrow. Base and BNB Chain are Burn/Mint bridge representations whose pool-gated mint/burn, pool-owner administration, rate-limit and peer configuration, token upgrades, pool rotation, destination caps, and pause controls are all Bridge Risk; none are counted as native Mint Authority. Current route evidence identifies the Apyx 3-of-6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 as the common owner, with Chainlink CCIP as the external validation domain. Current numeric CCIP rate limits and live remote-peer/RMN validator settings remain an evidence gap.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Codex mint/bridge boundary migration",
+    "summary": "apxUSD uses Chainlink CCIP with Ethereum as the only native issuance deployment and Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as the canonical escrow. Base, BNB Chain, and Solana are Burn/Mint bridge representations. EVM pool-gated mint/burn and administration are Bridge Risk, not native Mint Authority. The reviewed Base/BNB pool owner is the Apyx 3-of-6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. Solana uses a distinct 1-of-2 SPL mint multisig; no EVM Safe threshold is attributed to it. Current numeric CCIP rate limits and live remote-peer/RMN validator settings remain an evidence gap.",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Pharos bridge-route re-verification; Codex mint/bridge boundary migration and Solana closeout",
     "confidence": "verified",
     "protocols": [
       {
@@ -24,7 +24,7 @@
           "burn-mint",
           "lock-release"
         ],
-        "note": "Ethereum Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 is the home/canonical lockbox; Base Burn/Mint pool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2 and BNB Chain Burn/Mint pool 0xFD957D7E27D239da5455b82303b2F618f73a9C49 mint against it. Token addresses match the Pharos coin file on all three chains."
+        "note": "Ethereum Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 is the home/canonical lockbox; Base, BNB Chain, and Solana are directory-listed Burn/Mint representations. Solana's pool state is AuWWEJVQFesgLLZtbjFTR3wne35tqxWfdoC4zhBdkHPe."
       },
       {
         "source": "issuer",
@@ -39,7 +39,7 @@
     ],
     "sources": [
       {
-        "label": "Chainlink CCIP Directory - apxUSD (3 networks, token pool types + addresses)",
+        "label": "Chainlink CCIP Directory - apxUSD (4 networks, token pool types + addresses)",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
       },
       {
@@ -130,6 +130,44 @@
         ]
       },
       {
+        "id": "solana:HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe",
+        "destinationChain": "solana",
+        "contractAddress": "HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe",
+        "protocol": "Chainlink CCIP (Solana Burn/Mint pool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The live Chainlink apxUSD directory lists this six-decimal Solana mint and Burn/Mint pool state AuWWEJVQFesgLLZtbjFTR3wne35tqxWfdoC4zhBdkHPe. Finalized RPC at slot 444460685 confirms the initialized six-decimal SPL mint. At slot 444460905 the pool state is owned by program 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB. The mint authority is a separate 1-of-2 SPL multisig, not the EVM owner Safe; its signers and freeze authority are recorded in the route control evidence.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "observedBlock": 444460685,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "solana",
+        "controllerAddress": "AuWWEJVQFesgLLZtbjFTR3wne35tqxWfdoC4zhBdkHPe",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:solana:AuWWEJVQFesgLLZtbjFTR3wne35tqxWfdoC4zhBdkHPe"
+        ],
+        "sources": [
+          {
+            "label": "Chainlink apxUSD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "Solana apxUSD mint",
+            "url": "https://explorer.solana.com/address/HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      },
+      {
         "id": "bsc:0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
         "destinationChain": "bsc",
         "contractAddress": "0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
@@ -170,6 +208,35 @@
     ],
     "controls": [
       {
+        "id": "apxusd-solana-mint-multisig",
+        "label": "apxUSD Solana representation mint authority",
+        "routeRefs": [
+          "solana:HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "pVrU5baovRPoQfaqHMvB1E1HdQvx6dBBFvheN8MzkRE",
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-05",
+        "observedBlock": 444460906,
+        "sources": [
+          {
+            "label": "Solana apxUSD mint authority account",
+            "url": "https://explorer.solana.com/address/pVrU5baovRPoQfaqHMvB1E1HdQvx6dBBFvheN8MzkRE"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Finalized mint account at slot 444460685 names pVrU5baovRPoQfaqHMvB1E1HdQvx6dBBFvheN8MzkRE as mintAuthority and 5CcTTUPtSxF1iB5d2fGR7gYHbUBHL1orwzbuZdQGJ1CG as freezeAuthority. At slot 444460906 the 355-byte SPL Token multisig account decodes to initialized, m=1, n=2, with signers DNJ8S3C93eeKS7cTG6uMDX5QTp22b4pjAcYxc4vFrCqS and 5CcTTUPtSxF1iB5d2fGR7gYHbUBHL1orwzbuZdQGJ1CG. Either signer satisfies the mint threshold; signer attribution and current pool rate limits were not established by this observation."
+      },
+      {
         "id": "apxusd-ethereum-ccip-lock-release-owner",
         "label": "apxUSD Ethereum CCIP Lock/Release pool owner Safe",
         "routeRefs": [
@@ -189,8 +256,8 @@
           "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
         ],
         "authorityType": "safe",
-        "threshold": 3,
-        "signerCount": 6,
+        "threshold": 4,
+        "signerCount": 7,
         "safe": {
           "owners": [
             "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
@@ -198,9 +265,10 @@
             "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
             "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
             "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
-            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839",
+            "0x6c927E5B7B895E7f41fBE8B35328Ad2d5E324e79"
           ],
-          "threshold": 3,
+          "threshold": 4,
           "enabledModules": [],
           "guard": null,
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",

@@ -18,22 +18,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Kimi Code R08 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Independent accountant AUP report for Rupiah Token collateral - January 31, 2026",
-        "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z"
+        "label": "Independent accountant AUP report for Rupiah Token collateral - July 31, 2026",
+        "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_July_31_2026_2975b84148.pdf?updated_at=2026-08-25T04%3A24%3A54.729Z"
       },
       {
         "label": "Rupiah Token website",
         "url": "https://rupiahtoken.com/"
       }
     ],
-    "rationale": "The January 31, 2026 independent accountant AUP (Johannes Juara & Rekan / Hari Manurung CPA) reconciles Rp94,232,212,766 of bank collateral to total issued Rupiah Token with an explicit 1:1 ratio and states procedures obtained bank statements and time-deposit certificates for each collateral account. Re-search on 2026-08-08 of rupiahtoken.com and public S3/attestation paths found no newer issuer-published reserve report, so the January 2026 AUP remains the latest usable primary-source breakdown. The snapshot is 189 days old as of the review date, so it sits outside the 31-day V9 admission window.",
-    "compositionBasis": "Independent accountant agreed-upon procedures over Rupiah Token bank collateral as of January 31, 2026",
-    "compositionAsOf": "2026-01-31",
+    "rationale": "The July 31, 2026 independent accountant AUP (Johannes Juara & Rekan / Hari Manurung CPA), published August 25, reconciles Rp74,085,663,766 of bank collateral to total circulating Rupiah Token at 1:1 and states that procedures inspected bank statements and time-deposit certificates for each collateral account. The July 2026 AUP supersedes the January 2026 basis without changing the disclosed reserve category; bank identities, account balances, the time-deposit share, maturity terms, and legal custody safeguards remain undisclosed.",
+    "compositionBasis": "Independent accountant agreed-upon procedures over Rupiah Token bank collateral as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve category is unidentified. Bank identities, account balances, the time-deposit share, maturity terms, and legal custody safeguards are undisclosed.",
     "knownUnknownExposurePct": 0,

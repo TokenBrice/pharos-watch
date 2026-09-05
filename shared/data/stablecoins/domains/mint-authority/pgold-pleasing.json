@@ -28,7 +28,7 @@
         "chain": "arbitrum",
         "address": "0x7e5Cc9Bb562EAE2356FAe7c59ea04C4677F73986",
         "label": "Proxy-admin upgrade authority — Arbitrum",
-        "role": "minter-admin",
+        "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "deploymentRefs": [

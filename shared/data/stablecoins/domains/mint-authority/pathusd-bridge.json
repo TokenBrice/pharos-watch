@@ -4,14 +4,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "probable",
-    "summary": "At Tempo block 32028752, pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remains a UUPS proxy (implementation 0x271c4d8616ed81c2cc006446c61f25219b182f8a; EIP-1967 admin slot zero). Its sole DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e authorizes upgradeToAndCall, so mint logic is changeable. The same proxy holds ISSUER_ROLE on the pathUSD TIP-20 token and mints within the 100 million supply cap.",
+    "summary": "At Tempo block 37986178, pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remains a UUPS proxy (implementation 0x7742d1f4faeae2f19b748616cdfe26e7da37a140; EIP-1967 admin slot zero). Its sole DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e authorizes upgradeToAndCall and setSupplyCap, so mint logic and the supply cap are changeable. The same proxy holds ISSUER_ROLE on the pathUSD TIP-20 token and mints within the current supply cap.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
         "0x8354d80eea9978faa04c3b36771c1e8b9c3e9058"
       ],
       "implementationAddresses": [
-        "0x271c4d8616ed81c2cc006446c61f25219b182f8a"
+        "0x7742d1f4faeae2f19b748616cdfe26e7da37a140"
       ],
       "adminAddresses": [
         "0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
@@ -19,8 +19,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "pathUSD issuer proxy DEFAULT_ADMIN_ROLE (UUPS upgrader)",
-      "observedAt": "2026-07-27",
-      "observedBlock": 32028752,
+      "observedAt": "2026-09-04",
+      "observedBlock": 37986178,
       "sources": [
         {
           "label": "Tempo public RPC",
@@ -76,10 +76,11 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
+        "capDescription": "TIP-20 DEFAULT_ADMIN_ROLE on the pathUSD token can call setSupplyCap, so this EOA can raise the token supply cap.",
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-27",
-        "observedBlock": 32028752,
+        "observedAt": "2026-09-04",
+        "observedBlock": 37986178,
         "sources": [
           {
             "label": "Tempo public RPC",
@@ -98,7 +99,7 @@
             "url": "https://explore.tempo.xyz/address/0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
           }
         ],
-        "evidence": "At Tempo block 32028752, dual public RPCs (rpc.tempo.xyz and tempo.drpc.org) agreed: issuer proxy EIP-1967 implementation slot = 0x271c4d8616ed81c2cc006446c61f25219b182f8a, admin slot = 0x0, UPGRADE_INTERFACE_VERSION() = 5.0.0, supportsInterface(AccessControlEnumerable)=true, getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1, getRoleMember(DEFAULT_ADMIN_ROLE,0)=0x79c6631fa15cda38777fb9dd7a6348baee794a4e, and hasRole(DEFAULT_ADMIN_ROLE, that address)=true. eth_call upgradeToAndCall(currentImpl, 0x) from a non-admin reverts AccessControlUnauthorizedAccount(caller, DEFAULT_ADMIN_ROLE=0x0); the same call from 0x79c6631f… returns success with no state change. No on-chain upgrade delay was observed (delaySec=0). Account bytecode is EIP-7702 designator 0xef0100||0x0000fb7702036ff9f76044a501ac1aa74cbab16b (not a Safe; getOwners/getThreshold empty), so authorityType remains eoa with a present 7702 delegation module rather than a verified multisig threshold."
+        "evidence": "At Tempo block 37986178, dual public RPCs (rpc.tempo.xyz and tempo.drpc.org) agreed: issuer proxy EIP-1967 implementation slot = 0x7742d1f4faeae2f19b748616cdfe26e7da37a140, admin slot = 0x0, UPGRADE_INTERFACE_VERSION() = 5.0.0, supportsInterface(AccessControlEnumerable)=true, getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1, getRoleMember(DEFAULT_ADMIN_ROLE,0)=0x79c6631fa15cda38777fb9dd7a6348baee794a4e, and hasRole(DEFAULT_ADMIN_ROLE, that address)=true. eth_call setSupplyCap(100000001*10^6) from this EOA returned success, while the issuer proxy reverted Unauthorized. eth_call upgradeToAndCall(currentImpl, 0x) from a non-admin reverts AccessControlUnauthorizedAccount(caller, DEFAULT_ADMIN_ROLE=0x0); the same call from 0x79c6631f… returns success with no state change. No on-chain upgrade delay was observed (delaySec=0). Account bytecode is EIP-7702 designator 0xef0100||0x0000fb7702036ff9f76044a501ac1aa74cbab16b (not a Safe; getOwners/getThreshold empty), so authorityType remains eoa with a present 7702 delegation module rather than a verified multisig threshold."
       }
     ],
     "economicCapSemantics": "unbounded",

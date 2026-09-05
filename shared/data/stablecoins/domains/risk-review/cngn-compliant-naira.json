@@ -234,7 +234,67 @@
           },
           {
             "label": "cNGN Solana mint",
-            "url": "https://solscan.io/token/3jiqwBQVRC5zHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+            "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+          }
+        ]
+      },
+      {
+        "id": "lisk:0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+        "destinationChain": "lisk",
+        "contractAddress": "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+        "protocol": "Bantu AMTP / cNGN issuer bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Conservative representation classification matching the reviewed destination architecture: the cNGN FAQ and Bantu Foundation case study establish Bantu as the native source of truth with destination deployments minted through the issuer's lock-and-mint bridge, and the issuer's contract registry lists this Lisk deployment as a supported mainnet network. At Lisk block 36,929,627 on 2026-09-05, name() and symbol() returned cNGN with 6 decimals and live supply, and owner() returned 0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6. The Lisk-specific AMTP adapter, peers, and burn/lock reconciliation remain undisclosed, so this route is scoreable as a representation while its exact bridge implementation remains an evidence gap.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-09-05",
+        "observedBlock": 36929627,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/guides/contract-addresses"
+          },
+          {
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          },
+          {
+            "label": "cNGN Lisk explorer",
+            "url": "https://blockscout.lisk.com/token/0xC7aB2C35Ea37236e644C24A4E4a1911c082887c0"
+          }
+        ]
+      },
+      {
+        "id": "assetchain:0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
+        "destinationChain": "assetchain",
+        "contractAddress": "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
+        "protocol": "Bantu AMTP / cNGN issuer bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Conservative representation classification matching the reviewed destination architecture: the cNGN FAQ and Bantu Foundation case study establish Bantu as the native source of truth with destination deployments minted through the issuer's lock-and-mint bridge, and the issuer's contract registry lists this Asset Chain deployment as a supported mainnet network. At Asset Chain block 1,854,354 on 2026-09-05, name() and symbol() returned cNGN with 6 decimals and live supply, and owner() returned 0xe0c474bc3442024bb161ce819d19f2254a14661d. The Asset Chain-specific AMTP adapter, peers, and burn/lock reconciliation remain undisclosed, so this route is scoreable as a representation while its exact bridge implementation remains an evidence gap.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-09-05",
+        "observedBlock": 1854354,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/guides/contract-addresses"
+          },
+          {
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          },
+          {
+            "label": "cNGN Asset Chain explorer",
+            "url": "https://scan.assetchain.org/token/0x7923C0f6FA3d1BA6EAFCAedAaD93e737Fd22FC4F"
           }
         ]
       }
@@ -557,14 +617,14 @@
         "sources": [
           {
             "label": "cNGN Solana mint",
-            "url": "https://solscan.io/token/3jiqwBQVRC5zHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+            "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
           },
           {
             "label": "cNGN Solana issuance program",
             "url": "https://solscan.io/account/9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
           }
         ],
-        "evidence": "Relocated from Mint Authority: at Solana mainnet slot approximately 434,019,689 on 2026-07-20, Token-2022 mint 3jiqwBQVRC5zHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 had mintAuthority GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM, a config account owned by issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28. The config named operational authority EOA 88ifu36RXwpEUtz4qRWhm4eVz2jGtR7W1iuBuotum5DN, so the program-gated mint capability remains scoreable under Bridge Risk while the AMTP-versus-independent-native relationship remains unresolved. The same read found freezeAuthority and permanentDelegate 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL, an SPL 2-of-2 multisig; those access-control facts are preserved here as context and are not widened into bridge capabilities."
+        "evidence": "Relocated from Mint Authority: at Solana mainnet slot approximately 434,019,689 on 2026-07-20, Token-2022 mint 3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 had mintAuthority GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM, a config account owned by issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28. The config named operational authority EOA 88ifu36RXwpEUtz4qRWhm4eVz2jGtR7W1iuBuotum5DN, so the program-gated mint capability remains scoreable under Bridge Risk while the AMTP-versus-independent-native relationship remains unresolved. The same read found freezeAuthority and permanentDelegate 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL, an SPL 2-of-2 multisig; those access-control facts are preserved here as context and are not widened into bridge capabilities."
       },
       {
         "id": "cngn-solana-program-upgrade-authority",

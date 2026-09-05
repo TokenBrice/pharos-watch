@@ -115,6 +115,60 @@
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
           }
         ]
+      },
+      {
+        "id": "bsc:0xa14556f13516c53ff035858ffd21e1625e7eadfd",
+        "destinationChain": "bsc",
+        "contractAddress": "0xa14556f13516c53ff035858ffd21e1625e7eadfd",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The official Chainlink CCIP directory identifies this BNB Chain apyUSD deployment as a Burn/Mint representation of canonical Ethereum apyUSD; the token address and 18-decimal precision match the authored catalog.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "BNB Chain apyUSD contract",
+            "url": "https://bscscan.com/address/0xa14556f13516c53ff035858ffd21e1625e7eadfd"
+          },
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+          }
+        ]
+      },
+      {
+        "id": "solana:Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv",
+        "destinationChain": "solana",
+        "contractAddress": "Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The official Chainlink CCIP directory identifies this Solana apyUSD deployment as a Burn/Mint representation of canonical Ethereum apyUSD; the token address and 6-decimal precision match the authored catalog.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Solana apyUSD mint",
+            "url": "https://explorer.solana.com/address/Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv"
+          },
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+          }
+        ]
       }
     ],
     "controls": [

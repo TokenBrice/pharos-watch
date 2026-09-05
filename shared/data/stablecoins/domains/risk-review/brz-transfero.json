@@ -69,10 +69,10 @@
         ]
       },
       {
-        "id": "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
+        "id": "bsc:0x0295afd3d7e86068050d64509e515f2db71b4914",
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
-        "contractAddress": "0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
+        "contractAddress": "0x0295afd3D7E86068050d64509e515f2Db71b4914",
         "protocol": "Transfero native issuance",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
@@ -80,13 +80,153 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native BRZ on BSC (legacy 4-decimal deployment): owner() = Transfero issuer EOA 0x01455c3b57e40223352a53c9897643273ad78a57 (mint-authority review).",
+        "reviewNote": "Current BRZ on BSC: Transfero's issuer-published deployment is 0x0295afd3D7E86068050d64509e515f2Db71b4914 with 18 decimals; the legacy 4-decimal deployment is no longer the current integration.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-09-04",
         "sources": [
           {
             "label": "Transfero",
-            "url": "https://transfero.com/"
+            "url": "https://transfero.com/brz-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x05539f021b66fd01d1fb1ff8e167cdd09bf7c2d0",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x05539F021b66Fd01d1FB1ff8E167CdD09bf7c2D0",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current BRZ on Avalanche: Transfero's issuer-published deployment is 0x05539F021b66Fd01d1FB1ff8E167CdD09bf7c2D0 with 18 decimals; the legacy 4-decimal deployment is no longer the current integration.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/brz-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "solana:BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current BRZ on Solana: Transfero's issuer-published integration mint is BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN, a 6-decimal Token-2022 mint; the legacy 4-decimal mint is no longer current.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/brz-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "celo:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+        "destinationChain": "celo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Celo: Transfero's current integration widget publishes 0xE9185Ee218cae427aF7B9764A011bb89FeA761B4; live chain reads identify BRZ Token / BRZ with 18 decimals and nonzero supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Transfero current BRZ contract addresses",
+            "url": "https://transfero.com/brz-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "moonbeam:0x3225edce8ad30ae282e62fa32e7418e4b9cf197b",
+        "destinationChain": "moonbeam",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Moonbeam: Transfero's current integration widget publishes 0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b; live chain reads identify BRZ Token / BRZ with 18 decimals and nonzero supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Transfero current BRZ contract addresses",
+            "url": "https://transfero.com/brz-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "algorand:112866019",
+        "destinationChain": "algorand",
+        "canonicalChain": "ethereum",
+        "contractAddress": "112866019",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Algorand: Transfero's current supported-network page lists Algorand; ASA 112866019 is Brazilian Digital Token (BRZ), with 4 decimals and live nonzero balances.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Transfero current BRZ supported networks",
+            "url": "https://transfero.com/brz-stablecoin"
+          },
+          {
+            "label": "Algorand BRZ asset metadata",
+            "url": "https://mainnet-idx.algonode.cloud/v2/assets/112866019"
+          }
+        ]
+      },
+      {
+        "id": "stellar:BRZ-GABMA6FPH3OJXNTGWO7PROF7I5WPQUZOB4BLTBTP4FK6QV7HWISLIEO2",
+        "destinationChain": "stellar",
+        "canonicalChain": "ethereum",
+        "contractAddress": "BRZ-GABMA6FPH3OJXNTGWO7PROF7I5WPQUZOB4BLTBTP4FK6QV7HWISLIEO2",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Stellar: Transfero's current supported-network page lists Stellar; Horizon identifies BRZ-GABMA6FPH3OJXNTGWO7PROF7I5WPQUZOB4BLTBTP4FK6QV7HWISLIEO2 with 7-decimal precision and 86 authorized accounts.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "sources": [
+          {
+            "label": "Transfero current BRZ supported networks",
+            "url": "https://transfero.com/brz-stablecoin"
+          },
+          {
+            "label": "Stellar Horizon BRZ asset metadata",
+            "url": "https://horizon.stellar.org/assets?asset_code=BRZ&issuer=GABMA6FPH3OJXNTGWO7PROF7I5WPQUZOB4BLTBTP4FK6QV7HWISLIEO2"
           }
         ]
       },
@@ -179,10 +319,10 @@
         ]
       },
       {
-        "id": "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
-        "destinationChain": "avalanche",
+        "id": "chiliz:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+        "destinationChain": "chiliz",
         "canonicalChain": "ethereum",
-        "contractAddress": "0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
+        "contractAddress": "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
         "protocol": "Transfero native issuance",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
@@ -190,35 +330,17 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native BRZ on Avalanche (legacy 4-decimal deployment, 15,502-byte code, read 2026-07-20).",
+        "reviewNote": "Native BRZ on Chiliz: Transfero's current integration publishes 0xE9185Ee218cae427aF7B9764A011bb89FeA761B4, and Chiliz's official stablecoin reference lists this exact contract with no third-party bridge (Bridges: n/a; acquired with Transfero). At Chiliz block 37,273,117 on 2026-09-05, live chain reads returned BRZ Token / BRZ with 18 decimals and 100,000 BRZ max supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-09-05",
         "sources": [
           {
-            "label": "Transfero",
-            "url": "https://transfero.com/"
-          }
-        ]
-      },
-      {
-        "id": "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
-        "destinationChain": "solana",
-        "canonicalChain": "ethereum",
-        "contractAddress": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
-        "protocol": "Transfero native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Native BRZ on Solana: mint authority is the Transfero issuer wallet ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D (mint-authority review).",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
+            "label": "Transfero current BRZ contract addresses",
+            "url": "https://transfero.com/brz-stablecoin"
+          },
           {
-            "label": "Transfero",
-            "url": "https://transfero.com/"
+            "label": "Chiliz Chain stablecoin reference (BRZ row)",
+            "url": "https://docs.chiliz.com/learn/about-stablecoins/stablecoins-on-chiliz-chain"
           }
         ]
       }

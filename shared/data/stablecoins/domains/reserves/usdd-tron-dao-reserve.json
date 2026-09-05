@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "TRX",
-      "pct": 59.7,
+      "pct": 59.9512430832,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "TRON Network",
@@ -18,7 +18,7 @@
     },
     {
       "name": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
-      "pct": 37.9,
+      "pct": 37.9258008380,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "USDD Smart Allocator",
@@ -33,7 +33,23 @@
     },
     {
       "name": "USDT (PSM vaults)",
-      "pct": 1.9,
+      "pct": 1.4780536939,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDT (direct vaults)",
+      "pct": 0.0346107749,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -49,7 +65,7 @@
     },
     {
       "name": "sTRX (direct vaults)",
-      "pct": 0.5,
+      "pct": 0.6102916101,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "TRON Network",
@@ -64,72 +80,44 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-12",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Pharos reserve research (production-capture alignment)",
     "confidence": "verified",
     "sources": [
-      {
-        "label": "USDD reserve dashboard",
-        "url": "https://usdd.io/data"
-      },
       {
         "label": "USDD Data Platform latest Tron collateral",
         "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
       },
       {
-        "label": "USDD Data Platform latest Ethereum collateral",
-        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth"
-      },
-      {
-        "label": "USDD Data Platform latest BNB Chain collateral",
-        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc"
-      },
-      {
-        "label": "USDD Data Platform all-chain overview",
-        "url": "https://app-api.usdd.io/data-platform/overview/info"
-      },
-      {
-        "label": "USDD Smart Allocator live positions and debt",
-        "url": "https://app-api.usdd.io/smart-allocator/detail-overview"
-      },
-      {
-        "label": "USDD Peg Stability Module documentation",
-        "url": "https://docs.usdd.io/user-guide/psm-peg-stability-module"
-      },
-      {
-        "label": "USDD Smart Allocator documentation",
-        "url": "https://docs.usdd.io/smart-allocator"
-      },
-      {
-        "label": "USDD core features",
-        "url": "https://docs.usdd.io/introduction/core-features"
+        "label": "USDD Data Platform Tron collateral history",
+        "url": "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron"
       }
     ],
-    "rationale": "The production usdd-data-platform adapter snapshot fetched on 2026-08-12T04:11:42Z from the configured Tron latest-collateral feed emits TRX 59.7%, Smart Allocator 37.9%, USDT PSM vaults 1.9%, and direct-vault sTRX 0.5%, normalized from the feed's gross lockedValue rows. These percentages are the exact live classification scaffold; they are not liability shares and the TRX weight includes borrower-owned overcollateralization. The separate 2026-08-11 all-chain debt reconciliation remains useful non-additive context but is not substituted for the captured adapter weights. Smart Allocator stays an unresolved aggregate: the live detail feed identifies USDS, USDT, USDT0, and USDC positions across several venues, but its holdings churn and do not reconcile exactly to reported debt, so no fixed constituent weights or dependency edges are asserted.",
-    "compositionBasis": "Exact normalized gross locked-collateral rows emitted by the configured Tron USDD Data Platform adapter; all-chain debt weights retained as non-additive review context",
-    "compositionAsOf": "2026-08-12",
+    "rationale": "The configured USDD Data Platform Tron latest-collateral feed capture on 2026-09-04 reports five positive lockedValue categories. Normalizing the current rows (total collateral $1,910,128,975.51) yields TRX 59.9512430832%, Smart Allocator 37.9258008380%, USDT PSM vaults 1.4780536939%, USDT direct vaults 0.0346107749%, and sTRX direct vaults 0.6102916101%. These percentages are the live classification scaffold, not liability shares; TRX includes borrower-owned overcollateralization. Smart Allocator remains an unresolved aggregate because its constituent holdings churn and do not reconcile exactly to reported debt.",
+    "compositionBasis": "Normalized gross lockedValue rows from the configured USDD Data Platform Tron latest-collateral feed captured on 2026-09-04",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 37.9% Smart Allocator live slice is identified as an aggregate protocol position, but its constituent holdings change dynamically and do not reconcile exactly to reported debt; it remains aggregated rather than forcing transient constituent percentages or failure-domain weights.",
-    "knownUnknownExposurePct": 37.9,
+    "knownUnknownExposure": "The 37.9258008380% Smart Allocator live slice is identified as an aggregate protocol position, but its constituent holdings change dynamically and do not reconcile exactly to reported debt; it remains aggregated rather than forcing transient constituent percentages or failure-domain weights.",
+    "knownUnknownExposurePct": 37.9258008380,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "TRX",
-        "pct": 59.7,
+        "pct": 59.9512430832,
         "disposition": "untracked-exogenous-asset",
         "rationale": "TRX is volatile crypto collateral issued by the TRON network, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
-        "pct": 37.9,
+        "pct": 37.9258008380,
         "disposition": "basket-needs-split",
         "rationale": "The live allocator feed identifies USDS, USDT, USDT0, and USDC positions, but its debt and deployed holdings do not reconcile exactly at every observation; retain one explicitly upstream-exposed protocol-position slice instead of forcing transient dependency weights."
       },
       {
-        "reserveIndex": 3,
+        "reserveIndex": 4,
         "reserveName": "sTRX (direct vaults)",
-        "pct": 0.5,
+        "pct": 0.6102916101,
         "disposition": "untracked-exogenous-asset",
         "rationale": "sTRX is a TRON staking receipt and not a tracked stablecoin dependency."
       }

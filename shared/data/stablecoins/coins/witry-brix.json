@@ -101,11 +101,11 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-08-29",
-      "publishedAt": "2026-08-29",
+      "periodEnd": "2026-09-04",
+      "publishedAt": "2026-09-04",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-only",
-      "liabilityReconciliation": "none",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
       "reviewer": "Pharos reserve research",
       "confidence": "verified",
       "sources": [

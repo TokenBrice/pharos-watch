@@ -338,6 +338,32 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(eligibleReserveMeta(), CLOCK_SEC)).toBeNull();
   });
 
+  it.each(["independent-audit", "agreed-upon-procedures", "attestation"] as const)(
+    "admits %s as audited reserve evidence only when it carries an audit opinion",
+    (type) => {
+      const base = eligibleReserveMeta();
+      const supervised = eligibleReserveMeta({
+        proofOfReserves: { ...base.proofOfReserves!, type },
+      });
+      const unsupervised = eligibleReserveMeta({
+        mintAuthority: { ...base.mintAuthority!, supervision: "attestation-only" },
+        proofOfReserves: { ...base.proofOfReserves!, type },
+      });
+
+      const audited = type === "independent-audit";
+      const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(supervised, CLOCK_SEC);
+      const fallback = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC);
+      expect(admitted !== null).toBe(audited);
+      expect(fallback !== null).toBe(audited);
+
+      const evidence = new ReviewEvidenceBuilder(supervised.id, CLOCK_SEC);
+      addReviewedStaticReserveEvidence(supervised, admitted, evidence, CLOCK_SEC);
+      expect(evidence.finish().componentEvidence.some(
+        (entry) => entry.componentKey === "reviewed-static-reserves",
+      )).toBe(audited);
+    },
+  );
+
   it("keeps the issuer and report dates on audited fallback evidence", () => {
     // This is what makes an expired composition resolve to
     // `published-evidence-expired` rather than `issuer-undisclosed`: emitting

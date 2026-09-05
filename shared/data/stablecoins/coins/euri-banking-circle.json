@@ -18,8 +18,8 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.eurite.com/",
-    "provider": "Banking Circle S.A. disclosures (no EY reserve attestation exists: the only EY artefact is the bank's FY2024 entity financial-statements audit, which mentions EURI once and covers no reserve backing; the homepage's 'trusted attestation by a top tier auditor' links no document, and the MiCA whitepaper names only a Fireblocks SOC 2 and a PeckShield contract audit)",
-    "attestorTier": "self",
+    "provider": "Ernst & Young (issuer states EY conducts periodic 1:1 reserve attestations, but no dated EURI attestation report is publicly retrievable)",
+    "attestorTier": "undisclosed",
     "cadence": "none",
     "attestorJurisdiction": "Luxembourg"
   },

@@ -65,8 +65,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Re-verified at MegaETH block 24121857 (2026-08-16): the verified UUPS xUSDOFTUpgradeable implementation's owner is Safe 0x141c03abc062a9d5d4238e1666b849c929e53cb2; endpoint() returned LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, peers(30101) returned the Ethereum token, and isPeer(...) returned true. This is the MegaETH bridge representation in a direct LayerZero OFT burn/mint route, not an independently evidenced native issuer; the Ethereum USDmMinting path is reviewed under Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "megaeth",
-        "controllerAddress": "0xfafddbb3fc7688494971a79cc65dca3ef82079e7",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x141c03abc062a9d5d4238e1666b849c929e53cb2",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:megaeth:0xfafddbb3fc7688494971a79cc65dca3ef82079e7"
@@ -80,7 +80,7 @@
           },
           {
             "label": "MegaETH mainnet contract registry",
-            "url": "https://docs.megaeth.com/frontier"
+            "url": "https://docs.megaeth.com/developer-docs/overview-1/contracts.md"
           },
           {
             "label": "LayerZero OFT reference",
@@ -103,7 +103,7 @@
         "reviewNote": "Re-verified at Ethereum blocks 25770580 and 25770626 (2026-08-16): the verified UUPS xUSDOFTUpgradeable token uses LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and peers(30398) returns the MegaETH token. USDmMinting 0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2.usdm() returns this Ethereum token and isMinter(USDmMinting) is true. This is the canonical native-issuance deployment; its collateral/order mint controls are reviewed in Mint Authority, while its co-located OFT burn/mint machinery is reviewed here.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
-        "controllerAddress": "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",
+        "controllerAddress": "0x141c03abc062a9d5d4238e1666b849c929e53cb2",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",

@@ -20,8 +20,8 @@
         "0xa603cf264adeb8e7f0f063c116929adac2d4286e"
       ],
       "implementationAddresses": [
-        "0xe4386180df7285e7d78794148e1b31c9edfb0689",
-        "0xd3239a355d47269e77cd028f2e965ef9fd893eb0",
+        "0x3f0ec5b26ec6e50907abea87a798bf395189bcd5",
+        "0xe8b32cb5a6b87e24cfe18b5dd8254bbce33ce9fa",
         "0xdd5a54ba2ab379a5e642c58f98ad793a183960e2",
         "0x0ee21b6c1f6aed64ce3c67767168ea62f3d8974b",
         "0xd2b5f8f1ded3d6e00965b8215b57a33c21101c63",
@@ -45,7 +45,7 @@
         },
         {
           "label": "Plasma mHYPER token",
-          "url": "https://plasma-explorer.com/address/0xb31bea5c2a43f942a3800558b1aa25978da75f8a"
+          "url": "https://plasmascan.to/address/0xb31bea5c2a43f942a3800558b1aa25978da75f8a"
         }
       ]
     },

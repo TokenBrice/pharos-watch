@@ -7,7 +7,6 @@
     "applicability": "unclear",
     "authorizationStatus": "unknown",
     "issuerPathway": "unknown",
-    "issuerEntity": "Mento Labs GmbH",
     "notes": "Reviewed issuer-family attribution for CHFm. This identifies the Mento operating entity for cross-asset control-domain attribution; it does not resolve whether decentralized Mento governance is the statutory issuer.",
     "references": [
       {
@@ -24,6 +23,6 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-24"
+    "reviewedAt": "2026-09-05"
   }
 }

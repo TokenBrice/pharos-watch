@@ -22,7 +22,7 @@
         "sources": [
           {
             "label": "BIMA Mainnet Addresses",
-            "url": "https://docs.bima.money/security/mainnet-addresses"
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/docs/mainnet.md"
           },
           {
             "label": "BorrowerOperations on Etherscan",
@@ -75,14 +75,6 @@
       "reviewedAt": "2026-08-17",
       "sources": [
         {
-          "label": "Minting USBD",
-          "url": "https://docs.bima.money/minting-usbd"
-        },
-        {
-          "label": "BIMA Mainnet Addresses",
-          "url": "https://docs.bima.money/security/mainnet-addresses"
-        },
-        {
           "label": "Bima DebtToken source",
           "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/DebtToken.sol"
         },
@@ -119,7 +111,7 @@
         },
         {
           "label": "BIMA Mainnet Addresses",
-          "url": "https://docs.bima.money/security/mainnet-addresses"
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/docs/mainnet.md"
         }
       ]
     },

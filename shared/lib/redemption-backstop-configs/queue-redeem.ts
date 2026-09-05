@@ -511,7 +511,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
   }),
   "aznd-mu-digital": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
-    unresolvedOutputDisposition: "issuer-undisclosed",
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     costModel: fixedFee(0, "Mu Digital docs describe minting and redemption as fee-free"),
@@ -527,7 +527,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Tracked metadata describes KYC-gated weekly AZND redemptions against the full reserve book rather than an always-live stablecoin hot-wallet buffer",
-      "2026-07-27 recheck (Kimi data review): Mu Digital documents accepted mint funding assets (USDC, USDT, or AUSD) but still does not identify the asset used to settle an approved AZND redemption ('receipt of funds' after the weekly queue). The output therefore remains an unresolved asset with no guessed identity.",
+      "2026-09-04 adjudication: Mu Digital Terms of Use Section 4.E.ix grants eligible AZND holders the right to withdraw for USDC, and Mu Digital's mint/redeem documentation describes an approximately 7-day queue; the redemption output is therefore resolved to USDC.",
     ],
   }),
   "avusd-avant": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {

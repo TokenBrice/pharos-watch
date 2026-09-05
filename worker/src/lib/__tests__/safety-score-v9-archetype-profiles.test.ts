@@ -83,12 +83,12 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     // algorithmic, so a commodity overlay cannot carry one.
     expect(overlay.profileReview).toBeUndefined();
     expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("commodity-claim");
-    // 15 registry coins migrated; 13 are in the active scored set (GRAMG and
-    // GRAMS are tracked but carry no `llamaId`, so they never enter it). 13
-    // curated overlays — the same two ride the conservative compiler fallback.
+    // XNK remains represented by a curated overlay for readable delisted
+    // metadata, but its lifecycle correction removes it from the active
+    // scored registry: 12 active entries and 13 overlays (XNK plus 12 active).
     expect(
       [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim").length,
-    ).toBe(13);
+    ).toBe(12);
     expect(
       mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim").length,
     ).toBe(13);

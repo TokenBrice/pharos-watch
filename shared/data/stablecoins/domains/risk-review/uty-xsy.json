@@ -140,8 +140,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "At Avalanche block 92981600 on 2026-08-16, the tracked UTY deployment resolved to OFT implementation 0x79fc5fd276c03aaa8418871ce3a5c5767a0241ef; endpoint() returned LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, token() returned itself, approvalRequired() was false, and peers(30184) returned the Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1. This is a bridge mint/burn representation against the Base lockbox, not a native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "avalanche",
-        "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "controllerChain": "base",
+        "controllerAddress": "0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb"
@@ -209,8 +209,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "At Katana block 40178663 on 2026-08-16, the tracked UTY deployment resolved to OFT implementation 0x4ef498786e9c7dd58ccdd04e8ed0aebd1c764f72; endpoint() returned LayerZero V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, token() returned itself, approvalRequired() was false, and peers(30184) returned the Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1. This is a bridge mint/burn representation against the Base lockbox, not a native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "katana",
-        "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "controllerChain": "base",
+        "controllerAddress": "0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:katana:0xba515304d8153c4b162dc79f867e152df9c127eb"

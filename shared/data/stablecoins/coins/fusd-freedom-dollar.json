@@ -1,18 +1,17 @@
 {
   "id": "fusd-freedom-dollar",
   "name": "Freedom Dollar",
-  "symbol": "FUSD",
+  "symbol": "fUSD",
   "oneLiner": "FUSD is the Zano privacy-chain dollar token with a self-published ZANO reserve dashboard; redemption is limited and it is not bridged to tracked Pharos chains.",
   "flags": {
     "backing": "crypto-backed",
-    "governance": "centralized-dependent"
+    "governance": "decentralized"
   },
   "collateral": "FUSD is minted against ZANO reserves deposited into the Freedom Dollar DAO contract, with initial overcollateralization above 1000%. Reserves are staked on Zano and publicly visible on-chain.",
   "pegMechanism": "Algorithmic Zano-backed mint/redemption design: users mint FUSD by depositing ZANO into the Freedom Dollar DAO, with very high initial overcollateralization and on-chain reserve visibility.",
   "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "freedom-dollar",
-  "protocolSlug": "freedom-dollar",
   "links": [
     {
       "label": "Website",
@@ -30,10 +29,11 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://freedomdollar.com/",
-    "provider": "Freedom Dollar (latestReport removed 2026-08: the page's own reserve widget says 'Last updated: 07/08/2025' - over a year stale - so the prior 2026-07-30 review verified only that the URL loads, not that reserve data is current)",
+    "provider": "Freedom Dollar live on-chain reserve dashboard: the homepage widget updates in real time (observed 'Last updated: 9/4/2026, 5:08:19 PM' on 2026-09-04); current timestamped reconciliation metrics: circulating 8M fUSD, minted 12M, reserves $9,259,995.74 (1,328,740.96 ZANO x $6.969 + 4,000,001 fUSD), coverage ratio 1.16x; ZANO reserve wallet independently viewable.",
     "attestorTier": "self",
     "cadence": "ad-hoc"
   },
+  "collateralQuality": "exotic",
   "notices": [
     {
       "type": "info",

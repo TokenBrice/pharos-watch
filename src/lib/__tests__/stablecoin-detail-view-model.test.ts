@@ -640,6 +640,39 @@ describe("stablecoin detail view-model builder", () => {
     });
   });
 
+  it("omits intentionally gated queries from the page health banner", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const viewModel = buildStablecoinDetailViewModel(
+      makeReadyDetailParams({
+        id: coin.id,
+        coin,
+        queries: {
+          dexLiquidity: { enabled: false },
+          reportCards: { enabled: false },
+          redemptionBackstops: { enabled: false },
+        },
+        supplemental: {
+          yieldRankings: { enabled: false },
+          stressSignals: { enabled: false },
+          flows: { enabled: false },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+    expect(viewModel.staleQueries.map((query) => query.preset)).not.toEqual(
+      expect.arrayContaining([
+        "dexLiquidity",
+        "reportCards",
+        "redemptionBackstops",
+        "yieldRankings",
+        "stressSignals",
+        "mintBurnFlows",
+      ]),
+    );
+  });
+
   it("distinguishes optional-source failure from unsupported or valid empty coverage", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const error = new Error("optional feeds unavailable");

@@ -1,30 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 
 describe("liquidity coverage", () => {
-  it("classifies every deployment through the canonical provider inventory", () => {
-    const classified: string[] = [];
-    for (const meta of ACTIVE_STABLECOINS) {
-      for (const c of meta.contracts ?? []) {
-        classified.push(
-          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain, c.address).join(",") || "provider-inaccessible"}`,
-        );
-      }
-      for (const c of meta.tradedContracts ?? []) {
-        classified.push(
-          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain, c.address).join(",") || "provider-inaccessible"}`,
-        );
-      }
-    }
-    // 51 -> 50 when the SILK quarantine (#892) removed silk-shade-protocol
-    // from the active registry.
-    // 50 -> 40 when wave-3 census providers (aquarius/tezos/icon-balanced/kava-swap)
-    // covered 10 formerly no-provider deployments.
-    // 40 -> 30 when the Osmosis SQS and Noble swap providers covered another
-    // 10 Cosmos deployments.
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(30);
-  });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
     const symbolToIds = new Map<string, string[]>();

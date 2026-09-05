@@ -176,15 +176,6 @@ export interface CurrentPriceOverride {
       newestExpiry: number;
       dispersionBps: number;
     };
-    juiceDollarBridge?: {
-      chain: "citrea";
-      bridge: string;
-      quoteToken: string;
-      quoteParentId: string;
-      blockNumber: number;
-      redeemableJusd: number;
-      simulatedJusd: number;
-    };
   };
 }
 

@@ -65,7 +65,7 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "anzen-usdz",
