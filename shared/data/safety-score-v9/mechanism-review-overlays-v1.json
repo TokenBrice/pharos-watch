@@ -829,64 +829,41 @@
     },
     {
       "assetId": "zarm-mento",
-      "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-09-05",
       "sources": [
         {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+          "label": "Mento itemized reserve assets, custody wallets and positions (fetched 2026-09-05)",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Mento V3 reserve conversion documentation",
-          "url": "https://docs.mento.org/mento-v3"
+          "label": "Mento protocol-wide reserve, liquidity and governance risk disclosure",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview.md"
+        },
+        {
+          "label": "Mento shared V2/V3 Reserve and StableTokenZAR deployment inventory",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+        },
+        {
+          "label": "Sourcify verified ZARm proxy source on Celo",
+          "url": "https://sourcify.dev/server/v2/contract/42220/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6?fields=abi,metadata,sources"
+        },
+        {
+          "label": "Celo finalized block 76721442 (ZARm and Reserve code; ZARm totalSupply reads)",
+          "url": "https://celoscan.io/block/76721442"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/zarm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 30 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
-      "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 10000000
-      },
+      "notes": "Reviewed 2026-09-05: replaces the stale CDP overlay to match the existing fiat-cash classification for shared protocol-reserve inventory. The official deployment inventory identifies StableTokenZAR at 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 and the shared Reserve at 0x9380fa34fd9e4fd14c06305fd7b6199089ed4eb9. The itemized reserve API disclosed $19,959,907.699599963 of collateral across named hot, cold and operational wallets and deployed positions; its CDP rows contain no ZARm debt. At finalized Celo block 76721442, both deployment addresses had contract code and ZARm totalSupply was 10925.176443780387 tokens. These primary disclosures and on-chain anchors support limited claim/segregation, custody continuity, and assurance/reconciliation under the same shared-reserve framing as CADm, KESm and BRLm. Claim/segregation is limited to observable protocol reserve inventory, not a direct legal holder claim or a ZARm-specific partition. Custody continuity is limited because the disclosed reserve wallets and protocol governance remain shared failure domains. Assurance is limited to itemized self-reported assets corroborated by contract and token-supply reads, not an independently attested reserve-to-liability reconciliation or a complete cross-chain balance audit. No independent auditor, enforceable holder seniority, bankruptcy-remoteness, or dedicated ZARm recovery commitment is established. The broad fiat-cash classification is economically broader than ordinary custodial fiat cash. Raw primary responses and block reads are retained in agents/2026-09-05-safety-score-gap-campaign/evidence/zarm-*. No current CDP ratio, liquidation capacity or historical virtual conversion inventory is carried into the fiat-cash overlay.",
+      "metrics": {},
       "components": {
-        "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "backstop": {
-          "applicability": "measured",
+        "claimAndSegregation": {
           "quality": "limited"
         },
-        "branchIsolation": {
-          "applicability": "measured",
+        "custodyContinuity": {
           "quality": "limited"
         },
-        "shutdownAndBadDebt": {
-          "applicability": "measured",
+        "assuranceAndReconciliation": {
           "quality": "limited"
-        },
-        "structuralRedemption": {
-          "applicability": "measured",
-          "quality": "adequate"
         }
       }
     },
