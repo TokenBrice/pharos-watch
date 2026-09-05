@@ -1,6 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
-import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
+import { encodeFunctionData, parseAbi } from "viem/utils";
 
 import {
   DIRECT_API_MAX_POOL_TVL_USD,
@@ -13,17 +13,22 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockNumber,
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import { getDexMeasuredExecutionDeployment } from "../measured-execution/registry";
 import { buildChainAddressKey } from "./token-resolution";
+import {
+  decodeStagedMulticallResult,
+  erc20RecoveryCalls,
+  ERC20_RECOVERY_ABI,
+  loadStagedPoolRecoveryRows,
+  mapStagedMulticallResults,
+  rawAmountToDecimal,
+} from "./staged-pool-recovery";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { sqrtRatioToSpotPrice } from "./fetch-slipstream";
 
 const CHAIN = "bsc";
 const STAGING_DEX_ID = "uniswap-bsc";
-const MAX_POOLS = 12;
-const MAX_AGE_SEC = 4 * 60 * 60;
 const MULTICALL_BATCH_SIZE = 60;
 const successfulResult = (pools: DexApiPool[]): DexApiFetchResult =>
   makeDexApiFetchResult(pools, { ok: true, degraded: false, errors: [] });
@@ -37,71 +42,15 @@ const POOL_ABI = parseAbi([
 const FACTORY_ABI = parseAbi([
   "function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)",
 ]);
-const ERC20_ABI = parseAbi([
-  "function decimals() view returns (uint8)",
-  "function balanceOf(address account) view returns (uint256)",
-]);
-
-interface StagedCandidateRow {
-  pool_id: string;
-  base_token: string | null;
-  quote_token: string | null;
-}
 
 interface Candidate {
   poolAddress: `0x${string}`;
   expectedTokens: Set<string>;
 }
 
-function decodeResult<T>(
-  result: EvmMulticall3Result | undefined,
-  abi: typeof POOL_ABI | typeof FACTORY_ABI | typeof ERC20_ABI,
-  functionName: string,
-): T | null {
-  if (!result?.success) return null;
-  try {
-    return decodeFunctionResult({ abi, functionName: functionName as never, data: result.returnData }) as T;
-  } catch {
-    return null;
-  }
-}
-
-function resultMap(results: readonly EvmMulticall3Result[]): Map<string, EvmMulticall3Result> {
-  return new Map(results.map((result) => [result.label, result]));
-}
-
-function bigintToDecimal(value: bigint, decimals: number): number {
-  if (decimals <= 0) return Number(value);
-  const divisor = 10n ** BigInt(decimals);
-  const whole = value / divisor;
-  const remainder = value % divisor;
-  return Number(`${whole}.${remainder.toString().padStart(decimals, "0").slice(0, 12)}`);
-}
-
 async function loadCandidates(db: D1Database): Promise<Candidate[]> {
-  const nowSec = Math.floor(Date.now() / 1_000);
-  const result = await db
-    .prepare(
-      `SELECT pool_id, base_token, quote_token
-       FROM (
-         SELECT pool_id, base_token, quote_token, tvl_usd,
-                ROW_NUMBER() OVER (
-                  PARTITION BY pool_id
-                  ORDER BY tvl_usd DESC, stablecoin_id
-                ) AS candidate_rank
-         FROM dex_pool_staging
-         WHERE chain = ? AND dex_id = ? AND refreshed_at >= ?
-           AND source IN ('cg_onchain', 'gecko_terminal', 'dexscreener')
-           AND base_token IS NOT NULL AND quote_token IS NOT NULL
-       )
-       WHERE candidate_rank = 1
-       ORDER BY tvl_usd DESC, pool_id
-       LIMIT ?`,
-    )
-    .bind(CHAIN, STAGING_DEX_ID, nowSec - MAX_AGE_SEC, MAX_POOLS)
-    .all<StagedCandidateRow>();
-
-  return (result.results ?? []).flatMap((row) => {
+  const rows = await loadStagedPoolRecoveryRows(db, { chain: CHAIN, dexId: STAGING_DEX_ID });
+  return rows.flatMap((row) => {
     const poolAddress = canonicalEvmAddress(
       row.pool_id.startsWith(`${CHAIN}:`) ? row.pool_id.slice(CHAIN.length + 1) : null,
     );
@@ -146,22 +95,7 @@ export async function fetchUniswapV3BscShadowPools(input: {
         poolCall("token1"),
         poolCall("fee"),
         poolCall("slot0"),
-        ...[...candidate.expectedTokens].flatMap((tokenAddress, tokenIndex) => [
-          {
-            label: `${prefix}-token-${tokenIndex}-decimals`,
-            target: tokenAddress,
-            callData: encodeFunctionData({ abi: ERC20_ABI, functionName: "decimals" }),
-          },
-          {
-            label: `${prefix}-token-${tokenIndex}-balance`,
-            target: tokenAddress,
-            callData: encodeFunctionData({
-              abi: ERC20_ABI,
-              functionName: "balanceOf",
-              args: [candidate.poolAddress],
-            }),
-          },
-        ]),
+        ...erc20RecoveryCalls(prefix, candidate.poolAddress, candidate.expectedTokens),
       ];
     });
     const rawState = await fetchEvmMulticall3Aggregate3AtBlock(CHAIN, stateCalls, blockNumber, {
@@ -172,15 +106,15 @@ export async function fetchUniswapV3BscShadowPools(input: {
       multicallBatchSize: MULTICALL_BATCH_SIZE,
     });
     if (!rawState) throw new Error("uniswap-v3-bsc-state-unavailable");
-    const state = resultMap(rawState);
+    const state = mapStagedMulticallResults(rawState);
 
     const decoded = candidates.flatMap((candidate, index) => {
       const prefix = `univ3-bsc-${index}`;
-      const factory = canonicalEvmAddress(decodeResult<string>(state.get(`${prefix}-factory`), POOL_ABI, "factory"));
-      const token0 = canonicalEvmAddress(decodeResult<string>(state.get(`${prefix}-token0`), POOL_ABI, "token0"));
-      const token1 = canonicalEvmAddress(decodeResult<string>(state.get(`${prefix}-token1`), POOL_ABI, "token1"));
-      const fee = Number(decodeResult<number>(state.get(`${prefix}-fee`), POOL_ABI, "fee"));
-      const slot0 = decodeResult<readonly [bigint, number, number, number, number, number, boolean]>(
+      const factory = canonicalEvmAddress(decodeStagedMulticallResult<string>(state.get(`${prefix}-factory`), POOL_ABI, "factory"));
+      const token0 = canonicalEvmAddress(decodeStagedMulticallResult<string>(state.get(`${prefix}-token0`), POOL_ABI, "token0"));
+      const token1 = canonicalEvmAddress(decodeStagedMulticallResult<string>(state.get(`${prefix}-token1`), POOL_ABI, "token1"));
+      const fee = Number(decodeStagedMulticallResult<number>(state.get(`${prefix}-fee`), POOL_ABI, "fee"));
+      const slot0 = decodeStagedMulticallResult<readonly [bigint, number, number, number, number, number, boolean]>(
         state.get(`${prefix}-slot0`),
         POOL_ABI,
         "slot0",
@@ -219,26 +153,26 @@ export async function fetchUniswapV3BscShadowPools(input: {
       multicallBatchSize: MULTICALL_BATCH_SIZE,
     });
     if (!rawBindings) throw new Error("uniswap-v3-bsc-binding-unavailable");
-    const bindings = resultMap(rawBindings);
+    const bindings = mapStagedMulticallResults(rawBindings);
 
     const pools: DexApiPool[] = [];
     for (let index = 0; index < decoded.length; index++) {
       const row = decoded[index]!;
       const resolvedPool = canonicalEvmAddress(
-        decodeResult<string>(bindings.get(`univ3-bsc-binding-${index}`), FACTORY_ABI, "getPool"),
+        decodeStagedMulticallResult<string>(bindings.get(`univ3-bsc-binding-${index}`), FACTORY_ABI, "getPool"),
       );
       if (resolvedPool !== row.candidate.poolAddress) continue;
       const stagedTokens = [...row.candidate.expectedTokens];
       const tokenRows = [row.token0, row.token1].flatMap((address, tokenIndex) => {
         const stagedIndex = stagedTokens.indexOf(address);
-        const decimals = Number(decodeResult<number>(
+        const decimals = Number(decodeStagedMulticallResult<number>(
           state.get(`${row.prefix}-token-${stagedIndex}-decimals`),
-          ERC20_ABI,
+          ERC20_RECOVERY_ABI,
           "decimals",
         ));
-        const rawBalance = decodeResult<bigint>(
+        const rawBalance = decodeStagedMulticallResult<bigint>(
           state.get(`${row.prefix}-token-${stagedIndex}-balance`),
-          ERC20_ABI,
+          ERC20_RECOVERY_ABI,
           "balanceOf",
         );
         if (
@@ -254,7 +188,7 @@ export async function fetchUniswapV3BscShadowPools(input: {
           address,
           symbol: trackedAssetId ?? `TOKEN${tokenIndex}`,
           decimals,
-          balance: bigintToDecimal(rawBalance, decimals),
+          balance: rawAmountToDecimal(rawBalance, decimals),
           trackedAssetId,
           directPrice,
         }];
