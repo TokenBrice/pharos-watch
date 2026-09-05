@@ -112,3 +112,16 @@ regexes = [
   '''0x6a4854078428eea517e8013827cba9f90583f8a9fdf8610c8791d1b04feb6a3eee428bf506c98ead1e870918f26a1d41f5bfb792b1e4f331679d1ad3e527326f''',
 ]
 paths = ['''(?:^|/)shared/data/stablecoins/domains/risk-review/usdcx-movement\.json$''']
+
+# Exact Cardano policy-id + asset-name identifiers, pinned to the published
+# Cardano Foundation token registry in each transfer review's sources.
+[[allowlists]]
+description = "Reviewed USDA and USDM Cardano asset identifiers are public, not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441$''',
+  '''^c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d$''',
+]
+paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json$''']
