@@ -173,7 +173,7 @@ const MORE_COLUMNS: readonly NavColumn[] = [
       { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
       { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
       { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference" },
-      { href: "/status/", label: "System Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
+      { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline" },
       {
         href: "https://pharosville.pharos.watch/",
         label: "PharosVille",

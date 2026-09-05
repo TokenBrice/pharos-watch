@@ -181,13 +181,13 @@ describe("TopNav", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("keeps the System Status destination label and shows health as separate metadata", () => {
+  it("keeps the Status destination label and shows health as separate metadata", () => {
     installMatchMediaMock(true);
 
     render(<TopNav />);
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
 
-    const statusLabel = screen.getByText("System Status", { selector: "span" });
+    const statusLabel = screen.getByText("Status", { selector: "span" });
     const state = screen.getByText("Healthy", { selector: "span" });
     const statusLink = statusLabel.closest("a");
     expect(state.closest("a")).toBe(statusLink);
@@ -218,7 +218,7 @@ describe("TopNav", () => {
     render(<TopNav />);
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
 
-    expect(screen.getByText("System Status", { selector: "span" })).not.toBeNull();
+    expect(screen.getByText("Status", { selector: "span" })).not.toBeNull();
     expect(screen.getByText("Unavailable", { selector: "span" })).not.toBeNull();
   });
 });
