@@ -9,13 +9,6 @@ import { isRouteActive } from "@/lib/navigation";
 
 const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => item.href !== "/stability-index/");
 
-function mobileLabel(item: (typeof MOBILE_ROUTE_ITEMS)[number]): string {
-  // "DDR" is useful in the constrained desktop rail, but "Depegs" is more
-  // legible as a persistent phone-nav label.
-  if (item.shortLabel === "DDR") return "Depegs";
-  return item.shortLabel ?? item.label;
-}
-
 export function MobileBottomNav() {
   const pathname = usePathname();
 
@@ -42,7 +35,7 @@ export function MobileBottomNav() {
               }
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
-              <span className="text-[11px] font-medium leading-none">{mobileLabel(item)}</span>
+              <span className="text-[11px] font-medium leading-none">{item.shortLabel ?? item.label}</span>
             </Link>
           );
         })}

@@ -136,9 +136,8 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   // "Yield" reads unambiguously at every width and keeps the rail inside the
   // masthead width budget; search still indexes the canonical group label.
   { ...YIELD_NAV_ITEM, label: "Yield", shortLabel: "Yield" },
-  // Below xl the rail falls back to the in-product shorthand (DDR, PSI); the
-  // five-item rail plus the section menus does not fit 1024px otherwise.
-  { ...DEPEG_NAV_ITEM, shortLabel: "DDR" },
+  // Compact labels keep the rail and section menus within the masthead.
+  { ...DEPEG_NAV_ITEM, shortLabel: "Depeg" },
   { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "PSI" },
 ];
 
