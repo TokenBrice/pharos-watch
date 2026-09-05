@@ -317,6 +317,32 @@
             "url": "https://transfero.com/"
           }
         ]
+      },
+      {
+        "id": "chiliz:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+        "destinationChain": "chiliz",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Chiliz: Transfero's current integration publishes 0xE9185Ee218cae427aF7B9764A011bb89FeA761B4, and Chiliz's official stablecoin reference lists this exact contract with no third-party bridge (Bridges: n/a; acquired with Transfero). At Chiliz block 37,273,117 on 2026-09-05, live chain reads returned BRZ Token / BRZ with 18 decimals and 100,000 BRZ max supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "sources": [
+          {
+            "label": "Transfero current BRZ contract addresses",
+            "url": "https://transfero.com/brz-stablecoin"
+          },
+          {
+            "label": "Chiliz Chain stablecoin reference (BRZ row)",
+            "url": "https://docs.chiliz.com/learn/about-stablecoins/stablecoins-on-chiliz-chain"
+          }
+        ]
       }
     ]
   }

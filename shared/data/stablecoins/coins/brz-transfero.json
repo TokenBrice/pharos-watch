@@ -121,6 +121,11 @@
       "chain": "stellar",
       "address": "BRZ-GABMA6FPH3OJXNTGWO7PROF7I5WPQUZOB4BLTBTP4FK6QV7HWISLIEO2",
       "decimals": 7
+    },
+    {
+      "chain": "chiliz",
+      "address": "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-regulated",

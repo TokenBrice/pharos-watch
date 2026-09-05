@@ -60,8 +60,8 @@ describe("DEX deployment coverage ownership", () => {
       }
     }
 
-    expect(unsupported).toHaveLength(30);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(24);
+    expect(unsupported).toHaveLength(33);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(26);
     // Registering the Osmosis and Noble providers removed the last two active
     // coins whose entire footprint sat outside the discovery registry.
     expect(exclusivelyUnsupported).toEqual([]);
