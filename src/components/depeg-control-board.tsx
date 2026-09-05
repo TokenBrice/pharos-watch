@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, RotateCcw } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -277,38 +278,20 @@ export function DepegControlBoard({
       <div className="pharos-table-shell">
         <div className="pharos-table-toolbar">
           <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by peg currency">
-              {PEG_FILTER_OPTIONS.map((f) => (
-                <button
-                  key={f.value}
-                  type="button"
-                  onClick={() => onPegFilterChange(f.value as PegCurrency | "all")}
-                  aria-pressed={pegFilter === f.value}
-                  className={cn(
-                    "pharos-focus-ring pharos-control-pill",
-                    pegFilter === f.value ? "pharos-control-pill-active" : "",
-                  )}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by governance type">
-              {GOVERNANCE_FILTER_OPTIONS.map((f) => (
-                <button
-                  key={f.value}
-                  type="button"
-                  onClick={() => onTypeFilterChange(f.value as GovernanceType | "all")}
-                  aria-pressed={typeFilter === f.value}
-                  className={cn(
-                    "pharos-focus-ring pharos-control-pill",
-                    typeFilter === f.value ? "pharos-control-pill-active" : "",
-                  )}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <ControlPillToggle
+              options={PEG_FILTER_OPTIONS}
+              value={pegFilter}
+              onChange={onPegFilterChange}
+              ariaLabel="Filter by peg currency"
+              className="flex flex-wrap gap-1"
+            />
+            <ControlPillToggle
+              options={GOVERNANCE_FILTER_OPTIONS}
+              value={typeFilter}
+              onChange={onTypeFilterChange}
+              ariaLabel="Filter by governance type"
+              className="flex flex-wrap gap-1"
+            />
             <FilterSearchInput
               value={searchQuery}
               onValueChange={onSearchChange}

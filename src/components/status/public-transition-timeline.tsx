@@ -2,6 +2,7 @@
 import type { PublicStatusHistoryWindow, PublicStatusTransition } from "@shared/types";
 import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
 import { DataTableShell } from "@/components/data-table-shell";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { TableCell, TableRow } from "@/components/table";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
@@ -39,21 +40,13 @@ export function PublicTransitionTimeline({
             Window filters this table only. The runway above always summarizes the last 30 days.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {PUBLIC_STATUS_HISTORY_WINDOWS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onWindowChange(option)}
-              aria-pressed={option === window}
-              className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${
-                option === window ? "pharos-control-pill-active" : ""
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
+        <ControlPillToggle
+          className="flex flex-wrap gap-2"
+          options={PUBLIC_STATUS_HISTORY_WINDOWS}
+          value={window}
+          onChange={onWindowChange}
+          buttonClassName="px-2.5 py-1 text-xs"
+        />
       </div>
 
       <div className="mt-4">

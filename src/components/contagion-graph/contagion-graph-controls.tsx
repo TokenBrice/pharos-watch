@@ -4,7 +4,15 @@ import { cn } from "@/lib/utils";
 import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
 import { DEPENDENCY_TYPE_FILTERS } from "@/components/contagion-graph-model";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
-import { NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
+import { ALL_NODE_LIMIT, NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
+
+// Focus and Type pills stay hand-rolled here: Focus overrides each button's
+// accessible name (visible label vs aria-label differ) and Type carries
+// per-option title tooltips — neither fits the shared pill contract.
+function formatNodeLimitLabel(limit: NodeLimitOption): string {
+  return limit === ALL_NODE_LIMIT ? "All" : String(limit);
+}
 
 interface ContagionGraphControlsProps {
   focusMode: FocusMode;
@@ -104,17 +112,15 @@ export function ContagionGraphControls({
 
         <div className="flex items-center gap-2">
           <span className="pharos-kicker shrink-0">Limit</span>
-          <div role="group" aria-label="Maximum nodes shown" className="flex flex-wrap gap-1.5">
-            {NODE_LIMIT_OPTIONS.map((limit) => (
-              <ControlPill
-                key={limit}
-                isActive={nodeLimit === limit}
-                onClick={() => onNodeLimitChange(limit)}
-              >
-                {limit === "all" ? "All" : limit}
-              </ControlPill>
-            ))}
-          </div>
+          <ControlPillToggle
+            className="flex flex-wrap gap-1.5"
+            ariaLabel="Maximum nodes shown"
+            options={NODE_LIMIT_OPTIONS}
+            value={nodeLimit}
+            onChange={onNodeLimitChange}
+            formatLabel={formatNodeLimitLabel}
+            buttonClassName="px-3 py-1"
+          />
         </div>
 
         <label className="flex items-center gap-2">

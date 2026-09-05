@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -32,6 +32,7 @@ import {
   type ElevatedCoin,
 } from "@/components/dews-summary-model";
 import { useSvgId } from "@/components/chart-primitives/axes";
+import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
@@ -359,15 +360,9 @@ function DEWSRadar({
   const uid = useId();
   const wakeGradId = useSvgId("dews-wake");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [isFinePointer, setIsFinePointer] = useState(false);
-
-  useEffect(() => {
-    const mql = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const sync = () => setIsFinePointer(mql.matches);
-    sync();
-    mql.addEventListener("change", sync);
-    return () => mql.removeEventListener("change", sync);
-  }, []);
+  // Hover affordances require a hover-capable fine pointer; touch devices fall
+  // back to tap-to-navigate via resolveRadarClick.
+  const isFinePointer = useMediaQuery("(hover: hover) and (pointer: fine)", false);
 
   // Roving tabindex: keyboard order = severity desc, then mcap desc.
   const rovingOrder = useMemo(() => buildRovingOrder(elevated), [elevated]);

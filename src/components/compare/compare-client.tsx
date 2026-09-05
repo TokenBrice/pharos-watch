@@ -20,10 +20,10 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { CompareEmptyState } from "@/components/compare-empty-state";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CHART_PALETTE } from "@/lib/chart-colors";
-import { cn } from "@/lib/utils";
 import {
   COMPARISON_PRESETS,
   MAX_COMPARE_COINS,
@@ -583,25 +583,14 @@ function CohortToggle({ cohort, effective, memberCount, onChange }: CohortToggle
   return (
     <div className="flex flex-col items-stretch gap-1 sm:items-end">
       <span className="pharos-meta">Cohort baseline</span>
-      <div className="flex flex-wrap gap-1" role="group" aria-label="Cohort baseline">
-        {COHORT_OPTIONS.map((option) => {
-          const isActive = cohort === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onChange(option.value)}
-              aria-pressed={isActive}
-              className={cn(
-                "pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs",
-                isActive ? "pharos-control-pill-active" : "",
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <ControlPillToggle
+        className="flex flex-wrap gap-1"
+        ariaLabel="Cohort baseline"
+        options={COHORT_OPTIONS}
+        value={cohort}
+        onChange={onChange}
+        buttonClassName="px-2.5 py-1 text-xs"
+      />
       {cohort !== effective ? (
         <span className="text-[10px] text-muted-foreground">
           Falling back to All ({memberCount}); selected cohort too thin.

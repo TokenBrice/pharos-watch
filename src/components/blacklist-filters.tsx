@@ -1,33 +1,23 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
-function FilterPill({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "pharos-focus-ring pharos-control-pill min-h-11 px-3 sm:min-h-8",
-        active && "pharos-control-pill-active",
-      )}
-    >
-      {children}
-    </button>
-  );
+const EVENT_TYPE_FILTER_OPTIONS: { value: BlacklistEventType | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "blacklist", label: "Freeze" },
+  { value: "unblacklist", label: "Release" },
+  { value: "destroy", label: "Wipe" },
+];
+
+const ALL_STABLECOIN_FILTER_OPTIONS = ["all", ...BLACKLIST_STABLECOINS] as const;
+
+// Raw stablecoin tickers are their own labels; only the "all" sentinel differs.
+function formatStablecoinFilterLabel(value: BlacklistStablecoin | "all"): string {
+  return value === "all" ? "All" : value;
 }
 
 interface BlacklistFiltersProps {
@@ -51,15 +41,23 @@ export function BlacklistFilters({
   onChainChange,
   onEventTypeChange,
 }: BlacklistFiltersProps) {
-  const { withEvents, withoutEvents } = useMemo(() => {
-    const withE: BlacklistStablecoin[] = [];
+  const { stablecoinOptions, withoutEvents } = useMemo(() => {
+    const visibleOptions: Array<BlacklistStablecoin | "all"> = ["all"];
     const withoutE: BlacklistStablecoin[] = [];
     for (const coin of BLACKLIST_STABLECOINS) {
       const count = perCoinTotalEvents?.[coin] ?? 0;
-      (count > 0 ? withE : withoutE).push(coin);
+      (count > 0 ? visibleOptions : withoutE).push(coin);
     }
-    return { withEvents: withE, withoutEvents: withoutE };
+    return {
+      stablecoinOptions: perCoinTotalEvents == null ? ALL_STABLECOIN_FILTER_OPTIONS : visibleOptions,
+      withoutEvents: withoutE,
+    };
   }, [perCoinTotalEvents]);
+
+  const chainOptions = useMemo(
+    () => [{ value: "all", label: "All" }, ...chains.map((chain) => ({ value: chain.id, label: chain.name }))],
+    [chains],
+  );
 
   const hasEventCounts = perCoinTotalEvents != null;
   const selectionHiddenByDefault =
@@ -70,20 +68,15 @@ export function BlacklistFilters({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
       <div className="space-y-1.5">
         <span className="pharos-kicker">Stablecoin</span>
-        <div className="flex w-full flex-wrap justify-start gap-1.5" role="group" aria-label="Filter by stablecoin">
-          <FilterPill active={stablecoinFilter === "all"} onClick={() => onStablecoinChange("all")}>
-            All
-          </FilterPill>
-          {(hasEventCounts ? withEvents : BLACKLIST_STABLECOINS).map((stablecoin) => (
-            <FilterPill
-              key={stablecoin}
-              active={stablecoinFilter === stablecoin}
-              onClick={() => onStablecoinChange(stablecoin)}
-            >
-              {stablecoin}
-            </FilterPill>
-          ))}
-        </div>
+        <ControlPillToggle
+          className="flex w-full flex-wrap justify-start gap-1.5"
+          ariaLabel="Filter by stablecoin"
+          options={stablecoinOptions}
+          value={stablecoinFilter}
+          onChange={onStablecoinChange}
+          formatLabel={formatStablecoinFilterLabel}
+          buttonClassName="min-h-11 px-3 sm:min-h-8"
+        />
         {hasEventCounts && withoutEvents.length > 0 ? (
           <div className="space-y-1.5">
             <button
@@ -100,21 +93,16 @@ export function BlacklistFilters({
               {showWithoutEvents ? "Hide" : "Show"} tracked without events yet ({withoutEvents.length})
             </button>
             {showWithoutEvents ? (
-              <div
-                id="blacklist-no-events-filter-group"
-                className="flex w-full flex-wrap justify-start gap-1.5 opacity-80"
-                role="group"
-                aria-label="Filter by stablecoin without recorded events"
-              >
-                {withoutEvents.map((stablecoin) => (
-                  <FilterPill
-                    key={stablecoin}
-                    active={stablecoinFilter === stablecoin}
-                    onClick={() => onStablecoinChange(stablecoin)}
-                  >
-                    {stablecoin}
-                  </FilterPill>
-                ))}
+              <div id="blacklist-no-events-filter-group" className="opacity-80">
+                <ControlPillToggle
+                  className="flex w-full flex-wrap justify-start gap-1.5"
+                  ariaLabel="Filter by stablecoin without recorded events"
+                  options={withoutEvents}
+                  value={stablecoinFilter}
+                  onChange={onStablecoinChange}
+                  formatLabel={formatStablecoinFilterLabel}
+                  buttonClassName="min-h-11 px-3 sm:min-h-8"
+                />
               </div>
             ) : null}
           </div>
@@ -122,33 +110,25 @@ export function BlacklistFilters({
       </div>
       <div className="space-y-1.5">
         <span className="pharos-kicker">Chain</span>
-        <div className="flex w-full flex-wrap justify-start gap-1.5" role="group" aria-label="Filter by chain">
-          <FilterPill active={chainFilter === "all"} onClick={() => onChainChange("all")}>
-            All
-          </FilterPill>
-          {chains.map((chain) => (
-            <FilterPill key={chain.id} active={chainFilter === chain.id} onClick={() => onChainChange(chain.id)}>
-              {chain.name}
-            </FilterPill>
-          ))}
-        </div>
+        <ControlPillToggle
+          className="flex w-full flex-wrap justify-start gap-1.5"
+          ariaLabel="Filter by chain"
+          options={chainOptions}
+          value={chainFilter}
+          onChange={onChainChange}
+          buttonClassName="min-h-11 px-3 sm:min-h-8"
+        />
       </div>
       <div className="space-y-1.5">
         <span className="pharos-kicker">Event Type</span>
-        <div className="flex w-full flex-wrap justify-start gap-1.5" role="group" aria-label="Filter by event type">
-          <FilterPill active={eventTypeFilter === "all"} onClick={() => onEventTypeChange("all")}>
-            All
-          </FilterPill>
-          <FilterPill active={eventTypeFilter === "blacklist"} onClick={() => onEventTypeChange("blacklist")}>
-            Freeze
-          </FilterPill>
-          <FilterPill active={eventTypeFilter === "unblacklist"} onClick={() => onEventTypeChange("unblacklist")}>
-            Release
-          </FilterPill>
-          <FilterPill active={eventTypeFilter === "destroy"} onClick={() => onEventTypeChange("destroy")}>
-            Wipe
-          </FilterPill>
-        </div>
+        <ControlPillToggle
+          className="flex w-full flex-wrap justify-start gap-1.5"
+          ariaLabel="Filter by event type"
+          options={EVENT_TYPE_FILTER_OPTIONS}
+          value={eventTypeFilter}
+          onChange={onEventTypeChange}
+          buttonClassName="min-h-11 px-3 sm:min-h-8"
+        />
       </div>
     </div>
   );
