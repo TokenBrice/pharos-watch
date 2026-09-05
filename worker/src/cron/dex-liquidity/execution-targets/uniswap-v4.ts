@@ -29,7 +29,9 @@ export function buildUniswapV4RegisteredExecutionTarget(
     : [];
   const exactPoolId = retainedPoolId(identity.pool.pool);
   const matchingCandidates = exactPoolId
-    ? candidates.filter((candidate) => candidate.poolId === exactPoolId)
+    ? [...context.uniswapV4ExecutionCandidates.values()].flat().filter(
+        (candidate) => candidate.chain === identity.chainNorm && candidate.poolId === exactPoolId,
+      )
     : candidates;
   if (matchingCandidates.length !== 1) {
     return {
