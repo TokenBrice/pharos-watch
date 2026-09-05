@@ -6,6 +6,9 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
+import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import { pricesAgreeWithinBps } from "../../lib/price-divergence";
+import { loadPriceCorroborationObservations } from "./price-corroboration-observations";
 import {
   countDepegAuthoritativeSources,
   getPriceCacheMaxAgeSec,
@@ -356,8 +359,41 @@ export async function runPostEnrichmentPricePipeline(
   if (stillMissing.length > 0) {
     const priceCacheReadAbort = returnIfAborted(signal, `${abortStagePrefix}read-price-cache`);
     if (priceCacheReadAbort) return priceCacheReadAbort;
+    const staged = await loadPriceCorroborationObservations(db, now, signal);
     const priceCache = input.priceCache ?? await getPriceCache(db);
     for (const asset of stillMissing) {
+      const candidates = staged.get(asset.id) ?? [];
+      const candidatePrices = Object.fromEntries(candidates.map((candidate) => [candidate.source, candidate.price]));
+      for (const candidate of candidates) {
+        const agreeSources = [...new Set(candidates
+          .filter((other) => pricesAgreeWithinBps(candidate.price, other.price, DIVERGENCE_THRESHOLD_BPS))
+          .map((other) => other.source))];
+        const decision = validateFallbackPriceCandidate({
+          price: candidate.price,
+          source: candidate.source,
+          confidence: "fallback",
+          agreeSources,
+          candidatePrices,
+          validationContext: validationContexts.get(asset),
+          validationReferences,
+          previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+        });
+        if (!decision.accepted) continue;
+        applyAcceptedPriceCandidate({
+          asset,
+          price: candidate.price,
+          source: candidate.source,
+          confidence: "fallback",
+          observedAt: candidate.observedAt,
+          observedAtMode: candidate.observedAtMode,
+          consensusSources: Object.keys(candidatePrices),
+          agreeSources,
+          syncedAt: input.syncStartSec,
+        });
+        cachedFallbackCount++;
+        break;
+      }
+      if (!hasMissingPrice(asset)) continue;
       const cached = priceCache.get(asset.id);
       if (!cached) continue;
       const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
