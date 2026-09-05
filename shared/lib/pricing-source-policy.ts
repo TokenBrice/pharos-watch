@@ -15,10 +15,6 @@ export function isPoolChallengeEligibleConsensus(sources: string[]): boolean {
   );
 }
 
-export function isGtProbeEligibleSingleSource(source: string): boolean {
-  return !!getPricingSourceRegistryEntry(source)?.isGtProbeEligible;
-}
-
 export function isReplaySafePriceSource(source: string | null | undefined): boolean {
   if (!source) return false;
   const sourceParts = normalizePricingSourceKeys(source);

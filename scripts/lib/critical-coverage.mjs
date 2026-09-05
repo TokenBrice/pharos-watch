@@ -72,7 +72,6 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/cron/sync-stablecoins/enrich-prices-pass-common.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-passes.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-consensus.ts": "2026-09-05",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-gt-probe.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-hardening.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-shared.ts": "2026-09-05",

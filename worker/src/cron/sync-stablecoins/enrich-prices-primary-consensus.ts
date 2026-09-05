@@ -83,7 +83,6 @@ export function buildPrimaryConsensusResults(params: {
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       navQuote: params.quoteMaps.navPrices.get(asset.id),
-      addressProviderQuotes: params.quoteMaps.addressProviderQuotes.get(asset.id),
       protocolSources: params.dexPriceSources.get(asset.id),
       dexAggregateQuote: (() => {
         const dexRow = params.dexRows.get(asset.id);

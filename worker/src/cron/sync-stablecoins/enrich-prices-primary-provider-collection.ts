@@ -25,7 +25,6 @@ import {
   getRedstoneMetaSymbolForStablecoinId,
   REDSTONE_TRACKED_STABLECOIN_IDS,
 } from "../../lib/redstone";
-import type { AddressPriceQuote } from "../../lib/address-price-providers";
 import {
   createDexPriceSourceLoadTelemetry,
   loadDexPriceRows,
@@ -109,7 +108,6 @@ export interface PrimaryConsensusQuoteMaps {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
-  addressProviderQuotes: Map<string, AddressPriceQuote[]>;
 }
 
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
@@ -134,7 +132,6 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     curveOraclePrice: null,
     curveOracleObservedAt: null,
     navPrices: new Map(),
-    addressProviderQuotes: new Map(),
   };
 }
 
@@ -447,7 +444,6 @@ export async function collectPrimaryProviderQuotes(params: {
     bitstampObservedAtBySymbol,
     coinbaseObservedAtBySymbol,
     navPrices,
-    addressProviderQuotes,
   } = emptyQuoteMaps;
 
   let curveOraclePrice: number | null = null;
@@ -668,7 +664,6 @@ export async function collectPrimaryProviderQuotes(params: {
       curveOraclePrice,
       curveOracleObservedAt,
       navPrices,
-      addressProviderQuotes,
     },
     providerDiagnostics,
   };

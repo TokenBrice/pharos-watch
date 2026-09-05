@@ -178,8 +178,6 @@ vi.mock("@/components/feedback-modal", () => createNoopComponentMock("FeedbackMo
 
 vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
 
-vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => createNoopComponentMock("RecentBlacklistBanner"));
-
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
 describe("StablecoinDetailClient", () => {

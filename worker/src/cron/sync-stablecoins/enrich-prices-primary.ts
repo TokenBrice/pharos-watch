@@ -10,14 +10,7 @@ import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "./enrich-prices-primary-provider-collection";
 import { buildPrimaryConsensusResults, logDexPriceSourceLoadTelemetry } from "./enrich-prices-primary-consensus";
-import {
-  applyListAggregatorDowngrade,
-  applyPoolChallenge,
-  applyPrimaryPostConsensusHardening,
-} from "./enrich-prices-primary-hardening";
-
-export type { PrimaryPriceResult, PriceValidationStats };
-export { applyListAggregatorDowngrade, applyPoolChallenge };
+import { applyPrimaryPostConsensusHardening } from "./enrich-prices-primary-hardening";
 
 /**
  * Fetch prices from CG, CEX tickers, Curve on-chain, and DEX sources in parallel,

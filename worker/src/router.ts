@@ -10,11 +10,10 @@ import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse 
 import {
   getRouteMatch,
   ROUTER_STATIC_PATHS,
-  getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
 import { logWorkerEvent } from "./lib/structured-log";
 import { auditCatalogActionResponseSafely } from "./lib/catalog-action-audit";
-import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
+import type { FullRouteContext, RouteMatch } from "./routes/shared";
 
 export interface ResolvedRoute {
   routeMatch: RouteMatch;
@@ -52,10 +51,6 @@ function auditPersistenceFailureResponse(response: Response): Response {
     },
     { status: 503, noStore: true, headers },
   );
-}
-
-export function getRouteDependencies(url: URL): readonly RouteDependency[] | null {
-  return getRegisteredRouteDependencies(url.pathname);
 }
 
 function validateRouteMatchMethod(

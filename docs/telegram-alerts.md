@@ -757,7 +757,7 @@ For single-coin alerts the first chunk is sent with `link_preview_options: { is_
 
 The same bot token can be used for both:
 
-- Channel-style digest posting via `postDigestToTelegram(...)`
+- Channel-style digest posting through immutable editions and the durable digest outbox (`enqueueTelegramDigestEdition` / `deliverTelegramDigestEdition`)
 - Direct chat replies and subscriber alerts via `sendToChat(...)`
 
 The Daily Digest is a market-wide editorial edition generated once on its existing schedule. A personalized recap is a private, per-subscriber deterministic view of Tape changes over that subscriber's watchlist window. They do not share an AI request or delivery outbox: recap planning does not call the digest generator, and a missing or stale digest only removes the optional footer link from a valid recap.

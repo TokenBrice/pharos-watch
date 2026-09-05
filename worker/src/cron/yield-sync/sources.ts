@@ -1,26 +1,32 @@
 export {
   BASEDOLLAR_SP_CONFIG,
   LIQUITY_V2_SP_CONFIG,
-  fetchBeefySources,
-  fetchBimaSusbdSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
+  fetchLiquityV2StabilityPoolSource,
+  type LiquityV2SpSourceConfig,
+} from "./sources-optional-protocols-onchain";
+export {
+  fetchBimaSusbdSource,
   fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
-  fetchLiquityV2StabilityPoolSource,
-  fetchMorphoVaultSources,
   fetchOndoUsdyOracleSource,
   fetchReProtocolReusdSource,
-  fetchPendleMarketSources,
-  fetchRoycoDawnSources,
+  fetchYearnYboldSource,
+} from "./sources-optional-protocols-protocol-api";
+export { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
+export { fetchRoycoDawnSources } from "./royco-dawn";
+export {
   fetchVaultsFyiSources,
-  type LiquityV2SpSourceConfig,
   type VaultsFyiSourceResult,
   type VaultsFyiTelemetry,
+} from "./vaults-fyi";
+export {
+  fetchBeefySources,
+  fetchMorphoVaultSources,
+  fetchPendleMarketSources,
   fetchYearnKongSources,
-  fetchYearnYboldSource,
-  fetchZephyrZysSource,
-} from "./sources-optional-protocols";
+} from "./sources-optional-protocols-supplemental";
 export {
   fetchAaveV3SupplyRates,
   fetchCompoundV3SupplyRates,
