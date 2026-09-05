@@ -21,23 +21,27 @@ describe("critical coverage sharding", () => {
     expect(args.some((arg) => arg.endsWith(".test.ts"))).toBe(true);
   });
 
-  it("limits a shard to touched sources and their importing owner tests", () => {
+  it("limits instrumentation to touched sources without shrinking the baseline owner suite", () => {
     const source = "worker/src/lib/auth.ts";
     const args = buildCriticalCoverageArgs([], { changedFiles: [source] });
     const selectedTests = args.filter((arg) => CRITICAL_TEST_FILES.includes(arg));
 
     expect(args.filter((arg) => arg.startsWith("--coverage.include="))).toHaveLength(1);
     expect(args).toContain(`--coverage.include=${source}`);
-    expect(selectedTests).toContain("worker/src/lib/__tests__/auth.test.ts");
-    expect(selectedTests.length).toBeLessThan(CRITICAL_TEST_FILES.length);
+    expect(selectedTests).toEqual(CRITICAL_TEST_FILES);
   });
 
-  it("caps the PR shard count at the number of selected owner tests", () => {
+  it("caps shard count by the full owner suite rather than touched-source owners", () => {
     const source = "worker/src/lib/auth.ts";
-    const ownership = new Map([[source, ["worker/src/lib/__tests__/auth.test.ts"]]]);
+    const otherSource = "worker/src/lib/price-validation.ts";
+    const ownership = new Map([
+      [source, ["worker/src/lib/__tests__/auth.test.ts"]],
+      [otherSource, ["worker/src/lib/__tests__/price-validation.test.ts", "worker/src/lib/__tests__/price-consensus.test.ts"]],
+    ]);
+    const options = { changedFiles: [source], criticalFiles: [source, otherSource], ownership };
 
-    expect(countCriticalCoverageShards({ changedFiles: [source], criticalFiles: [source], ownership })).toBe(1);
-    expect(countCriticalCoverageShards({ criticalFiles: [source], ownership }, 1)).toBe(1);
+    expect(countCriticalCoverageShards(options)).toBe(3);
+    expect(countCriticalCoverageShards(options, 2)).toBe(2);
   });
 
   it("merges blobs with the same coverage scope before the ratchet runs", () => {
