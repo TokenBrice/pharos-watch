@@ -16,7 +16,7 @@ import ts from "typescript";
  * .tsx → TSX  |  .jsx → JSX  |  .ts / .mts / .cts → TS
  * .js / .mjs / .cjs → JS  |  anything else → TS (safe default for unknown types)
  *
- * Note: check-client-registry-imports previously mapped .jsx → TSX.
+ * Note: a retired client-import scanner previously mapped .jsx → TSX.
  * The canonical mapping uses JSX, which is the correct ScriptKind for
  * .jsx files (TSX is for TypeScript JSX; JSX is for JavaScript JSX).
  *

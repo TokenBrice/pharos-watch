@@ -181,7 +181,7 @@ export type MethodologyDiagramCardProps = {
   exactClassNames?: MethodologyPipelineCardClasses;
 };
 
-export function MethodologyDiagramCard({
+function MethodologyDiagramCard({
   title,
   subtitle,
   className,
@@ -201,7 +201,7 @@ export function MethodologyDiagramCard({
   );
 }
 
-export function MethodologyDiagramArrow({
+function MethodologyDiagramArrow({
   direction = "down",
 }: {
   direction?: "down" | "right";

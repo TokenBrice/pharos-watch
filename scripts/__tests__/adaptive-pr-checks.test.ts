@@ -174,6 +174,44 @@ describe("adaptive PR checks", () => {
       .toContain("check:doc-sync");
   });
 
+  it("skips the static lane's doc-sync copy only when the docs lane owns it", () => {
+    const changedFiles = ["docs/testing.md", "shared/lib/classification.ts"];
+    const composed = buildPrStaticCheckPlan(changedFiles, { skipDocSync: true }).commands.map(
+      (command) => command.name,
+    );
+    expect(composed).not.toContain("check:doc-sync");
+    // Standalone semantics are unchanged: the same diff without the
+    // composition flag still validates source-owned docs here.
+    const standalone = buildPrStaticCheckPlan(changedFiles).commands.map((command) => command.name);
+    expect(standalone).toContain("check:doc-sync");
+  });
+
+  it("accepts --skip-doc-sync as a composition-only static runner option", async () => {
+    const stdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const stderr = { write: vi.fn<(chunk: string) => unknown>() };
+    const runCommandImpl = vi.fn(async () => ({ status: 0, aborted: false, output: "" }));
+
+    await expect(runPrStaticChecks({
+      argv: ["--json", "--skip-doc-sync", "--base=HEAD", "--head=HEAD"],
+      env: process.env,
+      runCommandImpl: runCommandImpl as never,
+      stderr,
+      stdout,
+    })).resolves.toBe(0);
+
+    expect(stderr.write.mock.calls.map(([chunk]) => chunk).join("")).toContain(
+      "doc-sync owned by the docs lane",
+    );
+
+    await expect(runPrStaticChecks({
+      argv: ["--bogus-flag", "--base=HEAD", "--head=HEAD"],
+      env: process.env,
+      runCommandImpl: runCommandImpl as never,
+      stderr: { write: vi.fn() },
+      stdout: { write: vi.fn() },
+    })).rejects.toThrow("Unknown option");
+  });
+
   it("runs the critical-coverage completeness guard for every non-doc PR path", () => {
     expect(buildPrStaticCheckPlan(["worker/src/lib/auth.ts"]).commands.map((command) => command.name)).toContain(
       "check:critical-coverage-completeness",

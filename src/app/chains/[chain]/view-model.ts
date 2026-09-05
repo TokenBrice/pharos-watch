@@ -1,6 +1,6 @@
 import type { ChainStablecoin } from "@/hooks/use-chains";
 
-export function buildCompositionLayout(coins: ChainStablecoin[]) {
+function buildCompositionLayout(coins: ChainStablecoin[]) {
   const totalCoins = coins.length;
   if (totalCoins === 0) {
     return { displayCoins: [], rest: [], restTotal: 0, cols: 2, rows: 1 };
@@ -41,7 +41,7 @@ export function buildCompositionLayout(coins: ChainStablecoin[]) {
   return { displayCoins, rest, restTotal, cols, rows };
 }
 
-export function buildBackingTotals(coins: ChainStablecoin[]) {
+function buildBackingTotals(coins: ChainStablecoin[]) {
   const totals: Record<string, number> = {
     "rwa-backed": 0,
     "crypto-backed": 0,

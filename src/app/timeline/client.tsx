@@ -38,11 +38,6 @@ export {
   buildTimelineResetParams,
 } from "./timeline-controller";
 
-export type {
-  TimelineEventQueryParams,
-  TimelineFeedController,
-} from "./timeline-controller";
-
 export interface TimelineUrlState {
   type: string;
   severity: TapeFilterState["severity"];

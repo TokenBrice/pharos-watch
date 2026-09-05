@@ -19,11 +19,15 @@ export interface WorkflowMatrixEntry {
   lane: PrLaneId;
   shard?: number;
   shardCount?: number;
+  skipDocSync?: boolean;
   timeout: number;
 }
 
 export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: WorkflowMatrixEntry[] } {
   const include: WorkflowMatrixEntry[] = [];
+  // When the docs lane is selected alongside the static lane (mixed docs/source
+  // PR), the docs job owns `check:doc-sync`; the static job skips its own copy.
+  const docsLaneSelected = isPrLaneSelected(getPrLane("docs"), selection);
   for (const lane of PR_LANES) {
     if (["preflight", "critical-coverage", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
     const shards = lane.id === "critical-coverage-shards"
@@ -33,6 +37,7 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
       include.push({
         lane: lane.id,
         ...(lane.shards ? { shard, shardCount: shards } : {}),
+        ...(lane.id === "static" && docsLaneSelected ? { skipDocSync: true } : {}),
         timeout: lane.timeoutMinutes,
       });
     }
@@ -56,6 +61,7 @@ function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
       head: env.PR_HEAD_SHA,
       shard,
       shardCount,
+      skipDocSync: bool(env.PR_SKIP_DOC_SYNC),
     }), { env, stdio: "inherit" });
     if (result.error) throw result.error;
     if (result.status !== 0) return result.status ?? 1;

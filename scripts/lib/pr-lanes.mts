@@ -34,8 +34,14 @@ export interface PrLaneCommandContext {
   base?: string;
   forwardedTestArgs?: readonly string[];
   head?: string;
+  /**
+   * Composition context set when the docs lane owns `check:doc-sync` in the
+   * same plan (mixed docs/source PR): the static lane then skips its own
+   * doc-sync execution. Standalone static plans never set it.
+   */
   shard?: number;
   shardCount?: number;
+  skipDocSync?: boolean;
 }
 
 export const PR_LANES: readonly PrLaneDefinition[] = [
@@ -125,6 +131,7 @@ export function buildPrLaneCommandArgs(
     case "pr-static":
       if (context.base) args.push(`--base=${context.base}`);
       if (context.head) args.push(`--head=${context.head}`);
+      if (context.skipDocSync) args.push("--skip-doc-sync");
       break;
   }
   return args;

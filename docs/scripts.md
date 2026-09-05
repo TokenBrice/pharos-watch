@@ -94,7 +94,7 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 ### PR And Release Gates
 
-Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. [Testing: Commands](./testing.md#commands) owns their behavior and [Testing: CI Pipeline](./testing.md#ci-pipeline) owns lane membership and check selection. The [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns the protected-PR and production release sequence. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
+Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. In mixed docs/source plans the docs lane owns `check:doc-sync`; `check:pr` and the generated CI matrix pass `--skip-doc-sync` to the static lane in that composition, while standalone `npm run check:pr:static` keeps its own doc-sync selection. [Testing: Commands](./testing.md#commands) owns their behavior and [Testing: CI Pipeline](./testing.md#ci-pipeline) owns lane membership and check selection. The [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns the protected-PR and production release sequence. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
 
 For `check:focused` selection and preview behavior, use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
 

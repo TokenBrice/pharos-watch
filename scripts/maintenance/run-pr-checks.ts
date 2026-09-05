@@ -165,12 +165,14 @@ async function resolveBaseSha(
 
 export function createLaneCommand(
   lane: PrCheckLane,
-  { base, env, forwardedTestArgs, head, resolvedBaseSha }: {
+  { base, env, forwardedTestArgs, head, resolvedBaseSha, skipDocSync }: {
     base: string;
     env: NodeJS.ProcessEnv;
     forwardedTestArgs: readonly string[];
     head: string;
     resolvedBaseSha: string;
+    /** Set when the docs lane in the same composed plan owns `check:doc-sync`. */
+    skipDocSync?: boolean;
   },
 ): PrCheckCommand {
   const withLane = (command: SpawnCommand, extraEnv?: Record<string, string>): PrCheckCommand => ({
@@ -196,6 +198,7 @@ export function createLaneCommand(
         base,
         forwardedTestArgs,
         head,
+        skipDocSync,
       }))
     : createSpawnCommand("node", buildPrLaneCommandArgs(manifestCommand));
 
@@ -327,13 +330,17 @@ export async function runPrChecks(
   if (classification.criticalCoverageChanged && flags.skipCoverage) {
     log("[check:pr] Skipping touched critical coverage locally; the remote PR gate WILL run it.");
   }
-
+  // When the composed plan already runs the docs lane, that lane owns
+  // `check:doc-sync`; the static lane receives --skip-doc-sync so doc-sync
+  // executes exactly once. Standalone `check:pr:static` never gets the flag.
+  const skipDocSync = lanes.includes("doc-sync");
   const commands = lanes.map((lane) => createLaneCommand(lane, {
     base,
     env,
     forwardedTestArgs: flags.forwardedTestArgs,
     head,
     resolvedBaseSha,
+    skipDocSync,
   }));
   const laneReports = await runPrCheckLanes(commands, { env, json, log, runCommandImpl });
   const report: GateReport<typeof classification> = {
