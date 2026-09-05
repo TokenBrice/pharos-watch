@@ -184,12 +184,7 @@ export function buildPublicDecisionLedger(params: {
   const competitors = params.candidates.filter(
     (candidate) => candidate.sourceKey !== params.selected.sourceKey,
   );
-  const selectionRankBySourceKey = new Map<string, number>();
-  params.candidates.forEach((candidate, index) => {
-    if (!selectionRankBySourceKey.has(candidate.sourceKey)) {
-      selectionRankBySourceKey.set(candidate.sourceKey, index + 1);
-    }
-  });
+  const selectionRankBySourceKey = buildSelectionRankBySourceKey(params.candidates);
   const ranked = [...competitors].sort((a, b) => {
     const deltaA = Math.abs(a.apy30d - params.selected.apy30d);
     const deltaB = Math.abs(b.apy30d - params.selected.apy30d);
@@ -223,4 +218,21 @@ export function buildPublicDecisionLedger(params: {
     rejectedCount: params.rejectedCount,
     alternatives,
   };
+}
+
+/**
+ * First-occurrence selection rank (1-based) over a coin's ordered candidate
+ * list. Shared by the public decision ledger and the ranking payload's
+ * alt-source projections.
+ */
+export function buildSelectionRankBySourceKey(
+  candidates: EvaluatedYieldSource[],
+): Map<string, number> {
+  const selectionRankBySourceKey = new Map<string, number>();
+  candidates.forEach((candidate, index) => {
+    if (!selectionRankBySourceKey.has(candidate.sourceKey)) {
+      selectionRankBySourceKey.set(candidate.sourceKey, index + 1);
+    }
+  });
+  return selectionRankBySourceKey;
 }

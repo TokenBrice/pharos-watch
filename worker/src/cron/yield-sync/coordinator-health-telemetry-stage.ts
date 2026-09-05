@@ -64,7 +64,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     methodologyVersion: fetched.safetySnapshot.methodologyVersion,
     publishedAt: fetched.safetySnapshot.publishedAt,
   });
-  const { previewRankingsPayload } = buildPreviewYieldRankingsArtifacts({
+  const { previewRankingsPayload, publicationViews } = buildPreviewYieldRankingsArtifacts({
     evaluatedSources: normalized.evaluatedSources,
     bestSourceKeyByCoin: normalized.bestSourceKeyByCoin,
     riskFreeRate: fetched.riskFreeRate,
@@ -129,6 +129,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
       ...onChainHealth,
       safetySnapshotMeta,
       previewRankingsPayload,
+      publicationViews,
       degradationReasons,
       previousYieldPublicationSnapshot,
       previousPublishedYieldBearingCount: publishedCoverageGuard.previousPublishedYieldBearingCount,

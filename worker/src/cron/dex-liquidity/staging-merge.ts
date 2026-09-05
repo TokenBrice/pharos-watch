@@ -14,7 +14,7 @@ import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs } from "./types";
+import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs, LiquidityPoolSourceFamily } from "./types";
 import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
@@ -382,6 +382,24 @@ function incrementSkipDimension(
   });
 }
 
+// Exhaustive staged-source → published source-family mapping: adding a staged
+// source without a row fails this record's type. The gecko_terminal fallback
+// still covers staged rows whose persisted source string outlives this deploy,
+// including prototype-named keys that plain Record indexing would inherit.
+const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], Exclude<LiquidityPoolSourceFamily, "dl">> = {
+  cg_onchain: "cg_onchain",
+  gecko_terminal: "gecko_terminal",
+  dexscreener: "dexscreener",
+  cg_tickers: "cg_tickers",
+  horizon: "horizon",
+  aquarius: "aquarius",
+  tezos: "tezos",
+  "icon-balanced": "icon-balanced",
+  "kava-swap": "kava-swap",
+  "osmosis-sqs": "osmosis-sqs",
+  "noble-swap": "noble-swap",
+};
+
 /**
  * Read staged pools from dex_pool_staging (refreshed within 24h),
  * convert to pool entries with confidence decay and defaults,
@@ -664,26 +682,9 @@ export async function mergeStagedPools(
       poolType,
       price: stagedPool.priceUsd ?? 0,
       symbol: stagedPool.symbol,
-      sourceFamily:
-        stagedPool.source === "dexscreener"
-          ? "dexscreener"
-          : stagedPool.source === "cg_tickers"
-            ? "cg_tickers"
-            : stagedPool.source === "horizon"
-              ? "horizon"
-              : stagedPool.source === "aquarius"
-                ? "aquarius"
-                : stagedPool.source === "tezos"
-                  ? "tezos"
-                  : stagedPool.source === "icon-balanced"
-                    ? "icon-balanced"
-                    : stagedPool.source === "kava-swap"
-                      ? "kava-swap"
-                      : stagedPool.source === "osmosis-sqs"
-                        ? "osmosis-sqs"
-                        : stagedPool.source === "noble-swap"
-                          ? "noble-swap"
-                          : "gecko_terminal",
+      sourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, stagedPool.source)
+        ? STAGED_SOURCE_FAMILY[stagedPool.source]
+        : "gecko_terminal",
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {

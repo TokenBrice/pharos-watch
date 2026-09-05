@@ -110,7 +110,10 @@ export async function computeStablecoinScores(
   const preparedRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
 
-  for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
+  // Nothing mutates metrics' key set across either pass (value-level updates
+  // only), so direct iteration visits identical entries in insertion order.
+  for (const [id, m] of metrics) {
+    if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
     p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
     m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)), fallbackCounters);
@@ -300,7 +303,8 @@ export async function computeStablecoinScores(
   }
   joinEvidence?.byTargetId.clear();
 
-  for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
+  for (const [id, m] of metrics) {
+    if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
     const rebuilt = rebuildMetricsFromPools(retainedPools, fallbackCounters);

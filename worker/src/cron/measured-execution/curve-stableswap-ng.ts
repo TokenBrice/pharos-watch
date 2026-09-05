@@ -77,37 +77,33 @@ export interface CurveStableSwapNgPoolPolicy {
   scoreEligible: true;
 }
 
+/** Projects one reviewed deployment identity, plus its factory binding, into the producer policy shape. */
+function toCurveStableSwapNgPolicy(
+  deployment: (typeof CURVE_STABLESWAP_NG_DEPLOYMENTS)[number],
+): CurveStableSwapNgPoolPolicy {
+  return {
+    chain: deployment.chain,
+    stablecoinId: deployment.stablecoinId,
+    poolAddress: deployment.poolAddress,
+    expectedPoolCodeHash: deployment.poolCodeHash,
+    factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+    expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
+    factoryPoolIndex: deployment.factoryPoolIndex,
+    poolTokens: deployment.poolTokens,
+    inputIndex: deployment.inputIndex,
+    outputIndex: deployment.outputIndex,
+    mode: "active",
+    scoreEligible: true,
+  };
+}
+
 /** Exact reviewed USDG/USDC StableSwap-NG deployment. This is not a generic Curve allowlist. */
-export const CURVE_USDG_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy = {
-  chain: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].chain,
-  stablecoinId: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].stablecoinId,
-  poolAddress: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].poolAddress,
-  expectedPoolCodeHash: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].poolCodeHash,
-  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
-  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
-  factoryPoolIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].factoryPoolIndex,
-  poolTokens: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].poolTokens,
-  inputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].inputIndex,
-  outputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[0].outputIndex,
-  mode: "active",
-  scoreEligible: true,
-};
+export const CURVE_USDG_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy =
+  toCurveStableSwapNgPolicy(CURVE_STABLESWAP_NG_DEPLOYMENTS[0]);
 
 /** Exact reviewed DUSD/USDC StableSwap-NG deployment. DUSD is the rate-bearing input; direct get_dy is required. */
-export const CURVE_DUSD_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy = {
-  chain: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].chain,
-  stablecoinId: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].stablecoinId,
-  poolAddress: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].poolAddress,
-  expectedPoolCodeHash: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].poolCodeHash,
-  factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
-  expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
-  factoryPoolIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].factoryPoolIndex,
-  poolTokens: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].poolTokens,
-  inputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].inputIndex,
-  outputIndex: CURVE_STABLESWAP_NG_DEPLOYMENTS[1].outputIndex,
-  mode: "active",
-  scoreEligible: true,
-};
+export const CURVE_DUSD_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy =
+  toCurveStableSwapNgPolicy(CURVE_STABLESWAP_NG_DEPLOYMENTS[1]);
 
 const CURVE_STABLESWAP_NG_POLICIES: readonly CurveStableSwapNgPoolPolicy[] = [
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,

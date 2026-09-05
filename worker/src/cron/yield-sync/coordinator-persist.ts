@@ -1,7 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { toYieldBenchmarkRegistry, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
-import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
-import { buildYieldSourceProvenance } from "./provenance";
+import { type EvaluatedYieldSource } from "./evaluation";
+import {
+  buildYieldPublicationViews,
+  type YieldCoinPublicationView,
+} from "./publication-view";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   attachYieldPublicationMetadata,
@@ -38,28 +41,21 @@ export function buildPreviewYieldRankingsArtifacts(params: {
   startSec: number;
 }): {
   previewRankingsPayload: ReturnType<typeof buildYieldRankingsPayloadFromEvaluatedSources>;
-  previewRankingProvenanceByKey: Map<string, Record<string, unknown>>;
+  publicationViews: Map<string, YieldCoinPublicationView>;
 } {
-  const previewRankingProvenanceByKey = new Map<string, Record<string, unknown>>();
-  for (const source of params.evaluatedSources) {
-    previewRankingProvenanceByKey.set(
-      buildHistoryKey(source.id, source.sourceKey),
-      buildYieldSourceProvenance({
-        source,
-        isBest: params.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
-        evaluatedSources: params.evaluatedSources,
-        startSec: params.startSec,
-        dlPoolsMeta: params.dlPoolsMeta,
-      }),
-    );
-  }
+  const { provenanceByKey, viewsByCoinId } = buildYieldPublicationViews({
+    evaluatedSources: params.evaluatedSources,
+    bestSourceKeyByCoin: params.bestSourceKeyByCoin,
+    startSec: params.startSec,
+    dlPoolsMeta: params.dlPoolsMeta,
+  });
 
   return {
-    previewRankingProvenanceByKey,
+    publicationViews: viewsByCoinId,
     previewRankingsPayload: buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: params.evaluatedSources,
-      bestSourceKeyByCoin: params.bestSourceKeyByCoin,
-      rankingProvenanceByKey: previewRankingProvenanceByKey,
+      publicationViews: viewsByCoinId,
+      rankingProvenanceByKey: provenanceByKey,
       riskFreeRate: params.riskFreeRate,
       riskFreeRateMeta: params.riskFreeRateMeta,
       riskFreeRateRegistry: toYieldBenchmarkRegistry(params.riskFreeRates),
@@ -76,10 +72,8 @@ export async function publishYieldCoordinatorResults(params: {
   signal?: AbortSignal;
   previewRankingsPayload: ReturnType<typeof buildYieldRankingsPayloadFromEvaluatedSources>;
   evaluatedSources: EvaluatedYieldSource[];
-  bestSourceKeyByCoin: Map<string, string>;
+  publicationViews: Map<string, YieldCoinPublicationView>;
   startSec: number;
-  medianApy: number;
-  dlPoolsMeta: YieldSourceInputMeta;
   degradationReasons: string[];
   resolvedCount: number;
   rowsRejected: number;
@@ -109,7 +103,10 @@ export async function publishYieldCoordinatorResults(params: {
     startSec: params.startSec,
     rankingCount: params.previewRankingsPayload.rankings.length,
     sourceRowCount: params.evaluatedSources.length,
-    bestRowCount: params.bestSourceKeyByCoin.size,
+    // Views own the selection: one per coin with a selected best row.
+    // Equivalent to the construction-time bestSourceKeyByCoin.size because
+    // evaluation only records winners drawn from the evaluated rows.
+    bestRowCount: params.publicationViews.size,
     rowsRejected: params.rowsRejected,
     divergenceFlags: params.divergenceFlags,
     sourceSwitches: params.sourceSwitches,
@@ -157,10 +154,8 @@ export async function publishYieldCoordinatorResults(params: {
     publicationWrite = await persistEvaluatedYieldSources(params.db, {
       signal: params.signal,
       evaluatedSources: params.evaluatedSources,
-      bestSourceKeyByCoin: params.bestSourceKeyByCoin,
+      publicationViews: params.publicationViews,
       startSec: params.startSec,
-      medianApy: params.medianApy,
-      dlPoolsMeta: params.dlPoolsMeta,
       generationId,
       rankingsPayload: publishedRankingsPayload,
       previousYieldPublicationSnapshot: params.previousYieldPublicationSnapshot,

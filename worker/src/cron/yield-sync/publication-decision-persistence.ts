@@ -1,19 +1,14 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import {
-  YieldRankingsResponseSchema,
-  type YieldPublicDecisionLedger,
-  type YieldSourceInputMeta,
-} from "@shared/types/yield";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { getCache, type CacheWriteResult } from "../../lib/db-cache";
 import { readCachedJson } from "../../lib/api-cache-read";
 import { validatePayloadWithSchema } from "../../lib/api-schema";
-import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
-import { compareCandidates, getConfidencePriority } from "./evaluation-arbitration";
+import type { EvaluatedYieldSource } from "./evaluation";
+import { getConfidencePriority } from "./evaluation-arbitration";
 import { publishYieldRowsAtomically } from "./publication-atomic-batch";
-import { buildYieldSourceProvenance } from "./provenance";
-import { buildPublicDecisionLedger, deriveRejectionReasonCode, deriveYieldSourceRole } from "./decision-public";
-import { resolveApy30dDeltaFromPrevious } from "./publication-ranking-payload";
+import { deriveRejectionReasonCode, deriveYieldSourceRole } from "./decision-public";
+import type { YieldCoinPublicationView } from "./publication-view";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 
 const MAX_SOURCE_DECISION_ALTERNATIVES = 4;
@@ -191,56 +186,6 @@ function serializeBoundedDecisionAlternatives(
   return "[]";
 }
 
-function buildYieldSourceDecisionEvidence(params: {
-  source: EvaluatedYieldSource;
-  evaluatedSources: EvaluatedYieldSource[];
-  bestSourceKeyByCoin: Map<string, string>;
-  startSec: number;
-  dlPoolsMeta: YieldSourceInputMeta;
-}): {
-  selectedReason: string;
-  sourceSwitch: boolean;
-  previousBestSourceKey: string | null;
-  rejectedCount: number;
-  alternativesJson: string;
-  publicDecisionLedger: YieldPublicDecisionLedger;
-} {
-  const candidates = params.evaluatedSources
-    .filter((candidate) => candidate.id === params.source.id)
-    .sort(compareCandidates);
-  const rejectedCount = candidates.filter((candidate) => candidate.rejected).length;
-  const provenance = buildYieldSourceProvenance({
-    source: params.source,
-    isBest: params.bestSourceKeyByCoin.get(params.source.id) === params.source.sourceKey,
-    evaluatedSources: params.evaluatedSources,
-    startSec: params.startSec,
-    dlPoolsMeta: params.dlPoolsMeta,
-  });
-  const previousBestSourceKey =
-    typeof provenance.previousBestSourceKey === "string" ? provenance.previousBestSourceKey : null;
-  const apy30dDeltaFromPrevious = resolveApy30dDeltaFromPrevious({
-    selected: params.source,
-    candidates,
-    previousBestSourceKey,
-  });
-
-  return {
-    selectedReason: typeof provenance.selectionReason === "string" ? provenance.selectionReason : "Selected source",
-    sourceSwitch: provenance.sourceSwitch === true,
-    previousBestSourceKey,
-    rejectedCount,
-    alternativesJson: serializeBoundedDecisionAlternatives(params.source, candidates),
-    publicDecisionLedger: buildPublicDecisionLedger({
-      selected: params.source,
-      candidates,
-      rejectedCount,
-      previousBestSourceKey,
-      sourceSwitch: provenance.sourceSwitch === true,
-      apy30dDeltaFromPrevious,
-    }),
-  };
-}
-
 function classifyDecisionRetention(input: {
   sourceSwitch: boolean;
   source: EvaluatedYieldSource;
@@ -331,10 +276,8 @@ export async function persistEvaluatedYieldSources(
   input: {
     signal?: AbortSignal;
     evaluatedSources: EvaluatedYieldSource[];
-    bestSourceKeyByCoin: Map<string, string>;
+    publicationViews: Map<string, YieldCoinPublicationView>;
     startSec: number;
-    medianApy: number;
-    dlPoolsMeta: YieldSourceInputMeta;
     generationId: string;
     rankingsPayload: unknown;
     previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
@@ -343,7 +286,6 @@ export async function persistEvaluatedYieldSources(
   | {
       ok: false;
       updatedCount: number;
-      rankingProvenanceByKey: Map<string, Record<string, unknown>>;
       validationFailures: number;
       reason?: string;
       cacheWrite?: CacheWriteResult;
@@ -351,7 +293,6 @@ export async function persistEvaluatedYieldSources(
   | {
       ok: true;
       updatedCount: number;
-      rankingProvenanceByKey: Map<string, Record<string, unknown>>;
       validationFailures: number;
       cacheWrite: CacheWriteResult;
     }
@@ -360,10 +301,12 @@ export async function persistEvaluatedYieldSources(
   const historyRows: Array<Record<string, unknown>> = [];
   const decisionRows: Array<Record<string, unknown>> = [];
   const decisionAlternativeRows: Array<Record<string, unknown>> = [];
-  const rankingProvenanceByKey = new Map<string, Record<string, unknown>>();
 
   for (const source of input.evaluatedSources) {
-    const isBest = input.bestSourceKeyByCoin.get(source.id) === source.sourceKey ? 1 : 0;
+    // The publication views are the sole owner of the selection decision; the
+    // is-best flag must agree with the frozen view, not a re-read map.
+    const view = input.publicationViews.get(source.id);
+    const isBest = view != null && view.selected.sourceKey === source.sourceKey ? 1 : 0;
     const warningSignals = [...source.warnings];
     const warningSignalsJson = warningSignals.length > 0 ? JSON.stringify(warningSignals) : null;
     const safeVariance30d = source.stdDev30d != null && Number.isFinite(source.stdDev30d) ? source.stdDev30d : null;
@@ -445,32 +388,11 @@ export async function persistEvaluatedYieldSources(
           }),
     });
 
-    rankingProvenanceByKey.set(
-      buildHistoryKey(source.id, source.sourceKey),
-      buildYieldSourceProvenance({
-        source,
-        isBest: isBest === 1,
-        evaluatedSources: input.evaluatedSources,
-        startSec: input.startSec,
-        dlPoolsMeta: input.dlPoolsMeta,
-      }),
-    );
-
-    if (isBest === 1) {
-      const decisionEvidence = buildYieldSourceDecisionEvidence({
-        source,
-        evaluatedSources: input.evaluatedSources,
-        bestSourceKeyByCoin: input.bestSourceKeyByCoin,
-        startSec: input.startSec,
-        dlPoolsMeta: input.dlPoolsMeta,
-      });
-      const candidates = input.evaluatedSources
-        .filter((candidate) => candidate.id === source.id)
-        .sort(compareCandidates);
+    if (view != null && isBest === 1) {
       const retention = classifyDecisionRetention({
-        sourceSwitch: decisionEvidence.sourceSwitch,
+        sourceSwitch: view.sourceSwitch,
         source,
-        candidates,
+        candidates: view.candidates,
       });
       decisionRows.push({
         generation_id: input.generationId,
@@ -480,17 +402,17 @@ export async function persistEvaluatedYieldSources(
         selected_data_source: source.dataSource,
         selected_apy_30d: source.apy30d,
         selected_score: source.pharosYieldScore,
-        selected_reason: decisionEvidence.selectedReason,
-        previous_best_source_key: decisionEvidence.previousBestSourceKey,
-        source_switch: decisionEvidence.sourceSwitch ? 1 : 0,
-        rejected_count: decisionEvidence.rejectedCount,
-        alternatives_json: decisionEvidence.alternativesJson,
+        selected_reason: view.selectedReason,
+        previous_best_source_key: view.previousBestSourceKey,
+        source_switch: view.sourceSwitch ? 1 : 0,
+        rejected_count: view.rejectedCount,
+        alternatives_json: serializeBoundedDecisionAlternatives(source, view.candidates),
         created_at: input.startSec,
         retention_reason: retention.retentionReason,
         trend_fingerprint: retention.trendFingerprint,
       });
 
-      for (const alternative of decisionEvidence.publicDecisionLedger.alternatives) {
+      for (const alternative of view.decisionLedger.alternatives) {
         decisionAlternativeRows.push({
           generation_id: input.generationId,
           stablecoin_id: source.id,
@@ -512,7 +434,6 @@ export async function persistEvaluatedYieldSources(
     return {
       ok: false,
       updatedCount: 0,
-      rankingProvenanceByKey,
       validationFailures: publishability.validationFailures,
       reason: publishability.reason,
     };
@@ -532,7 +453,6 @@ export async function persistEvaluatedYieldSources(
     return {
       ok: false,
       updatedCount: 0,
-      rankingProvenanceByKey,
       validationFailures: 0,
       reason: "cache-write-skipped-newer",
       cacheWrite,
@@ -542,7 +462,6 @@ export async function persistEvaluatedYieldSources(
   return {
     ok: true,
     updatedCount: input.evaluatedSources.length,
-    rankingProvenanceByKey,
     validationFailures: publishability.validationFailures,
     cacheWrite,
   };

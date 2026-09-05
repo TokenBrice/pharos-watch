@@ -1,10 +1,11 @@
-import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import type { PegAssetBase } from "@shared/types/core";
 import {
   CIRCUIT_SOURCE,
   DEX_FRESHNESS_SEC,
+  MAX_OPEN_DEPEG_EVENTS,
   POOL_CHALLENGE_MIN_TVL,
 } from "../lib/constants";
 import { executeAtomicBatch } from "../lib/db";
@@ -12,6 +13,7 @@ import {
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
+  logOpenDepegEventLimitReached,
 } from "../lib/depeg-helpers";
 import {
   normalizePendingDepegRow,
@@ -36,9 +38,6 @@ import {
 } from "./pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
-
-/** Bound open-event hydration so pending confirmation cannot materialize an unbounded set. */
-const MAX_OPEN_DEPEG_EVENTS = 200;
 
 /**
  * Process pending depeg records that require secondary confirmation.
@@ -109,14 +108,7 @@ export async function confirmPendingDepegs(
     .all<{ stablecoin_id: string }>();
   const openEventRows = openEvents.results ?? [];
   if (openEventRows.length >= MAX_OPEN_DEPEG_EVENTS) {
-    logWorkerEvent({
-      scope: "handler",
-      level: "warn",
-      event: "depeg_open_event_limit_reached",
-      message: "Skipped pending depeg confirmation because the open-event query reached its limit",
-      status: "degraded",
-      metadata: { pass: "confirmation", maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
-    });
+    logOpenDepegEventLimitReached("confirmation");
     return { providerDiagnostics };
   }
   const openSet = new Set(openEventRows.map((r) => r.stablecoin_id));
