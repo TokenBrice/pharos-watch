@@ -89,7 +89,7 @@ vi.mock("../evm-rpc", () => ({
 const kavaFetchLivePriceMock = vi.fn();
 
 vi.mock("../authoritative-price-sources/kava-pricefeed", async (importOriginal) => {
-  const actual = await importOriginal<KavaPricefeedModule>();
+  const actual = await importOriginal<typeof KavaPricefeedModule>();
   return {
     ...actual,
     kavaUsdxPricefeedProvider: {
