@@ -24,16 +24,16 @@
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Telcoin, Inc. / Telcoin Digital Asset Bank",
+    "issuerEntity": "Telcoin LLC",
     "issuerDomicile": "United States",
-    "stateRegulator": "Nebraska Department of Banking and Finance",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": false,
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.telco.in/en/terms-of-use",
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository charter (final approval Nov 2025) and has publicly positioned itself as GENIUS Act-aligned through that framework. No GENIUS PPSI approval or filed application exists; the GENIUS Act is still in proposed-rules rulemaking and no state has been certified as substantially similar. The telco.in/digital-cash page states Telcoin will publish monthly attestations -- future tense as of June 2026; none have been located in public sources. No eMXN-specific reserve disclosure URL was found. The stored issuerPathway remains unknown; Telcoin frames Nebraska as its intended GENIUS-aligned route, but no achieved state-qualified approval was found.",
+    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository charter (final approval Nov 2025) and has publicly positioned itself as GENIUS Act-aligned through that framework. No GENIUS PPSI approval or filed application exists; the GENIUS Act is still in proposed-rules rulemaking and no state has been certified as substantially similar. The telco.in/digital-cash page states Telcoin will publish monthly attestations -- future tense as of June 2026; none have been located in public sources. The stored issuerPathway remains unknown; Telcoin frames Nebraska as its intended GENIUS-aligned route, but no achieved state-qualified approval was found.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -96,6 +96,6 @@
       "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-09-05"
   }
 }

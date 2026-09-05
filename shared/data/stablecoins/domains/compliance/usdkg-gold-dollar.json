@@ -27,7 +27,7 @@
     "issuerPathway": "unknown",
     "issuerEntity": "OJSC Virtual Asset Issuer (state-owned, Ministry of Finance of the Kyrgyz Republic); Gold Dollar operates the issuance; LLC Virelint Group previously cited as operator",
     "issuerDomicile": "Kyrgyz Republic",
-    "licensingRegulator": "Ministry of Finance of the Kyrgyz Republic",
+    "licensingRegulator": "Financial Market Regulatory and Supervisory Service under the Ministry of Economy and Commerce of the Kyrgyz Republic",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -88,6 +88,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-05"
   }
 }

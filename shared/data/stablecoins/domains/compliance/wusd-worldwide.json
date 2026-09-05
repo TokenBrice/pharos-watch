@@ -37,7 +37,7 @@
       },
       {
         "label": "WSPN terms of service",
-        "url": "https://www.wspn.io/pdf/WSPN_Terms_of_Service.pdf",
+        "url": "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
         "sourceKind": "issuer-disclosure"
       }
     ],
@@ -62,6 +62,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-05"
   }
 }
