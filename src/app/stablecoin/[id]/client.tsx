@@ -152,7 +152,7 @@ function StablecoinDetailClientContent({
       liquidity: overviewActive || activityActive,
       reportCards: overviewActive,
       redemption: overviewActive || activityActive,
-      yield: activityActive,
+      yield: true,
       stress: overviewActive,
       flows: overviewActive || activityOrHistoryActive,
       blacklist: activityOrHistoryActive,
