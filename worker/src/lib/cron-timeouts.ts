@@ -90,11 +90,7 @@ export const PROGRESS_TELEMETRY_SKIP_JOBS: Readonly<Record<string, true>> = {
   "telegram-pulse-snapshot": true,
   "snapshot-supply": true,
   "snapshot-chain-supply": true,
-  "prune-status-probe-runs": true,
-  "prune-cron-history": true,
-  "prune-detail-cache": true,
   "cron-sentinel": true,
-  "telegram-degradation-watchdog": true,
 };
 
 export function shouldSkipCronProgress(job: string): boolean {
