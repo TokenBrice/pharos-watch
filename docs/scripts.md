@@ -88,7 +88,7 @@ npm run test:a11y:hydrated
 
 ### Build And Generated Artifacts
 
-The stablecoin client projection generator counts the public cemetery as curated dead records plus frozen tracked profiles. Its lightweight `DEAD_STABLECOIN_COUNT` is shared by About copy and root metadata; it is not the curated-only source count.
+The stablecoin client projection generator counts the public cemetery as curated dead records plus frozen tracked profiles. Its lightweight generated cemetery count is shared by About copy and root metadata; it is not the curated-only source count.
 
 Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Every registry entry declares a build lifecycle: `compile-input` for files the static export needs before compilation, `post-refresh` for projections rebuilt after release data refresh, or `maintenance-only` for explicitly maintained outputs. Plain `prebuild` selects only compile inputs.
 
