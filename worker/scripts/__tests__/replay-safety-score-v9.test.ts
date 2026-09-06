@@ -32,12 +32,10 @@ const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
 const PUBLISHED_AT_ISO = new Date(PUBLISHED_AT_SEC * 1_000).toISOString();
 
 function writeTestFile(path: string, value: string): void {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
   writeFileSync(path, value);
 }
 
 function readTestFile(path: string): string {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
   return readFileSync(path, "utf8");
 }
 
@@ -357,11 +355,8 @@ describe("mechanism capture replay resolution", () => {
       const summaryDirectory = resolve(summaryRoot, "test-mechanism");
       const summaryPath = resolve(summaryDirectory, "2026-09-03.summary.json");
       const cacheDir = resolve(dir, "cache");
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture paths.
       mkdirSync(summaryDirectory, { recursive: true });
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture paths.
       mkdirSync(cacheDir, { recursive: true });
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture paths.
       writeFileSync(
         summaryPath,
         JSON.stringify({
@@ -374,7 +369,6 @@ describe("mechanism capture replay resolution", () => {
         }),
       );
 
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture path.
       writeFileSync(resolve(cacheDir, `${sha256}.json`), body);
       await expect(resolveSafetyScoreV9ReplayInput(sha256, { cacheDir, summaryRoot })).resolves.toEqual(body);
 

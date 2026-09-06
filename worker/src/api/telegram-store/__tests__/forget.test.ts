@@ -15,7 +15,6 @@ function discoverTelegramChatIdTablesFromMigrations(): string[] {
   const tables = new Set<string>();
   for (const file of readdirSync(migrationDir)) {
     if (!file.endsWith(".sql")) continue;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test scans checked-in Worker migrations only.
     const sql = readFileSync(join(migrationDir, file), "utf8");
     const createTablePattern = /CREATE TABLE IF NOT EXISTS\s+(telegram_[a-z0-9_]+)\s*\(([\s\S]*?)\);/giu;
     for (const match of sql.matchAll(createTablePattern)) {

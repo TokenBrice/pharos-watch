@@ -306,6 +306,16 @@ describe("HeroCard", () => {
     expect(html).not.toContain("$0.0000");
   });
 
+  it("uses the published deviation when the live price snapshot disagrees", () => {
+    const html = renderHero({
+      coinData: { price: 1.02 },
+      deviationBps: -50,
+    });
+
+    expect(html).toContain("-50 BPS");
+    expect(html).not.toContain("+200 BPS");
+  });
+
   it("renders website and social link destinations with accessible names", () => {
     const html = renderHero();
 

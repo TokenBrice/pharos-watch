@@ -8,6 +8,7 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/blacklist-tracker";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import type { BlacklistReconciliationStatus } from "@shared/types/status";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
 import { isRecord } from "@shared/lib/type-guards";
 import { CONTRACT_CONFIGS } from "./blacklist-contracts";
@@ -21,6 +22,8 @@ import {
 } from "./blacklist-gaps";
 import {
   BLACKLIST_STABLECOINS,
+  BlacklistSummaryResponseSchema,
+  type BlacklistSummaryResponse,
   type BlacklistEvent,
   type BlacklistQuarterlyEventTypePoint,
   type BlacklistRecentEventTypeCounts,
@@ -42,7 +45,17 @@ import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
 } from "./blacklist-cache-keys";
 
-type BlacklistSummaryPayload = Record<string, unknown>;
+type BlacklistSummaryPayload = BlacklistSummaryResponse &
+  Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
+    reconciliation?: BlacklistReconciliationStatus;
+  };
+
+const BlacklistSummaryCachePayloadSchema = BlacklistSummaryResponseSchema.required({
+  coverage: true,
+  freezeLedgerMeta: true,
+  dataQuality: true,
+  methodology: true,
+});
 
 interface BuiltBlacklistSummary {
   payload: BlacklistSummaryPayload;
@@ -281,7 +294,7 @@ function buildDataQuality(
   freezeLedgerMeta: ReturnType<typeof buildFreezeLedgerMeta>,
   gapMetrics: BlacklistGapMetrics,
   coverage: ReturnType<typeof buildCoverage>,
-) {
+): BlacklistSummaryPayload["dataQuality"] {
   const gapStatus = getBlacklistGapStatus({
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
@@ -426,17 +439,8 @@ function buildPerCoinRecentEventTypes(
 }
 
 function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPayload {
-  if (!isRecord(value)) return false;
-  return (
-    isRecord(value.stats) &&
-    Array.isArray(value.chart) &&
-    Array.isArray(value.chains) &&
-    isRecord(value.coverage) &&
-    isRecord(value.freezeLedgerMeta) &&
-    isRecord(value.dataQuality) &&
-    typeof value.totalEvents === "number" &&
-    isRecord(value.methodology)
-  );
+  // Validate without projecting: additive fields in retained snapshots must survive.
+  return BlacklistSummaryCachePayloadSchema.safeParse(value).success;
 }
 
 function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySnapshot | null {

@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/methodology-versions/depeg-dews.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.21`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.22`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-dews.ts`
 
@@ -116,6 +116,8 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 ### S_black — Blacklist Activity
 
 Only for stablecoin IDs with direct live blacklist tracker configs. Recent `blacklist_events` rows are resolved through tracker provenance (`config_key` / `contract_address`) to the owning canonical stablecoin ID before scoring, so same-symbol siblings do not inherit each other's freeze events. Legacy rows without provenance fall back only when the symbol maps to a single tracker-owned stablecoin ID. Uses 24h event count with spike detection relative to 7d daily average.
+
+Only public events (`suppression_reason IS NULL`) enter either window. Suppressed EURC mirror-zero rows remain stored for provenance but cannot create a blacklist surge. The daily digest applies the same public-event eligibility before counting its rolling 24-hour activity or selecting candidates; unsuppressed zero-value events remain eligible. Excluding rows can change both the numerator and the 7-day baseline, so it does not imply every resulting DEWS score decreases.
 
 ### S_flow — Mint/Burn Flow
 

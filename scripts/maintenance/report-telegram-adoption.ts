@@ -22,6 +22,9 @@ const DAY_SEC = 24 * 60 * 60;
 const CAPTURE_DAYS = 14;
 const ADOPTION_DAYS = 30;
 const ACTIVE_WATCHER_DAYS = 7;
+const CAPTURE_EDGE_GRACE_SEC = 10 * 60;
+const PLANNING_WRITE_SHARE_THRESHOLD = 0.2;
+const PLANNING_LATENCY_THRESHOLD_MS = 10 * 60 * 1000;
 const FIVE_MINUTE_LANE: Record<string, true> = {
   "dispatch-telegram-alerts": true,
   "telegram-personalized-recap-planner": true,
@@ -30,12 +33,24 @@ const FIVE_MINUTE_LANE: Record<string, true> = {
   "telegram-pulse-snapshot": true,
 };
 
+type DecisionState = "measured" | "undecided";
+
+type UndecidedReason =
+  | "capture-window-incomplete"
+  | "write-share-numerator-missing"
+  | "write-share-denominator-missing"
+  | "no-real-source-events"
+  | "no-valid-real-event-samples"
+  | "write-share-denominator-invalid";
+
 export interface TelegramAdoptionReport {
   generatedAt: string;
   window: {
     startSec: number;
     endSec: number;
     captureDays: number;
+    coverageStartSec: number | null;
+    coverageEndSec: number | null;
   };
   adoption: {
     subscriberCount: number;
@@ -46,16 +61,21 @@ export interface TelegramAdoptionReport {
   };
   planning: {
     dispatchInvocations: number;
-    planningMs: { p50: number | null; p95: number | null };
     noWorkRunShare: number | null;
-    planningStatements: number;
-    fiveMinuteLaneD1Statements: number | null;
-    planningStatementFraction: number | null;
+    planningRowsWritten: number | null;
+    fiveMinuteLaneD1Writes: number | null;
+    planningWriteShare: number | null;
+    realSourceEvents: number;
+    enqueuedSourceEvents: number;
+    planningToFirstEnqueueMs: { p50: number | null; p95: number | null };
   };
   decision: {
+    state: DecisionState;
+    reason: UndecidedReason | null;
     proceed41: boolean;
   };
 }
+
 
 type SubscriberCountRow = {
   subscriber_count?: number | string | null;
@@ -85,7 +105,12 @@ type CronRunRow = {
   duration_ms?: number | string | null;
   item_count?: number | string | null;
   metadata?: string | Record<string, unknown> | null;
-  d1_statements?: number | string | null;
+};
+
+type SourceEventLatencyRow = {
+  source_event_id?: string | null;
+  detected_at?: number | string | null;
+  first_enqueued_at?: number | string | null;
 };
 
 function numberValue(value: unknown): number | null {
@@ -152,22 +177,6 @@ function deliveryCount(rows: DeliveryRow[], cutoffSec: number): number {
   return rows.filter((row) => nonnegative(row.final_delivery_at) >= cutoffSec).length;
 }
 
-function d1StatementCount(row: CronRunRow): number | null {
-  const metadata = parseMetadata(row.metadata);
-  const candidates = [
-    row.d1_statements,
-    metadata.d1Statements,
-    metadata.d1StatementCount,
-    metadata.fiveMinuteLaneD1Statements,
-    metadata.statementCount,
-    (metadata.d1 as Record<string, unknown> | undefined)?.statements,
-  ];
-  for (const candidate of candidates) {
-    const value = numberValue(candidate);
-    if (value != null) return Math.max(0, value);
-  }
-  return null;
-}
 
 function dispatchMetadata(row: CronRunRow): Record<string, unknown> {
   return parseMetadata(row.metadata);
@@ -217,33 +226,95 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
         AND COALESCE(slot_started_at, started_at) >= ${captureStartSec}
       ORDER BY COALESCE(slot_started_at, started_at) ASC`,
   );
+  const sourceEventLatencyRows = client.query<SourceEventLatencyRow>(
+    `SELECT event.source_event_id AS source_event_id,
+            event.detected_at AS detected_at,
+            MIN(target.enqueued_at) AS first_enqueued_at
+       FROM telegram_alert_source_events event
+       LEFT JOIN telegram_alert_job_targets target
+         ON target.source_event_id = event.source_event_id
+        AND target.enqueued_at IS NOT NULL
+      WHERE event.detected_at >= ${captureStartSec}
+      GROUP BY event.source_event_id, event.detected_at
+      ORDER BY event.detected_at ASC`,
+  );
 
   const dispatchRows = cronRows.filter((row) => row.job === "dispatch-telegram-alerts");
-  const planningMs = dispatchRows
+  const laneRows = cronRows.filter(
+    (row) => FIVE_MINUTE_LANE[row.job ?? ""] === true || row.job === "dispatch-telegram-alerts",
+  );
+  const laneStarts = laneRows
+    .map((row) => numberValue(row.slot_started_at ?? row.started_at))
+    .filter((value): value is number => value != null);
+  const dispatchStarts = dispatchRows
+    .map((row) => numberValue(row.slot_started_at ?? row.started_at))
+    .filter((value): value is number => value != null);
+  const coverageStartSec = laneStarts.length > 0 ? Math.min(...laneStarts) : null;
+  const coverageEndSec = laneStarts.length > 0 ? Math.max(...laneStarts) : null;
+  const dispatchCoverageStartSec = dispatchStarts.length > 0 ? Math.min(...dispatchStarts) : null;
+  const dispatchCoverageEndSec = dispatchStarts.length > 0 ? Math.max(...dispatchStarts) : null;
+  const captureComplete = coverageStartSec != null
+    && coverageEndSec != null
+    && dispatchCoverageStartSec != null
+    && dispatchCoverageEndSec != null
+    && coverageStartSec <= captureStartSec + CAPTURE_EDGE_GRACE_SEC
+    && coverageEndSec >= nowSec - CAPTURE_EDGE_GRACE_SEC
+    && dispatchCoverageStartSec <= captureStartSec + CAPTURE_EDGE_GRACE_SEC
+    && dispatchCoverageEndSec >= nowSec - CAPTURE_EDGE_GRACE_SEC;
+
+  const planningWriteValues = dispatchRows.map((row) => numberValue(dispatchMetadata(row).planningRowsWritten));
+  const planningWritesComplete = dispatchRows.length > 0
+    && planningWriteValues.every((value): value is number => value != null && value >= 0);
+  const planningRowsWritten = planningWritesComplete
+    ? planningWriteValues.reduce((total, value) => total + value, 0)
+    : null;
+
+  const laneWriteValues = laneRows.map((row) => numberValue(dispatchMetadata(row).d1RowsWritten));
+  const laneWritesComplete = laneRows.length > 0
+    && laneWriteValues.every((value): value is number => value != null && value >= 0);
+  const fiveMinuteLaneD1Writes = laneWritesComplete
+    ? laneWriteValues.reduce((total, value) => total + value, 0)
+    : null;
+  const planningWriteShare = planningRowsWritten != null && fiveMinuteLaneD1Writes != null
+    && fiveMinuteLaneD1Writes > 0
+    ? Math.min(1, planningRowsWritten / fiveMinuteLaneD1Writes)
+    : null;
+  const writeShareDenominatorValid = laneWritesComplete
+    && fiveMinuteLaneD1Writes != null
+    && fiveMinuteLaneD1Writes > 0
+    && planningWritesComplete
+    && planningRowsWritten != null
+    && planningRowsWritten <= fiveMinuteLaneD1Writes;
+
+  const noWorkRuns = dispatchRows.filter((row) => dispatchMetadata(row).noWorkRun === true).length;
+  const enqueueLatenciesMs = sourceEventLatencyRows
     .map((row) => {
-      const metadata = dispatchMetadata(row);
-      return (numberValue(metadata.sourceEventsProcessed) ?? 0) > 0
-        ? numberValue(metadata.planningMs)
+      const detectedAt = numberValue(row.detected_at);
+      const firstEnqueuedAt = numberValue(row.first_enqueued_at);
+      return detectedAt != null && firstEnqueuedAt != null && firstEnqueuedAt >= detectedAt
+        ? (firstEnqueuedAt - detectedAt) * 1000
         : null;
     })
-    .filter((value): value is number => value != null && value >= 0);
-  const planningStatements = dispatchRows.reduce(
-    (total, row) => total + nonnegative(dispatchMetadata(row).planningStatements),
-    0,
-  );
-  const noWorkRuns = dispatchRows.filter((row) => dispatchMetadata(row).noWorkRun === true).length;
-  const laneD1Counts = cronRows
-    .filter((row) => FIVE_MINUTE_LANE[row.job ?? ""] === true || row.job === "dispatch-telegram-alerts")
-    .map(d1StatementCount)
     .filter((value): value is number => value != null);
-  const fiveMinuteLaneD1Statements = laneD1Counts.length > 0
-    ? laneD1Counts.reduce((total, value) => total + value, 0)
-    : null;
-  const p50 = percentile(planningMs, 0.5);
-  const p95 = percentile(planningMs, 0.95);
-  const planningStatementFraction = fiveMinuteLaneD1Statements && fiveMinuteLaneD1Statements > 0
-    ? Math.min(1, planningStatements / fiveMinuteLaneD1Statements)
-    : null;
+  const enqueuedSourceEvents = enqueueLatenciesMs.length;
+  const planningToFirstEnqueueMs = {
+    p50: percentile(enqueueLatenciesMs, 0.5),
+    p95: percentile(enqueueLatenciesMs, 0.95),
+  };
+  const reason: UndecidedReason | null = !captureComplete
+    ? "capture-window-incomplete"
+    : !planningWritesComplete
+      ? "write-share-numerator-missing"
+      : !laneWritesComplete
+        ? "write-share-denominator-missing"
+        : !writeShareDenominatorValid
+          ? "write-share-denominator-invalid"
+          : sourceEventLatencyRows.length === 0
+            ? "no-real-source-events"
+            : enqueuedSourceEvents === 0
+              ? "no-valid-real-event-samples"
+              : null;
+
   const lifecycleActive = latestLifecycleValue(lifecycleRows);
   const dailyActive = lifecycleActive ?? nonnegative(subscriberRow.active_watchers_7d);
   const usageAlerts = usageAlertsSent(usageRows);
@@ -251,10 +322,21 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
   const alertsSent7d = deliveryRows.length > 0
     ? deliveryCount(deliveryRows, activeWatcherStartSec)
     : usageAlertsSent(usageRows.filter((row) => row.day != null && row.day >= utcDay(activeWatcherStartSec)));
+  const proceed41 = reason == null
+    && (
+      (planningWriteShare != null && planningWriteShare > PLANNING_WRITE_SHARE_THRESHOLD)
+      || (planningToFirstEnqueueMs.p95 != null && planningToFirstEnqueueMs.p95 > PLANNING_LATENCY_THRESHOLD_MS)
+    );
 
   return {
     generatedAt: new Date(nowSec * 1000).toISOString(),
-    window: { startSec: captureStartSec, endSec: nowSec, captureDays: CAPTURE_DAYS },
+    window: {
+      startSec: captureStartSec,
+      endSec: nowSec,
+      captureDays: CAPTURE_DAYS,
+      coverageStartSec,
+      coverageEndSec,
+    },
     adoption: {
       subscriberCount: nonnegative(subscriberRow.subscriber_count),
       activeWatchers7d: lifecycleActive ?? nonnegative(subscriberRow.active_watchers_7d),
@@ -264,15 +346,18 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
     },
     planning: {
       dispatchInvocations: dispatchRows.length,
-      planningMs: { p50, p95 },
       noWorkRunShare: dispatchRows.length > 0 ? noWorkRuns / dispatchRows.length : null,
-      planningStatements,
-      fiveMinuteLaneD1Statements,
-      planningStatementFraction,
+      planningRowsWritten,
+      fiveMinuteLaneD1Writes,
+      planningWriteShare,
+      realSourceEvents: sourceEventLatencyRows.length,
+      enqueuedSourceEvents,
+      planningToFirstEnqueueMs,
     },
     decision: {
-      proceed41: (planningStatementFraction != null && planningStatementFraction > 0.2)
-        || (p95 != null && p95 > 10 * 60 * 1000),
+      state: reason == null ? "measured" : "undecided",
+      reason,
+      proceed41,
     },
   };
 }
@@ -286,13 +371,18 @@ function displayPercent(value: number | null): string {
 }
 
 export function renderTelegramAdoptionBlock(report: TelegramAdoptionReport): string {
-  const measured = report.planning.dispatchInvocations > 0;
+  const status = report.decision.state === "measured"
+    ? "measured"
+    : `undecided (${report.decision.reason ?? "incomplete"})`;
+  const decisionDetail = report.decision.state === "measured"
+    ? "measured against the owner thresholds: planning share > 20% of five-minute-lane D1 writes or p95 planning→first-enqueue latency > 10 minutes; 4.2/4.3 remain undecided pending separate table-value evidence"
+    : `undecided: ${report.decision.reason ?? "incomplete capture"}; no 4.1 decision until the evidence is complete; 4.2/4.3 remain undecided pending separate table-value evidence`;
   return [
     START_MARKER,
     "<!-- This block is generated by scripts/maintenance/report-telegram-adoption.ts from remote D1. -->",
     "<!-- Do not edit by hand. Run `node --import tsx scripts/maintenance/report-telegram-adoption.ts` after the capture window. -->",
     "### Telegram adoption and planning cost",
-    `Status: **${measured ? "measured" : "not yet measured"}** (14-day five-minute dispatch capture; generated ${report.generatedAt}).`,
+    `Status: **${status}** (14-day five-minute dispatch capture; generated ${report.generatedAt}).`,
     "",
     "| Metric | Value |",
     "| --- | ---: |",
@@ -301,12 +391,14 @@ export function renderTelegramAdoptionBlock(report: TelegramAdoptionReport): str
     `| Daily active watchers | ${displayNumber(report.adoption.dailyActive)} |`,
     `| Alerts sent (7d / 30d) | ${displayNumber(report.adoption.alertsSent7d)} / ${displayNumber(report.adoption.alertsSent30d)} |`,
     `| Dispatch invocations | ${displayNumber(report.planning.dispatchInvocations)} |`,
-    `| Planning wall time (p50 / p95) | ${displayNumber(report.planning.planningMs.p50)} ms / ${displayNumber(report.planning.planningMs.p95)} ms |`,
     `| Zero-work dispatch share | ${displayPercent(report.planning.noWorkRunShare)} |`,
-    `| Planning D1 statements | ${displayNumber(report.planning.planningStatements)} |`,
-    `| Planning share of five-minute-lane D1 statements | ${displayPercent(report.planning.planningStatementFraction)} |`,
+    `| Planning pipeline D1 rows written | ${displayNumber(report.planning.planningRowsWritten)} |`,
+    `| Five-minute-lane D1 rows written | ${displayNumber(report.planning.fiveMinuteLaneD1Writes)} |`,
+    `| Planning share of five-minute-lane D1 writes | ${displayPercent(report.planning.planningWriteShare)} |`,
+    `| Real source events (enqueued) | ${displayNumber(report.planning.realSourceEvents)} / ${displayNumber(report.planning.enqueuedSourceEvents)} |`,
+    `| Planning→first-enqueue latency (p50 / p95) | ${displayNumber(report.planning.planningToFirstEnqueueMs.p50)} ms / ${displayNumber(report.planning.planningToFirstEnqueueMs.p95)} ms |`,
     "",
-    `Decision ` + "`decision.proceed41`" + `: **${String(report.decision.proceed41)}** (proceed with 4.1 when planning share exceeds 20% or p95 exceeds 10 minutes).`,
+    `Decision ` + "`decision.proceed41`" + `: **${String(report.decision.proceed41)}** (${decisionDetail}).`,
     END_MARKER,
   ].join("\n");
 }

@@ -1,11 +1,9 @@
 import { z } from "zod";
 import { ReserveCompositionOverviewSchema } from "../live-reserves";
-import type { PriceSourceHealth } from "../pricing-source-health";
-import type {
-  DataQuality,
-  DatasetFreshness,
-} from "./core";
+import { PriceSourceHealthSchema } from "../pricing-source-health";
 import {
+  DataQualitySchema,
+  DatasetFreshnessSchema,
   StatusCauseSchema,
   StatusDiscrepancySchema,
   StatusHealthValueSchema,
@@ -14,26 +12,25 @@ import {
   StatusStalenessSchema,
   StatusTransitionSchema,
 } from "./core";
-import type { BudgetOnlySurfaceStatus, CronStatus } from "./cron";
-import type {
-  CanaryStatus,
-  AlertBrokerHealthSummary,
-  D1UsageSummary,
-  DependencyHealth,
-  ProviderCircuitHealth,
-  PublicationHealth,
-  ProducerHeadStatus,
+import { BudgetOnlySurfaceStatusSchema, CronStatusSchema } from "./cron";
+import {
+  CanaryStatusSchema,
+  D1UsageSummarySchema,
+  DependencyHealthSchema,
+  ProducerHeadStatusSchema,
+  ProviderCircuitHealthSchema,
+  PublicationHealthSchema,
 } from "./operational";
+import { TelegramBotStatsSchema } from "./telegram";
+import { HealthResponseSchema } from "./public-health";
 import { CacheStatusSchema } from "./schema-primitives";
-import type { TelegramBotStats } from "./telegram";
-import type { TelegramHealthSummary } from "./public-health";
-import type {
-  ClassificationWarning,
-  CoinGeckoPriceDiff,
-  LiquidityHealth,
-  MintBurnReconciliationSummary,
-  ReserveDriftEntry,
-  YieldHealthSummary,
+import {
+  ClassificationWarningSchema,
+  CoinGeckoPriceDiffSchema,
+  LiquidityHealthSchema,
+  MintBurnReconciliationSummarySchema,
+  ReserveDriftEntrySchema,
+  YieldHealthSummarySchema,
 } from "./yield-liquidity";
 
 export type StatusSectionKey =
@@ -61,53 +58,44 @@ export type StatusSectionError = z.output<typeof StatusSectionErrorSchema>;
 
 export type StatusSectionErrors = Partial<Record<StatusSectionKey, StatusSectionError>>;
 
-type StatusSummary = {
-    unhealthyCrons: number;
-    availabilityImpactingUnhealthyCrons: number;
-    watchUnhealthyCrons: number;
-    degradedCrons: number;
-    cronErrors: number;
-    availabilityImpactingCronErrors: number;
-    /** Count of availability-critical crons with 2+ consecutive failed runs (sustained outage). */
-    availabilityImpactingConsecutiveCronErrors: number;
-    staleCronArtifacts?: number;
-    expiredCronLeases?: number;
-    orphanedCronProgressRows?: number;
-    scheduledSlotRunning?: number;
-    scheduledSlotStaleCandidates?: number;
-    scheduledSlotOldestRunningAgeSec?: number | null;
-    scheduledSlotRunningQueryFailed?: boolean;
-    scheduledSlotEventMarkerQueryFailed?: boolean;
-    budgetOnlySurfaceCount?: number;
-    budgetOnlySurfaceMissingTelemetry?: number;
-    budgetOnlySurfaceStaleTelemetry?: number;
-    budgetOnlySurfaceErrors?: number;
-    canaryTotalChecks?: number;
-    canaryErrorCount?: number;
-    canaryDegradedCount?: number;
-    canarySkippedCount?: number;
-    canaryStaleCount?: number;
-    diagnosticIssueCount: number;
-    worstCacheRatio: number;
-    /**
-     * Count of rows inserted into `status_transitions` in the last 24 hours.
-     * A defensive observability signal added in Workstream 5 of
-     * 2026-04-13 status-stability hardening so operators
-     * can spot new flapping lanes as thresholds drift without spelunking
-     * the transitions table. Under normal operation this should be ≤ 2.
-     */
-    transitionsLast24h: number;
-};
-
-const StatusJsonObjectSchema = z.object({}).passthrough();
-
-function statusObjectSchema<T>(): z.ZodType<T> {
-  return z.custom<T>((value) => value != null && typeof value === "object" && !Array.isArray(value));
-}
-
-function statusRecordSchema<T>(): z.ZodType<Record<string, T>> {
-  return z.record(z.string(), statusObjectSchema<T>());
-}
+export const StatusSummarySchema = z.object({
+  unhealthyCrons: z.number(),
+  availabilityImpactingUnhealthyCrons: z.number(),
+  watchUnhealthyCrons: z.number(),
+  degradedCrons: z.number(),
+  cronErrors: z.number(),
+  availabilityImpactingCronErrors: z.number(),
+  /** Count of availability-critical crons with 2+ consecutive failed runs (sustained outage). */
+  availabilityImpactingConsecutiveCronErrors: z.number(),
+  staleCronArtifacts: z.number().optional(),
+  expiredCronLeases: z.number().optional(),
+  orphanedCronProgressRows: z.number().optional(),
+  scheduledSlotRunning: z.number().optional(),
+  scheduledSlotStaleCandidates: z.number().optional(),
+  scheduledSlotOldestRunningAgeSec: z.number().nullable().optional(),
+  scheduledSlotRunningQueryFailed: z.boolean().optional(),
+  scheduledSlotEventMarkerQueryFailed: z.boolean().optional(),
+  budgetOnlySurfaceCount: z.number().optional(),
+  budgetOnlySurfaceMissingTelemetry: z.number().optional(),
+  budgetOnlySurfaceStaleTelemetry: z.number().optional(),
+  budgetOnlySurfaceErrors: z.number().optional(),
+  canaryTotalChecks: z.number().optional(),
+  canaryErrorCount: z.number().optional(),
+  canaryDegradedCount: z.number().optional(),
+  canarySkippedCount: z.number().optional(),
+  canaryStaleCount: z.number().optional(),
+  diagnosticIssueCount: z.number(),
+  worstCacheRatio: z.number(),
+  /**
+   * Count of rows inserted into `status_transitions` in the last 24 hours.
+   * A defensive observability signal added in Workstream 5 of
+   * 2026-04-13 status-stability hardening so operators
+   * can spot new flapping lanes as thresholds drift without spelunking
+   * the transitions table. Under normal operation this should be ≤ 2.
+   */
+  transitionsLast24h: z.number(),
+});
+type StatusSummary = z.output<typeof StatusSummarySchema>;
 
 const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
   status: StatusHealthValueSchema,
@@ -135,32 +123,28 @@ const StatusResponseObjectSchema = z
     discrepancy: StatusDiscrepancySchema,
     timeline: z.array(StatusTransitionSchema),
     caches: z.record(z.string(), CacheStatusSchema),
-    crons: statusRecordSchema<CronStatus>(),
-    budgetOnlySurfaces: z.array(statusObjectSchema<BudgetOnlySurfaceStatus>()),
-    dataQuality: statusObjectSchema<DataQuality>(),
-    telegramBot: statusObjectSchema<TelegramBotStats>().nullable(),
+    crons: z.record(z.string(), CronStatusSchema),
+    budgetOnlySurfaces: z.array(BudgetOnlySurfaceStatusSchema),
+    dataQuality: DataQualitySchema,
+    telegramBot: TelegramBotStatsSchema.nullable(),
     sectionErrors: z.record(z.string(), StatusSectionErrorSchema),
-    datasetFreshness: statusObjectSchema<DatasetFreshness>(),
-    summary: statusObjectSchema<StatusSummary>(),
-    liquidityHealth: statusObjectSchema<LiquidityHealth>().nullable(),
-    yieldHealth: statusObjectSchema<YieldHealthSummary>().nullable(),
-    publicationHealth: statusObjectSchema<PublicationHealth>().nullable().optional(),
-    dependencyHealth: statusObjectSchema<DependencyHealth>().nullable().optional(),
-    providerCircuitHealth: statusObjectSchema<ProviderCircuitHealth>().nullable().optional(),
-    canaries: statusObjectSchema<CanaryStatus>().nullable().optional(),
-    alertBroker: statusObjectSchema<AlertBrokerHealthSummary>().optional(),
-    telegramSummary: statusObjectSchema<TelegramHealthSummary>().nullable().optional(),
-    producerHeads: z.array(statusObjectSchema<ProducerHeadStatus>()).optional(),
-    priceSourceHealth: statusObjectSchema<PriceSourceHealth>().nullable(),
-    priceProviderDiagnostics: z.array(z.record(z.string(), z.unknown())).nullable(),
-    gtProbe: StatusJsonObjectSchema.nullable(),
-    coingeckoPriceDiff: statusObjectSchema<CoinGeckoPriceDiff>().nullable(),
-    d1Usage: statusObjectSchema<D1UsageSummary>().nullable(),
-    mintBurnReconciliation: statusObjectSchema<MintBurnReconciliationSummary>().nullable(),
+    datasetFreshness: DatasetFreshnessSchema,
+    summary: StatusSummarySchema,
+    liquidityHealth: LiquidityHealthSchema.nullable(),
+    yieldHealth: YieldHealthSummarySchema.nullable(),
+    publicationHealth: PublicationHealthSchema.nullable().optional(),
+    dependencyHealth: DependencyHealthSchema.nullable().optional(),
+    providerCircuitHealth: ProviderCircuitHealthSchema.nullable().optional(),
+    canaries: CanaryStatusSchema.nullable().optional(),
+    telegramSummary: HealthResponseSchema.shape.telegramSummary,
+    producerHeads: z.array(ProducerHeadStatusSchema).optional(),
+    priceSourceHealth: PriceSourceHealthSchema.nullable(),
+    coingeckoPriceDiff: CoinGeckoPriceDiffSchema.nullable(),
+    d1Usage: D1UsageSummarySchema.nullable(),
+    mintBurnReconciliation: MintBurnReconciliationSummarySchema.nullable(),
     reserveComposition: StatusReserveCompositionSchema,
-    cacheBlobSizes: z.record(z.string(), z.number()).optional(),
-    reserveDrift: z.array(statusObjectSchema<ReserveDriftEntry>()).optional(),
-    classificationWarnings: z.array(statusObjectSchema<ClassificationWarning>()).optional(),
+    reserveDrift: z.array(ReserveDriftEntrySchema).optional(),
+    classificationWarnings: z.array(ClassificationWarningSchema).optional(),
   })
   .passthrough();
 

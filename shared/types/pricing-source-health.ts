@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "coingecko+defillama-list",
   "coingecko",
@@ -53,22 +55,29 @@ export type PriceSourceHealthBucketKey = (typeof PRICE_SOURCE_HEALTH_BUCKET_KEYS
 
 export type PriceSourceDepthBucket = "0" | "1" | "2" | "3" | "4" | "5+";
 
-export type PriceSourceDepthDistribution = Record<PriceSourceDepthBucket, number>;
+const PRICE_SOURCE_DEPTH_BUCKETS = ["0", "1", "2", "3", "4", "5+"] as const;
 
-export interface PriceSourceHealth {
-  sourceDistribution: Record<PriceSourceHealthBucketKey, number> & Record<string, number>;
+export const PriceSourceDepthDistributionSchema = z.record(
+  z.enum(PRICE_SOURCE_DEPTH_BUCKETS),
+  z.number(),
+);
+export type PriceSourceDepthDistribution = z.output<typeof PriceSourceDepthDistributionSchema>;
+
+export const PriceSourceHealthSchema = z.object({
+  sourceDistribution: z.record(z.string(), z.number()),
   /**
    * Distribution of active canonical assets by candidate `consensusSources`
    * count. Bucket `5+` contains all assets with five or more candidate
    * sources.
    */
-  sourceDepthDistribution?: PriceSourceDepthDistribution;
-  confidenceDistribution: {
-    high: number;
-    "single-source": number;
-    low: number;
-    fallback: number;
-  };
-  totalAssets: number;
-  lastSync: number;
-}
+  sourceDepthDistribution: PriceSourceDepthDistributionSchema.optional(),
+  confidenceDistribution: z.object({
+    high: z.number(),
+    "single-source": z.number(),
+    low: z.number(),
+    fallback: z.number(),
+  }),
+  totalAssets: z.number(),
+  lastSync: z.number(),
+});
+export type PriceSourceHealth = z.output<typeof PriceSourceHealthSchema>;

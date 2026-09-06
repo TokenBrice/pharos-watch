@@ -11,6 +11,7 @@ import {
   type LiquidityShiftSnapshot,
 } from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
+import { BLACKLIST_PUBLIC_EVENT_SQL } from "../../lib/blacklist/shared";
 import {
   getGaugeBand,
   detectFlightToQuality,
@@ -184,7 +185,7 @@ export async function collectBlacklistActivity(
   try {
     const blRows = await ctx.db
       .prepare(
-        "SELECT stablecoin AS symbol, chain_name, event_type, amount_usd_at_event FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount_usd_at_event DESC",
+        `SELECT stablecoin AS symbol, chain_name, event_type, amount_usd_at_event FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? AND ${BLACKLIST_PUBLIC_EVENT_SQL} ORDER BY amount_usd_at_event DESC`,
       )
       .bind(ctx.nowSec - SECONDS.ONE_DAY, ctx.nowSec)
       .all<{ symbol: string; chain_name: string; event_type: string; amount_usd_at_event: number | null }>();

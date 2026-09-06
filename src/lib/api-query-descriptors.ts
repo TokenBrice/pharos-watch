@@ -4,6 +4,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
 import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
+import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
@@ -71,23 +72,6 @@ export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
 export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
 
 const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
-const StablecoinDetailTokenSchema = z.object({
-  date: z.number().optional(),
-  totalCirculatingUSD: StablecoinDetailPegBucketsSchema.optional(),
-  totalCirculating: StablecoinDetailPegBucketsSchema.optional(),
-  circulating: StablecoinDetailPegBucketsSchema.optional(),
-}).passthrough();
-
-/** Public per-coin detail response; provider-specific fields intentionally pass through. */
-export const StablecoinDetailResponseSchema = z.object({
-  price: z.number().nullable().optional(),
-  priceSource: z.string().nullable().optional(),
-  priceConfidence: PriceConfidenceSchema.nullable().optional(),
-  priceUpdatedAt: z.number().nullable().optional(),
-  priceObservedAt: z.number().nullable().optional(),
-  tokens: z.array(StablecoinDetailTokenSchema).optional(),
-}).passthrough();
-export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
 
 export const StablecoinLiveSummarySchema = z.object({
   price: z.number().nullable(),
@@ -232,6 +216,16 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
+  ),
+  chainsDetail: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
+    (chainId: string) => ({
+      queryKey: ["chains", "detail", chainId] as const,
+      path: API_PATHS.chainsDetail(chainId),
+      producerIntervalMs: CRON_15MIN,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
+    }),
   ),
   bluechipRatings: defineApiQuery(
     {

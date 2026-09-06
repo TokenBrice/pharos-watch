@@ -28,7 +28,6 @@ function runtimeImportSpecifiers(sourceText: string): string[] {
 
 describe("telegram HTML helper", () => {
   it("has no runtime imports", () => {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed repo-local helper path.
     const sourceText = readFileSync(TELEGRAM_HTML_PATH, "utf8");
 
     expect(runtimeImportSpecifiers(sourceText)).toEqual([]);

@@ -234,8 +234,6 @@ export function makeHealthyStatusResponse(): StatusResponse {
     providerCircuitHealth: null,
     canaries: null,
     priceSourceHealth: null,
-    priceProviderDiagnostics: null,
-    gtProbe: null,
     coingeckoPriceDiff: null,
     d1Usage: null,
     mintBurnReconciliation: null,

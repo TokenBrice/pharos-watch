@@ -18,7 +18,7 @@ The subsystem has four moving parts:
 <!-- Do not edit by hand. Run `node --import tsx scripts/maintenance/report-telegram-adoption.ts` after the capture window. -->
 ### Telegram adoption and planning cost
 
-Status: **not yet measured** (14-day five-minute dispatch capture has not been collected).
+Status: **undecided (capture-window-incomplete)** (14-day five-minute dispatch capture; generated from the last incomplete observation).
 
 | Metric | Value |
 | --- | ---: |
@@ -27,12 +27,14 @@ Status: **not yet measured** (14-day five-minute dispatch capture has not been c
 | Daily active watchers | not measured |
 | Alerts sent (7d / 30d) | not measured / not measured |
 | Dispatch invocations | not measured |
-| Planning wall time (p50 / p95) | not measured |
 | Zero-work dispatch share | not measured |
-| Planning D1 statements | not measured |
-| Planning share of five-minute-lane D1 statements | not measured |
+| Planning pipeline D1 rows written | not measured |
+| Five-minute-lane D1 rows written | not measured |
+| Planning share of five-minute-lane D1 writes | not measured |
+| Real source events (enqueued) | not measured / not measured |
+| Planning→first-enqueue latency (p50 / p95) | not measured ms / not measured ms |
 
-Decision `decision.proceed41`: **false** until the 14-day measurement is available. The reporter applies the owner-approved thresholds: proceed with 4.1 when planning share exceeds 20% or p95 exceeds 10 minutes.
+Decision `decision.proceed41`: **false** (undecided: capture-window-incomplete; no 4.1 decision until the 14-day evidence is complete; 4.2/4.3 remain undecided pending separate table-value evidence).
 <!-- GENERATED-END: telegram-adoption -->
 
 ## Personalized Daily Recap

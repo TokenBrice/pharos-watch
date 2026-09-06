@@ -76,5 +76,5 @@ export const DDR_LOCK_ON_TIME_GRACE_SEC = 20 * 60;
 
 /** DDRv4 cache/manifest generation values. */
 export const DDR_SNAPSHOT_CACHE_GENERATION = 3;
-export const DDRR_SNAPSHOT_CACHE_GENERATION = 3;
+export const DDRR_SNAPSHOT_CACHE_GENERATION = 4;
 export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v4";

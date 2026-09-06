@@ -6,10 +6,12 @@ import type {
   DdrrDurationReview,
   DdrrRow,
   DdrrSummary,
+  DdrrV2CoverageRow,
   DdrrVerdictReview,
 } from "@shared/types/depeg-resolver-review";
 
 export type DdrrCoverageState = Exclude<DdrrRow["predictionState"], "frozen">;
+type DdrrOutcomeRow = DdrrRow | (DdrrRow & Pick<DdrrV2CoverageRow, "actualOutcome">);
 
 const MUTED_TONE = "border-border bg-muted text-muted-foreground";
 const EMERALD_TONE = "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
@@ -114,23 +116,6 @@ export function formatDdrSignedDuration(seconds: number | null): string {
   return `${rounded > 0 ? "+" : "−"}${formatElapsedSeconds(Math.abs(rounded))}`;
 }
 
-export function ddrSourceEventStateToActualOutcome(
-  sourceEventState: DdrrRow["sourceEventState"],
-): DdrrActualOutcome {
-  switch (sourceEventState) {
-    case "active":
-      return "still_open";
-    case "missing":
-      return "source_missing";
-    case "recovered":
-    case "terminal":
-    case "orphan_closed":
-    case "data_issue":
-    case "invalidated":
-      return sourceEventState;
-  }
-}
-
 export function isScored(row: DdrrRow): boolean {
   return row.kind === "prediction_review" && isDdrScoredVerdict(row.verdictReview);
 }
@@ -163,13 +148,17 @@ export function getDurationReview(row: DdrrRow): DdrrDurationReview {
   return "duration_unscored";
 }
 
-export function getActualOutcome(row: DdrrRow): DdrrActualOutcome {
+export function getActualOutcome(row: DdrrOutcomeRow): DdrrActualOutcome {
   if (row.kind === "prediction_review" || row.kind === "no_call_review") {
     return row.actual.kind;
   }
-  return ddrSourceEventStateToActualOutcome(row.sourceEventState);
+  if (row.kind === "coverage") {
+    return row.actualOutcome;
+  }
+  // Invalidated rows carry the outcome natively: their prediction state (and
+  // the producer's sourceEventState) is the literal "invalidated".
+  return row.predictionState;
 }
-
 export function getRowContextLabel(row: DdrrRow): string {
   switch (row.kind) {
     case "prediction_review":

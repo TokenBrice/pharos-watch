@@ -14,6 +14,7 @@ function detailSnapshot(generatedAt: number): StablecoinDetailSnapshot {
     version: 1,
     stablecoinId: "usdt-tether",
     generatedAt,
+    updatedAt: { liveSummary: generatedAt, supplyHistory: generatedAt },
     lanes: {
       liveSummary: {
         price: 1,
@@ -50,6 +51,22 @@ describe("stablecoin detail request budget", () => {
       snapshot.lanes.liveSummary,
     );
     expect(queryClient.getQueryData(["supply-history", "usdt-tether", 90])).toEqual([]);
+  });
+
+  it("preserves independent producer clocks and cannot replace newer live data with a later build", () => {
+    const queryClient = new QueryClient();
+    const snapshot = detailSnapshot(1_700_000_900_000);
+    snapshot.updatedAt = { liveSummary: 1_700_000_100_000, supplyHistory: 1_699_900_000_000 };
+    seedStablecoinDetailQueryCache(queryClient, snapshot);
+    const liveKey = ["stablecoin-live-summary", "usdt-tether"];
+    const historyKey = ["supply-history", "usdt-tether", 90];
+    expect(queryClient.getQueryState(liveKey)?.dataUpdatedAt).toBe(snapshot.updatedAt.liveSummary);
+    expect(queryClient.getQueryState(historyKey)?.dataUpdatedAt).toBe(snapshot.updatedAt.supplyHistory);
+    const live = { ...snapshot.lanes.liveSummary!, price: 1.01 };
+    queryClient.setQueryData(liveKey, live, { updatedAt: 1_700_000_500_000 });
+    seedStablecoinDetailQueryCache(queryClient, snapshot);
+    expect(queryClient.getQueryData(liveKey)).toEqual(live);
+    queryClient.clear();
   });
 
   it("loads all hero metrics while leaving offscreen-only lanes gated", async () => {

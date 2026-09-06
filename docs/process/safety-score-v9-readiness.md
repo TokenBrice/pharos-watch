@@ -39,3 +39,18 @@ An attestation may continue to project a previously verified capture after its
 raw body leaves `captures/`, but a new replay or an integrity mismatch fails
 closed. Registries and attestations therefore remain byte-stable while the raw
 retention policy is enforced.
+
+## Composite ceiling gate
+
+`scripts/maintenance/check-safety-score-v9-composite-ceiling.ts` is the
+operator-side A+ reachability gate. Given a replay artifact, it assembles the
+best real, currently-measured pillar sub-scores per cohort (unrestricted,
+non-wrapper, issuer-class) and asserts the resulting composite can still reach
+A+. The donor composite is scored by the production aggregation seam
+(`aggregateV9SmoothBoundedHeadroom` with the policy's single
+`compensabilityHeadroom` — the same call the live formula makes), so the gate
+certifies the real frontier rather than a historical hard-cap counterfactual.
+Pillar-dependent headroom (the retired `controlCompensabilityHeadroom`
+`legacy-control-selector` experiment) belongs only to
+`scripts/maintenance/replay-safety-score-v9-aggregation.ts` and must not
+re-enter the gate.

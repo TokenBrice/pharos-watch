@@ -35,7 +35,6 @@ const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtu
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 function resolveMigrationPath(file: string): string {
   const fixture = path.join(FIXTURES_DIR, file);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
   return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
 }
 
@@ -845,9 +844,7 @@ describe("yield publication migration compatibility", () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
     try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
       sqlite.exec(readFileSync(resolveMigrationPath("0000_baseline.sql"), "utf8"));
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
       sqlite.exec(readFileSync(resolveMigrationPath("0125_yield_publication_generations.sql"), "utf8"));
 
       sqlite

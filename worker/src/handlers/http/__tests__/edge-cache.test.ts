@@ -23,17 +23,43 @@ describe("createEdgeCacheContext", () => {
     expect(context.cacheKey.url).toBe("https://api.pharos.watch/api/og/chain/ethereum");
   });
 
-  it("still skips edge cache lookup for HEAD requests", () => {
-    const request = new Request("https://api.pharos.watch/api/og/chain/ethereum?bust=random", { method: "HEAD" });
-    const context = createEdgeCacheContext(request, new URL(request.url));
+  it("coalesces tracking-query variants for routes declared query-free", () => {
+    const bareRequest = new Request("https://api.pharos.watch/api/stablecoins");
+    const trackedRequest = new Request("https://api.pharos.watch/api/stablecoins?utm_source=campaign");
 
-    expect(context.skipCache).toBe(true);
-    expect(context.cacheKey.url).toBe("https://api.pharos.watch/api/og/chain/ethereum");
+    const bare = createEdgeCacheContext(bareRequest, new URL(bareRequest.url));
+    const tracked = createEdgeCacheContext(trackedRequest, new URL(trackedRequest.url));
+
+    expect(tracked.cacheKey.url).toBe(bare.cacheKey.url);
+  });
+
+  it("preserves meaningful query parameters for parameterized routes", () => {
+    const usdtRequest = new Request("https://api.pharos.watch/api/depeg-events?stablecoin=usdt-tether");
+    const usdcRequest = new Request("https://api.pharos.watch/api/depeg-events?stablecoin=usdc-circle");
+
+    const usdt = createEdgeCacheContext(usdtRequest, new URL(usdtRequest.url));
+    const usdc = createEdgeCacheContext(usdcRequest, new URL(usdcRequest.url));
+
+    expect(usdt.cacheKey.url).not.toBe(usdc.cacheKey.url);
+  });
+
+  it("keeps the chains leaderboard and each chain detail on separate cache keys", () => {
+    const urls = [
+      "https://api.pharos.watch/api/chains",
+      "https://api.pharos.watch/api/chains?chain=ethereum",
+      "https://api.pharos.watch/api/chains?chain=tron",
+    ];
+    const keys = urls.map((url) => {
+      const request = new Request(url);
+      return createEdgeCacheContext(request, new URL(request.url)).cacheKey.url;
+    });
+
+    expect(new Set(keys).size).toBe(3);
   });
 });
 
 describe("writeEdgeCache", () => {
-  const put = vi.fn(async () => undefined);
+  const put = vi.fn<(request: Request, response: Response) => Promise<void>>(async () => undefined);
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -52,6 +78,23 @@ describe("writeEdgeCache", () => {
     await Promise.all(ctx.waitUntil.mock.calls.map(([promise]) => promise));
 
     expect(put).toHaveBeenCalledOnce();
+  });
+
+  it("stores cacheable responses without dropping Vary metadata", async () => {
+    const ctx = makeExecutionContext();
+    const response = new Response("{}", {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=60, max-age=10",
+        Vary: "Authorization",
+      },
+    });
+
+    writeEdgeCache(makeContext(), response, ctx);
+    await Promise.all(ctx.waitUntil.mock.calls.map(([promise]) => promise));
+
+    expect(put).toHaveBeenCalledOnce();
+    expect(put.mock.calls[0]?.[1]?.headers.get("Vary")).toBe("Authorization");
   });
 
   it("skips no-store, no-cache, and private responses", () => {

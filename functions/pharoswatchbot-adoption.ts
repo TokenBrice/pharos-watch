@@ -1,5 +1,6 @@
 import { buildProxyResponse, buildUpstreamHeaders, jsonError } from "./lib/proxy-utils";
-import { hashClientIp } from "./lib/client-ip-hash";
+import { hashClientIp } from "@shared/lib/client-ip-hash";
+import { readBoundedRequestBody } from "./lib/bounded-request-body";
 import { rejectIfNotSiteDataUiOrigin } from "./lib/site-data-origin";
 import {
   createProxyRequest,
@@ -52,6 +53,7 @@ export const onRequest = async (context: TelegramAdoptionPagesContext): Promise<
   // Deploy the Worker route before this Pages shim; the Pages release removes
   // the old direct D1 write only after the additive Worker endpoint is live.
   let clientIpHash: string | null = null;
+  let body: Uint8Array<ArrayBuffer> | null = null;
   const proxyContext: TelegramAdoptionProxyContext = { ...context, params: {} };
 
   return runPagesProxy(proxyContext, {
@@ -71,6 +73,15 @@ export const onRequest = async (context: TelegramAdoptionPagesContext): Promise<
     },
     resolveUpstreamPath: () => TELEGRAM_ADOPTION_API_PATH,
     beforeFetch: async ({ request, env }) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5_000);
+      try {
+        const result = await readBoundedRequestBody(request, 512, controller.signal);
+        if (result.status !== "ok") return response(400);
+        body = result.bytes;
+      } finally {
+        clearTimeout(timer);
+      }
       clientIpHash = await getClientIpHash(request, env);
       return clientIpHash ? null : response(503);
     },
@@ -91,7 +102,7 @@ export const onRequest = async (context: TelegramAdoptionPagesContext): Promise<
         path: upstreamPath,
         method: "POST",
         headers,
-        body: request.body,
+        body,
         label: "Telegram adoption",
       });
     },

@@ -68,6 +68,8 @@ Important contract:
 - The route must not add a worker/API endpoint unless the current frontend joins stop being sufficient.
 - The current non-commodity historical bucket exposed by `useNonUsdShare()` is not pure fiat-only history; it includes currency-linked plus other non-commodity non-USD pegs. Route copy should stay honest about that unless the data contract changes.
 
+The shared table's peg-deviation text and severity both read the published `peg-summary.currentDeviationBps`; the raw price remains an independently refreshed price display rather than a second deviation authority.
+
 ---
 
 ## Section Order

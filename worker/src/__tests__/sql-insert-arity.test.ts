@@ -8,10 +8,8 @@ const INSERT_PATTERN =
   /INSERT\s+(?:OR\s+(?:IGNORE|REPLACE|ABORT|FAIL|ROLLBACK)\s+|)INTO\s+[\w.]+\s*\(([^()]*)\)\s*VALUES\s*\(/gi;
 
 function listSourceFiles(dir: string, out: string[] = []): string[] {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-local source scan.
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-local source scan.
     if (statSync(full).isDirectory()) {
       if (entry !== "__tests__" && entry !== "test-helpers" && entry !== "node_modules") listSourceFiles(full, out);
       continue;
@@ -63,7 +61,6 @@ interface InsertSite {
 function scanInsertArity(): InsertSite[] {
   const mismatches: InsertSite[] = [];
   for (const file of listSourceFiles(WORKER_SRC)) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-local source scan.
     const source = readFileSync(file, "utf8");
     for (const match of source.matchAll(INSERT_PATTERN)) {
       const columnList = match[1]!;

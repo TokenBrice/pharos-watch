@@ -239,7 +239,10 @@ export const DATA_SURFACE_DESCRIPTORS = {
     queryKey: ["report-cards", "v9"],
     producerJob: "compute-safety-score-v9",
     producerIntervalSec: CRON_INTERVALS["compute-safety-score-v9"],
-    endpointMaxAgeSec: 900,
+    // 2x the publication cadence: the endpoint budget tolerates one missed
+    // 30-minute publication, matching the V9 consumer fail-close basis
+    // (worker/src/lib/safety-score-v9/consumer-freshness.ts).
+    endpointMaxAgeSec: 2 * CRON_INTERVALS["compute-safety-score-v9"],
     dependencyCriticality: "critical",
     uiLabel: "Report Cards",
     pharosVilleSchemaKey: "reportCards",

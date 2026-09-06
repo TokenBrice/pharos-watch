@@ -39,7 +39,6 @@ import {
   type StablecoinsCacheLoadResult,
 } from "../stablecoins-cache";
 import {
-  getCacheBlobSizes,
   getD1UsageSummary,
   type D1UsageSummaryWithTableGrowth,
 } from "./d1-usage";
@@ -444,8 +443,6 @@ export async function loadStatusSupplements(
   }
 
   let priceSourceHealth: PriceSourceHealth | null = null;
-  let priceProviderDiagnostics: Array<Record<string, unknown>> | null = null;
-  let gtProbe: Record<string, unknown> | null = null;
   try {
     const syncStablecoinsCron = crons["sync-stablecoins"];
     const metadata = syncStablecoinsCron?.lastRun?.metadata;
@@ -466,15 +463,6 @@ export async function loadStatusSupplements(
           err,
         );
       }
-    }
-    if (Array.isArray(metadata?.providerDiagnostics)) {
-      priceProviderDiagnostics = metadata.providerDiagnostics.filter(
-        (entry): entry is Record<string, unknown> => isRecord(entry),
-      );
-    }
-    const rawGtProbe = metadata?.gtProbe;
-    if (isRecord(rawGtProbe)) {
-      gtProbe = rawGtProbe;
     }
   } catch (err) {
     logStatusSupplementWarning(
@@ -532,17 +520,6 @@ export async function loadStatusSupplements(
     );
   }
 
-  let cacheBlobSizes: Record<string, number> | undefined;
-  try {
-    cacheBlobSizes = await getCacheBlobSizes(db);
-  } catch (err) {
-    logStatusSupplementWarning(
-      "cache_blob_sizes_query_failed",
-      "Cache blob sizes query failed",
-      err,
-      { source: "cache" },
-    );
-  }
 
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
@@ -617,11 +594,8 @@ export async function loadStatusSupplements(
     providerCircuitHealth,
     canaries,
     priceSourceHealth,
-    priceProviderDiagnostics,
-    gtProbe,
     coingeckoPriceDiff,
     d1Usage,
-    cacheBlobSizes,
     mintBurnReconciliation,
     reserveDrift,
     classificationWarnings,

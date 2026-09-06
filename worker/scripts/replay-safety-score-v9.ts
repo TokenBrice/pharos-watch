@@ -138,9 +138,7 @@ function decodeCaptureBody(bytes: Uint8Array): Buffer {
 }
 
 function findCaptureReference(directory: string, expectedSha256: string): CaptureReference | null {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- summary-root traversal is an explicit local operator path.
   if (!existsSync(directory)) return null;
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- summary-root traversal is an explicit local operator path.
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) {
@@ -149,7 +147,6 @@ function findCaptureReference(directory: string, expectedSha256: string): Captur
       continue;
     }
     if (!entry.isFile() || !entry.name.endsWith(CAPTURE_SUMMARY_SUFFIX)) continue;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- summary path discovered under the explicit local root.
     const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(path, "utf8")), path);
     if (summary.sha256 === expectedSha256) return { sha256: summary.sha256, r2Key: summary.r2Key };
   }
@@ -175,9 +172,7 @@ export async function resolveSafetyScoreV9ReplayInput(
   }
   const cacheDir = resolve(options.cacheDir ?? DEFAULT_CAPTURE_CACHE_DIR);
   const cachedPath = resolve(cacheDir, `${expectedSha256}.json`);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache path.
   if (existsSync(cachedPath)) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache path.
     return verifyCaptureBody(readFileSync(cachedPath), expectedSha256);
   }
 
@@ -192,9 +187,7 @@ export async function resolveSafetyScoreV9ReplayInput(
     const compressed = await client.get(key);
     if (!compressed) continue;
     const body = verifyCaptureBody(compressed, expectedSha256);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache directory.
     mkdirSync(cacheDir, { recursive: true });
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- hash-addressed local cache path.
     writeFileSync(cachedPath, body);
     return body;
   }
@@ -202,7 +195,6 @@ export async function resolveSafetyScoreV9ReplayInput(
 }
 
 function readJson(path: string): unknown {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 async function readReplayInput(input: string): Promise<unknown> {
@@ -351,7 +343,6 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),
     ...(values["allow-registry-mismatch"] === true ? { allowRegistryMismatch: true } : {}),
   });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, serializeSafetyScoreV9ReplayArtifact(artifact), "utf8");
 }
 

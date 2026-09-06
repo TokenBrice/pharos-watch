@@ -39,7 +39,6 @@ function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
   try {
     const file = resolve(process.cwd(), "src/generated/stablecoin-detail-snapshots", `${id}.json`);
     // The ID comes from the closed tracked-stablecoin registry above.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     return JSON.parse(readFileSync(file, "utf8")) as StablecoinDetailSnapshot;
   } catch {
     return null;

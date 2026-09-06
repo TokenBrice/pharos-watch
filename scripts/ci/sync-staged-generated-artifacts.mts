@@ -120,7 +120,6 @@ function captureOutputStates(
     // output is restorable whenever its working tree matches the index: porcelain
     // status empty, or index-only (`XY` with a blank worktree column).
     const worktreeClean = status.trim().length === 0 || (tracked && status.length > 1 && status[1] === " ");
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- registry-declared artifact output under the repo root
     return { existed: existsSync(resolve(cwd, path)), path, tracked, wasClean: worktreeClean };
   });
 }
@@ -140,7 +139,6 @@ function restoreOutputStates(
       execFile("git", ["checkout", "--", state.path], options);
     } else if (!state.existed) {
       const outputPath = resolve(cwd, state.path);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- remove only an output this hook run created
       if (existsSync(outputPath)) unlinkSync(outputPath);
     }
   }

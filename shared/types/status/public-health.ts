@@ -47,7 +47,7 @@ export const PublicStatusHistoryResponseSchema = z
   .passthrough();
 export type PublicStatusHistoryResponse = z.output<typeof PublicStatusHistoryResponseSchema>;
 
-const CircuitRecordSchema = z.object({
+export const CircuitRecordSchema = z.object({
   state: z.enum(["closed", "half-open", "open"]),
   consecutiveFailures: z.number(),
   lastFailureAt: z.number().nullable(),

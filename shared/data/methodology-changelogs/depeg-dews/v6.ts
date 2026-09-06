@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.22",
+    title: "Public-event eligibility for blacklist stress",
+    date: "2026-09-06",
+    effectiveAt: 1788652800,
+    summary:
+      "DEWS blacklist windows and daily digest activity now exclude suppressed tracker events, aligning their inputs with the public blacklist history.",
+    impact: [
+      "Suppressed EURC mirror-zero rows no longer contribute to DEWS 24-hour or 7-day event counts or create digest blacklist candidates",
+      "Unsuppressed rows retain their existing time windows, event-type eligibility, and canonical stablecoin attribution",
+      "Both recent counts and the historical spike baseline change; lower event counts do not guarantee a lower stress score",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.21",
     title: "Independent confirmation for native-fiat onsets",
     date: "2026-08-12",

@@ -24,18 +24,19 @@ regexes = ['''^0x[a-fA-F0-9]{40}[.,;:)\]]?$''']
 # `.gitleaksignore` entries were the previous remedy for this class and they rot on
 # every renumbering, which is why this lives here instead.
 #
-# Matched on the whole source LINE, and only with the `<source-family>:` prefix that
-# makes it a curated registry reference. A bare base58 allowlist would be far too
-# strong: roughly one generic alphanumeric API key in fourteen happens to contain no
-# 0, O, I or l, and would be exempted along with it.
+# Match only the finding span, with a registry prefix and curated-data path.
+# Unrelated credentials on the same source line must remain detectable.
 #
 # The prefix repeats: failure-domain keys qualify the family further, as in
 # `"solana:system-key:<pubkey>"`, so a single-segment prefix missed them and the
 # finding resurfaced during the mint/bridge boundary migration.
 [[allowlists]]
 description = "Registry-prefixed Solana mint identifiers are public on-chain identifiers, not secrets"
-regexTarget = "line"
-regexes = ['''"(?:[a-z0-9]+(?:-[a-z0-9]+)*:)+[1-9A-HJ-NP-Za-km-z]{32,44}"''']
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^(?:[a-z0-9]+(?:-[a-z0-9]+)*:)+[1-9A-HJ-NP-Za-km-z]{32,44}"$''']
+paths = ['''(?:^|/)shared/data/stablecoins/domains/risk-review/[^/]+\.json$''']
 
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
@@ -67,17 +68,17 @@ regexes = ['''^ibc/[A-F0-9]{64}$''']
 # JSON and mechanism overlays. It grants read access to an already-public
 # document and is not a credential.
 #
-# Matched on the whole source LINE rather than on the bare UUID: a naked UUID
-# allowlist would exempt any secret that happens to be UUID-shaped. Scoped to
-# the GitBook media host so only these download links qualify.
-#
-# Line-pinned `.gitleaksignore` entries were the previous remedy and they rot —
-# inserting a field above the URL renumbers the line and the finding returns,
-# which is exactly how it resurfaced during the v9.14 migration.
+# Match only the reviewed public CDN token values, never an arbitrary UUID
+# or a whole URL-bearing source line. New public tokens require review.
 [[allowlists]]
 description = "GitBook public file-download tokens in cited source URLs are not credentials"
-regexTarget = "line"
-regexes = ['''gitbook(-x-prod)?\.(io|appspot\.com)/[^"'\s]*[?&]alt=media&token=''']
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^(?:54e9714e-c65f-4b0c-8bcf-c7869956dd20|3cad87ae-7846-4bfe-ba2e-411fbf166f60|cad709b6-47f1-427d-ad14-443fa5cd76e1|df75631f-9b3c-4524-81e4-f69b6baaf1e5|55e4e094-d2e5-4847-a47d-4277fc8e70c3|b41923ad-1f3b-42af-9ef3-625a1a029e21|7dce3beb-cc89-406f-a2df-a83b3737a021|fbbfb1d4-ca86-4186-93d9-400fe5a36be7)$''',
+]
+paths = ['''(?:^|/)shared/data/(?:stablecoins|safety-score-v9)/.*\.json$''']
 
 # Falcon publishes asset labels such as `ARIA_B71VABWJ_T8GB`. Artifact V2
 # records those labels as allocation `key` values, and the default

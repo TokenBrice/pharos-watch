@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test-only directory walker rooted at process.cwd() */
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";

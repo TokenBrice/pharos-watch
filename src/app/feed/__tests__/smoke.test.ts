@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test creates and cleans temporary feed fixture files under os.tmpdir() only. */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

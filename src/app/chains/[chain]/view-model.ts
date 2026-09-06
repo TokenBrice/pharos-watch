@@ -1,6 +1,6 @@
-import type { ChainStablecoin } from "@/hooks/use-chains";
+import type { ChainDetailCoin } from "@shared/types/chains";
 
-function buildCompositionLayout(coins: ChainStablecoin[]) {
+function buildCompositionLayout(coins: ChainDetailCoin[]) {
   const totalCoins = coins.length;
   if (totalCoins === 0) {
     return { displayCoins: [], rest: [], restTotal: 0, cols: 2, rows: 1 };
@@ -36,12 +36,12 @@ function buildCompositionLayout(coins: ChainStablecoin[]) {
   const displayCount = needsOthers ? Math.min(maxDisplay - 1, totalCoins) : totalCoins;
   const displayCoins = coins.slice(0, displayCount);
   const rest = coins.slice(displayCount);
-  const restTotal = rest.reduce((sum, coin) => sum + coin.supplyOnChain, 0);
+  const restTotal = rest.reduce((sum, coin) => sum + coin.supplyUsd, 0);
 
   return { displayCoins, rest, restTotal, cols, rows };
 }
 
-function buildBackingTotals(coins: ChainStablecoin[]) {
+function buildBackingTotals(coins: ChainDetailCoin[]) {
   const totals: Record<string, number> = {
     "rwa-backed": 0,
     "crypto-backed": 0,
@@ -50,21 +50,21 @@ function buildBackingTotals(coins: ChainStablecoin[]) {
 
   for (const coin of coins) {
     const key = coin.backing && coin.backing in totals ? coin.backing : "other";
-    totals[key] += coin.supplyOnChain;
+    totals[key] += coin.supplyUsd;
   }
 
   return totals;
 }
 
 export interface ChainRouteViewModel {
-  coins: ChainStablecoin[];
+  coins: ChainDetailCoin[];
   totalUsd: number;
   backingTotals: ReturnType<typeof buildBackingTotals>;
   compositionLayout: ReturnType<typeof buildCompositionLayout>;
 }
 
 export function buildChainRouteViewModel(
-  coins: ChainStablecoin[],
+  coins: ChainDetailCoin[],
   totalUsd: number,
 ): ChainRouteViewModel {
   return {

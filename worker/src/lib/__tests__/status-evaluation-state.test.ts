@@ -350,13 +350,13 @@ describe("status cause text", () => {
     expect(selected.some((cause) => cause.code === "active_price_coverage_incomplete")).toBe(false);
   });
 
-  it("warns when DEX data is display-valid but stale for live pricing", () => {
+  it("warns when the DEX liquidity dataset exceeds its endpoint publication budget", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
         makePublicHealth("healthy", {
           caches: {
             "dex-liquidity": {
-              ageSeconds: 4_501,
+              ageSeconds: 14_401,
               maxAge: 43_200,
               healthy: true,
             },
@@ -369,11 +369,34 @@ describe("status cause text", () => {
       expect.objectContaining({
         code: "dex_pricing_bridge_stale",
         severity: "warning",
-        metric: "dexPriceAgeSeconds",
-        value: 4_501,
-        threshold: 4_500,
+        metric: "dexLiquidityAgeSeconds",
+        value: 14_401,
+        threshold: 14_400,
       }),
     );
+  });
+
+  it("keeps dataset ages inside the endpoint budget off the stale cause the per-row window used to flag", () => {
+    // Ages past the 4_500 s per-row `DEX_FRESHNESS_SEC` admission window but at
+    // or below the 14_400 s dataset endpoint budget (including the exact
+    // boundary) must not fire the dataset-age diagnostic.
+    for (const ageSeconds of [4_501, 5_000, 14_400]) {
+      const causes = buildAvailabilityCauses(
+        makeAvailabilityCauseInput(
+          makePublicHealth("healthy", {
+            caches: {
+              "dex-liquidity": {
+                ageSeconds,
+                maxAge: 43_200,
+                healthy: true,
+              },
+            },
+          }),
+        ),
+      );
+
+      expect(causes.some((cause) => cause.code === "dex_pricing_bridge_stale")).toBe(false);
+    }
   });
 
   it("emits a warning cache cause when an override-tightened cache breaches its degraded band below the global threshold", () => {

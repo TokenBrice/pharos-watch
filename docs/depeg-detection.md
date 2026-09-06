@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.21`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.22`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/depeg-dews.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`

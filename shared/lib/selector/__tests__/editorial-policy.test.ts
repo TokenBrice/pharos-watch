@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- Test-only repository discovery and temporary fixtures. */
 import { afterEach, describe, expect, it } from "vitest";
 import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

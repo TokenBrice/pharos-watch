@@ -8,6 +8,7 @@ export interface ChainCirculatingPoint {
 }
 
 export type RawChainCirculating = Record<string, {
+  chainId?: string;
   current?: number;
   circulatingPrevDay?: number;
   circulatingPrevWeek?: number;
@@ -33,7 +34,11 @@ export function canonicalizeChainCirculating(
 
   for (const [rawChainId, data] of Object.entries(chainCirculating)) {
     if (!data || typeof data !== "object") continue;
-    const chainId = resolveChainId(rawChainId);
+    // Worker-generated rows retain their display-label key for compatibility,
+    // but the explicit canonical id is authoritative when present. Unknown or
+    // malformed ids fall back to the legacy label resolver.
+    const chainId = (typeof data.chainId === "string" ? resolveChainId(data.chainId) : null)
+      ?? resolveChainId(rawChainId);
     if (!chainId) continue;
 
     const current = sanitizeSupply(data.current);

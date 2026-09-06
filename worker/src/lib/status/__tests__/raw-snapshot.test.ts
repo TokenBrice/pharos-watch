@@ -21,7 +21,6 @@ function minimalRawStatus() {
     budgetOnlySurfaces: [],
     dataQuality: {},
     telegramBot: null,
-    alertBroker: undefined,
     sectionErrors: {},
     datasetFreshness: {},
     summary: {},

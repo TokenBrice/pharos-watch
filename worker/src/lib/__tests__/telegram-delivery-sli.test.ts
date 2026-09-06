@@ -13,11 +13,9 @@ function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
   const migrationDir = process.cwd().endsWith("/worker")
     ? join(process.cwd(), "migrations")
     : join(process.cwd(), "worker/migrations");
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration directory.
   for (const file of readdirSync(migrationDir)
     .filter((entry) => entry.endsWith(".sql"))
     .sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration replay.
     sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
   }
   databases.push(sqlite);

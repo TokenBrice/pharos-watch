@@ -9,6 +9,8 @@ import { buildExplorerUrl } from "@shared/lib/explorer";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
 import type { ChainConfig } from "../blacklist-contracts";
 
+export const BLACKLIST_PUBLIC_EVENT_SQL = "suppression_reason IS NULL";
+
 export function shouldSuppressAsMirrorZero(
   stablecoin: string,
   eventType: string,

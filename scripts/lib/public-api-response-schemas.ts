@@ -33,8 +33,10 @@ import {
   DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
   NonUsdShareResponseSchema,
+  PegBucketsSchema,
   PegSummaryResponseSchema,
   StablecoinChartResponseSchema,
+  StablecoinDetailResponseSchema,
   StablecoinListResponseSchema,
   StressSignalDetailResponseSchema,
   StressSignalsAllResponseSchema,
@@ -66,24 +68,6 @@ import {
   YieldRankingsResponseSchema,
   YieldVenueRiskScoresSchema,
 } from "@shared/types/yield";
-
-const PegBucketsSchema = z.record(z.string(), z.number());
-
-const StablecoinDetailTokenSchema = z
-  .object({
-    totalCirculatingUSD: PegBucketsSchema.optional(),
-    totalCirculating: PegBucketsSchema.optional(),
-    circulating: PegBucketsSchema.optional(),
-  })
-  .passthrough();
-
-/** Mirrors the worker-local DefiLlama envelope validator; upstream fields stay passthrough. */
-export const StablecoinDetailResponseSchema = z
-  .object({
-    price: z.number().optional(),
-    tokens: z.array(StablecoinDetailTokenSchema).optional(),
-  })
-  .passthrough();
 
 export const StablecoinSummaryResponseSchema = z.object({
   id: z.string(),

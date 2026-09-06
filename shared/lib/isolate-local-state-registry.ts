@@ -16,9 +16,9 @@ export interface IsolateLocalStateRegistryEntry {
  */
 export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
-    sourcePath: "functions/lib/client-ip-hash.ts",
+    sourcePath: "shared/lib/client-ip-hash.ts",
     stateNames: ["cachedSecret", "cachedKey"],
-    owner: "Pages client-IP hashing",
+    owner: "Pages and Worker client-IP hashing",
     kind: "key",
     resetOrTtl: "Replaced when the supplied secret changes; otherwise resets on isolate recycle or deploy.",
     durableTruth: "The runtime secret is authoritative; the non-extractable imported key is only a derived cache.",

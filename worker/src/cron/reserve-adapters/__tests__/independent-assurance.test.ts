@@ -115,7 +115,6 @@ async function verify(manifestOverride: Partial<IndependentAssuranceManifest> = 
 }
 
 function readIndexFixture(name: string): string {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- test-only fixture reads with literal names from this file.
   return readFileSync(resolve(TEST_DIR, "fixtures", name), "utf8");
 }
 

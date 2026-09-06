@@ -88,6 +88,8 @@ function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<num
   return prevMonth == null ? undefined : [prevMonth, current];
 }
 
+// The two endpoints are the all-time worst tracked deviation and the current
+// published deviation; this is a range, not a 30-day history window.
 function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
   if (pegCoin?.currentDeviationBps == null) return undefined;
   return [pegCoin.worstDeviationBps ?? pegCoin.currentDeviationBps, pegCoin.currentDeviationBps];

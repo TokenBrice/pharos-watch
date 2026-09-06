@@ -83,12 +83,42 @@ export const ChainDominantStablecoinSchema = z.object({
   symbol: z.string(),
   share: z.number(),
 });
-
-
 export const ChainTopStablecoinSchema = ChainDominantStablecoinSchema.extend({
   supplyUsd: z.number(),
 });
 
+export const ChainDetailCoinSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  symbol: z.string(),
+  price: z.number().nullable(),
+  pegType: z.string().optional(),
+  supplyUsd: z.number(),
+  chainShare: RatioSchema,
+  change24h: z.number(),
+  change24hPct: RatioSchema,
+  change7d: z.number(),
+  change7dPct: RatioSchema,
+  change30d: z.number(),
+  change30dPct: RatioSchema,
+  backing: z.string().optional(),
+});
+
+export type ChainDetailCoin = z.infer<typeof ChainDetailCoinSchema>;
+
+/**
+ * Full per-chain coin rows for one chain, published by `GET /api/chains?chain=<id>`.
+ * The chain-detail route renders these directly; the chain-local `totalUsd` is the
+ * same aggregate the matching `chains[]` summary carries, so one response is the
+ * single authority for both the hero totals and the composition sections.
+ */
+export const ChainDetailSchema = z.object({
+  chainId: z.string(),
+  totalUsd: z.number(),
+  coins: z.array(ChainDetailCoinSchema),
+});
+
+export type ChainDetail = z.infer<typeof ChainDetailSchema>;
 
 export const ChainSummarySchema = z.object({
   id: z.string(),
@@ -113,7 +143,6 @@ export const ChainSummarySchema = z.object({
 });
 
 export type ChainSummary = z.infer<typeof ChainSummarySchema>;
-
 export const ChainsResponseSchema = z.object({
   chains: z.array(ChainSummarySchema),
   globalTotalUsd: z.number(),
@@ -122,6 +151,7 @@ export const ChainsResponseSchema = z.object({
   globalChange24hPct: RatioSchema,
   globalChange7dPct: RatioSchema,
   globalChange30dPct: RatioSchema,
+  chainDetail: ChainDetailSchema.optional(),
   updatedAt: z.number(),
   healthMethodologyVersion: z.string(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),

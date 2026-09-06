@@ -23,7 +23,7 @@ import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 // Public Zod schemas keep exported companion aliases as the contract type surface.
 
 export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v4";
-export const DDRR_SNAPSHOT_CACHE_GENERATION = 3;
+export const DDRR_SNAPSHOT_CACHE_GENERATION = 4;
 export const DDRR_PUBLIC_WARNING =
   "Reviews compare frozen DDR predictions Pharos published with later Pharos event data. Coverage rows are not scored as predictions.";
 
@@ -302,6 +302,9 @@ export type DdrrFailedPublication = z.infer<typeof DdrrFailedPublicationSchema>;
 export const DdrrV2CoverageRowSchema = DdrrV2BaseRowSchema.extend({
   kind: z.literal("coverage"),
   predictionState: z.enum(DDRR_COVERAGE_PREDICTION_STATE_VALUES),
+  // Actual-outcome spelling of the base row's sourceEventState; carried
+  // alongside it so consumers need no state-to-outcome mapping.
+  actualOutcome: z.enum(DDRR_ACTUAL_OUTCOME_VALUES),
   actualEndedAt: z.number().int().nonnegative().nullable(),
   terminalEvidenceSourceDate: z.string().nullable(),
   coverageCause: z.enum(DDRR_COVERAGE_CAUSE_VALUES),

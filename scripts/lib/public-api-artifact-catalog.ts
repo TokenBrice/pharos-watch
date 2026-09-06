@@ -111,6 +111,13 @@ export const STABLECOIN_QUERY_PARAM = {
   schema: { type: "string" },
   description: "Optional canonical Pharos stablecoin ID filter.",
 } as const satisfies PublicApiArtifactParameter;
+export const CHAIN_QUERY_PARAM = {
+  name: "chain",
+  in: "query",
+  schema: { type: "string" },
+  description: "Optional canonical Pharos chain ID for full per-chain coin detail rows.",
+} as const satisfies PublicApiArtifactParameter;
+
 
 export const REQUIRED_STABLECOIN_QUERY_PARAM = {
   name: "stablecoin",
@@ -710,9 +717,10 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "chains",
     summary: "Chains",
-    description: "Chain-level stablecoin aggregates with Chain Health Scores.",
+    description: "Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for full per-chain coin detail rows.",
     tags: ["Chains"],
     responseSchema: "ChainsResponse",
+    parameters: [CHAIN_QUERY_PARAM],
   },
   {
     key: "non-usd-share",

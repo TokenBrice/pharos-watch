@@ -244,7 +244,6 @@ describe("Night Watch blacklist reconciliation", () => {
       .filter((filename) => filename.startsWith("0000_") || Number(filename.slice(0, 4)) >= 72)
       .sort();
     for (const filename of migrationFiles) {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- filenames come from the migrations directory listing above.
       sqlite.exec(readFileSync(resolve(migrationsDir, filename), "utf8"));
     }
     for (const statement of mutationStatements) sqlite.exec(statement);
@@ -287,7 +286,6 @@ describe("Night Watch blacklist reconciliation", () => {
         .filter((filename) => filename.startsWith("0000_") || Number(filename.slice(0, 4)) >= 72)
         .sort();
       for (const filename of migrationFiles) {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- filenames come from the migrations directory listing above.
         sqlite.exec(readFileSync(resolve(migrationsDir, filename), "utf8"));
       }
       sqlite.exec(balanceStatement!);

@@ -68,6 +68,7 @@ export const coverageRow: DdrrRow = {
   startedAt: 1,
   eligibleAt: 1,
   sourceEventState: "recovered",
+  actualOutcome: "recovered",
   terminalEvidenceAt: null,
   terminalEvidenceInterval: null,
   terminalEvidencePrecision: null,

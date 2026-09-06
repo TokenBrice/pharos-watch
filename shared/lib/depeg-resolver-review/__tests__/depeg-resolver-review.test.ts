@@ -103,6 +103,7 @@ function coverage(overrides: Partial<DdrrV2CoverageInput> = {}): DdrrV2CoverageI
     startedAt: STARTED_AT,
     eligibleAt: ELIGIBLE_AT,
     sourceEventState: "recovered",
+    actualOutcome: "recovered",
     predictionState: "resolved_before_prediction",
     actualEndedAt: ELIGIBLE_AT - 1,
     coverageCause: "pre_lock_recovered",
@@ -191,6 +192,19 @@ describe("DDRR row contract", () => {
 
     expect(rows.map((row) => row.kind)).toEqual(["coverage", "invalidated_prediction"]);
     expect(rows.map((row) => DdrrRowSchema.parse(row))).toEqual(rows);
+  });
+
+  it("carries the actual outcome on coverage rows alongside the source state", () => {
+    const row = buildDdrrCoverageRow(
+      coverage({ sourceEventState: "active", actualOutcome: "still_open" }),
+    );
+    expect(row.sourceEventState).toBe("active");
+    expect(row.actualOutcome).toBe("still_open");
+    expect(DdrrRowSchema.parse(row)).toEqual(row);
+
+    const { actualOutcome, ...withoutOutcome } = row;
+    expect(actualOutcome).toBe("still_open");
+    expect(() => DdrrRowSchema.parse(withoutOutcome)).toThrow(/actualOutcome/);
   });
 
   it("carries additive auto-repair and split lineage through review rows", () => {

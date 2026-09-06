@@ -2,13 +2,28 @@ import { describe, expect, it } from "vitest";
 
 import { NonUsdShareResponseSchema } from "@shared/types/market";
 import {
+  PUBLIC_API_RESPONSE_SCHEMAS,
   SnapshotCoinResponseSchema,
   SnapshotsIndexResponseSchema,
-  StablecoinDetailResponseSchema,
   StablecoinSummaryResponseSchema,
 } from "../lib/public-api-response-schemas";
 
+const StablecoinDetailResponseSchema = PUBLIC_API_RESPONSE_SCHEMAS.StablecoinDetailResponse;
+
 describe("public API response schemas", () => {
+  it("accepts the public null-price response and preserves its provenance", () => {
+    const payload = {
+      price: null,
+      priceSource: null,
+      priceConfidence: null,
+      priceUpdatedAt: 1_700_000_000,
+      priceObservedAt: null,
+      tokens: [{ date: 1_700_000_000, totalCirculatingUSD: { peggedUSD: 100 } }],
+      providerExtra: "retained",
+    };
+    expect(StablecoinDetailResponseSchema.parse(payload)).toEqual(payload);
+    expect(StablecoinDetailResponseSchema.safeParse({ ...payload, priceConfidence: "bogus" }).success).toBe(false);
+  });
   it("accepts representative payloads derived from the worker responses", () => {
     expect(StablecoinDetailResponseSchema.safeParse({
       price: 1.0001,

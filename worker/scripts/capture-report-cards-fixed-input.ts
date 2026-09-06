@@ -23,14 +23,12 @@ async function main(): Promise<void> {
   }
 
   // Accept either the raw cache envelope or Wrangler D1's JSON query result.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   let raw: unknown = JSON.parse(readFileSync(values["exact-cache-export"], "utf8"));
   if (Array.isArray(raw)) raw = raw[0];
   if (raw && typeof raw === "object" && "results" in raw) {
     raw = (raw as { results?: Array<{ value?: unknown }> }).results?.[0]?.value;
   }
   const fixedInput = await parseSafetyScoreV9InputCacheValue(raw);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, `${JSON.stringify(fixedInput, null, 2)}\n`, "utf8");
 }
 

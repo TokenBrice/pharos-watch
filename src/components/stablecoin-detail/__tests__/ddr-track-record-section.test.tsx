@@ -88,6 +88,7 @@ const COVERAGE_ROW = {
   startedAt: 1_699_900_000,
   kind: "coverage",
   predictionState: "missed_lock_recovered",
+  actualOutcome: "recovered",
   actualEndedAt: 1_699_910_000,
   terminalEvidenceSourceDate: null,
   coverageCause: "lock_missed",

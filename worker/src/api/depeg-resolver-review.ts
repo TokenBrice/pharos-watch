@@ -12,7 +12,6 @@ function degradedResponse(reason: string): DdrrResponse {
     summary: buildEmptyDdrrSummary(),
     rows: [],
     assessedEventCount: 0,
-    assessmentRowsTruncated: false,
     incidentRowLimit: 0,
     methodologyVersions: [],
     degradedReasons: [reason],

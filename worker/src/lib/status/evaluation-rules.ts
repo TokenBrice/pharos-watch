@@ -5,7 +5,7 @@ import {
   getCacheRatioThresholds,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
@@ -20,7 +20,15 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
 };
 
 const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
+
 const STATUS_RESERVE_REPEATED_TRUNCATION_COUNT = 2;
+
+// Dataset-level publication budget for the DEX liquidity cache (one missed
+// two-hour scoring runway). This is the cache's endpoint freshness budget from
+// the shared lane descriptor — deliberately distinct from the per-row
+// `DEX_FRESHNESS_SEC` admission window that gates individual `dex_prices`
+// rows for depeg logic.
+const DEX_DATASET_ENDPOINT_MAX_AGE_SEC = CACHE_FRESHNESS_LANES.dexLiquidity.endpointMaxAgeSec;
 
 export interface ReserveCompositionAssessment {
   bootstrap: boolean;
@@ -243,14 +251,14 @@ function evaluateDexDiagnostics(input: AvailabilityRuleInput): Partial<StatusRul
   const dexLiquidityCache = input.publicHealth.caches["dex-liquidity"];
   const dewsCache = input.publicHealth.caches.dews;
   const causes: StatusCause[] = [];
-  if (dexLiquidityCache?.ageSeconds != null && dexLiquidityCache.ageSeconds > DEX_FRESHNESS_SEC) {
+  if (dexLiquidityCache?.ageSeconds != null && dexLiquidityCache.ageSeconds > DEX_DATASET_ENDPOINT_MAX_AGE_SEC) {
     causes.push(
       makeCause(
         "availability",
         "dex_pricing_bridge_stale",
         "warning",
-        "DEX liquidity remains available for public display, but DEX prices exceed the 75-minute live-pricing admission window; promoted DEX sources and pool challenges are no longer receiving fresh observations.",
-        { metric: "dexPriceAgeSeconds", value: dexLiquidityCache.ageSeconds, threshold: DEX_FRESHNESS_SEC },
+        "The published DEX liquidity dataset has exceeded its endpoint freshness budget of one missed two-hour scoring runway. Individual DEX price observations use a separate trust window.",
+        { metric: "dexLiquidityAgeSeconds", value: dexLiquidityCache.ageSeconds, threshold: DEX_DATASET_ENDPOINT_MAX_AGE_SEC },
       ),
     );
   }

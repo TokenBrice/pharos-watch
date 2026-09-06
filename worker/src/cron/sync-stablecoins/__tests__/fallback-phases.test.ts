@@ -511,10 +511,10 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
       mcap: 4_884_400_000,
       supplySource: "onchain-total-supply",
       chainCirculating: {
-        Ethereum: 4_517_720_000,
-        Base: 11_478_000,
-        Optimism: 4_876_000,
-        Arbitrum: 346_620_000,
+        Ethereum: { current: 4_517_720_000, chainId: "ethereum" },
+        Base: { current: 11_478_000, chainId: "base" },
+        Optimism: { current: 4_876_000, chainId: "optimism" },
+        Arbitrum: { current: 346_620_000, chainId: "arbitrum" },
       },
     });
     const susds = makeAsset({
@@ -542,10 +542,10 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(susds.circulating).toEqual({ peggedUSD: 4_884_400_000 });
     expect(susds.chains).toEqual(["Ethereum", "Base", "Optimism", "Arbitrum"]);
     expect(susds.chainCirculating).toEqual({
-      Ethereum: { current: 4_517_720_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Base: { current: 11_478_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Optimism: { current: 4_876_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Arbitrum: { current: 346_620_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+      Ethereum: { current: 4_517_720_000, chainId: "ethereum", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+      Base: { current: 11_478_000, chainId: "base", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+      Optimism: { current: 4_876_000, chainId: "optimism", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+      Arbitrum: { current: 346_620_000, chainId: "arbitrum", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
     });
     expect(other.chainCirculating).toEqual({ Ethereum: { current: 1 } });
   });

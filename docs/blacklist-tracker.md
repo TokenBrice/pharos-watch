@@ -80,6 +80,8 @@ The tracker has two amount layers:
 
 The snapshot total is not a live balance guarantee and is distinct from the local net-active event-state view.
 
+The producer summary cache is admitted fail-closed against the shared response schema with current-version `coverage`, `freezeLedgerMeta`, `dataQuality`, and `methodology` fields required. Invalid nested values or missing required fields trigger a live rebuild; valid retained snapshots keep their producer freshness and all additive fields rather than being projected through the parser. The producer payload is statically typed to the same response contract. Public response optionality is unchanged.
+
 ## Schedule And Runtime
 
 - **Expression:** `3 */6 * * *`

@@ -14,6 +14,10 @@ export function createWorkerEnv(overrides: Partial<Env> = {}): Env {
     TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: createRateLimit(),
     TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: createRateLimit(),
     TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: createRateLimit(),
+    TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: createRateLimit(),
+    TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: createRateLimit(),
+    TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: createRateLimit(),
+    SITE_API_SHARED_SECRET: "test-site-secret",
     CF_VERSION_METADATA: {
       id: "test-worker-version",
       tag: "test",

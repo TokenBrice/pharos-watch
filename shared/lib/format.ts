@@ -1,5 +1,4 @@
 import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
-import { BPS_PER_UNIT } from "./math";
 import { isFiniteNumber } from "./type-guards";
 import { formatRelativeAgeSeconds } from "./relative-time";
 import { ratioToPercentage, relativeChangeRatio } from "./stats";
@@ -201,20 +200,6 @@ export function formatBps(bps: number): string {
   return `${sign}${bps} bps`;
 }
 
-/**
- * Compute peg deviation in basis points.
- * `pegValue` should be the USD price of one unit of the peg currency
- * (e.g. ~1.19 for EUR, ~1.30 for CHF, ~3200 for gold oz, 1 for USD).
- */
-export function formatPegDeviation(price: number | null | undefined, pegValue: number | null = 1): string {
-  if (!isFiniteNumber(price)) return "N/A";
-  if (pegValue == null || !Number.isFinite(pegValue) || pegValue === 0) return "N/A";
-  // Deviation as basis points relative to peg: ((price / pegValue) - 1) * BPS_PER_UNIT
-  const ratio = price / pegValue;
-  const bps = Math.round((ratio - 1) * BPS_PER_UNIT);
-  if (!Number.isFinite(bps)) return "N/A";
-  return formatBps(bps);
-}
 
 export function formatPercentChange(current: number, previous: number): string {
   const changeRatio = relativeChangeRatio(current, previous);

@@ -7,15 +7,16 @@ import { ZodError } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_ORIGIN, PAGES_APP_ORIGIN, SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
+import { isRecord } from "@shared/lib/type-guards";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
+  StablecoinDetailResponseSchema,
   SupplyHistoryResponseSchema,
   type SupplyHistoryPoint,
 } from "@shared/types/market";
 import type { StablecoinDetailSnapshot } from "../../src/lib/api";
 import {
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
-  StablecoinDetailResponseSchema,
   StablecoinLiveSummarySchema,
   projectStablecoinLiveSummary,
   type StablecoinLiveSummary,
@@ -46,6 +47,7 @@ export interface SnapshotInputs {
   generatedAt: number;
   liveSummariesById: ReadonlyMap<string, StablecoinLiveSummary | null>;
   supplyHistoryById: ReadonlyMap<string, SupplyHistoryPoint[] | null>;
+  updatedAtById: ReadonlyMap<string, StablecoinDetailSnapshot["updatedAt"]>;
 }
 
 export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): StablecoinDetailSnapshot[] {
@@ -56,6 +58,7 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
       version: 1,
       stablecoinId: coin.id,
       generatedAt: inputs.generatedAt,
+      updatedAt: inputs.updatedAtById.get(coin.id) ?? {},
       lanes: {
         ...(liveSummary ? { liveSummary } : {}),
         ...(supplyHistory ? { supplyHistory } : {}),
@@ -107,6 +110,11 @@ export function validateStablecoinDetailSnapshot(snapshot: unknown): StablecoinD
   }
   if (candidate.lanes.liveSummary) StablecoinLiveSummarySchema.parse(candidate.lanes.liveSummary);
   if (candidate.lanes.supplyHistory) SupplyHistoryResponseSchema.parse(candidate.lanes.supplyHistory);
+  for (const updatedAt of Object.values(candidate.updatedAt ?? {})) {
+    if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt < 0) {
+      throw new Error("Detail snapshot source clock is invalid");
+    }
+  }
   return candidate as StablecoinDetailSnapshot;
 }
 
@@ -144,7 +152,7 @@ function authenticatedGeneratorHeaders(url: string): Record<string, string> {
   return headers;
 }
 
-export async function fetchDetailSnapshotJson(url: string): Promise<unknown> {
+async function fetchDetailSnapshotJson(url: string): Promise<{ data: unknown; updatedAt: number }> {
   const response = await fetchWithRetry(url, { headers: authenticatedGeneratorHeaders(url) }, {
     logLabel: "stablecoin-detail-snapshots",
   });
@@ -152,17 +160,28 @@ export async function fetchDetailSnapshotJson(url: string): Promise<unknown> {
     const body = await response.text();
     throw new DetailSnapshotHttpError(url, response.status, body);
   }
-  return response.json();
+  const data: unknown = await response.json();
+  const meta = isRecord(data) && isRecord(data._meta) ? data._meta : null;
+  const sourceUpdatedAt = meta?.updatedAt ?? (isRecord(data) ? data.updatedAt : undefined);
+  if (typeof sourceUpdatedAt === "number" && Number.isFinite(sourceUpdatedAt) && sourceUpdatedAt >= 0) {
+    return { data, updatedAt: sourceUpdatedAt * 1000 };
+  }
+  const date = Date.parse(response.headers.get("Date") ?? "");
+  const age = Number(response.headers.get("X-Data-Age") ?? 0);
+  const edgeAge = Number(response.headers.get("Age") ?? 0);
+  // A server Date already predates edge residence. Without it, subtract both ages.
+  const acquiredAt = Number.isFinite(date) ? date : Date.now() - (Number.isFinite(edgeAge) ? edgeAge * 1000 : 0);
+  return { data, updatedAt: Math.max(0, acquiredAt - (Number.isFinite(age) ? age * 1000 : 0)) };
 }
 
 export async function fetchOptionalDetailSnapshotLane<T>(
   label: string,
   url: string,
   schema: { parse(value: unknown): T },
-): Promise<T | null> {
+): Promise<{ data: T; updatedAt: number } | null> {
   try {
     const payload = await fetchDetailSnapshotJson(url);
-    return schema.parse(payload);
+    return { data: schema.parse(payload.data), updatedAt: payload.updatedAt };
   } catch (error) {
     if (error instanceof DetailSnapshotHttpError) {
       console.warn(`[stablecoin-detail-snapshots] Omitting ${label} lane: ${error.message}`);
@@ -221,9 +240,13 @@ async function generateSnapshots(): Promise<StablecoinDetailSnapshot[]> {
     generatedAt: Date.now(),
     liveSummariesById: new Map(lanes.map(([id, detail]) => [
       id,
-      detail ? projectStablecoinLiveSummary(detail) : null,
+      detail ? projectStablecoinLiveSummary(detail.data) : null,
     ])),
-    supplyHistoryById: new Map(lanes.map(([id, , history]) => [id, history])),
+    supplyHistoryById: new Map(lanes.map(([id, , history]) => [id, history?.data ?? null])),
+    updatedAtById: new Map(lanes.map(([id, detail, history]) => [id, {
+      ...(detail ? { liveSummary: detail.updatedAt } : {}),
+      ...(history ? { supplyHistory: history.updatedAt } : {}),
+    }])),
   });
 }
 
