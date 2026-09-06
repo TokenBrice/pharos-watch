@@ -857,6 +857,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 Returns aggregate mint and burn pressure over the requested window.
 
+When the current Safety Score publication differs from the cached aggregate's identity, the handler recomputes flight-to-quality from the cached per-coin 24-hour net flows and current cohorts. Flow timestamps and freshness headers remain unchanged. Unusable classification sources or invalid cached coin inputs retain the fail-closed FTQ state and warning.
+
 - **Operation ID:** `mintBurnFlows`
 - **Path:** `/api/mint-burn-flows`
 - **Parameters:** `stablecoin` (query, optional, string); `hours` (query, optional, integer)
