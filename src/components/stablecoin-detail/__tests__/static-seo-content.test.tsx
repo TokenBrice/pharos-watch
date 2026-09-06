@@ -68,6 +68,33 @@ const summary: StablecoinAiSummary = {
 
 describe("StablecoinDetailSeoContent", () => {
 
+  it("answers USDC depeg history with existing research links and matching FAQ schema", () => {
+    const usdc = { ...coin, id: "usdc-circle", name: "USD Coin", symbol: "USDC" };
+    const items = buildStablecoinFaqItems(usdc);
+    const historyAnswer = items.find((item) => item.question === "Has USDC depegged?");
+    expect(historyAnswer?.answer).toContain("March 2023");
+    expect(historyAnswer?.answer).toContain("not a guarantee of future peg stability");
+    expect(buildStablecoinFaqItems(coin)).toHaveLength(4);
+
+    const { container } = render(
+      <>
+        <StablecoinDetailSeoContent coin={usdc} />
+        <FaqSection items={items} includeJsonLd />
+      </>,
+    );
+    expect(screen.getByRole("heading", { name: "USDC depeg history" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "March 2023 USDC depeg timeline" }).getAttribute("href")).toBe(
+      "/depeg/usdc-2023-03-11/",
+    );
+    expect(screen.getByRole("link", { name: "Why USDC depegged during the SVB crisis" }).getAttribute("href")).toBe(
+      "/learn/case-studies/usdc-svb-2023/",
+    );
+    const schema = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+    const schemaAnswer = schema.mainEntity.find((item: { name: string }) => item.name === historyAnswer!.question);
+    expect(schemaAnswer.acceptedAnswer.text).toBe(historyAnswer!.answer);
+    expect(screen.getAllByText(historyAnswer!.answer)).toHaveLength(2);
+  });
+
   it("labels NAV tokens by their denominated NAV rather than a fixed peg", () => {
     const navCoin: StablecoinMeta = {
       ...coin,

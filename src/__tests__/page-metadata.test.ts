@@ -29,6 +29,8 @@ describe("page metadata helpers", () => {
     ["usdg-paxos", "USDG (Global Dollar): Reserves, Redemption & Risk", "redemption access, freeze controls"],
     ["usde-ethena", "Ethena USDe: Backing, Peg Stability & Risk", "Compare its risk profile with sUSDe"],
     ["bold-liquity", "Liquity BOLD: Collateral, Redemption & Risk", "Compare its Safety Score and risk profile with LUSD"],
+    ["fpi-frax", "Frax Price Index (FPI): CPI Peg, Backing & Risk", "CPI-linked target, backing and redemption mechanics"],
+    ["sgho-aave", "Aave Savings GHO (sGHO): Yield, Withdrawals & Risk", "GHO-denominated yield and withdrawal mechanics"],
   ])("uses the bounded metadata pilot for %s without changing crawl policy", (id, title, descriptionPhrase) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     expect(coin).toBeDefined();

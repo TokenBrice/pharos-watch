@@ -123,6 +123,7 @@ export const content: CaseStudy = {
   crossLinks: [
     { href: "/learn/mechanisms/cdp/", label: "Mechanism: CDP stablecoins" },
     { href: "/stablecoin/pmusd-precious-metals/", label: "pmUSD overview" },
+    { href: "/depeg/pmusd-2026-05-02/", label: "Pharos event record: pmUSD, May 2026" },
     { href: "/learn/case-studies/usd0pp-usual-2025/", label: "Case study: USD0++ and redemption-terms risk" },
     { href: "/methodology/", label: "Pharos methodology" },
   ],

@@ -69,6 +69,7 @@ The hub at `/learn/mechanisms/` renders the same shell with its own headline, a 
 - Title: hand-tuned per archetype, all ending in `, Explained` (see `MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts`, imported by the route module and reused by the OG-image script); template `%s | Pharos` adds the suffix.
 - Description: hand-tuned per archetype, ~150-165 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
+- Methodology cross-links retain the `/methodology/` page and target its current section anchors; algorithmic and synthetic-delta-neutral explanations link to `#pegscore-dews-methodology` for PegScore/DEWS. The mechanism registry test checks these cross-reference fragments against `METHODOLOGY_SECTIONS`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the manual staging, rasterization, and review workflow.
 - JSON-LD: `BreadcrumbJsonLd` rendered by `LearnPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 

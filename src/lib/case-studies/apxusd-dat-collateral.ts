@@ -147,6 +147,10 @@ export const content: CaseStudy = {
       label: "apxUSD coin page",
     },
     {
+      href: "/depeg/apxusd-2026-06-02/",
+      label: "Pharos event record: apxUSD, June 2026",
+    },
+    {
       href: "/learn/case-studies/pmusd-precious-metals/",
       label: "Case study: pmUSD's exotic-RWA fragility",
     },

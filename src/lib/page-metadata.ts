@@ -193,7 +193,7 @@ function deploymentChainCount(coin: StablecoinMeta): number {
   return new Set((coin.contracts ?? []).map((contract) => contract.chain)).size;
 }
 
-// September 2026 search-intent pilot; keep other coins as controls.
+// September 2026 search-intent cohorts; keep other coins as controls.
 const STABLECOIN_METADATA_PILOT: Partial<Record<string, { title: string; description: string }>> = {
   "paxg-paxos": {
     title: "PAX Gold (PAXG): Gold Backing, Custody & Risk",
@@ -214,6 +214,17 @@ const STABLECOIN_METADATA_PILOT: Partial<Record<string, { title: string; descrip
     title: "Liquity BOLD: Collateral, Redemption & Risk",
     description:
       "Review Liquity BOLD's collateral, redemption mechanics, peg history and liquidity. Compare its Safety Score and risk profile with LUSD.",
+  },
+  // Second cohort: query-level baselines reviewed on September 6; metadata only.
+  "fpi-frax": {
+    title: "Frax Price Index (FPI): CPI Peg, Backing & Risk",
+    description:
+      "Understand Frax FPI's CPI-linked target, backing and redemption mechanics. Review reserve evidence and risks, beyond a fixed $1 peg.",
+  },
+  "sgho-aave": {
+    title: "Aave Savings GHO (sGHO): Yield, Withdrawals & Risk",
+    description:
+      "Understand Aave's sGHO savings vault, its GHO-denominated yield and withdrawal mechanics. Review backing, current yield data and risks.",
   },
 };
 
