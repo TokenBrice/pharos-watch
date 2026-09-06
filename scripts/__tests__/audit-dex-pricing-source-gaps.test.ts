@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildDexPricingSourceGapAudit,
-  extractConfiguredCurveStablecoinIds,
   parseCliArgs,
   renderDexPricingSourceGapMarkdown,
   runCli,
@@ -100,13 +99,40 @@ describe("audit-dex-pricing-source-gaps", () => {
     expect(readFileSync(outputPath, "utf8")).toBe(`${JSON.stringify(expectedAudit, null, 2)}\n`);
   });
 
-  it("extracts configured Curve ids from the source file without importing Worker code", () => {
-    expect(extractConfiguredCurveStablecoinIds(`
-      export const CURVE_POOL_CONFIGS = [
-        { stablecoinId: "usdat-saturn" },
-        { stablecoinId: "dola-inverse-finance" },
-      ];
-    `)).toEqual(new Set(["usdat-saturn", "dola-inverse-finance"]));
+  it("derives configured Curve ids from the runtime registry import", () => {
+    const audit = buildDexPricingSourceGapAudit({
+      generatedAt: "2026-09-06T00:00:00.000Z",
+      stablecoins: [],
+      dexPrices: [],
+      curveCandidates: [
+        {
+          stablecoinId: "usdt-tether", // configured by worker/src/lib/curve-pool-configs.ts
+          poolAddress: "0x0000000000000000000000000000000000000001",
+          chain: "ethereum",
+          tvlUsd: 8_000_000,
+          inputIndex: 1,
+          outputIndex: 2,
+          inputDecimals: 6,
+          outputDecimals: 6,
+          referenceSymbol: "USDC",
+          routeType: "direct",
+        },
+        {
+          stablecoinId: "mystery-usd",
+          poolAddress: "0x0000000000000000000000000000000000000003",
+          chain: "ethereum",
+          tvlUsd: 8_000_000,
+          inputIndex: 1,
+          outputIndex: 2,
+          inputDecimals: 6,
+          outputDecimals: 6,
+          referenceSymbol: "USDC",
+          routeType: "direct",
+        },
+      ],
+    });
+
+    expect(audit.curveConfigGaps.map((row) => row.stablecoinId)).toEqual(["mystery-usd"]);
   });
 
   it("reports material protocol rows whose DEX source key is missing from the registry", () => {

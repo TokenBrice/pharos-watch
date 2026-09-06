@@ -6,6 +6,7 @@ import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   REDEMPTION_BACKSTOP_CONFIGS,
 } from "@shared/lib/redemption-backstop-configs";
+import { configsFromBackstopEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import {
   resolveCapacityConfidence,
   resolveFeeConfidence,
@@ -67,7 +68,7 @@ const SEMANTIC_STATIC_SCORE_FIELDS = [
 function buildSnapshot(): ParitySnapshot {
   const ownerById = new Map<string, string>();
   for (const entry of REDEMPTION_BACKSTOP_CONFIG_MANIFEST) {
-    for (const id of Object.keys(entry.configs)) {
+    for (const id of Object.keys(configsFromBackstopEntries(entry.entries))) {
       ownerById.set(id, entry.name);
     }
   }

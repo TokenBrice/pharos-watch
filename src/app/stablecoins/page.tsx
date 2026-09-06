@@ -6,7 +6,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
@@ -38,14 +38,14 @@ const AXES: ReadonlyArray<{
 const taxonomyItems = AXES.flatMap((axis) => axis.children);
 
 const PROFILE_GROUPS = Array.from(
-  TRACKED_STABLECOINS.reduce((groups, coin) => {
+  CLIENT_TRACKED_STABLECOINS.reduce((groups, coin) => {
     const initial = coin.name.trim().charAt(0).toUpperCase();
     const label = /^[A-Z]$/.test(initial) ? initial : "0–9";
     const group = groups.get(label) ?? [];
     group.push(coin);
     groups.set(label, group);
     return groups;
-  }, new Map<string, Array<(typeof TRACKED_STABLECOINS)[number]>>()),
+  }, new Map<string, Array<(typeof CLIENT_TRACKED_STABLECOINS)[number]>>()),
 )
   .sort(([left], [right]) => left.localeCompare(right))
   .map(([label, coins]) => ({

@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CopyButton } from "@/components/copy-button";
@@ -187,7 +187,7 @@ interface PreLaunchDetailProps {
 // ---------------------------------------------------------------------------
 
 export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDetailProps) {
-  const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
+  const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
   const chains = coin.contracts?.map((c) => c.chain) ?? [];
   const uniqueChains = [...new Set(chains)];
   const launchAlertCommand = `/subscribe launch ${coin.id}`;

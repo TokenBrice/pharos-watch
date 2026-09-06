@@ -24,7 +24,9 @@ import { YieldDataHealth } from "@/components/yield/yield-data-health";
 import {
   buildYieldViewModel,
   getActiveFilterSummaries,
+  prepareYieldUniverse,
   RISK_BUDGET_FILTER_KEYS,
+  selectVisibleYieldRows,
   YIELD_PRESET_SPECS,
   YIELD_RISK_BUDGET_SPECS,
   type YieldPresetKey,
@@ -291,28 +293,16 @@ export function YieldClient() {
     }),
     [searchParams],
   );
+  const yieldUniverse = useMemo(() => prepareYieldUniverse(rankings, watchlist.idSet), [rankings, watchlist.idSet]);
   const viewModel = useMemo<YieldViewModel>(
     () =>
-      buildYieldViewModel(rankings, urlParams, {
+      buildYieldViewModel(yieldUniverse, urlParams, {
         benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
         fallbackBenchmark: data?.provenance?.benchmark ?? null,
-        watchlistIds: watchlist.idSet,
       }),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, urlParams, yieldUniverse],
   );
-  const comparisonViewModel = useMemo<YieldViewModel>(
-    () =>
-      buildYieldViewModel(
-        rankings,
-        {},
-        {
-          benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
-          fallbackBenchmark: data?.provenance?.benchmark ?? null,
-          watchlistIds: watchlist.idSet,
-        },
-      ),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, watchlist.idSet],
-  );
+  const comparisonRows = useMemo(() => selectVisibleYieldRows(yieldUniverse, {}), [yieldUniverse]);
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
   const activeFilterSummaries = useMemo(() => getActiveFilterSummaries(viewModel), [viewModel]);
@@ -334,27 +324,10 @@ export function YieldClient() {
     const el = document.getElementById(`yield-row-${id}`);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
-
-  const sourceBoardViewModel = useMemo<YieldViewModel>(
-    () =>
-      buildYieldViewModel(
-        rankings,
-        {
-          ...urlParams,
-          depth: null,
-          sourceConfidence: null,
-          sourcePosture: null,
-        },
-        {
-          benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
-          fallbackBenchmark: data?.provenance?.benchmark ?? null,
-          watchlistIds: watchlist.idSet,
-        },
-      ),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
+  const sourceBoardRows = useMemo(
+    () => selectVisibleYieldRows(yieldUniverse, { ...urlParams, depth: null, sourceConfidence: null, sourcePosture: null }),
+    [urlParams, yieldUniverse],
   );
-
-  const sourceBoardRows = sourceBoardViewModel.visibleRows;
 
   const sourceBoardModel = useMemo(
     () =>
@@ -660,7 +633,7 @@ export function YieldClient() {
               medianApy={data.medianApy ?? 0}
               scalingFactor={data.scalingFactor}
               emptyMessage={viewModel.emptyState.description}
-              comparisonRows={comparisonViewModel.visibleRows}
+              comparisonRows={comparisonRows}
               updatedAt={data.updatedAt}
               methodologyLabel={data.methodology?.versionLabel ?? "Pharos Yield Score current"}
               filterSummary={{

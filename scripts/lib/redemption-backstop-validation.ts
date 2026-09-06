@@ -26,6 +26,7 @@ import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   type RedemptionBackstopConfigManifestEntry,
 } from "@shared/lib/redemption-backstop-configs/manifest";
+import { configsFromBackstopEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import {
   REDEMPTION_BACKSTOP_POLICY_ENTRIES,
   type RedemptionBackstopPolicyEntry,
@@ -188,7 +189,7 @@ export function validateRedemptionBackstopRegistry(
 
   for (const moduleEntry of manifest) {
     const allowedFamilies = new Set(moduleEntry.allowedRouteFamilies);
-    for (const [id, config] of Object.entries(moduleEntry.configs)) {
+    for (const [id, config] of Object.entries(configsFromBackstopEntries(moduleEntry.entries))) {
       const previous = seenById.get(id);
       if (previous) {
         addFinding(
@@ -1079,7 +1080,7 @@ function isValidReviewedAt(value: string): boolean {
 function mergeManifestConfigsForValidation(
   manifest: readonly RedemptionBackstopConfigManifestEntry[],
 ): Record<string, RedemptionBackstopConfig> {
-  return Object.assign({}, ...manifest.map((entry) => entry.configs));
+  return Object.assign({}, ...manifest.map((entry) => configsFromBackstopEntries(entry.entries)));
 }
 
 function addFinding(

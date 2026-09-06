@@ -1,44 +1,25 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import {
-  DDRR_REVIEWER_VERSION,
-} from "@shared/lib/methodology-versions/depeg-resolver";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import {
-  DDRR_PUBLIC_WARNING,
-  type DdrrResponse,
-} from "@shared/types/depeg-resolver-review";
+import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import { jsonFreshDegradedResponse } from "../lib/api-response";
-import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
-import { buildEmptyDdrrSummary } from "../lib/depeg-resolver-review-response";
+import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "../lib/depeg-resolver-review-response";
 import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 
 function degradedResponse(reason: string): DdrrResponse {
   const nowSec = Math.floor(Date.now() / 1000);
-  return {
-    _meta: {
-      computedAt: nowSec,
-      expiresAt: nowSec + API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
-      degraded: true,
-      degradedReason: reason,
-      reviewerVersion: DDRR_REVIEWER_VERSION,
-      publicWarning: DDRR_PUBLIC_WARNING,
-      assessedEventCount: 0,
-      reviewedEventCount: 0,
-      pendingEventCount: 0,
-      durationScoredCount: 0,
-      verdictScoredCount: 0,
-      assessmentRowLimit: 0,
-      assessmentRowsTruncated: false,
-      incidentRowLimit: 0,
-      incidentRowsTruncated: false,
-      publicRowLimit: 0,
-      publicRowsTruncated: false,
-      methodologyVersions: [],
-    },
+  const response = buildDdrrResponseEnvelope({
+    nowSec,
     summary: buildEmptyDdrrSummary(),
     rows: [],
-    methodology: buildDdrMethodologyEnvelope(nowSec),
-  };
+    assessedEventCount: 0,
+    assessmentRowsTruncated: false,
+    incidentRowLimit: 0,
+    methodologyVersions: [],
+    degradedReasons: [reason],
+  });
+  response._meta.assessmentRowLimit = 0;
+  response._meta.publicRowLimit = 0;
+  return response;
 }
 
 function staleSnapshotResponse(snapshot: DdrrResponse): DdrrResponse {

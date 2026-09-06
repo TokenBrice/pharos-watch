@@ -303,7 +303,7 @@ export function getYieldComparisonLabel(filters: YieldViewModelFilters): string 
 }
 
 const COHORT_MIN_SIZE = 8;
-interface CohortBucket {
+export interface CohortBucket {
   scoresDescending: number[];
 }
 

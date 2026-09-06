@@ -14,6 +14,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import {
   buildBackingTaxonomyUrl,
@@ -42,7 +43,7 @@ const COMPARISON_MOBILE_CARD_CAP = 4;
 
 interface ExploreNextSectionProps {
   coin: StablecoinMeta;
-  related: StablecoinMeta[];
+  related: StablecoinClientListMeta[];
   staticComparisonPages: StaticComparisonEntry[];
   logos: Record<string, string>;
 }

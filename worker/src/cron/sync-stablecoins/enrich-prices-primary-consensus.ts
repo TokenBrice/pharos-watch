@@ -123,21 +123,10 @@ export function buildPrimaryConsensusResults(params: {
     if (!consensus) continue;
 
     params.results.set(asset.id, {
-      price: consensus.price,
-      source: consensus.source,
-      selectedSource: consensus.selectedSource,
-      priceEstimator: consensus.priceEstimator,
-      confidence: consensus.confidence,
+      ...consensus,
       dlPrice: dlListQuote?.price ?? null,
       cgPrice,
       candidateSources: Object.keys(consensus.allPrices),
-      agreeSources: consensus.agreeSources,
-      disagreeSources: consensus.disagreeSources,
-      allPrices: consensus.allPrices,
-      observedAt: consensus.observedAt,
-      observedAtMode: consensus.observedAtMode,
-      observedAtBySource: consensus.observedAtBySource,
-      observedAtModeBySource: consensus.observedAtModeBySource,
       priceSourceConfidenceProfile,
     });
 
