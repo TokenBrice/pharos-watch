@@ -3,6 +3,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import AboutPage from "./page";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
@@ -73,6 +74,7 @@ describe("AboutPage", () => {
     expect(faqJsonLdBlocks).toHaveLength(1);
     expect(faqJsonLd).toBeDefined();
     expect(visibleText).toContain("About Pharos FAQ");
+    expect(visibleText).toContain(`${CEMETERY_ENTRIES.length} dead ones`);
 
     for (const item of faqJsonLd?.mainEntity ?? []) {
       expect(visibleText).toContain(item.name);

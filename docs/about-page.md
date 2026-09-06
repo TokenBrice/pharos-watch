@@ -66,6 +66,7 @@ The page is organized into these sections, in order:
 ## Content Notes
 
 - The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
+- Cemetery counts in the hero, tracked-feature copy, and FAQ use the generated lightweight `DEAD_STABLECOIN_COUNT`: curated obituaries plus frozen tracked profiles, matching the public cemetery and export cohort rather than the curated-only source file. The root layout's cemetery description shares that projection.
 - The `Get in Touch` copy describes Pharos as MIT-licensed open source and links to the GitHub repository.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together. The visible source roster lives in `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts`; keep that module as the current roster source instead of duplicating long provider lists here.
 - Pricing copy should continue to disclose market-data sources, oracle sources, DEX-derived pricing, and protocol redemption quotes when they are externally visible in the UI.
