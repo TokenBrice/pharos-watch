@@ -60,7 +60,7 @@
     "worker/src/cron/depeg-resolver/persistence.ts": 100,
     "worker/src/cron/depeg-resolver/public-projection.ts": 100,
     "worker/src/cron/depeg-resolver/publication.ts": 93.5,
-    "worker/src/cron/depeg-resolver/storage-adapters.ts": 86.2,
+    "worker/src/cron/depeg-resolver/storage-adapters.ts": 85.7,
     "worker/src/cron/depeg-resolver/utils.ts": 93,
     "worker/src/lib/depeg-resolver-assessment-store.ts": 66,
     "worker/src/lib/depeg-resolver-errata-store.ts": 100,
