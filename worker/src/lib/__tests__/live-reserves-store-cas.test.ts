@@ -9,7 +9,6 @@ import { buildReserveSyncRecordDeferredStatement } from "../live-reserves/store-
 import {
   finalizeReserveSuccess,
   mockReserveD1 as mockD1,
-  reserveCompositionInput,
   reserveSyncAttemptInput,
 } from "./live-reserves-store.test-support";
 

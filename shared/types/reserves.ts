@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DependencyTypeSchema, type DependencyType } from "./dependency-types";
+import { DependencyTypeSchema } from "./dependency-types";
 
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];

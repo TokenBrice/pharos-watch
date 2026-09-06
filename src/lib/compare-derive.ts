@@ -12,7 +12,6 @@ import type {
   MintBurnPerCoinResponse,
   PegSummaryCoin,
   RedemptionBackstopEntry,
-  ReportCardGrade,
   StablecoinData,
   StressSignalEntry,
   SupplyHistoryPoint,
