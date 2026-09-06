@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
-import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
+import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { makePublicHealth } from "./public-health.test-support";
+import {
+  makeDataQuality,
+  makeReserveComposition as makeBaseReserveComposition,
+} from "@shared/types/__tests__/status.test-support";
 import {
   buildAvailabilityCauses,
   buildDataQualityCauses,
@@ -20,82 +24,19 @@ import type { AvailabilityEvaluationInput, DataQualityEvaluationInput } from "..
 function makeReserveComposition(
   overrides?: Partial<StatusResponse["reserveComposition"]>,
 ): StatusResponse["reserveComposition"] {
-  return {
+  return makeBaseReserveComposition({
     configuredCoins: 10,
     freshCoins: 10,
-    staleCoins: 0,
-    missingCoins: 0,
-    degradedCoins: 0,
-    errorCoins: 0,
-    corruptCoins: 0,
     independentFreshEligible: 4,
     independentFreshUnverified: 2,
     staticValidatedFresh: 2,
     weakProbeFresh: 2,
-    writeTimeoutUncertain: 0,
-    deferredCoins: 0,
-    runBudgetTruncated: false,
-    deferredAt: null,
-    nextCursorStablecoinId: null,
-    cursorTailState: null,
-    cursorTailError: null,
-    cursorRecordedAt: null,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: null,
-    runBudgetTruncationCount: 0,
-    historyWriteGaps: [],
-    persistentlyStaleIndependentCoins: [],
     lastSuccessAt: 1_700_000_000,
     oldestFreshAgeSec: 3600,
-    status: "healthy",
     freshCoverageRatio: 1,
     authoritativeFreshCoverageRatio: 0.8,
     ...overrides,
-  };
-}
-
-function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
-  return {
-    stablecoinsCacheStatus: "ok",
-    stablecoinsCacheReason: null,
-    blacklistGapStatus: "ok",
-    activeDepegStatus: "ok",
-    onchainSupplyQueryStatus: "ok",
-    repairDebt: {
-      status: "ok",
-      openCount: 0,
-      oldestAgeSec: null,
-      byKind: {},
-      availabilityEscalated: false,
-      nextRunnerDueAt: null,
-      source: "worker-repair-tasks",
-    },
-    ddrRepairDebtStatus: "ok",
-    ddrRepairDebtCount: 0,
-    ddrRepairDebtCheckedAt: null,
-    ddrRepairDebtEvents: [],
-    ddrRepairDebtEventsTruncated: false,
-    sourceFailures: [],
-    totalStablecoins: 10,
-    missingPrices: 0,
-    blacklistMissingAmounts: 0,
-    blacklistRecentMissingAmounts: 0,
-    blacklistRecentWindowSec: 86400,
-    blacklistMissingRatio: 0,
-    blacklistTotal: 0,
-    blacklistOldestRecoverableAgeSec: null,
-    blacklistNeverAttemptedCount: 0,
-    blacklistRepeatedFailureCount: 0,
-    onchainSupplyDivergences: 0,
-    onchainDivergenceRatio: 0,
-    onchainSupplyMonitoring: "active",
-    onchainSupplyLatestAt: null,
-    onchainSupplyTrackedCoins: 0,
-    activeDepegs: 0,
-    staleOnchainSupply: 0,
-    onchainStaleRatio: 0,
-    ...overrides,
-  };
+  });
 }
 
 function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {

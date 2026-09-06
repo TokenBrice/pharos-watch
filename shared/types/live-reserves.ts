@@ -163,6 +163,37 @@ export const ReserveCompositionOverviewSchema = z.object({
 });
 export type ReserveCompositionOverview = z.infer<typeof ReserveCompositionOverviewSchema>;
 
+export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCompositionOverview {
+  return {
+    configuredCoins,
+    freshCoins: 0,
+    staleCoins: 0,
+    missingCoins: 0,
+    degradedCoins: 0,
+    errorCoins: 0,
+    corruptCoins: 0,
+    independentFreshEligible: 0,
+    independentFreshUnverified: 0,
+    staticValidatedFresh: 0,
+    weakProbeFresh: 0,
+    writeTimeoutUncertain: 0,
+    deferredCoins: 0,
+    runBudgetTruncated: false,
+    deferredAt: null,
+    nextCursorStablecoinId: null,
+    cursorTailState: null,
+    cursorTailError: null,
+    cursorRecordedAt: null,
+    cursorTailCompletedAt: null,
+    cursorTailFailedAt: null,
+    runBudgetTruncationCount: 0,
+    historyWriteGaps: [],
+    persistentlyStaleIndependentCoins: [],
+    lastSuccessAt: null,
+    oldestFreshAgeSec: null,
+  };
+}
+
 export const LiveReserveRedemptionTelemetrySchema = z
   .object({
     capacityUsd: z.number().finite().optional(),

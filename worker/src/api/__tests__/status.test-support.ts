@@ -9,6 +9,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as dependencyHealthModule from "../../lib/dependency-health";
+import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 
 stubCryptoForAuth();
 
@@ -86,46 +87,11 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       },
     },
     budgetOnlySurfaces: [],
-    dataQuality: {
-      stablecoinsCacheStatus: "ok",
-      stablecoinsCacheReason: null,
-      blacklistGapStatus: "ok",
-      activeDepegStatus: "ok",
-      onchainSupplyQueryStatus: "ok",
-      repairDebt: {
-        status: "ok",
-        openCount: 0,
-        oldestAgeSec: null,
-        byKind: {},
-        availabilityEscalated: false,
-        nextRunnerDueAt: null,
-        source: "worker-repair-tasks",
-      },
-      ddrRepairDebtStatus: "ok",
-      ddrRepairDebtCount: 0,
-      ddrRepairDebtCheckedAt: null,
-      ddrRepairDebtEvents: [],
-      ddrRepairDebtEventsTruncated: false,
-      sourceFailures: [],
+    dataQuality: makeDataQuality({
       totalStablecoins: 1,
-      missingPrices: 0,
-      blacklistMissingAmounts: 0,
-      blacklistRecentMissingAmounts: 0,
-      blacklistRecentWindowSec: 86400,
-      blacklistMissingRatio: 0,
-      blacklistTotal: 0,
-      blacklistOldestRecoverableAgeSec: null,
-      blacklistNeverAttemptedCount: 0,
-      blacklistRepeatedFailureCount: 0,
-      onchainSupplyDivergences: 0,
-      onchainDivergenceRatio: 0,
-      onchainSupplyMonitoring: "active",
       onchainSupplyLatestAt: now - 60,
       onchainSupplyTrackedCoins: 1,
-      activeDepegs: 0,
-      staleOnchainSupply: 0,
-      onchainStaleRatio: 0,
-    },
+    }),
     telegramBot: null,
     sectionErrors: {},
     datasetFreshness: {
@@ -139,49 +105,8 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       dews: now - 60,
       digest: now - 60,
     },
-    summary: {
-      unhealthyCrons: 0,
-      availabilityImpactingUnhealthyCrons: 0,
-      watchUnhealthyCrons: 0,
-      degradedCrons: 0,
-      cronErrors: 0,
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-      diagnosticIssueCount: 0,
-      worstCacheRatio: 0,
-      transitionsLast24h: 0,
-    },
-    reserveComposition: {
-      configuredCoins: 0,
-      freshCoins: 0,
-      staleCoins: 0,
-      missingCoins: 0,
-      degradedCoins: 0,
-      errorCoins: 0,
-      corruptCoins: 0,
-      independentFreshEligible: 0,
-      independentFreshUnverified: 0,
-      staticValidatedFresh: 0,
-      weakProbeFresh: 0,
-      writeTimeoutUncertain: 0,
-      deferredCoins: 0,
-      runBudgetTruncated: false,
-      deferredAt: null,
-      nextCursorStablecoinId: null,
-      cursorTailState: null,
-      cursorTailError: null,
-      cursorRecordedAt: null,
-      cursorTailCompletedAt: null,
-      cursorTailFailedAt: null,
-      runBudgetTruncationCount: 0,
-      historyWriteGaps: [],
-      persistentlyStaleIndependentCoins: [],
-      lastSuccessAt: null,
-      oldestFreshAgeSec: null,
-      status: "healthy",
-      freshCoverageRatio: 0,
-      authoritativeFreshCoverageRatio: 0,
-    },
+    summary: makeStatusSummary(),
+    reserveComposition: makeReserveComposition(),
     freshnessDiagnostics: [],
     ...overrides,
   };
@@ -291,7 +216,7 @@ function buildStatusD1Scenario({
   sectionOverrides = {},
 }: StatusD1ScenarioOptions = {}): MockD1Database {
   const now = Math.floor(Date.now() / 1000);
-  const sectionDefaults = sections.flatMap((section) =>
+  const sectionDefaults = sections.flatMap<MockTableConfig>((section) =>
     sectionOverrides[section] ?? (section === "live" ? makeMinimalLiveStatusRows(now) : STATUS_D1_SECTIONS[section]),
   );
   const defaults = sectionDefaults.filter(
