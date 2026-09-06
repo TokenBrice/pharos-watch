@@ -462,7 +462,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/report-cards-fixed-input.ts",
-      "sha256": "3e3f7a0f66529831086b3cdee4e5e11848cc7d5fffedbd80726f5bc366315b11"
+      "sha256": "6e3da6a59e795869f85b8a5ba3c3c7bfde7ee8f2f0b94f12ba526992e3a9f794"
     },
     {
       "path": "worker/src/lib/safety-score-v9/centrifuge-supply-observer.ts",
@@ -603,7 +603,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-03-block-25895460-shock-coverage.json.gz"
     }
   ],
-  "digest": "a0c0b82c4266cfda0412d18e50ddac65bdfe251fb8d0bbaaa1bc11d024931317"
+  "digest": "7ec0466c464e8e683c960bd26ee85d4797325e9eb9cc07de5d5ad0a97410b3c5"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

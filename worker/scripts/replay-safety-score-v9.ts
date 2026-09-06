@@ -26,6 +26,12 @@ import {
   type SafetyScoreV9CandidatePipelineResult,
 } from "../src/lib/safety-score-v9/candidate";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  loadSafetyScoreV9RegistryRef,
+  registryNavAssetIds,
+  verifyRegistrySnapshot,
+  type SafetyScoreV9RegistrySnapshot,
+} from "./lib/safety-score-v9-registry";
 
 export interface SafetyScoreV9FutureDatedReview {
   assetId: string;
@@ -42,9 +48,9 @@ export interface SafetyScoreV9FutureDatedReview {
  * data reviewed today therefore manufactures large phantom score drops that
  * read exactly like a regression. Surface them before the operator diffs.
  */
-export function findFutureDatedCuratedReviews(clockSec: number): SafetyScoreV9FutureDatedReview[] {
+export function findFutureDatedCuratedReviews(clockSec: number, metaById = ACTIVE_META_BY_ID): SafetyScoreV9FutureDatedReview[] {
   const found: SafetyScoreV9FutureDatedReview[] = [];
-  for (const [assetId, meta] of ACTIVE_META_BY_ID) {
+  for (const [assetId, meta] of metaById) {
     const review = (meta as { reserveReview?: { reviewedAt?: string; compositionAsOf?: string } }).reserveReview;
     if (!review) continue;
     for (const field of ["reviewedAt", "compositionAsOf"] as const) {
@@ -86,6 +92,8 @@ Options:
   --output <path>                 Canonical V9 replay JSON (required)
   --published-at <time>           Fixed ISO timestamp or Unix seconds (required)
   --extension <path>              Optional reviewed V9 fact-extension JSON
+  --registry-ref <git-sha>         Verified capture-time registry from a trusted local Git commit.
+                                  Otherwise uses an embedded registry snapshot, then the local registry.
   --release-candidate-id <id>     Optional v9-rc-N publication identity override
   --allow-future-reviews          Replay even when curated review dates postdate the capture
                                   clock. Those reviews are rejected at that clock, silently
@@ -226,9 +234,18 @@ function isFixedInputCacheEnvelope(value: unknown): boolean {
  * on raw JSON by `schemaVersion`. The v3 lane is read-only: nothing writes it
  * any more, but frozen captures must keep replaying byte-for-byte.
  */
-export async function parseSafetyScoreV9ReplayFixedInput(value: unknown): Promise<SafetyScoreV9CompilerInput> {
-  if (isFixedInputCacheEnvelope(value)) return parseSafetyScoreV9InputCacheValue(value);
-  return normalizeSafetyScoreV9CompilerInput(value);
+export async function parseSafetyScoreV9ReplayFixedInput(
+  value: unknown,
+  registrySnapshot?: SafetyScoreV9RegistrySnapshot,
+): Promise<SafetyScoreV9CompilerInput> {
+  const navAssetIds = registrySnapshot ? registryNavAssetIds(verifyRegistrySnapshot(registrySnapshot)) : undefined;
+  const input = isFixedInputCacheEnvelope(value)
+    ? await parseSafetyScoreV9InputCacheValue(value, navAssetIds)
+    : normalizeSafetyScoreV9CompilerInput(value, navAssetIds);
+  if (registrySnapshot && input.registryFingerprint !== registrySnapshot.fingerprint) {
+    throw new Error(`Capture registry fingerprint ${input.registryFingerprint} does not match supplied snapshot ${registrySnapshot.fingerprint}`);
+  }
+  return input;
 }
 
 /**
@@ -288,7 +305,12 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   publishedAtSec: number;
   releaseCandidateId?: string;
   allowRegistryMismatch?: boolean;
+  registrySnapshot?: SafetyScoreV9RegistrySnapshot;
 }): SafetyScoreV9ReplayArtifact {
+  if (input.registrySnapshot && (!input.fixedInput || typeof input.fixedInput !== "object" ||
+    !("registryFingerprint" in input.fixedInput) || input.fixedInput.registryFingerprint !== input.registrySnapshot.fingerprint)) {
+    throw new Error("Capture registry fingerprint does not match supplied snapshot");
+  }
   return {
     schemaVersion: 1,
     kind: "safety-score-v9-candidate-replay",
@@ -297,7 +319,16 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
       authorized: false,
       reason: "v9-replay-only",
     },
-    pipeline: buildSafetyScoreV9Candidate(input),
+    pipeline: buildSafetyScoreV9Candidate({
+      ...input,
+      ...(input.registrySnapshot ? {
+        registry: {
+          metaById: new Map(verifyRegistrySnapshot(input.registrySnapshot).activeStablecoins.map((coin) => [coin.id, coin])),
+          registryFingerprint: input.registrySnapshot.fingerprint,
+          reviewedTransferFacts: new Map(input.registrySnapshot.transferReviews.map((review) => [review.assetId, review])),
+        },
+      } : {}),
+    }),
   };
 }
 
@@ -312,6 +343,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       output: { type: "string" },
       "published-at": { type: "string" },
       extension: { type: "string" },
+      "registry-ref": { type: "string" },
       "release-candidate-id": { type: "string" },
       "allow-registry-mismatch": { type: "boolean" },
       "allow-future-reviews": { type: "boolean" },
@@ -328,16 +360,40 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     "--release-candidate-id must match v9-rc-N",
   );
 
-  const fixedInput = rederiveUndisclosedFeeObservations(
-    await parseSafetyScoreV9ReplayFixedInput(await readReplayInput(values.input)),
+  const raw = await readReplayInput(values.input);
+  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot };
+  const embedded = capture.kind === "safety-score-v9-registry-capture" ? capture.registrySnapshot : undefined;
+  assertCliUsage(
+    !(values["registry-ref"] !== undefined && values["allow-registry-mismatch"] === true),
+    "--registry-ref cannot be combined with --allow-registry-mismatch",
   );
+  if (capture.kind === "safety-score-v9-registry-capture" && !embedded) throw new Error("Registry capture is missing its snapshot");
+  const registrySnapshot = typeof values["registry-ref"] === "string"
+    ? loadSafetyScoreV9RegistryRef(values["registry-ref"])
+    : values["allow-registry-mismatch"] === true ? undefined : embedded;
+  if (embedded) {
+    verifyRegistrySnapshot(embedded);
+    if (registrySnapshot && (registrySnapshot.fingerprint !== embedded.fingerprint ||
+      registrySnapshot.transferReviewsDigest !== embedded.transferReviewsDigest)) {
+      throw new Error("Embedded registry and --registry-ref disagree");
+    }
+  }
+  const capturedInput = await parseSafetyScoreV9ReplayFixedInput(
+    capture.kind === "safety-score-v9-registry-capture" ? capture.fixedInput : raw, registrySnapshot,
+  );
+  // Capture-time replay must retain producer bytes and their base generation.
+  // The legacy current-curation lane retains its SIM-EXIT-L2 emulation.
+  const fixedInput = registrySnapshot ? capturedInput : rederiveUndisclosedFeeObservations(capturedInput);
   if (values["allow-future-reviews"] !== true) {
-    const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec);
+    const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec, registrySnapshot
+      ? new Map(registrySnapshot.activeStablecoins.map((coin) => [coin.id, coin]))
+      : ACTIVE_META_BY_ID);
     assertCliUsage(futureDated.length === 0, formatFutureDatedReviewError(futureDated, fixedInput.clockSec));
   }
   const extension = typeof values.extension === "string" ? readJson(values.extension) : undefined;
   const artifact = buildSafetyScoreV9ReplayArtifact({
     fixedInput,
+    registrySnapshot,
     ...(extension === undefined ? {} : { extension }),
     publishedAtSec,
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),

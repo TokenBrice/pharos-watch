@@ -26,6 +26,7 @@ import {
 } from "../replay-safety-score-v9";
 import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements-client";
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
+import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 
 const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
@@ -222,6 +223,28 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("replays a capture-time NAV asset that is non-NAV live only with its verified registry snapshot", async () => {
+    const snapshot = structuredClone(localRegistrySnapshot());
+    snapshot.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = true;
+    snapshot.fingerprint = registrySnapshotFingerprint(snapshot);
+    const { baseInputGenerationId: _derived, ...capture } = exactFixedInput();
+    const historical = {
+      ...capture,
+      registryFingerprint: snapshot.fingerprint,
+      navPriceById: {
+        "usdc-circle": { priceUsd: 1.02, observedAtSec: CLOCK_SEC, sourceId: "coingecko", confidence: "high" },
+      },
+    };
+    await expect(parseSafetyScoreV9ReplayFixedInput(historical)).rejects.toThrow("NAV price rows target non-NAV assets: usdc-circle");
+    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(historical, snapshot);
+    const artifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot: snapshot, publishedAtSec: PUBLISHED_AT_SEC });
+    expect(artifact.pipeline.candidate.cards.map((card) => card.id)).toEqual(["usdc-circle"]);
+    expect(fixedInput.navPriceById?.["usdc-circle"]?.priceUsd).toBe(1.02);
+    const corrupt = structuredClone(snapshot);
+    corrupt.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = false;
+    await expect(parseSafetyScoreV9ReplayFixedInput(historical, corrupt)).rejects.toThrow("snapshot fingerprint does not match");
   });
 
   it("replays a registry-fingerprint mismatch only behind --allow-registry-mismatch", async () => {

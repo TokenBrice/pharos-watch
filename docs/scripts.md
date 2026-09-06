@@ -26,6 +26,27 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
 
+## Safety Score Capture-Time Replay
+
+`npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
+exports a registry-bound wrapper with normalized `fixedInput` and a verified
+`registrySnapshot`. `--registry-ref <git-sha>` loads the trusted local commit
+that produced a historical capture; otherwise export requires a matching local
+registry. `--normalized-only` emits plain input for current-curation workflows
+and cannot be combined with `--registry-ref`.
+
+`npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
+uses that commit's verified registry metadata and transfer reviews. Embedded
+snapshots are selected automatically when no ref is supplied. A missing or
+mismatched snapshot never falls back to local classifications. The separate
+`--allow-registry-mismatch` mode still means code-plus-current-curation and
+cannot be combined with `--registry-ref`; on a wrapper it explicitly ignores
+the snapshot for scoring while checking its integrity.
+
+Use `jq '(.fixedInput // .).clockSec'` to read either export shape. See the
+[equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry---registry-ref)
+for integrity, trusted-Git execution, and production-digest limitations.
+
 ## D1 Insights Capture
 
 Use `npm run ops:d1-insights -- --dry-run` to preview the default read-only Wrangler calls. Without `--dry-run`, the helper captures `7d` reads, `30d` reads, and `30d` time for `stablecoin-db`, then writes `agents/d1-insights-<timestamp>.json`.

@@ -27,8 +27,9 @@ producer cycle, and keep it open until the fallback path is reviewed.
 
 Create `agents/v9-captures/`, then follow
 [section (a) of the equivalence harness](./safety-score-equivalence-harness.md#a-export-a-production-capture)
-exactly. Keep the normalized capture produced by
-`report-cards:capture-fixed-input`; it contains the capture's authoritative `clockSec`.
+with `--normalized-only` on `report-cards:capture-fixed-input`. This sweep
+intentionally uses HEAD curation rather than an embedded capture-time registry;
+the plain normalized capture retains the authoritative top-level `clockSec`.
 
 ```bash
 mkdir -p agents/v9-captures

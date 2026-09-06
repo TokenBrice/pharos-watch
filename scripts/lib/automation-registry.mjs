@@ -261,6 +261,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-report-card-registry-fingerprint.ts",
     sourcePaths: [
+      "scripts/lib/report-card-registry-fingerprint.ts",
       "shared/data/stablecoins/coins.generated.json",
       "shared/data/stablecoins/canonical-order.json",
       "shared/data/dead-stablecoins.json",
