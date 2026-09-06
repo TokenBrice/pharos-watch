@@ -39,6 +39,10 @@ The `/stablecoin/[id]/yield/` subroute is statically generated only for active c
 
 `PreLaunchDetail` is the server-rendered variant for tracked assets whose metadata status is still `pre-launch`.
 
+The identity header precedes the status banner. The banner keeps its lifecycle explanation visible and places the full `launchPhaseDetail` narrative in a collapsed native disclosure labelled "Full launch status and history". The full text remains in the server-rendered HTML; this layout does not change lifecycle status, launch dates, or alert behavior.
+
+The exact launch-alert command is keyboard-focusable so narrow-screen readers can scroll its overflow without a pointer. Launch narratives and milestone descriptions wrap unbroken addresses so the page reflows at 320 CSS pixels, including with the narrative disclosure expanded.
+
 In addition to the pre-launch dossier sections (banner, timeline, milestones, featured content, and metadata), it now includes a launch-alert CTA that:
 
 - owns the page's visible `h1` for pre-launch assets; active assets use an `sr-only` server-rendered `h1` and keep the visible identity in the client hero
@@ -89,6 +93,8 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 ---
 
 ## Section Order
+
+Cold-load nested hashes such as `#depeg-history` reveal enclosing disclosures and re-align after hydration on the existing bounded 160/480/960/1800 ms cadence. These initial-position corrections are instant: animating through intermediate lazy sections delays their mounting and can overshoot as their heights change. Top-level section hashes remain owned by the scrollspy; changing the hash or user wheel/touch/pointer/key input stops further alignment, unmount clears pending work, and browser back/forward restoration remains native.
 
 `src/app/stablecoin/[id]/detail-content.tsx` composes sections in this order for live/non-pre-launch assets (`client.tsx` delegates to this compositor):
 
