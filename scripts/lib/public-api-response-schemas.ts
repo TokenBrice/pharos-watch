@@ -19,7 +19,7 @@ import {
   DdrV2ResponseRowSchema,
 } from "@shared/types/depeg-resolver";
 import {
-  DdrrResponseSchema,
+  DdrrResponseOpenApiSchema,
   DdrrRowSchema,
   DdrrV2SummaryMetricsSchema,
   DdrrV2SummarySegmentSchema,
@@ -254,7 +254,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
   DdrResponse: DdrResponseSchema,
-  DdrrResponse: DdrrResponseSchema,
+  DdrrResponse: DdrrResponseOpenApiSchema,
   RedemptionBackstopsResponse: RedemptionBackstopsResponseSchema,
   StabilityIndexResponse: StabilityIndexResponseSchema,
   BlacklistResponse: BlacklistResponseSchema,

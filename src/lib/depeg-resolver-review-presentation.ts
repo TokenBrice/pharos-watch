@@ -1,17 +1,16 @@
+import { actualOutcomeFromSourceEventState } from "@shared/lib/depeg-resolver-review";
 import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
 import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DDRR_SCORED_VERDICTS } from "@shared/types/depeg-resolver-review";
 import type {
   DdrrActualOutcome,
   DdrrDurationReview,
-  DdrrRow,
+  DdrrResponseRow,
   DdrrSummary,
-  DdrrV2CoverageRow,
   DdrrVerdictReview,
 } from "@shared/types/depeg-resolver-review";
 
-export type DdrrCoverageState = Exclude<DdrrRow["predictionState"], "frozen">;
-type DdrrOutcomeRow = DdrrRow | (DdrrRow & Pick<DdrrV2CoverageRow, "actualOutcome">);
+export type DdrrCoverageState = Exclude<DdrrResponseRow["predictionState"], "frozen">;
 
 const MUTED_TONE = "border-border bg-muted text-muted-foreground";
 const EMERALD_TONE = "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
@@ -116,11 +115,11 @@ export function formatDdrSignedDuration(seconds: number | null): string {
   return `${rounded > 0 ? "+" : "−"}${formatElapsedSeconds(Math.abs(rounded))}`;
 }
 
-export function isScored(row: DdrrRow): boolean {
+export function isScored(row: DdrrResponseRow): boolean {
   return row.kind === "prediction_review" && isDdrScoredVerdict(row.verdictReview);
 }
 
-export function isTrackRecordRow(row: DdrrRow): boolean {
+export function isTrackRecordRow(row: DdrrResponseRow): boolean {
   return row.kind === "prediction_review";
 }
 
@@ -129,7 +128,7 @@ export function formatPercent(value: number | null): string {
   return formatPercentFromRatio(value, Number.isInteger(value * 100) ? 0 : 1);
 }
 
-export function getCoverageState(row: DdrrRow): DdrrCoverageState | null {
+export function getCoverageState(row: DdrrResponseRow): DdrrCoverageState | null {
   return row.predictionState === "frozen" ? null : row.predictionState;
 }
 
@@ -138,28 +137,28 @@ export function formatMetricPercent(value: number | null | undefined): string {
   return formatPercent(value);
 }
 
-export function getVerdictReview(row: DdrrRow): DdrrVerdictReview {
+export function getVerdictReview(row: DdrrResponseRow): DdrrVerdictReview {
   if (row.kind === "prediction_review" || row.kind === "no_call_review") return row.verdictReview;
   return "pending";
 }
 
-export function getDurationReview(row: DdrrRow): DdrrDurationReview {
+export function getDurationReview(row: DdrrResponseRow): DdrrDurationReview {
   if (row.kind === "prediction_review" || row.kind === "no_call_review") return row.durationReview;
   return "duration_unscored";
 }
 
-export function getActualOutcome(row: DdrrOutcomeRow): DdrrActualOutcome {
+export function getActualOutcome(row: DdrrResponseRow): DdrrActualOutcome {
   if (row.kind === "prediction_review" || row.kind === "no_call_review") {
     return row.actual.kind;
   }
   if (row.kind === "coverage") {
-    return row.actualOutcome;
+    return row.actualOutcome ?? actualOutcomeFromSourceEventState(row.sourceEventState);
   }
   // Invalidated rows carry the outcome natively: their prediction state (and
   // the producer's sourceEventState) is the literal "invalidated".
   return row.predictionState;
 }
-export function getRowContextLabel(row: DdrrRow): string {
+export function getRowContextLabel(row: DdrrResponseRow): string {
   switch (row.kind) {
     case "prediction_review":
       return "Public prediction";
@@ -172,7 +171,7 @@ export function getRowContextLabel(row: DdrrRow): string {
   }
 }
 
-export function getRowTime(row: DdrrRow): number {
+export function getRowTime(row: DdrrResponseRow): number {
   switch (row.kind) {
     case "prediction_review":
     case "no_call_review":
@@ -184,7 +183,7 @@ export function getRowTime(row: DdrrRow): number {
   }
 }
 
-export function getSignedDurationError(row: DdrrRow): number | null {
+export function getSignedDurationError(row: DdrrResponseRow): number | null {
   return row.kind === "prediction_review" ? row.signedDurationErrorSec : null;
 }
 
@@ -197,7 +196,7 @@ export interface PredictionRowsBreakdown {
   iqrScoredCount: number;
 }
 
-export function summarizePredictionRows(rows: readonly DdrrRow[]): PredictionRowsBreakdown {
+export function summarizePredictionRows(rows: readonly DdrrResponseRow[]): PredictionRowsBreakdown {
   return rows.reduce<PredictionRowsBreakdown>(
     (breakdown, row) => {
       if (row.kind !== "prediction_review") return breakdown;
@@ -242,13 +241,13 @@ export function nodeKind(verdict: DdrrVerdictReview): NodeKind {
 }
 
 export interface DdrTimelineModel {
-  rows: DdrrRow[];
+  rows: DdrrResponseRow[];
   correct: number;
   miss: number;
   pending: number;
 }
 
-export function buildDdrTimelineModel(rows: readonly DdrrRow[], limit: number): DdrTimelineModel {
+export function buildDdrTimelineModel(rows: readonly DdrrResponseRow[], limit: number): DdrTimelineModel {
   const ordered = [...rows].sort((a, b) => getRowTime(a) - getRowTime(b)).slice(-limit);
   return {
     rows: ordered,
@@ -349,12 +348,12 @@ export function getCoverageMetric(
 }
 
 export interface DdrReviewerRowsModel {
-  shownRows: DdrrRow[];
+  shownRows: DdrrResponseRow[];
   hiddenCount: number;
-  trackRecordRows: DdrrRow[];
+  trackRecordRows: DdrrResponseRow[];
 }
 
-export function buildDdrReviewerRows(rows: readonly DdrrRow[], displayLimit: number): DdrReviewerRowsModel {
+export function buildDdrReviewerRows(rows: readonly DdrrResponseRow[], displayLimit: number): DdrReviewerRowsModel {
   // Scored rows carry the signal; surface them first, then a capped run of maturing rows.
   const orderedRows = [...rows].sort((a, b) => Number(isScored(b)) - Number(isScored(a)));
   const shownRows = orderedRows.slice(0, displayLimit);

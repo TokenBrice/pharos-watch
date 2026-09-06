@@ -11,7 +11,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
-  type DdrrRow,
+  type DdrrResponseRow,
   type DdrrSummary,
 } from "@shared/types/depeg-resolver-review";
 import {
@@ -68,7 +68,7 @@ const NODE_TONE: Record<NodeKind, { dot: string; pos: string }> = {
   muted: { dot: "bg-muted-foreground/30", pos: "top-1/2 -translate-y-1/2" },
 };
 
-function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
+function TrackRecordTimeline({ rows }: { rows: DdrrResponseRow[] }) {
   // Oldest call on the left, the most recent at "now" on the right.
   const { rows: ordered, correct, miss, pending } = buildDdrTimelineModel(rows, TIMELINE_NODE_LIMIT);
   if (ordered.length === 0) return null;
@@ -218,7 +218,7 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
   );
 }
 
-function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: readonly DdrrRow[] }) {
+function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: readonly DdrrResponseRow[] }) {
   const metrics = summary.headline;
   const rowBreakdown = summarizePredictionRows(rows);
   const correct = metrics.recoveryLikelihoodCorrectCount;
@@ -351,7 +351,7 @@ function CoverageAccountabilityLedger({
   );
 }
 
-function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string> }) {
+function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string, string> }) {
   const coverageState = getCoverageState(row);
   const scored = isScored(row);
   const verdictReview = getVerdictReview(row);

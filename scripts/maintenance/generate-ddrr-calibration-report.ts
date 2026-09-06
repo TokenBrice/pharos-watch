@@ -6,8 +6,8 @@ import {
   DdrrResponseSchema,
   type DdrrHorizonCalibration,
   type DdrrResponse,
-  type DdrrRow,
-  type DdrrV2CoverageRow,
+  type DdrrResponseRow,
+  type DdrrV2CoverageResponseRow,
   type DdrrV2NoCallReviewRow,
   type DdrrV2PredictionReviewRow,
   type DdrrVerdictReview,
@@ -248,16 +248,16 @@ function incrementActual(
   counts[actualBucket(row)] += 1;
 }
 
-function predictionRows(rows: readonly DdrrRow[]): DdrrV2PredictionReviewRow[] {
+function predictionRows(rows: readonly DdrrResponseRow[]): DdrrV2PredictionReviewRow[] {
   return rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
 }
 
-function noCallRows(rows: readonly DdrrRow[]): DdrrV2NoCallReviewRow[] {
+function noCallRows(rows: readonly DdrrResponseRow[]): DdrrV2NoCallReviewRow[] {
   return rows.filter((row): row is DdrrV2NoCallReviewRow => row.kind === "no_call_review");
 }
 
-function coverageRows(rows: readonly DdrrRow[]): DdrrV2CoverageRow[] {
-  return rows.filter((row): row is DdrrV2CoverageRow => row.kind === "coverage");
+function coverageRows(rows: readonly DdrrResponseRow[]): DdrrV2CoverageResponseRow[] {
+  return rows.filter((row): row is DdrrV2CoverageResponseRow => row.kind === "coverage");
 }
 
 function isDurationScored(row: DdrrV2PredictionReviewRow): row is DurationScoredRow {
@@ -482,7 +482,7 @@ function buildNoCallCalibration(
   };
 }
 
-function buildCoverageCalibration(rows: readonly DdrrV2CoverageRow[]): DdrrCoverageCalibration {
+function buildCoverageCalibration(rows: readonly DdrrV2CoverageResponseRow[]): DdrrCoverageCalibration {
   const byPredictionState: Record<string, number> = {};
   const byCoverageCause: Record<string, number> = {};
   const byOperationalCoverageCause: Record<string, number> = {};

@@ -1,5 +1,6 @@
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import {
+  actualOutcomeFromSourceEventState,
   hasTerminalEvidence,
   type DdrrActualEventInput,
   type DdrrV2CoverageInput,
@@ -87,11 +88,19 @@ function isRecoveredClosure(actual: DdrrActualEventInput): boolean {
 function sourceOutcome(
   actual: DdrrActualEventInput | null,
 ): Pick<DdrrV2CoverageInput, "sourceEventState" | "actualOutcome"> {
-  if (!actual) return { sourceEventState: "missing", actualOutcome: "source_missing" };
-  if (hasTerminalEvidence(actual)) return { sourceEventState: "terminal", actualOutcome: "terminal" };
-  if (isRecoveredClosure(actual)) return { sourceEventState: "recovered", actualOutcome: "recovered" };
-  if (actual.endedAt != null) return { sourceEventState: "orphan_closed", actualOutcome: "orphan_closed" };
-  return { sourceEventState: "active", actualOutcome: "still_open" };
+  const sourceEventState: DdrrV2CoverageInput["sourceEventState"] = !actual
+    ? "missing"
+    : hasTerminalEvidence(actual)
+      ? "terminal"
+      : isRecoveredClosure(actual)
+        ? "recovered"
+        : actual.endedAt != null
+          ? "orphan_closed"
+          : "active";
+  return {
+    sourceEventState,
+    actualOutcome: actualOutcomeFromSourceEventState(sourceEventState),
+  };
 }
 
 function terminalEvidenceAtForEligibility(

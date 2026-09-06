@@ -1,4 +1,4 @@
-import type { DdrrRow } from "@shared/types/depeg-resolver-review";
+import type { DdrrRow, DdrrV2CoverageRow } from "@shared/types/depeg-resolver-review";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 
 export const predictionRow: DdrrRow = {
@@ -54,7 +54,7 @@ export const predictionRow: DdrrRow = {
   withinIqr: true,
 };
 
-export const coverageRow: DdrrRow = {
+export const coverageRow: DdrrV2CoverageRow = {
   kind: "coverage",
   eventId: 43,
   currentEventId: 43,
