@@ -50,6 +50,8 @@ Each detail page renders:
 
 Case-study JSON-LD lives in `case-study-json-ld.tsx`: the hub emits an `ItemList`; detail pages emit an `Article` with image `public/og-learn-case-<slug>.png`.
 
+The article's visible metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays the authored `datePublished` in UTC alongside reading time. This agrees with organization authorship in Article JSON-LD. Git-derived modification dates are not presented as human review or substantive-update dates; no individual reviewer is implied.
+
 Reverse lookup helpers in the content registry let other surfaces deep-link into case studies:
 
 - `CASE_STUDY_BY_DEPEG_SLUG`

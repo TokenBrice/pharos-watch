@@ -13,6 +13,7 @@ what shipped, what's next, and why.
   `src/app/blog/[slug]/page.tsx` (react-markdown, `remarkGfm` + `rehypeSlug` — no
   heading autolinks, unlike `/docs`).
 - **Hub:** `src/app/blog/page.tsx` lists posts newest-first.
+- **Publication line:** post headers credit Pharos and link to `/about/#editorial-ai-policy`, matching the Article-family organization author. The visible published date comes from the registry, not git modification time; it makes no human-review claim.
 - **Feed:** `src/app/feed/blog.xml/route.ts` → `/feed/blog.xml` (the legacy
   extensionless `/feed/blog` path is a `_redirects` 301).
 - **Homepage banner:** `src/components/home-blog-banner.tsx` advertises the
