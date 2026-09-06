@@ -201,6 +201,7 @@ The stablecoin detail Grade History module combines that legacy archive with `GE
 
 ## Frontend
 
+- The route FAQ describes the 30-minute evaluation cadence and last-verified publication behavior in reader-facing terms. Its alert CTA links to the existing `/pharoswatchbot/#getting-started` setup section.
 - `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting. Its grade filter composes with an inline peg filter that groups the stablecoin-list `pegType` values into USD, non-USD fiat, and commodities (gold or silver); selecting the active peg pill again clears that peg constraint.
 - `src/app/safety-scores/pillar-explainer.tsx` renders the static three-column primer immediately below the hero. It introduces Backing, Exit, and Control through one plain-language question apiece, shows the current 40% / 35% / 25% weights, and keeps methodology detail out of the ratings grid.
 - `src/lib/safety-score-data-coverage.ts` and `data-coverage-module.tsx` derive and render the score-input coverage module on `/coverage/`. Collapsed it shows one sentence of headline counts and the open-data-point split by evidence responsibility; expanding it adds the responsibility explanations, the per-count breakdowns, and the most common reason codes by affected assets. A publication hold replaces the headline sentence. The Safety Scores hero no longer embeds this module.

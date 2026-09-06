@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bell, Code2, Rss, Star } from "lucide-react";
+import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -105,13 +105,6 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
             >
               <Code2 aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               API access
-            </Link>
-            <Link
-              href="/compare/"
-              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              <Star aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
-              Watchlist preset
             </Link>
           </div>
         </div>

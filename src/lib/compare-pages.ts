@@ -351,8 +351,8 @@ export function buildComparisonFaqItems(page: StaticComparisonPage): ComparisonF
       answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V9 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`,
     },
     {
-      question: `Why does Pharos keep a static ${left.symbol} vs ${right.symbol} page?`,
-      answer: `This page gives crawlers and readers a stable overview of the ${left.symbol} vs ${right.symbol} question while the live dashboard keeps volatile metrics fresh. It intentionally covers a capped set of high-intent comparisons instead of generating every possible stablecoin pair.`,
+      question: `Where can I compare current ${left.symbol} and ${right.symbol} data?`,
+      answer: `Open the live ${page.shortTitle} comparison from this page to see current peg behavior, liquidity, flows, and Safety Scores. Use this brief to understand the structural differences, then check each coin's latest evidence before making a decision.`,
     },
   ];
 }

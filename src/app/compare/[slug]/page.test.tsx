@@ -55,5 +55,9 @@ describe("StaticComparisonPage", () => {
 
     expect(findLinkByText(document, "Open sUSDe detail page")?.getAttribute("href")).toBe("/stablecoin/susde-ethena");
     expect(findLinkByText(document, "Open USDe detail page")?.getAttribute("href")).toBe("/stablecoin/usde-ethena");
+    const liveCompareUrl = new URL(findLinkByText(document, "Open live compare")!.getAttribute("href")!, "https://pharos.watch");
+    expect(liveCompareUrl.searchParams.get("coins")).toBe("susde-ethena,usde-ethena");
+    expect(findLinkByText(document, "Telegram alerts")?.getAttribute("href")).toBe("/pharoswatchbot#getting-started");
+    expect(findLinkByText(document, "Watchlist preset")).toBeUndefined();
   }, 30_000);
 });

@@ -250,7 +250,7 @@ export function getTrackedFeatures({
     {
       title: "Bluechip safety ratings",
       description:
-        "Independent SMIDGE (Security, Management, Insurance, Decentralization, Governance, Escrow) coverage for rated stablecoins, pulled in as an outside reference signal.",
+        "Independent SMIDGE (Stability, Management, Implementation, Decentralization, Governance, Externals) coverage for rated stablecoins, pulled in as an outside reference signal.",
       icon: ShieldCheck,
       href: "https://bluechip.org",
       external: true,

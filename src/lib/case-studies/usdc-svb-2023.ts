@@ -8,11 +8,11 @@ export const content: CaseStudy = {
     "A fully-reserved dollar stablecoin lost its peg for two days in March 2023, not because its backing failed, but because one of the banks holding that backing did.",
   lead: [
     "On the weekend of March 10-13, 2023, USDC traded as low as roughly $0.87, a peak deviation near 1,300 bps below par and the largest the issuer had ever recorded. The cause sat one layer below the token: about $3.3 billion of Circle's cash reserves were deposited at Silicon Valley Bank, which entered FDIC receivership on Friday, March 10.",
-    "USDC was not undercollateralized in any structural sense. Treasuries and repo continued to back the bulk of the float. What broke was access: with primary redemptions paused over a weekend and roughly 8% of the cash leg trapped at a failed bank, the secondary market repriced the token for the uncertainty of whether those deposits would be recovered.",
+    "USDC was not undercollateralized in any structural sense. Treasuries and repo continued to back the bulk of the float. What broke was access: with primary redemptions paused over a weekend and cash representing roughly 8% of total reserves trapped at a failed bank, the secondary market repriced the token for the uncertainty of whether those deposits would be recovered.",
     "They were. After the Treasury, Federal Reserve, and FDIC jointly guaranteed all SVB deposits on Sunday, March 12, the deviation closed quickly and USDC traded at parity again by the March 13 New York session. The episode is studied here as a banking-channel concentration event, not a backing failure, and as the clearest case of fiat-stablecoin contagion propagating into DeFi.",
   ],
   takeaways: [
-    "USDC fell to ~$0.87 not because its backing failed but because access did: ~$3.3B (~8% of the cash leg) was trapped at the failed Silicon Valley Bank and primary redemption paused over a weekend.",
+    "USDC fell to ~$0.87 not because its backing failed but because access did: ~$3.3B (~8% of total reserves) was trapped at the failed Silicon Valley Bank and primary redemption paused over a weekend.",
     "Reserve quality and reserve access are different risks: a fully, conservatively reserved coin can still depeg if part of the backing is briefly unreachable.",
     "Hard-coded $1 plumbing spread the shock: Dai (via the PSM, to ~$0.85), FRAX (~$0.88), and alUSD all inherited the deviation by composition, the clearest case of fiat-stablecoin contagion into DeFi.",
     "The recovery was a policy decision (a federal deposit backstop), not a structural feature of the token; the durable signal is named-bank reserve composition and disclosure cadence.",
@@ -52,7 +52,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2023-03-10",
       headline: "SVB enters receivership; Circle discloses exposure",
-      body: "Silicon Valley Bank was taken into FDIC receivership on Friday, March 10. Late that day Circle disclosed that about $3.3 billion of the USDC reserve (roughly 8% of the cash backing) was held at the bank and could not be withdrawn. Primary-market redemption queues stalled.",
+      body: "Silicon Valley Bank was taken into FDIC receivership on Friday, March 10. Late that day Circle disclosed that about $3.3 billion of the USDC reserve (roughly 8% of total reserves) was held at the bank and could not be withdrawn. Primary-market redemption queues stalled.",
       severity: "med",
       href: "https://www.circle.com/pressroom/3-3-billion-of-usdc-reserve-risk-removed-dollar-de-peg-closes",
     },
