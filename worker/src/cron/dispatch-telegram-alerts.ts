@@ -71,12 +71,14 @@ function telegramPlanningWriteTarget(sql: string): string | null {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+  // normalizedSql collapses whitespace to single spaces, so literal spaces keep
+  // these patterns linear (no nested quantifiers).
   const targetMatch = normalizedSql.match(
-    /^(?:insert(?:\s+or\s+(?:replace|rollback|abort|fail|ignore))?|replace)\s+into\s+["`]?([a-z0-9_]+)["`]?/,
+    /^(?:insert(?: or (?:replace|rollback|abort|fail|ignore))?|replace) into ["`]?([a-z0-9_]+)/,
   ) ?? normalizedSql.match(
-    /^update(?:\s+or\s+(?:replace|rollback|abort|fail|ignore))?\s+["`]?([a-z0-9_]+)["`]?/,
+    /^update(?: or (?:replace|rollback|abort|fail|ignore))? ["`]?([a-z0-9_]+)/,
   ) ?? normalizedSql.match(
-    /^delete\s+from\s+["`]?([a-z0-9_]+)["`]?/,
+    /^delete from ["`]?([a-z0-9_]+)/,
   );
   const target = targetMatch?.[1];
   return target && TELEGRAM_PLANNING_TABLES.includes(target as (typeof TELEGRAM_PLANNING_TABLES)[number])
