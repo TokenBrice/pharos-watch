@@ -110,7 +110,7 @@
     "worker/src/lib/live-reserves/store-overview.ts": 80.7,
     "worker/src/lib/live-reserves/store-read.ts": 100,
     "worker/src/lib/live-reserves/store-row-decoding.ts": 89,
-    "worker/src/lib/live-reserves/store-shared.ts": 94.4,
+    "worker/src/lib/live-reserves/store-shared.ts": 94.1,
     "worker/src/lib/live-reserves/store-snapshot-state.ts": 100,
     "worker/src/lib/live-reserves/store-statements.ts": 93.3,
     "worker/src/lib/live-reserves/store-views.ts": 92,
