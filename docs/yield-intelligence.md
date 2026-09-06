@@ -617,6 +617,8 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 
 ### Presentation Boundaries
 
+- The workbench emits `yield_zero_results` only after ranking data has loaded without a query error. Loading, absent-data, and failed-refresh states are not counted as empty-result exposures; a loaded empty payload still is. This event measures an empty view, not a completed conversion or necessarily a failed search.
+- URL filter normalization also waits for loaded, error-free ranking data, so data-derived options cannot erase a valid incoming filter while the request is pending.
 - Leaderboard rows keep a fixed visual budget: confidence, freshness, and warning/source-risk severity. Additional evidence belongs in the expanded panel or detail page.
 - The stablecoin detail section is an at-a-glance summary; `/stablecoin/<id>/yield/` is the history-first workbench. The two surfaces must not duplicate whole panels.
 - Deep-link workbenches are runtime analysis surfaces and remain `noindex`; `/yield/` and stablecoin detail pages are the indexable surfaces.

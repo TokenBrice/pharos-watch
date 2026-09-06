@@ -18,6 +18,7 @@ const {
   leaderboardPropsMock,
   scatterPropsMock,
   staleQueriesMock,
+  trackEventMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsSummaryMock: vi.fn(),
@@ -28,7 +29,10 @@ const {
   leaderboardPropsMock: vi.fn(),
   scatterPropsMock: vi.fn(),
   staleQueriesMock: vi.fn(),
+  trackEventMock: vi.fn(),
 }));
+
+vi.mock("@/lib/analytics", () => ({ trackEvent: trackEventMock }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -150,6 +154,47 @@ describe("YieldClient", () => {
 
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.queryByTestId("yield-scatter-plot")).toBeNull();
+  });
+
+  it.each([
+    { data: undefined, isLoading: true, error: null },
+    { data: undefined, isLoading: false, error: null },
+    { data: undefined, isLoading: false, error: new Error("Unavailable") },
+    { data: makeResponse(), isLoading: false, error: new Error("Refresh failed") },
+  ])("waits for loaded error-free data before tracking an empty view (%#)", (pending) => {
+    searchParamsMock.set("q", "zzzz-no-match");
+    const ready = useYieldRankingsSummaryMock();
+    useYieldRankingsSummaryMock.mockReturnValue({ ...ready, ...pending });
+    const { rerender } = render(<YieldClient />);
+    expect(trackEventMock).not.toHaveBeenCalledWith("yield_zero_results", expect.anything());
+
+    useYieldRankingsSummaryMock.mockReturnValue(ready);
+    rerender(<YieldClient />);
+    expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
+    rerender(<YieldClient />);
+    expect(trackEventMock.mock.calls.filter(([name]) => name === "yield_zero_results")).toHaveLength(1);
+  });
+
+  it("still tracks a successfully loaded empty payload", () => {
+    useYieldRankingsSummaryMock.mockReturnValue({
+      ...useYieldRankingsSummaryMock(),
+      data: { ...makeResponse(), rankings: [] },
+    });
+    render(<YieldClient />);
+    expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
+  });
+
+  it("preserves a valid incoming yield-type filter while ranking options load", () => {
+    searchParamsMock.set("yieldType", "lending-opportunity");
+    const ready = useYieldRankingsSummaryMock();
+    useYieldRankingsSummaryMock.mockReturnValue({ ...ready, data: undefined, isLoading: true });
+    const { rerender } = render(<YieldClient />);
+    expect(replaceParamsMock).not.toHaveBeenCalled();
+
+    useYieldRankingsSummaryMock.mockReturnValue(ready);
+    rerender(<YieldClient />);
+    expect(replaceParamsMock).not.toHaveBeenCalled();
+    expect(searchParamsMock.get("yieldType")).toBe("lending-opportunity");
   });
 
   it("resolves comparison rows independently of the current filters", () => {
