@@ -25,6 +25,10 @@ Keep the visible policy organized around user-understandable categories rather t
 
 Analytics loads only when `NEXT_PUBLIC_GA_ID` is configured and the browser uses the public production hostname `pharos.watch`. Operator routes (`/admin/`, `/admin-api/` and descendants), operator hosts, Pages preview hosts, and the embedded Telegram Mini App are excluded from GA4 bootstrap, page views, custom events, and Web Vitals. The shared gate in `src/lib/analytics.ts` checks the browser location again when custom events fire, including delayed callbacks after a route change.
 
+The shared liquidity/compliance search hook (`src/hooks/use-url-search-sync.ts`) schedules `search_performed` only from manual input, not initial URL queries or browser history changes. Analytics receives the page label and query length, never the raw query in that custom event; clearing input cancels the pending search event. URL synchronization retains its own debounce, while search analytics uses the shared one-second debounce and route-navigation cleanup. This custom-event restriction does not strip query strings from page-view URLs.
+
+`WebVitalsReporter` keeps its reporting callback identity stable across route rerenders, preventing Next.js from registering additional metric observers for the same mounted reporter. It reads the latest pathname for the public-route guard and existing `page_path` attribution; this does not turn document-lifetime Web Vitals into per-client-navigation measurements.
+
 Deliberate local test exception: `localhost`, `127.0.0.1`, and `[::1]` retain analytics support when a measurement ID is explicitly configured, so the existing local `SMOKE_UI_EXPECT_GA_ID` smoke check remains usable. Use a test measurement ID for these runs; they are not public-production traffic. No other host suffix or preview domain is allowed. The page explains cookies, retention, hosting providers, and the typed event catalog without promising telemetry that the runtime does not collect.
 
 Authoritative sources:

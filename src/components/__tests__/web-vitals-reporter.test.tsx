@@ -29,6 +29,21 @@ afterEach(() => {
 });
 
 describe("WebVitalsReporter", () => {
+  it("keeps one callback identity while reading the latest public pathname", () => {
+    pathnameMock.mockReturnValue("/");
+    window.gtag = vi.fn();
+    const view = render(<WebVitalsReporter />);
+    const callback = reportCallbacks[0];
+    window.history.replaceState(null, "", "/liquidity/");
+    pathnameMock.mockReturnValue("/liquidity/");
+    view.rerender(<WebVitalsReporter />);
+    expect(reportCallbacks[1]).toBe(callback);
+    callback({ name: "INP", value: 80, id: "same-document" });
+    expect(window.gtag).toHaveBeenCalledWith("event", "web_vital", expect.objectContaining({
+      page_path: "/liquidity/", id: "same-document",
+    }));
+  });
+
   it("blocks a previously registered callback after navigating from a public page to ops", () => {
     pathnameMock.mockReturnValue("/");
     window.gtag = vi.fn();
@@ -39,6 +54,7 @@ describe("WebVitalsReporter", () => {
     callback({ name: "LCP", value: 1234, id: "before-router-update" });
     pathnameMock.mockReturnValue("/admin/crons/");
     view.rerender(<WebVitalsReporter />);
+    expect(reportCallbacks[1]).toBe(callback);
     callback({ name: "LCP", value: 1234, id: "after-router-update" });
 
     expect(window.gtag).not.toHaveBeenCalled();

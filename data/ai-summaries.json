@@ -3709,13 +3709,25 @@
   },
   "sgho-aave": {
     "title": "Aave's non-slashable GHO savings module",
-    "text": "Aave's non-slashable GHO yield product: 1:1 deposits, governance-set savings rate, and no cooldown. It is separate from the slashable Umbrella stkGHO safety module.\n\nAave Savings GHO (sGHO) is the non-slashable GHO {{term:yield-bearing}}yield product{{/term}} offered alongside the slashable Umbrella stkGHO safety module. Depositors mint sGHO against GHO at a 1:1 conversion and receive GHO-denominated emissions at the Aave-governance-set savings rate. The module holds a nine-figure pile of GHO and pays out without cooldown or slashing risk; it is distinct from the Umbrella stkGHO position that absorbs deficit events for the GHO market, and underneath sits GHO's own {{term:cdp}}CDP{{/term}} collateral profile. Yield is governance-set, so emissions can move with Aave DAO decisions.",
-    "updatedAt": "2026-07-08",
+    "text": "Aave Savings GHO (sGHO) is an ERC-4626 savings vault on Ethereum whose shares increase in GHO value as yield accrues. Deposits mint shares at the prevailing exchange rate, so one sGHO does not represent a fixed one GHO. The governance-set savings rate accrues on-chain, replacing the legacy sGHO product's separately claimed Merit rewards. Deposited GHO stays in the vault, while the DAO funds yield separately.\n\nThe savings vault is non-slashable and distinct from Umbrella stkGHO, whose stakers absorb GHO-market deficits. Shares can be redeemed for GHO without a cooldown, subject to the vault's pause controls. Pharos records GHO as the wrapper's single backing asset, so the savings layer adds no collateral diversification. Holders remain exposed to GHO's underlying collateral and peg risk, alongside the vault's smart-contract controls and governance decisions over the savings rate.",
+    "updatedAt": "2026-09-06",
     "authoredBy": "ai",
-    "model": "claude-fable-5",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-08",
-    "factsAsOf": "2026-07-08"
+    "model": "gpt-6-astra",
+    "factsAsOf": "2026-09-06",
+    "sources": [
+      {
+        "label": "Aave: Savings GHO documentation",
+        "url": "https://aave.com/docs/ecosystem/gho/sgho"
+      },
+      {
+        "label": "Aave governance: sGHO launch configuration (March 25, 2026)",
+        "url": "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346"
+      },
+      {
+        "label": "Aave: Umbrella documentation",
+        "url": "https://aave.com/docs/aave-v3/umbrella"
+      }
+    ]
   },
   "gtusdcp-gauntlet": {
     "title": "Gauntlet's curated USDC MetaMorpho V2 vault",

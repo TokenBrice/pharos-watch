@@ -151,7 +151,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
                 <LaunchMilestoneBadge type={m.type} />
               </div>
               <p className="mt-1 text-sm font-medium text-foreground">{m.title}</p>
-              {m.description && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{m.description}</p>}
+              {m.description && <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">{m.description}</p>}
               {m.sourceUrl && (
                 <a
                   href={m.sourceUrl}
@@ -229,7 +229,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
           <p className="pharos-kicker">Copy Exact Bot Command</p>
           <div className="mt-2 flex items-center gap-2">
-            <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono tabular-nums text-foreground sm:text-sm">
+            <code tabIndex={0} className="pharos-focus-ring block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono tabular-nums text-foreground sm:text-sm">
               {launchAlertCommand}
             </code>
             <CopyButton
@@ -273,6 +273,17 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         </Link>
       </nav>
 
+      {/* ── Header ────────────────────────────────────────────────── */}
+      <header className="flex items-start gap-4">
+        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
+        <div className="min-w-0 space-y-1">
+          <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
+            {coin.name} ({coin.symbol}) Pre-launch Stablecoin Tracker
+          </h1>
+          <p className="font-mono tabular-nums text-sm text-muted-foreground">{coin.symbol}</p>
+        </div>
+      </header>
+
       {/* ── Pre-Launch Banner ─────────────────────────────────────── */}
       <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -284,19 +295,15 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           Pharos can still tell you how this asset is supposed to work, when it expects to launch, and what sources to
           watch. Live market, peg, liquidity, and safety surfaces activate only after the first post-launch data sync.
         </p>
-        {coin.launchPhaseDetail && <p className="mt-2 text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>}
+        {coin.launchPhaseDetail && (
+          <details className="mt-3">
+            <summary className="pharos-focus-ring cursor-pointer rounded-sm text-sm font-medium text-foreground">
+              Full launch status and history
+            </summary>
+            <p className="mt-2 break-words text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>
+          </details>
+        )}
       </div>
-
-      {/* ── Header ────────────────────────────────────────────────── */}
-      <header className="flex items-start gap-4">
-        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
-        <div className="min-w-0 space-y-1">
-          <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {coin.name} ({coin.symbol}) Pre-launch Stablecoin Tracker
-          </h1>
-          <p className="font-mono tabular-nums text-sm text-muted-foreground">{coin.symbol}</p>
-        </div>
-      </header>
 
       {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
       <section className="pharos-card-shell p-4 sm:p-5">

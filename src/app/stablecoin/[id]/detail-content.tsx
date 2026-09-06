@@ -33,7 +33,7 @@ import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-vi
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import { revealAnchorId } from "@/lib/anchor-reveal";
+import { alignAnchorAfterHydration } from "@/lib/anchor-reveal";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import type { AiSummaryClaimValues } from "@shared/types";
@@ -220,12 +220,18 @@ export function DetailContent({
   staticHasCollateralUsage,
   viewModel,
 }: DetailContentProps) {
-  // Direct loads with a hash land before lazy sections settle; opening the
-  // enclosing disclosures for the hash target keeps deep links honest now
-  // that module detail folds by default.
+  // The scrollspy owns its top-level hashes. Nested direct links need the
+  // same bounded alignment after hydration, not only disclosure reveal.
   useEffect(() => {
-    const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
-    if (hash) revealAnchorId(hash);
+    let hash: string;
+    try {
+      hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    } catch {
+      return;
+    }
+    if (hash && !DETAIL_SECTIONS.some((section) => section.id === hash)) {
+      return alignAnchorAfterHydration(hash);
+    }
   }, []);
   const heroModel = viewModel.hero;
   const frozenNote = viewModel.coin.status === "frozen" && viewModel.coin.frozenAt
