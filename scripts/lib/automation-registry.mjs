@@ -105,7 +105,14 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
-    sourcePaths: ["shared/data/stablecoins/coins/**", "shared/data/stablecoins/domains/**"],
+    sourcePaths: [
+      "shared/data/stablecoins/coins/**",
+      "shared/data/stablecoins/domains/**",
+      "shared/data/stablecoins/canonical-order.json",
+      "shared/lib/stablecoins/**",
+      "shared/types/**",
+      "scripts/lib/stablecoin-catalog-sources.ts",
+    ],
   }),
   generatedArtifact({
     id: "agents-doc",
@@ -305,6 +312,9 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: [
       "shared/data/stablecoins/canonical-order.json",
       "shared/data/stablecoins/coins.generated.json",
+      "shared/data/stablecoins/listing-decisions.json",
+      "shared/types/stablecoin-client-meta.ts",
+      "scripts/lib/ts-ast.mts",
     ],
   }),
   generatedArtifact({

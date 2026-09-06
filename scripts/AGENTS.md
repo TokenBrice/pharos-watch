@@ -4,9 +4,14 @@ Applies to scripts, excluding worker-bound tooling under worker/scripts.
 
 ## Read First
 
-- `docs/scripts.md`
-- `docs/testing.md#ci-pipeline`
-- `docs/deployment-process.md`
+- `docs/scripts.md#operator-cli-contract`
+- `docs/testing.md#smallest-adequate-check-per-area`
+
+## Read When Relevant
+
+- CI, release, or repository-policy changes: `docs/testing.md#ci-pipeline`, `docs/deployment-process.md#ci-deploy-sequence`, and `docs/scripts.md#pr-and-release-gates`.
+- Generated outputs: `docs/scripts.md#build-and-generated-artifacts`.
+- Credentials, remote operations, or mutation: `docs/scripts.md#operational-notes` and the script's owning runbook.
 
 ## Invariants
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import {
   parseStrictCliArgs,
   runCliEntrypoint,
@@ -56,6 +58,7 @@ export interface FocusedCheckPlan {
 export interface FocusedCheck {
   command: string;
   source: string;
+  argv?: readonly string[];
 }
 
 export interface BuildFocusedCheckPlanOptions {
@@ -140,16 +143,34 @@ export function buildFocusedCheckPlan(
 
   const checks: FocusedCheck[] = [];
   const seenChecks = new Set<string>();
+  const isGeneric = (family: PathFamily) => family.id === "frontend-routes" || family.id === "scripts-tooling";
+  const retainedCommands = new Set([...selectedFamilies.values()].filter((family) => !isGeneric(family)).flatMap((family) => family.checks));
   [...selectedFamilies.values()]
     .sort((a, b) => (familyOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (familyOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER))
     .forEach((family) => {
       for (const command of family.checks) {
-        const plannedCommand = command === "npm run lint:changed" && base
+        let argv: string[] | undefined;
+        let plannedCommand = command === "npm run lint:changed" && base
           ? `${command} -- --base=${base}`
           : command;
+        if (isGeneric(family)) {
+          if (retainedCommands.has(command)) continue;
+          const files = classification.changedFiles.filter((file) => family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)));
+          if (family.id === "frontend-routes" && command === "npx vitest run src"
+            && files.every((file) => /\.[cm]?[jt]sx?$/.test(file))) {
+            argv = ["npx", "vitest", "related", "--run", "--passWithNoTests=false", ...files];
+            plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
+          } else if (command === "npm run check:generated-artifacts") {
+            const ids = selectChangedGeneratedArtifactIds(classification.changedFiles).filter((id) =>
+              GENERATED_ARTIFACT_REGISTRY.some((artifact) => artifact.id === id && artifact.checkable !== false),
+            );
+            if (ids.length === 0) continue;
+            plannedCommand = `${command} -- --only=${ids.join(",")}`;
+          }
+        }
         if (seenChecks.has(plannedCommand)) continue;
         seenChecks.add(plannedCommand);
-        checks.push({ command: plannedCommand, source: family.id });
+        checks.push({ command: plannedCommand, source: family.id, ...(argv ? { argv } : {}) });
       }
     });
 
@@ -181,8 +202,8 @@ function normalizeCommandResult(result: number | CommandResult): CommandResult {
   return typeof result === "number" ? { status: result, aborted: false } : result;
 }
 
-function createCheckCommand(check: string): SpawnCommand {
-  const tokens = check.trim().split(/\s+/);
+function createCheckCommand(check: FocusedCheck): SpawnCommand {
+  const tokens = check.argv ? [...check.argv] : check.command.trim().split(/\s+/);
   const executable = tokens.shift();
   if (!executable) throw new Error("Focused check registry contains an empty command.");
   return { ...createSpawnCommand(executable, tokens), captureOutput: true };
@@ -251,7 +272,7 @@ export async function runFocusedChecks({
   let failed = false;
   for (const [index, check] of plan.checks.entries()) {
     if (failed) continue;
-    const command = createCheckCommand(check.command);
+    const command = createCheckCommand(check);
     const laneStartedAt = now();
     let result: CommandResult;
     try {

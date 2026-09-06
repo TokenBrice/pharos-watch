@@ -61,9 +61,9 @@ The repository's working rules and hard rules are owned by the root [`CLAUDE.md`
 
 ## 4. Scratch Work
 
-Put plans, research, screenshots, reports, captures, and handoffs under ignored `agents/<YYYY-MM-DD>-<slug>/`. Durable product, process, API, methodology, and operating truth belongs in the closest verified page under `docs/`, not in scratch.
+Create scratch files only when useful; put plans, research, screenshots, reports, captures, and handoffs under ignored `agents/<YYYY-MM-DD>-<slug>/`. Durable product, process, API, methodology, and operating truth belongs in the closest verified page under `docs/`, not in scratch.
 
-Every campaign needs a README that records its owner, status, created and last-reviewed dates, source or plan, durable destinations, retention rule, and safe-to-remove condition. Follow the ledger and handoff convention in [Agent Artifacts](./agent-artifacts.md). Never infer that an ignored or old artifact is disposable.
+Campaign READMEs, ledgers, dispatch packets, and retention records are for substantial work spanning sessions or requiring coordinated agent handoffs. Bounded fixes and reviews need no scratch ledger. Follow the scope and handoff convention in [Agent Artifacts](./agent-artifacts.md#campaign-index-and-handoff). Never infer that an ignored or old artifact is disposable.
 
 ## 5. Scope Safety
 
@@ -79,11 +79,11 @@ Passing deployment proves activation, not runtime health. Cron, scheduler, inges
 
 ## 7. Handoff and Finish
 
-Handoff and closeout requirements — final-message contents, campaign ledger closure, and scratch safe-to-remove conditions — are owned by the [Agent Artifacts campaign index and closeout contract](./agent-artifacts.md#campaign-index-and-handoff).
+For bounded fixes and reviews, complete the authorized work, run focused validation, and briefly report changes or findings, checks, and unresolved work. Substantial campaigns also follow the [Agent Artifacts campaign index and closeout contract](./agent-artifacts.md#campaign-index-and-handoff).
 
 ## 8. Commit And Release
 
-Group changes into logical commits. Use a descriptive subject and a useful body explaining what changed and why. Batch commit bodies must include the stable scratch plan path and task IDs, for example:
+Group changes into logical commits. Use a descriptive subject and a useful body explaining what changed and why. For substantial campaigns, include the existing scratch plan path and task IDs; bounded changes need neither. Campaign example:
 
 ```text
 Plan: agents/<YYYY-MM-DD>-<slug>/IMPLEMENTATION-PLAN.md

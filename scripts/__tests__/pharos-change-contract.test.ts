@@ -140,6 +140,7 @@ describe("classifyChangedFiles", () => {
     expect(contract.checks).toContain("npm run check:generated-artifacts -- --only=agents-doc");
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("agent-hooks-process");
     expect(docKeys(contract)).toContain("docs/process/agent-artifacts.md");
+    expect(docKeys(contract)).not.toContain("CLAUDE.md");
   });
   it("includes docs, warnings, and deploy impact in text output", () => {
     const contract = classifyChangedFiles(["worker/migrations/0123_example.sql"]);
@@ -243,7 +244,42 @@ describe("representative --file routing", () => {
     expect(contract.mappings.map((mapping) => mapping.id)).toEqual(
       expect.arrayContaining(["frontend-routes", "validation-ci-policy"]),
     );
-    expect(docKeys(contract)).toContain("docs/deployment-process.md");
+    expect(docKeys(contract)).toContain("docs/deployment-process.md#ci-deploy-sequence");
+  });
+
+  it.each([
+    "scripts/maintenance/run-focused-checks.ts",
+    "scripts/maintenance/build-annotation-candidates.ts",
+    "scripts/__tests__/pharos-change-contract.test.ts",
+  ])("keeps ordinary script reads bounded for %s", (file) => {
+    const contract = route(file);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["scripts-tooling"]);
+    expect(docKeys(contract)).toEqual([
+      "docs/scripts.md#operator-cli-contract",
+      "docs/testing.md#smallest-adequate-check-per-area",
+      "docs/process/agent-start-here.md",
+    ]);
+    expect(contract.scopedContext).toContain("scripts/AGENTS.md");
+  });
+
+  it.each([
+    ".github/workflows/pages-release.yml",
+    "scripts/ci/classify-deploy-changes.ts",
+    "scripts/lib/automation-registry.mjs",
+    "scripts/lib/deploy-impact.mts",
+    "scripts/lib/pr-lanes.mts",
+    "scripts/maintenance/run-pr-static-checks.ts",
+    "scripts/maintenance/refresh-pages-release-data.ts",
+    "scripts/maintenance/run-generated-artifacts.ts",
+    "scripts/maintenance/prepare-workspace.ts",
+  ])("preserves CI and deployment ownership for %s", (file) => {
+    const contract = route(file);
+    expect(contract.mappings.find((mapping) => mapping.id === "validation-ci-policy")?.risk).toBe("high");
+    expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
+    expect(docKeys(contract)).toContain("docs/deployment-process.md#ci-deploy-sequence");
+    expect(contract.background.map((doc) => doc.path)).toContain("docs/process/feature-flags.md");
+    expect(contract.checks).toContain("npx vitest run scripts/__tests__");
+    expect(contract.checks).toContain("npm run check:generated-artifacts");
   });
 
   it("routes Telegram API ingress to the unified Telegram contract", () => {

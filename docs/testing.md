@@ -24,11 +24,13 @@ Use `npm run check:focused -- --file <path>` to route one path through the chang
 
 Explicit paths use the same normalization as `agent:route`, including repository-relative, `./`, and absolute paths within the repository or current worktree. Paths outside those roots or without an ownership mapping fail before checks run. A mapped area can intentionally select no focused checks; use the matrix below for its local verification recipe.
 
+For generic frontend modules, the focused runner replaces directory-wide test commands with `vitest related --run --passWithNoTests=false` for the selected files. This uses Vitest's import graph; a zero-test selection fails and requires choosing an explicit suite when coverage relies on runtime-loaded files. Non-module changes retain directory coverage. Scripts retain their directory suite because source-reading and CLI contract tests are invisible to the import graph. Sensitive mappings retain their explicit suites and guardrails, including broader CI/release checks when those paths are selected. Generic script artifact checks select only affected checkable outputs and their dependents through the existing artifact registry. `--plan-only` shows these narrowed commands; the protected PR gate is unchanged.
+
 | Area | Smallest adequate local recipe | Conditional additions |
 | --- | --- | --- |
 | Shared `shared/lib` change | `npm run lint:changed`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib` | Add `npm run check:stablecoin-data` for catalog/data semantics; run `npm run test:pr -- --base=<ref>` when the change touches critical consumers. |
 | Worker cron change | `npm run lint:changed`; `npm run typecheck:worker`; `npm run check:cron-sync`; `npm run check:cron-connections`; `npx vitest run worker/src/cron worker/src/handlers/scheduled` | Add `npm run validate:worker-scheduled-smoke` for dispatch wiring and the focused cron test when a specific source mapping supplies one. |
-| `src/components` change | `npm run lint:changed`; `npm run typecheck`; `npx vitest run src/components` | Add `npm run check:table-primitives` for table markup/primitives; route/public-surface changes need the page-specific registry/CSP/SEO checks. |
+| `src/components` change | `npm run check:focused -- --file <component-path>` selects lint, source typing, and related tests | Add `npm run check:table-primitives` for table markup/primitives; route/public-surface changes need the page-specific registry/CSP/SEO checks. |
 | API route (`worker/src/api` or `functions/`) change | `npm run lint:changed`; `npm run typecheck`; `npm run typecheck:worker`; `npm run test:critical-contracts` | Add `npm run test:pr -- --base=<ref>` when dependency-selected or multi-mode contract coverage is needed. |
 | D1 migration | `npm run lint:changed`; `npm run typecheck:worker`; `npm run check:migrations`; `npx vitest run worker/src` | Add the affected API test under `worker/src/api/<relevant>.test.ts` when runtime behavior changes; run `npm run test:pr -- --base=<ref>` for critical consumers. |
 | Stablecoin JSON (`shared/data/stablecoins/**`) | `npm run lint:changed`; `npm run check:stablecoin-data`; `npm run check:generated-artifacts -- --only=stablecoin-client-projections`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts` | Add the focused catalog/registry test; `check:pr:static` also selects page and Worker checks because stablecoin data is a deploy-impact shared path. |
@@ -150,6 +152,8 @@ CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical -- --pool=threads
 ## Test Setup
 
 **Config:** `vitest.config.ts`
+
+Vitest bootstraps the catalog and client projections through `scripts/test/ensure-fresh-stablecoin-artifacts.ts`, using registry-owned input and output paths. Successful builds cache recursive filename, size, modification-time, and change-time fingerprints under ignored `.cache/vitest-stablecoin-artifacts/`. Unchanged runs skip regeneration; source additions/deletions and missing or edited outputs invalidate the cache. This is a local metadata shortcut: content checks and clean CI generation remain authoritative for changes that preserve all recorded metadata. Removing this cache safely forces a rebuild.
 
 ```ts
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
