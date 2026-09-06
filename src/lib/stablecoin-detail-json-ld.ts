@@ -131,22 +131,19 @@ export function buildStablecoinDatasetJsonLd(
             measurementTechnique: "Checked-in catalog metadata and reviewed listing-policy decisions.",
           }
       : {
-          name: `${coin.name} Stablecoin Analytics`,
+          name: `${coin.name} Stablecoin Profile`,
           description: coin.flags.navToken
-            ? `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} ${backingLabel} yield-bearing token with ${profilePegLabel}. Price, market cap, supply trends, chain distribution, peg score, redemption backstop coverage, and depeg history.`
-            : `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, redemption backstop coverage, and depeg history.`,
-          keywords: ["analytics", "peg tracking"],
+            ? `Build-time profile for ${coin.name} (${coin.symbol}). ${governanceLabel} ${backingLabel} yield-bearing token with ${profilePegLabel}. The markdown download contains catalog metadata and available editorial context, not live prices or scores.`
+            : `Build-time profile for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. The markdown download contains catalog metadata and available editorial context, not live prices or scores.`,
+          keywords: ["stablecoin profile", "catalog metadata"],
           variableMeasured: [
-            { "@type": "PropertyValue", name: "price", unitText: "USD" },
-            { "@type": "PropertyValue", name: "marketCap", unitText: "USD" },
-            { "@type": "PropertyValue", name: "circulatingSupply", unitText: coin.symbol },
-            { "@type": "PropertyValue", name: "pegScore", minValue: 0, maxValue: 100 },
-            { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
-            { "@type": "PropertyValue", name: "safetyGrade" },
-            { "@type": "PropertyValue", name: "redemptionBackstopCoverage" },
+            { "@type": "PropertyValue", name: "pegReference", value: pegLabel },
+            { "@type": "PropertyValue", name: "backing", value: backingLabel },
+            { "@type": "PropertyValue", name: "governance", value: governanceLabel },
+            { "@type": "PropertyValue", name: "listingStatus", value: coin.status ?? "active" },
           ],
           measurementTechnique:
-            "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
+            "Checked-in stablecoin catalog metadata and available editorial summaries exported at build time. dateModified, when present, is the editorial summary update date, not a live metric observation time.",
         };
   const stablecoinThing = buildStablecoinThingJsonLd({
     coin,

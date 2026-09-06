@@ -76,7 +76,7 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         expect.objectContaining({
           "@type": "Dataset",
           "@id": "https://pharos.watch/datasets/top-stablecoins/#dataset",
-          url: "https://pharos.watch/datasets/top-stablecoins/latest.json",
+          url: "https://pharos.watch/about/api/#dataset-top-stablecoins",
           includedInDataCatalog: {
             "@type": "DataCatalog",
             "@id": "https://pharos.watch/about/api/#data-catalog",

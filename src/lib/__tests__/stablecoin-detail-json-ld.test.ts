@@ -66,15 +66,17 @@ describe("buildStablecoinDatasetJsonLd", () => {
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
 
-  it("exposes redemption backstop coverage as an active analytics measurement", () => {
+  it("describes only the catalog fields actually present in the markdown profile", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const jsonLd = buildStablecoinDatasetJsonLd(coin);
 
-    expect(jsonLd.description).toContain("redemption backstop coverage");
-    expect(jsonLd.variableMeasured).toContainEqual({
-      "@type": "PropertyValue",
-      name: "redemptionBackstopCoverage",
-    });
+    expect(jsonLd.description).toContain("Build-time profile");
+    expect(jsonLd.description).toContain("not live prices or scores");
+    expect(jsonLd.variableMeasured.map((variable) => variable.name)).toEqual([
+      "pegReference", "backing", "governance", "listingStatus",
+    ]);
+    expect(jsonLd.measurementTechnique).toContain("editorial summary update date");
+    expect(JSON.stringify(jsonLd.variableMeasured)).not.toMatch(/price|marketCap|circulatingSupply|Score|Grade/);
   });
 
   it("uses NAV-aware descriptions for yield-bearing strategy shares", () => {
