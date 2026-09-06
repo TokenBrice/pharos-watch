@@ -96,10 +96,10 @@
     },
     {
       "type": "article",
-      "url": "https://themerkle.com/koreas-onchain-crypto-expansion-continues-as-first-krw-stablecoin-launches-on-aptos/",
-      "title": "Korea's first KRW stablecoin launches on Aptos",
+      "url": "https://www.cryptotimes.io/2026/05/13/bdacs-and-aptos-team-up-to-expand-krw1-stablecoin-ecosystem/",
+      "title": "BDACS and Aptos team up to expand KRW1 stablecoin ecosystem",
       "description": "KRW1 expands beyond EVM chains via Aptos Foundation partnership; Aptos cited for low-cost payments, remittances, and real-world asset tokenisation infrastructure.",
-      "source": "The Merkle"
+      "source": "The Crypto Times"
     }
   ],
   "milestones": [
@@ -170,6 +170,13 @@
       "title": "BDACS publishes institutional KRW1 whitepaper",
       "description": "Institutional whitepaper published on the BDACS newsroom; krw1.kr now describes commercialization of issuance and circulation for select KYC/AML-vetted institutions, while aggregator-tracked supply remains proof-of-concept scale pending Korea's Digital Asset Basic Act (bills introduced July 28 2026).",
       "sourceUrl": "https://newsroom.bdacs.co.kr"
+    },
+    {
+      "date": "2026-07-14",
+      "type": "regulatory",
+      "title": "Korea's finance ministry targets Digital Asset Basic Act passage in the second half of 2026",
+      "description": "The Ministry of Economy and Finance set a target of passing the Digital Asset Basic Act in H2 2026, the framework that would authorise won-pegged stablecoin issuers and gate KRW1's commercial launch. The Bank of Korea and the Financial Services Commission remain split over whether issuance should be restricted to bank-majority entities.",
+      "sourceUrl": "https://koreatechdesk.com/korea-stablecoin-digital-asset-act-fintech-banks"
     }
   ]
 }
