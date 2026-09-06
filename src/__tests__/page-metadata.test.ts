@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import {
   buildApiOgImageUrl,
   buildStablecoinDetailDescription,
@@ -11,20 +12,59 @@ import {
 describe("page metadata helpers", () => {
   it("builds phrase-safe stablecoin descriptions", () => {
     const usdt = TRACKED_META_BY_ID.get("usdt-tether");
-    const usde = TRACKED_META_BY_ID.get("usde-ethena");
     const nect = TRACKED_META_BY_ID.get("nect-beraborrow");
 
     expect(usdt).toBeDefined();
-    expect(usde).toBeDefined();
     expect(nect).toBeDefined();
 
     expect(buildStablecoinDetailDescription(usdt!)).toContain("backed by real-world assets");
-    expect(buildStablecoinDetailDescription(usde!)).toContain("collateralized by crypto assets");
     // nect-beraborrow was firmed to reviewedStatus true by the C10 access
     // review (live EMERGENCY_ROLE pause evidence). The description now carrn path is
     // reachable by any address the owner adds to the PSM-bond whitelist.
     expect(buildStablecoinDetailDescription(nect!)).toContain("Issuer can freeze addresses");
   });
+
+  it.each([
+    ["paxg-paxos", "PAX Gold (PAXG): Gold Backing, Custody & Risk", "Compare PAXG with XAUT"],
+    ["usdg-paxos", "USDG (Global Dollar): Reserves, Redemption & Risk", "redemption access, freeze controls"],
+    ["usde-ethena", "Ethena USDe: Backing, Peg Stability & Risk", "Compare its risk profile with sUSDe"],
+    ["bold-liquity", "Liquity BOLD: Collateral, Redemption & Risk", "Compare its Safety Score and risk profile with LUSD"],
+  ])("uses the bounded metadata pilot for %s without changing crawl policy", (id, title, descriptionPhrase) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    expect(coin).toBeDefined();
+    const metadata = buildStablecoinDetailMetadata(coin);
+
+    expect(metadata.title).toBe(title);
+    expect(metadata.description).toContain(descriptionPhrase);
+    expect(metadata.description!.length).toBeLessThanOrEqual(160);
+    expect(metadata.description).toBe(buildStablecoinDetailDescription(coin));
+    expect(metadata.alternates?.canonical).toBe(`/stablecoin/${id}/`);
+    expect(metadata.robots).toEqual(INDEXABLE_ROBOTS);
+    expect(metadata.openGraph).toMatchObject({ title, description: metadata.description, url: `/stablecoin/${id}/` });
+    expect(metadata.twitter).toMatchObject({ title, description: metadata.description });
+  });
+
+  it("keeps USDC outside the metadata pilot", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const metadata = buildStablecoinDetailMetadata(coin);
+    expect(metadata.title).toBe("USDC (USD Coin) Stablecoin Safety Score & Risk Profile");
+    expect(metadata.description).toContain("USDC risk profile for USD Coin:");
+    expect(metadata.alternates?.canonical).toBe("/stablecoin/usdc-circle/");
+    expect(metadata.robots).toEqual(INDEXABLE_ROBOTS);
+  });
+
+  it.each(["pre-launch", "quarantined", "delisted", "frozen"] as const)(
+    "preserves %s metadata if a pilot coin leaves active monitoring",
+    (status) => {
+      const coin = { ...TRACKED_META_BY_ID.get("paxg-paxos")!, status };
+      const metadata = buildStablecoinDetailMetadata(coin);
+      const statusTitle = status === "pre-launch" ? "Launch Tracker" : status === "frozen" ? "Failed Stablecoin Archive" : "Inactive Listing Record";
+      expect(metadata.title).toContain(statusTitle);
+      expect(metadata.description).not.toContain("Compare PAXG with XAUT");
+      expect(metadata.alternates?.canonical).toBe("/stablecoin/paxg-paxos/");
+      expect(metadata.robots).toEqual(INDEXABLE_ROBOTS);
+    },
+  );
 
   it("describes NAV tokens as NAV claims rather than fixed-dollar pegs", () => {
     const dusd = TRACKED_META_BY_ID.get("dusd-dialectic");
