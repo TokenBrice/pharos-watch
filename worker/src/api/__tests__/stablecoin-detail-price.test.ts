@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { enrichMissingDetailPrice } from "../stablecoin-detail/price";
 import { handleStablecoinDetail, resetStablecoinDetailStateForTests } from "../stablecoin-detail";
 import { routeStablecoinDetail } from "../stablecoin-detail/router";
@@ -81,7 +80,7 @@ describe("missing detail price enrichment", () => {
     { price: null }, { price: 0 }, { price: -1 }, { price: "1" },
     { priceConfidence: "low" }, { priceConfidence: "fallback" }, { priceConfidence: null },
     { priceSource: "cached" }, { priceSource: "" },
-    { priceObservedAt: NOW - DEPEG_PRIMARY_PRICE_MAX_AGE_SEC }, { priceObservedAt: NOW + 1 },
+    { priceObservedAt: NOW + 1 },
     { priceObservedAt: null, priceUpdatedAt: null }, { frozen: true }, { id: "usdc-circle" },
   ])("leaves the original response unchanged for unusable canonical data %j", async (overrides) => {
     const response = makeResponse();
@@ -89,7 +88,7 @@ describe("missing detail price enrichment", () => {
     expect(await response.text()).toBe(detailBody);
   });
 
-  it.each([NOW - API_FRESHNESS_MAX_AGE_SEC.stablecoins, NOW + 1, Number.NaN])("rejects stale/future/invalid publication %s", async (updatedAt) => {
+  it.each([NOW + 1, Number.NaN])("rejects future/invalid publication %s", async (updatedAt) => {
     const response = makeResponse();
     expect(await enrichMissingDetailPrice(makeDb({}, updatedAt), "usdt-tether", response)).toBe(response);
   });
@@ -113,15 +112,17 @@ describe("missing detail price enrichment", () => {
     expect(await response.text()).toBe(detailBody);
   });
 
-  it("bounds browser and edge TTL by the remaining price observation lifetime", async () => {
-    const db = makeDb({ priceObservedAt: NOW - DEPEG_PRIMARY_PRICE_MAX_AGE_SEC + 5 });
-    const result = await enrichMissingDetailPrice(db, "usdt-tether", makeResponse());
-    expect(result.headers.get("Cache-Control")).toBe("public, s-maxage=5, max-age=5");
-  });
-
   it("also bounds TTL by canonical publication freshness", async () => {
     const result = await enrichMissingDetailPrice(makeDb({}, NOW - API_FRESHNESS_MAX_AGE_SEC.stablecoins + 4), "usdt-tether", makeResponse());
     expect(result.headers.get("Cache-Control")).toBe("public, s-maxage=4, max-age=4");
+  });
+
+  it("keeps a stale published quote visible while warning and disabling reuse", async () => {
+    const result = await enrichMissingDetailPrice(makeDb({}, NOW - 6000), "usdt-tether", makeResponse());
+    expect(await result.json()).toMatchObject({ price: 0.997 });
+    expect(result.headers.get("Cache-Control")).toBe("no-store");
+    expect(result.headers.get("Warning")).toContain("Response is stale");
+    expect(result.headers.get("X-Data-Age")).toBe("6000");
   });
 
   it("preserves errors without querying or consuming them", async () => {
@@ -132,6 +133,24 @@ describe("missing detail price enrichment", () => {
 });
 
 describe("detail response paths", () => {
+  it("serves the published USDT price when its observation predates the depeg detection window", async () => {
+    // Captured production publication: observed 1788718239, synced 1788722142,
+    // served at 1788722903. The homepage still publishes this high-confidence price.
+    const db = makeDb({
+      price: 0.99993,
+      priceObservedAt: NOW - 4664,
+      priceUpdatedAt: NOW - 4664,
+      priceSyncedAt: NOW - 761,
+    }, NOW - 761, 60);
+    const result = await handleStablecoinDetail(db, "usdt-tether", { waitUntil: vi.fn() } as unknown as ExecutionContext);
+    expect(await result.json()).toMatchObject({
+      price: 0.99993,
+      priceObservedAt: NOW - 4664,
+      priceSyncedAt: NOW - 761,
+      tokens,
+    });
+  });
+
   it.each([60, 600, undefined])("enriches fresh cache, stale cache and provider responses (age %s)", async (age) => {
     const pending: Promise<unknown>[] = [];
     const ctx = { waitUntil: (promise: Promise<unknown>) => pending.push(promise) } as unknown as ExecutionContext;

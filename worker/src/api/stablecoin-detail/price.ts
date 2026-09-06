@@ -1,5 +1,5 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 
@@ -22,7 +22,7 @@ export async function enrichMissingDetailPrice(
     if (canonical.kind !== "ok") return response;
     const now = Math.floor(Date.now() / 1000);
     const cacheAge = now - canonical.updatedAt;
-    if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0 || cacheAge >= API_FRESHNESS_MAX_AGE_SEC.stablecoins) return response;
+    if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) return response;
 
     const coin = canonical.payload.peggedAssets.find((asset) => asset.id === stablecoinId);
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
@@ -32,14 +32,17 @@ export async function enrichMissingDetailPrice(
       !coin.priceSource || coin.priceSource === "cached" ||
       (coin.priceConfidence !== "high" && coin.priceConfidence !== "single-source") ||
       typeof observedAt !== "number" || !Number.isFinite(observedAt) || observedAt <= 0 ||
-      observedAt > now || now - observedAt >= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+      observedAt > now
     ) return response;
 
     const headers = new Headers(response.headers);
-    const remaining = Math.floor(Math.min(
-      API_FRESHNESS_MAX_AGE_SEC.stablecoins - cacheAge,
-      DEPEG_PRIMARY_PRICE_MAX_AGE_SEC - (now - observedAt),
-    ));
+    // Detail display follows the current publication, not the stricter observation
+    // window for triggering depeg events. Preserve the quote's original timestamp.
+    const remaining = Math.max(0, Math.floor(API_FRESHNESS_MAX_AGE_SEC.stablecoins - cacheAge));
+    const priceFreshness = addFreshnessHeaders({}, canonical.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins);
+    headers.set("X-Data-Age", String(Math.max(cacheAge, Number(headers.get("X-Data-Age") ?? 0))));
+    if (priceFreshness.Warning) headers.append("Warning", priceFreshness.Warning);
+    if (priceFreshness["Cache-Control"] === "no-store") headers.set("Cache-Control", "no-store");
     // Bound both browser and edge reuse without clearing stale-history warnings
     // or replacing a no-store policy with a fresh cache policy.
     const cacheControl = headers.get("Cache-Control");
