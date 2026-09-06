@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1785911421,
+  "last_updated_at": 1788681300,
   "donations": [
     {
       "chain": "ethereum",
@@ -315,6 +315,18 @@
     },
     {
       "chain": "base",
+      "tx_hash": "0xd1501fdf5126139010d8c456576f68c67c34867dc831f51a5847df5aa954ca3b",
+      "block_timestamp": 1778117255,
+      "from_address": "0x06fa6f778f2e031ec437b3fadb740e3942b59c02",
+      "display": "0x06fa6f...9c02",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "base",
       "tx_hash": "0x1c68199eb5bbd926b8e1e13a807f7c73c26a487c79f486eaeca11eba35bbcc99",
       "block_timestamp": 1778149199,
       "from_address": "0x42e6dd8d517abb3e4f6611ca53a8d1243c183fb0",
@@ -516,6 +528,18 @@
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "arbitrum",
+      "tx_hash": "0x7fbf887dc6fe7cffb3eb348bf297880526aca95fe39687fde677e37e9cb9305c",
+      "block_timestamp": 1778746946,
+      "from_address": "0x830da1fc68f4827606a0f92cd3c8d5676104a2b0",
+      "display": "0x830da1...a2b0",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.01,
+      "usd_at_receipt": 22.58,
+      "price_note": "coingecko-historical-2026-05-14"
     },
     {
       "chain": "arbitrum",
