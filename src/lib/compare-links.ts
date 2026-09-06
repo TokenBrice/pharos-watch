@@ -67,7 +67,10 @@ export interface StaticComparisonLink {
 }
 
 export function getPrimaryStaticComparisonLinkForCoin(coinId: string): StaticComparisonLink | null {
-  const pair = STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId || rightId === coinId);
+  // For USDe, explain the staking wrapper before the broader dollar benchmark.
+  const pair = (coinId === "usde-ethena"
+    ? STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId && rightId === "susde-ethena")
+    : undefined) ?? STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId || rightId === coinId);
   if (!pair) return null;
 
   const [leftId, rightId] = pair;

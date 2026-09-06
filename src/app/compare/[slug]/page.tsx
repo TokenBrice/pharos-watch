@@ -124,6 +124,31 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
         </aside>
       </section>
 
+      {page.editorial && (
+        <section className="space-y-4" aria-labelledby="comparison-differences-title">
+          <h2 id="comparison-differences-title" className="text-lg font-semibold">What differs in practice</h2>
+          {page.editorial.sections.map((section) => (
+            <article key={section.question} className="pharos-card-shell px-4 py-4">
+              <h3 className="text-base font-semibold text-foreground">{section.question}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{section.answer}</p>
+              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                {section.sources.map((source) => (
+                  <li key={source.href}>
+                    <a href={source.href} className="pharos-focus-ring rounded-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                      {source.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Issuer sources checked <time dateTime={page.editorial.sourcesCheckedAt}>{page.editorial.sourcesCheckedAt}</time>.
+            {" "}These describe product mechanics and terms, not an independent audit or a live reserve snapshot.
+          </p>
+        </section>
+      )}
+
       <section className="grid gap-4 lg:grid-cols-2">
         {[page.left, page.right].map((coin) => (
           <article key={coin.id} className="pharos-card-shell px-4 py-4">

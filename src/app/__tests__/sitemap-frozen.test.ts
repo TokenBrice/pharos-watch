@@ -101,6 +101,18 @@ describe("sitemap", () => {
     expect(entriesByUrl.get(`${SITE_ORIGIN}${pair!.href}`)?.lastModified).toEqual(expectedPairLastModified);
   });
 
+  it("includes substantive editorial dates in enriched comparison lastmod", () => {
+    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const lastEdited = sitemapDates as Record<string, string>;
+    for (const pair of STATIC_COMPARISON_PAGES.filter((page) => page.editorial)) {
+      expect(entries.get(`${SITE_ORIGIN}${pair.href}`)?.lastModified).toEqual(new Date(Math.max(
+        new Date(lastEdited[buildStablecoinUrl(pair.left.id)]).getTime(),
+        new Date(lastEdited[buildStablecoinUrl(pair.right.id)]).getTime(),
+        new Date(pair.editorial!.updatedAt).getTime(),
+      )));
+    }
+  });
+
   it("stamps /changelog/ from the latest changelog entry, floored by its git edit date", () => {
     const entries = sitemap();
     const entry = entries.find((e) => e.url === `${SITE_ORIGIN}/changelog/`);

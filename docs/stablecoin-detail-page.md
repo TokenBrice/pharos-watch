@@ -208,6 +208,8 @@ When reserves render, `ReservePanel` wraps the treemap block in `<section id="re
 
 The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `ExploreNextSection` wraps itself in `<section id="explore-next">` for existing deep links. The browse grid is `sm:grid-cols-2 xl:grid-cols-3` with columns Taxonomy | Trackers | Actions. A separate Peers block above it shows up to 6 related pills (`related.slice(0, 6)`) with a `See all peers ->` header link to the peg landing page when a peg slug exists, plus a `vs {symbol}` compact-link list that opens the crawlable static comparison brief for each pair.
 
+The shared primary-comparison helper sends USDe's hero, detail action and static fallback to the USDe/sUSDe brief so readers can distinguish the base token from its staking wrapper. Other profiles retain their existing first registered pair (including USDG/USDC and PAXG/XAUT); unknown pairs fall back to the live tool. The Explore action pointing at `/compare/` is labelled as browsing comparisons, not as a watchlist preset it does not activate.
+
 ---
 
 ## Fallback And Staleness Rules

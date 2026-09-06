@@ -104,6 +104,7 @@ function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]):
     Math.max(
       lastEdited(buildStablecoinUrl(page.left.id)).getTime(),
       lastEdited(buildStablecoinUrl(page.right.id)).getTime(),
+      page.editorial ? new Date(page.editorial.updatedAt).getTime() : 0,
     ),
   );
 }
