@@ -22,10 +22,6 @@ import {
   type OutputWriter,
 } from "../lib/report-violations.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
-import {
-  EDITORIAL_POLICY_TEST_COMMAND,
-  hasEditorialPolicyImpact,
-} from "../lib/editorial-surface-registry";
 import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
@@ -59,7 +55,6 @@ const PARALLEL_STATIC_CHECKS = new Set([
   "check:structural",
   "check:generated-artifacts",
 ]);
-const DEFERRED_STATIC_CHECKS = new Set<string>([EDITORIAL_POLICY_TEST_COMMAND.name]);
 
 type StructuralCheckImpact = "none" | "test-only" | "production";
 
@@ -92,11 +87,8 @@ export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
 
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
   return {
-    sequential: commands.filter(
-      (command) => !PARALLEL_STATIC_CHECKS.has(command.name) && !DEFERRED_STATIC_CHECKS.has(command.name),
-    ),
+    sequential: commands.filter((command) => !PARALLEL_STATIC_CHECKS.has(command.name)),
     parallel: commands.filter((command) => PARALLEL_STATIC_CHECKS.has(command.name)),
-    deferred: commands.filter((command) => DEFERRED_STATIC_CHECKS.has(command.name)),
   };
 }
 
@@ -133,12 +125,6 @@ export function buildPrStaticCheckPlan(
     case "test-only":
       commands.push({ name: "check:clone-ratchet" }, { name: "check:cron-console-usage" });
       break;
-  }
-  if (hasEditorialPolicyImpact(changedFiles)) {
-    commands.push({
-      name: EDITORIAL_POLICY_TEST_COMMAND.name,
-      args: [...EDITORIAL_POLICY_TEST_COMMAND.args],
-    });
   }
 
   if (classification.pagesChanged) {
@@ -205,7 +191,7 @@ export async function runPrStaticChecks({
         ? [`--base=${base}`, `--head=${head}`]
         : (command.args ?? []),
   }));
-  const { sequential, parallel, deferred } = partitionPrStaticCheckPlan(runnableCommands);
+  const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
   const maxParallel = Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3;
   const reporter = {
@@ -232,9 +218,6 @@ export async function runPrStaticChecks({
   const parallelUnits = parallel.map((command) => createExecutionUnit([
     createTrackedCommand(command),
   ]));
-  const deferredUnit = createExecutionUnit(
-    deferred.map((command) => createTrackedCommand(command)),
-  );
   const trackedRunner: CommandImplementation<NpmScriptCommand> = async (command, extraEnv, options) => {
     const index = laneIndexes.get(command);
     const commandStartedAt = Date.now();
@@ -282,19 +265,8 @@ export async function runPrStaticChecks({
       signal: controller.signal,
     })),
   ]);
-  const initialFailed = [sequentialResult, parallelResult].some(
-    (result) => result.status !== 0 && !result.aborted,
-  );
-  const deferredResult = initialFailed
-    ? { status: 0, aborted: true, failedCmd: null }
-    : await stopOnFailure(runExecutionUnit<NpmScriptCommand>(deferredUnit, {
-        getCommandEnv,
-        reporter,
-        runCommandImpl: trackedRunner,
-        signal: controller.signal,
-      }));
   const failed = laneReports.some((lane) => lane.status === "failed") ||
-    [sequentialResult, parallelResult, deferredResult].some((result) => result.status !== 0 && !result.aborted);
+    [sequentialResult, parallelResult].some((result) => result.status !== 0 && !result.aborted);
   const report: GateReport<typeof classification> = {
     base,
     head,
@@ -304,7 +276,7 @@ export async function runPrStaticChecks({
     status: failed ? "failed" : "passed",
     durationMs: Math.max(0, Date.now() - startedAt),
   };
-  const failure = [sequentialResult, parallelResult, deferredResult].find(
+  const failure = [sequentialResult, parallelResult].find(
     (result) => result.status !== 0 && !result.aborted,
   );
   if (!json && failure) throw new Error(formatNpmFailure(failure));

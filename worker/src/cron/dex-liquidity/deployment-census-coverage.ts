@@ -2,10 +2,10 @@ import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
 import {
-  getRuntimeDexDiscoveryProviders,
-  isRuntimeCensusProviderSetSupersededByRegistry,
-  DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY,
-} from "../dex-discovery/provider-registry";
+  DEX_DISCOVERY_PROVIDER_REGISTRY,
+  getDexDiscoveryProviders,
+  isCensusProviderSetSupersededByRegistry,
+} from "@shared/lib/dex-deployment-coverage";
 import { tryParseJson } from "../../lib/json-parse";
 import { estimateDiscoverySweepPeriodSec, estimateDiscoverySweepWindowCount } from "../dex-discovery/target-window";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
@@ -16,7 +16,7 @@ import {
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 const DEX_DISCOVERY_PROVIDER_IDS = new Set<string>(
-  DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY.map((provider) => provider.providerId),
+  DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => provider.providerId),
 );
 
 /**
@@ -210,7 +210,7 @@ export function classifyDexPlaceholderCoverage(params: {
   const expectedKeys = new Set<string>();
   for (const deployment of params.deployments) {
     const key = deploymentKey(deployment.chain, deployment.address);
-    if (getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address).length === 0) {
+    if (getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0) {
       unsupportedChainByKey.set(key, deployment.chain);
     } else {
       expectedKeys.add(key);
@@ -300,7 +300,7 @@ export function classifyDexPlaceholderCoverage(params: {
         providerCount,
         nowSec: params.nowSec,
         maxAgeSec,
-        providerSetSuperseded: isRuntimeCensusProviderSetSupersededByRegistry(
+        providerSetSuperseded: isCensusProviderSetSupersededByRegistry(
           row.chain,
           row.contract_address,
           providerCount,
@@ -316,7 +316,7 @@ export function classifyDexPlaceholderCoverage(params: {
         case "superseded":
           // The row claims no registered provider supports this chain while the
           // registry now resolves one (this key is only reviewed because
-          // `getRuntimeDexDiscoveryProviders()` returned a provider above). It is a
+          // `getDexDiscoveryProviders()` returned a provider above). It is a
           // pre-coverage artifact the crawl rotation has not overwritten yet, so
           // it is superseded evidence — publishing it as a standing scope limit
           // attributed a solved integration gap to "Pharos has no method here".

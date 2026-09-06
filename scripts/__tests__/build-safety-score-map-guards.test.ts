@@ -257,7 +257,7 @@ describe("safety-score map — canonical publication provenance", () => {
   it("rejects a non-numeric capture clock rather than rendering an epoch-stamped poster", async () => {
     const run = await runGenerator({ ...universe(), asOfSec: Number.NaN });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/asOfSec must be a finite integer/);
+    expect(run.stderr).toMatch(/Report-card response is malformed at asOfSec/);
   });
 
   it("refuses a stale PSI reading instead of publishing an old regime", async () => {
@@ -371,7 +371,7 @@ describe("safety-score map — grade-letter integrity", () => {
     a.push({ id: "coin-future", symbol: "GFUT", circulating: { peggedUSD: 1e9 } });
     const run = await runGenerator({ cards: c, assets: a });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Unknown grade "G\+" for coin-future — the tier map \(A\/B\/C\/D\/F\) is out of date/);
+    expect(run.stderr).toMatch(/Report-card response is malformed at cards\.20\.grade/);
     expect(existsSync(run.pngPath)).toBe(false);
   });
 
@@ -386,7 +386,7 @@ describe("safety-score map — grade-letter integrity", () => {
     c.push({ id: "coin-nr-scored", score: 71, grade: "NR" });
     const run = await runGenerator({ cards: c, assets: a }, { stopBeforeRender: true });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Score\/grade disagreement for coin-nr-scored/);
+    expect(run.stderr).toMatch(/Report-card response is malformed/);
   });
 
   it("rejects an out-of-range score and a score-grade disagreement", async () => {
@@ -394,12 +394,12 @@ describe("safety-score map — grade-letter integrity", () => {
     c[0] = { id: c[0].id, score: 101, grade: "A+" };
     const run = await runGenerator({ cards: c, assets: a });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Invalid score for coin-00/);
+    expect(run.stderr).toMatch(/Report-card response is malformed at cards\.0\.score/);
 
     c[0] = { id: c[0].id, score: 20, grade: "A+" };
     const disagreement = await runGenerator({ cards: c, assets: a });
     expect(disagreement.status).toBe(1);
-    expect(disagreement.stderr).toMatch(/Score\/grade disagreement for coin-00/);
+    expect(disagreement.stderr).toMatch(/Report-card response is malformed/);
   });
 
   it("rejects duplicate report-card ids before the supply join", async () => {
@@ -407,7 +407,7 @@ describe("safety-score map — grade-letter integrity", () => {
     c.push({ ...c[0] });
     const run = await runGenerator({ cards: c, assets: a });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Duplicate report-card id "coin-00"/);
+    expect(run.stderr).toMatch(/Report-card response is malformed at cards/);
   });
 });
 

@@ -6,8 +6,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DlListQuote } from "../../lib/primary-price-collector";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
-import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
-import type { PriceValidationStats } from "./enrich-prices-primary-shared";
+import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "./enrich-prices-shared";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "./enrich-prices-primary-provider-collection";
 import { buildPrimaryConsensusResults, logDexPriceSourceLoadTelemetry } from "./enrich-prices-primary-consensus";
 import { applyPrimaryPostConsensusHardening } from "./enrich-prices-primary-hardening";
@@ -24,7 +23,7 @@ export async function fetchPrimaryPrices(
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
-  dlListPrices?: Map<string, number | DlListQuote>,
+  dlListPrices?: Map<string, DlListQuote>,
   validationContexts?: ValidationContextResolver,
   options?: {
     previousAssetsById?: Map<string, PeggedAsset>;
@@ -39,18 +38,7 @@ export async function fetchPrimaryPrices(
 }> {
   throwIfAborted(signal);
 
-  const resolveDlListQuote = (assetId: string): DlListQuote | undefined => {
-    const entry = dlListPrices?.get(assetId);
-    if (entry == null) return undefined;
-    if (typeof entry === "number") {
-      return {
-        price: entry,
-        observedAt: null,
-        observedAtMode: "unknown",
-      };
-    }
-    return entry;
-  };
+  const resolveDlListQuote = (assetId: string): DlListQuote | undefined => dlListPrices?.get(assetId);
 
   const contexts = validationContexts ?? createValidationContextResolver();
   const results = new Map<string, PrimaryPriceResult>();
@@ -108,10 +96,15 @@ export async function fetchPrimaryPrices(
     `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 
+  const cgPrices = new Map<string, number>();
+  for (const [geckoId, entry] of quoteMaps.cgQuotes) {
+    cgPrices.set(geckoId, entry.price);
+  }
+
   return {
     results,
     stats,
-    cgPrices: quoteMaps.cgPrices,
+    cgPrices,
     providerDiagnostics,
   };
 }

@@ -2,134 +2,133 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ChainsResponse } from "@shared/types/chains";
+import { RatioSchema } from "@shared/types/ratio";
 import { makeChain, makeCoin } from "./chain-profile-fixtures";
 
-const { useChainsMock, useChainStablecoinsMock } = vi.hoisted(() => ({
-  useChainsMock: vi.fn(),
-  useChainStablecoinsMock: vi.fn(),
+const { useRegisteredApiQueryMock } = vi.hoisted(() => ({
+  useRegisteredApiQueryMock: vi.fn(),
 }));
 
-vi.mock("../use-chains", () => ({
-  useChains: useChainsMock,
-  useChainStablecoins: useChainStablecoinsMock,
+vi.mock("../api-hooks", () => ({
+  useRegisteredApiQuery: useRegisteredApiQueryMock,
 }));
 
 import { useChainProfileData } from "../use-chain-profile-data";
 
+const SNAPSHOT_SEC = 1_710_500_000;
+
+function makeResponse(overrides: Partial<ChainsResponse> = {}): ChainsResponse {
+  return {
+    chains: [makeChain({ totalUsd: 500_000_000 })],
+    globalTotalUsd: 500_000_000,
+    chainAttributedTotalUsd: 500_000_000,
+    unattributedTotalUsd: 0,
+    globalChange24hPct: RatioSchema.parse(0),
+    globalChange7dPct: RatioSchema.parse(0),
+    globalChange30dPct: RatioSchema.parse(0),
+    chainDetail: {
+      chainId: "ethereum",
+      totalUsd: 500_000_000,
+      coins: [makeCoin()],
+    },
+    updatedAt: SNAPSHOT_SEC,
+    healthMethodologyVersion: "1.5",
+    _meta: {
+      updatedAt: SNAPSHOT_SEC,
+      ageSeconds: 60,
+      status: "fresh",
+      dependencies: {
+        reportCards: {
+          status: "fresh",
+          updatedAt: SNAPSHOT_SEC,
+          ageSeconds: 60,
+        },
+      },
+      safetyScoreIdentity: null,
+    },
+    ...overrides,
+  };
+}
+
+function makeQuery(data: ChainsResponse | undefined, overrides: Record<string, unknown> = {}) {
+  return {
+    data,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    dataUpdatedAt: data ? SNAPSHOT_SEC * 1_000 : 0,
+    meta: data?._meta ?? null,
+    ...overrides,
+  };
+}
+
 describe("useChainProfileData", () => {
   beforeEach(() => {
-    useChainsMock.mockReset();
-    useChainStablecoinsMock.mockReset();
-
-    useChainsMock.mockReturnValue({
-      data: { chains: [makeChain({ totalUsd: 500_000_000 })] },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    });
-
-    useChainStablecoinsMock.mockReturnValue({
-      coins: [makeCoin()],
-      totalUsd: 500_000_000,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    });
+    useRegisteredApiQueryMock.mockReset();
   });
 
-  it("allows detailed sections when both snapshots match exactly", () => {
-    const { result } = renderHook(() => useChainProfileData("ethereum"));
-
-    expect(result.current.chain?.id).toBe("ethereum");
-    expect(result.current.canRenderDetailedSections).toBe(true);
-    expect(result.current.snapshotConsistency).toBe("matched");
-    expect(result.current.detailedSectionNotice).toBeNull();
-  });
-
-  it("blocks detailed sections when snapshots mismatch", () => {
-    useChainStablecoinsMock.mockReturnValue({
-      coins: [makeCoin()],
-      totalUsd: 500_000_000,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-      dataUpdatedAt: 1_710_499_100_000,
-      meta: { updatedAt: 1_710_499_100, ageSeconds: 960, status: "degraded" },
+  it("uses the Worker detail rows and total as the page model authority", () => {
+    const payload = makeResponse({
+      chainDetail: {
+        chainId: "ethereum",
+        totalUsd: 500_000_000,
+        coins: [
+          makeCoin({ id: "usdc-circle", supplyUsd: 375_000_000, chainShare: RatioSchema.parse(0.75) }),
+          makeCoin({ id: "usdt-tether", supplyUsd: 125_000_000, chainShare: RatioSchema.parse(0.25) }),
+        ],
+      },
     });
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(payload));
 
     const { result } = renderHook(() => useChainProfileData("ethereum"));
 
-    expect(result.current.canRenderDetailedSections).toBe(false);
-    expect(result.current.snapshotConsistency).toBe("mismatched");
-    expect(result.current.detailedSectionNotice).toMatch(/syncing to the latest chain snapshot/i);
+    expect(result.current.chain?.totalUsd).toBe(payload.chainDetail?.totalUsd);
+    expect(result.current.totalUsd).toBe(payload.chainDetail?.totalUsd);
+    expect(result.current.coins).toBe(payload.chainDetail?.coins);
+    expect(result.current.coins).toEqual(payload.chainDetail?.coins);
+    expect(useRegisteredApiQueryMock).toHaveBeenCalledTimes(1);
   });
 
-  it("does not treat equal timestamps as matching when aggregate totals disagree", () => {
-    useChainStablecoinsMock.mockReturnValue({
-      coins: [makeCoin()],
-      totalUsd: 450_000_000,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    });
+  it("confirms a missing chain only after the Worker response is available", () => {
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse({ chains: [], chainDetail: undefined })));
 
     const { result } = renderHook(() => useChainProfileData("ethereum"));
 
-    expect(result.current.snapshotConsistency).toBe("mismatched");
-    expect(result.current.canRenderDetailedSections).toBe(false);
+    expect(result.current.chain).toBeNull();
+    expect(result.current.canConfirmMissingChain).toBe(true);
+    expect(result.current.hasAnyData).toBe(true);
+    expect(result.current.coins).toEqual([]);
   });
 
-  it("still surfaces a route error when the stablecoin refresh fails against cached data", () => {
-    const refreshError = new Error("cached response");
-    useChainStablecoinsMock.mockReturnValue({
-      coins: [makeCoin()],
-      totalUsd: 500_000_000,
-      isLoading: false,
+  it("reports initial loading before the chain response arrives", () => {
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(undefined, { isLoading: true }));
+
+    const { result } = renderHook(() => useChainProfileData("ethereum"));
+
+    expect(result.current.isInitialLoading).toBe(true);
+    expect(result.current.hasAnyData).toBe(false);
+    expect(result.current.routeError).toBeNull();
+  });
+
+  it("surfaces a chain response error without inventing detail data", () => {
+    const responseError = new Error("chains unavailable");
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(undefined, {
       isError: true,
-      error: refreshError,
-      refetch: vi.fn(),
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    });
+      error: responseError,
+    }));
 
     const { result } = renderHook(() => useChainProfileData("ethereum"));
 
-    expect(result.current.canRenderDetailedSections).toBe(true);
-    expect(result.current.detailedSectionNotice).toMatch(/temporarily unavailable/i);
-    expect(result.current.routeError).toBe(refreshError);
+    expect(result.current.routeError).toBe(responseError);
+    expect(result.current.canConfirmMissingChain).toBe(false);
+    expect(result.current.coins).toEqual([]);
   });
 
-  it("refetches both chain queries through refetchAll", async () => {
-    const refetchChains = vi.fn().mockResolvedValue({ status: "success", error: null });
-    const refetchStablecoins = vi.fn().mockResolvedValue({ status: "success", error: null });
-
-    useChainsMock.mockReturnValue({
-      data: { chains: [makeChain({ totalUsd: 500_000_000 })] },
-      isLoading: false,
-      error: null,
-      refetch: refetchChains,
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    });
-    useChainStablecoinsMock.mockReturnValue({
-      coins: [makeCoin()],
-      totalUsd: 500_000_000,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: refetchStablecoins,
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    });
+  it("refetches the single authoritative query through refetchAll", async () => {
+    const refetch = vi.fn().mockResolvedValue({ status: "success", error: null });
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse(), { refetch }));
 
     const { result } = renderHook(() => useChainProfileData("ethereum"));
 
@@ -137,7 +136,6 @@ describe("useChainProfileData", () => {
       await result.current.refetchAll();
     });
 
-    expect(refetchChains).toHaveBeenCalledTimes(1);
-    expect(refetchStablecoins).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

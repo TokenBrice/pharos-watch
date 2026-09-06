@@ -16,7 +16,7 @@ import {
   type NavItem,
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PUBLIC_ROUTE_INVENTORY } from "@/lib/public-route-inventory";
 
@@ -193,7 +193,7 @@ const MORE_GROUP = NAV_GROUPS.find((g) => g.key === "more");
 const moreColumnRows = (key: string): readonly RouteRow[] =>
   MORE_GROUP?.columns?.find((column) => column.key === key)?.items.map(navToRow) ?? [];
 
-const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((coin) => ({
+const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = CLIENT_TRACKED_STABLECOINS.map((coin) => ({
   href: buildStablecoinUrl(coin.id),
   label: `${coin.name} (${coin.symbol})`,
   description:

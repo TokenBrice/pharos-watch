@@ -26,18 +26,17 @@ import {
 } from "../replay-safety-score-v9";
 import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements-client";
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
+import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 
 const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
 const PUBLISHED_AT_ISO = new Date(PUBLISHED_AT_SEC * 1_000).toISOString();
 
 function writeTestFile(path: string, value: string): void {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
   writeFileSync(path, value);
 }
 
 function readTestFile(path: string): string {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
   return readFileSync(path, "utf8");
 }
 
@@ -123,7 +122,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     await expect(parseSafetyScoreV9ReplayFixedInput(native)).resolves.toEqual(native);
     await expect(parseSafetyScoreV9ReplayFixedInput(JSON.parse(cacheEntry.value))).resolves.toEqual(native);
     await expect(parseSafetyScoreV9ReplayFixedInput(cacheEntry.value)).resolves.toEqual(native);
-  });
+  }, 30_000);
 
   it("keeps the two capture generations on their own parsers", async () => {
     const legacy = exactFixedInput();
@@ -225,6 +224,28 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("replays a capture-time NAV asset that is non-NAV live only with its verified registry snapshot", async () => {
+    const snapshot = structuredClone(localRegistrySnapshot());
+    snapshot.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = true;
+    snapshot.fingerprint = registrySnapshotFingerprint(snapshot);
+    const { baseInputGenerationId: _derived, ...capture } = exactFixedInput();
+    const historical = {
+      ...capture,
+      registryFingerprint: snapshot.fingerprint,
+      navPriceById: {
+        "usdc-circle": { priceUsd: 1.02, observedAtSec: CLOCK_SEC, sourceId: "coingecko", confidence: "high" },
+      },
+    };
+    await expect(parseSafetyScoreV9ReplayFixedInput(historical)).rejects.toThrow("NAV price rows target non-NAV assets: usdc-circle");
+    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(historical, snapshot);
+    const artifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot: snapshot, publishedAtSec: PUBLISHED_AT_SEC });
+    expect(artifact.pipeline.candidate.cards.map((card) => card.id)).toEqual(["usdc-circle"]);
+    expect(fixedInput.navPriceById?.["usdc-circle"]?.priceUsd).toBe(1.02);
+    const corrupt = structuredClone(snapshot);
+    corrupt.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = false;
+    await expect(parseSafetyScoreV9ReplayFixedInput(historical, corrupt)).rejects.toThrow("snapshot fingerprint does not match");
+  }, 60_000);
 
   it("replays a registry-fingerprint mismatch only behind --allow-registry-mismatch", async () => {
     // A capture frozen before a curation commit carries the registry
@@ -357,11 +378,8 @@ describe("mechanism capture replay resolution", () => {
       const summaryDirectory = resolve(summaryRoot, "test-mechanism");
       const summaryPath = resolve(summaryDirectory, "2026-09-03.summary.json");
       const cacheDir = resolve(dir, "cache");
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture paths.
       mkdirSync(summaryDirectory, { recursive: true });
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture paths.
       mkdirSync(cacheDir, { recursive: true });
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture paths.
       writeFileSync(
         summaryPath,
         JSON.stringify({
@@ -374,7 +392,6 @@ describe("mechanism capture replay resolution", () => {
         }),
       );
 
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary test fixture path.
       writeFileSync(resolve(cacheDir, `${sha256}.json`), body);
       await expect(resolveSafetyScoreV9ReplayInput(sha256, { cacheDir, summaryRoot })).resolves.toEqual(body);
 

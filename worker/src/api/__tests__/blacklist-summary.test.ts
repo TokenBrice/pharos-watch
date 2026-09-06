@@ -44,19 +44,14 @@ function makeBlacklistSummaryFallbackTables() {
   ];
 }
 
+async function makeValidSummaryPayload() {
+  return readJsonResponse<Record<string, unknown>>(await handleBlacklistSummary(mockD1(makeBlacklistSummaryFallbackTables())), 200);
+}
+
 describe("handleBlacklistSummary", () => {
   it("serves a fresh producer snapshot without live blacklist_events scans", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const payload = {
-      stats: { usdtBlacklisted: 7 },
-      chart: [],
-      chains: [],
-      coverage: { counts: { supportedConfigs: 0 } },
-      freezeLedgerMeta: { gaps: { recoverable: 0 } },
-      dataQuality: { status: "ok" },
-      totalEvents: 7,
-      methodology: { asOf: now },
-    };
+    const payload = { ...await makeValidSummaryPayload(), totalEvents: 7, additiveField: { retained: true } };
     const db = mockD1([
       {
         match: "blacklist-summary-snapshot-read",
@@ -107,19 +102,45 @@ describe("handleBlacklistSummary", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
   });
 
+  it.each(["stats", "chart", "chains", "coverage", "freezeLedgerMeta", "dataQuality", "methodology"])(
+    "rejects malformed nested cached %s rather than serving it",
+    async (field) => {
+      const now = Math.floor(Date.now() / 1000);
+      const payload = await makeValidSummaryPayload();
+      payload[field] = field === "chart" || field === "chains" ? [{}] : {};
+      payload.totalEvents = 99;
+      const db = mockD1([
+        { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
+          version: 1, materializedAt: now, freshnessTs: now, payload,
+        }) }] },
+        ...makeBlacklistSummaryFallbackTables(),
+      ]);
+      const body = await readJsonResponse<{ totalEvents: number }>(await handleBlacklistSummary(db), 200);
+      expect(body.totalEvents).toBe(0);
+    },
+  );
+
+  it.each(["coverage", "freezeLedgerMeta", "dataQuality", "methodology"])(
+    "requires current-version cached %s even though public responses allow omission",
+    async (field) => {
+      const now = Math.floor(Date.now() / 1000);
+      const payload = await makeValidSummaryPayload();
+      delete payload[field];
+      payload.totalEvents = 99;
+      const db = mockD1([
+        { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
+          version: 1, materializedAt: now, freshnessTs: now, payload,
+        }) }] },
+        ...makeBlacklistSummaryFallbackTables(),
+      ]);
+      expect((await readJsonResponse<{ totalEvents: number }>(await handleBlacklistSummary(db), 200)).totalEvents).toBe(0);
+    },
+  );
+
   it("serves a stale producer snapshot without refreshing producer freshness from the public request", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleAt = now - 24 * 60 * 60;
-    const payload = {
-      stats: { usdtBlacklisted: 9 },
-      chart: [],
-      chains: [],
-      coverage: { counts: { supportedConfigs: 0 } },
-      freezeLedgerMeta: { gaps: { recoverable: 0 } },
-      dataQuality: { status: "ok" },
-      totalEvents: 9,
-      methodology: { asOf: staleAt },
-    };
+    const payload = { ...await makeValidSummaryPayload(), totalEvents: 9 };
     const db = mockD1([
       {
         match: "blacklist-summary-snapshot-read",
@@ -147,16 +168,8 @@ describe("handleBlacklistSummary", () => {
 
   it("hydrates a legacy producer snapshot with durable reconciliation status", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const payload = {
-      stats: { usdtBlacklisted: 9 },
-      chart: [],
-      chains: [],
-      coverage: { counts: { supportedConfigs: 0 } },
-      freezeLedgerMeta: { gaps: { recoverable: 0 } },
-      dataQuality: { status: "ok" },
-      totalEvents: 9,
-      methodology: { asOf: now },
-    };
+    const payload = await makeValidSummaryPayload();
+    delete payload.reconciliation;
     const db = mockD1([
       {
         match: "blacklist-summary-snapshot-read",
@@ -332,7 +345,8 @@ describe("handleBlacklistSummary", () => {
       {
         match: "quarter_sort_key",
         // Timestamp 1_777_000_000 (USDT blacklist event) → bucket 8105 (Q2 2026).
-        // See shared/lib/blacklist-aggregates.ts quarterToSortKey: year*4 + floor(month/3).
+        // See worker/src/lib/blacklist-summary-service.ts quarterToSortKey:
+        // year*4 + floor(month/3).
         rows: [
           { stablecoin: "USDT", quarter_sort_key: 8105, event_type: "blacklist", n: 1 },
           { stablecoin: "USDC", quarter_sort_key: 8105, event_type: "destroy", n: 1 },

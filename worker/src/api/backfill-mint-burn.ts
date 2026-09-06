@@ -1,5 +1,5 @@
 import { buildAlchemyUrl, getAlchemyBlockNumber, fetchAlchemyLogs, resolveBlockTimestamps } from "../lib/alchemy-logs";
-import type { AlchemyLogEntry } from "../lib/alchemy-logs";
+import type { AlchemyLogEntry, AlchemyTopicFilter } from "../lib/alchemy-logs";
 import { createBudget, budgetExhausted } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
@@ -7,7 +7,6 @@ import { errorResponse, jsonResponse } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { assertActiveStablecoin } from "../lib/frozen-guards";
-import type { TopicFilter } from "../lib/evm-logs";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
@@ -235,7 +234,7 @@ export async function handleBackfillMintBurn({
           continue;
         }
 
-        const topics: TopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
+        const topics: AlchemyTopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
         if (eventDef.filterTopic) {
           topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
         }

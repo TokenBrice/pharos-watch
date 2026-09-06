@@ -51,7 +51,26 @@ export {
   type ExitRouteScope,
 } from "./exit-route";
 
-const PegBucketsSchema = z.record(z.string(), z.number());
+export const PegBucketsSchema = z.record(z.string(), z.number());
+
+const StablecoinDetailTokenSchema = z.object({
+  date: z.number().optional(),
+  totalCirculatingUSD: PegBucketsSchema.optional(),
+  totalCirculating: PegBucketsSchema.optional(),
+  circulating: PegBucketsSchema.optional(),
+}).passthrough();
+
+/** Public per-coin detail response; provider-specific fields intentionally pass through. */
+export const StablecoinDetailResponseSchema = z.object({
+  price: z.number().nullable().optional(),
+  priceSource: z.string().nullable().optional(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
+  priceObservedAt: z.number().nullable().optional(),
+  tokens: z.array(StablecoinDetailTokenSchema).optional(),
+}).passthrough();
+export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
+
 const PriceSourceConfidenceProfileSchema = z.object({
   activeDexLanes: z.number().int().min(0),
   freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
@@ -60,6 +79,7 @@ const PriceSourceConfidenceProfileSchema = z.object({
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
+    chainId: z.string().optional(),
     current: z.number().finite().nonnegative(),
     circulatingPrevDay: z.number().finite().nonnegative(),
     circulatingPrevWeek: z.number().finite().nonnegative(),
@@ -465,6 +485,18 @@ const SupplyHistoryPointSchema = z.object({
 });
 export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
 export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
+
+const NonUsdSharePointSchema = z.object({
+  date: z.number(),
+  // Aggregate/share fields are nullable; `total` is emitted only when positive.
+  commodityShare: z.number().nullable(),
+  fiatNonUsdShare: z.number().nullable(),
+  commodity: z.number().nullable(),
+  fiatNonUsd: z.number().nullable(),
+  total: z.number(),
+});
+export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
+export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);

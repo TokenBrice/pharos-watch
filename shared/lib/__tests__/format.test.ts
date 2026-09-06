@@ -22,7 +22,6 @@ import {
   formatBps,
   formatDeathDate,
   formatEventDate,
-  formatPegDeviation,
   formatYearMonth,
   formatNativePrice,
   pegCurrencySymbol,
@@ -330,36 +329,6 @@ describe("formatBps", () => {
   });
 });
 
-describe("formatPegDeviation", () => {
-  it("returns +0 bps for on-peg (price equals pegValue)", () => {
-    expect(formatPegDeviation(1.0, 1.0)).toBe("+0 bps");
-  });
-  it("returns positive bps when price above peg", () => {
-    // (1.005 / 1.0 - 1) * 10000 = 50
-    expect(formatPegDeviation(1.005, 1.0)).toBe("+50 bps");
-  });
-  it("returns negative bps when price below peg", () => {
-    // (0.995 / 1.0 - 1) * 10000 = -50
-    expect(formatPegDeviation(0.995, 1.0)).toBe("-50 bps");
-  });
-  it("handles non-USD peg values", () => {
-    // EUR peg: price 1.19, pegValue 1.19 => on-peg
-    expect(formatPegDeviation(1.19, 1.19)).toBe("+0 bps");
-    // Slightly off: (1.20 / 1.19 - 1) * 10000 = ~84
-    expect(formatPegDeviation(1.20, 1.19)).toBe("+84 bps");
-  });
-  it("defaults pegValue to 1 (USD)", () => {
-    expect(formatPegDeviation(1.001)).toBe("+10 bps");
-  });
-  it("returns N/A for null price", () => expect(formatPegDeviation(null)).toBe("N/A"));
-  it("returns N/A for undefined price", () => expect(formatPegDeviation(undefined)).toBe("N/A"));
-  it("returns N/A for NaN price", () => expect(formatPegDeviation(NaN)).toBe("N/A"));
-  it("returns N/A for zero pegValue", () => expect(formatPegDeviation(1.0, 0)).toBe("N/A"));
-  it("returns N/A for non-finite inputs", () => {
-    expect(formatPegDeviation(Infinity)).toBe("N/A");
-    expect(formatPegDeviation(1.0, Infinity)).toBe("N/A");
-  });
-});
 
 describe("formatPercentChange", () => {
   it("formats positive change", () => {

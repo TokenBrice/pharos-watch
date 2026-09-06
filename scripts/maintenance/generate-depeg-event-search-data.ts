@@ -22,16 +22,7 @@ function buildClientEntries(events: readonly DepegEventIndexEntry[]): DepegEvent
     .sort((a, b) => {
       if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
       return a.slug.localeCompare(b.slug);
-    })
-    .map((event) => ({
-      slug: event.slug,
-      stablecoinId: event.stablecoinId,
-      symbol: event.symbol,
-      pegType: event.pegType,
-      direction: event.direction,
-      peakDeviationBps: event.peakDeviationBps,
-      startedAt: event.startedAt,
-    }));
+    });
 }
 
 const relatedEntries = buildClientEntries(readDepegEventIndex({ missing: "throw" }));

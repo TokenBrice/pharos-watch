@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test reads checked-in per-coin annotation JSON from the repository only. */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

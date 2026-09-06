@@ -8,6 +8,7 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/blacklist-tracker";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import type { BlacklistReconciliationStatus } from "@shared/types/status";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
 import { isRecord } from "@shared/lib/type-guards";
 import { CONTRACT_CONFIGS } from "./blacklist-contracts";
@@ -21,16 +22,19 @@ import {
 } from "./blacklist-gaps";
 import {
   BLACKLIST_STABLECOINS,
+  BlacklistSummaryResponseSchema,
+  type BlacklistSummaryResponse,
   type BlacklistEvent,
   type BlacklistQuarterlyEventTypePoint,
   type BlacklistRecentEventTypeCounts,
   type BlacklistStablecoin,
 } from "@shared/types/market";
-import { buildBlacklistQuarterlyChartFromSnapshots, sortKeyToLabel } from "@shared/lib/blacklist-aggregates";
-import { isBlacklistStablecoin } from "@shared/lib/blacklist";
+import { buildBlacklistAddressCountKey, isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "./blacklist-api";
 import {
   buildBlacklistActiveRecords,
+  buildBlacklistIdentityLookupKeys,
+  buildBlacklistRecordIdentityKey,
   computeBlacklistActiveSummaryStats,
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
@@ -41,7 +45,17 @@ import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
 } from "./blacklist-cache-keys";
 
-type BlacklistSummaryPayload = Record<string, unknown>;
+type BlacklistSummaryPayload = BlacklistSummaryResponse &
+  Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
+    reconciliation?: BlacklistReconciliationStatus;
+  };
+
+const BlacklistSummaryCachePayloadSchema = BlacklistSummaryResponseSchema.required({
+  coverage: true,
+  freezeLedgerMeta: true,
+  dataQuality: true,
+  methodology: true,
+});
 
 interface BuiltBlacklistSummary {
   payload: BlacklistSummaryPayload;
@@ -53,6 +67,56 @@ interface CachedBlacklistSummarySnapshot {
   materializedAt: number;
   freshnessTs: number;
   payload: BlacklistSummaryPayload;
+}
+
+type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
+
+function quarterToSortKey(timestamp: number): number {
+  const d = new Date(timestamp * 1000);
+  return d.getUTCFullYear() * 4 + Math.floor(d.getUTCMonth() / 3);
+}
+
+function sortKeyToLabel(sortKey: number): string {
+  const year = Math.floor(sortKey / 4);
+  const q = (sortKey % 4) + 1;
+  return `Q${q} '${(year % 100).toString().padStart(2, "0")}`;
+}
+
+function buildBlacklistQuarterlyChartFromSnapshots(
+  currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
+  latestByAddr: BlacklistEvent[],
+): BlacklistChartPoint[] {
+  const latestBlacklistTsByKey = new Map<string, number>();
+  for (const row of latestByAddr) {
+    if (row.eventType !== "blacklist") continue;
+    for (const key of buildBlacklistIdentityLookupKeys(row)) {
+      const prev = latestBlacklistTsByKey.get(key);
+      if (prev == null || row.timestamp > prev) latestBlacklistTsByKey.set(key, row.timestamp);
+    }
+  }
+  const emptyBucket = (): Record<BlacklistStablecoin, number> =>
+    Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<BlacklistStablecoin, number>;
+  const buckets = new Map<number, Record<BlacklistStablecoin, number>>();
+  for (const snapshot of currentBalances.values()) {
+    if (snapshot.amountUsd == null || snapshot.amountUsd <= 0) continue;
+    const scopedKey = buildBlacklistRecordIdentityKey(snapshot);
+    const legacyKey = buildBlacklistAddressCountKey(snapshot.stablecoin, snapshot.chainId, snapshot.address);
+    const ts = latestBlacklistTsByKey.get(scopedKey) ?? latestBlacklistTsByKey.get(legacyKey) ?? snapshot.observedAt;
+    const sortKey = quarterToSortKey(ts);
+    const bucket = buckets.get(sortKey) ?? emptyBucket();
+    bucket[snapshot.stablecoin] = (bucket[snapshot.stablecoin] ?? 0) + snapshot.amountUsd;
+    buckets.set(sortKey, bucket);
+  }
+  if (buckets.size === 0) return [];
+  const sortKeys = [...buckets.keys()].sort((a, b) => a - b);
+  const result: BlacklistChartPoint[] = [];
+  for (let sortKey = sortKeys[0]; sortKey <= sortKeys[sortKeys.length - 1]; sortKey++) {
+    const bucket = buckets.get(sortKey);
+    const total = BLACKLIST_STABLECOINS.reduce((sum, s) => sum + (bucket?.[s] ?? 0), 0);
+    const point = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, bucket?.[s] ?? 0])) as Record<BlacklistStablecoin, number>;
+    result.push({ quarter: sortKeyToLabel(sortKey), ...point, total });
+  }
+  return result;
 }
 
 const BLACKLIST_IDENTITY_PARTITION_SQL = `
@@ -230,7 +294,7 @@ function buildDataQuality(
   freezeLedgerMeta: ReturnType<typeof buildFreezeLedgerMeta>,
   gapMetrics: BlacklistGapMetrics,
   coverage: ReturnType<typeof buildCoverage>,
-) {
+): BlacklistSummaryPayload["dataQuality"] {
   const gapStatus = getBlacklistGapStatus({
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
@@ -375,17 +439,8 @@ function buildPerCoinRecentEventTypes(
 }
 
 function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPayload {
-  if (!isRecord(value)) return false;
-  return (
-    isRecord(value.stats) &&
-    Array.isArray(value.chart) &&
-    Array.isArray(value.chains) &&
-    isRecord(value.coverage) &&
-    isRecord(value.freezeLedgerMeta) &&
-    isRecord(value.dataQuality) &&
-    typeof value.totalEvents === "number" &&
-    isRecord(value.methodology)
-  );
+  // Validate without projecting: additive fields in retained snapshots must survive.
+  return BlacklistSummaryCachePayloadSchema.safeParse(value).success;
 }
 
 function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySnapshot | null {
@@ -455,9 +510,8 @@ async function buildBlacklistSummaryPayload(
       .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>(),
 
     // Per-coin, per-quarter, per-event-type counts for the stablecoin detail
-    // page chart. Bucketing matches the JS helper in
-    // shared/lib/blacklist-aggregates.ts (year*4 + floor(month/3)) so labels
-    // align with the main-page chart.
+    // page chart. Bucketing matches the local quarterToSortKey helper
+    // (year*4 + floor(month/3)) so labels align with the main-page chart.
     db
       .prepare(
         `/* blacklist-summary-quarterly-event-counts */

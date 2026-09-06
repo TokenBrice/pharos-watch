@@ -157,6 +157,8 @@ The handler reads the canonical publication and health row, validates the comple
 
 A current response emits `X-Safety-Score-Status: current`. A held response serves the last accepted ratings, emits `X-Safety-Score-Status: held`, uses the accepted timestamp for freshness, and forces `Cache-Control: no-store`.
 
+Endpoint freshness for `/api/report-cards/v9` follows the publication cadence: the shared surface descriptor sets the `X-Data-Age` / `Warning` budget at 2x `compute-safety-score-v9` (3600 s), so the endpoint tolerates exactly one missed 30-minute publication — the same basis as the V9 consumer fail-close — instead of the historical sub-cadence 900 s budget.
+
 The response includes:
 
 - complete V9 identity and source digests

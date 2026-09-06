@@ -271,7 +271,7 @@ export interface ScreenerRow {
   mintAuthorityScoreBandLabel: string;
   mintAuthorityScoreBadgeClassName: string;
   mintAuthorityScoreDetail: string;
-  /** Compact peg-deviation samples for the desktop 30d peg sparkline. */
+  /** Two-point [worst, current] peg deviations for the desktop peg-range sparkline; not a 30-day history. */
   pegDeviationSeries?: ReadonlyArray<number | null>;
   /** Compact supply samples for the desktop 30d supply sparkline. */
   supplySeries?: ReadonlyArray<number | null>;

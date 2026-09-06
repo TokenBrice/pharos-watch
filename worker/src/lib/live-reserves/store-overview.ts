@@ -1,3 +1,4 @@
+import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEventArgs } from "../structured-log";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -7,7 +8,6 @@ import {
   LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
-  emptyReserveCompositionOverview,
   type AuthoritativeReserveSnapshot,
   type LiveReserveScoringMap,
   type ReserveCompositionRow,

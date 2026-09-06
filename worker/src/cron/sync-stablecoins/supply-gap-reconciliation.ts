@@ -354,6 +354,7 @@ function applySingleMissingChainRemainder(
   const chainLabel = CHAIN_META[chainId]?.name ?? chainId;
   const chainCirculating = candidate.asset.chainCirculating ?? {};
   chainCirculating[chainLabel] = {
+    chainId,
     current: remainderCurrent,
     circulatingPrevDay: remainderDay,
     circulatingPrevWeek: remainderWeek,
@@ -403,10 +404,11 @@ async function applyCuratedOnChainSupplyGap(input: {
 
   if (onChainMcap.chainCirculating) {
     input.candidate.asset.chainCirculating = Object.fromEntries(
-      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, current]) => [
+      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, row]) => [
         chainLabel,
         {
-          current,
+          ...(row.chainId ? { chainId: row.chainId } : {}),
+          current: row.current,
           circulatingPrevDay: 0,
           circulatingPrevWeek: 0,
           circulatingPrevMonth: 0,

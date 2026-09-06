@@ -45,11 +45,8 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       launchDate: "2018-01-01",
       reserves: [{ name: "Treasury bills", pct: 80, risk: "very-low" }],
     },
-    pegScore: 95,
-    liquidityScore: 80,
-    safetyGrade: "A",
-    netFlow30d: 1_240_000_000,
     pegDetails: {
+      pegScore: 95,
       currentDeviationBps: 2,
       activeDepeg: false,
       recent90d: { pegPct: 99.8, incidentCount: 1 },
@@ -60,6 +57,7 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       consensusSources: ["source-a", "source-b"],
     },
     liquidity: {
+      liquidityScore: 80,
       effectiveTvlUsd: 1_000_000_000,
       totalVolume24hUsd: 250_000_000,
       poolCount: 12,

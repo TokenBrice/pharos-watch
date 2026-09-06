@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ChainStablecoin } from "@/hooks/use-chains";
+import type { ChainDetailCoin } from "@shared/types/chains";
 import { trendColor } from "@/lib/chain-ui";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -26,7 +26,7 @@ export function StablecoinTable({
   coins,
   backingFilter,
 }: {
-  coins: ChainStablecoin[];
+  coins: ChainDetailCoin[];
   backingFilter: string | null;
 }) {
   const router = useRouter();
@@ -91,7 +91,7 @@ export function StablecoinTable({
           <InteractiveTableRow
             key={coin.id}
             role="link"
-            ariaLabel={`${coin.name} (${coin.symbol}) — ${formatCompactUsd(coin.supplyOnChain)} on chain`}
+            ariaLabel={`${coin.name} (${coin.symbol}) — ${formatCompactUsd(coin.supplyUsd)} on chain`}
             className="group transition-colors hover:bg-muted/40"
             onActivate={() => router.push(buildStablecoinUrl(coin.id))}
           >
@@ -104,7 +104,7 @@ export function StablecoinTable({
                 <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
               </span>
             </TableCell>
-            <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(coin.supplyOnChain)}</TableCell>
+            <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(coin.supplyUsd)}</TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
                 <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">

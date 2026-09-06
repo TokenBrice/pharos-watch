@@ -17,7 +17,7 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 1. **`sync-stablecoins` cron:** Admin page → Crons section. Is the cron healthy? Last successful run recent (< 2× expected interval)?
 2. **Publication completeness:** for `stablecoin_publication_*`, inspect `/api/status.dataQuality.stablecoinPublication`: missing IDs, active-ID waivers, expected/present/waived counts, expired waivers, and the `observedAt` timestamp of the publication evidence. A schema-valid cache can still be incomplete.
 3. **Active current-price coverage:** for `active_price_coverage_*`, inspect `/api/health.activePriceCoverage` (it is not exposed on `/api/status`): missing IDs, eligibility/streak evidence, and per-gap source and rejection detail. This is distinct from historical chart price coverage.
-4. **Pricing provider diagnostics:** inspect `/api/status.priceProviderDiagnostics`. Any upstream (Binance, CoinGecko, DefiLlama) reporting sustained failures?
+4. **Pricing provider diagnostics:** inspect the `sync-stablecoins` cron's latest-run metadata in Admin → Crons (the `providerDiagnostics` block in `cron_runs.metadata`). It is no longer projected as `/api/status.priceProviderDiagnostics`; check source, stage, status, and error details for sustained Binance, CoinGecko, or DefiLlama failures.
 
 ## Remediation
 

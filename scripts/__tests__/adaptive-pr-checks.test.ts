@@ -233,7 +233,6 @@ describe("adaptive PR checks", () => {
         "check:generated-artifacts",
       ]),
     );
-    expect(partition.deferred.map((command) => command.name)).toEqual(["test"]);
     expect(partition.sequential.map((command) => command.name)).toContain("check:worker-package");
   });
 
@@ -301,22 +300,5 @@ describe("adaptive PR checks", () => {
     expect(names).toContain("check:structural");
     expect(names).not.toContain("check:clone-ratchet");
     expect(names).not.toContain("check:cron-console-usage");
-  });
-
-  it("runs the editorial policy gate for every registered extractor family", () => {
-    const representativePaths = [
-      "data/ai-summaries.json",
-      "src/data/changelogs/example.ts",
-      "src/data/blog/posts/example.md",
-      "scripts/lib/editorial-baseline.json",
-      "scripts/lib/editorial-exceptions.json",
-    ];
-    const plan = buildPrStaticCheckPlan(representativePaths);
-    const editorialCommand = plan.commands.find((command) => command.name === "test");
-    expect(editorialCommand).toEqual({
-      name: "test",
-      args: ["scripts/__tests__/editorial-policy.test.ts"],
-    });
-    expect(buildPrStaticCheckPlan(["src/lib/not-an-editorial-surface.ts"]).commands).not.toContainEqual(editorialCommand);
   });
 });

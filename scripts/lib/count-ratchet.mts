@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- paths are explicit caller-selected ratchet baselines resolved under the caller-selected cwd. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 

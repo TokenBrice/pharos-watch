@@ -10,7 +10,7 @@ export type DdrPredictionErratumReason =
   | "implementation_bug"
   | "hash_mismatch";
 
-export interface DdrPredictionErratum {
+export type DdrPredictionErratum = {
   id: number;
   publicPredictionId: number;
   incidentKey: string;
@@ -23,7 +23,7 @@ export interface DdrPredictionErratum {
   rowHashBefore: string | null;
   createdAt: number;
   createdBy: string;
-}
+};
 
 export interface LoadPredictionErrataFilters {
   // Read-only: the loader measures length and copies through `new Set`, never

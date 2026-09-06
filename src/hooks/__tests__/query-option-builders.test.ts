@@ -30,7 +30,7 @@ describe("query option builders", () => {
       queryKey: ["report-cards", "v9"],
       path: "/api/report-cards/v9",
       producerIntervalMs: 30 * 60 * 1000,
-      metaMaxAgeSec: 900,
+      metaMaxAgeSec: 3600,
     });
     expect(FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistory("usdc-circle", 3650)).toMatchObject({
       queryKey: ["safety-score-history", "usdc-circle", 3650],

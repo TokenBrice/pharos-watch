@@ -708,6 +708,7 @@ Notes:
 - `data/logos.json` keys are canonical stablecoin IDs today, though some values still point at legacy numeric filenames such as `/logos/1-usdt.svg`. Ignore that for new work.
 - `scripts/maintenance/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
+- Oversized tracked logos (over 64px in either dimension and over 2500 bytes) also need a compact 32x32 WebP derivative. These are checked-in generated artifacts owned by the `compact-logos` registry entry: staging a `public/logos/*.{png,jpg,jpeg,webp}` source regenerates and stages `public/logos/compact/**` plus `src/lib/logo-variants.generated.json` automatically via the pre-commit hook, `npm run logos:compact` regenerates them manually (pruning orphans), and `npm run check:generated-artifacts -- --only=compact-logos` verifies freshness. Two source logos sharing one basename (for example `foo.png` and `foo.jpg`) collide on `compact/foo.webp` and are rejected — keep basenames unique.
 
 ### 6b. Editorial summary
 

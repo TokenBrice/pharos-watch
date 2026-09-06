@@ -1,4 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { hashClientIp } from "@shared/lib/client-ip-hash";
 import {
   BoundedStreamOverflowError,
   bufferReadableStream,
@@ -33,6 +34,7 @@ export interface TelegramIngressPolicy {
   method: "POST";
   path: string;
   binding: TelegramIngressRateLimitBinding;
+  sourceBinding: "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT";
   rateLimit: number;
   periodSec: 60;
   bodyLimitBytes: number;
@@ -45,6 +47,7 @@ export const TELEGRAM_INGRESS_POLICIES = {
     method: "POST",
     path: API_PATHS.telegramWebhook(),
     binding: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
+    sourceBinding: "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT",
     rateLimit: 2_400,
     periodSec: 60,
     bodyLimitBytes: 128 * 1024,
@@ -55,6 +58,7 @@ export const TELEGRAM_INGRESS_POLICIES = {
     method: "POST",
     path: API_PATHS.telegramMiniAppSession(),
     binding: "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
+    sourceBinding: "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT",
     rateLimit: 1_600,
     periodSec: 60,
     bodyLimitBytes: 16 * 1024,
@@ -65,6 +69,7 @@ export const TELEGRAM_INGRESS_POLICIES = {
     method: "POST",
     path: API_PATHS.telegramMiniAppMutation(),
     binding: "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
+    sourceBinding: "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT",
     rateLimit: 9_600,
     periodSec: 60,
     bodyLimitBytes: 16 * 1024,
@@ -85,6 +90,10 @@ export interface TelegramIngressAbuseEnv {
   TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
+  TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: RateLimit;
+  SITE_API_SHARED_SECRET?: string;
 }
 
 function resolvePolicy(request: Request, url: URL): TelegramIngressPolicy | null {
@@ -237,7 +246,9 @@ export async function evaluateTelegramIngressAbuseGate(
   }
 
   const limiter = resolveRateLimiter(env, policy.binding);
-  if (!limiter) {
+  const sourceLimiter = env[policy.sourceBinding];
+  const hashSecret = env.SITE_API_SHARED_SECRET?.trim();
+  if (!limiter || !sourceLimiter || !hashSecret) {
     logRejection({
       policy,
       stage: "rate_limit",
@@ -252,7 +263,10 @@ export async function evaluateTelegramIngressAbuseGate(
 
   let allowed: boolean;
   try {
-    allowed = (await limiter.limit({ key: resolveRateLimitKey(policy, url) })).success;
+    const routeKey = resolveRateLimitKey(policy, url);
+    const sourceHash = await hashClientIp(request.headers.get("CF-Connecting-IP") ?? "unknown", hashSecret);
+    allowed = (await sourceLimiter.limit({ key: `${routeKey}:source:${sourceHash}` })).success
+      && (await limiter.limit({ key: routeKey })).success;
   } catch {
     logRejection({
       policy,

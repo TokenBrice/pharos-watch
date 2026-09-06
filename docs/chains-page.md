@@ -79,17 +79,17 @@ Default sort is `totalUsd desc`.
 `src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
-2. `StaleDataBanner` when coordinated chain/stablecoin snapshots are stale or mismatched
+2. `StaleDataBanner` when the chain snapshot is stale
 3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (30d deltas and percentages use only chain rows with known previous-month anchors; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `shared/lib/chains/health.ts`
 4. `ShowYourWorkPanel` rendered immediately below the hero card, exposing the factor math
-5. stablecoin composition grid — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
-6. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
-7. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
-8. skeleton loading states inside the hero card only (market metrics + the Chain Health zone); the detailed sections render nothing or `DetailedSectionsNotice` until the coordinated-snapshot gate opens
+5. stablecoin composition grid — rendered from `chainDetail.coins` when the chain summary exists; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
+6. backing-type breakdown — rendered from `chainDetail.coins`; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
+7. full stablecoin table with a screen-reader-only `<caption>` — rendered from `chainDetail.coins`
+8. skeleton loading states inside the hero card only (market metrics + the Chain Health zone); detail rows remain empty until the chain-scoped response supplies them
 
-`useChainProfileData()` coordinates `GET /api/chains` and `GET /api/stablecoins` for the route. It renders the summary chain card as soon as the chain snapshot exists, but it keeps the composition/backing/table sections hidden until both snapshots share the same `updatedAt` value, the chain summary total and the stablecoin-derived chain total match within floating-point tolerance (`chainTotalsMatch`), and the stablecoins snapshot has authoritative freshness metadata. The route surfaces explicit notices for the three non-happy states: missing detailed stablecoin data, mismatched snapshots, and missing freshness metadata.
+`useChainProfileData()` reads one chain-scoped response, `GET /api/chains?chain=<id>`. The summary and detail rows therefore share one `updatedAt` and freshness identity; there is no second stablecoins query or cross-snapshot consistency gate. The Worker includes `chainDetail` only when the requested chain is known, and its `totalUsd` plus each coin's `chainShare` use that chain's local denominator.
 
-`useChainStablecoins()` derives profile rows from `/api/stablecoins`, not `/api/chains`, by summing every `chainCirculating` entry that resolves to the selected canonical chain ID.
+`useChainDetail(chainId)` is the parameterized query hook for that response. Profile rows are not recomputed in the browser from `/api/stablecoins`; the removed `useChainStablecoins()` path must not be reintroduced.
 
 ---
 
@@ -103,22 +103,23 @@ The page contract is limited to presentation: the leaderboard exposes the compos
 
 ## API And Freshness
 
-`useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset and the endpoint's 1800-second freshness budget.
+`useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset and the endpoint's 1800-second freshness budget. `useChainDetail(chainId)` reads the same endpoint with `?chain=<id>` and receives the full per-chain coin rows in `chainDetail`.
 
 `GET /api/chains` returns body `_meta` freshness metadata plus HTTP freshness headers. When its supporting caches lag, the body `_meta.status` degrades instead of silently appearing fresh. `_meta.dependencies.reportCards` also tells the route whether a missing Chain Health score is due to stale/unavailable report-card inputs versus genuine score-coverage gaps.
 
 Every positive-supply chain in the response carries exactly `min(stablecoinCount, 5)` `topStablecoins` rows. The shared response schema rejects older or partial payloads that do not meet this contract, so the leaderboard does not merge a second stablecoins snapshot into the chain snapshot.
+
+When `chain` is supplied, `chainDetail` contains the active aggregate coins for that canonical chain, sorted by descending chain-local supply. Each row includes canonical `chainShare` and 24h/7d/30d change ratios; the detail total is the denominator for those shares. The unclassified backing bucket remains `other`, distinct from worker health or data-quality buckets.
 
 `worker/src/api/chains.ts`:
 
 - loads the strict stablecoins cache and restricts it to active core-aggregate assets (`isActiveChainAggregateAsset`), which scopes every downstream peg rate, aggregate, and total
 - derives non-USD peg references from `fxFallbackRates`; missing commodity references are withheld rather than defaulted to `$1`
 - hydrates safety scores only from a fresh accepted report-card publication; a held, stale, or unavailable source leaves the score map empty
-- computes the response via `aggregateChains(...)`
+- computes the response via `aggregateChains(...)`, optionally with the requested canonical detail chain
 - computes `globalTotalUsd` from all tracked circulating supply, while preserving `chainAttributedTotalUsd` and `unattributedTotalUsd` for chain-specific residuals
 - overwrites `updatedAt` with the stablecoins-cache timestamp
 - applies freshness headers with `X-Data-Age`, exposes report-card dependency freshness in `_meta.dependencies.reportCards`, and downgrades `Cache-Control` to `no-store` when the chain snapshot or health dependency is degraded
-- preserves the detailed-chain data gate in the route client by exposing freshness metadata for `useChainProfileData()`
 
 If the stablecoins cache is unavailable or structurally invalid, the endpoint returns `503`.
 

@@ -37,7 +37,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbUrlRoute("mint-burn-flows", () => import("../api/mint-burn-flows").then(({ handleMintBurnFlows }) => handleMintBurnFlows)),
   defineLazyDbUrlRoute("mint-burn-events", () => import("../api/mint-burn-events").then(({ handleMintBurnEvents }) => handleMintBurnEvents)),
   defineLazyDbUrlRoute("stress-signals", () => import("../api/stress-signals").then(({ handleStressSignals }) => handleStressSignals)),
-  defineLazyDbRoute("chains", () => import("../api/chains").then(({ handleChains }) => handleChains)),
+  defineLazyDbUrlRoute("chains", () => import("../api/chains").then(({ handleChains }) => handleChains)),
   defineLazyDbUrlRoute("non-usd-share", () => import("../api/non-usd-share").then(({ handleNonUsdShare }) => handleNonUsdShare)),
   defineLazyDbRequestRoute("public-status-history", () => import("../api/public-status-history").then(({ handlePublicStatusHistory }) => handlePublicStatusHistory)),
   defineLazyDbRoute("telegram-pulse", () => import("../api/telegram-pulse").then(({ handleTelegramPulse }) => handleTelegramPulse)),

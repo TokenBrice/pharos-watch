@@ -91,6 +91,7 @@ function coverageRow(overrides: Record<string, unknown> = {}): DdrrRow {
     ...BASE_ROW,
     kind: "coverage",
     predictionState: "missed_lock_recovered",
+    actualOutcome: "recovered",
     actualEndedAt: 1_700_010_000,
     terminalEvidenceSourceDate: null,
     coverageCause: "lock_missed",
@@ -227,7 +228,7 @@ describe("projectDdrTrackRecordSummary", () => {
       response([
         predictionRow({ eventId: 1, signedDurationErrorSec: 7200, durationReview: "median_late_by" }),
         noCallRow({ eventId: 2, startedAt: BASE_ROW.startedAt - 100 }),
-        coverageRow({ eventId: 3, startedAt: BASE_ROW.startedAt - 200, sourceEventState: "active" }),
+        coverageRow({ eventId: 3, startedAt: BASE_ROW.startedAt - 200, sourceEventState: "active", actualOutcome: "still_open" }),
         invalidatedRow({ eventId: 4, startedAt: BASE_ROW.startedAt - 300 }),
       ]),
       COIN,

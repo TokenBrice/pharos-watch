@@ -6,11 +6,15 @@
 
 Operational and CI helper scripts live in `scripts/`, while worker-bound operational tooling that imports `worker/src/**` lives in `worker/scripts/`. Together they support build integrity, smoke checks, data sync, and targeted maintenance tasks.
 
+Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries for 5xx and caller-declared transient statuses. Before retrying they cancel the failed response body. One 30-second `AbortSignal.timeout` deadline (caller-overridable with `timeoutMs`, composed with caller cancellation) covers attempts, waits, and returned-body reads; aborts are not retried.
+
 `scripts/maintenance/audit-seo-render-budget.mjs` measures public-page resource budgets and defaults to the live site. It blocks Google Analytics collection requests before navigation so synthetic audit visits do not enter analytics, but retains GTM/gtag script downloads to measure their JavaScript cost. Each JSON row reports `blockedAnalyticsRequests`; the table labels that count `gaBlocked`. This suppression is specific to the audit and does not change intentional GA acceptance in `smoke-ui.mjs`.
 
 ## Safety Score Map Refresh
 
 `npm run build:safety-score-map` fetches one canonical set of report cards, stablecoin supply, and Stability Index data, then renders it. The map does not compare scores, grades, tier populations, leaders, or supply movements with an earlier run; those audits belong to the Safety Score publication pipeline. It retains only input-contract and renderability checks, so a schema-valid held or aged Safety Score publication still produces a poster while malformed data, unusable supply joins, stale PSI context, invalid geometry, missing fonts, or a wrong-size raster fail closed.
+
+Schema rejections use canonical diagnostics (the first failing field path and schema issue), rather than translating errors into historical map-specific wording. Valid payloads still pass the map's score/grade, duplicate-ID, supply-join, and geometry checks.
 
 `.github/workflows/safety-map-refresh.yml` schedules the refresh at 02:20, 04:20, and 06:20 UTC, plus manual dispatch. GitHub scheduled starts are best-effort and can arrive hours late, so the additional slots only improve the odds. The digest is independent of winning this race and can carry forward a recent dated map within its bounded continuity window.
 
@@ -23,6 +27,27 @@ Every committed source file that reads `process.argv` is enrolled by exact path 
 For these scripts, `--dry-run` means no mutation: a command may read local state or fetch remote data to validate the planned operation, but it does not write files or call a mutating API. `register-telegram.ts --check` remains a compatibility alias for its no-network dry run. `sync-digests.ts --check` remains the narrower no-network wiring check; it conflicts with `--dry-run` so the selected behavior is unambiguous. Existing no-flag workflow invocations retain their prior live behavior.
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
+
+## Safety Score Capture-Time Replay
+
+`npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
+exports a registry-bound wrapper with normalized `fixedInput` and a verified
+`registrySnapshot`. `--registry-ref <git-sha>` loads the trusted local commit
+that produced a historical capture; otherwise export requires a matching local
+registry. `--normalized-only` emits plain input for current-curation workflows
+and cannot be combined with `--registry-ref`.
+
+`npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
+uses that commit's verified registry metadata and transfer reviews. Embedded
+snapshots are selected automatically when no ref is supplied. A missing or
+mismatched snapshot never falls back to local classifications. The separate
+`--allow-registry-mismatch` mode still means code-plus-current-curation and
+cannot be combined with `--registry-ref`; on a wrapper it explicitly ignores
+the snapshot for scoring while checking its integrity.
+
+Use `jq '(.fixedInput // .).clockSec'` to read either export shape. See the
+[equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay)
+for integrity, trusted-Git execution, and production-digest limitations.
 
 ## D1 Insights Capture
 
@@ -59,7 +84,7 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and 14-day Telegram dispatch planning telemetry, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. |
+| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and the complete 14-day Telegram dispatch capture, reduce rows-written share and real-event first-enqueue latency, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. Incomplete windows, missing write denominators, or missing real-event samples remain explicitly undecided. |
 
 ## Routing Index
 

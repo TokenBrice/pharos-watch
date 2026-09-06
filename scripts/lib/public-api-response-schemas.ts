@@ -19,7 +19,7 @@ import {
   DdrV2ResponseRowSchema,
 } from "@shared/types/depeg-resolver";
 import {
-  DdrrResponseSchema,
+  DdrrResponseOpenApiSchema,
   DdrrRowSchema,
   DdrrV2SummaryMetricsSchema,
   DdrrV2SummarySegmentSchema,
@@ -32,8 +32,11 @@ import {
   DepegEventsResponseSchema,
   DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
+  NonUsdShareResponseSchema,
+  PegBucketsSchema,
   PegSummaryResponseSchema,
   StablecoinChartResponseSchema,
+  StablecoinDetailResponseSchema,
   StablecoinListResponseSchema,
   StressSignalDetailResponseSchema,
   StressSignalsAllResponseSchema,
@@ -66,24 +69,6 @@ import {
   YieldVenueRiskScoresSchema,
 } from "@shared/types/yield";
 
-const PegBucketsSchema = z.record(z.string(), z.number());
-
-const StablecoinDetailTokenSchema = z
-  .object({
-    totalCirculatingUSD: PegBucketsSchema.optional(),
-    totalCirculating: PegBucketsSchema.optional(),
-    circulating: PegBucketsSchema.optional(),
-  })
-  .passthrough();
-
-/** Mirrors the worker-local DefiLlama envelope validator; upstream fields stay passthrough. */
-export const StablecoinDetailResponseSchema = z
-  .object({
-    price: z.number().optional(),
-    tokens: z.array(StablecoinDetailTokenSchema).optional(),
-  })
-  .passthrough();
-
 export const StablecoinSummaryResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -109,18 +94,6 @@ export const StablecoinSummaryResponseSchema = z.object({
   chainCount: z.number(),
   updatedAt: z.number(),
 });
-
-const NonUsdSharePointSchema = z.object({
-  date: z.number(),
-  // Preserve the frontend contract's nullable aggregate/share fields; total is emitted only when positive.
-  commodityShare: z.number().nullable(),
-  fiatNonUsdShare: z.number().nullable(),
-  commodity: z.number().nullable(),
-  fiatNonUsd: z.number().nullable(),
-  total: z.number(),
-});
-
-export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
 
 const SnapshotIndexEntrySchema = z.object({
   snapshotDate: z.string(),
@@ -281,7 +254,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
   DdrResponse: DdrResponseSchema,
-  DdrrResponse: DdrrResponseSchema,
+  DdrrResponse: DdrrResponseOpenApiSchema,
   RedemptionBackstopsResponse: RedemptionBackstopsResponseSchema,
   StabilityIndexResponse: StabilityIndexResponseSchema,
   BlacklistResponse: BlacklistResponseSchema,

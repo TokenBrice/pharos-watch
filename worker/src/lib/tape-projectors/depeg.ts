@@ -30,14 +30,9 @@ import {
 } from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
-import type { DepegEventCloseReason } from "@shared/types/market";
+import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
-const RECOVERY_CLOSE_REASONS = new Set<DepegEventCloseReason>([
-  "recovered-primary",
-  "recovered-dex",
-  "recovered-native",
-]);
 
 interface DepegSourceRow {
   id: number;
@@ -94,10 +89,12 @@ async function fetchDepegRows(
 }
 
 function isRecoveryClosure(row: DepegSourceRow): boolean {
-  if (row.close_reason != null) {
-    return RECOVERY_CLOSE_REASONS.has(row.close_reason as DepegEventCloseReason);
-  }
-  return row.recovery_price != null;
+  const closure = classifyDepegClosure({
+    endedAt: row.ended_at,
+    closeReason: row.close_reason,
+    recoveryPrice: row.recovery_price ?? null,
+  });
+  return closure === "recovered" || closure === "legacy_recovered";
 }
 
 async function projectDepegByVariant(

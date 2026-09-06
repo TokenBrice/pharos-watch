@@ -1,242 +1,254 @@
 import { z } from "zod";
 
-interface TelegramBotTopStablecoin {
-  stablecoinId: string;
-  symbol: string;
-  subscribers: number;
-  explicitSubscribers?: number;
-  presetImpliedSubscribers?: number;
-}
-
-export interface TelegramPendingDeliveryBacklog {
-  claimable?: number;
-  due: number;
-  deferred: number;
-  expired: number;
-  nearTtl?: number;
-  sending?: number;
-  /** Pending-table rows whose delivery effect is currently in flight. */
-  pendingSending?: number;
-  /** Authoritative fresh-target rows whose direct delivery effect is in flight. */
-  freshSending?: number;
-  executionUnknown?: number;
-  pendingExecutionUnknown?: number;
-  freshExecutionUnknown?: number;
-  oldestExecutionUnknownAgeSec?: number | null;
-  executionUnknownSampleLimit?: number;
-  executionUnknownLowerBound?: boolean;
-  sentCleanup?: number;
-}
-
-interface TelegramWatcherLifecycleSnapshot {
-  date: string;
-  snapshotAt: number;
-  activeWatchers: number;
-  newWatchers: number;
-  churnedWatchers: number;
-  reactivatedWatchers: number;
-  explicitCoinFollows: number;
-  presetImpliedCoinFollows: number;
-  activePresetFollowers: number;
-  alertTypeOptIns: TelegramAlertTypeChats;
-  quietHoursEnabledChats: number;
-  pendingDeliveries: number;
-}
-
-interface TelegramWebhookEffectLifecycle {
-  planned: number;
-  started: number;
-  executionUnknown: number;
-  oldestPlannedAgeSec: number | null;
-  oldestAmbiguousAgeSec: number | null;
-  sampleLimit: number;
-  lowerBound: boolean;
-}
-
-interface TelegramPersonalizedRecapTelemetry {
-  enabledPrivateChats: number;
-  due: number;
-  queued: number;
-  executionUnknown: number;
-  oldestDueAgeSec: number | null;
-  oldestQueuedAgeSec: number | null;
-  oldestExecutionUnknownAgeSec: number | null;
-}
-
-export type TelegramDeliverySliEvidenceQuality = "complete" | "partial" | "empty";
-type TelegramDeliverySliEvidenceFreshness = "fresh" | "stale" | "empty";
-
-export interface TelegramDeliveryLatencySli {
-  eligibleCount: number;
-  observedCount: number;
-  averageSec: number | null;
-  maximumSec: number | null;
-  quality: TelegramDeliverySliEvidenceQuality;
-}
-
-export interface TelegramDeliverySliReasonCount {
-  reason: string;
-  count: number;
-}
-
-export interface TelegramDeliverySliBacklogBucket {
-  priority: number;
-  ageBucket: "lt_5m" | "5m_15m" | "15m_1h" | "1h_6h" | "gte_6h";
-  count: number;
-  oldestAgeSec: number;
-  nearestTtlSec: number | null;
-}
-
-export interface TelegramDeliverySliRollup {
-  window: {
-    generatedAt: number;
-    startsAt: number;
-    endsAt: number;
-    lookbackSec: number;
-    bounded: true;
-  };
-  evidence: {
-    latestAt: number | null;
-    ageSec: number | null;
-    freshness: TelegramDeliverySliEvidenceFreshness;
-    freshnessThresholdSec: number;
-  };
-  detectionToPlan: TelegramDeliveryLatencySli;
-  planToTelegramAcceptance: TelegramDeliveryLatencySli;
-  telegramAcceptanceBeforeTtl: {
-    telegramAcceptedCount: number;
-    knownTtlCount: number;
-    acceptedBeforeTtlCount: number;
-    acceptedAfterTtlCount: number;
-    rate: number | null;
-    quality: TelegramDeliverySliEvidenceQuality;
-  };
-  authoritativeTargetOutcomes: {
-    total: number;
-    telegramAccepted: number;
-    failed: number;
-    cancelled: number;
-    expired: number;
-    executionUnknown: number;
-    unresolved: number;
-    telegramAcceptanceRate: number | null;
-  };
-  familyAttribution: {
-    dews: number;
-    depeg: number;
-    safety: number;
-    launch: number;
-    reserve: number;
-    freeze: number;
-    mixed: number;
-    unknown: number;
-  };
-  preferenceChangeCancellations: {
-    count: number;
-    reasons: TelegramDeliverySliReasonCount[];
-    reasonsTruncated: boolean;
-  };
-  backlog: {
-    windowStartsAt: number;
-    windowBounded: true;
-    count: number;
-    oldestAgeSec: number | null;
-    buckets: TelegramDeliverySliBacklogBucket[];
-  };
-  observedTargetErrorReasons: {
-    reasons: TelegramDeliverySliReasonCount[];
-    truncated: boolean;
-  };
-  executionUnknown: {
-    count: number;
-    oldestAgeSec: number | null;
-    olderThan15mCount: number;
-  };
-  deadLetters: {
-    count: number;
-    totalAttempts: number;
-    reasons: TelegramDeliverySliReasonCount[];
-    reasonsTruncated: boolean;
-    lastErrorReasons: TelegramDeliverySliReasonCount[];
-    lastErrorReasonsTruncated: boolean;
-  };
-}
-
-export type TelegramDeliverySliStatus =
-  | {
-      availability: "available";
-      quality: TelegramDeliverySliEvidenceQuality;
-      freshness: TelegramDeliverySliEvidenceFreshness;
-      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt";
-      rollup: TelegramDeliverySliRollup;
-    }
-  | {
-      availability: "unavailable";
-      quality: "unavailable";
-      freshness: "unknown";
-      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt";
-      rollup: null;
-      error: {
-        code: "telegram_delivery_sli_query_failed";
-        message: string;
-      };
-    };
-
-export interface TelegramBotStats {
-  totalChats: number;
-  alertEnabledChats: number;
-  deliverableChats: number;
-  subscribedChats: number;
-  emptyAlertChats: number;
-  mutedChatsWithSubscriptions: number;
-  totalSubscriptions: number;
-  explicitCoinSubscriptions?: number;
-  presetImpliedCoinSubscriptions?: number;
-  activePresetFollowers?: number;
-  avgSubscriptionsPerSubscribedChat: number;
-  pendingDisambiguations: number;
-  pendingDeliveries: number;
-  lastSubscriberActivityAt: number | null;
-  customPreferenceChats: number;
-  quietHoursEnabledChats: number;
-  alertTypeChats: TelegramAlertTypeChats;
-  topStablecoins: TelegramBotTopStablecoin[];
-  oldestPendingDeliveryAgeSec?: number | null;
-  oldestDuePendingAgeSec?: number | null;
-  estimatedDrainTimeSec?: number;
-  retryErrorClassCounts?: Record<string, number>;
-  pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
-  webhookEffectUnknown?: number;
-  webhookEffectLifecycle?: TelegramWebhookEffectLifecycle;
-  personalizedRecap?: TelegramPersonalizedRecapTelemetry;
-  deliverySli: TelegramDeliverySliStatus;
-  presetQueryFailures?: number;
-  /**
-   * Number of inactive subscribers cleaned up in the trailing 7-day window
-   * by the `telegram-inactive-cleanup` weekly cron. `null` when the cron has
-   * not produced a successful run within the window (e.g. fresh deploy).
-   */
-  inactiveSubscribersCleanedThisWeek?: number | null;
-  lifecycleSnapshot?: TelegramWatcherLifecycleSnapshot;
-  quality?: TelegramTelemetryQuality;
-}
-
-export interface TelegramAlertTypeChats {
-  dews: number;
-  depeg: number;
-  safety: number;
-  launch: number;
-  reserve: number;
-  freeze?: number;
-  allTypes: number;
-}
-
 const TelegramTelemetryQualitySchema = z.object({
   status: z.enum(["complete", "partial"]),
   unavailableFields: z.array(z.string()),
   errors: z.record(z.string(), z.string()).optional(),
 });
-type TelegramTelemetryQuality = z.infer<typeof TelegramTelemetryQualitySchema>;
+
+const TelegramBotTopStablecoinSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  subscribers: z.number(),
+  explicitSubscribers: z.number().optional(),
+  presetImpliedSubscribers: z.number().optional(),
+});
+
+export const TelegramPendingDeliveryBacklogSchema = z.object({
+  claimable: z.number().optional(),
+  due: z.number(),
+  deferred: z.number(),
+  expired: z.number(),
+  nearTtl: z.number().optional(),
+  sending: z.number().optional(),
+  /** Pending-table rows whose delivery effect is currently in flight. */
+  pendingSending: z.number().optional(),
+  /** Authoritative fresh-target rows whose direct delivery effect is in flight. */
+  freshSending: z.number().optional(),
+  executionUnknown: z.number().optional(),
+  pendingExecutionUnknown: z.number().optional(),
+  freshExecutionUnknown: z.number().optional(),
+  oldestExecutionUnknownAgeSec: z.number().nullable().optional(),
+  executionUnknownSampleLimit: z.number().optional(),
+  executionUnknownLowerBound: z.boolean().optional(),
+  sentCleanup: z.number().optional(),
+});
+export type TelegramPendingDeliveryBacklog = z.output<typeof TelegramPendingDeliveryBacklogSchema>;
+
+export const TelegramAlertTypeChatsSchema = z.object({
+  dews: z.number(),
+  depeg: z.number(),
+  safety: z.number(),
+  launch: z.number(),
+  reserve: z.number(),
+  freeze: z.number().optional(),
+  allTypes: z.number(),
+});
+export type TelegramAlertTypeChats = z.output<typeof TelegramAlertTypeChatsSchema>;
+
+const TelegramWatcherLifecycleSnapshotSchema = z.object({
+  date: z.string(),
+  snapshotAt: z.number(),
+  activeWatchers: z.number(),
+  newWatchers: z.number(),
+  churnedWatchers: z.number(),
+  reactivatedWatchers: z.number(),
+  explicitCoinFollows: z.number(),
+  presetImpliedCoinFollows: z.number(),
+  activePresetFollowers: z.number(),
+  alertTypeOptIns: TelegramAlertTypeChatsSchema,
+  quietHoursEnabledChats: z.number(),
+  pendingDeliveries: z.number(),
+});
+
+const TelegramWebhookEffectLifecycleSchema = z.object({
+  planned: z.number(),
+  started: z.number(),
+  executionUnknown: z.number(),
+  oldestPlannedAgeSec: z.number().nullable(),
+  oldestAmbiguousAgeSec: z.number().nullable(),
+  sampleLimit: z.number(),
+  lowerBound: z.boolean(),
+});
+
+const TelegramPersonalizedRecapTelemetrySchema = z.object({
+  enabledPrivateChats: z.number(),
+  due: z.number(),
+  queued: z.number(),
+  executionUnknown: z.number(),
+  oldestDueAgeSec: z.number().nullable(),
+  oldestQueuedAgeSec: z.number().nullable(),
+  oldestExecutionUnknownAgeSec: z.number().nullable(),
+});
+
+export const TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES = ["complete", "partial", "empty"] as const;
+export type TelegramDeliverySliEvidenceQuality =
+  (typeof TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES)[number];
+
+const TelegramDeliverySliEvidenceFreshnessSchema = z.enum(["fresh", "stale", "empty"]);
+
+export const TelegramDeliveryLatencySliSchema = z.object({
+  eligibleCount: z.number(),
+  observedCount: z.number(),
+  averageSec: z.number().nullable(),
+  maximumSec: z.number().nullable(),
+  quality: z.enum(TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES),
+});
+export type TelegramDeliveryLatencySli = z.output<typeof TelegramDeliveryLatencySliSchema>;
+
+export const TelegramDeliverySliReasonCountSchema = z.object({
+  reason: z.string(),
+  count: z.number(),
+});
+export type TelegramDeliverySliReasonCount = z.output<typeof TelegramDeliverySliReasonCountSchema>;
+
+export const TelegramDeliverySliBacklogBucketSchema = z.object({
+  priority: z.number(),
+  ageBucket: z.enum(["lt_5m", "5m_15m", "15m_1h", "1h_6h", "gte_6h"]),
+  count: z.number(),
+  oldestAgeSec: z.number(),
+  nearestTtlSec: z.number().nullable(),
+});
+export type TelegramDeliverySliBacklogBucket = z.output<typeof TelegramDeliverySliBacklogBucketSchema>;
+
+export const TelegramDeliverySliRollupSchema = z.object({
+  window: z.object({
+    generatedAt: z.number(),
+    startsAt: z.number(),
+    endsAt: z.number(),
+    lookbackSec: z.number(),
+    bounded: z.literal(true),
+  }),
+  evidence: z.object({
+    latestAt: z.number().nullable(),
+    ageSec: z.number().nullable(),
+    freshness: TelegramDeliverySliEvidenceFreshnessSchema,
+    freshnessThresholdSec: z.number(),
+  }),
+  detectionToPlan: TelegramDeliveryLatencySliSchema,
+  planToTelegramAcceptance: TelegramDeliveryLatencySliSchema,
+  telegramAcceptanceBeforeTtl: z.object({
+    telegramAcceptedCount: z.number(),
+    knownTtlCount: z.number(),
+    acceptedBeforeTtlCount: z.number(),
+    acceptedAfterTtlCount: z.number(),
+    rate: z.number().nullable(),
+    quality: z.enum(TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES),
+  }),
+  authoritativeTargetOutcomes: z.object({
+    total: z.number(),
+    telegramAccepted: z.number(),
+    failed: z.number(),
+    cancelled: z.number(),
+    expired: z.number(),
+    executionUnknown: z.number(),
+    unresolved: z.number(),
+    telegramAcceptanceRate: z.number().nullable(),
+  }),
+  familyAttribution: z.object({
+    dews: z.number(),
+    depeg: z.number(),
+    safety: z.number(),
+    launch: z.number(),
+    reserve: z.number(),
+    freeze: z.number(),
+    mixed: z.number(),
+    unknown: z.number(),
+  }),
+  preferenceChangeCancellations: z.object({
+    count: z.number(),
+    reasons: z.array(TelegramDeliverySliReasonCountSchema),
+    reasonsTruncated: z.boolean(),
+  }),
+  backlog: z.object({
+    windowStartsAt: z.number(),
+    windowBounded: z.literal(true),
+    count: z.number(),
+    oldestAgeSec: z.number().nullable(),
+    buckets: z.array(TelegramDeliverySliBacklogBucketSchema),
+  }),
+  observedTargetErrorReasons: z.object({
+    reasons: z.array(TelegramDeliverySliReasonCountSchema),
+    truncated: z.boolean(),
+  }),
+  executionUnknown: z.object({
+    count: z.number(),
+    oldestAgeSec: z.number().nullable(),
+    olderThan15mCount: z.number(),
+  }),
+  deadLetters: z.object({
+    count: z.number(),
+    totalAttempts: z.number(),
+    reasons: z.array(TelegramDeliverySliReasonCountSchema),
+    reasonsTruncated: z.boolean(),
+    lastErrorReasons: z.array(TelegramDeliverySliReasonCountSchema),
+    lastErrorReasonsTruncated: z.boolean(),
+  }),
+});
+export type TelegramDeliverySliRollup = z.output<typeof TelegramDeliverySliRollupSchema>;
+
+export const TelegramDeliverySliStatusSchema = z.discriminatedUnion("availability", [
+  z.object({
+    availability: z.literal("available"),
+    quality: z.enum(TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES),
+    freshness: TelegramDeliverySliEvidenceFreshnessSchema,
+    acceptanceDefinition: z.literal("telegram_bot_api_accepted_not_user_receipt"),
+    rollup: TelegramDeliverySliRollupSchema,
+  }),
+  z.object({
+    availability: z.literal("unavailable"),
+    quality: z.literal("unavailable"),
+    freshness: z.literal("unknown"),
+    acceptanceDefinition: z.literal("telegram_bot_api_accepted_not_user_receipt"),
+    rollup: z.null(),
+    error: z.object({
+      code: z.literal("telegram_delivery_sli_query_failed"),
+      message: z.string(),
+    }),
+  }),
+]);
+export type TelegramDeliverySliStatus = z.output<typeof TelegramDeliverySliStatusSchema>;
+
+export const TelegramBotStatsSchema = z.object({
+  totalChats: z.number(),
+  alertEnabledChats: z.number(),
+  deliverableChats: z.number(),
+  subscribedChats: z.number(),
+  emptyAlertChats: z.number(),
+  mutedChatsWithSubscriptions: z.number(),
+  totalSubscriptions: z.number(),
+  explicitCoinSubscriptions: z.number().optional(),
+  presetImpliedCoinSubscriptions: z.number().optional(),
+  activePresetFollowers: z.number().optional(),
+  avgSubscriptionsPerSubscribedChat: z.number(),
+  pendingDisambiguations: z.number(),
+  pendingDeliveries: z.number(),
+  lastSubscriberActivityAt: z.number().nullable(),
+  customPreferenceChats: z.number(),
+  quietHoursEnabledChats: z.number(),
+  alertTypeChats: TelegramAlertTypeChatsSchema,
+  topStablecoins: z.array(TelegramBotTopStablecoinSchema),
+  oldestPendingDeliveryAgeSec: z.number().nullable().optional(),
+  oldestDuePendingAgeSec: z.number().nullable().optional(),
+  estimatedDrainTimeSec: z.number().optional(),
+  retryErrorClassCounts: z.record(z.string(), z.number()).optional(),
+  pendingDeliveryBacklog: TelegramPendingDeliveryBacklogSchema.optional(),
+  webhookEffectUnknown: z.number().optional(),
+  webhookEffectLifecycle: TelegramWebhookEffectLifecycleSchema.optional(),
+  personalizedRecap: TelegramPersonalizedRecapTelemetrySchema.optional(),
+  deliverySli: TelegramDeliverySliStatusSchema,
+  presetQueryFailures: z.number().optional(),
+  /**
+   * Number of inactive subscribers cleaned up in the trailing 7-day window
+   * by the `telegram-inactive-cleanup` weekly cron. `null` when the cron has
+   * not produced a successful run within the window (e.g. fresh deploy).
+   */
+  inactiveSubscribersCleanedThisWeek: z.number().nullable().optional(),
+  lifecycleSnapshot: TelegramWatcherLifecycleSnapshotSchema.optional(),
+  quality: TelegramTelemetryQualitySchema.optional(),
+});
+export type TelegramBotStats = z.output<typeof TelegramBotStatsSchema>;
+
 
 const TelegramPulsePrivacySchema = z.object({
   exactActiveWatchers: z.boolean(),

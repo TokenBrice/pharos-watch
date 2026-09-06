@@ -88,7 +88,7 @@ Do not maintain an allegedly exhaustive Telegram table roster here. The schema a
 - [telegram-architecture.md](./telegram-architecture.md) for storage and dispatch ownership
 - `worker/src/cron/telegram-retention-cleanup.ts`
 - `worker/src/cron/telegram-inactive-cleanup.ts`
-- `worker/src/api/telegram-store/forget.ts`
+- `worker/src/lib/telegram/subscriber-lifecycle.ts`
 - `shared/lib/telegram-recap-policy.ts`
 
 Durable follows and enabled recap preferences remain while configured; empty inactive profiles can be pruned under the runtime policy. Short-lived state and operational/audit records use category-specific retention. Personalized recap pending deliveries expire after the shared six-hour `TELEGRAM_RECAP_TTL_SEC`; recap target outcomes have their own retention windows.

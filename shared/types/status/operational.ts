@@ -1,5 +1,6 @@
-import type { StatusHealthOrUnknown } from "./core";
-import type { D1CapacityAssessment } from "./d1-capacity";
+import { z } from "zod";
+import { StatusHealthOrUnknownSchema } from "./schema-primitives";
+import { D1CapacityAssessmentSchema } from "./d1-capacity";
 
 export interface AlertBrokerHealthSummary {
   activeCount: number;
@@ -12,188 +13,232 @@ export interface AlertBrokerHealthSummary {
   queryFailed: boolean;
 }
 
-export interface ProducerHeadStatus {
-  scheduleKey: string;
-  job: string;
-  producerPath: string;
-  producerKind: string;
-  observed: boolean;
-  lastInvocationId: string | null;
-  lastWorkerVersion: string | null;
-  lastInvokedAt: number | null;
-  lastCompletedAt: number | null;
-  lastOutcome: string | null;
-  lastError: string | null;
-  lastProductiveInvocationId: string | null;
-  lastProductiveAt: number | null;
-  lastProductiveItemCount: number | null;
-  lastPublicationAt: number | null;
-  invocationCount: number;
-  productiveCount: number;
-}
+export const ProducerHeadStatusSchema = z.object({
+  scheduleKey: z.string(),
+  job: z.string(),
+  producerPath: z.string(),
+  producerKind: z.string(),
+  observed: z.boolean(),
+  lastInvocationId: z.string().nullable(),
+  lastWorkerVersion: z.string().nullable(),
+  lastInvokedAt: z.number().nullable(),
+  lastCompletedAt: z.number().nullable(),
+  lastOutcome: z.string().nullable(),
+  lastError: z.string().nullable(),
+  lastProductiveInvocationId: z.string().nullable(),
+  lastProductiveAt: z.number().nullable(),
+  lastProductiveItemCount: z.number().nullable(),
+  lastPublicationAt: z.number().nullable(),
+  invocationCount: z.number(),
+  productiveCount: z.number(),
+});
+export type ProducerHeadStatus = z.output<typeof ProducerHeadStatusSchema>;
 
-export type PublicationSurfaceId =
-  "dex-liquidity" | "yield-rankings" | "stablecoins" | "dews" | "psi" | "safety-score-v9";
-export type PublicationGenerationState = "candidate" | "validated" | "published" | "rejected" | "superseded" | "failed";
+export const PUBLICATION_SURFACE_IDS = [
+  "dex-liquidity",
+  "yield-rankings",
+  "stablecoins",
+  "dews",
+  "psi",
+  "safety-score-v9",
+] as const;
+export type PublicationSurfaceId = (typeof PUBLICATION_SURFACE_IDS)[number];
 
-export interface PublicationGenerationHealth {
-  generationId: string;
-  sourceState: string;
-  state: PublicationGenerationState;
-  startedAt: number;
-  validatedAt: number | null;
-  publishedAt: number | null;
-  failedAt: number | null;
-  candidateRows: number | null;
-  publishedRows: number | null;
-  expectedRows: number | null;
-  failureReason: string | null;
-  metadata?: Record<string, unknown>;
-}
+export const PUBLICATION_GENERATION_STATES = [
+  "candidate",
+  "validated",
+  "published",
+  "rejected",
+  "superseded",
+  "failed",
+] as const;
+export const PublicationGenerationStateSchema = z.enum(PUBLICATION_GENERATION_STATES);
+export type PublicationGenerationState = z.infer<typeof PublicationGenerationStateSchema>;
 
-export interface PublicationSurfaceHealth {
-  surface: PublicationSurfaceId;
-  label: string;
-  sourceOfTruth: string;
-  lastPublishedGeneration: PublicationGenerationHealth | null;
-  lastAttemptedGeneration: PublicationGenerationHealth | null;
-  lastFailureReason: string | null;
-  candidateAgeSec: number | null;
-  dependencyWatermarks: Record<string, unknown> | null;
-}
+export const PublicationGenerationHealthSchema = z.object({
+  generationId: z.string(),
+  sourceState: z.string(),
+  state: PublicationGenerationStateSchema,
+  startedAt: z.number(),
+  validatedAt: z.number().nullable(),
+  publishedAt: z.number().nullable(),
+  failedAt: z.number().nullable(),
+  candidateRows: z.number().nullable(),
+  publishedRows: z.number().nullable(),
+  expectedRows: z.number().nullable(),
+  failureReason: z.string().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type PublicationGenerationHealth = z.output<typeof PublicationGenerationHealthSchema>;
 
-export interface PublicationSurfaceFailure {
-  surface: PublicationSurfaceId;
-  code: string;
-  message: string;
-}
+export const PublicationSurfaceHealthSchema = z.object({
+  surface: z.enum(PUBLICATION_SURFACE_IDS),
+  label: z.string(),
+  sourceOfTruth: z.string(),
+  lastPublishedGeneration: PublicationGenerationHealthSchema.nullable(),
+  lastAttemptedGeneration: PublicationGenerationHealthSchema.nullable(),
+  lastFailureReason: z.string().nullable(),
+  candidateAgeSec: z.number().nullable(),
+  dependencyWatermarks: z.record(z.string(), z.unknown()).nullable(),
+});
+export type PublicationSurfaceHealth = z.output<typeof PublicationSurfaceHealthSchema>;
 
-export interface PublicationHealth {
-  checkedAt: number;
-  surfaces: Partial<Record<PublicationSurfaceId, PublicationSurfaceHealth>>;
-  failedSurfaces?: PublicationSurfaceFailure[];
-}
+export const PublicationSurfaceFailureSchema = z.object({
+  surface: z.enum(PUBLICATION_SURFACE_IDS),
+  code: z.string(),
+  message: z.string(),
+});
+export type PublicationSurfaceFailure = z.output<typeof PublicationSurfaceFailureSchema>;
 
-export type DependencyHealthStatus = "healthy" | "degraded" | "stale" | "unknown";
-export type DependencyImpactLayer = "availability" | "data-quality" | "system";
-export type DependencyCriticality = "critical" | "watch";
+export const PublicationHealthSchema = z.object({
+  checkedAt: z.number(),
+  surfaces: z.record(z.string(), PublicationSurfaceHealthSchema),
+  failedSurfaces: z.array(PublicationSurfaceFailureSchema).optional(),
+});
+export type PublicationHealth = z.output<typeof PublicationHealthSchema>;
 
-export interface DependencyHealthItem {
-  id: string;
-  label: string;
-  sourceOfTruth: string;
-  producerJob: string | null;
-  cacheKey: string | null;
-  publicationSurface: PublicationSurfaceId | null;
-  impactLayer: DependencyImpactLayer;
-  criticality: DependencyCriticality;
-  dependsOn: string[];
-  consumers: string[];
-  status: DependencyHealthStatus;
-  checkedAt: number;
-  updatedAt: number | null;
-  ageSeconds: number | null;
-  maxAgeSec: number | null;
-  reason: string | null;
-  runbookPath: string | null;
-}
+export const DEPENDENCY_HEALTH_STATUS_VALUES = ["healthy", "degraded", "stale", "unknown"] as const;
+export const DependencyHealthStatusSchema = z.enum(DEPENDENCY_HEALTH_STATUS_VALUES);
+export type DependencyHealthStatus = z.infer<typeof DependencyHealthStatusSchema>;
 
-interface DependencyRootCauseGroup {
-  rootDependencyId: string;
-  rootStatus: DependencyHealthStatus;
-  rootReason: string | null;
-  symptomDependencyIds: string[];
-  impactedDependencyIds: string[];
-  consumerIds: string[];
-  criticality: DependencyCriticality;
-}
+export const DEPENDENCY_IMPACT_LAYER_VALUES = ["availability", "data-quality", "system"] as const;
+export const DependencyImpactLayerSchema = z.enum(DEPENDENCY_IMPACT_LAYER_VALUES);
+export type DependencyImpactLayer = z.infer<typeof DependencyImpactLayerSchema>;
 
-export interface DependencyHealth {
-  checkedAt: number;
-  dependencies: Record<string, DependencyHealthItem>;
-  rootCauseGroups: DependencyRootCauseGroup[];
-  summary: {
-    total: number;
-    healthy: number;
-    degraded: number;
-    stale: number;
-    unknown: number;
-    rootCauseGroupCount: number;
-  };
-}
+export const DEPENDENCY_CRITICALITY_VALUES = ["critical", "watch"] as const;
+export const DependencyCriticalitySchema = z.enum(DEPENDENCY_CRITICALITY_VALUES);
+export type DependencyCriticality = z.infer<typeof DependencyCriticalitySchema>;
 
-export interface ProviderCircuitHealthEntry {
-  providerId: string;
-  family: string;
-  state: "closed" | "half-open" | "open";
-  consecutiveFailures: number;
-  openedAt: number | null;
-  openAgeSec: number | null;
-  lastFailureAt: number | null;
-  lastSuccessAt: number | null;
-}
+export const DependencyHealthItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  sourceOfTruth: z.string(),
+  producerJob: z.string().nullable(),
+  cacheKey: z.string().nullable(),
+  publicationSurface: z.enum(PUBLICATION_SURFACE_IDS).nullable(),
+  impactLayer: DependencyImpactLayerSchema,
+  criticality: DependencyCriticalitySchema,
+  dependsOn: z.array(z.string()),
+  consumers: z.array(z.string()),
+  status: DependencyHealthStatusSchema,
+  checkedAt: z.number(),
+  updatedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+  maxAgeSec: z.number().nullable(),
+  reason: z.string().nullable(),
+  runbookPath: z.string().nullable(),
+});
+export type DependencyHealthItem = z.output<typeof DependencyHealthItemSchema>;
 
-export interface ProviderCircuitHealthFamilySummary {
-  total: number;
-  closed: number;
-  halfOpen: number;
-  open: number;
-}
+const DependencyRootCauseGroupSchema = z.object({
+  rootDependencyId: z.string(),
+  rootStatus: DependencyHealthStatusSchema,
+  rootReason: z.string().nullable(),
+  symptomDependencyIds: z.array(z.string()),
+  impactedDependencyIds: z.array(z.string()),
+  consumerIds: z.array(z.string()),
+  criticality: DependencyCriticalitySchema,
+});
 
-export interface ProviderCircuitHealth {
-  checkedAt: number;
-  status: StatusHealthOrUnknown;
-  totalTracked: number;
-  closedCount: number;
-  halfOpenCount: number;
-  openCount: number;
-  openProviders: ProviderCircuitHealthEntry[];
-  byFamily: Record<string, ProviderCircuitHealthFamilySummary>;
-}
+export const DependencyHealthSchema = z.object({
+  checkedAt: z.number(),
+  dependencies: z.record(z.string(), DependencyHealthItemSchema),
+  rootCauseGroups: z.array(DependencyRootCauseGroupSchema),
+  summary: z.object({
+    total: z.number(),
+    healthy: z.number(),
+    degraded: z.number(),
+    stale: z.number(),
+    unknown: z.number(),
+    rootCauseGroupCount: z.number(),
+  }),
+});
+export type DependencyHealth = z.output<typeof DependencyHealthSchema>;
 
-export type CanaryRunStatus = "ok" | "degraded" | "error" | "skipped";
-export type CanaryRunSeverity = "info" | "warning" | "error" | "critical";
+export const ProviderCircuitHealthEntrySchema = z.object({
+  providerId: z.string(),
+  family: z.string(),
+  state: z.enum(["closed", "half-open", "open"]),
+  consecutiveFailures: z.number(),
+  openedAt: z.number().nullable(),
+  openAgeSec: z.number().nullable(),
+  lastFailureAt: z.number().nullable(),
+  lastSuccessAt: z.number().nullable(),
+});
+export type ProviderCircuitHealthEntry = z.output<typeof ProviderCircuitHealthEntrySchema>;
 
-interface CanaryStatusCheck {
-  checkId: string;
-  label: string;
-  description: string;
-  status: CanaryRunStatus;
-  severity: CanaryRunSeverity;
-  observedAt: number;
-  durationMs: number | null;
-  metadata?: Record<string, unknown>;
-  error?: string;
-}
+export const ProviderCircuitHealthFamilySummarySchema = z.object({
+  total: z.number(),
+  closed: z.number(),
+  halfOpen: z.number(),
+  open: z.number(),
+});
+export type ProviderCircuitHealthFamilySummary = z.output<
+  typeof ProviderCircuitHealthFamilySummarySchema
+>;
 
-export interface CanaryStatus {
-  checkedAt: number;
-  status: StatusHealthOrUnknown;
-  latestRunAt: number | null;
-  maxAgeSec: number;
-  totalChecks: number;
-  okCount: number;
-  degradedCount: number;
-  errorCount: number;
-  skippedCount: number;
-  staleCount: number;
-  checks: Record<string, CanaryStatusCheck>;
-}
+export const ProviderCircuitHealthSchema = z.object({
+  checkedAt: z.number(),
+  status: StatusHealthOrUnknownSchema,
+  totalTracked: z.number(),
+  closedCount: z.number(),
+  halfOpenCount: z.number(),
+  openCount: z.number(),
+  openProviders: z.array(ProviderCircuitHealthEntrySchema),
+  byFamily: z.record(z.string(), ProviderCircuitHealthFamilySummarySchema),
+});
+export type ProviderCircuitHealth = z.output<typeof ProviderCircuitHealthSchema>;
 
-export interface D1UsageSummary {
-  checkedAt: number;
-  windowStart: number;
-  windowEnd: number;
-  databaseId: string;
-  databaseName: string | null;
-  databaseSizeBytes: number | null;
-  numTables: number | null;
-  region: string | null;
-  readReplicationMode: string | null;
-  readQueries24h: number | null;
-  writeQueries24h: number | null;
-  rowsRead24h: number | null;
-  rowsWritten24h: number | null;
+export const CANARY_RUN_STATUS_VALUES = ["ok", "degraded", "error", "skipped"] as const;
+export const CanaryRunStatusSchema = z.enum(CANARY_RUN_STATUS_VALUES);
+export type CanaryRunStatus = z.infer<typeof CanaryRunStatusSchema>;
+
+export const CANARY_RUN_SEVERITY_VALUES = ["info", "warning", "error", "critical"] as const;
+export const CanaryRunSeveritySchema = z.enum(CANARY_RUN_SEVERITY_VALUES);
+export type CanaryRunSeverity = z.infer<typeof CanaryRunSeveritySchema>;
+
+const CanaryStatusCheckSchema = z.object({
+  checkId: z.string(),
+  label: z.string(),
+  description: z.string(),
+  status: CanaryRunStatusSchema,
+  severity: CanaryRunSeveritySchema,
+  observedAt: z.number(),
+  durationMs: z.number().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  error: z.string().optional(),
+});
+
+export const CanaryStatusSchema = z.object({
+  checkedAt: z.number(),
+  status: StatusHealthOrUnknownSchema,
+  latestRunAt: z.number().nullable(),
+  maxAgeSec: z.number(),
+  totalChecks: z.number(),
+  okCount: z.number(),
+  degradedCount: z.number(),
+  errorCount: z.number(),
+  skippedCount: z.number(),
+  staleCount: z.number(),
+  checks: z.record(z.string(), CanaryStatusCheckSchema),
+});
+export type CanaryStatus = z.output<typeof CanaryStatusSchema>;
+
+export const D1UsageSummarySchema = z.object({
+  checkedAt: z.number(),
+  windowStart: z.number(),
+  windowEnd: z.number(),
+  databaseId: z.string(),
+  databaseName: z.string().nullable(),
+  databaseSizeBytes: z.number().nullable(),
+  numTables: z.number().nullable(),
+  region: z.string().nullable(),
+  readReplicationMode: z.string().nullable(),
+  readQueries24h: z.number().nullable(),
+  writeQueries24h: z.number().nullable(),
+  rowsRead24h: z.number().nullable(),
+  rowsWritten24h: z.number().nullable(),
   /** Optional while an older Worker or a not-yet-initialized observation store is serving status. */
-  capacity?: D1CapacityAssessment | null;
-}
+  capacity: D1CapacityAssessmentSchema.nullable().optional(),
+});
+export type D1UsageSummary = z.output<typeof D1UsageSummarySchema>;

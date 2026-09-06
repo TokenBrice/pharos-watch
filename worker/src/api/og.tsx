@@ -22,6 +22,8 @@ import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stableco
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
@@ -302,12 +304,9 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       contract: "published",
     }),
     loadDexLiquidityMap(db),
-    db
-      .prepare(
-        "SELECT score, band FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1",
-      )
-      .bind(id)
-      .first<{ score: number; band: string }>(),
+    loadStressSignalCurrentRowForCoin(db, id, Math.floor(Date.now() / 1000), {
+      staleAfterSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8,
+    }),
     loadOgSafetyScoreSource(db),
     db
       .prepare(
@@ -524,16 +523,9 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     db
       .prepare("SELECT score, band FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ score: number; band: string }>(),
-    db
-      .prepare(
-        `SELECT s.band
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<{ band: string }>(),
+    loadStressSignalCurrentRows(db, now, {
+      staleAfterSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8,
+    }),
     // New: Get active depeg details
     db
       .prepare(

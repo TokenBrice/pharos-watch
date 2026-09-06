@@ -14,7 +14,6 @@ import {
 } from "@shared/lib/chains/l2beat-risk";
 import {
   isRecord,
-  markdownValue,
   parseCoverageAuditCliArgs,
   readJsonFile,
   resolveGeneratedAt,
@@ -22,6 +21,7 @@ import {
   runAsMain,
   stringValue,
 } from "../lib/coverage-audit-cli";
+import { markdownValue, renderMarkdownRows } from "../lib/markdown-report";
 
 const L2BEAT_SUMMARY_URL = "https://l2beat.com/api/scaling/summary";
 
@@ -264,11 +264,12 @@ export function buildL2BeatSnapshotCoverageAudit(input: {
 }
 
 function renderMatchedChains(audit: L2BeatChainCoverageAudit): string[] {
-  if (audit.matchedChains.length === 0) return ["_None._"];
-  return [
-    "pharos chain | L2BEAT project | slug | stage | env score | host | weak risks",
-    "--- | --- | --- | --- | ---: | --- | ---",
-    ...audit.matchedChains.map((row) => [
+  return renderMarkdownRows({
+    headings: ["pharos chain", "L2BEAT project", "slug", "stage", "env score", "host", "weak risks"],
+    rows: audit.matchedChains,
+    alignments: ["left", "left", "left", "left", "right", "left", "left"],
+    empty: "_None._",
+    cells: (row) => [
       `${row.chainName} (${row.chainId})`,
       `${row.name} (${row.projectId})`,
       row.slug,
@@ -276,37 +277,37 @@ function renderMatchedChains(audit: L2BeatChainCoverageAudit): string[] {
       row.chainEnvironmentScore,
       row.hostChain,
       `bad ${row.riskSentiments.bad}, warning ${row.riskSentiments.warning}`,
-    ].map(markdownValue).join(" | ")),
-  ];
+    ],
+  });
 }
 
 function renderAliasIssues(audit: L2BeatChainCoverageAudit): string[] {
-  if (audit.aliasIssues.length === 0) return ["_None._"];
-  return [
-    "kind | chain | project | message",
-    "--- | --- | --- | ---",
-    ...audit.aliasIssues.map((issue) => [
+  return renderMarkdownRows({
+    headings: ["kind", "chain", "project", "message"],
+    rows: audit.aliasIssues,
+    empty: "_None._",
+    cells: (issue) => [
       issue.kind,
       issue.chainId,
       issue.projectId,
       issue.message,
-    ].map(markdownValue).join(" | ")),
-  ];
+    ],
+  });
 }
 
 function renderDriftRows(rows: readonly SnapshotDriftRow[]): string[] {
-  if (rows.length === 0) return ["_None._"];
-  return [
-    "project | field | current | observed | kind",
-    "--- | --- | --- | --- | ---",
-    ...rows.map((row) => [
+  return renderMarkdownRows({
+    headings: ["project", "field", "current", "observed", "kind"],
+    rows,
+    empty: "_None._",
+    cells: (row) => [
       row.projectId,
       row.field,
       row.current,
       row.observed,
       row.kind,
-    ].map(markdownValue).join(" | ")),
-  ];
+    ],
+  });
 }
 
 export function renderL2BeatSnapshotCoverageAuditMarkdown(audit: L2BeatSnapshotCoverageAudit): string {

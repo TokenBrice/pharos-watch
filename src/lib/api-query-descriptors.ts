@@ -4,6 +4,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
 import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
+import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
@@ -13,6 +14,7 @@ import type {
   BluechipRatingsMap,
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
+  NonUsdSharePoint,
   PegSummaryResponse,
   StablecoinChartPoint,
   StablecoinListResponse,
@@ -60,10 +62,9 @@ import {
   CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
-import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
 import { z } from "zod";
 
-export type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
+export type { NonUsdSharePoint } from "@shared/types/market";
 
 /** First-paint window selected by the stablecoin detail market charts. */
 export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
@@ -71,23 +72,6 @@ export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
 export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
 
 const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
-const StablecoinDetailTokenSchema = z.object({
-  date: z.number().optional(),
-  totalCirculatingUSD: StablecoinDetailPegBucketsSchema.optional(),
-  totalCirculating: StablecoinDetailPegBucketsSchema.optional(),
-  circulating: StablecoinDetailPegBucketsSchema.optional(),
-}).passthrough();
-
-/** Public per-coin detail response; provider-specific fields intentionally pass through. */
-export const StablecoinDetailResponseSchema = z.object({
-  price: z.number().nullable().optional(),
-  priceSource: z.string().nullable().optional(),
-  priceConfidence: PriceConfidenceSchema.nullable().optional(),
-  priceUpdatedAt: z.number().nullable().optional(),
-  priceObservedAt: z.number().nullable().optional(),
-  tokens: z.array(StablecoinDetailTokenSchema).optional(),
-}).passthrough();
-export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
 
 export const StablecoinLiveSummarySchema = z.object({
   price: z.number().nullable(),
@@ -202,15 +186,6 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
  * imports stay lazy and are cached per endpoint declaration.
  */
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
-  stablecoinDetail: defineParameterizedApiQuery(
-    "plain",
-    createLazySchema<StablecoinDetailResponse>(async () => StablecoinDetailResponseSchema),
-    (stablecoinId: string) => ({
-      queryKey: ["stablecoin-detail", stablecoinId] as const,
-      path: API_PATHS.stablecoinDetail(stablecoinId),
-      producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
-    }),
-  ),
   stablecoinLiveSummary: defineParameterizedApiQuery(
     "plain",
     createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
@@ -241,6 +216,16 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
+  ),
+  chainsDetail: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
+    (chainId: string) => ({
+      queryKey: ["chains", "detail", chainId] as const,
+      path: API_PATHS.chainsDetail(chainId),
+      producerIntervalMs: CRON_15MIN,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
+    }),
   ),
   bluechipRatings: defineApiQuery(
     {
@@ -507,7 +492,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "plain",
     createLazySchema<NonUsdSharePoint[]>(
-      async () => (await import("@/lib/non-usd-share-schema")).NonUsdShareResponseSchema,
+      async () => (await import("@shared/types/market")).NonUsdShareResponseSchema,
     ),
   ),
   stabilityIndex: STABILITY_INDEX_QUERY_DESCRIPTOR,

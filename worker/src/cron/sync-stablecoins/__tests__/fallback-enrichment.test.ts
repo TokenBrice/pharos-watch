@@ -1,106 +1,56 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import { buildPriceValidationContext } from "../../../lib/price-validation";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createValidationContextResolver } from "../pricing";
 import { runFallbackPriceEnrichmentPhase } from "../fallback-enrichment";
-import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
 
-const phaseMocks = vi.hoisted(() => ({
-  authoritativeOverrideStats: { applied: 0 },
-  createAuthoritativeLivePriceOverrideStats: vi.fn(() => ({ applied: 0 })),
-  fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
-  applyProtocolPriceOverrides: vi.fn(() => 0),
-  prevalidatePrices: vi.fn(),
-  reportStablecoinsStage: vi.fn(async () => undefined),
-  runMissingPriceEnrichmentPhase: vi.fn(async () => ({
-    missingBefore: new Set(["fallback-usd"]),
-    enrichStats: { providerDiagnostics: [] },
-  })),
-  runSharedPriceCompletion: vi.fn(async () => ({
-    authoritativeOverrideCount: 0,
-    rejectedCount: 0,
-    cachedFallbackCount: 0,
-    nativePegCorrectionCount: 0,
-    nativePegFillCount: 0,
-    priceCacheEntries: [],
-    providerDiagnostics: [],
-  })),
-}));
+const fixtures = createLatestSchemaFixtureTracker();
+const NOW_SEC = 1_800_000_000;
 
-vi.mock("../../../lib/authoritative-price-sources", () => ({
-  createAuthoritativeLivePriceOverrideStats: phaseMocks.createAuthoritativeLivePriceOverrideStats,
-  fetchAuthoritativeLivePriceOverrides: phaseMocks.fetchAuthoritativeLivePriceOverrides,
-}));
-
-vi.mock("../pricing", () => ({
-  applyProtocolPriceOverrides: phaseMocks.applyProtocolPriceOverrides,
-  prevalidatePrices: phaseMocks.prevalidatePrices,
-}));
-
-vi.mock("../runtime", () => ({
-  reportStablecoinsStage: phaseMocks.reportStablecoinsStage,
-}));
-
-vi.mock("../post-enrichment", () => ({
-  isAbortResult: (value: unknown) => typeof value === "object" && value !== null && "status" in value,
-  runMissingPriceEnrichmentPhase: phaseMocks.runMissingPriceEnrichmentPhase,
-  runSharedPriceCompletion: phaseMocks.runSharedPriceCompletion,
-}));
-
-const NOW_SEC = 1_700_000_000;
-
-function makeAsset(): PeggedAsset {
-  return makePeggedAsset({
-    id: "fallback-usd",
-    name: "Fallback USD",
-    symbol: "FUSD",
-    geckoId: "fallback-usd",
-    pegMechanism: "fiat-backed",
-    price: null,
-    circulating: { peggedUSD: 1_000_000 },
-    chainCirculating: {},
-    chains: [],
-  });
-}
+afterEach(() => {
+  fixtures.closeAll();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("runFallbackPriceEnrichmentPhase", () => {
-  beforeEach(() => {
-    for (const mock of Object.values(phaseMocks)) {
-      if (typeof mock === "function" && "mockClear" in mock) {
-        mock.mockClear();
+  it("uses authenticated fallback enrichment but withholds an unreasonable candidate", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const assets = ["dllr-sovryn", "btcusd-btcfi"].map((id) => makePeggedAsset({
+      id, geckoId: ACTIVE_META_BY_ID.get(id)!.geckoId, price: null,
+    }));
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).includes("/simple/price")) {
+        const authenticated = new Headers(init?.headers).get("x-cg-pro-api-key") === "cg-key";
+        return Response.json(authenticated ? {
+          [assets[0].geckoId!]: { usd: 1, last_updated_at: NOW_SEC },
+          [assets[1].geckoId!]: { usd: 10, last_updated_at: NOW_SEC },
+        } : {});
       }
-    }
-  });
-
-  it("passes the CoinGecko API key into missing-price enrichment", async () => {
-    const db = mockD1([]);
-    const asset = makeAsset();
-
-    await runFallbackPriceEnrichmentPhase({
-      assets: [asset],
-      db,
-      syncStartSec: NOW_SEC,
-      cmcApiKey: "cmc-key",
-      jupiterApiKey: "jupiter-key",
-      coingeckoApiKey: "cg-key",
-      validationContexts: {
-        get: () => buildPriceValidationContext({ stablecoinId: "fallback-usd", pegType: "peggedUSD" }),
-      },
+      return Response.json({ coins: {}, pairs: [] });
+    }));
+    const { db } = fixtures.open();
+    const input = {
+      assets, db, syncStartSec: NOW_SEC, coingeckoApiKey: "cg-key",
+      validationContexts: createValidationContextResolver(),
       previousTrustedPrices: new Map(),
       returnIfAborted: () => null,
-      abortResult: () => ({ status: "degraded", metadata: "{}" }),
-    });
+      abortResult: () => ({ status: "degraded" as const, metadata: "{}", aborted: true as const }),
+    };
 
-    expect(phaseMocks.runMissingPriceEnrichmentPhase).toHaveBeenCalledWith(
-      expect.objectContaining({
-        assets: [asset],
-        db,
-        syncStartSec: NOW_SEC,
-        cmcApiKey: "cmc-key",
-        jupiterApiKey: "jupiter-key",
-        coingeckoApiKey: "cg-key",
-      }),
-      "fallback-",
-    );
+    await runFallbackPriceEnrichmentPhase(input);
+
+    expect(assets.map(({ id, price }) => ({ id, price }))).toEqual([
+      { id: "dllr-sovryn", price: 1 },
+      { id: "btcusd-btcfi", price: null },
+    ]);
+    const aborted = { status: "degraded" as const, metadata: "cancelled fallback enrichment", aborted: true as const };
+    assets[0].price = null;
+    expect(await runFallbackPriceEnrichmentPhase({
+      ...input,
+      returnIfAborted: (_signal, stage) => stage === "fallback-enrich-prices" ? aborted : null,
+    })).toBe(aborted);
+    expect(assets[0].price).toBeNull();
   });
 });

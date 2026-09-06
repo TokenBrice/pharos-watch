@@ -10,9 +10,11 @@ import {
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { StablecoinData } from "@shared/types";
+import type { MintBurnCoinFlow, StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 
 // ---------------------------------------------------------------------------
 // Minimal fixture helpers
@@ -46,21 +48,28 @@ function makeCard(id: string, grade: ReturnType<typeof makeV9Card>["grade"]) {
 
 function makeFlowCoin(
   stablecoinId: string,
-  overrides: {
-    netFlow24hUsd?: number;
-    netFlow30dUsd?: number;
-    pressureShiftScore?: number | null;
-    netFlowDirection24h?: NetFlowDirection24h;
-    pressureShiftState?: PressureShiftState;
-  } = {},
-) {
+  overrides: Partial<MintBurnCoinFlow> = {},
+): MintBurnCoinFlow {
   return {
     stablecoinId,
+    symbol: stablecoinId.toUpperCase(),
+    flowIntensity: null,
+    pressureShiftScore: null,
+    pressureShiftState: "stable",
+    netFlowDirection24h: "minting",
+    has24hActivity: false,
+    baselineDailyNetUsd: null,
+    baselineDailyAbsUsd: null,
+    baselineDataDays: null,
     netFlow24hUsd: 1000,
+    mintVolume24hUsd: 0,
+    burnVolume24hUsd: 0,
+    mintCount24h: 0,
+    burnCount24h: 0,
+    netFlow7dUsd: 7000,
     netFlow30dUsd: 30000,
-    pressureShiftScore: null as number | null,
-    netFlowDirection24h: "minting" as NetFlowDirection24h,
-    pressureShiftState: "stable" as PressureShiftState,
+    netFlow90dUsd: 90000,
+    largestEvent24h: null,
     ...overrides,
   };
 }
@@ -209,11 +218,10 @@ describe("deriveComparisonCoins", () => {
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("usdc");
   });
-
-  it("maps pegScore from pegCoinMap", () => {
+  it("maps pegDetails from pegCoinMap", () => {
     const assetMap = new Map([["usdc", makeAsset("usdc")]]);
     const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const pegCoinMap = new Map([["usdc", { id: "usdc", pegScore: 92 }]]);
+    const pegCoinMap = new Map([["usdc", makePegSummaryCoin({ id: "usdc", pegScore: 92 })]]);
     const result = deriveComparisonCoins({
       selectedIds: ["usdc"],
       assetMap,
@@ -223,10 +231,10 @@ describe("deriveComparisonCoins", () => {
       cardMap: new Map(),
       flowCoinMap: new Map(),
     });
-    expect(result[0].pegScore).toBe(92);
+    expect(result[0].pegDetails?.pegScore).toBe(92);
   });
 
-  it("returns null pegScore when coin is not in pegCoinMap", () => {
+  it("returns null pegDetails when coin is not in pegCoinMap", () => {
     const assetMap = new Map([["usdc", makeAsset("usdc")]]);
     const metaMap = new Map([["usdc", makeMeta("usdc")]]);
     const result = deriveComparisonCoins({
@@ -238,13 +246,13 @@ describe("deriveComparisonCoins", () => {
       cardMap: new Map(),
       flowCoinMap: new Map(),
     });
-    expect(result[0].pegScore).toBeNull();
+    expect(result[0].pegDetails).toBeNull();
   });
 
-  it("maps liquidityScore from dexData", () => {
+  it("maps liquidity from dexData", () => {
     const assetMap = new Map([["usdc", makeAsset("usdc")]]);
     const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const dexData = { usdc: { liquidityScore: 85 } };
+    const dexData = { usdc: makeDexLiquidityData({ liquidityScore: 85 }) };
     const result = deriveComparisonCoins({
       selectedIds: ["usdc"],
       assetMap,
@@ -254,10 +262,10 @@ describe("deriveComparisonCoins", () => {
       cardMap: new Map(),
       flowCoinMap: new Map(),
     });
-    expect(result[0].liquidityScore).toBe(85);
+    expect(result[0].liquidity?.liquidityScore).toBe(85);
   });
 
-  it("maps safetyGrade from cardMap", () => {
+  it("maps safetyCard from cardMap", () => {
     const assetMap = new Map([["usdc", makeAsset("usdc")]]);
     const metaMap = new Map([["usdc", makeMeta("usdc")]]);
     const cardMap = new Map([["usdc", makeCard("usdc", "A")]]);
@@ -270,23 +278,7 @@ describe("deriveComparisonCoins", () => {
       cardMap,
       flowCoinMap: new Map(),
     });
-    expect(result[0].safetyGrade).toBe("A");
-  });
-
-  it("maps netFlow30d from flowCoinMap", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const flowCoinMap = new Map([["usdc", makeFlowCoin("usdc", { netFlow30dUsd: 500_000 })]]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap,
-    });
-    expect(result[0].netFlow30d).toBe(500_000);
+    expect(result[0].safetyCard?.grade).toBe("A");
   });
 
   it("preserves selectedIds order in output", () => {
@@ -511,14 +503,9 @@ describe("deriveFlowCardData", () => {
   });
 
   it("defaults netFlowDirection24h to 'inactive' when null", () => {
-    const coin = {
-      stablecoinId: "usdc",
-      netFlow24hUsd: 1000,
-      netFlow30dUsd: 30000,
-      pressureShiftScore: null as number | null,
-      netFlowDirection24h: null as NetFlowDirection24h | null,
-      pressureShiftState: "stable" as PressureShiftState,
-    };
+    const coin = makeFlowCoin("usdc", {
+      netFlowDirection24h: null as unknown as NetFlowDirection24h,
+    });
     const flowCoinMap = new Map([["usdc", coin]]);
     const result = deriveFlowCardData({
       selectedIds: ["usdc"],
@@ -529,14 +516,9 @@ describe("deriveFlowCardData", () => {
   });
 
   it("defaults pressureShiftState to 'nr' when null", () => {
-    const coin = {
-      stablecoinId: "usdc",
-      netFlow24hUsd: 1000,
-      netFlow30dUsd: 30000,
-      pressureShiftScore: null as number | null,
-      netFlowDirection24h: "minting" as NetFlowDirection24h,
-      pressureShiftState: null as PressureShiftState | null,
-    };
+    const coin = makeFlowCoin("usdc", {
+      pressureShiftState: null as unknown as PressureShiftState,
+    });
     const flowCoinMap = new Map([["usdc", coin]]);
     const result = deriveFlowCardData({
       selectedIds: ["usdc"],

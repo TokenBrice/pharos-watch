@@ -39,7 +39,7 @@ import {
 } from "./deployment-outcomes";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
+import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 
 export type EffectiveTier = "refresh" | "t1" | "t2" | "t3" | "dormant" | "skip";
 
@@ -178,7 +178,7 @@ export function hasVerifiedEmptyCensus(
   if (!summary) return false;
   if (summary.observedPoolsCount > 0 || summary.providerSupportedInaccessibleCount > 0) return false;
   const supportedDeploymentCount = targets.filter(
-    (target) => getRuntimeDexDiscoveryProviders(target.chain, target.address).length > 0,
+    (target) => getDexDiscoveryProviders(target.chain, target.address).length > 0,
   ).length;
   return supportedDeploymentCount > 0 && summary.verifiedNoPoolsCount >= supportedDeploymentCount;
 }
@@ -388,8 +388,8 @@ export async function syncDexDiscovery(
         nowSec,
         censusVerifiedEmpty,
         (coverage?.hasSupplementalCoverage === true ||
-          (coverage?.poolCount === 0 && targets.some((target) =>
-            getRuntimeDexDiscoveryProviders(target.chain, target.address).length > 0))) &&
+        (coverage?.poolCount === 0 && targets.some((target) =>
+          getDexDiscoveryProviders(target.chain, target.address).length > 0))) &&
           isDiscoveryEvidenceRefreshDue(targets, metaById.get(coin.id), nowSec),
       );
 

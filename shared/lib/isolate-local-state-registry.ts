@@ -16,9 +16,9 @@ export interface IsolateLocalStateRegistryEntry {
  */
 export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
-    sourcePath: "functions/lib/client-ip-hash.ts",
+    sourcePath: "shared/lib/client-ip-hash.ts",
     stateNames: ["cachedSecret", "cachedKey"],
-    owner: "Pages client-IP hashing",
+    owner: "Pages and Worker client-IP hashing",
     kind: "key",
     resetOrTtl: "Replaced when the supplied secret changes; otherwise resets on isolate recycle or deploy.",
     durableTruth: "The runtime secret is authoritative; the non-extractable imported key is only a derived cache.",
@@ -271,6 +271,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "cache",
     resetOrTtl: "One warning per novel chat_type until isolate recycle.",
     durableTruth: "Signed Telegram initData and current request fields are authoritative; this only suppresses duplicate logs.",
+  },
+  {
+    sourcePath: "worker/src/cron/dispatch-telegram-alerts.ts",
+    stateNames: ["COUNTED_STATEMENT_ORIGINALS"],
+    owner: "Telegram planning rows-written attribution",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by counted prepared statements; entries live only while a batch holds the statement and reset with the isolate.",
+    durableTruth: "D1 meta.rows_written on each executed statement is authoritative; the map only pairs counted wrappers with their originals for batch attribution.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 

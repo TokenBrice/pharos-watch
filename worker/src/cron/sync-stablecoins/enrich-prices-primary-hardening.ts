@@ -19,8 +19,7 @@ import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import { midDivergenceBps } from "../../lib/price-divergence";
 import type { ValidationContextResolver } from "./pricing";
-import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
-import type { PriceValidationStats } from "./enrich-prices-primary-shared";
+import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "./enrich-prices-shared";
 
 /**
  * Downgrades 2-source clusters whose members are all list-style aggregators

@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
-import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../forget";
+import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -15,7 +15,6 @@ function discoverTelegramChatIdTablesFromMigrations(): string[] {
   const tables = new Set<string>();
   for (const file of readdirSync(migrationDir)) {
     if (!file.endsWith(".sql")) continue;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test scans checked-in Worker migrations only.
     const sql = readFileSync(join(migrationDir, file), "utf8");
     const createTablePattern = /CREATE TABLE IF NOT EXISTS\s+(telegram_[a-z0-9_]+)\s*\(([\s\S]*?)\);/giu;
     for (const match of sql.matchAll(createTablePattern)) {

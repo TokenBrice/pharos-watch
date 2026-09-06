@@ -27,19 +27,17 @@ const baseConfig: RedemptionBackstopConfig = {
   },
 };
 
-type ManifestFixture = Omit<RedemptionBackstopConfigManifestEntry, "entries">;
+type ManifestFixture = Omit<RedemptionBackstopConfigManifestEntry, "entries"> & {
+  configs: Record<string, RedemptionBackstopConfig>;
+};
 
 /** Fixtures declare configs only; entries carry no extra metadata unless a test adds it. */
 function toManifest(modules: ManifestFixture[]): RedemptionBackstopConfigManifestEntry[] {
-  return modules.map((module) => ({ ...module, entries: defineRecordEntries(module.configs) }));
+  return modules.map(({ configs, ...module }) => ({ ...module, entries: defineRecordEntries(configs) }));
 }
 
 function validateFixture(modules: ManifestFixture[]) {
-  const manifest = toManifest(modules);
-  return validateRedemptionBackstopRegistry({
-    manifest,
-    mergedConfigs: Object.assign({}, ...manifest.map((entry) => entry.configs)),
-  });
+  return validateRedemptionBackstopRegistry({ manifest: toManifest(modules) });
 }
 
 describe("validateRedemptionBackstopRegistry", () => {
@@ -276,14 +274,12 @@ describe("validateRedemptionBackstopRegistry", () => {
       {
         name: "issuer",
         filePath: "issuer.ts",
-        configs: defineBackstopRegistry(issuerEntries),
         entries: issuerEntries,
         allowedRouteFamilies: ["offchain-issuer"],
       },
       {
         name: "plain",
         filePath: "plain.ts",
-        configs: { "usdc-circle": baseConfig },
         entries: defineRecordEntries({ "usdc-circle": baseConfig }, { sourceFilePath: "plain.ts" }),
         allowedRouteFamilies: ["offchain-issuer"],
       },

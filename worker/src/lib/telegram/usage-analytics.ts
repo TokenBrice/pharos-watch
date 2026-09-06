@@ -6,7 +6,7 @@ import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
-} from "./active-watcher-sql";
+} from "@shared/lib/telegram-alert-families";
 import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,

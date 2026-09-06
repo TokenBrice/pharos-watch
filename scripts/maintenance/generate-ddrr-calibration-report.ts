@@ -2,11 +2,12 @@
 
 import {
   DDRR_VERDICT_REVIEW_VALUES,
+  DDRR_SCORED_VERDICTS,
   DdrrResponseSchema,
   type DdrrHorizonCalibration,
   type DdrrResponse,
-  type DdrrRow,
-  type DdrrV2CoverageRow,
+  type DdrrResponseRow,
+  type DdrrV2CoverageResponseRow,
   type DdrrV2NoCallReviewRow,
   type DdrrV2PredictionReviewRow,
   type DdrrVerdictReview,
@@ -21,26 +22,19 @@ import {
   isRecord,
   joinUrl,
   markdownValue,
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
   runAsMain,
-  runReportCli,
+  runCoverageAuditCli,
   toPositiveInt,
-} from "../lib/report-cli";
+} from "../lib/coverage-audit-cli";
 import { renderMarkdownRows } from "../lib/markdown-report";
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
 export const PROD_DDRR_SITE_DATA_URL = `${PROD_ORIGIN}/_site-data/depeg-resolver-review`;
 export const TRUSTED_DDRR_API_KEY_ORIGINS = new Set(["https://api.pharos.watch"]);
 
-const TERMINALITY_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
-  "correct_recoverable",
-  "correct_terminal",
-  "false_terminal",
-  "false_recoverable",
-  "risk_noted_terminal",
-]);
 const DURATION_RETUNE_MIN_ROWS = 50;
 const DURATION_RETUNE_MIN_COINS = 20;
 const FACTOR_REVIEW_FALSE_TERMINAL_THRESHOLD = 2;
@@ -254,16 +248,16 @@ function incrementActual(
   counts[actualBucket(row)] += 1;
 }
 
-function predictionRows(rows: readonly DdrrRow[]): DdrrV2PredictionReviewRow[] {
+function predictionRows(rows: readonly DdrrResponseRow[]): DdrrV2PredictionReviewRow[] {
   return rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
 }
 
-function noCallRows(rows: readonly DdrrRow[]): DdrrV2NoCallReviewRow[] {
+function noCallRows(rows: readonly DdrrResponseRow[]): DdrrV2NoCallReviewRow[] {
   return rows.filter((row): row is DdrrV2NoCallReviewRow => row.kind === "no_call_review");
 }
 
-function coverageRows(rows: readonly DdrrRow[]): DdrrV2CoverageRow[] {
-  return rows.filter((row): row is DdrrV2CoverageRow => row.kind === "coverage");
+function coverageRows(rows: readonly DdrrResponseRow[]): DdrrV2CoverageResponseRow[] {
+  return rows.filter((row): row is DdrrV2CoverageResponseRow => row.kind === "coverage");
 }
 
 function isDurationScored(row: DdrrV2PredictionReviewRow): row is DurationScoredRow {
@@ -337,7 +331,7 @@ export function buildFactorAttribution(rows: readonly DdrrV2PredictionReviewRow[
       group.rowCount += 1;
       group.coins.add(row.stablecoinId);
       group.verdictCounts[row.verdictReview] += 1;
-      if (TERMINALITY_SCORED_VERDICTS.has(row.verdictReview)) group.scoredCount += 1;
+      if (DDRR_SCORED_VERDICTS.has(row.verdictReview)) group.scoredCount += 1;
       incrementActual(group.actualCounts, row);
       if (group.sampleIncidentKeys.length < SAMPLE_LIMIT) group.sampleIncidentKeys.push(row.incidentKey);
     }
@@ -488,7 +482,7 @@ function buildNoCallCalibration(
   };
 }
 
-function buildCoverageCalibration(rows: readonly DdrrV2CoverageRow[]): DdrrCoverageCalibration {
+function buildCoverageCalibration(rows: readonly DdrrV2CoverageResponseRow[]): DdrrCoverageCalibration {
   const byPredictionState: Record<string, number> = {};
   const byCoverageCause: Record<string, number> = {};
   const byOperationalCoverageCause: Record<string, number> = {};
@@ -927,7 +921,7 @@ function usage(): string {
 }
 
 export function parseArgs(argv: readonly string[] = process.argv.slice(2)): DdrrCalibrationCliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): DdrrCalibrationCliOptions => ({
       inputPath: null,
       apiBase: null,
@@ -1012,7 +1006,7 @@ export async function runCli(
   cwd: string = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  return runReportCli([...argv], {
+  return runCoverageAuditCli([...argv], {
     parse: parseArgs,
     cwd,
     build: async (options) => {

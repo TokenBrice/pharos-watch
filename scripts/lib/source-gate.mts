@@ -34,7 +34,6 @@ export function scanSourceGate<Violation>({
       violations.push(...scanFile({
         absolutePath,
         relativePath: relative(cwd, absolutePath),
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- source roots are explicit gate inputs
         content: readFileSync(absolutePath, "utf8"),
         root,
       }));

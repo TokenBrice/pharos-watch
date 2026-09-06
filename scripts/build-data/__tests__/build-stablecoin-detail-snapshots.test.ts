@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { SupplyHistoryResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
 import {
-  StablecoinDetailResponseSchema,
   projectStablecoinLiveSummary,
   type StablecoinLiveSummary,
 } from "../../../src/lib/api-query-descriptors";
@@ -37,6 +36,24 @@ describe("stablecoin detail snapshot generator", () => {
     vi.unstubAllGlobals();
   });
 
+  it("carries body and header source clocks through snapshots rather than the build clock", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json({ price: 1, _meta: { updatedAt: 1_700_000_000 } }))
+      .mockResolvedValueOnce(Response.json([], {
+        headers: { Date: "Tue, 14 Nov 2023 22:13:20 GMT", "X-Data-Age": "3600", Age: "600" },
+      })));
+    const detail = await fetchOptionalDetailSnapshotLane("detail", "https://api.pharos.watch/api/stablecoin/usdt-tether", StablecoinDetailResponseSchema);
+    const history = await fetchOptionalDetailSnapshotLane("history", "https://api.pharos.watch/api/supply-history", SupplyHistoryResponseSchema);
+    const snapshot = buildStablecoinDetailSnapshots({
+      generatedAt: 1_700_100_000_000,
+      liveSummariesById: new Map([["usdt-tether", projectStablecoinLiveSummary(detail!.data)]]),
+      supplyHistoryById: new Map([["usdt-tether", history!.data]]),
+      updatedAtById: new Map([["usdt-tether", { liveSummary: detail!.updatedAt, supplyHistory: history!.updatedAt }]]),
+    }).find((candidate) => candidate.stablecoinId === "usdt-tether")!;
+    expect(snapshot.updatedAt).toEqual({ liveSummary: 1_700_000_000_000, supplyHistory: 1_699_996_400_000 });
+  });
+
   it("projects only compact above-fold fields from the full response", () => {
     const detail = StablecoinDetailResponseSchema.parse({
       price: null,
@@ -57,6 +74,7 @@ describe("stablecoin detail snapshot generator", () => {
     const summary = liveSummary();
     const snapshots = buildStablecoinDetailSnapshots({
       generatedAt: 1_700_000_000_000,
+      updatedAtById: new Map(),
       liveSummariesById: new Map([["usdt-tether", summary]]),
       supplyHistoryById: new Map([[
         "usdt-tether",
@@ -123,8 +141,9 @@ describe("stablecoin detail snapshot generator", () => {
     );
     const snapshots = buildStablecoinDetailSnapshots({
       generatedAt: 1_700_000_000_000,
+      updatedAtById: new Map(),
       liveSummariesById: new Map([
-        ["usdt-tether", invalidDetail ? projectStablecoinLiveSummary(invalidDetail) : null],
+        ["usdt-tether", invalidDetail ? projectStablecoinLiveSummary(invalidDetail.data) : null],
         ["usdc-circle", liveSummary()],
       ]),
       supplyHistoryById: new Map(),
@@ -162,6 +181,7 @@ describe("stablecoin detail snapshot generator", () => {
     }));
     const snapshot = buildStablecoinDetailSnapshots({
       generatedAt: 1_700_000_000_000,
+      updatedAtById: new Map(),
       liveSummariesById: new Map([["usdt-tether", liveSummary()]]),
       supplyHistoryById: new Map([["usdt-tether", history]]),
     }).find((candidate) => candidate.stablecoinId === "usdt-tether")!;
@@ -178,6 +198,7 @@ describe("stablecoin detail snapshot generator", () => {
     );
     const snapshot = buildStablecoinDetailSnapshots({
       generatedAt: 1_700_000_000_000,
+      updatedAtById: new Map(),
       liveSummariesById: new Map([["usdt-tether", liveSummary({ circulating: oversizedBuckets })]]),
       supplyHistoryById: new Map([[
         "usdt-tether",

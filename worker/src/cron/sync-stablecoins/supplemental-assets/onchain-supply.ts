@@ -43,10 +43,17 @@ const MOVEMENT_XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
 const MOVEMENT_XRESERVE_CALL = "0xc47cf5ef000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000002715";
 const MOVEMENT_XRESERVE_TOLERANCE_BPS = 1n;
 
+export interface OnChainMcapChainRow {
+  current: number;
+  /** Canonical CHAIN_META id; absent for intentionally unattributed residuals. */
+  chainId?: string;
+}
+
 export interface OnChainMcapResult {
   mcap: number;
   supplySource: SupplementalOnChainSupplySource;
-  chainCirculating?: Record<string, number>;
+  /** Display-label keys are retained for public compatibility. */
+  chainCirculating?: Record<string, OnChainMcapChainRow>;
 }
 
 export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
@@ -392,9 +399,9 @@ export async function fetchCuratedAggregateOnChainMcap(
   }
 
   let totalMcap = 0;
-  const chainCirculating: Record<string, number> = {};
+  const chainCirculating: Record<string, OnChainMcapChainRow> = {};
   const canonicalSupplyChain = CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id];
-  let canonicalResult: { mcap: number; chainLabel: string } | null = null;
+  let canonicalResult: { mcap: number; chain: string; chainLabel: string } | null = null;
   let representationMcap = 0;
   for (const { config: curated, contract: supplyContract } of selectedContracts) {
     throwIfAborted(signal);
@@ -420,7 +427,12 @@ export async function fetchCuratedAggregateOnChainMcap(
     } else {
       totalMcap += result.mcap;
     }
-    chainCirculating[result.chainLabel] = (chainCirculating[result.chainLabel] ?? 0) + result.mcap;
+
+    const existing = chainCirculating[result.chainLabel];
+    chainCirculating[result.chainLabel] = {
+      current: (existing?.current ?? 0) + result.mcap,
+      chainId: existing?.chainId ?? result.chain,
+    };
   }
 
   if (canonicalSupplyChain) {
@@ -448,13 +460,19 @@ export async function fetchCuratedAggregateOnChainMcap(
         return null;
       }
 
-      chainCirculating[canonicalResult.chainLabel] = canonicalResult.mcap - escrowMcap;
+      chainCirculating[canonicalResult.chainLabel] = {
+        current: canonicalResult.mcap - escrowMcap,
+        chainId: canonicalResult.chain,
+      };
       const unattributedMcap = escrowMcap - representationMcap;
       if (unattributedMcap > 0) {
-        chainCirculating[residual.unattributedChainLabel] = unattributedMcap;
+        chainCirculating[residual.unattributedChainLabel] = { current: unattributedMcap };
       }
     } else {
-      chainCirculating[canonicalResult.chainLabel] = canonicalResult.mcap - representationMcap;
+      chainCirculating[canonicalResult.chainLabel] = {
+        current: canonicalResult.mcap - representationMcap,
+        chainId: canonicalResult.chain,
+      };
     }
   }
 

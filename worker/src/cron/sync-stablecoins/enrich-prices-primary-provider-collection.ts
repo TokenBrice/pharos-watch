@@ -1,12 +1,12 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { PriceObservedAtMode } from "@shared/types/core";
 import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
-import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
+import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
+import { parsePositiveNumber } from "../../lib/number-utils";
 import { throwIfAborted } from "../../lib/abort";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
@@ -32,13 +32,12 @@ import {
   type DexPriceSourceLoadTelemetry,
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
-import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
-import type { PeggedAsset } from "./enrich-prices-shared";
-import { isUsableGeckoId } from "./enrich-prices-primary-shared";
+import { isUsableGeckoId, type PeggedAsset } from "./enrich-prices-shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 // crvUSD PriceAggregator contract. Consulted as a regular primary-consensus
@@ -87,9 +86,7 @@ export interface PrimaryPricePlan {
 }
 
 export interface PrimaryConsensusQuoteMaps {
-  cgPrices: Map<string, number>;
-  cgObservedAtByGeckoId: Map<string, number>;
-  cgObservedAtModeByGeckoId: Map<string, PriceObservedAtMode>;
+  cgQuotes: Map<string, CoingeckoSimplePriceEntry>;
   cgObservedAt: number | null;
   cgTickerPrices: Map<string, number>;
   cgTickerObservedAt: number | null;
@@ -111,9 +108,7 @@ export interface PrimaryConsensusQuoteMaps {
 
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
   return {
-    cgPrices: new Map(),
-    cgObservedAtByGeckoId: new Map(),
-    cgObservedAtModeByGeckoId: new Map(),
+    cgQuotes: new Map(),
     cgObservedAt: null,
     cgTickerPrices: new Map(),
     cgTickerObservedAt: null,
@@ -144,11 +139,6 @@ function isNavTelemetryPriceEligible(
 ): boolean {
   const adapter = metaById.get(assetId)?.liveReservesConfig?.adapter;
   return isNavTelemetryPriceSource(adapter);
-}
-
-function parsePositiveFiniteNumber(value: unknown): number | null {
-  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
 
 function getMetadataRecord(value: string): Record<string, unknown> | null {
@@ -217,9 +207,9 @@ async function loadReserveNavPriceQuotes(params: {
       const metadata = getMetadataRecord(row.metadata);
       if (!metadata) continue;
 
-      const navPerToken = parsePositiveFiniteNumber(metadata.navPerToken);
+      const navPerToken = parsePositiveNumber(metadata.navPerToken);
       const sourceTimestamp =
-        parsePositiveFiniteNumber(metadata.sourceTimestamp) ?? parsePositiveFiniteNumber(metadata.oracleUpdatedAt);
+        parsePositiveNumber(metadata.sourceTimestamp) ?? parsePositiveNumber(metadata.oracleUpdatedAt);
       if (navPerToken == null || sourceTimestamp == null) continue;
 
       const usdRate = resolveNavUsdRate({
@@ -271,7 +261,7 @@ async function runPrimaryProviderFetch(
 export async function buildPrimaryPricePlan(
   assets: PeggedAsset[],
   db: D1Database,
-  dlListPrices?: Map<string, number | DlListQuote>,
+  dlListPrices?: Map<string, DlListQuote>,
 ): Promise<PrimaryPricePlan> {
   const metaById = new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
   const nowSec = Math.floor(Date.now() / 1000);
@@ -439,9 +429,7 @@ export async function collectPrimaryProviderQuotes(params: {
 
   const emptyQuoteMaps = createEmptyPrimaryConsensusQuoteMaps();
   const {
-    cgPrices,
-    cgObservedAtByGeckoId,
-    cgObservedAtModeByGeckoId,
+    cgQuotes,
     binancePrices,
     krakenPrices,
     bitstampPrices,
@@ -487,11 +475,7 @@ export async function collectPrimaryProviderQuotes(params: {
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_PRICES, "CG price API", async () => {
         const outcome = await fetchCoingeckoSimplePrices(geckoIds, coingeckoApiKey ?? null, signal, nowSec);
         for (const [geckoId, entry] of outcome.value) {
-          cgPrices.set(geckoId, entry.price);
-          if (entry.observedAt != null && entry.observedAtMode != null) {
-            cgObservedAtByGeckoId.set(geckoId, entry.observedAt);
-            cgObservedAtModeByGeckoId.set(geckoId, entry.observedAtMode);
-          }
+          cgQuotes.set(geckoId, entry);
         }
         if (outcome.value.size > 0) {
           cgObservedAt = Math.floor(Date.now() / 1000);
@@ -654,9 +638,7 @@ export async function collectPrimaryProviderQuotes(params: {
 
   return {
     quoteMaps: {
-      cgPrices,
-      cgObservedAtByGeckoId,
-      cgObservedAtModeByGeckoId,
+      cgQuotes,
       cgObservedAt,
       cgTickerPrices,
       cgTickerObservedAt,

@@ -274,6 +274,7 @@ describe("handleStablecoinDetail", () => {
 
     const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(60);
   });
 
   it("returns 502 when upstream fails and no cache exists", async () => {

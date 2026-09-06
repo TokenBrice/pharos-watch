@@ -980,50 +980,64 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(rowsByIncident.get("ddr2:matrix-missing-source")).toMatchObject({
       kind: "coverage",
       sourceEventState: "missing",
+      actualOutcome: "source_missing",
       predictionState: "data_quality_gap",
       coverageCause: "data_quality_gap",
       reason: "source_event_missing",
     });
     expect(rowsByIncident.get("ddr2:matrix-pre-lock-recovered")).toMatchObject({
+      sourceEventState: "recovered",
+      actualOutcome: "recovered",
       predictionState: "resolved_before_prediction",
       coverageCause: "pre_lock_recovered",
       actualEndedAt: ELIGIBLE_AT - 60,
     });
     expect(rowsByIncident.get("ddr2:matrix-terminal-before")).toMatchObject({
       sourceEventState: "terminal",
+      actualOutcome: "terminal",
       predictionState: "terminal_before_prediction",
       coverageCause: "pre_lock_terminal",
       terminalEvidenceAt: terminalBeforeAt,
     });
     expect(rowsByIncident.get("ddr2:matrix-pending")).toMatchObject({
+      sourceEventState: "active",
+      actualOutcome: "still_open",
       eligibleAt: pendingEligibleAt,
       predictionState: "pending_lock",
       coverageCause: "active_pending_lock",
     });
     expect(rowsByIncident.get("ddr2:matrix-missed-recovered")).toMatchObject({
+      sourceEventState: "recovered",
+      actualOutcome: "recovered",
       predictionState: "missed_lock_recovered",
       coverageCause: "lock_missed",
       operationalCoverageCause: "lock_missed",
     });
     expect(rowsByIncident.get("ddr2:matrix-orphan")).toMatchObject({
       sourceEventState: "orphan_closed",
+      actualOutcome: "orphan_closed",
       predictionState: "orphan_closed",
       coverageCause: "orphan_closed",
       outcomeQualityState: "orphan_closed",
     });
     expect(rowsByIncident.get("ddr2:matrix-terminal-after")).toMatchObject({
       sourceEventState: "terminal",
+      actualOutcome: "terminal",
       predictionState: "missed_lock_terminal",
       coverageCause: "lock_missed",
       terminalEvidenceAt: terminalAfterAt,
     });
     expect(rowsByIncident.get("ddr2:matrix-system-deferral")).toMatchObject({
+      sourceEventState: "active",
+      actualOutcome: "still_open",
       predictionState: "lock_deferred",
       coverageCause: "active_lock_deferred",
       operationalCoverageCause: "system_deferral",
       reason: "cache stale",
     });
     expect(rowsByIncident.get("ddr2:matrix-cron-gap")).toMatchObject({
+      sourceEventState: "active",
+      actualOutcome: "still_open",
       predictionState: "lock_deferred",
       coverageCause: "cron_gap",
       operationalCoverageCause: "cron_gap",
@@ -1784,6 +1798,11 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(cacheWrite?.binds[0]).toBe("depeg-resolver-review:snapshot");
     const payload = JSON.parse(cacheWrite?.binds[1] as string).payload;
     expect(payload._meta.reviewedEventCount).toBe(1);
+    expect(payload.rows[0]).toMatchObject({
+      kind: "coverage",
+      sourceEventState: "missing",
+      actualOutcome: "source_missing",
+    });
     expect(payload.summary.headline).toMatchObject({
       recoveryLikelihoodScoredCount: 0,
     });

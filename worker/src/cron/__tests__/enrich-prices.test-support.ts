@@ -21,13 +21,11 @@ import {
   applyPoolChallenge,
 } from "../sync-stablecoins/enrich-prices-primary-hardening";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
-import type { PriceValidationStats } from "../sync-stablecoins/enrich-prices-primary-shared";
-import {
-  runCmcPass,
-  runDexScreenerPass,
-  runDlContractPasses,
-  runJupiterPass,
-} from "../sync-stablecoins/enrich-prices-passes";
+import type { PriceValidationStats } from "../sync-stablecoins/enrich-prices-shared";
+import { runCmcPass } from "../sync-stablecoins/enrich-prices-cmc-pass";
+import { runDexScreenerPass } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
+import { runDlContractPasses } from "../sync-stablecoins/enrich-prices-defillama-pass";
+import { runJupiterPass } from "../sync-stablecoins/enrich-prices-jupiter-pass";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";

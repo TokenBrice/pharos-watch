@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- source paths are derived from BLOG_POSTS slugs and guarded by blog-registry.test.ts. */
 
 import fs from "node:fs";
 import path from "node:path";

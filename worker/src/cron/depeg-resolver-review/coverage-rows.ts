@@ -1,5 +1,6 @@
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import {
+  actualOutcomeFromSourceEventState,
   hasTerminalEvidence,
   type DdrrActualEventInput,
   type DdrrV2CoverageInput,
@@ -84,12 +85,22 @@ function isRecoveredClosure(actual: DdrrActualEventInput): boolean {
   return closure === "recovered" || closure === "legacy_recovered";
 }
 
-function sourceEventState(actual: DdrrActualEventInput | null): DdrrV2CoverageInput["sourceEventState"] {
-  if (!actual) return "missing";
-  if (hasTerminalEvidence(actual)) return "terminal";
-  if (isRecoveredClosure(actual)) return "recovered";
-  if (actual.endedAt != null) return "orphan_closed";
-  return "active";
+function sourceOutcome(
+  actual: DdrrActualEventInput | null,
+): Pick<DdrrV2CoverageInput, "sourceEventState" | "actualOutcome"> {
+  const sourceEventState: DdrrV2CoverageInput["sourceEventState"] = !actual
+    ? "missing"
+    : hasTerminalEvidence(actual)
+      ? "terminal"
+      : isRecoveredClosure(actual)
+        ? "recovered"
+        : actual.endedAt != null
+          ? "orphan_closed"
+          : "active";
+  return {
+    sourceEventState,
+    actualOutcome: actualOutcomeFromSourceEventState(sourceEventState),
+  };
 }
 
 function terminalEvidenceAtForEligibility(
@@ -218,7 +229,7 @@ export function coverageRowForIncident(
   const terminalEvidenceAt = terminalEvidenceAtForEligibility(actual, coverageEligibilityAt(incident));
   return {
     ...baseFieldsForIncident(incident, {}),
-    sourceEventState: sourceEventState(actual),
+    ...sourceOutcome(actual),
     terminalEvidenceAt,
     terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
     terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,
@@ -245,7 +256,7 @@ export function failedPublicationCoverageRow(
   return {
     ...baseFieldsForIncident(incident, payload),
     eligibleAt: sealed.eligibleAt,
-    sourceEventState: sourceEventState(actual),
+    ...sourceOutcome(actual),
     terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
     terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
     terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,

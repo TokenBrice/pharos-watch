@@ -147,10 +147,6 @@ const workerRestrictedImportPaths = [
 
 const workerRestrictedImportPatterns = [
   {
-    group: ["@/lib/*", "src/lib/*", "../src/lib/*", "../../src/lib/*", "../../../src/lib/*", "../../../../src/lib/*"],
-    message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
-  },
-  {
     // Worker only needs viem's pure ABI codecs from viem/utils. Any other viem
     // subpath (clients/transports/actions) would pull the websocket transport
     // surface (and its `ws` advisory) into the bundle. Keep viem/utils allowed.
@@ -189,14 +185,10 @@ const eslintConfig = defineConfig([
       // detect-object-injection flags every obj[variable] access — overwhelmingly
       // false positives in application code (548 hits, none genuine).
       "security/detect-object-injection": "off",
-    },
-  },
-  {
-    // Repo-local maintenance scripts intentionally walk dynamic paths inside the
-    // checked-out workspace. The security rule is useful for runtime code, but
-    // it produces false positives for these controlled CLI scripts.
-    files: ["scripts/**/*.{mjs,ts}"],
-    rules: {
+      // detect-non-literal-fs-filename flags every dynamic fs path; repo
+      // scripts and tests intentionally walk dynamic paths under the
+      // workspace, so after owner review the rule is off globally
+      // (docs/testing.md#eslint-configuration).
       "security/detect-non-literal-fs-filename": "off",
     },
   },

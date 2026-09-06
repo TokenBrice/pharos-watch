@@ -1,4 +1,4 @@
-import { configsFromBackstopEntries, defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "../factory";
+import { defineConfigFamily, defineRecordEntries, finalizeBackstopRegistry } from "../factory";
 import {
   documentedVariableFee,
   fixedFee,
@@ -1486,5 +1486,4 @@ const FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   ],
 );
 
-export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS = configsFromBackstopEntries(FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY.entries);
 export const STABLECOIN_REDEEM_BACKSTOP_ENTRIES = FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY.entries;

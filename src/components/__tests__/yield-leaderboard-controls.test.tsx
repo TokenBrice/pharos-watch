@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { buildYieldViewModel } from "@/lib/yield-view-model";
+import { buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
 
 const STORAGE_KEY = "pharos-watchlist-v1";
 
@@ -39,7 +39,7 @@ beforeEach(() => {
 
 
 function buildModel(params: Parameters<typeof buildYieldViewModel>[1] = {}, watchlistIds?: ReadonlySet<string>) {
-  return buildYieldViewModel(rows, params, { watchlistIds: watchlistIds ?? null });
+  return buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds ?? null), params);
 }
 
 describe("YieldLeaderboardControls", () => {
@@ -199,7 +199,7 @@ describe("YieldLeaderboardControls", () => {
     ];
 
     function buildCohortModel(params: Parameters<typeof buildYieldViewModel>[1] = {}) {
-      return buildYieldViewModel(cohortRows, params, { watchlistIds: null });
+      return buildYieldViewModel(prepareYieldUniverse(cohortRows, null), params);
     }
 
     it("renders non-zero yield types in descending count order with All first", () => {

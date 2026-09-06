@@ -1,13 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import {
   buildApiOgImageUrl,
   buildStablecoinDetailDescription,
   buildStablecoinDetailMetadata,
   summarizeText,
 } from "@/lib/page-metadata";
+
+const INDEXABLE_ROBOTS = {
+  index: true,
+  follow: true,
+  googleBot: {
+    index: true,
+    follow: true,
+    "max-snippet": -1,
+    "max-image-preview": "large",
+    "max-video-preview": -1,
+  },
+} as const;
 
 describe("page metadata helpers", () => {
   it("builds phrase-safe stablecoin descriptions", () => {

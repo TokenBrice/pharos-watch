@@ -43,6 +43,7 @@ import {
   decodeAddressWord,
   decodeBoolWord,
   decodeUint8Word,
+  decodeUint256Word,
 } from "./abi-decode";
 
 const ADAPTER_KEY = "liquity-v2-branches";
@@ -234,22 +235,22 @@ async function fetchLiquityV2BranchState(
   if (rawByLabel) {
     const balances = params.branches.map((branch, index) => ({
       branch,
-      balanceRaw: decodeRequiredOptionalUint256(rawByLabel.get(`branch:balance:${index}`)),
+      balanceRaw: decodeUint256Word(rawByLabel.get(`branch:balance:${index}`)),
     }));
     const debts = balances.map((entry, index) => ({
       entry,
-      debtRaw: decodeRequiredOptionalUint256(rawByLabel.get(`branch:debt:${index}`)),
+      debtRaw: decodeUint256Word(rawByLabel.get(`branch:debt:${index}`)),
       shutDown: decodeBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
       redemptionFeeBps: params.redemptionRateProbe
         ? null
         : rateBpsFromRaw(
-            decodeRequiredOptionalUint256(rawByLabel.get(`branch:fee:${index}`)),
+            decodeUint256Word(rawByLabel.get(`branch:fee:${index}`)),
             BRANCH_REDEMPTION_RATE_DECIMALS,
           ),
     }));
     const redemptionFeeBps = params.redemptionRateProbe?.decimals != null
       ? rateBpsFromRaw(
-          decodeRequiredOptionalUint256(rawByLabel.get("branch:fee:global")),
+          decodeUint256Word(rawByLabel.get("branch:fee:global")),
           params.redemptionRateProbe.decimals,
         )
       : null;
@@ -294,11 +295,6 @@ async function fetchLiquityV2BranchState(
     };
   }));
   return { balances, debts, redemptionFeeBps };
-}
-
-function decodeRequiredOptionalUint256(raw: `0x${string}` | null | undefined): bigint | null {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  return BigInt(raw);
 }
 
 async function adaptErc4626ShareEntries(
@@ -367,10 +363,10 @@ async function adaptErc4626ShareEntries(
   return entries.map((entry, index) => {
     const probed = probedByIndex.get(index);
     if (!probed || entry.balanceRaw == null) return entry;
-    const totalAssetsRaw = decodeRequiredOptionalUint256(
+    const totalAssetsRaw = decodeUint256Word(
       metadataRawByLabel.get(`branch:total-assets:${index}`),
     );
-    const totalSupplyRaw = decodeRequiredOptionalUint256(
+    const totalSupplyRaw = decodeUint256Word(
       metadataRawByLabel.get(`branch:total-supply:${index}`),
     );
     if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) return entry;
@@ -419,7 +415,7 @@ async function fetchBranchProtocolPriceMap(
   const rawByLabel = await fetchLiquityV2Batch(input, params, calls, signal, ctx);
   await Promise.all(missingPricedBranches.map(async ({ branch }, index) => {
     const priceRaw = rawByLabel
-      ? decodeRequiredOptionalUint256(rawByLabel.get(`branch:protocol-price:${index}`))
+      ? decodeUint256Word(rawByLabel.get(`branch:protocol-price:${index}`))
       : await onchain.uint256(branch.holder, BRANCH_PRICE_SELECTOR);
     if (priceRaw == null || priceRaw <= 0n) return;
     const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
@@ -491,7 +487,7 @@ function decodeRequiredUint256(
   raw: `0x${string}` | undefined,
   label: string,
 ): bigint {
-  const value = decodeRequiredOptionalUint256(raw);
+  const value = decodeUint256Word(raw);
   if (value == null) throw new Error(`missing or invalid ${label} result`);
   if (value < 0n) throw new Error(`${label} result is negative`);
   return value;

@@ -20,8 +20,7 @@ import type {
   PrimaryDexPriceSources,
   PrimaryDexRows,
 } from "./enrich-prices-primary-provider-collection";
-import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
-import { isUsableGeckoId, type PriceValidationStats } from "./enrich-prices-primary-shared";
+import { isUsableGeckoId, type PeggedAsset, type PriceValidationStats, type PrimaryPriceResult } from "./enrich-prices-shared";
 
 const VUSD_PRIMARY_DEX_AGGREGATE_ID = "vusd-virtue";
 
@@ -54,15 +53,14 @@ export function buildPrimaryConsensusResults(params: {
     // read, so the quote feeds both candidate building and the dlPrice field.
     const dlListQuote = params.resolveDlListQuote(asset.id);
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
-    const cgPrice = geckoId ? (params.quoteMaps.cgPrices.get(geckoId) ?? null) : null;
-    const cgObservedAtForAsset =
-      geckoId && cgPrice != null
-        ? (params.quoteMaps.cgObservedAtByGeckoId.get(geckoId) ?? params.quoteMaps.cgObservedAt)
-        : null;
+    const cgQuote = geckoId ? (params.quoteMaps.cgQuotes.get(geckoId) ?? null) : null;
+    const cgPrice = cgQuote?.price ?? null;
+    // Entries without an upstream observation timestamp resolve to the shared
+    // batch local-fetch clock recorded at collection time ("local_fetch" mode).
+    const cgObservedAtForAsset = cgQuote != null ? (cgQuote.observedAt ?? params.quoteMaps.cgObservedAt) : null;
     const cgObservedAtModeForAsset =
-      geckoId && cgPrice != null
-        ? (params.quoteMaps.cgObservedAtModeByGeckoId.get(geckoId) ??
-          (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
+      cgQuote != null
+        ? (cgQuote.observedAtMode ?? (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
         : null;
 
     const collectedQuotes: PrimaryCollectedQuotes = {
@@ -125,21 +123,10 @@ export function buildPrimaryConsensusResults(params: {
     if (!consensus) continue;
 
     params.results.set(asset.id, {
-      price: consensus.price,
-      source: consensus.source,
-      selectedSource: consensus.selectedSource,
-      priceEstimator: consensus.priceEstimator,
-      confidence: consensus.confidence,
+      ...consensus,
       dlPrice: dlListQuote?.price ?? null,
       cgPrice,
       candidateSources: Object.keys(consensus.allPrices),
-      agreeSources: consensus.agreeSources,
-      disagreeSources: consensus.disagreeSources,
-      allPrices: consensus.allPrices,
-      observedAt: consensus.observedAt,
-      observedAtMode: consensus.observedAtMode,
-      observedAtBySource: consensus.observedAtBySource,
-      observedAtModeBySource: consensus.observedAtModeBySource,
       priceSourceConfidenceProfile,
     });
 

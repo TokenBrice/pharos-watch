@@ -6,9 +6,16 @@
 // canonical V9 composite-ceiling audit;
 // it needs a replay artifact, so it runs operator-side, not in CI.
 //
+// The donor composite is scored by the same production aggregation seam the
+// live formula uses (aggregateV9SmoothBoundedHeadroom with the policy's single
+// compensabilityHeadroom), so the gate certifies the real frontier instead of
+// the retired pillar-specific hard minimum.
+//
 // Usage: node --import tsx scripts/maintenance/check-safety-score-v9-composite-ceiling.ts --replay <replay.json>
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { aggregateV9SmoothBoundedHeadroom } from "@shared/lib/safety-score-v9/aggregation";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 type PillarName = "backing" | "exit" | "control";
 
@@ -28,7 +35,6 @@ interface MeasuredCard extends Card {
 interface Formula {
   pillarWeights: Record<PillarName, number>;
   gradeThresholds: Array<{ grade: string; minScore: number }>;
-  controlCompensabilityHeadroom: number;
   compensabilityHeadroom: number;
 }
 
@@ -52,43 +58,20 @@ interface ReplayDocument {
   pipeline?: { candidate?: { cards?: Card[] } };
 }
 
-const args = process.argv.slice(2);
-const replayFlag = args.indexOf("--replay");
-if (replayFlag === -1 || !args[replayFlag + 1]) {
-  console.error("Usage: node --import tsx scripts/maintenance/check-safety-score-v9-composite-ceiling.ts --replay <replay.json>");
-  process.exit(2);
-}
-
-const root = resolve(new URL("../..", import.meta.url).pathname);
-const replay = JSON.parse(readFileSync(resolve(args[replayFlag + 1]), "utf8")) as ReplayDocument;
-const policy = JSON.parse(
-  readFileSync(resolve(root, "shared/data/safety-score-v9/methodology-policy-candidate-v1.json"), "utf8"),
- ) as PolicyDocument;
-const registry = JSON.parse(readFileSync(resolve(root, "shared/data/stablecoins/coins.generated.json"), "utf8")) as
-  | RegistryCoin[]
-  | RegistryDocument;
-
-const formula = (policy.policy?.semantic ?? policy.semantic)!.formula;
-const weights = formula.pillarWeights;
-const aPlus = formula.gradeThresholds.find((row) => row.grade === "A+")!.minScore;
-const replayCards = replay.pipeline?.candidate?.cards ?? replay.candidate?.cards ?? replay.cards;
-const cards: MeasuredCard[] = replayCards!.filter(
-  (card): card is MeasuredCard => card.grade !== "NR" && card.score !== null,
-);
-const archetypeById = new Map(
-  (Array.isArray(registry) ? registry : registry.coins ?? []).map((coin): [string, string | undefined] => [
-    coin.id,
-    coin.mechanismArchetype,
-  ]),
-);
-
-const ISSUER_ARCHETYPES = new Set(["fiat-cash", "tbill"]);
+const ISSUER_ARCHETYPES: Record<string, true> = { "fiat-cash": true, tbill: true };
 const isWrapper = (card: Card): boolean => (card.caps ?? []).some((cap) => cap.source === "parent");
 
-const VARIANTS: Array<{ name: string; filter: (card: MeasuredCard) => boolean }> = [
+const VARIANTS: Array<{
+  name: string;
+  filter: (card: MeasuredCard, archetypeById: Map<string, string | undefined>) => boolean;
+}> = [
   { name: "unrestricted", filter: () => true },
   { name: "non-wrapper", filter: (card) => !isWrapper(card) },
-  { name: "issuer-class", filter: (card) => ISSUER_ARCHETYPES.has(archetypeById.get(card.id) ?? "") && !isWrapper(card) },
+  {
+    name: "issuer-class",
+    filter: (card, archetypeById) =>
+      Boolean(ISSUER_ARCHETYPES[archetypeById.get(card.id) ?? ""]) && !isWrapper(card),
+  },
 ];
 
 function bestPillar(pool: readonly MeasuredCard[], pillar: PillarName): { id: string; score: number } | null {
@@ -100,49 +83,111 @@ function bestPillar(pool: readonly MeasuredCard[], pillar: PillarName): { id: st
   return best;
 }
 
-let failed = false;
-for (const variant of VARIANTS) {
-  const pool = cards.filter(variant.filter);
-  const donors = {
-    backing: bestPillar(pool, "backing"),
-    exit: bestPillar(pool, "exit"),
-    control: bestPillar(pool, "control"),
-  };
-  if (!donors.backing || !donors.exit || !donors.control) {
-    console.error(`✖ ${variant.name}: empty donor pool (${pool.length} cards)`);
-    failed = true;
-    continue;
+export interface CompositeCeilingVariantOutcome {
+  name: string;
+  passed: boolean;
+  composite: number;
+}
+
+export interface CompositeCeilingGateReport {
+  passed: boolean;
+  stdout: string[];
+  stderr: string[];
+  variants: CompositeCeilingVariantOutcome[];
+}
+
+export interface CompositeCeilingGateInput {
+  replay: ReplayDocument;
+  policy: PolicyDocument;
+  registry: RegistryCoin[] | RegistryDocument;
+}
+
+export function runCompositeCeilingGate(input: CompositeCeilingGateInput): CompositeCeilingGateReport {
+  const formula = (input.policy.policy?.semantic ?? input.policy.semantic)!.formula;
+  const weights = formula.pillarWeights;
+  const aPlus = formula.gradeThresholds.find((row) => row.grade === "A+")!.minScore;
+  const replayCards = input.replay.pipeline?.candidate?.cards ?? input.replay.candidate?.cards ?? input.replay.cards;
+  const cards: MeasuredCard[] = (replayCards ?? []).filter(
+    (card): card is MeasuredCard => card.grade !== "NR" && card.score !== null,
+  );
+  const archetypeById = new Map(
+    (Array.isArray(input.registry) ? input.registry : input.registry.coins ?? []).map(
+      (coin): [string, string | undefined] => [coin.id, coin.mechanismArchetype],
+    ),
+  );
+
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const variants: CompositeCeilingVariantOutcome[] = [];
+  let failed = false;
+  for (const variant of VARIANTS) {
+    const pool = cards.filter((card) => variant.filter(card, archetypeById));
+    const donors = {
+      backing: bestPillar(pool, "backing"),
+      exit: bestPillar(pool, "exit"),
+      control: bestPillar(pool, "control"),
+    };
+    if (!donors.backing || !donors.exit || !donors.control) {
+      stderr.push(`✖ ${variant.name}: empty donor pool (${pool.length} cards)`);
+      failed = true;
+      continue;
+    }
+    const trace = aggregateV9SmoothBoundedHeadroom(
+      { backing: donors.backing.score, exit: donors.exit.score, control: donors.control.score },
+      weights,
+      formula.compensabilityHeadroom,
+    );
+    const composite = trace.score;
+    const pass = composite >= aPlus;
+    if (!pass) failed = true;
+    variants.push({ name: variant.name, passed: pass, composite });
+    stdout.push(
+      `${pass ? "✔" : "✖"} ${variant.name}: composite ${composite.toFixed(2)} ` +
+        `(blend ${trace.weightedQuality.toFixed(2)}, weakest ${trace.weakestPillar} ${trace.weakestScore.toFixed(1)}, ` +
+        `headroom ${formula.compensabilityHeadroom}) vs A+ ${aPlus} — margin ${(composite - aPlus).toFixed(2)}`,
+    );
+    stdout.push(
+      `   donors: backing=${donors.backing.id}@${donors.backing.score.toFixed(1)} ` +
+        `exit=${donors.exit.id}@${donors.exit.score.toFixed(1)} control=${donors.control.id}@${donors.control.score.toFixed(1)} ` +
+        `(pool ${pool.length})`,
+    );
   }
-  const blend =
-    donors.backing.score * weights.backing + donors.exit.score * weights.exit + donors.control.score * weights.control;
-  const weakest = Math.min(donors.backing.score, donors.exit.score, donors.control.score);
-  const controlWeakest = donors.control.score === weakest;
-  const headroom = controlWeakest ? formula.controlCompensabilityHeadroom : formula.compensabilityHeadroom;
-  const capped = Math.min(blend, weakest + headroom);
-  const pass = capped >= aPlus;
-  if (!pass) failed = true;
-  console.log(
-    `${pass ? "✔" : "✖"} ${variant.name}: composite ${capped.toFixed(2)} (blend ${blend.toFixed(2)}, ` +
-      `bounded-comp limit ${(weakest + headroom).toFixed(2)}) vs A+ ${aPlus} — margin ${(capped - aPlus).toFixed(2)}`,
-  );
-  console.log(
-    `   donors: backing=${donors.backing.id}@${donors.backing.score.toFixed(1)} ` +
-      `exit=${donors.exit.id}@${donors.exit.score.toFixed(1)} control=${donors.control.id}@${donors.control.score.toFixed(1)} ` +
-      `(pool ${pool.length})`,
-  );
+
+  const frontier = [...cards].sort((a, b) => b.score - a.score).slice(0, 5);
+  stdout.push("real-coin frontier (top 5):");
+  for (const card of frontier) {
+    stdout.push(
+      `   ${card.grade} ${card.score} ${card.id} — binding ${card.bindingCap?.kind ?? "none"}` +
+        ` (distance to A+ ${(aPlus - card.score).toFixed(0)})`,
+    );
+  }
+
+  return { passed: !failed, stdout, stderr, variants };
 }
 
-const frontier = [...cards].sort((a, b) => b.score - a.score).slice(0, 5);
-console.log("real-coin frontier (top 5):");
-for (const card of frontier) {
-  console.log(
-    `   ${card.grade} ${card.score} ${card.id} — binding ${card.bindingCap?.kind ?? "none"}` +
-      ` (distance to A+ ${(aPlus - card.score).toFixed(0)})`,
-  );
-}
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  const args = process.argv.slice(2);
+  const replayFlag = args.indexOf("--replay");
+  if (replayFlag === -1 || !args[replayFlag + 1]) {
+    console.error("Usage: node --import tsx scripts/maintenance/check-safety-score-v9-composite-ceiling.ts --replay <replay.json>");
+    process.exit(2);
+  }
 
-if (failed) {
-  console.error("COMPOSITE CEILING GATE: FAIL — A+ is not reachable from real measured sub-scores.");
-  process.exit(1);
+  const root = resolve(new URL("../..", import.meta.url).pathname);
+  const replay = JSON.parse(readFileSync(resolve(args[replayFlag + 1]), "utf8")) as ReplayDocument;
+  const policy = JSON.parse(
+    readFileSync(resolve(root, "shared/data/safety-score-v9/methodology-policy-candidate-v1.json"), "utf8"),
+  ) as PolicyDocument;
+  const registry = JSON.parse(readFileSync(resolve(root, "shared/data/stablecoins/coins.generated.json"), "utf8")) as
+    | RegistryCoin[]
+    | RegistryDocument;
+
+  const report = runCompositeCeilingGate({ replay, policy, registry });
+  for (const line of report.stdout) console.log(line);
+  for (const line of report.stderr) console.error(line);
+  if (!report.passed) {
+    console.error("COMPOSITE CEILING GATE: FAIL — A+ is not reachable from real measured sub-scores.");
+    process.exit(1);
+  }
+  console.log("COMPOSITE CEILING GATE: PASS");
 }
-console.log("COMPOSITE CEILING GATE: PASS");

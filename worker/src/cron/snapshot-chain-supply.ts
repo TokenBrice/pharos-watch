@@ -6,6 +6,7 @@ import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatIsoDate } from "@shared/lib/format";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
@@ -17,7 +18,10 @@ import {
   SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
 } from "../lib/supply-snapshot-completion";
 
-const CACHE_MAX_AGE_SEC = 1200;
+// Skip once the stablecoins cache has missed two producer intervals
+// (`sync-stablecoins` cadence via the shared lane descriptor), matching the
+// snapshot-supply admission gate.
+const CACHE_MAX_AGE_SEC = 2 * CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
 
 interface SnapshotChainSupplyOptions {
   nowSec?: number;

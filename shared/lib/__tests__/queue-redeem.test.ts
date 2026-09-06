@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "../redemption-backstop-configs/queue-redeem";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "../redemption-backstop-configs";
 
 describe("queue-redeem Nest NAV vault configs", () => {
   it("preserves the golden queued-NAV configuration family", () => {
     const nestNavVaultIds = ["ntbill-nest", "nbasis-nest", "nopal-nest", "nwisdom-nest"] as const;
     const configs = Object.fromEntries(
-      nestNavVaultIds.map((stablecoinId) => [stablecoinId, QUEUE_REDEEM_BACKSTOP_CONFIGS[stablecoinId]]),
+      nestNavVaultIds.map((stablecoinId) => [stablecoinId, REDEMPTION_BACKSTOP_CONFIGS[stablecoinId]]),
     );
 
     expect(configs).toEqual({

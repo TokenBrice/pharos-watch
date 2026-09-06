@@ -15,7 +15,6 @@
  * the same glob implementation and exist only for tracked implementation areas
  * that intentionally inherit a parent contract rather than owning documentation.
  */
-/* eslint-disable security/detect-non-literal-fs-filename -- reads the fixed checked-in registry, with path injection retained for isolated tests. */
 import { readFileSync } from "node:fs";
 import { dirname, matchesGlob, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

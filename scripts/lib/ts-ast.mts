@@ -41,7 +41,6 @@ export function getScriptKind(file: string): ts.ScriptKind {
  * @returns {{ source: string, sourceFile: import("typescript").SourceFile }}
  */
 export function parseSourceFile(file: string): { source: string; sourceFile: ts.SourceFile } {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- parse the explicit scanner target
   const source = readFileSync(file, "utf8");
   return {
     source,

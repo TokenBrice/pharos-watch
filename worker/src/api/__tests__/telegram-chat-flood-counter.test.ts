@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   recordTelegramChatCommandFlood,
   TELEGRAM_CHAT_FLOOD_UPSERT_SQL,
-} from "../telegram-store/processed-updates";
+} from "../../lib/telegram/processed-updates";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 

@@ -261,6 +261,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-report-card-registry-fingerprint.ts",
     sourcePaths: [
+      "scripts/lib/report-card-registry-fingerprint.ts",
       "shared/data/stablecoins/coins.generated.json",
       "shared/data/stablecoins/canonical-order.json",
       "shared/data/dead-stablecoins.json",
@@ -496,6 +497,18 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "src/assets/fonts/*.woff2",
       "src/lib/case-studies/**",
     ],
+  }),
+  generatedArtifact({
+    id: "compact-logos",
+    buildLifecycle: "maintenance-only",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/generate-compact-logos.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-compact-logos.ts",
+    outputPaths: ["public/logos/compact/**", "src/lib/logo-variants.generated.json"],
+    phase: 3,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-compact-logos.ts",
+    sourcePaths: ["public/logos/*.{png,jpg,jpeg,webp}"],
   }),
 ];
 

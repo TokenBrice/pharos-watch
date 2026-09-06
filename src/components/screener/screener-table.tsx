@@ -92,9 +92,9 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   { id: "peg", label: "Peg", className: "text-left" },
   {
     id: "peg30d",
-    label: "30d Peg",
+    label: "Peg Range",
     className: "text-right w-[112px] hidden xl:table-cell",
-    title: "30-day peg deviation strip (±bps around the peg)",
+    title: "Peg range: worst / current deviation (±bps around the peg)",
   },
   {
     id: "supply30d",
@@ -461,7 +461,7 @@ function ScreenerTableRow({
             data={getRowPegDeviationSeries(row)}
             signed
             referenceValue={0}
-            ariaLabel={`30-day peg deviation for ${row.symbol}`}
+            ariaLabel={`Peg range: worst / current for ${row.symbol}`}
             width={96}
             height={16}
           />

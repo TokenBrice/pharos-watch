@@ -18,7 +18,7 @@ The subsystem has four moving parts:
 <!-- Do not edit by hand. Run `node --import tsx scripts/maintenance/report-telegram-adoption.ts` after the capture window. -->
 ### Telegram adoption and planning cost
 
-Status: **not yet measured** (14-day five-minute dispatch capture has not been collected).
+Status: **undecided (capture-window-incomplete)** (14-day five-minute dispatch capture; generated from the last incomplete observation).
 
 | Metric | Value |
 | --- | ---: |
@@ -27,12 +27,14 @@ Status: **not yet measured** (14-day five-minute dispatch capture has not been c
 | Daily active watchers | not measured |
 | Alerts sent (7d / 30d) | not measured / not measured |
 | Dispatch invocations | not measured |
-| Planning wall time (p50 / p95) | not measured |
 | Zero-work dispatch share | not measured |
-| Planning D1 statements | not measured |
-| Planning share of five-minute-lane D1 statements | not measured |
+| Planning pipeline D1 rows written | not measured |
+| Five-minute-lane D1 rows written | not measured |
+| Planning share of five-minute-lane D1 writes | not measured |
+| Real source events (enqueued) | not measured / not measured |
+| Planning→first-enqueue latency (p50 / p95) | not measured ms / not measured ms |
 
-Decision `decision.proceed41`: **false** until the 14-day measurement is available. The reporter applies the owner-approved thresholds: proceed with 4.1 when planning share exceeds 20% or p95 exceeds 10 minutes.
+Decision `decision.proceed41`: **false** (undecided: capture-window-incomplete; no 4.1 decision until the 14-day evidence is complete; 4.2/4.3 remain undecided pending separate table-value evidence).
 <!-- GENERATED-END: telegram-adoption -->
 
 ## Personalized Daily Recap
@@ -454,7 +456,7 @@ Filtering is subscription-aware:
 - Global depeg uses the subscriber's `global_depeg_worsening_bps_step` for both the initial severity gate and worsening follow-ups
 - Quiet hours force `disable_notification = true`
 - Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count of currently-snoozed chats (whether or not they would have received an alert this run) surfaces as `chatsWithActiveSnooze` in dispatch metadata.
-- A durable **Paused** state (`/pause`) is the same snooze column set to the far-future sentinel `4102444800` (2100-01-01 UTC), so the dispatcher skips a paused chat with no routing change. The sentinel is recognized by `isPausedSentinel()` in `worker/src/lib/telegram/constants.ts` and rendered as "Paused" (rather than a multi-thousand-day countdown) in `/list`, `/health`, and `/settings`. Resuming clears the column to NULL via `/pause off`, `/unsnooze`, or the Clear-snooze button; no path treats NULL as still-paused.
+- A durable **Paused** state (`/pause`) is the same snooze column set to the far-future sentinel `4102444800` (2100-01-01 UTC), so the dispatcher skips a paused chat with no routing change. The sentinel is recognized by `isPausedSentinel()` in `shared/lib/telegram-delivery-policy.ts` and rendered as "Paused" (rather than a multi-thousand-day countdown) in `/list`, `/health`, and `/settings`. Resuming clears the column to NULL via `/pause off`, `/unsnooze`, or the Clear-snooze button; no path treats NULL as still-paused.
 - Per-coin snoozes live on `telegram_subscriptions.alert_snooze_until_ts` (added pre-squash in `0119_telegram_subscription_snooze.sql`, now part of `worker/migrations/0000_baseline.sql`). The dispatcher filters them out at the subscriber-row SELECT and also loads a `Map<stablecoinId, Set<chatId>>` of active per-coin snoozes so the global fan-out lane suppresses the same (chat, stablecoin) pair. Per-coin snooze and chat-level snooze stack — either active suppresses fan-out.
 
 When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default, and it lets `/set <ticker> <type> off` silence that coin even when the chat follows a preset or all-stablecoin alert family.

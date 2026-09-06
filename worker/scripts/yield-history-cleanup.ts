@@ -441,7 +441,6 @@ export async function runYieldHistoryCleanupCli(
       }
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const artifact = JSON.parse(readFileSync(restorePath, "utf8")) as YieldHistoryCleanupArtifact;
     if (sqlitePath) {
       restoreCleanupRowsToSqlite(sqlitePath, artifact.rows);
@@ -466,7 +465,6 @@ export async function runYieldHistoryCleanupCli(
 
   if (exportPath) {
     const artifact = createYieldHistoryCleanupArtifact(beforeRows, operator);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFileSync(exportPath, JSON.stringify(artifact, null, 2));
   }
 

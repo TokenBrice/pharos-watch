@@ -74,7 +74,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "2a605a1c336343bfcd1b299d04d5c738b56f204faa9d9c7f54c7135c0946f246"
+      "sha256": "d6b62bb6e839c09560ce9c5223dd2c3376de8216dcc1f5828db4b7e6d22ce737"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -114,7 +114,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "4a78787df31e58234f85564b113a6a81b9d38cecc23a3338b7b771a635491f76"
+      "sha256": "5bd94453fa7727c3739fa65ba9582d53db2ea744cff94ba1824cbb1a1532fda1"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -126,7 +126,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/manifest.ts",
-      "sha256": "475ba13d7c18191876d62a4150f1a8fb863e5f156a91b6a5dc90f96995fb5394"
+      "sha256": "42025cbdb0c4d75ee79705adbd6ba25ce42418d80bd8d13101a3f7e8c3ad7180"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
@@ -142,7 +142,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/index.ts",
-      "sha256": "4c80a129153e890c20573bd6d63f14067022118c4fe1602b5a85e47df1eb39bf"
+      "sha256": "31532e3933bbf13ef66ce2fbde889cee891868273359e065e70a1ea303fd90bf"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
@@ -170,7 +170,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "ac1264c9712ab96fe4f80d0c3de3cc0dec2ac329982035faca4afd3dc4b2c7a5"
+      "sha256": "4e2a38df7803ee20e94f94f3cf4c16f88481f6a4fe6acf2892586bae3f65dd91"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -186,7 +186,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-      "sha256": "2b1b1cc57bb6fc048c235e1b775a9d30caf4642e7818b9a000f422729b096601"
+      "sha256": "3d60f93e4680cb48ba10f28c66a1dfbc7ecec9fa9363501ce1ddb52ff3c6d4d7"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/shared.ts",
@@ -354,7 +354,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "6d037ef5b76aa2328aec484bf9853dc835e35f7e24c6b5de9e5599a6df66a1ed"
+      "sha256": "5e4355afd2a734259675ea66af4adfa666485281e26fbdb4fbfb464ebab8b939"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -374,7 +374,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/reserves.ts",
-      "sha256": "0f75cbb2f9b9372049ba2599d62a64d7d17c4e9820d5f9c83775b11ef3f6107c"
+      "sha256": "496b5e6b27dfcd79a238e1f3ff55cfb362c8969fec8432f562fd6bc0a7a2084e"
     },
     {
       "path": "shared/types/safety-schema-primitives.ts",
@@ -462,7 +462,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/report-cards-fixed-input.ts",
-      "sha256": "3e3f7a0f66529831086b3cdee4e5e11848cc7d5fffedbd80726f5bc366315b11"
+      "sha256": "6e3da6a59e795869f85b8a5ba3c3c7bfde7ee8f2f0b94f12ba526992e3a9f794"
     },
     {
       "path": "worker/src/lib/safety-score-v9/centrifuge-supply-observer.ts",
@@ -603,7 +603,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-03-block-25895460-shock-coverage.json.gz"
     }
   ],
-  "digest": "1a9eeeedecf463202d052e2c70b64d591d165e6b8c56eb1165fb378b1476db09"
+  "digest": "7ec0466c464e8e683c960bd26ee85d4797325e9eb9cc07de5d5ad0a97410b3c5"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

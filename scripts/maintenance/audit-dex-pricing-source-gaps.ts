@@ -2,24 +2,24 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { formatDexPricingAuditUsd as formatUsd } from "@shared/lib/format";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   circulatingForStablecoinRow,
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   runAsMain,
-  runReportCli,
+  runCoverageAuditCli,
   type UnknownRecord,
-} from "../lib/report-cli";
+} from "../lib/coverage-audit-cli";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
 const HIGH_PRIORITY_MCAP_USD = 50_000_000;
 const LOW_SOURCE_DEPTH = 2;
 const PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
-const DEFAULT_CURVE_CONFIG_PATH = "worker/src/lib/curve-pool-configs.ts";
 
 export interface DexGapStablecoinRow {
   id: string;
@@ -224,25 +224,9 @@ function parseProtocolSources(row: DexGapDexPriceRow, warnings: string[]): DexPr
   }
 }
 
-export function extractConfiguredCurveStablecoinIds(source: string): Set<string> {
-  const ids = new Set<string>();
-  const stablecoinIdPattern = /stablecoinId:\s*"([^"]+)"/g;
-  for (const match of source.matchAll(stablecoinIdPattern)) {
-    ids.add(match[1]);
-  }
-  return ids;
-}
-
-function loadConfiguredCurveStablecoinIds(warnings: string[]): Set<string> {
-  try {
-    return extractConfiguredCurveStablecoinIds(readFileSync(resolve(DEFAULT_CURVE_CONFIG_PATH), "utf8"));
-  } catch (err) {
-    warnings.push(
-      `Unable to read ${DEFAULT_CURVE_CONFIG_PATH}: ${err instanceof Error ? err.message : String(err)}`,
-    );
-    return new Set();
-  }
-}
+// The configured-ID set is derived from the runtime Curve registry itself.
+// Unlike the retired source-text parser, a missing registry module fails the
+// import at startup instead of warning and reporting with an empty set.
 
 function hasDexPrimarySource(sources: string[], protocols: DexProtocolSourceSnapshot[]): boolean {
   if (sources.includes("dex-promoted")) return true;
@@ -260,7 +244,7 @@ export function buildDexPricingSourceGapAudit(input: BuildAuditInput): DexPricin
   const stableById = new Map(input.stablecoins.map((row) => [row.id, row]));
   const dexLiquidityById = new Map((input.dexLiquidity ?? []).map((row) => [row.stablecoin_id, row]));
   const configuredCurveStablecoinIds =
-    input.configuredCurveStablecoinIds ?? loadConfiguredCurveStablecoinIds(warnings);
+    input.configuredCurveStablecoinIds ?? new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
 
   const registryGaps: RegistryGapRow[] = [];
   const dexAdmissionGaps: DexAdmissionGapRow[] = [];
@@ -567,7 +551,7 @@ function readJson(path: string): unknown {
 }
 
 export function parseCliArgs(argv: string[]): CliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): CliOptions => ({
       stablecoinsPath: null,
       priceDepthPath: null,
@@ -593,7 +577,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
 }
 
 export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()): Promise<number> {
-  return runReportCli(argv, {
+  return runCoverageAuditCli(argv, {
     parse: parseCliArgs,
     cwd,
     build: (options) => {

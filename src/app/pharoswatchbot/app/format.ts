@@ -41,18 +41,6 @@ export function computeEffectiveSource(
 // Hoisted so render paths (StatusPanel) don't re-allocate the formatter on every render.
 const HEALTH_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
-/**
- * Far-future sentinel marking a durably "Paused" chat (`/pause`). Mirrors
- * `PAUSE_SENTINEL_TS` in `worker/src/lib/telegram/constants.ts` (2100-01-01 UTC);
- * kept as a local literal so the Mini App bundle stays free of worker imports.
- */
-const PAUSE_SENTINEL_TS = 4102444800;
-
-/** True when a snooze timestamp is the durable Paused sentinel (exact match). */
-export function isPausedSentinel(ts: number | null | undefined): boolean {
-  return ts === PAUSE_SENTINEL_TS;
-}
-
 export function formatSnoozePill(snoozeUntilTs: number): string {
   const date = new Date(snoozeUntilTs * 1000);
   const hh = String(date.getUTCHours()).padStart(2, "0");

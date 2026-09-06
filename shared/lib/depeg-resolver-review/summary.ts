@@ -3,25 +3,19 @@ import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { DDR_PREDICTION_POLICY_VERSION } from "../methodology-versions/depeg-resolver";
 import {
   DDRR_COVERAGE_PREDICTION_STATE_VALUES,
+  DDRR_SCORED_VERDICTS,
   type DdrrCoveragePredictionState,
   DdrrHorizonCalibration,
   DdrrHorizonHitRate,
-  DdrrRow,
+  DdrrResponseRow,
   DdrrSummary,
-  DdrrV2CoverageRow,
+  DdrrV2CoverageResponseRow,
   DdrrV2PredictionReviewRow,
   DdrrV2SummaryMetrics,
   DdrrVerdictReview,
 } from "../../types/depeg-resolver-review";
 import { isOperationalMissCause } from "./review";
 
-const RECOVERY_LIKELIHOOD_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
-  "correct_recoverable",
-  "correct_terminal",
-  "false_terminal",
-  "false_recoverable",
-  "risk_noted_terminal",
-]);
 // Headline-scope gate. Distinct from the UI's CALIBRATION_THRESHOLD=5 (calibrating-badge /
 // fraction-vs-percentage display gate); both read recoveryLikelihoodScoredCount but are
 // deliberately separate decisions — do not merge them.
@@ -32,11 +26,11 @@ type DdrrDurationScoredPredictionRow = DdrrV2PredictionReviewRow & {
   absoluteDurationErrorSec: number;
 };
 
-function countUniqueIncidents(rows: readonly DdrrRow[]): number {
+function countUniqueIncidents(rows: readonly DdrrResponseRow[]): number {
   return new Set(rows.map((row) => row.incidentKey)).size;
 }
 
-function summarizeHorizons(rows: readonly DdrrRow[]): DdrrHorizonHitRate[] {
+function summarizeHorizons(rows: readonly DdrrResponseRow[]): DdrrHorizonHitRate[] {
   return DDR_HORIZON_VALUES.map((horizon) => {
     let hits = 0;
     let misses = 0;
@@ -57,7 +51,7 @@ function summarizeHorizons(rows: readonly DdrrRow[]): DdrrHorizonHitRate[] {
   });
 }
 
-function summarizeHorizonCalibration(rows: readonly DdrrRow[]): DdrrHorizonCalibration[] {
+function summarizeHorizonCalibration(rows: readonly DdrrResponseRow[]): DdrrHorizonCalibration[] {
   const durationRows = rows
     .filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review")
     .filter(isDurationScoredPredictionRow);
@@ -117,7 +111,9 @@ function countPredictionVerdicts(rows: readonly DdrrV2PredictionReviewRow[]): Re
   );
 }
 
-function countCoveragePredictionStates(rows: readonly DdrrV2CoverageRow[]): Record<DdrrCoveragePredictionState, number> {
+function countCoveragePredictionStates(
+  rows: readonly DdrrV2CoverageResponseRow[],
+): Record<DdrrCoveragePredictionState, number> {
   const counts = Object.fromEntries(DDRR_COVERAGE_PREDICTION_STATE_VALUES.map((state) => [state, 0])) as Record<
     DdrrCoveragePredictionState,
     number
@@ -132,7 +128,7 @@ function isDurationScoredPredictionRow(row: DdrrV2PredictionReviewRow): row is D
   return row.signedDurationErrorSec != null && row.absoluteDurationErrorSec != null;
 }
 
-export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMetrics {
+export function summarizeDdrrMetrics(rows: readonly DdrrResponseRow[]): DdrrV2SummaryMetrics {
   const predictionRows = rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
   const noCallRows = rows.filter((row) => row.kind === "no_call_review");
   const coverageRows = rows.filter((row) => row.kind === "coverage");
@@ -142,7 +138,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
 
   const recoveryLikelihoodCorrectCount = verdicts.correct_recoverable + verdicts.correct_terminal;
   const recoveryLikelihoodScoredCount = predictionRows.filter((row) =>
-    RECOVERY_LIKELIHOOD_SCORED_VERDICTS.has(row.verdictReview),
+    DDRR_SCORED_VERDICTS.has(row.verdictReview),
   ).length;
 
   const durationRows = predictionRows.filter(isDurationScoredPredictionRow);
@@ -275,7 +271,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
   };
 }
 
-export function summarizeDdrrRows(rows: readonly DdrrRow[]): DdrrSummary {
+export function summarizeDdrrRows(rows: readonly DdrrResponseRow[]): DdrrSummary {
   const allMetrics = summarizeDdrrMetrics(rows);
   const currentPolicyRows = rows.filter((row) =>
     (row.kind === "prediction_review" || row.kind === "no_call_review" || row.kind === "invalidated_prediction") &&
@@ -298,7 +294,7 @@ export function summarizeDdrrRows(rows: readonly DdrrRow[]): DdrrSummary {
       : headlineScope === "all_ddrv2"
         ? "All official DDRv2 public predictions"
         : "Not enough reviewed outcomes for this policy";
-  const segments = new Map<string, DdrrRow[]>();
+  const segments = new Map<string, DdrrResponseRow[]>();
   for (const row of rows) {
     if (row.kind !== "prediction_review" && row.kind !== "no_call_review" && row.kind !== "invalidated_prediction") {
       continue;

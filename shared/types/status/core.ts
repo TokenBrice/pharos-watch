@@ -129,57 +129,106 @@ export const StatusProbeSummarySchema = z.object({
 });
 export type StatusProbeSummary = z.output<typeof StatusProbeSummarySchema>;
 
-export interface DataQuality {
-  stablecoinsCacheStatus: "ok" | "degraded" | "error";
-  stablecoinsCacheReason: string | null;
-  blacklistGapStatus: "ok" | "failed";
-  activeDepegStatus: "ok" | "failed";
-  onchainSupplyQueryStatus: "ok" | "failed" | "unavailable";
-  repairDebt: RepairDebtSummary;
-  ddrRepairDebtStatus: "ok" | "present" | "unknown";
-  ddrRepairDebtCount: number;
-  ddrRepairDebtCheckedAt: number | null;
-  ddrRepairDebtEvents: Array<{
-    eventId: number;
-    reason: string;
-  }>;
-  ddrRepairDebtEventsTruncated: boolean;
-  sourceFailures: Array<{
-    source: "stablecoins-cache" | "blacklist-gaps" | "active-depegs" | "onchain-supply";
-    message: string;
-  }>;
-  totalStablecoins: number;
-  missingPrices: number;
-  stablecoinPublication?: StablecoinPublicationHealth;
-  blacklistMissingAmounts: number;
-  blacklistRecentMissingAmounts: number;
-  blacklistRecentWindowSec: number;
-  blacklistMissingRatio: number;
-  blacklistTotal: number;
-  blacklistOldestRecoverableAgeSec: number | null;
-  blacklistNeverAttemptedCount: number;
-  blacklistRepeatedFailureCount: number;
-  blacklistReconciliation?: BlacklistReconciliationStatus;
-  onchainSupplyDivergences: number;
-  onchainDivergenceRatio: number;
-  onchainSupplyMonitoring: "active" | "unavailable";
-  onchainSupplyLatestAt: number | null;
-  onchainSupplyTrackedCoins: number;
-  activeDepegs: number;
-  staleOnchainSupply: number;
-  onchainStaleRatio: number;
-}
+export const BlacklistReconciliationStatusSchema = z.object({
+  status: z.enum(["not-run", "running", "verified", "failed", "unknown"]),
+  runId: z.string().nullable(),
+  manifestId: z.string().nullable(),
+  manifestSha256: z.string().nullable(),
+  bookmarkRecorded: z.boolean(),
+  expectedEventCount: z.number(),
+  presentEventCount: z.number(),
+  missingEventCount: z.number(),
+  duplicateIdentityCount: z.number(),
+  destroyedAmountExpectedRaw: z.string(),
+  destroyedAmountActualRaw: z.string(),
+  balanceReplayExpectedCount: z.number(),
+  balanceReplayMatchingCount: z.number(),
+  unresolvedManifestGapCount: z.number(),
+  tronAtSafeHead: z.boolean(),
+  arbitrumAtSafeHead: z.boolean(),
+  startedAt: z.number().nullable(),
+  completedAt: z.number().nullable(),
+});
+export type BlacklistReconciliationStatus = z.output<typeof BlacklistReconciliationStatusSchema>;
 
-export interface StablecoinPublicationHealth {
-  status: "complete" | "incomplete" | "unknown";
-  expectedActiveCount: number;
-  presentActiveCount: number;
-  waivedActiveCount: number;
-  missingActiveIds: string[];
-  waivedActiveIds: string[];
-  expiredWaiverIds: string[];
-  observedAt: number | null;
-}
+const RepairDebtKindSummarySchema = z.object({
+  openCount: z.number(),
+  oldestAgeSec: z.number().nullable(),
+  nextRunnerDueAt: z.number().nullable(),
+});
+
+export const RepairDebtSummarySchema = z.object({
+  status: z.enum(["ok", "present", "unknown"]),
+  openCount: z.number(),
+  oldestAgeSec: z.number().nullable(),
+  byKind: z.record(z.string(), RepairDebtKindSummarySchema),
+  availabilityEscalated: z.boolean(),
+  nextRunnerDueAt: z.number().nullable(),
+  source: z.enum([
+    "worker-repair-tasks",
+    "worker-repair-tasks+ddr-cache-fallback",
+    "ddr-cache-fallback",
+    "unavailable",
+  ]),
+});
+export type RepairDebtSummary = z.output<typeof RepairDebtSummarySchema>;
+export const StablecoinPublicationHealthSchema = z.object({
+  status: z.enum(["complete", "incomplete", "unknown"]),
+  expectedActiveCount: z.number(),
+  presentActiveCount: z.number(),
+  waivedActiveCount: z.number(),
+  missingActiveIds: z.array(z.string()),
+  waivedActiveIds: z.array(z.string()),
+  expiredWaiverIds: z.array(z.string()),
+  observedAt: z.number().nullable(),
+});
+export type StablecoinPublicationHealth = z.output<typeof StablecoinPublicationHealthSchema>;
+
+export const DataQualitySchema = z.object({
+  stablecoinsCacheStatus: z.enum(["ok", "degraded", "error"]),
+  stablecoinsCacheReason: z.string().nullable(),
+  blacklistGapStatus: z.enum(["ok", "failed"]),
+  activeDepegStatus: z.enum(["ok", "failed"]),
+  onchainSupplyQueryStatus: z.enum(["ok", "failed", "unavailable"]),
+  repairDebt: RepairDebtSummarySchema,
+  ddrRepairDebtStatus: z.enum(["ok", "present", "unknown"]),
+  ddrRepairDebtCount: z.number(),
+  ddrRepairDebtCheckedAt: z.number().nullable(),
+  ddrRepairDebtEvents: z.array(
+    z.object({
+      eventId: z.number(),
+      reason: z.string(),
+    }),
+  ),
+  ddrRepairDebtEventsTruncated: z.boolean(),
+  sourceFailures: z.array(
+    z.object({
+      source: z.enum(["stablecoins-cache", "blacklist-gaps", "active-depegs", "onchain-supply"]),
+      message: z.string(),
+    }),
+  ),
+  totalStablecoins: z.number(),
+  missingPrices: z.number(),
+  stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
+  blacklistMissingAmounts: z.number(),
+  blacklistRecentMissingAmounts: z.number(),
+  blacklistRecentWindowSec: z.number(),
+  blacklistMissingRatio: z.number(),
+  blacklistTotal: z.number(),
+  blacklistOldestRecoverableAgeSec: z.number().nullable(),
+  blacklistNeverAttemptedCount: z.number(),
+  blacklistRepeatedFailureCount: z.number(),
+  blacklistReconciliation: BlacklistReconciliationStatusSchema.optional(),
+  onchainSupplyDivergences: z.number(),
+  onchainDivergenceRatio: z.number(),
+  onchainSupplyMonitoring: z.enum(["active", "unavailable"]),
+  onchainSupplyLatestAt: z.number().nullable(),
+  onchainSupplyTrackedCoins: z.number(),
+  activeDepegs: z.number(),
+  staleOnchainSupply: z.number(),
+  onchainStaleRatio: z.number(),
+});
+export type DataQuality = z.output<typeof DataQualitySchema>;
 
 export interface ActivePriceCoverageGap {
   stablecoinId: string;
@@ -213,51 +262,15 @@ export interface ActivePriceCoverageHealth {
   observedAt: number | null;
 }
 
-export interface BlacklistReconciliationStatus {
-  status: "not-run" | "running" | "verified" | "failed" | "unknown";
-  runId: string | null;
-  manifestId: string | null;
-  manifestSha256: string | null;
-  bookmarkRecorded: boolean;
-  expectedEventCount: number;
-  presentEventCount: number;
-  missingEventCount: number;
-  duplicateIdentityCount: number;
-  destroyedAmountExpectedRaw: string;
-  destroyedAmountActualRaw: string;
-  balanceReplayExpectedCount: number;
-  balanceReplayMatchingCount: number;
-  unresolvedManifestGapCount: number;
-  tronAtSafeHead: boolean;
-  arbitrumAtSafeHead: boolean;
-  startedAt: number | null;
-  completedAt: number | null;
-}
-
-interface RepairDebtKindSummary {
-  openCount: number;
-  oldestAgeSec: number | null;
-  nextRunnerDueAt: number | null;
-}
-
-export interface RepairDebtSummary {
-  status: "ok" | "present" | "unknown";
-  openCount: number;
-  oldestAgeSec: number | null;
-  byKind: Record<string, RepairDebtKindSummary>;
-  availabilityEscalated: boolean;
-  nextRunnerDueAt: number | null;
-  source: "worker-repair-tasks" | "worker-repair-tasks+ddr-cache-fallback" | "ddr-cache-fallback" | "unavailable";
-}
-
-export interface DatasetFreshness {
-  stablecoins: number | null;
-  blacklist: number | null;
-  mintBurn: number | null;
-  supply: number | null;
-  safetyGrades: number | null;
-  yield: number | null;
-  depegs: number | null;
-  dews: number | null;
-  digest: number | null;
-}
+export const DatasetFreshnessSchema = z.object({
+  stablecoins: z.number().nullable(),
+  blacklist: z.number().nullable(),
+  mintBurn: z.number().nullable(),
+  supply: z.number().nullable(),
+  safetyGrades: z.number().nullable(),
+  yield: z.number().nullable(),
+  depegs: z.number().nullable(),
+  dews: z.number().nullable(),
+  digest: z.number().nullable(),
+});
+export type DatasetFreshness = z.output<typeof DatasetFreshnessSchema>;

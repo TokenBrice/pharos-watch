@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
-import type { DdrrRow } from "@shared/types/depeg-resolver-review";
+import {
+  DdrrResponseRowSchema,
+  type DdrrRow,
+} from "@shared/types/depeg-resolver-review";
 import {
   coverageRow,
   makePredictionPolicySegment,
@@ -12,7 +15,6 @@ import {
   DDR_COVERAGE_LABELS,
   DDR_OUTCOME_LABELS,
   DDR_VERDICT_LABELS,
-  ddrSourceEventStateToActualOutcome,
   formatMetricPercent,
   formatPercent,
   formatDdrSignedDuration,
@@ -62,13 +64,38 @@ describe("DDR review presentation vocabulary", () => {
     expect(isDdrScoredVerdict("pending")).toBe(false);
   });
 
-  it("normalizes source outcomes and duration display exhaustively", () => {
-    expect(ddrSourceEventStateToActualOutcome("active")).toBe("still_open");
-    expect(ddrSourceEventStateToActualOutcome("missing")).toBe("source_missing");
-    expect(ddrSourceEventStateToActualOutcome("terminal")).toBe("terminal");
+  it("reads native outcomes and formats duration display", () => {
+    expect(
+      getActualOutcome({
+        ...coverageRow,
+        sourceEventState: "active",
+        actualOutcome: "still_open",
+      }),
+    ).toBe("still_open");
+    expect(
+      getActualOutcome({
+        ...coverageRow,
+        sourceEventState: "missing",
+        actualOutcome: "source_missing",
+      }),
+    ).toBe("source_missing");
+    expect(getActualOutcome(invalidatedRow)).toBe("invalidated");
     expect(formatDdrSignedDuration(null)).toBe("N/A");
     expect(formatDdrSignedDuration(61)).toBe("+1m");
     expect(formatDdrSignedDuration(-61)).toBe("−1m");
+  });
+
+  it("accepts generation-3 coverage rows and renders the same outcome label as generation-4", () => {
+    const generation4Row = DdrrResponseRowSchema.parse(coverageRow);
+    const { actualOutcome: _actualOutcome, ...generation3Payload } = coverageRow;
+    const generation3Row = DdrrResponseRowSchema.parse(generation3Payload);
+
+    expect(generation3Row).not.toHaveProperty("actualOutcome");
+    const generation4Outcome = getActualOutcome(generation4Row);
+    const generation3Outcome = getActualOutcome(generation3Row);
+    expect(generation4Outcome).toBe("recovered");
+    expect(generation3Outcome).toBe(generation4Outcome);
+    expect(DDR_OUTCOME_LABELS[generation3Outcome]).toBe(DDR_OUTCOME_LABELS[generation4Outcome]);
   });
 });
 

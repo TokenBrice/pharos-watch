@@ -165,66 +165,17 @@ export interface EvmLogFetchResult {
   failureReason?: string;
 }
 
-/** Topic filter entry for compound topic queries */
-export interface TopicFilter {
-  index: number; // 0–3
-  value: string; // hex hash
-}
-
 /**
- * Build Etherscan topic filter URL params from an array of topic filters.
- * Sets `topic{N}` for each entry and `topic0_{N}_opr = "and"` for N > 0
- * (Etherscan requires explicit operator params between topic positions).
+ * Fetch EVM logs for a single topic0 hash from Etherscan v2.
+ *
+ * Returns a completeness-aware result so callers can distinguish reliable
+ * empty scans from partial failures; splits the block range recursively
+ * when the provider caps results.
  */
-export function buildTopicParams(topics: TopicFilter[]): URLSearchParams {
-  const params = new URLSearchParams();
-  for (const { index, value } of topics) {
-    params.set(`topic${index}`, value);
-    if (index > 0) {
-      params.set(`topic0_${index}_opr`, "and");
-    }
-  }
-  return params;
-}
-
 export async function fetchEvmLogsForTopicWithCompleteness(
   evmChainId: number,
   contractAddress: string,
   topicHash: string,
-  apiKey: string | null,
-  fromBlock: number,
-  toBlock: number,
-  depth: number,
-  rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<EvmLogFetchResult> {
-  return fetchEvmLogsForTopicsWithCompleteness(
-    evmChainId,
-    contractAddress,
-    [{ index: 0, value: topicHash }],
-    apiKey,
-    fromBlock,
-    toBlock,
-    depth,
-    rateLimit,
-    budget,
-    signal,
-  );
-}
-
-/**
- * Fetch EVM logs matching compound topic filters from Etherscan v2.
- * Supports filtering by topic0 alone, or topic0 + topic1/topic2 for
- * mint/burn detection (e.g. Transfer where from=zero or to=zero).
- *
- * Returns a completeness-aware result so callers can distinguish reliable
- * empty scans from partial failures.
- */
-export async function fetchEvmLogsForTopicsWithCompleteness(
-  evmChainId: number,
-  contractAddress: string,
-  topics: TopicFilter[],
   apiKey: string | null,
   fromBlock: number,
   toBlock: number,
@@ -256,7 +207,6 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
     };
   }
 
-  const topicParams = buildTopicParams(topics);
   const params = new URLSearchParams({
     chainid: evmChainId.toString(),
     module: "logs",
@@ -264,11 +214,8 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
     address: contractAddress,
     fromBlock: fromBlock.toString(),
     toBlock: toBlock.toString(),
+    topic0: topicHash,
   });
-  // Merge topic params into the main params
-  for (const [key, value] of topicParams) {
-    params.set(key, value);
-  }
   if (apiKey) params.set("apikey", apiKey);
 
   budget.count++;
@@ -325,10 +272,10 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
 
     // Sequential splits to avoid fanning out into 2^depth concurrent connections.
     // Matches the sequential pattern in alchemy-logs.ts.
-    const first = await fetchEvmLogsForTopicsWithCompleteness(
+    const first = await fetchEvmLogsForTopicWithCompleteness(
       evmChainId,
       contractAddress,
-      topics,
+      topicHash,
       apiKey,
       fromBlock,
       mid,
@@ -345,10 +292,10 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
         maxDepth: Math.max(depth, first.maxDepth),
       };
     }
-    const second = await fetchEvmLogsForTopicsWithCompleteness(
+    const second = await fetchEvmLogsForTopicWithCompleteness(
       evmChainId,
       contractAddress,
-      topics,
+      topicHash,
       apiKey,
       mid + 1,
       toBlock,

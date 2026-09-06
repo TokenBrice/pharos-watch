@@ -11,7 +11,6 @@ import { useChainProfileData } from "@/hooks/use-chain-profile-data";
 import {
   BackingBreakdown,
   CompositionSection,
-  DetailedSectionsNotice,
   StablecoinTable,
 } from "./detail-sections";
 import { ChainHero } from "./chain-hero";
@@ -25,13 +24,10 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
     chain,
     coins,
     totalUsd,
-    canRenderDetailedSections,
     canConfirmMissingChain,
-    detailedSectionNotice,
     hasAnyData,
     routeError,
     chainsQuery,
-    stablecoinsQuery,
     refetchAll,
   } = useChainProfileData(chainId);
 
@@ -95,13 +91,6 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
               hasData: !!chainsQuery.data?.chains?.length,
               meta: chainsQuery.meta,
             },
-            {
-              preset: "stablecoins",
-              dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
-              error: stablecoinsQuery.error,
-              hasData: stablecoinsQuery.meta != null || stablecoinsQuery.dataUpdatedAt > 0,
-              meta: stablecoinsQuery.meta,
-            },
           ]}
         />
         {hero}
@@ -113,7 +102,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
             chainName={chain.name}
           />
         )}
-        {chain && canRenderDetailedSections ? (
+        {chain && (
           <>
             <CompositionSection model={routeModel} />
             <BackingBreakdown
@@ -123,10 +112,6 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
             />
             <StablecoinTable coins={filteredCoins} backingFilter={backingFilter} />
           </>
-        ) : (
-          chain && detailedSectionNotice ? (
-            <DetailedSectionsNotice message={detailedSectionNotice} onRetry={() => { void refetchAll(); }} />
-          ) : null
         )}
       </div>
     </SectionErrorBoundary>

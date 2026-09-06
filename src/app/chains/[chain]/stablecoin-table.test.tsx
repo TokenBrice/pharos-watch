@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { RatioSchema } from "@shared/types/ratio";
 import { makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
 import { StablecoinTable } from "./stablecoin-table";
 
@@ -34,8 +35,8 @@ describe("Chain detail StablecoinTable", () => {
             id: "dai-maker",
             name: "DAI",
             symbol: "DAI",
-            supplyOnChain: 400_000_000,
-            chainShare: 0.4,
+            supplyUsd: 400_000_000,
+            chainShare: RatioSchema.parse(0.4),
             backing: "crypto-backed",
           }),
         ]}

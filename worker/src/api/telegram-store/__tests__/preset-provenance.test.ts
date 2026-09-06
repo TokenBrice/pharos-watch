@@ -22,9 +22,7 @@ function migrationDirectory(): string {
 function openLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
   const dir = migrationDirectory();
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration directory only.
   for (const file of readdirSync(dir).filter((entry) => entry.endsWith(".sql")).sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration replay only.
     sqlite.exec(readFileSync(join(dir, file), "utf8"));
   }
   return { sqlite, db: createSqliteD1(sqlite) };

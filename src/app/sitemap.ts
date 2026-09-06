@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getActiveChainIds } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
@@ -210,7 +210,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...buildStaticSitemapEntries(referencePageSpecs, lastEdited),
   ];
 
-  const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({
+  const stablecoinPages: MetadataRoute.Sitemap = CLIENT_TRACKED_STABLECOINS.map((coin) => ({
     url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
     lastModified: stablecoinLastModified(coin.id),
     changeFrequency: "daily" as const,

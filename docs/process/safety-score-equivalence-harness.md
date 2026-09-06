@@ -23,7 +23,7 @@ Every later task that says "verified against the harness runbook" means the proc
 Two properties make the replay equal to production:
 
 - The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9/publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
-- `worker/scripts/replay-safety-score-v9.ts` compiles that input through the same pipeline with no network, D1, or wall-clock reads. The artifact is a pure function of (capture, `--published-at`, code) — two replays of one capture at one commit are byte-identical.
+- `worker/scripts/replay-safety-score-v9.ts` compiles without network, D1, or wall-clock reads. Capture-time replay freezes the registry snapshot as well as the input and publication clock; current evaluator code, policy, and non-transfer V9 overlays still come from the checkout. Two replays with the same inputs are byte-identical; this alone does not prove equality with a historical production publication.
 
 `worker/scripts/diff-safety-score-v9-replays.ts` drops two separately-owned key families at every depth — `VOLATILE_KEYS` (per-run publication identity and capture timing) and `VERSION_ACTIVATION_KEYS` (pinned-build and methodology-identity digests plus `policyVersion`, which move only on a deliberate version activation) — and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
 
@@ -81,7 +81,7 @@ Strip the SQL wrapper. Either form is a valid replay input:
 
 ```sh
 # Preferred: verify the envelope checksum, generation, capture kind, and schema,
-# then write the normalized fixed input.
+# then write a registry-bound capture wrapper containing the normalized fixed input.
 npm run report-cards:capture-fixed-input -- \
   --exact-cache-export "agents/v9-captures/capture-${date_stamp}.raw.json" \
   --output "agents/v9-captures/capture-${date_stamp}.json"
@@ -97,7 +97,7 @@ Read the capture's scoring clock — every replay of this capture uses it verbat
 
 ```sh
 # From the normalized capture
-jq -r .clockSec "agents/v9-captures/capture-${date_stamp}.json"
+jq -r '(.fixedInput // .).clockSec' "agents/v9-captures/capture-${date_stamp}.json"
 
 # From the compressed envelope
 jq -r .payload "agents/v9-captures/capture-${date_stamp}.envelope.json" \
@@ -107,7 +107,7 @@ jq -r .payload "agents/v9-captures/capture-${date_stamp}.envelope.json" \
 Also record the capture's identity — `sourceGeneration` is present on both the envelope and the normalized capture, and the normalized capture additionally carries the content-derived `baseInputGenerationId`:
 
 ```sh
-jq -r '{sourceGeneration, baseInputGenerationId, clockSec}' \
+jq -r '(.fixedInput // .) | {sourceGeneration, baseInputGenerationId, clockSec}' \
   "agents/v9-captures/capture-${date_stamp}.json"
 ```
 
@@ -118,7 +118,7 @@ Two captures sharing a `sourceGeneration` are the same producer cycle and do not
 Check out the commit you want to measure, then:
 
 ```sh
-clock_sec="$(jq -r .clockSec agents/v9-captures/capture-20260807-1500.json)"
+clock_sec="$(jq -r '(.fixedInput // .).clockSec' agents/v9-captures/capture-20260807-1500.json)"
 commit="$(git rev-parse --short HEAD)"
 npm run safety-score-v9:replay -- \
   --input agents/v9-captures/capture-20260807-1500.json \
@@ -130,9 +130,65 @@ Name every artifact `replay-<commit>-<capture stamp>.json`. The commit is what t
 
 The replay writes canonical byte-stable JSON. The published response lives at `pipeline.candidate`; its `cards` array carries one card per asset.
 
+### Capture-time registry replay
+
+New `report-cards:capture-fixed-input` exports wrap the normalized input as
+`{kind:"safety-score-v9-registry-capture", fixedInput, registrySnapshot}`.
+The snapshot contains the full active/frozen/dead registry identity projection,
+its recomputed fingerprint, and separately digest-bound transfer reviews.
+Keeping full registry rows rather than a flag-only projection lets replay
+recompute the original fingerprint, not merely trust a claimed identity.
+This is an operator export format; the production D1 envelope is unchanged.
+
+For an older capture with only a fingerprint, supply a trusted local commit:
+
+```sh
+npm run safety-score-v9:replay -- \
+  --input agents/v9-captures/capture-20260904-1100.json \
+  --output agents/v9-captures/replay-registry-20260904.json \
+  --published-at 1788509806 \
+  --registry-ref 83ee5baede53181d2fc07fd43a7acd103f0f562f
+```
+
+`--registry-ref` accepts a 7–40-character lowercase hexadecimal commit SHA.
+The loader exports that commit's `shared/` and catalog-generation scripts to
+ignored scratch under `agents/v9-captures/registry-scratch/`, rebuilds its
+catalog, computes the registry fingerprint with the generator's shared
+algorithm, and removes the temporary tree even on failure. It never fetches
+Git history. Only use trusted local commits: their catalog loader executes.
+The same flag on `report-cards:capture-fixed-input` embeds that verified registry.
+Without the flag, export verifies the local registry before embedding it;
+a mismatch requires the correct ref, never an invented snapshot.
+
+Replay uses an embedded snapshot automatically. If both it and a ref are
+present, registry fingerprints and transfer-review digests must agree.
+Malformed snapshots, missing refs, and capture/snapshot mismatches fail closed.
+The NAV validator and baseline extension use snapshot classifications and
+metadata, never today's classifications. No NAV rows are discarded.
+Capture-time replay also preserves captured redemption observations rather
+than applying the legacy current-curation SIM-EXIT-L2 rederivation, so the
+capture's base-input generation remains unchanged.
+
+The registry fingerprint does **not** identify every V9 overlay or the evaluator.
+Transfer reviews are loaded from the same ref and separately digest-bound to
+avoid future-dated live reviews; policy, other V9 overlays, and evaluation-build
+identity remain checkout-owned. Retain the original publication and evaluator
+revision for a production-result comparison. See the recovered capture mapping
+and digest limitations in [V9 readiness](./safety-score-v9-readiness.md#recovered-capture-time-registries).
+
+`--normalized-only` retains the plain normalized export for current-curation
+workflows such as the expiry sweep. It cannot be combined with `--registry-ref`.
+
 ### `--allow-registry-mismatch`
 
 A capture records the registry fingerprint of the tree it was taken from, and the replay refuses to score it against a different registry. That refusal is what makes an ordinary replay a clean code-only measurement, so it must stay on by default. A frozen capture stops replaying after any change to the fully merged stablecoin registries—including base files, domain sidecars, lifecycle/listing inputs, or the dead registry—that rotates the fingerprint. `--allow-registry-mismatch` is the operator's explicit acceptance of that mismatch: the replay proceeds against the local registry rows and adopts the capture's registry identity so the pipeline's internal identity checks stay coherent. The resulting diff no longer isolates the code change — it measures **code and curation together**, and it must be partitioned by attribution (which drift entries belong to a methodology change, which to each curation commit, which to neither) before any of it is read as an equivalence result. An entry that lands in no attribution class is a finding, not noise. The flag is replay-only; the production publication path never sets it and its fingerprint check is unchanged.
+
+With a registry-bound wrapper, `--allow-registry-mismatch` explicitly selects the
+local registry instead of the embedded snapshot (the snapshot's integrity is
+still checked). It remains a code-plus-current-curation comparison, including
+the existing NAV validation and replay-lane redemption rederivation. Combining
+it with `--registry-ref` is rejected because the requested registry modes
+contradict one another.
 
 ## (c) Diff a baseline replay against a candidate replay
 

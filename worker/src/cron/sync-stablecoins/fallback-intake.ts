@@ -149,9 +149,15 @@ export async function overlayFallbackCuratedAggregateSupply(
     asset.circulating = { [pegKey]: onChainMcap.mcap };
     asset.supplySource = onChainMcap.supplySource;
     asset.chainCirculating = Object.fromEntries(
-      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, current]) => [
+      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, row]) => [
         chainLabel,
-        { current, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+        {
+          ...(row.chainId ? { chainId: row.chainId } : {}),
+          current: row.current,
+          circulatingPrevDay: 0,
+          circulatingPrevWeek: 0,
+          circulatingPrevMonth: 0,
+        },
       ]),
     );
     asset.chains = Object.keys(onChainMcap.chainCirculating);

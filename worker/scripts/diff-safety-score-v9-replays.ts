@@ -218,7 +218,6 @@ Options:
 const MAX_REPORTED_ENTRIES = 50;
 
 function readJson(path: string): unknown {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 

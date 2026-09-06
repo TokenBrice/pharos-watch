@@ -89,6 +89,14 @@ function readListingClassById(sourcePath = LISTING_DECISIONS_JSON_ABS) {
 }
 
 /**
+ * Read the full source catalog. `runCli` parses once and shares the array via
+ * each builder's `sourceCoins`; fixture callers that omit it get a path-scoped read.
+ */
+function readSourceCoins(sourceJsonPath = SOURCE_JSON_ABS) {
+  return JSON.parse(readFileSync(sourceJsonPath, "utf8"));
+}
+
+/**
  * Read the canonical field allowlist from `shared/types/stablecoin-client-meta.ts`.
  * Order there defines the key order in the emitted JSON so re-runs are
  * byte-identical while keeping TypeScript consumers and this generator on one
@@ -648,13 +656,13 @@ export function validateListProjection(slim, sourceCoin, index, listFields, list
 
 export function buildClientRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
+  sourceCoins = readSourceCoins(sourceJsonPath),
   canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
   listingDecisionsJsonPath = LISTING_DECISIONS_JSON_ABS,
   clientFields = readCanonicalClientFields(),
   detailFields = readCanonicalClientDetailFields(),
 } = {}) {
-  const rawJson = readFileSync(sourceJsonPath, "utf8");
-  const parsed = JSON.parse(rawJson);
+  const parsed = sourceCoins;
   const canonicalOrder = readCanonicalOrder(canonicalOrderJsonPath);
   const listingClassById = readListingClassById(listingDecisionsJsonPath);
   const sourceById = new Map(parsed.map((coin) => [coin.id, coin]));
@@ -687,10 +695,10 @@ export function buildClientRegistryOutput({
 
 export function buildComplianceRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
+  sourceCoins = readSourceCoins(sourceJsonPath),
   geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS,
 } = {}) {
-  const rawJson = readFileSync(sourceJsonPath, "utf8");
-  const parsed = JSON.parse(rawJson);
+  const parsed = sourceCoins;
 
   if (!Array.isArray(parsed)) {
     throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
@@ -723,9 +731,11 @@ export function buildComplianceRegistryOutput({
   };
 }
 
-export function buildTelegramMiniAppCatalogOutput({ sourceJsonPath = SOURCE_JSON_ABS } = {}) {
-  const rawJson = readFileSync(sourceJsonPath, "utf8");
-  const parsed = JSON.parse(rawJson);
+export function buildTelegramMiniAppCatalogOutput({
+  sourceJsonPath = SOURCE_JSON_ABS,
+  sourceCoins = readSourceCoins(sourceJsonPath),
+} = {}) {
+  const parsed = sourceCoins;
 
   if (!Array.isArray(parsed)) {
     throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
@@ -819,10 +829,10 @@ export function projectWorkerRuntimeCoin(coin, index) {
 
 export function buildWorkerRuntimeRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
+  sourceCoins = readSourceCoins(sourceJsonPath),
   canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
 } = {}) {
-  const rawJson = readFileSync(sourceJsonPath, "utf8");
-  const parsed = JSON.parse(rawJson);
+  const parsed = sourceCoins;
   const canonicalOrder = JSON.parse(readFileSync(canonicalOrderJsonPath, "utf8"));
 
   if (!Array.isArray(parsed)) {
@@ -856,10 +866,13 @@ function detailOutputPath(id) {
 }
 
 export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
-  const { output, listCoins, detailOutputs } = buildClientRegistryOutput();
-  const { output: complianceOutput, geniusEntries } = buildComplianceRegistryOutput();
-  const { output: telegramMiniAppOutput, searchableCoins } = buildTelegramMiniAppCatalogOutput();
-  const { output: workerRuntimeOutput, runtimeCoins } = buildWorkerRuntimeRegistryOutput();
+  // One read/parse of the ~16 MB catalog shared by all four builders; none of
+  // them mutates the array, so passing the same instance is safe.
+  const sourceCoins = readSourceCoins();
+  const { output, listCoins, detailOutputs } = buildClientRegistryOutput({ sourceCoins });
+  const { output: complianceOutput, geniusEntries } = buildComplianceRegistryOutput({ sourceCoins });
+  const { output: telegramMiniAppOutput, searchableCoins } = buildTelegramMiniAppCatalogOutput({ sourceCoins });
+  const { output: workerRuntimeOutput, runtimeCoins } = buildWorkerRuntimeRegistryOutput({ sourceCoins });
 
   if (checkMode) {
     const currentList = existsSync(LIST_OUTPUT_JSON_ABS) ? readFileSync(LIST_OUTPUT_JSON_ABS, "utf8") : "";

@@ -11,6 +11,7 @@ export {
   getEndpointDefinitionByKey,
   getEndpointOpsProxyTimeoutMs,
   isCacheBypassPath,
+  isCacheKeyQueryFreePath,
   isMutatingAdminPath,
   type DynamicAdminEndpointMatch,
   type EndpointDefinition,

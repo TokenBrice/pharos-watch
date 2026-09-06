@@ -1,4 +1,5 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { StatusResponse } from "@shared/types";
 import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
@@ -38,11 +39,6 @@ const DATASET_META: Record<
   digest: { label: "Daily digest", owners: ["daily-digest"] },
 };
 
-function getExpectedFreshnessSec(owners: readonly string[]): number | null {
-  const cadenceSec = getCadenceSec(owners);
-  return cadenceSec == null ? null : cadenceSec * 2;
-}
-
 function getCadenceSec(owners: readonly string[]): number | null {
   const intervals = owners
     .map((owner) => getCronJobMeta(owner)?.intervalSec)
@@ -51,12 +47,13 @@ function getCadenceSec(owners: readonly string[]): number | null {
   return Math.min(...intervals);
 }
 
-// Band heuristics: "on time" = age ≤ 4× expected (2× intervalSec),
-// "aging" = 4× expected < age ≤ 6× expected, "late" = age > 6× expected.
-// Thresholds are intentionally generous — only flag truly overdue pipelines.
+// Band heuristics reuse the canonical default availability ratios over the
+// writer cadence: 8× cadence (= 4× the displayed grace basis) and 12× cadence
+// (= 6× the basis). Thresholds are intentionally generous — only flag truly
+// overdue pipelines.
 function getBand(
   ageSeconds: number | null,
-  expectedFreshnessSec: number | null,
+  cadenceSec: number | null,
 ): {
   label: string;
   className: string;
@@ -67,19 +64,19 @@ function getBand(
       className: OPERATIONAL_PILL_CLASS.unknown,
     };
   }
-  if (expectedFreshnessSec == null) {
+  if (cadenceSec == null) {
     return {
       label: "unknown",
       className: OPERATIONAL_PILL_CLASS.unknown,
     };
   }
-  if (ageSeconds > expectedFreshnessSec * 6) {
+  if (ageSeconds > cadenceSec * STATUS_CACHE_RATIO_THRESHOLDS.stale) {
     return {
       label: "late",
       className: OPERATIONAL_PILL_CLASS.error,
     };
   }
-  if (ageSeconds > expectedFreshnessSec * 4) {
+  if (ageSeconds > cadenceSec * STATUS_CACHE_RATIO_THRESHOLDS.degraded) {
     return {
       label: "aging",
       className: OPERATIONAL_PILL_CLASS.warning,
@@ -103,7 +100,7 @@ export function DatasetFreshnessTable({
     const updatedAt = datasetFreshness[key];
     const ageSeconds = updatedAt != null ? Math.max(0, nowSeconds - updatedAt) : null;
     const cadenceSec = getCadenceSec(meta.expectedOwners ?? meta.owners);
-    const expectedFreshnessSec = getExpectedFreshnessSec(meta.expectedOwners ?? meta.owners);
+    const expectedFreshnessSec = cadenceSec != null ? cadenceSec * 2 : null;
     const owners = meta.owners.map((owner) => getCronJobMeta(owner)?.label ?? owner).join(", ");
 
     return {
@@ -114,7 +111,7 @@ export function DatasetFreshnessTable({
       owners,
       cadenceSec,
       expectedFreshnessSec,
-      band: getBand(ageSeconds, expectedFreshnessSec),
+      band: getBand(ageSeconds, cadenceSec),
     };
   });
 

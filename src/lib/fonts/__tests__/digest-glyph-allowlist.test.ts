@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test reads
-   fixed allowlist + digest data fixtures rooted at process.cwd(). */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

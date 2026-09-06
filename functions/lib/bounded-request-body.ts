@@ -5,13 +5,14 @@ import {
 } from "@shared/lib/bounded-stream";
 
 export type BoundedRequestBodyResult =
-  | { status: "ok"; bytes: Uint8Array }
+  | { status: "ok"; bytes: Uint8Array<ArrayBuffer> }
   | { status: "too-large" }
   | { status: "unreadable" };
 
 export async function readBoundedRequestBody(
   request: Request,
   maxBytes: number,
+  signal?: AbortSignal,
 ): Promise<BoundedRequestBodyResult> {
   const declared = parseDeclaredLength(request.headers.get("Content-Length"));
   if (
@@ -27,6 +28,7 @@ export async function readBoundedRequestBody(
   try {
     const { bytes } = await bufferReadableStream(request.body, {
       maxBytes,
+      signal,
       overflowCancelReason: () => "Body too large",
     });
     return { status: "ok", bytes };

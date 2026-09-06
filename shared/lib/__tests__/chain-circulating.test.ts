@@ -65,7 +65,32 @@ describe("chain-circulating", () => {
       circulatingPrevMonth: 39,
     });
   });
+  it("prefers explicit canonical ids over compatibility labels", () => {
+    const canonical = canonicalizeChainCirculating({
+      "upstream-renamed-chain": {
+        chainId: "ethereum",
+        current: 10,
+        circulatingPrevDay: 9,
+        circulatingPrevWeek: 8,
+        circulatingPrevMonth: 7,
+      },
+      Base: {
+        chainId: "ethereum",
+        current: 5,
+        circulatingPrevDay: 4,
+        circulatingPrevWeek: 3,
+        circulatingPrevMonth: 2,
+      },
+    });
 
+    expect(canonical.get("ethereum")).toEqual({
+      current: 15,
+      circulatingPrevDay: 13,
+      circulatingPrevWeek: 11,
+      circulatingPrevMonth: 9,
+    });
+    expect(canonical.get("base")).toBeUndefined();
+  });
   it("keeps DefiLlama casing variants in canonical chain buckets", () => {
     const canonical = canonicalizeChainCirculating({
       XDC: {

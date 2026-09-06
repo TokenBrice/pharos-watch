@@ -3,7 +3,7 @@ import {
   WORKER_PRE_LAUNCH_STABLECOINS,
   WORKER_TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { DepegEventCloseReason } from "@shared/types/market";
+import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-cache-read";
@@ -45,12 +45,6 @@ type ClosedDepegResolutionRow = {
   peg_reference: number;
   close_reason: string | null;
 };
-
-const RECOVERY_CLOSE_REASONS = new Set<DepegEventCloseReason>([
-  "recovered-primary",
-  "recovered-dex",
-  "recovered-native",
-]);
 
 export interface TelegramDispatchEvents {
   dewsChanges: ReturnType<typeof buildDewsChanges>;
@@ -150,11 +144,13 @@ export function countSuppressedSafetyChangesAtSeed(
     : 0;
 }
 
-function isRecoveryClosure(row: Pick<ClosedDepegResolutionRow, "close_reason" | "recovery_price">): boolean {
-  if (row.close_reason != null) {
-    return RECOVERY_CLOSE_REASONS.has(row.close_reason as DepegEventCloseReason);
-  }
-  return row.recovery_price != null;
+function isRecoveryClosure(row: ClosedDepegResolutionRow): boolean {
+  const closure = classifyDepegClosure({
+    endedAt: row.ended_at,
+    closeReason: row.close_reason,
+    recoveryPrice: row.recovery_price,
+  });
+  return closure === "recovered" || closure === "legacy_recovered";
 }
 
 function eventPriceCurrency(stablecoinId: string, pegReference: number): string {

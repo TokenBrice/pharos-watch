@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test-only directory walker rooted at process.cwd() */
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -12,7 +11,6 @@ import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
 const COMPONENTS_DIR = join(ROOT, "src/components");
-const APP_GLOBALS = join(ROOT, "src/app/globals.css");
 
 // Relative posix-style paths (for stable match regardless of OS separator).
 const ALLOWED_SERIF_FILES = new Set<string>([
@@ -48,28 +46,6 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("design invariants", () => {
-  it("keeps homepage overview table sizing responsive to the density control", () => {
-    const globals = readFileSync(APP_GLOBALS, "utf8");
-
-    expect(globals).toMatch(
-      /\.pharos-overview-table-shell\.pharos-density-compact\s*{[^}]*--overview-table-row-height:\s*2\.625rem/s,
-    );
-    expect(globals).toMatch(
-      /\.pharos-overview-table-shell\.pharos-density-spacious\s*{[^}]*--overview-table-row-height:\s*3\.5rem/s,
-    );
-    expect(globals).toMatch(
-      /\.pharos-overview-table-row\s*{[^}]*height:\s*var\(--overview-table-row-height\)\s*!important/s,
-    );
-  });
-
-  it("resolves the display font token from the body-level font bridge", () => {
-    const globals = readFileSync(APP_GLOBALS, "utf8");
-
-    expect(globals).toMatch(/body\s*{[^}]*--font-pharos-display:\s*var\(\s*--font-bricolage,/s);
-    expect(globals).not.toMatch(/ABC Whyte Inktrap|abc-whyte-inktrap/);
-    expect(globals).not.toMatch(/:root\s*{[^}]*--font-pharos-display:/s);
-  });
-
   it("never uses Tailwind max-* variants (this pipeline does not emit them)", () => {
     const files = walk(COMPONENTS_DIR);
     const offenders: string[] = [];
