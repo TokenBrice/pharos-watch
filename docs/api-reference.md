@@ -345,10 +345,6 @@ Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and 
 
 Returns the full current and historical detail payload for one canonical Pharos stablecoin ID.
 
-For active records, a missing or invalid top-level `price` is enriched from the validated current stablecoins publication when both that publication and its positive price observation are fresh. Enrichment requires `high` or `single-source` confidence and a non-cached source; missing, withheld, stale, or frozen observations leave the provider response unchanged. An existing finite positive provider price is preserved. Retained inactive-record detail is never enriched.
-
-An enriched response includes `priceSource`, `priceConfidence`, `priceUpdatedAt`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, `consensusSources`, and `agreeSources`, plus `priceSourceConfidenceProfile` when available. Observation timestamps retain their pricing provenance; the response does not substitute request time or history time. Browser/edge cache lifetimes are capped by the remaining canonical publication and observation freshness windows. Historical `tokens`, supply values, retained detail cache rows, and stale-history `Warning` / `X-Data-Age` / `no-store` semantics are unchanged.
-
 - **Operation ID:** `stablecoinStablecoinId`
 - **Path:** `/api/stablecoin/{stablecoinId}`
 - **Parameters:** `stablecoinId` (path, required, string)

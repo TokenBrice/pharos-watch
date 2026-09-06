@@ -8,6 +8,7 @@ import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
 import { computeGaugeScore, detectFlightToQuality, getGaugeBand } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
+import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import {
   buildFlightToQualityClassificationFromV9Snapshot,
@@ -212,7 +213,8 @@ function cachedAggregateSafetyIdentity(payload: Record<string, unknown>): Safety
 /**
  * Aggregate flow cache rows retain their FTQ cohort identity. A cache may be
  * served for flow freshness, but never with an FTQ decision from another
- * report-card publication.
+ * report-card publication. Reclassify cached 24h flows when that publication
+ * advances; this does not refresh the underlying flow snapshot.
  */
 async function reconcileCachedAggregateSafetyResponse(
   db: D1Database,
@@ -248,6 +250,34 @@ async function reconcileCachedAggregateSafetyResponse(
                   )
                 ? null
                 : "identity-mismatch";
+          if (reason === "identity-mismatch" && current.kind === "ok") {
+            const coins = MintBurnFlowsResponseSchema.shape.coins.safeParse(payload.coins);
+            if (coins.success) {
+              let safeNet24h = 0;
+              let riskyNet24h = 0;
+              for (const coin of coins.data) {
+                if (current.classification.safeIds.has(coin.stablecoinId)) {
+                  safeNet24h += coin.netFlow24hUsd;
+                } else if (current.classification.riskyIds.has(coin.stablecoinId)) {
+                  riskyNet24h += coin.netFlow24hUsd;
+                }
+              }
+              const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+              return cloneResponse(fallback, {
+                body: JSON.stringify({
+                  ...payload,
+                  gauge: {
+                    ...(isRecord(payload.gauge) ? payload.gauge : {}),
+                    flightToQuality: ftq.active,
+                    flightIntensity: ftq.intensity,
+                    classificationSource: "safety-score-v9-publication",
+                    safetyScoreIdentity: current.classification.safetyScoreIdentity,
+                  },
+                  ...(isRecord(payload.sync) ? { sync: { ...payload.sync, classificationWarning: null } } : {}),
+                }),
+              });
+            }
+          }
       } else {
         reason = active.kind === "error" ? active.reason : "identity-mismatch";
       }
