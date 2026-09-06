@@ -22,6 +22,8 @@ Use `package.json` for the full live npm-script list. `scripts/lib/automation-re
 
 Use `npm run check:focused -- --file <path>` to route one path through the change contract and run the checks selected by its ownership mappings, preferring specific-tier mappings over fallback-tier mappings for each path; add `--plan-only` to inspect the plan without executing it.
 
+Explicit paths use the same normalization as `agent:route`, including repository-relative, `./`, and absolute paths within the repository or current worktree. Paths outside those roots or without an ownership mapping fail before checks run. A mapped area can intentionally select no focused checks; use the matrix below for its local verification recipe.
+
 | Area | Smallest adequate local recipe | Conditional additions |
 | --- | --- | --- |
 | Shared `shared/lib` change | `npm run lint:changed`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib` | Add `npm run check:stablecoin-data` for catalog/data semantics; run `npm run test:pr -- --base=<ref>` when the change touches critical consumers. |

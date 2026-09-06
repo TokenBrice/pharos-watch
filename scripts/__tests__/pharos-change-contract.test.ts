@@ -525,6 +525,27 @@ describe("hook harness classification", () => {
 });
 
 describe("hard-block hook outputs", () => {
+  it.each([
+    { tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } },
+    { tool_name: "exec_command", tool_input: { cmd: "git reset --hard HEAD" } },
+    { toolName: "exec_command", toolInput: { cmd: "git reset --hard HEAD" } },
+    { tool: "exec_command", arguments: { cmd: "git reset --hard HEAD" } },
+    { cmd: "git reset --hard HEAD" },
+  ])("inspects shell command fields across supported hook payloads: %j", (input) => {
+    expect(buildPreToolUseHookOutput(input)).toMatchObject({
+      hookSpecificOutput: { permissionDecision: "deny" },
+    });
+    expect(buildPermissionRequestHookOutput(input)).toMatchObject({
+      hookSpecificOutput: { decision: { behavior: "deny" } },
+    });
+  });
+
+  it("allows a read-only exec_command cmd payload", () => {
+    const input = { tool_name: "exec_command", tool_input: { cmd: "git status --short" } };
+    expect(buildPreToolUseHookOutput(input)).toEqual({});
+    expect(buildPermissionRequestHookOutput(input)).toEqual({});
+  });
+
   it("blocks destructive git reset commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {

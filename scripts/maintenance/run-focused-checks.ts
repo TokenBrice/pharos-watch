@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { classifyChangedFiles, normalizeChangedFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
+import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
 import {
   parseStrictCliArgs,
   runCliEntrypoint,
@@ -111,7 +111,7 @@ export function parseFocusedCheckArgs(argv: readonly string[] = []): FocusedChec
 
 function selectFocusedFiles(args: FocusedCheckArgs): string[] {
   if (args.files.length > 0) {
-    return normalizeChangedFiles(args.files.map((file) => file.replace(/^\.\//, "")));
+    return normalizeExplicitFiles(args.files);
   }
 
   return readChangedFiles({ baseRef: args.base, staged: args.staged });
@@ -218,6 +218,13 @@ export async function runFocusedChecks({
   if (writeCliHelpIfRequested(args, USAGE, stdout)) return 0;
 
   const plan = buildFocusedCheckPlan(selectFocusedFiles(args), { base: args.base });
+  if (args.files.length > 0) {
+    const mappedFiles = new Set(plan.classification.mappings.flatMap((mapping) => mapping.matchedFiles));
+    const unmatched = plan.changedFiles.filter((file) => !mappedFiles.has(file));
+    if (unmatched.length > 0) {
+      throw new Error(`No ownership mapping for explicit path(s): ${unmatched.join(", ")}. Route these paths before running focused checks.`);
+    }
+  }
   if (args.json) {
     writeLine(stderr, "[check:focused] " + plan.checks.length + " focused check(s) selected.");
   } else {

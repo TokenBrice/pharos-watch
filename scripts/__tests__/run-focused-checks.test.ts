@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -15,6 +16,54 @@ function writer() {
 }
 
 describe("focused checks", () => {
+  it.each([
+    "worker/src/cron/sync-yield-data.ts",
+    "./worker/src/cron/sync-yield-data.ts",
+    resolve(process.cwd(), "worker/src/cron/sync-yield-data.ts"),
+  ])("runs the same cron checks for explicit path %s", async (file) => {
+    const stdout = writer();
+    const runCommandImpl = vi.fn(async () => 0);
+    await expect(runFocusedChecks({
+      argv: ["--file", file, "--json"],
+      runCommandImpl,
+      stdout,
+      stderr: writer(),
+    })).resolves.toBe(0);
+
+    const report = JSON.parse(stdout.output());
+    expect(report.changedFiles).toEqual(["worker/src/cron/sync-yield-data.ts"]);
+    expect(report.checks).toEqual(buildFocusedCheckPlan(["worker/src/cron/sync-yield-data.ts"]).checks);
+    expect(runCommandImpl).toHaveBeenCalledTimes(5);
+    expect(report.status).toBe("passed");
+  });
+
+  it("rejects explicit paths outside the repository before running checks", async () => {
+    const runCommandImpl = vi.fn();
+    await expect(runFocusedChecks({
+      argv: ["--file", resolve(process.cwd(), "..", "outside.ts")],
+      runCommandImpl,
+      stdout: writer(),
+      stderr: writer(),
+    })).rejects.toThrow("explicit path resolves outside repository");
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unmatched explicit path even when another path has checks", async () => {
+    const runCommandImpl = vi.fn();
+    const warning = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await expect(runFocusedChecks({
+        argv: ["--file", "src/app/page.tsx", "--file", "__unmapped__/planned.ts"],
+        runCommandImpl,
+        stdout: writer(),
+        stderr: writer(),
+      })).rejects.toThrow("No ownership mapping for explicit path(s): __unmapped__/planned.ts");
+      expect(runCommandImpl).not.toHaveBeenCalled();
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
   it("uses the collapsed frontend route checks without selecting Worker checks", () => {
     const plan = buildFocusedCheckPlan(["src/components/query-error-notice.tsx"]);
 

@@ -89,7 +89,7 @@ Skill bodies must not hard-code snapshots of current repo state (counts, methodo
 
 Release and CI skills summarize the operating path, but `docs/deployment-process.md`, `docs/testing.md`, the workflow YAML, and the automation registries remain authoritative. Keep protected-main authorization wording, validation targets, generated-artifact staging behavior, and deployment-versus-operational proof aligned across both skills instead of allowing separate agent-specific release procedures.
 
-Symlinks pointing outside this repository are unsupported.
+Symlinks pointing outside this repository are unsupported. `check:agent-skills` also validates nested canonical companions and rejects broken or external symlink targets.
 
 ## Harness Configuration
 
@@ -120,6 +120,8 @@ Retired adapters are not preserved; durable guidance belongs in `docs/`, and scr
 
 `.github/workflows/agent-maintenance-candidates.yml` runs the deterministic annotation queue, AI-summary staleness queue, and curation digest each Monday. It opens or updates one review issue with bounded excerpts. The workflow is advisory: it does not edit stablecoin data, summaries, annotations, funding records, or review provenance.
 
+Annotation generation preserves the queue's reviewer-owned `last_swept_at` cursor, leaving it absent until the first editorial sweep. Only `annotations-refresh` advances it after review; generation and source failures must not mark unseen candidates as reviewed.
+
 Pre-launch and funding research remain deliberate operator workflows because they require current external-source verification and explicit approval. Candidate producers should automate discovery and triage, not editorial or financial decisions.
 
 ## Plugins And MCP
@@ -137,6 +139,8 @@ PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is now reviewed by hand, and `AGENTS.md` cannot drift from `CLAUDE.md` because it is generated (`npm run check:generated-artifacts -- --only=agents-doc`).
 
 Codex hook matchers are narrowed to shell/write tools. `npm run agent:setup` reports whether the generated hooks are installed/current and whether each hook is enabled in Codex. Enabling is a one-time Codex-side step (`/hooks` or `enabled = true`); disabled or unrecorded state does not change setup's installation exit status. Codex hooks are per-checkout, so rerun the opt-in command in each worktree.
+
+Shell hook payloads accept both `command` and `cmd` fields and pass them through the same pre-tool and permission-request policy checks.
 
 Set `PHAROS_HOOK_DIAGNOSTICS=1` or pass `--diagnostics` to append one safe JSONL record per hook invocation.
 The default diagnostic file is `agents/hook-diagnostics.jsonl`; set `PHAROS_HOOK_DIAGNOSTICS_FILE` for another local path.

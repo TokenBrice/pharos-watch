@@ -326,7 +326,7 @@ function resolveExplicitPath(
   };
 }
 
-function normalizeExplicitFiles(
+export function normalizeExplicitFiles(
   files: readonly string[],
   { allowMissing = false, execFile = execFileSync as GitExec }: { allowMissing?: boolean; execFile?: GitExec } = {},
 ): string[] {
@@ -417,7 +417,7 @@ function getToolInput(hookInput: UnknownRecord = {}): UnknownRecord {
 
 function getCommandFromHookInput(hookInput: UnknownRecord = {}): string {
   const toolInput = getToolInput(hookInput);
-  return String(toolInput.command ?? hookInput.command ?? "");
+  return String(toolInput.command ?? toolInput.cmd ?? hookInput.command ?? hookInput.cmd ?? "");
 }
 
 function collectArrayPaths(value: unknown): unknown[] {

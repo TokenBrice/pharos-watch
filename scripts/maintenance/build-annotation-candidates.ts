@@ -298,7 +298,7 @@ function renderRow(c: Candidate): string {
   return `- ${c.date} | ${c.coinId} | ${c.kind} | ${c.description} | source: ${c.source}${sevTag}`;
 }
 
-function renderAppendBlock(date: string, candidates: Candidate[], notes: string[]): string {
+export function renderAppendBlock(date: string, candidates: Candidate[], notes: string[]): string {
   const lines: string[] = [];
   let currentDate: string | null = null;
   const startDate = (sectionDate: string) => {
@@ -330,13 +330,14 @@ function stripFooter(body: string): string {
   return body.replace(/\n*<!--\s*last_swept_at:[^>]*-->\s*$/m, "");
 }
 
-function buildFile(existingBody: string, appendBlock: string, todaysFooter: string): string {
+export function buildFile(existingBody: string, appendBlock: string): string {
+  const reviewFooter = LAST_SWEPT_RE.exec(existingBody)?.[0] ?? "";
   const trimmed = stripFooter(existingBody.trimEnd());
   const header =
     trimmed === ""
       ? "# Annotation candidates\n\nAppend-only queue feeding the `annotations-refresh` skill. Each row is a machine-found event for editorial review — promote, drop, or defer.\n"
       : "";
-  const sections = [header, trimmed, appendBlock, todaysFooter].filter(Boolean);
+  const sections = [header, trimmed, appendBlock, reviewFooter].filter(Boolean);
   return (
     sections
       .join("\n")
@@ -394,8 +395,7 @@ async function main(): Promise<void> {
   });
 
   const appendBlock = renderAppendBlock(today, fresh, notes);
-  const footer = `\n<!-- last_swept_at: ${today} -->\n`;
-  const updated = buildFile(existingBody, appendBlock, footer);
+  const updated = buildFile(existingBody, appendBlock);
 
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
   writeFileSync(OUTPUT_PATH, updated, "utf8");
