@@ -24,12 +24,12 @@ function writeSelectorState(params: URLSearchParams, state: SelectorWizardState)
 }
 
 export function useSelectorState(): UseSelectorStateResult {
-  const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
+  const { searchParams, isReady, pushSearchParams, replaceParams } = useUrlFilters();
   const state = useMemo(() => decodeSelectorState(searchParams), [searchParams]);
   const rehydratedRef = useRef(false);
 
   useEffect(() => {
-    if (rehydratedRef.current) return;
+    if (!isReady || rehydratedRef.current) return;
     rehydratedRef.current = true;
     const valid = highestValidStep(state);
     const urlStep = state.step;
@@ -40,7 +40,7 @@ export function useSelectorState(): UseSelectorStateResult {
       const next = { ...state, step: valid };
       replaceParams((params) => writeSelectorState(params, next));
     }
-  }, [state, replaceParams]);
+  }, [isReady, state, replaceParams]);
 
   const dispatch = useCallback((action: SelectorAction) => {
     const next = transition(state, action);

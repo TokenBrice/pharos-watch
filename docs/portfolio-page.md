@@ -41,6 +41,8 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 
 `usePortfolio` validates canonical holdings only. Unknown or non-canonical IDs are dropped and duplicate canonical IDs are merged. Stored holdings are normalized and written back through `localStorage` after a successful storage-backed read. URL-sourced holdings take precedence and are normalized back into `?p=`, but they are not persisted to `localStorage`.
 
+During static hydration, the shared URL hook's temporary empty snapshot must not override an incoming portfolio link. Portfolio bootstrap falls back to the actual browser URL until that snapshot is ready; rendered holdings and persistence/writeback remain gated by initialization.
+
 ---
 
 ## UI Responsibilities

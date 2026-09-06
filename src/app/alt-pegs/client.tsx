@@ -240,12 +240,14 @@ export function AltPegsClient() {
   );
 
   const closeFocusedChart = useCallback(() => {
+    if (focusedChart === "share") setShareRange(focusedRange);
+    if (focusedChart === "cohorts") setCohortRange(focusedRange);
     replaceParams((params) => {
       params.delete("view");
       params.delete("chart");
       params.delete("range");
     });
-  }, [replaceParams]);
+  }, [focusedChart, focusedRange, replaceParams]);
 
   const setFocusedRange = useCallback(
     (chart: FocusedChart, range: TimeRangeOption) => {
