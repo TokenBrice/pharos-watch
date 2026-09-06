@@ -57,15 +57,7 @@ Use [`docs/README.md`](../README.md) to choose between public reference, enginee
 
 ## 3. Core Repository Rules
 
-- Prefer the smallest root-cause fix; avoid unrelated refactors.
-- Update matching docs for behavior, API, pipeline, methodology, or data-source changes.
-- Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides. Supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe.
-- Keep Tailwind classes as static strings.
-- Do not edit shadcn primitives in `src/components/ui/` unless explicitly required.
-- Use `getCirculatingRaw()` for circulating supply and `@shared/lib/...` / `@shared/types...` for shared imports; avoid relative cross-boundary imports.
-- Cron-backed hooks use `staleTime = producer interval` and `refetchInterval = 2x producer interval`.
-- Consume Worker response bodies before opening more fetches; Pharos's trigger-wide connection budget is six.
-- D1 migrations run before the new Worker is live. Destructive cleanup is a separate coordinated rollout.
+The repository's working rules and hard rules are owned by the root [`CLAUDE.md`](../../CLAUDE.md) and its generated `AGENTS.md` mirror — supply and import contracts, static Tailwind classes, cron hook polling windows, the six-connection trigger budget, and migration ordering. The root rules are authoritative; read them before editing. This page does not repeat them.
 
 ## 4. Scratch Work
 
@@ -85,17 +77,9 @@ Choose the smallest adequate checks from [Testing: Smallest adequate check per a
 
 Passing deployment proves activation, not runtime health. Cron, scheduler, ingestion, migration, and other operationally risky changes also require the first relevant production execution or observation before being called operationally complete.
 
-## 7. Handoff
+## 7. Handoff and Finish
 
-The final message must state:
-
-- status: complete, partial, or blocked;
-- exact changed files;
-- verification commands and outcomes, including known failures;
-- blockers and deferred items; and
-- the next owner or action.
-
-For a campaign, also update its ledger so every task ID ends as complete, deferred, superseded, or blocked. Record actual changed files and net LOC when the campaign contract requests them.
+Handoff and closeout requirements — final-message contents, campaign ledger closure, and scratch safe-to-remove conditions — are owned by the [Agent Artifacts campaign index and closeout contract](./agent-artifacts.md#campaign-index-and-handoff).
 
 ## 8. Commit And Release
 
@@ -111,7 +95,3 @@ The pre-commit hook may regenerate and stage registered artifacts marked `autoSt
 ## 9. Methodology Changes
 
 Methodology history is structured under `shared/data/methodology-changelogs/` and rendered by the public `/methodology/*-changelog/` routes. ADR-3 in [`architecture.md`](../architecture.md#architectural-decision-records) lists every target a methodology change must update. Do not create a second Markdown timeline. Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
-
-## 10. Finish
-
-Report the final artifact or plan path, verification and CI/deploy evidence, and any operational acceptance still pending. Name scratch as safe to remove only when its recorded condition is satisfied and its owner confirms closure. The handoff is complete when the next owner can continue without reconstructing scope, state, or evidence.

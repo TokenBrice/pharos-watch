@@ -1,5 +1,7 @@
 import {
+  DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
   getActiveDexCoverageWaiver,
+  getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
   encodeDexCensusAttemptResult,
   type DexCensusAttemptResult,
@@ -14,10 +16,6 @@ import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtim
 import type { ContractDeployment } from "@shared/types/core";
 import { batchExecute } from "../../lib/db";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
-import {
-  getRuntimeDexDiscoveryProviders,
-  isRuntimeDexDiscoveryProviderExhaustive,
-} from "./provider-registry";
 import {
   resolveDexCensusAttempt,
   type DexCensusAttemptSignals,
@@ -104,7 +102,7 @@ export function classifyDexDeploymentOutcomes(params: {
 }): DexDeploymentOutcomeWrite[] {
   const exhaustiveSuccessfulChecks = new Set(
     params.providerChecks
-      .filter((check) => check.status === "success" && isRuntimeDexDiscoveryProviderExhaustive(check.provider))
+      .filter((check) => check.status === "success" && DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[check.provider])
       .map((check) => deploymentKey(check.chain, check.address)),
   );
   const nonExhaustiveSuccessfulEmptyChecks = new Set(
@@ -112,7 +110,7 @@ export function classifyDexDeploymentOutcomes(params: {
       .filter(
         (check) =>
           check.status === "success" &&
-          !isRuntimeDexDiscoveryProviderExhaustive(check.provider) &&
+          !DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[check.provider] &&
           (check.observedPoolCount ?? 0) === 0,
       )
       .map((check) => deploymentKey(check.chain, check.address)),
@@ -129,7 +127,7 @@ export function classifyDexDeploymentOutcomes(params: {
   );
 
   return params.deployments.map((deployment) => {
-    const providers = getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address);
+    const providers = getDexDiscoveryProviders(deployment.chain, deployment.address);
     const key = deploymentKey(deployment.chain, deployment.address);
     const stagedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
     const providerObservedPoolCount = params.providerChecks
@@ -159,7 +157,7 @@ export function classifyDexDeploymentOutcomes(params: {
 export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDeploymentOutcomeWrite[] {
   return WORKER_ACTIVE_STABLECOINS.flatMap((meta) =>
     [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]
-      .filter((deployment) => getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)
+      .filter((deployment) => getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)
       .map((deployment) => ({
         stablecoinId: meta.id,
         chain: deployment.chain,
@@ -185,7 +183,7 @@ export function buildFailedCrawlDeploymentOutcomes(params: {
   nowSec: number;
 }): DexDeploymentOutcomeWrite[] {
   return params.deployments.map((deployment) => {
-    const providers = getRuntimeDexDiscoveryProviders(deployment.chain, deployment.address);
+    const providers = getDexDiscoveryProviders(deployment.chain, deployment.address);
     const attempt = resolveDexCensusAttempt({
       observedPoolCount: 0,
       providerCount: providers.length,

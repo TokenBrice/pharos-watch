@@ -466,6 +466,18 @@ const SupplyHistoryPointSchema = z.object({
 export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
 export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
 
+const NonUsdSharePointSchema = z.object({
+  date: z.number(),
+  // Aggregate/share fields are nullable; `total` is emitted only when positive.
+  commodityShare: z.number().nullable(),
+  fiatNonUsdShare: z.number().nullable(),
+  commodity: z.number().nullable(),
+  fiatNonUsd: z.number().nullable(),
+  total: z.number(),
+});
+export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
+export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
+
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
 

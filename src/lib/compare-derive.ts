@@ -7,6 +7,7 @@ import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
   BluechipRating,
   DexLiquidityData,
+  DexLiquidityMap,
   MintBurnCoinFlow,
   MintBurnPerCoinResponse,
   PegSummaryCoin,
@@ -55,10 +56,6 @@ export interface ComparisonCoinEntry {
   name: string;
   data: StablecoinData;
   meta: ComparisonMeta;
-  pegScore: number | null;
-  liquidityScore: number | null;
-  safetyGrade: ReportCardGrade | null;
-  netFlow30d: number | null;
   pegDetails?: PegSummaryCoin | null;
   liquidity?: DexLiquidityData | null;
   safetyCard?: V9ConsumerCard | null;
@@ -105,22 +102,6 @@ export interface CompareRadarCohortBaseline {
   series: Array<Omit<CompareRadarCardEntry, "symbol">>;
   memberCount: number;
 }
-
-type PegCoinSlice = {
-  id: string;
-  pegScore?: number | null;
-};
-
-type DexDataMap = Record<string, { liquidityScore?: number | null } | undefined>;
-
-type FlowCoinSlice = {
-  stablecoinId: string;
-  netFlow30dUsd?: number | null;
-  netFlow24hUsd: number;
-  pressureShiftScore?: number | null;
-  netFlowDirection24h?: NetFlowDirection24h | null;
-  pressureShiftState?: PressureShiftState | null;
-};
 
 /**
  * Build the radar median baseline for the selected cohort. Peg and mechanism
@@ -184,10 +165,10 @@ export function deriveComparisonCoins({
   selectedIds: string[];
   assetMap: Map<string, StablecoinData>;
   metaMap: ReadonlyMap<string, ComparisonMeta>;
-  pegCoinMap: Map<string, PegCoinSlice>;
-  dexData: DexDataMap | undefined;
+  pegCoinMap: Map<string, PegSummaryCoin>;
+  dexData: DexLiquidityMap | undefined;
   cardMap: Map<string, V9ConsumerCard>;
-  flowCoinMap: Map<string, FlowCoinSlice>;
+  flowCoinMap: Map<string, MintBurnCoinFlow>;
   bluechipMap?: Record<string, BluechipRating> | null;
   redemptionMap?: Record<string, RedemptionBackstopEntry>;
   yieldMap?: Map<string, YieldRanking>;
@@ -201,7 +182,6 @@ export function deriveComparisonCoins({
       if (!data || !meta) return null;
       const pegCoin = pegCoinMap.get(id);
       const dexCoin = dexData?.[id];
-      const safetyGrade = cardMap.get(id)?.grade ?? null;
       const flowCoin = flowCoinMap.get(id);
       return {
         id,
@@ -209,17 +189,13 @@ export function deriveComparisonCoins({
         name: data.name,
         data,
         meta,
-        pegScore: pegCoin?.pegScore ?? null,
-        liquidityScore: dexCoin?.liquidityScore ?? null,
-        safetyGrade,
-        netFlow30d: flowCoin?.netFlow30dUsd ?? null,
-        pegDetails: (pegCoin as PegSummaryCoin | undefined) ?? null,
-        liquidity: (dexCoin as DexLiquidityData | undefined) ?? null,
+        pegDetails: pegCoin ?? null,
+        liquidity: dexCoin ?? null,
         safetyCard: cardMap.get(id) ?? null,
         redemption: redemptionMap?.[id] ?? null,
         yield: yieldMap?.get(id) ?? null,
         stress: stressMap?.[id] ?? null,
-        flow: (flowCoin as MintBurnCoinFlow | undefined) ?? null,
+        flow: flowCoin ?? null,
         bluechipRating: bluechipMap?.[id] ?? null,
       };
     })
@@ -289,7 +265,7 @@ export function deriveFlowCardData({
   metaMap,
 }: {
   selectedIds: string[];
-  flowCoinMap: Map<string, FlowCoinSlice>;
+  flowCoinMap: Map<string, MintBurnCoinFlow>;
   metaMap: ReadonlyMap<string, { symbol?: string }>;
 }): FlowCardEntry[] {
   if (flowCoinMap.size === 0) return [];

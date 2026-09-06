@@ -2,7 +2,7 @@ import {
   createEmptyPrimaryConsensusQuoteMaps,
   type PrimaryConsensusQuoteMaps,
 } from "../enrich-prices-primary-provider-collection";
-import type { PriceValidationStats } from "../enrich-prices-primary-shared";
+import type { PriceValidationStats } from "../enrich-prices-shared";
 
 export function createEmptyQuoteMaps(): PrimaryConsensusQuoteMaps {
   return createEmptyPrimaryConsensusQuoteMaps();

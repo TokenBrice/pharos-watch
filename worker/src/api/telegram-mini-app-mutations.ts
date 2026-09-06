@@ -16,6 +16,7 @@ import {
   TELEGRAM_ALERT_PERSISTENCE,
   type TelegramAlertSettingCode,
 } from "@shared/lib/telegram-alert-families";
+import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { isTelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../lib/db";
 import { isSubscribableCoin } from "../lib/telegram/subscription-eligibility";
@@ -35,7 +36,7 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "../lib/telegram/presets";
-import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../lib/telegram/constants";
+import { SNOOZE_SECONDS } from "../lib/telegram/constants";
 import { isValidIanaTimezone } from "../lib/telegram/quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";

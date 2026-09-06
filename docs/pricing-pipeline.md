@@ -483,7 +483,7 @@ The retained GeckoTerminal helper preserves its divergence-handling contract for
 
 When changing live pricing behavior, update all relevant surfaces in the same change:
 
-1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`, or related provider modules
+1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, `worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts`, or related provider modules
 2. this document for canonical pricing behavior
 3. [Supply Snapshot](./supply-snapshot.md#supply-pipeline), [Depeg Detection](./depeg-detection.md#pending-depeg-confirmation), [Pharos Stability Index](./stability-index.md#stability-index-psi-computation), or [Blacklist Tracker](./blacklist-tracker.md#blacklist-sync-state-semantics) when the corresponding pipeline semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`

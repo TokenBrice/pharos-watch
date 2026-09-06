@@ -16,7 +16,7 @@ import { MiniAppTabs } from "./components/MiniAppTabs";
 import { MiniAppPanelRouter } from "./components/MiniAppPanelRouter";
 import { MiniAppSessionStatus, type MiniAppSessionStatus as MiniAppSessionStatusValue } from "./components/MiniAppSessionStatus";
 import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
-import { isPausedSentinel } from "./format";
+import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import {
   isMiniAppVersionMismatch,
   postMiniAppSnapshot,

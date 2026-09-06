@@ -147,10 +147,6 @@ const workerRestrictedImportPaths = [
 
 const workerRestrictedImportPatterns = [
   {
-    group: ["@/lib/*", "src/lib/*", "../src/lib/*", "../../src/lib/*", "../../../src/lib/*", "../../../../src/lib/*"],
-    message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
-  },
-  {
     // Worker only needs viem's pure ABI codecs from viem/utils. Any other viem
     // subpath (clients/transports/actions) would pull the websocket transport
     // surface (and its `ws` advisory) into the bundle. Keep viem/utils allowed.

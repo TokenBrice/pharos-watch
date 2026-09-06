@@ -19,7 +19,6 @@ import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { DIGEST_DATES } from "@/lib/digest-registry";
-import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
 interface BuildPageMetadataInput {
@@ -371,6 +370,18 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
 
 export function buildApiOgImageUrl(path: string): string {
   return new URL(path, API_ORIGIN).toString();
+}
+
+const INDEXABLE_ROBOTS: Metadata["robots"] = {
+  index: true,
+  follow: true,
+  googleBot: {
+    index: true,
+    follow: true,
+    "max-snippet": -1,
+    "max-image-preview": "large",
+    "max-video-preview": -1,
+  },
 }
 
 export function buildPageMetadata({

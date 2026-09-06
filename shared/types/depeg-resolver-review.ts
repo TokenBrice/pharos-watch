@@ -65,6 +65,14 @@ export const DDRR_VERDICT_REVIEW_VALUES = [
 ] as const;
 export type DdrrVerdictReview = (typeof DDRR_VERDICT_REVIEW_VALUES)[number];
 
+export const DDRR_SCORED_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set([
+  "correct_recoverable",
+  "correct_terminal",
+  "false_terminal",
+  "false_recoverable",
+  "risk_noted_terminal",
+]);
+
 export const DDRR_DURATION_REVIEW_VALUES = [
   "inside_band",
   "faster_than_band",

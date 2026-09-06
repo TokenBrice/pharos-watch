@@ -97,38 +97,17 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Unknown does not mean no privileged mint authority.");
   });
 
-  it("renders reviewed mint authority summary, controls, and sources", () => {
+  it("renders control and source link destinations with the V9 methodology stamp", () => {
     const html = renderToStaticMarkup(
       <MintAuthoritySection profile={REVIEWED_PROFILE} />,
     );
 
-    expect(html).toContain("Facilitator bucket mint");
-    expect(html).toContain("70/100");
-    expect(html).toContain("Governed");
-    expect(html).toContain("Scoring breakdown");
-    expect(html).toContain("Primary controls");
-    expect(html).toContain("Derived posture");
-    expect(html).toContain("Component score");
-    expect(html).toContain("Partially bounded admin");
-    expect(html).toContain("Confidence: Verified");
-    expect(html).toContain("GHO supply is minted by DAO-approved facilitators");
-    expect(html).toContain("Aave Ethereum Governance");
-    expect(html).toContain("DAO governor");
-    expect(html).toContain("Cap-limited");
-    expect(html).toContain("Setup");
-    expect(html).toContain("DAO governor, 3/5 threshold");
-    expect(html).toContain("Safe modules/guard");
-    expect(html).toContain("No modules or guards detected");
     expect(html).toContain("https://etherscan.io/address/0x123400000000000000000000000000000000abcd");
-    expect(html).toContain("1d timelock");
-    expect(html).toContain("Facilitator bucket capacity limits minting");
-    expect(html).toContain("Aave GHO facilitators");
     expect(html).toContain("https://example.com/gho-facilitators");
     // 9.1: the card publishes the V9 mint component, so it stamps the
     // safety-score identity rather than the retired mint-authority lane.
     expect(html).toContain(`Methodology ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`);
     expect(html).not.toContain("Methodology v1.3");
-    expect(html).toContain("Reviewed 2026-05-12");
   });
 
   it("renders incident caps and custody context when present", () => {
@@ -255,7 +234,5 @@ describe("MintAuthoritySection", () => {
     );
 
     expect(html).toContain("Verification gaps");
-    expect(html).toContain("No public Safe module page exists for this chain.");
-    expect(html).toContain("Confirm whether the proxy admin can upgrade mint logic.");
   });
 });

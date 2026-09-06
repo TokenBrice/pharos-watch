@@ -70,18 +70,7 @@ npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --replay <journal-path
 
 ## Capture storage and expiry
 
-The workflow uploads each raw JSON journal as gzip to the Cloudflare R2 bucket
-`pharos-measurements` under `captures/<mechanism>/<date>.json.gz`. Objects under
-`captures/` have a 180-day lifecycle. Git retains one compact
-`<date>.summary.json` per capture with the SHA-256, byte count, R2 key, and all
-fields required by the registry and attestations; raw bodies are not committed.
-
-The latest shock capture selected by the evaluation-build manifest is also
-written under the no-lifecycle `pinned/<mechanism>/<date>.json.gz` prefix.
-Replay resolves a local cache first, then `pinned/`, then `captures/`, and
-verifies the decompressed SHA-256 before caching. If neither R2 object exists,
-the exact failure is `capture <sha256> expired: non-replayable`; the workflow
-must fail closed rather than regenerate or silently skip the evidence.
+Capture storage, retention, and fail-closed replay are owned by [Safety Score V9 Readiness](./safety-score-v9-readiness.md): see [Mechanism capture storage](./safety-score-v9-readiness.md#mechanism-capture-storage) and [Replay and expiry](./safety-score-v9-readiness.md#replay-and-expiry).
 
 ## Related
 

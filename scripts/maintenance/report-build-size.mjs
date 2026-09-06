@@ -4,12 +4,24 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
-import { formatBytes } from "../lib/format-bytes.mts";
+
 import {
   countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
   summarizeStaticRouteFamilies,
 } from "../lib/static-export-capacity.mts";
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KiB", "MiB", "GiB"];
+  let value = bytes / 1024;
+  let unit = units[0];
+  for (let i = 1; i < units.length && value >= 1024; i += 1) {
+    value /= 1024;
+    unit = units[i];
+  }
+  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const args = new Set(process.argv.slice(2));

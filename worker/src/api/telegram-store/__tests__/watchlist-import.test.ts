@@ -8,7 +8,7 @@ import {
   packWatchlistPresetState,
   type WatchlistTokenDirectState,
 } from "../../../lib/telegram/watchlist-token";
-import { prepareTelegramProcessedUpdateMutationApplied } from "../processed-updates";
+import { prepareTelegramProcessedUpdateMutationApplied } from "../../../lib/telegram/processed-updates";
 import { persistPendingConfirmBulk } from "../disambiguation";
 import { prepareEnsureSubscriberExists } from "../subscribers";
 import { applyWatchlistDirectPatch, applyWatchlistImportV2, loadWatchlistPortableState } from "../watchlist-import";

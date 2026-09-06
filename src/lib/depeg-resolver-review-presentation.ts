@@ -1,5 +1,6 @@
 import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
 import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DDRR_SCORED_VERDICTS } from "@shared/types/depeg-resolver-review";
 import type {
   DdrrActualOutcome,
   DdrrDurationReview,
@@ -91,18 +92,11 @@ export const DDR_DURATION_LABELS: Readonly<Record<DdrrDurationReview, string>> =
   data_issue: "data issue",
 };
 
-const SCORED_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set([
-  "correct_recoverable",
-  "correct_terminal",
-  "false_terminal",
-  "false_recoverable",
-  "risk_noted_terminal",
-]);
 const CORRECT_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set(["correct_recoverable", "correct_terminal"]);
 const MISS_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set(["false_terminal", "false_recoverable"]);
 
 export function isDdrScoredVerdict(verdict: DdrrVerdictReview): boolean {
-  return SCORED_VERDICTS.has(verdict);
+  return DDRR_SCORED_VERDICTS.has(verdict);
 }
 
 export function isDdrCorrectVerdict(verdict: DdrrVerdictReview): boolean {

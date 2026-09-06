@@ -452,7 +452,6 @@ export const EDITORIAL_SURFACE_REGISTRY: readonly EditorialSurfaceEntry[] = [
   },
 ] as const;
 
-export const EDITORIAL_SURFACES = EDITORIAL_SURFACE_REGISTRY;
 export const EDITORIAL_BASELINE_PATH = "scripts/lib/editorial-baseline.json";
 export const EDITORIAL_EXCEPTIONS_PATH = "scripts/lib/editorial-exceptions.json";
 export const EDITORIAL_POLICY_TEST_PATH = "scripts/__tests__/editorial-policy.test.ts";

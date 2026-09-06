@@ -3,6 +3,7 @@ import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { DDR_PREDICTION_POLICY_VERSION } from "../methodology-versions/depeg-resolver";
 import {
   DDRR_COVERAGE_PREDICTION_STATE_VALUES,
+  DDRR_SCORED_VERDICTS,
   type DdrrCoveragePredictionState,
   DdrrHorizonCalibration,
   DdrrHorizonHitRate,
@@ -15,13 +16,6 @@ import {
 } from "../../types/depeg-resolver-review";
 import { isOperationalMissCause } from "./review";
 
-const RECOVERY_LIKELIHOOD_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
-  "correct_recoverable",
-  "correct_terminal",
-  "false_terminal",
-  "false_recoverable",
-  "risk_noted_terminal",
-]);
 // Headline-scope gate. Distinct from the UI's CALIBRATION_THRESHOLD=5 (calibrating-badge /
 // fraction-vs-percentage display gate); both read recoveryLikelihoodScoredCount but are
 // deliberately separate decisions — do not merge them.
@@ -142,7 +136,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
 
   const recoveryLikelihoodCorrectCount = verdicts.correct_recoverable + verdicts.correct_terminal;
   const recoveryLikelihoodScoredCount = predictionRows.filter((row) =>
-    RECOVERY_LIKELIHOOD_SCORED_VERDICTS.has(row.verdictReview),
+    DDRR_SCORED_VERDICTS.has(row.verdictReview),
   ).length;
 
   const durationRows = predictionRows.filter(isDurationScoredPredictionRow);

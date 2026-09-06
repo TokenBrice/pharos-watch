@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
-import { PAUSE_SENTINEL_TS } from "../../lib/telegram/constants";
+import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
 import { buildTelegramRecapDedupeKey } from "../../lib/telegram/recap-store";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";

@@ -30,7 +30,7 @@ import { buildInClause } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import { serializePendingMarkupPolicy } from "../lib/telegram/pending-provenance";
 import { listTelegramPresets, resolveTelegramPresetTargets } from "../lib/telegram/presets";
-import { isPausedSentinel } from "../lib/telegram/constants";
+import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import { formatTelegramRecap } from "../lib/telegram/recap-formatting";
 import { parseTelegramRecapFacts, type TelegramRecapFact, type TelegramRecapTapeRow } from "../lib/telegram/recap-facts";
 import { type TelegramRecapMembership, type TelegramRecapScopedFact } from "../lib/telegram/recap-ranking";

@@ -1,6 +1,6 @@
 import { relative } from "node:path";
 
-import { isValidDateOnly } from "./date-helpers.mts";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives.ts";
 import {
   CRITICAL_OWNERSHIP_WAIVERS,
   deriveCriticalOwnership,
@@ -70,11 +70,9 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-pass-common.ts": "2026-09-05",
-  "worker/src/cron/sync-stablecoins/enrich-prices-passes.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-consensus.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-hardening.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts": "2026-09-05",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-shared.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-progress.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts": "2026-09-05",
@@ -222,7 +220,7 @@ export function validateCriticalCoverageWaiverMetadata(
     if (criticalSet.has(file)) {
       errors.push(`${file}: already enrolled in critical coverage; remove waiver`);
     }
-    if (!isValidDateOnly(reviewAfter)) {
+    if (!isValidIsoDateOnly(reviewAfter)) {
       errors.push(`${file}: missing or invalid waiver reviewAfter`);
     }
   }
@@ -252,7 +250,7 @@ export function collectCriticalCoverageWaiverReviewQueue(
 
   for (const [file, reviewAfter] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
-    if (!isValidDateOnly(reviewAfter)) continue;
+    if (!isValidIsoDateOnly(reviewAfter)) continue;
     const row = { file, reviewAfter };
     if (reviewAfter <= todayString) {
       due.push(row);

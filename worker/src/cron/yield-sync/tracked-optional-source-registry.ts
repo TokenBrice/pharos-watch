@@ -99,55 +99,60 @@ async function loadMidasMmevOracleAnchorRow(
   return loadNavOracleAnchorRow(db, MIDAS_MMEV_ID, MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY, startSec, 7, 45);
 }
 
+/**
+ * Ordinary entry shape: the registry applies the shared per-source timeout
+ * policy once here instead of repeating it in every descriptor. Entries that
+ * must prepare D1 anchors before the timed region (Ondo, Midas) keep a
+ * bespoke `run` that opens the timer only after that preparation.
+ */
+function timedOptionalSourceEntry(
+  stablecoinId: string,
+  sourceKey: string,
+  label: string,
+  fetchSource: (
+    budgetSignal: AbortSignal,
+    context: TrackedOptionalSourceContext,
+  ) => Promise<ResolvedYield | null>,
+): TrackedOptionalSourceEntry {
+  return {
+    stablecoinId,
+    sourceKey,
+    run: (context) =>
+      runTimedOptionalSource(
+        label,
+        context.signal,
+        (budgetSignal) => fetchSource(budgetSignal, context),
+        null,
+      ),
+  };
+}
+
 const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
-  {
-    stablecoinId: SCRVUSD_CURVE_ID,
-    sourceKey: SCRVUSD_CURRENT_RATE_SOURCE_KEY,
-    run: (context) =>
-      runTimedOptionalSource(
-        "Curve scrvUSD current-rate source",
-        context.signal,
-        (budgetSignal) => fetchCurveScrvusdCurrentRateSource(
-          context.startSec,
-          budgetSignal,
-          context.chainRpcs,
-        ),
-        null,
-      ),
-  },
-  {
-    stablecoinId: BIMA_USBD_ID,
-    sourceKey: "protocol-api:bima-susbd",
-    run: (context) =>
-      runTimedOptionalSource(
-        "BIMA sUSBD source",
-        context.signal,
-        (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
-        null,
-      ),
-  },
-  {
-    stablecoinId: CETES_ETHERFUSE_ID,
-    sourceKey: "protocol-api:etherfuse-cetes-current-issuance",
-    run: (context) =>
-      runTimedOptionalSource(
-        "Etherfuse CETES current-issuance source",
-        context.signal,
-        (budgetSignal) => fetchEtherfuseCetesSource(budgetSignal),
-        null,
-      ),
-  },
-  {
-    stablecoinId: HASHNOTE_USYC_ID,
-    sourceKey: "protocol-api:hashnote-usyc",
-    run: (context) =>
-      runTimedOptionalSource(
-        "Hashnote USYC source",
-        context.signal,
-        (budgetSignal) => fetchHashnoteUsycSource(budgetSignal),
-        null,
-      ),
-  },
+  timedOptionalSourceEntry(
+    SCRVUSD_CURVE_ID,
+    SCRVUSD_CURRENT_RATE_SOURCE_KEY,
+    "Curve scrvUSD current-rate source",
+    (budgetSignal, context) =>
+      fetchCurveScrvusdCurrentRateSource(context.startSec, budgetSignal, context.chainRpcs),
+  ),
+  timedOptionalSourceEntry(
+    BIMA_USBD_ID,
+    "protocol-api:bima-susbd",
+    "BIMA sUSBD source",
+    (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
+  ),
+  timedOptionalSourceEntry(
+    CETES_ETHERFUSE_ID,
+    "protocol-api:etherfuse-cetes-current-issuance",
+    "Etherfuse CETES current-issuance source",
+    (budgetSignal) => fetchEtherfuseCetesSource(budgetSignal),
+  ),
+  timedOptionalSourceEntry(
+    HASHNOTE_USYC_ID,
+    "protocol-api:hashnote-usyc",
+    "Hashnote USYC source",
+    (budgetSignal) => fetchHashnoteUsycSource(budgetSignal),
+  ),
   {
     stablecoinId: ONDO_USDY_ID,
     sourceKey: ONDO_USDY_ORACLE_SOURCE_KEY,
@@ -191,40 +196,25 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
       return candidate?.yield ?? null;
     },
   },
-  {
-    stablecoinId: RE_REUSD_ID,
-    sourceKey: "protocol-api:re-protocol-reusd",
-    run: (context) =>
-      runTimedOptionalSource(
-        "Re Protocol reUSD source",
-        context.signal,
-        (budgetSignal) => fetchReProtocolReusdSource(budgetSignal),
-        null,
-      ),
-  },
-  {
-    stablecoinId: ZEPHYR_ZYS_ID,
-    sourceKey: "protocol-api:zys-zephyr-protocol",
-    run: (context) =>
-      runTimedOptionalSource(
-        "Zephyr ZYS source",
-        context.signal,
-        (budgetSignal) => fetchZephyrZysSource(budgetSignal),
-        null,
-      ),
-  },
-  {
-    stablecoinId: YEARN_YBOLD_ID,
-    sourceKey: YEARN_YBOLD_SOURCE_KEY,
-    run: (context) =>
-      runTimedOptionalSource(
-        "Yearn yBOLD source",
-        context.signal,
-        (budgetSignal) => fetchYearnYboldSource(budgetSignal),
-        null,
-      ),
-  },
-] as const;
+  timedOptionalSourceEntry(
+    RE_REUSD_ID,
+    "protocol-api:re-protocol-reusd",
+    "Re Protocol reUSD source",
+    (budgetSignal) => fetchReProtocolReusdSource(budgetSignal),
+  ),
+  timedOptionalSourceEntry(
+    ZEPHYR_ZYS_ID,
+    "protocol-api:zys-zephyr-protocol",
+    "Zephyr ZYS source",
+    (budgetSignal) => fetchZephyrZysSource(budgetSignal),
+  ),
+  timedOptionalSourceEntry(
+    YEARN_YBOLD_ID,
+    YEARN_YBOLD_SOURCE_KEY,
+    "Yearn yBOLD source",
+    (budgetSignal) => fetchYearnYboldSource(budgetSignal),
+  ),
+];
 
 export const TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID = new Map<string, TrackedOptionalSourceEntry[]>();
 for (const entry of TRACKED_OPTIONAL_SOURCE_REGISTRY) {
@@ -234,49 +224,25 @@ for (const entry of TRACKED_OPTIONAL_SOURCE_REGISTRY) {
 }
 
 export const STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: readonly TrackedOptionalSourceEntry[] = [
-  {
-    stablecoinId: LIQUITY_V1_LUSD_ID,
-    sourceKey: buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
-    run: (context) =>
-      runTimedOptionalSource(
-        "B.Protocol LQTY-only source",
-        context.signal,
-        (budgetSignal) => fetchBprotocolLqtyOnlySource(
-          budgetSignal,
-          context.chainRpcs,
-          context.coingeckoApiKey,
-        ),
-        null,
-      ),
-  },
-  {
-    stablecoinId: BASEDOLLAR_BD_ID,
-    sourceKey: buildOnChainSourceKey(BASEDOLLAR_BD_ID),
-    run: (context) =>
-      runTimedOptionalSource(
-        "Base Dollar SP interest-only source",
-        context.signal,
-        (budgetSignal) => fetchLiquityV2StabilityPoolSource(
-          BASEDOLLAR_SP_CONFIG,
-          budgetSignal,
-          context.chainRpcs,
-        ),
-        null,
-      ),
-  },
-  {
-    stablecoinId: LIQUITY_V2_BOLD_ID,
-    sourceKey: buildOnChainSourceKey(LIQUITY_V2_BOLD_ID),
-    run: (context) =>
-      runTimedOptionalSource(
-        "Liquity V2 SP interest-only source",
-        context.signal,
-        (budgetSignal) => fetchLiquityV2StabilityPoolSource(
-          LIQUITY_V2_SP_CONFIG,
-          budgetSignal,
-          context.chainRpcs,
-        ),
-        null,
-      ),
-  },
+  timedOptionalSourceEntry(
+    LIQUITY_V1_LUSD_ID,
+    buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
+    "B.Protocol LQTY-only source",
+    (budgetSignal, context) =>
+      fetchBprotocolLqtyOnlySource(budgetSignal, context.chainRpcs, context.coingeckoApiKey),
+  ),
+  timedOptionalSourceEntry(
+    BASEDOLLAR_BD_ID,
+    buildOnChainSourceKey(BASEDOLLAR_BD_ID),
+    "Base Dollar SP interest-only source",
+    (budgetSignal, context) =>
+      fetchLiquityV2StabilityPoolSource(BASEDOLLAR_SP_CONFIG, budgetSignal, context.chainRpcs),
+  ),
+  timedOptionalSourceEntry(
+    LIQUITY_V2_BOLD_ID,
+    buildOnChainSourceKey(LIQUITY_V2_BOLD_ID),
+    "Liquity V2 SP interest-only source",
+    (budgetSignal, context) =>
+      fetchLiquityV2StabilityPoolSource(LIQUITY_V2_SP_CONFIG, budgetSignal, context.chainRpcs),
+  ),
 ];

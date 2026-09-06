@@ -8,11 +8,11 @@ import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   circulatingForStablecoinRow,
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   runAsMain,
-  runReportCli,
+  runCoverageAuditCli,
   type UnknownRecord,
-} from "../lib/report-cli";
+} from "../lib/coverage-audit-cli";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
@@ -567,7 +567,7 @@ function readJson(path: string): unknown {
 }
 
 export function parseCliArgs(argv: string[]): CliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): CliOptions => ({
       stablecoinsPath: null,
       priceDepthPath: null,
@@ -593,7 +593,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
 }
 
 export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()): Promise<number> {
-  return runReportCli(argv, {
+  return runCoverageAuditCli(argv, {
     parse: parseCliArgs,
     cwd,
     build: (options) => {

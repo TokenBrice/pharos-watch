@@ -21,9 +21,11 @@ import { crawlCosmosPoolsStage } from "./crawl-cosmos-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
-import { getRuntimeDexDiscoveryProviders } from "./provider-registry";
-import { DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY } from "./provider-registry";
-import type { DexDiscoveryCrawlerLeafId } from "@shared/lib/dex-deployment-coverage";
+import {
+  DEX_DISCOVERY_PROVIDER_REGISTRY,
+  getDexDiscoveryProviders,
+  type DexDiscoveryCrawlerLeafId,
+} from "@shared/lib/dex-deployment-coverage";
 
 export interface CrawlResult {
   pools: StagedPool[];
@@ -64,7 +66,7 @@ function selectDexScreenerFallbackTargets(
   const completedEarlierQueries = completedPoolQueryKeys(providerChecks, ["coingecko", "geckoterminal"]);
   return coinTargets
     .filter(({ chain, address }) => {
-      if (!getRuntimeDexDiscoveryProviders(chain, address).includes("dexscreener")) return false;
+      if (!getDexDiscoveryProviders(chain, address).includes("dexscreener")) return false;
       return !completedEarlierQueries.has(canonicalExitRouteAssetKey(chain, address));
     })
     .map(({ chain, address }) => [chain, address] as const);
@@ -132,7 +134,7 @@ export async function crawlCoin(
     cosmos: () => crawlCosmosPoolsStage({ coinTargets, context }),
   };
   const executionLeaves = [...new Set(
-    DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY
+    DEX_DISCOVERY_PROVIDER_REGISTRY
       .filter((provider) => provider.lifecycle === "active")
       .sort((left, right) => left.executionOrder - right.executionOrder)
       .flatMap((provider) => provider.crawlerLeaf ? [provider.crawlerLeaf] : []),

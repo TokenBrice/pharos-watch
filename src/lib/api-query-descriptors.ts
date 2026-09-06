@@ -13,6 +13,7 @@ import type {
   BluechipRatingsMap,
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
+  NonUsdSharePoint,
   PegSummaryResponse,
   StablecoinChartPoint,
   StablecoinListResponse,
@@ -60,10 +61,9 @@ import {
   CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
-import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
 import { z } from "zod";
 
-export type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
+export type { NonUsdSharePoint } from "@shared/types/market";
 
 /** First-paint window selected by the stablecoin detail market charts. */
 export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
@@ -202,15 +202,6 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
  * imports stay lazy and are cached per endpoint declaration.
  */
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
-  stablecoinDetail: defineParameterizedApiQuery(
-    "plain",
-    createLazySchema<StablecoinDetailResponse>(async () => StablecoinDetailResponseSchema),
-    (stablecoinId: string) => ({
-      queryKey: ["stablecoin-detail", stablecoinId] as const,
-      path: API_PATHS.stablecoinDetail(stablecoinId),
-      producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
-    }),
-  ),
   stablecoinLiveSummary: defineParameterizedApiQuery(
     "plain",
     createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
@@ -507,7 +498,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "plain",
     createLazySchema<NonUsdSharePoint[]>(
-      async () => (await import("@/lib/non-usd-share-schema")).NonUsdShareResponseSchema,
+      async () => (await import("@shared/types/market")).NonUsdShareResponseSchema,
     ),
   ),
   stabilityIndex: STABILITY_INDEX_QUERY_DESCRIPTOR,

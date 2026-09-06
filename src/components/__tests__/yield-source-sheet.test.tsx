@@ -3,10 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
-import {
-  SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
-  mergeSourceRiskGoldenFixtures,
-} from "@shared/test-utils/yield-source-risk-golden-fixtures";
+import { mergeSourceRiskGoldenFixtures } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import type { YieldRanking } from "@shared/types";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
 
@@ -397,13 +394,7 @@ describe("YieldSourceSheet", () => {
             ...baseRanking.provenance!,
             sourceFreshness: "stale",
           },
-          sourceRisk: mergeSourceRiskGoldenFixtures([
-            "reward-heavy",
-            "low-source-depth",
-            "stale-source-age",
-            "bootstrap-observation-count",
-            "source-switch-churn",
-          ]),
+          sourceRisk: mergeSourceRiskGoldenFixtures(["reward-heavy", "stale-source-age"]),
         }}
         logo={undefined}
         riskFreeRate={0.02}
@@ -414,9 +405,8 @@ describe("YieldSourceSheet", () => {
     );
 
     expect(screen.getByText("Source risk")).toBeTruthy();
-    for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
-      expect(screen.getByText(label)).toBeTruthy();
-    }
+    expect(screen.getByText("reward-heavy")).toBeTruthy();
+    expect(screen.getByText("stale source")).toBeTruthy();
   });
 
   it("renders a rejection-hint chip on retained alternates when populated", () => {

@@ -1,5 +1,6 @@
 import {
   encodeDexCensusAttemptResult,
+  getDexDiscoveryProviders,
   type DexCensusAttemptResult,
   type DexDiscoveryProvider,
   type DexDeploymentOutcome,
@@ -13,7 +14,6 @@ import {
   estimateDeploymentCrawlCostMs,
   selectDiscoveryTargetWindow,
 } from "../target-window";
-import { getRuntimeDexDiscoveryProviders } from "../provider-registry";
 import {
   classifyStoredDexCensusState,
   isCurrentDexCensusStateComplete,
@@ -208,7 +208,7 @@ function seedStoredRow(
   stablecoinId: string,
   seed: DexCensusReplaySeed,
 ): ReplayStoredRow {
-  const currentProviderIds = getRuntimeDexDiscoveryProviders(seed.deployment.chain, seed.deployment.address);
+  const currentProviderIds = getDexDiscoveryProviders(seed.deployment.chain, seed.deployment.address);
   const providerIds = [...(seed.providerIds ?? currentProviderIds)];
   return {
     row: {
@@ -276,7 +276,7 @@ export function replayDexCensusSweep(input: DexCensusReplayInput): DexCensusRepl
       const visit = visits[visitIndex] ?? defaultReplayVisit();
       const persistence = visit.persistence ?? "outcome";
       const providerIds = [
-        ...(visit.providerIds ?? getRuntimeDexDiscoveryProviders(target.chain, target.address)),
+        ...(visit.providerIds ?? getDexDiscoveryProviders(target.chain, target.address)),
       ];
       const providerCount = providerIds.length;
       const signals: DexCensusAttemptSignals = {
@@ -324,7 +324,7 @@ export function replayDexCensusSweep(input: DexCensusReplayInput): DexCensusRepl
         },
         providerCount,
         providerSetSuperseded: providerCount === 0 &&
-          getRuntimeDexDiscoveryProviders(target.chain, target.address).length > 0,
+          getDexDiscoveryProviders(target.chain, target.address).length > 0,
       });
       persistedDeploymentKeys.push(key);
     }

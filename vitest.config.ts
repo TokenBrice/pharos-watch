@@ -134,6 +134,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
+      "@data": path.resolve(__dirname, "data"),
       // Workerd provides this scheme in production; Node-based Vitest needs a
       // runtime-only stand-in without changing the Worker bundle specifier.
       "cloudflare:workers": path.resolve(

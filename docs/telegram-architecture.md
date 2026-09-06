@@ -379,7 +379,7 @@ Files any seam may import:
 - `worker/src/lib/telegram/digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
 - `worker/src/lib/telegram/log.ts` — structured logging.
 - `worker/src/lib/telegram/pending-provenance.ts` — bounded target-group scope and markup-policy serialization/parsing shared by Dispatch and Queue.
-- `worker/src/lib/telegram/active-watcher-sql.ts` — trusted active-watcher/subscription/preset SQL fragments shared by pulse and lifecycle analytics. All six direct families participate; presets remain DEWS/depeg/safety only.
+- `shared/lib/telegram-alert-families.ts` — persistence manifest plus the trusted active-watcher/subscription/preset SQL fragments derived from it, shared by pulse, lifecycle analytics, and the offline load guard. All six direct families participate; presets remain DEWS/depeg/safety only.
 - `worker/src/lib/telegram/usd-profile.ts` — shared plain/signed compact-USD profiles. API formatters retain their null-producing input guards; alert context retains the visible `n/a` fallback.
 - `shared/lib/telegram-bot-registration.ts` — runtime-neutral command reference and BotFather registration manifest. One entry per command owns the registration description, audience visibility, syntax variants (with concise `/help` line and public-reference example), and deprecated aliases; `TELEGRAM_BOT_COMMANDS`, the group menu, `/help` rows, and the `/pharoswatchbot/` command reference all derive from it. Handler dispatch stays in `COMMAND_HANDLERS` — the manifest is documentation metadata, not a handler pipeline.
 - `shared/lib/telegram-recap-policy.ts` — runtime-neutral recap cadence, freshness, page, message, priority, TTL, and load bounds.

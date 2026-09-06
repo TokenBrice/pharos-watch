@@ -7,11 +7,11 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import {
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   runAsMain,
-  runReportCli,
+  runCoverageAuditCli,
   toPositiveInt,
-} from "../lib/report-cli";
+} from "../lib/coverage-audit-cli";
 
 const DIA_ASSET_QUOTATION_BASE_URL = "https://api.diadata.org/v1/assetQuotation";
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -124,7 +124,7 @@ function usage(): string {
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): CliOptions => ({
       inputPath: null,
       limit: 100,
@@ -428,7 +428,7 @@ export async function runCli(
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  return runReportCli(argv, {
+  return runCoverageAuditCli(argv, {
     parse: parseArgs,
     cwd,
     build: async (options) => {

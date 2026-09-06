@@ -89,8 +89,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(paths).not.toContain("shared/data/safety-score-v9/shock-coverage-replay-attestations-v1.json");
     expect(paths).not.toContain("shared/data/safety-score-v9/matched-invariants-v1.ts");
     expect(paths).not.toContain("worker/src/lib/safety-score-v9/candidate.ts");
-    expect(paths).not.toContain("worker/src/lib/safety-score-v9-release-window.ts");
-    expect(paths).not.toContain("worker/src/lib/safety-score-model-publication.ts");
     expect(buildV9EvaluationBuildManifest(root)).toEqual(buildV9EvaluationBuildManifest(root));
   });
 

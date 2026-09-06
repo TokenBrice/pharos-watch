@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
-import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../forget";
+import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();

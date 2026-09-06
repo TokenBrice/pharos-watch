@@ -32,6 +32,7 @@ import {
   DepegEventsResponseSchema,
   DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
+  NonUsdShareResponseSchema,
   PegSummaryResponseSchema,
   StablecoinChartResponseSchema,
   StablecoinListResponseSchema,
@@ -109,18 +110,6 @@ export const StablecoinSummaryResponseSchema = z.object({
   chainCount: z.number(),
   updatedAt: z.number(),
 });
-
-const NonUsdSharePointSchema = z.object({
-  date: z.number(),
-  // Preserve the frontend contract's nullable aggregate/share fields; total is emitted only when positive.
-  commodityShare: z.number().nullable(),
-  fiatNonUsdShare: z.number().nullable(),
-  commodity: z.number().nullable(),
-  fiatNonUsd: z.number().nullable(),
-  total: z.number(),
-});
-
-export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
 
 const SnapshotIndexEntrySchema = z.object({
   snapshotDate: z.string(),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { NonUsdShareResponseSchema } from "@shared/types/market";
 import {
-  NonUsdShareResponseSchema,
   SnapshotCoinResponseSchema,
   SnapshotsIndexResponseSchema,
   StablecoinDetailResponseSchema,

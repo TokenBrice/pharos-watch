@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { sha256Hex } from "@shared/lib/sha256";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   beginReserveSyncAttempt,
   pruneLiveReserveHistory,
 } from "../live-reserves/store";
-import { buildReserveCompositionHistoryInsertStatement, buildReserveCompositionHistoryRepairStatement, buildReserveSyncAttemptHistoryInsertStatement, buildReserveSyncAttemptHistoryRepairStatement, buildReserveSyncRecordDeferredStatement } from "../live-reserves/store-statements";
+import { buildReserveSyncRecordDeferredStatement } from "../live-reserves/store-statements";
 import {
   finalizeReserveSuccess,
   mockReserveD1 as mockD1,
@@ -14,38 +14,36 @@ import {
 } from "./live-reserves-store.test-support";
 
 describe("live-reserves-store", () => {
-  it("preserves history-target SQL and bind order", () => {
-    const db = mockD1();
-    const attemptId = "attempt-history-spec";
-    const composition = reserveCompositionInput(attemptId);
-    const attempt = {
-      stablecoinId: composition.stablecoinId, attemptedAt: composition.fetchedAt, adapterKey: composition.source,
-      breakerKey: "live-reserves:test", attemptId, status: "degraded" as const, warnings: [],
-      warningCount: 0, lastError: null, metadata: {},
-    };
-    const prepared = [
-      buildReserveCompositionHistoryInsertStatement(db, composition),
-      buildReserveSyncAttemptHistoryInsertStatement(db, attempt),
-      buildReserveCompositionHistoryRepairStatement(db, composition.stablecoinId, attemptId),
-      buildReserveSyncAttemptHistoryRepairStatement(db, composition.stablecoinId, attemptId),
-    ] as unknown as Array<{ sql: string; boundValues: unknown[] }>;
 
-    expect(prepared.map(({ sql, boundValues }) => sha256Hex(JSON.stringify([sql, boundValues])))).toEqual([
-      "4c4c70287cfbda07532f42f1eddd5763c15d07d69789da3c2750c1a56359114c", "fc98a361dec5e601605c4d93b1a38f95276a5d0677e2600d8e645e232dcf287a", "12f2321981b4dab96753e2fa54774155a0ef61891774e73cbe014d90676d9507", "65c7da7ed37dd8deaed6d8f7de43f01a25c87e698aab391bf69eed06191002a7",
-    ]);
-  });
+  it("fences late attempts by fetched timestamp and stored attempt identity", async () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const db = createSqliteD1(sqlite);
+      const readComposition = () =>
+        sqlite
+          .prepare("SELECT fetched_at, attempt_id FROM reserve_composition WHERE stablecoin_id = ?")
+          .get("iusd-infinifi");
+      const finalize = async (attemptId: string, fetchedAt: number) => {
+        await beginReserveSyncAttempt(db, reserveSyncAttemptInput(attemptId));
+        return finalizeReserveSuccess(db, attemptId, {
+          composition: { fetchedAt },
+          syncState: { lastSuccessAt: fetchedAt, lastSuccessAttemptId: attemptId },
+        });
+      };
 
-  it("fences the composition upsert so a late attempt cannot overwrite a newer row", async () => {
-    const db = mockD1();
-    const attemptId = "attempt-late";
-
-    await finalizeReserveSuccess(db, attemptId);
-
-    const upsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_composition ("));
-    expect(upsert).toBeDefined();
-    // Fence must reject strictly older fetchedAt, and same fetchedAt only when the stored row has no attempt_id.
-    expect(upsert!.sql).toMatch(/reserve_composition\.fetched_at\s*<\s*excluded\.fetched_at/);
-    expect(upsert!.sql).toMatch(/reserve_composition\.attempt_id\s+IS\s+NULL/);
+      await expect(finalize("attempt-authoritative", 1_000)).resolves.toEqual({ finalized: true, historyRecorded: true });
+      for (const [attemptId, fetchedAt] of [["attempt-older", 900], ["attempt-equal", 1_000]] as const) {
+        await expect(finalize(attemptId, fetchedAt)).resolves.toEqual({ finalized: false, historyRecorded: false });
+        expect(readComposition()).toEqual({ fetched_at: 1_000, attempt_id: "attempt-authoritative" });
+      }
+      await expect(finalize("attempt-newer", 1_100)).resolves.toEqual({ finalized: true, historyRecorded: true });
+      expect(readComposition()).toEqual({ fetched_at: 1_100, attempt_id: "attempt-newer" });
+      sqlite.prepare("UPDATE reserve_composition SET attempt_id = NULL WHERE stablecoin_id = ?").run("iusd-infinifi");
+      await expect(finalize("attempt-equal-legacy", 1_100)).resolves.toEqual({ finalized: true, historyRecorded: true });
+      expect(readComposition()).toEqual({ fetched_at: 1_100, attempt_id: "attempt-equal-legacy" });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns finalized=false and writes no history rows when the composition upsert no-ops", async () => {

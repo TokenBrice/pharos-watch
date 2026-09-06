@@ -35,8 +35,9 @@ import {
   type YieldSourcePosture,
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { gradeRange } from "@shared/lib/report-card-core";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { PegCurrency, ReportCardGrade, YieldBenchmarkKey, YieldType } from "@shared/types";
+import type { PegCurrency, YieldBenchmarkKey, YieldType } from "@shared/types";
 import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
@@ -301,20 +302,6 @@ export function getYieldComparisonLabel(filters: YieldViewModelFilters): string 
   return "Current view";
 }
 
-const COHORT_GRADE_BAND: Readonly<Record<ReportCardGrade, string>> = {
-  "A+": "A",
-  A: "A",
-  "A-": "A",
-  "B+": "B",
-  B: "B",
-  "B-": "B",
-  "C+": "C",
-  C: "C",
-  "C-": "C",
-  D: "D",
-  F: "F",
-  NR: "F",
-};
 const COHORT_MIN_SIZE = 8;
 interface CohortBucket {
   scoresDescending: number[];
@@ -322,8 +309,9 @@ interface CohortBucket {
 
 function cohortKey(row: YieldWorkbenchRanking): string | null {
   if (row.safetyGrade === null || row.pharosYieldScore === null) return null;
-  const band = COHORT_GRADE_BAND[row.safetyGrade];
-  return band === undefined ? null : `${row.yieldType}::${band}`;
+  // Methodology: unrated (NR) rows compete in the F cohort instead of being excluded.
+  const band = row.safetyGrade === "NR" ? "F" : gradeRange(row.safetyGrade);
+  return `${row.yieldType}::${band}`;
 }
 
 export function buildYieldCohortIndex(rows: readonly YieldWorkbenchRanking[]): Map<string, CohortBucket> {

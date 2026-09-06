@@ -2,6 +2,7 @@
 
 import {
   DDRR_VERDICT_REVIEW_VALUES,
+  DDRR_SCORED_VERDICTS,
   DdrrResponseSchema,
   type DdrrHorizonCalibration,
   type DdrrResponse,
@@ -21,26 +22,19 @@ import {
   isRecord,
   joinUrl,
   markdownValue,
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
   runAsMain,
-  runReportCli,
+  runCoverageAuditCli,
   toPositiveInt,
-} from "../lib/report-cli";
+} from "../lib/coverage-audit-cli";
 import { renderMarkdownRows } from "../lib/markdown-report";
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
 export const PROD_DDRR_SITE_DATA_URL = `${PROD_ORIGIN}/_site-data/depeg-resolver-review`;
 export const TRUSTED_DDRR_API_KEY_ORIGINS = new Set(["https://api.pharos.watch"]);
 
-const TERMINALITY_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
-  "correct_recoverable",
-  "correct_terminal",
-  "false_terminal",
-  "false_recoverable",
-  "risk_noted_terminal",
-]);
 const DURATION_RETUNE_MIN_ROWS = 50;
 const DURATION_RETUNE_MIN_COINS = 20;
 const FACTOR_REVIEW_FALSE_TERMINAL_THRESHOLD = 2;
@@ -337,7 +331,7 @@ export function buildFactorAttribution(rows: readonly DdrrV2PredictionReviewRow[
       group.rowCount += 1;
       group.coins.add(row.stablecoinId);
       group.verdictCounts[row.verdictReview] += 1;
-      if (TERMINALITY_SCORED_VERDICTS.has(row.verdictReview)) group.scoredCount += 1;
+      if (DDRR_SCORED_VERDICTS.has(row.verdictReview)) group.scoredCount += 1;
       incrementActual(group.actualCounts, row);
       if (group.sampleIncidentKeys.length < SAMPLE_LIMIT) group.sampleIncidentKeys.push(row.incidentKey);
     }
@@ -927,7 +921,7 @@ function usage(): string {
 }
 
 export function parseArgs(argv: readonly string[] = process.argv.slice(2)): DdrrCalibrationCliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): DdrrCalibrationCliOptions => ({
       inputPath: null,
       apiBase: null,
@@ -1012,7 +1006,7 @@ export async function runCli(
   cwd: string = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  return runReportCli([...argv], {
+  return runCoverageAuditCli([...argv], {
     parse: parseArgs,
     cwd,
     build: async (options) => {

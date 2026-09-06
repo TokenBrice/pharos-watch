@@ -18,7 +18,7 @@ import {
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
 } from "../../lib/telegram/presets";
-import { isPausedSentinel } from "../../lib/telegram/constants";
+import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import type { PendingAlertRow } from "./types";
 
 const INVALID_PROVENANCE_RETRY_SEC = 15 * 60;
