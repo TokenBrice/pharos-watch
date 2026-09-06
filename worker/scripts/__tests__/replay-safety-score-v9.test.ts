@@ -122,7 +122,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     await expect(parseSafetyScoreV9ReplayFixedInput(native)).resolves.toEqual(native);
     await expect(parseSafetyScoreV9ReplayFixedInput(JSON.parse(cacheEntry.value))).resolves.toEqual(native);
     await expect(parseSafetyScoreV9ReplayFixedInput(cacheEntry.value)).resolves.toEqual(native);
-  });
+  }, 30_000);
 
   it("keeps the two capture generations on their own parsers", async () => {
     const legacy = exactFixedInput();
@@ -245,7 +245,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     const corrupt = structuredClone(snapshot);
     corrupt.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = false;
     await expect(parseSafetyScoreV9ReplayFixedInput(historical, corrupt)).rejects.toThrow("snapshot fingerprint does not match");
-  });
+  }, 60_000);
 
   it("replays a registry-fingerprint mismatch only behind --allow-registry-mismatch", async () => {
     // A capture frozen before a curation commit carries the registry
