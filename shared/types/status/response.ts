@@ -95,7 +95,6 @@ export const StatusSummarySchema = z.object({
    */
   transitionsLast24h: z.number(),
 });
-type StatusSummary = z.output<typeof StatusSummarySchema>;
 
 const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
   status: StatusHealthValueSchema,
