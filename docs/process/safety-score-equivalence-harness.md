@@ -130,7 +130,7 @@ Name every artifact `replay-<commit>-<capture stamp>.json`. The commit is what t
 
 The replay writes canonical byte-stable JSON. The published response lives at `pipeline.candidate`; its `cards` array carries one card per asset.
 
-### Capture-time registry: `--registry-ref`
+### Capture-time registry replay
 
 New `report-cards:capture-fixed-input` exports wrap the normalized input as
 `{kind:"safety-score-v9-registry-capture", fixedInput, registrySnapshot}`.

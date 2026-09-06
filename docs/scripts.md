@@ -44,7 +44,7 @@ cannot be combined with `--registry-ref`; on a wrapper it explicitly ignores
 the snapshot for scoring while checking its integrity.
 
 Use `jq '(.fixedInput // .).clockSec'` to read either export shape. See the
-[equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry---registry-ref)
+[equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay)
 for integrity, trusted-Git execution, and production-digest limitations.
 
 ## D1 Insights Capture

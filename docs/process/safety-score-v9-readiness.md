@@ -89,7 +89,7 @@ code, policy, and all other V9 overlays. The production envelope checksum is
 verified during parsing; it is not a score-result checksum. Therefore these
 runs prove capture-time registry/NAV interpretation and deterministic replay,
 **not** historical production-output equivalence or a release authorization.
-See the [equivalence harness](./safety-score-equivalence-harness.md#capture-time-registry---registry-ref)
+See the [equivalence harness](./safety-score-equivalence-harness.md#capture-time-registry-replay)
 for snapshot scope and current-curation mode.
 
 ## Composite ceiling gate
