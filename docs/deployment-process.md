@@ -137,6 +137,27 @@ Workflow success proves activation identity, not every runtime behavior. The rea
 
 The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. The job records no cron probe at all, because a short deploy job cannot safely wait for and correlate a future scheduled run; observing the first matching scheduled execution stays a human step. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
 
+### Monitoring Without Model Polling
+
+Before observing, record the target SHA/run ID, affected jobs, Worker activation time, expected result/publication contract, and observation deadline. Use one deterministic watcher per target, with progress redirected to the campaign's ignored `agents/` directory. Do independent work while it runs; use completion notifications where supported, otherwise the fewest completion checks the harness permits. Do not repeatedly fetch unchanged state or assign a sub-agent solely to wait.
+
+For GitHub, resolve the exact run for the target SHA once. Native watch mode handles refreshes without model turns. For example, after setting `release_run_id` and `watch_log` to the verified run ID and campaign log path:
+
+```bash
+python3 -c 'import subprocess, sys; subprocess.run(sys.argv[1:], timeout=1800, check=True)' \
+  gh run watch "$release_run_id" --repo TokenBrice/pharos-watch --exit-status --compact --interval 30 \
+  > "$watch_log" 2>&1
+```
+
+The wrapper bounds the watch to 30 minutes; choose another explicit deadline when the run warrants it. For PR checks, use the same wrapper with `gh pr checks <pr-number> --repo TokenBrice/pharos-watch --required --watch --fail-fast --interval 30`. On completion, inspect the exit status and a bounded log tail. Timeout leaves checks/deployment pending; failure routes to CI triage. Do not silently restart the watcher.
+
+For Worker acceptance, reuse the existing commands:
+
+- `npm run ops:watch-worker-cron -- --json` collects a **single snapshot**, not a wait-until-healthy loop. Use it when the relevant execution should already have completed.
+- `npm run ops:night-watch-worker -- --start <iso> --end <iso> --interval-minutes 15 --include-d1 --output <report.md> --evidence-json <evidence.json> --checkpoint-jsonl <samples.jsonl>` collects a fixed observation window. Set campaign-specific scratch paths and a window covering the affected schedule plus its expected runtime. Add admin probes only when needed; supply credentials through the documented environment, never command arguments. Use a process deadline with collection grace beyond the observation end, because the window alone does not bound a stuck external command.
+
+These collectors write evidence; exit zero does not certify health, and night-watch does not stop early on a healthy sample. Read the report and correlate a new affected execution with activation and its expected status, duration, memory, and publication evidence. Pre-deploy successes do not satisfy acceptance. Missing evidence at the deadline remains pending with the next scheduled opportunity recorded. A longer unattended watch belongs in an external scheduler/event-triggered workflow, not an indefinitely continuing agent goal.
+
 ## GitHub Deploy Inputs
 
 Repository settings:
