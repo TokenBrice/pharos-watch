@@ -6,7 +6,6 @@ import type {
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
-  ReserveCompositionOverview,
 } from "@shared/types/live-reserves";
 export type { ReserveCompositionOverview } from "@shared/types/live-reserves";
 
