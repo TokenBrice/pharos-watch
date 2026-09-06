@@ -23,7 +23,9 @@ Keep the visible policy organized around user-understandable categories rather t
 
 ### Website analytics
 
-Analytics loads only when `NEXT_PUBLIC_GA_ID` is configured. The embedded Telegram Mini App route and its descendants are excluded from GA4 and Web Vitals collection. The page explains cookies, retention, hosting providers, and the typed event catalog without promising telemetry that the runtime does not collect.
+Analytics loads only when `NEXT_PUBLIC_GA_ID` is configured and the browser uses the public production hostname `pharos.watch`. Operator routes (`/admin/`, `/admin-api/` and descendants), operator hosts, Pages preview hosts, and the embedded Telegram Mini App are excluded from GA4 bootstrap, page views, custom events, and Web Vitals. The shared gate in `src/lib/analytics.ts` checks the browser location again when custom events fire, including delayed callbacks after a route change.
+
+Deliberate local test exception: `localhost`, `127.0.0.1`, and `[::1]` retain analytics support when a measurement ID is explicitly configured, so the existing local `SMOKE_UI_EXPECT_GA_ID` smoke check remains usable. Use a test measurement ID for these runs; they are not public-production traffic. No other host suffix or preview domain is allowed. The page explains cookies, retention, hosting providers, and the typed event catalog without promising telemetry that the runtime does not collect.
 
 Authoritative sources:
 

@@ -1,4 +1,6 @@
 import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
+import { SITE_HOSTNAME } from "@shared/lib/runtime-origins";
+import { isOpsPath } from "@/lib/admin-workspaces";
 
 // Extend Window to include gtag
 declare global {
@@ -77,8 +79,17 @@ type EventMap = {
 // Core tracking function
 // ---------------------------------------------------------------------------
 
+export function isAnalyticsAllowed(
+  pathname: string | null | undefined,
+  hostname = typeof window === "undefined" ? "" : window.location.hostname,
+): boolean {
+  // Loopback preserves explicit local GA smoke checks; layout still requires NEXT_PUBLIC_GA_ID.
+  const allowedHost = hostname === SITE_HOSTNAME || ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
+  return allowedHost && Boolean(pathname) && !isOpsPath(pathname) && !isTelegramMiniAppPath(pathname ?? "");
+}
+
 export function trackEvent<K extends keyof EventMap>(name: K, params: EventMap[K]): void {
-  if (typeof window !== "undefined" && !isTelegramMiniAppPath(window.location?.pathname ?? "") && window.gtag) {
+  if (typeof window !== "undefined" && isAnalyticsAllowed(window.location.pathname) && window.gtag) {
     window.gtag("event", name, params);
   }
 }

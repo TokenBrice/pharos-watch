@@ -17,10 +17,31 @@ afterEach(() => {
   delete window.dataLayer;
   delete window.gtag;
   pathnameMock.mockReset();
+  vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
 });
 
 describe("GoogleAnalytics", () => {
+  it.each(["/admin/", "/admin/crons/", "/admin-api/"])("does not bootstrap analytics on %s", (path) => {
+    pathnameMock.mockReturnValue(path);
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+    expect(window.gtag).toBeUndefined();
+    expect(window.dataLayer).toBeUndefined();
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+  });
+
+  it.each(["ops.pharos.watch", "stablecoin-dashboard.pages.dev", "preview.stablecoin-dashboard.pages.dev"])(
+    "does not bootstrap analytics on %s",
+    (hostname) => {
+      pathnameMock.mockReturnValue("/");
+      vi.spyOn(window, "location", "get").mockReturnValue({ hostname } as Location);
+      render(<GoogleAnalytics measurementId="G-TEST" />);
+      expect(window.gtag).toBeUndefined();
+      expect(window.dataLayer).toBeUndefined();
+      expect(document.getElementById("pharos-google-analytics")).toBeNull();
+    },
+  );
+
   it("does not bootstrap Google Analytics in the embedded Telegram Mini App", async () => {
     pathnameMock.mockReturnValue("/pharoswatchbot/app/");
 

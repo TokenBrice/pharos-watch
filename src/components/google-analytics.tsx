@@ -2,10 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { clearAllTrackingTimers } from "@/lib/analytics";
+import { clearAllTrackingTimers, isAnalyticsAllowed } from "@/lib/analytics";
 import { stripQueryVerificationTokenFromUrl } from "@/lib/api-key-verification-url";
 import { scheduleIdle } from "@/lib/browser-utils";
-import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
 
 declare global {
   interface Window {
@@ -21,7 +20,7 @@ interface GoogleAnalyticsProps {
 export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
   const pathname = usePathname();
   const bootstrapped = useRef(false);
-  const analyticsAllowed = Boolean(pathname) && !isTelegramMiniAppPath(pathname ?? "");
+  const analyticsAllowed = isAnalyticsAllowed(pathname);
 
   useEffect(() => {
     if (!analyticsAllowed) return;
