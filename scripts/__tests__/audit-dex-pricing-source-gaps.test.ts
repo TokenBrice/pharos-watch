@@ -106,7 +106,7 @@ describe("audit-dex-pricing-source-gaps", () => {
       dexPrices: [],
       curveCandidates: [
         {
-          stablecoinId: "usdt-tether", // configured by worker/src/lib/curve-pool-configs.ts
+          stablecoinId: "usdt-tether", // configured by shared/lib/curve-pool-configs.ts
           poolAddress: "0x0000000000000000000000000000000000000001",
           chain: "ethereum",
           tvlUsd: 8_000_000,

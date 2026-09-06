@@ -2,11 +2,11 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { formatDexPricingAuditUsd as formatUsd } from "@shared/lib/format";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import { CURVE_POOL_CONFIGS } from "../../worker/src/lib/curve-pool-configs";
 import {
   circulatingForStablecoinRow,
   parseCoverageAuditCliArgs,

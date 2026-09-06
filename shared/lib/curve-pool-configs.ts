@@ -1,4 +1,22 @@
-import type { CurvePoolConfig } from "./curve-onchain";
+export type CurveRouteType = "direct" | "one-hop" | "trusted-wrapper" | "chained-hop";
+
+export interface CurvePoolConfig {
+  stablecoinId: string;
+  poolAddress: string;
+  inputIndex: number;    // coin index of the reference asset (e.g., USDC=1 in 3pool)
+  outputIndex: number;   // coin index of the target stablecoin
+  inputDecimals: number;
+  outputDecimals: number;
+  chain: string;
+  /** Use get_dy_underlying selector for metapools (e.g., LUSD/3Crv) */
+  useUnderlying?: boolean;
+  /** Two-hop pricing: raw price is in intermediate token, multiply by via-token's USD price */
+  hop?: { viaStablecoinId: string };
+  /** Explicit route metadata for diagnostics and wrapper/chained-hop opt-in */
+  routeType?: CurveRouteType;
+  /** Maximum allowed dependency depth. Chained hops must opt in with maxHopDepth > 1. */
+  maxHopDepth?: number;
+}
 
 /**
  * Curve pool configurations for on-chain price queries.
@@ -10,6 +28,9 @@ import type { CurvePoolConfig } from "./curve-onchain";
  *
  * Pools should have >$1M TVL for meaningful prices.
  * 3pool indices: 0=DAI(18), 1=USDC(6), 2=USDT(6)
+ *
+ * The on-chain get_dy fetch machinery that consumes these configs lives in
+ * worker/src/lib/curve-onchain.ts (it needs RPC access, so it stays worker-side).
  */
 export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   // ── Direct pools (get_dy, paired against USDC) ──

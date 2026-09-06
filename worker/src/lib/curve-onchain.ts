@@ -17,26 +17,7 @@ import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { CURVE_ORACLE_MAX_STALENESS_SEC } from "./constants";
 import { encodeUint256 } from "./evm-selectors";
-
-export type CurveRouteType = "direct" | "one-hop" | "trusted-wrapper" | "chained-hop";
-
-export interface CurvePoolConfig {
-  stablecoinId: string;
-  poolAddress: string;
-  inputIndex: number;    // coin index of the reference asset (e.g., USDC=1 in 3pool)
-  outputIndex: number;   // coin index of the target stablecoin
-  inputDecimals: number;
-  outputDecimals: number;
-  chain: string;
-  /** Use get_dy_underlying selector for metapools (e.g., LUSD/3Crv) */
-  useUnderlying?: boolean;
-  /** Two-hop pricing: raw price is in intermediate token, multiply by via-token's USD price */
-  hop?: { viaStablecoinId: string };
-  /** Explicit route metadata for diagnostics and wrapper/chained-hop opt-in */
-  routeType?: CurveRouteType;
-  /** Maximum allowed dependency depth. Chained hops must opt in with maxHopDepth > 1. */
-  maxHopDepth?: number;
-}
+import type { CurvePoolConfig, CurveRouteType } from "@shared/lib/curve-pool-configs";
 
 // get_dy(int128,int128,uint256) selector
 const GET_DY_SELECTOR = "0x5e0d443f";

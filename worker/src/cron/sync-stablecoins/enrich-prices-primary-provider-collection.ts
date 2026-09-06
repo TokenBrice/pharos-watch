@@ -32,7 +32,7 @@ import {
   type DexPriceSourceLoadTelemetry,
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
-import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
