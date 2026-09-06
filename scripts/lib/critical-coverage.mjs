@@ -1,6 +1,6 @@
 import { relative } from "node:path";
 
-import { isValidIsoDateOnly } from "@shared/types/date-primitives.ts";
+import { isValidIsoDateOnly } from "../../shared/types/date-primitives.ts";
 import {
   CRITICAL_OWNERSHIP_WAIVERS,
   deriveCriticalOwnership,
