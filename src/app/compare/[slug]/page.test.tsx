@@ -21,6 +21,33 @@ describe("StaticComparisonPage", () => {
     vi.resetModules();
   });
 
+  it.each([
+    ["usdc-circle-vs-usdg-paxos", "How do USDC and USDG reserves compare?", "https://www.circle.com/usdc"],
+    ["usde-ethena-vs-susde-ethena", "Why can one sUSDe be worth more than one USDe?", "https://docs.ethena.fi/solution-design/staking-usde"],
+    ["paxg-paxos-vs-xaut-tether", "What gold claim does each token represent?", "https://gold.tether.to/legal/"],
+  ])("server-renders sourced answers for %s", async (slug, question, source) => {
+    const { default: StaticComparisonPage } = await import("./page");
+    const html = renderToStaticMarkup(await StaticComparisonPage({ params: Promise.resolve({ slug }) }));
+    const document = parseStaticDocument(html);
+    expect(document.querySelector("#comparison-differences-title")?.textContent).toBe("What differs in practice");
+    expect([...document.querySelectorAll("h3")].some((heading) => heading.textContent === question)).toBe(true);
+    expect(document.querySelector(`a[href="${source}"]`)).not.toBeNull();
+    expect(document.querySelector("time")?.getAttribute("datetime")).toBe("2026-09-06");
+    const faq = [...document.querySelectorAll('script[type="application/ld+json"]')]
+      .map((script) => JSON.parse(script.textContent ?? "{}"))
+      .find((json) => json["@type"] === "FAQPage");
+    expect(document.querySelector("details p")?.textContent).toBe(faq.mainEntity[0].acceptedAnswer.text);
+  }, 30_000);
+
+  it("does not imply source checking for a metadata-only comparison", async () => {
+    const { default: StaticComparisonPage } = await import("./page");
+    const document = parseStaticDocument(renderToStaticMarkup(
+      await StaticComparisonPage({ params: Promise.resolve({ slug: "usdt-tether-vs-usdc-circle" }) }),
+    ));
+    expect(document.querySelector("#comparison-differences-title")).toBeNull();
+    expect(document.querySelector("time")).toBeNull();
+  });
+
   it("resolves coin card detail links by exact stablecoin id", async () => {
     vi.doMock("@/lib/compare-pages", async (importOriginal) => {
       const actual = await importOriginal<typeof import("@/lib/compare-pages")>();
@@ -55,5 +82,9 @@ describe("StaticComparisonPage", () => {
 
     expect(findLinkByText(document, "Open sUSDe detail page")?.getAttribute("href")).toBe("/stablecoin/susde-ethena");
     expect(findLinkByText(document, "Open USDe detail page")?.getAttribute("href")).toBe("/stablecoin/usde-ethena");
+    const liveCompareUrl = new URL(findLinkByText(document, "Open live compare")!.getAttribute("href")!, "https://pharos.watch");
+    expect(liveCompareUrl.searchParams.get("coins")).toBe("susde-ethena,usde-ethena");
+    expect(findLinkByText(document, "Telegram alerts")?.getAttribute("href")).toBe("/pharoswatchbot#getting-started");
+    expect(findLinkByText(document, "Watchlist preset")).toBeUndefined();
   }, 30_000);
 });

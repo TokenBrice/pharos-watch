@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -122,26 +122,13 @@ function StablecoinDetailClientContent({
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState("overview");
-  const [interactionStarted, setInteractionStarted] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const { ref: overviewGateRef, near: overviewNear } = useNearViewport<HTMLDivElement>("600px");
   const { ref: activityGateRef, near: activityNear } = useNearViewport<HTMLDivElement>("600px");
   const { ref: historyGateRef, near: historyNear } = useNearViewport<HTMLDivElement>("600px");
-  useEffect(() => {
-    if (interactionStarted) return;
-    const activate = () => setInteractionStarted(true);
-    window.addEventListener("scroll", activate, { once: true, passive: true });
-    window.addEventListener("pointerdown", activate, { once: true, passive: true });
-    window.addEventListener("keydown", activate, { once: true });
-    return () => {
-      window.removeEventListener("scroll", activate);
-      window.removeEventListener("pointerdown", activate);
-      window.removeEventListener("keydown", activate);
-    };
-  }, [interactionStarted]);
-  const overviewActive = interactionStarted && overviewNear;
-  const activityActive = interactionStarted && activityNear;
-  const historyActive = interactionStarted && historyNear;
+  const overviewActive = overviewNear;
+  const activityActive = activityNear;
+  const historyActive = historyNear;
   const activityOrHistoryActive = activityActive || historyActive;
   const viewModel = useStablecoinDetailViewModel({
     id,
@@ -149,11 +136,12 @@ function StablecoinDetailClientContent({
     summary,
     logoSrc,
     supplementalQueryControls: {
-      liquidity: overviewActive || activityActive,
-      reportCards: overviewActive,
+      // These lanes also supply the visible hero, not only their deeper sections.
+      liquidity: true,
+      reportCards: true,
       redemption: overviewActive || activityActive,
       yield: true,
-      stress: overviewActive,
+      stress: true,
       flows: overviewActive || activityOrHistoryActive,
       blacklist: activityOrHistoryActive,
       reserves: overviewActive,

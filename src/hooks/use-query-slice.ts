@@ -7,7 +7,7 @@ import type { ApiMeta } from "@/lib/api";
  * The read-only surface every view-model builder consumes from a query. TanStack v5
  * returns a **fresh result object on every render**, so passing a query straight into a
  * `useMemo` dependency would defeat the memo; the historical workaround was to destructure
- * the five stable fields, re-assemble them into an object literal inside the memo, and list
+ * the stable transport fields, re-assemble them into an object literal inside the memo, and list
  * every field in the dependency array. `useQuerySlice` does that once, in one place.
  */
 export interface QueryResultLike<TData> {
@@ -17,6 +17,8 @@ export interface QueryResultLike<TData> {
   error?: unknown;
   dataUpdatedAt: number;
   meta?: ApiMeta | null;
+  /** Preserve explicit feature gates so deferred data is not treated as unavailable. */
+  enabled?: boolean;
 }
 
 export interface QuerySlice<TData> {
@@ -26,6 +28,7 @@ export interface QuerySlice<TData> {
   error: unknown | null;
   dataUpdatedAt: number;
   meta: ApiMeta | null;
+  enabled?: boolean;
 }
 
 type QuerySliceData<TQuery> = TQuery extends QueryResultLike<infer TData> ? TData : never;
@@ -38,15 +41,16 @@ function toQuerySlice<TData>(query: QueryResultLike<TData>): QuerySlice<TData> {
     error: query.error ?? null,
     dataUpdatedAt: query.dataUpdatedAt,
     meta: query.meta ?? null,
+    ...(query.enabled === undefined ? {} : { enabled: query.enabled }),
   };
 }
 
 /**
  * Referentially stable projection of one query result. The identity only changes when one
- * of the five transported fields changes, so the slice can be listed as a single dependency.
+ * of the transported fields changes, so the slice can be listed as a single dependency.
  */
 export function useQuerySlice<TData>(query: QueryResultLike<TData>): QuerySlice<TData> {
-  const { data, isLoading, isError, error, dataUpdatedAt, meta } = query;
+  const { data, isLoading, isError, error, dataUpdatedAt, meta, enabled } = query;
   return useMemo(
     () => ({
       data,
@@ -55,8 +59,9 @@ export function useQuerySlice<TData>(query: QueryResultLike<TData>): QuerySlice<
       error: error ?? null,
       dataUpdatedAt,
       meta: meta ?? null,
+      ...(enabled === undefined ? {} : { enabled }),
     }),
-    [data, dataUpdatedAt, error, isError, isLoading, meta],
+    [data, dataUpdatedAt, error, isError, isLoading, meta, enabled],
   );
 }
 
@@ -81,6 +86,7 @@ export function useQuerySlices<TQueries extends Record<string, QueryResultLike<u
     query.error,
     query.dataUpdatedAt,
     query.meta,
+    query.enabled,
   ]);
   return useMemo(
     () => {

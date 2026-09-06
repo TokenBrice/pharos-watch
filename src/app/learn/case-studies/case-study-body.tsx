@@ -40,7 +40,9 @@ function ArticleMeta({ study }: { study: CaseStudy }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-5">
       <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-        ~{minutes} min read
+        By <Link href="/about/#editorial-ai-policy" className="pharos-focus-ring underline underline-offset-4">Pharos</Link>
+        {" · Published "}<time dateTime={study.datePublished}>{formatUtcDayLabel(new Date(study.datePublished))}</time>
+        {" · "}~{minutes} min read
       </p>
       <CaseStudyShare />
     </div>

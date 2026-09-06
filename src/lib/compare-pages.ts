@@ -26,7 +26,94 @@ interface StaticComparisonPage {
   summary: string;
   left: StablecoinMeta;
   right: StablecoinMeta;
+  editorial?: ComparisonEditorial;
 }
+
+interface ComparisonEditorial {
+  updatedAt: string;
+  sourcesCheckedAt: string;
+  intro: string;
+  answer: string;
+  sections: {
+    question: string;
+    answer: string;
+    sources: { label: string; href: string }[];
+  }[];
+}
+
+const COMPARISON_EDITORIAL: Record<string, ComparisonEditorial> = {
+  "usdc-circle-vs-usdg-paxos": {
+    updatedAt: "2026-09-06",
+    sourcesCheckedAt: "2026-09-06",
+    intro: "USDC and Global Dollar (USDG) both target one US dollar. Circle and Paxos operate separate issuance and redemption arrangements, so the practical comparison starts with reserve disclosures and the cash-out route available to you.",
+    answer: "USDC is Circle's dollar token; USDG is Paxos's Global Dollar. Both use dollar-denominated reserves, but holding either token does not by itself establish access to its issuer's direct redemption service. Compare the applicable account terms and the liquidity on the chain and venue you use.",
+    sections: [
+      {
+        question: "How do USDC and USDG reserves compare?",
+        answer: "Circle says most USDC reserves are invested in the Circle Reserve Fund, a government money market fund. Paxos describes USDG reserves as US dollar deposits, US Treasuries and cash equivalents. These asset categories alone do not establish a safety ranking: report dates, custodians and access to the reserves during stress also matter.",
+        sources: [
+          { label: "Circle: USDC reserves", href: "https://www.circle.com/usdc" },
+          { label: "Paxos: mint and redeem", href: "https://www.paxos.com/mint-and-redeem" },
+        ],
+      },
+      {
+        question: "Can every holder redeem USDC or USDG directly for dollars?",
+        answer: "Direct redemption and selling on an exchange are different exit routes. Circle's terms distinguish customer categories and make redemption subject to applicable eligibility and compliance requirements. Paxos also sets issuer-specific terms for its dollar stablecoins. Check the terms that apply to your jurisdiction and account; an exchange balance is not proof of a direct issuer account or an immediate bank payout.",
+        sources: [
+          { label: "Circle: USDC terms", href: "https://www.circle.com/legal/usdc-terms" },
+          { label: "Paxos: dollar stablecoin terms", href: "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions" },
+        ],
+      },
+    ],
+  },
+  "usde-ethena-vs-susde-ethena": {
+    updatedAt: "2026-09-06",
+    sourcesCheckedAt: "2026-09-06",
+    intro: "USDe is Ethena's synthetic dollar. sUSDe represents USDe deposited in Ethena's staking vault, where distributed rewards accrue to the vault share. The distinction is the staking layer and its exit mechanics, not two independent reserve systems.",
+    answer: "sUSDe adds a reward-accruing vault position on top of USDe. It retains exposure to the underlying USDe system and adds staking-contract and unstaking constraints. Its value in USDe can rise as rewards accrue, so a price above one dollar is not automatically a peg premium.",
+    sections: [
+      {
+        question: "Why can one sUSDe be worth more than one USDe?",
+        answer: "Ethena's staking vault receives USDe rewards. Those rewards increase the USDe represented by each sUSDe share instead of requiring the token balance to grow. Compare sUSDe's market price with its current redeemable USDe value, then account for USDe's own dollar price. A fixed one-dollar comparison misses the accrued rewards.",
+        sources: [
+          { label: "Ethena: staking USDe", href: "https://docs.ethena.fi/solution-design/staking-usde" },
+        ],
+      },
+      {
+        question: "How do the exit routes and risks differ?",
+        answer: "Ethena documents an unstaking cooldown before the resulting USDe can be withdrawn; the duration is configurable, so check the current setting before unstaking. Selling sUSDe on a secondary market instead depends on available liquidity and price. Both tokens remain exposed to Ethena's underlying funding, custody and exchange risks. Staking rewards do not remove those exposures or guarantee a return.",
+        sources: [
+          { label: "Ethena: staking controls", href: "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions" },
+          { label: "Ethena: underlying system risks", href: "https://docs.ethena.fi/solution-overview/risks" },
+        ],
+      },
+    ],
+  },
+  "paxg-paxos-vs-xaut-tether": {
+    updatedAt: "2026-09-06",
+    sourcesCheckedAt: "2026-09-06",
+    intro: "PAX Gold (PAXG) and Tether Gold (XAUT) represent exposure to physical gold rather than a fixed US dollar. Each issuer describes one token as representing one fine troy ounce. Custody, allocation records and redemption conditions distinguish the two products.",
+    answer: "PAXG and XAUT share a gold reference, but their issuers and delivery arrangements differ. Paxos describes allocated gold held in London vaults; Tether Gold provides physical delivery in Switzerland under its redemption terms. Neither token is a dollar-stable substitute: its dollar value moves with gold as well as any token-market discount or premium.",
+    sections: [
+      {
+        question: "What gold claim does each token represent?",
+        answer: "Paxos describes PAXG as ownership of one fine troy ounce of allocated gold held in London vaults, with a wallet-based allocation lookup. Tether Gold's terms describe an undivided fine troy ounce within a specific bar. Allocation records help identify the backing, but holders still depend on the issuer and physical custody arrangements; a token transfer does not deliver a gold bar.",
+        sources: [
+          { label: "Paxos: PAX Gold and allocation lookup", href: "https://www.paxos.com/pax-gold" },
+          { label: "Tether Gold: ownership and redemption terms", href: "https://gold.tether.to/legal/" },
+        ],
+      },
+      {
+        question: "Can a small holder redeem either token for physical gold?",
+        answer: "Fractional token ownership should not be confused with fractional-bar delivery. Paxos describes redemption for Good Delivery bullion bars and a USD route at market prices. Tether Gold makes physical redemption subject to verification, minimum size and fees, with delivery in Switzerland or a broker-assisted potential sale. Check current minimums, fees and destination restrictions before treating physical redemption as an available exit.",
+        sources: [
+          { label: "Paxos: PAXG redemption options", href: "https://www.paxos.com/pax-gold" },
+          { label: "Tether Gold: redemption conditions", href: "https://gold.tether.to/legal/" },
+        ],
+      },
+    ],
+  },
+};
 
 export interface ComparisonFaqItem {
   question: string;
@@ -145,16 +232,18 @@ function buildStaticComparisonPages(): StaticComparisonPage[] {
     const right = getStablecoinOrThrow(rightId);
     const shortTitle = `${left.symbol} vs ${right.symbol}`;
     const slug = buildStaticComparisonSlug(left.id, right.id);
+    const editorial = COMPARISON_EDITORIAL[slug];
     return {
       slug,
       href: `/compare/${slug}/`,
       title: `${shortTitle}: Risk, Reserves & Liquidity Compared`,
       shortTitle,
       description: buildComparisonDescription(left, right),
-      intro: buildComparisonIntro(left, right),
+      intro: editorial?.intro ?? buildComparisonIntro(left, right),
       summary: buildComparisonSummary(left, right),
       left,
       right,
+      ...(editorial ? { editorial } : {}),
     };
   });
 }
@@ -181,7 +270,9 @@ export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = buildStaticCompar
 export const STATIC_COMPARISON_PAGE_BY_SLUG = new Map(STATIC_COMPARISON_PAGES.map((page) => [page.slug, page]));
 
 export function getStaticComparisonPagesForCoin(coinId: string): StaticComparisonPage[] {
-  return STATIC_COMPARISON_PAGES.filter((page) => page.left.id === coinId || page.right.id === coinId);
+  return STATIC_COMPARISON_PAGES
+    .filter((page) => page.left.id === coinId || page.right.id === coinId)
+    .sort((left, right) => Number(Boolean(right.editorial)) - Number(Boolean(left.editorial)));
 }
 
 export function buildComparisonResearchLinks(page: StaticComparisonPage) {
@@ -223,6 +314,13 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
 
 export function buildComparisonSnippetAnswer(page: StaticComparisonPage): ComparisonSnippetAnswer {
   const { left, right } = page;
+  if (page.editorial) {
+    return {
+      question: `What is the main difference between ${left.symbol} and ${right.symbol}?`,
+      answer: page.editorial.answer,
+      caveat: `Sources checked ${page.editorial.sourcesCheckedAt}; see the linked issuer documentation below. Open the live ${page.shortTitle} compare tool for current market data. This brief does not rank either token as categorically safer.`,
+    };
+  }
   const sameBroadLabels =
     left.flags.governance === right.flags.governance && left.flags.backing === right.flags.backing;
 
@@ -341,18 +439,18 @@ export function buildComparisonFaqItems(page: StaticComparisonPage): ComparisonF
   return [
     {
       question: `What is the main difference between ${left.symbol} and ${right.symbol}?`,
-      answer:
+      answer: page.editorial?.answer ?? (
         left.flags.backing === right.flags.backing && left.flags.governance === right.flags.governance
           ? `${leftDescriptor} and ${rightDescriptor} share the same broad governance and backing labels in Pharos, so the useful comparison is in the live details: peg history, liquidity depth, reserve signal, issuer controls, chain deployments, and dependency exposure.`
-          : `${leftDescriptor} and ${rightDescriptor} differ structurally: ${left.symbol} is ${GOVERNANCE_LABELS[left.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${GOVERNANCE_LABELS[right.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`,
+          : `${leftDescriptor} and ${rightDescriptor} differ structurally: ${left.symbol} is ${GOVERNANCE_LABELS[left.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${GOVERNANCE_LABELS[right.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`),
     },
     {
       question: `Which is safer: ${left.symbol} or ${right.symbol}?`,
       answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V9 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`,
     },
     {
-      question: `Why does Pharos keep a static ${left.symbol} vs ${right.symbol} page?`,
-      answer: `This page gives crawlers and readers a stable overview of the ${left.symbol} vs ${right.symbol} question while the live dashboard keeps volatile metrics fresh. It intentionally covers a capped set of high-intent comparisons instead of generating every possible stablecoin pair.`,
+      question: `Where can I compare current ${left.symbol} and ${right.symbol} data?`,
+      answer: `Open the live ${page.shortTitle} comparison from this page to see current peg behavior, liquidity, flows, and Safety Scores. Use this brief to understand the structural differences, then check each coin's latest evidence before making a decision.`,
     },
   ];
 }

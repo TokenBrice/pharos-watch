@@ -59,7 +59,7 @@ The health banner distinguishes an old producer snapshot, a failed refresh using
 The hook currently wires these sources:
 
 - `useSupplyHistory(id)` for the chart series
-- `useStablecoins()` for the canonical cached stablecoin snapshot
+- the registered `stablecoinLiveSummary(id)` query for the compact coin-detail price/supply projection (never a partial write to the global stablecoins cache)
 - `usePegSummary()` for peg score and depeg metadata
 - `useDexLiquidity()` for liquidity score and DEX context
 - `useReportCardsV9()` for the main Safety Score card
@@ -208,6 +208,8 @@ When reserves render, `ReservePanel` wraps the treemap block in `<section id="re
 
 The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `ExploreNextSection` wraps itself in `<section id="explore-next">` for existing deep links. The browse grid is `sm:grid-cols-2 xl:grid-cols-3` with columns Taxonomy | Trackers | Actions. A separate Peers block above it shows up to 6 related pills (`related.slice(0, 6)`) with a `See all peers ->` header link to the peg landing page when a peg slug exists, plus a `vs {symbol}` compact-link list that opens the crawlable static comparison brief for each pair.
 
+The shared primary-comparison helper sends USDe's hero, detail action and static fallback to the USDe/sUSDe brief so readers can distinguish the base token from its staking wrapper. Other profiles retain their existing first registered pair (including USDG/USDC and PAXG/XAUT); unknown pairs fall back to the live tool. The Explore action pointing at `/compare/` is labelled as browsing comparisons, not as a watchlist preset it does not activate.
+
 ---
 
 ## Fallback And Staleness Rules
@@ -229,7 +231,9 @@ Credentialed local runs read the authoritative API (`PHAROS_API_KEY`, or `SITE_A
 
 During static export, the server page reads only the current coin's file and passes it through the client boundary. The client seeds React Query only under the registered `stablecoin-live-summary` and per-coin supply-history keys with `dataUpdatedAt = snapshot.generatedAt`. The full `stablecoin-detail` key is not seeded. Producer-derived `staleTime` and `refetchInterval` remain unchanged, so fresh build lanes avoid their initial requests while an aged snapshot refetches normally. Peg summary remains an unseeded global query. Existing market and page-level freshness affordances use the preserved query timestamp; the snapshot is not labelled live.
 
-Report cards, liquidity, redemption, yield, stress, flows, blacklist, and reserves remain interaction/viewport-gated. The page-wide retry action includes only failed eager or currently enabled supplemental lanes.
+Report cards, liquidity, yield and stress load eagerly because they supply the visible hero. Redemption, flows, blacklist and reserves remain section-viewport-gated; approaching a section is sufficient, without requiring a scroll, pointer or keyboard event first. Offscreen child modules retain their own lazy-render gates. The shared `useQuerySlice` / `useQuerySlices` projection preserves explicit `enabled` flags, so intentionally deferred lanes are omitted from the page health banner rather than reported as missing initial data. The page-wide retry action includes only failed eager or currently enabled supplemental lanes.
+
+The detail API can enrich a missing provider price from the fresh published canonical stablecoins row without altering provider supply/history or storing the quote in the history cache. The compact summary preserves price source/confidence, observation/update/sync timestamps, observation mode and consensus/agreement source lists; older snapshots may omit the added provenance fields. The API's existing freshness/trust gates remain authoritative, and unavailable canonical prices remain unavailable rather than being inferred from historical supply ratios.
 
 ### Reserve presentation
 
@@ -260,6 +264,8 @@ The page-level stale banner starts with the five page-defining shared presets:
 - `redemptionBackstops`
 
 It also tracks supply history, yield rankings, stress signals, and the enabled mint/burn flow, blacklist, and live-reserve sources. Optional section components use the same source status to show unavailable or stale-with-data notices with retry actions; supported zero-result and unsupported states remain distinct. Depeg history continues to manage its own local loading and error state.
+
+Static-export freshness notices render deterministically: initial age classification uses the saved query receipt time and timestamps use `en-US`/UTC. After hydration, the existing hydration hook switches to the browser clock/local timezone. Saved-data errors, source advisories and producer lag already present at receipt remain visible in server HTML; only subsequent wall-clock aging waits for hydration.
 
 ### Retry behavior
 

@@ -384,6 +384,7 @@ export function YieldClient() {
   }, [viewModel.options.peg]);
 
   useEffect(() => {
+    if (!data || isLoading || error) return;
     if (viewModel.invalidParamKeys.length === 0) return;
     replaceParams((params) => {
       for (const key of viewModel.invalidParamKeys) {
@@ -392,9 +393,10 @@ export function YieldClient() {
         else params.set(key, normalizedValue);
       }
     });
-  }, [replaceParams, viewModel.invalidParamKeys, viewModel.normalizedParams]);
+  }, [data, error, isLoading, replaceParams, viewModel.invalidParamKeys, viewModel.normalizedParams]);
 
   useEffect(() => {
+    if (!data || isLoading || error) return;
     if (!viewModel.emptyState.isEmpty) {
       lastZeroResultSignature.current = null;
       return;
@@ -406,7 +408,7 @@ export function YieldClient() {
     if (lastZeroResultSignature.current === signature) return;
     lastZeroResultSignature.current = signature;
     trackEvent("yield_zero_results", { active_filter_count: activeFilterSummaries.length });
-  }, [activeFilterSummaries, viewModel.emptyState.isEmpty]);
+  }, [activeFilterSummaries, data, error, isLoading, viewModel.emptyState.isEmpty]);
 
   useEffect(() => {
     for (const warning of data?.warnings ?? []) {

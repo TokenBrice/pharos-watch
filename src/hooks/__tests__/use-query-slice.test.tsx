@@ -21,6 +21,19 @@ function makeQueryResult<TData>(overrides: Partial<QueryResultLike<TData>> = {})
 }
 
 describe("useQuerySlice", () => {
+  it("preserves an explicit feature gate across single-slice projections", () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useQuerySlice({ dataUpdatedAt: 0, enabled }),
+      { initialProps: { enabled: false } },
+    );
+
+    expect(result.current.enabled).toBe(false);
+    const first = result.current;
+    rerender({ enabled: true });
+    expect(result.current).not.toBe(first);
+    expect(result.current.enabled).toBe(true);
+  });
+
   it("keeps one identity across re-renders that only rebuild the query object", () => {
     const data = { rows: [1, 2, 3] };
     const { result, rerender } = renderHook(
@@ -74,6 +87,19 @@ describe("useQuerySlice", () => {
 });
 
 describe("useQuerySlices", () => {
+  it("preserves query enablement and updates it even when transport fields are unchanged", () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useQuerySlices({ optional: { dataUpdatedAt: 0, enabled } }),
+      { initialProps: { enabled: false } },
+    );
+
+    expect(result.current.optional).toHaveProperty("enabled", false);
+    const first = result.current;
+    rerender({ enabled: true });
+    expect(result.current).not.toBe(first);
+    expect(result.current.optional).toHaveProperty("enabled", true);
+  });
+
   it("keeps the container and every member stable while inputs are unchanged", () => {
     const listData = { peggedAssets: [] };
     const pegData = { coins: [] };

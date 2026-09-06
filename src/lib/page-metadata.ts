@@ -193,6 +193,30 @@ function deploymentChainCount(coin: StablecoinMeta): number {
   return new Set((coin.contracts ?? []).map((contract) => contract.chain)).size;
 }
 
+// September 2026 search-intent pilot; keep other coins as controls.
+const STABLECOIN_METADATA_PILOT: Partial<Record<string, { title: string; description: string }>> = {
+  "paxg-paxos": {
+    title: "PAX Gold (PAXG): Gold Backing, Custody & Risk",
+    description:
+      "Inspect PAX Gold's gold backing, custody evidence, redemption access and issuer controls. Compare PAXG with XAUT using Pharos risk data.",
+  },
+  "usdg-paxos": {
+    title: "USDG (Global Dollar): Reserves, Redemption & Risk",
+    description:
+      "Inspect Global Dollar (USDG) reserve evidence, redemption access, freeze controls and liquidity, with Pharos Safety Scores and comparisons.",
+  },
+  "usde-ethena": {
+    title: "Ethena USDe: Backing, Peg Stability & Risk",
+    description:
+      "Inspect Ethena USDe's backing, custody, peg history and exit liquidity. Compare its risk profile with sUSDe and other dollar stablecoins.",
+  },
+  "bold-liquity": {
+    title: "Liquity BOLD: Collateral, Redemption & Risk",
+    description:
+      "Review Liquity BOLD's collateral, redemption mechanics, peg history and liquidity. Compare its Safety Score and risk profile with LUSD.",
+  },
+};
+
 function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
   if (coin.status === "frozen") {
     return buildStablecoinTitle([
@@ -218,6 +242,9 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
       `${coin.symbol} Catalog Record`,
     ]);
   }
+
+  const pilotCopy = STABLECOIN_METADATA_PILOT[coin.id];
+  if (pilotCopy) return pilotCopy.title;
 
   if (hasRedundantName(coin)) {
     return buildStablecoinTitle([
@@ -270,6 +297,9 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
       160,
     );
   }
+
+  const pilotCopy = coin.status !== "frozen" ? STABLECOIN_METADATA_PILOT[coin.id] : undefined;
+  if (pilotCopy) return pilotCopy.description;
 
   const structure = coin.flags.navToken
     ? `${governancePhrase} ${backingPhrase} yield-bearing token with ${profilePegLabel}`

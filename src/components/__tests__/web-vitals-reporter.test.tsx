@@ -25,9 +25,25 @@ afterEach(() => {
   delete window.dataLayer;
   pathnameMock.mockReset();
   reportCallbacks.length = 0;
+  window.history.replaceState(null, "", "/");
 });
 
 describe("WebVitalsReporter", () => {
+  it("blocks a previously registered callback after navigating from a public page to ops", () => {
+    pathnameMock.mockReturnValue("/");
+    window.gtag = vi.fn();
+    const view = render(<WebVitalsReporter />);
+    const callback = reportCallbacks[0];
+
+    window.history.replaceState(null, "", "/admin/crons/");
+    callback({ name: "LCP", value: 1234, id: "before-router-update" });
+    pathnameMock.mockReturnValue("/admin/crons/");
+    view.rerender(<WebVitalsReporter />);
+    callback({ name: "LCP", value: 1234, id: "after-router-update" });
+
+    expect(window.gtag).not.toHaveBeenCalled();
+  });
+
   it("does not send Web Vitals from the embedded Telegram Mini App", () => {
     pathnameMock.mockReturnValue("/pharoswatchbot/app/");
     const gtag = vi.fn();

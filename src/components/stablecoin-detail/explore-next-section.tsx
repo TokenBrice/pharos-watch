@@ -106,7 +106,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
   }
   const actionLinks: Array<{ href: string; label: string }> = [
     { href: buildLiveCompareUrl([coin.id]), label: `Open ${coin.symbol} in live compare` },
-    { href: "/compare/", label: "Use the My Watchlist compare preset" },
+    { href: "/compare/", label: "Browse stablecoin comparisons" },
     { href: "/digest/", label: "Read the daily digest" },
     { href: "/api/", label: "Use the Pharos API" },
   ];
