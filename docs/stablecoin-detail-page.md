@@ -22,6 +22,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - renders one server-side `sr-only` `h1` for active pages before the client detail island mounts; the visible identity remains inside the client hero, while descriptions live in metadata and Dataset JSON-LD
 - keeps a visible dossier-style `Suspense` fallback with coin identity, classification, section rail placeholders, and score-card scaffolding while the full client boots
 - passes `ExploreNextSection` (and the FAQ) into `StablecoinDetailClient`, which renders them inside and immediately after the Explore zone
+- adds a USDC-specific March 2023 depeg answer to that FAQ and its matching JSON-LD; the static Answer First fallback also links to the existing event timeline and SVB case study, without changing the hydrated hero's case-study link or creating a new route
 - emits N-level `BreadcrumbJsonLd` plus a Dataset JSON-LD payload for active assets
 
 Active stablecoin Dataset JSON-LD is intentionally static and crawlable: `variableMeasured` advertises price, market cap, circulating supply, Peg Score, DEWS, Safety Grade, and Redemption Backstop coverage. Dataset nodes inline the Pharos `Organization` for `creator` / `publisher`, expose the CC BY 4.0 license URL, carry the stable Pharos coin URN in `identifier`, and set `sameAs` to the canonical Pharos detail URL. Provider/profile URLs belong to the nested `about` Thing's `sameAs`. Frozen assets use archive-specific historical variables, quarantined and delisted records use inactive-listing variables without live claims, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD.
@@ -37,6 +38,10 @@ The `/stablecoin/[id]/yield/` subroute is statically generated only for active c
 ### Pre-launch detail variant
 
 `PreLaunchDetail` is the server-rendered variant for tracked assets whose metadata status is still `pre-launch`.
+
+The identity header precedes the status banner. The banner keeps its lifecycle explanation visible and places the full `launchPhaseDetail` narrative in a collapsed native disclosure labelled "Full launch status and history". The full text remains in the server-rendered HTML; this layout does not change lifecycle status, launch dates, or alert behavior.
+
+The exact launch-alert command is keyboard-focusable so narrow-screen readers can scroll its overflow without a pointer. Launch narratives and milestone descriptions wrap unbroken addresses so the page reflows at 320 CSS pixels, including with the narrative disclosure expanded.
 
 In addition to the pre-launch dossier sections (banner, timeline, milestones, featured content, and metadata), it now includes a launch-alert CTA that:
 
@@ -89,6 +94,8 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 
 ## Section Order
 
+Cold-load nested hashes such as `#depeg-history` reveal enclosing disclosures and re-align after hydration on the existing bounded 160/480/960/1800 ms cadence. These initial-position corrections are instant: animating through intermediate lazy sections delays their mounting and can overshoot as their heights change. Top-level section hashes remain owned by the scrollspy; changing the hash or user wheel/touch/pointer/key input stops further alignment, unmount clears pending work, and browser back/forward restoration remains native.
+
 `src/app/stablecoin/[id]/detail-content.tsx` composes sections in this order for live/non-pre-launch assets (`client.tsx` delegates to this compositor):
 
 1. `QueryFreshnessNotices` — single banner covering errors and staleness across core, historical, and enabled supplemental detail sources, driven by `viewModel.staleQueries` (in the normal section stream; `QueryErrorNotice` appears only in the `list-error` early-return branch — the not-found branch renders a plain message — not here)
@@ -121,6 +128,7 @@ Detail experiments remain source-gated: hero verdict, depeg resolver, and the DD
 - Section ids are stable; do not rename them. In particular, the top-level Explore pill targets `#explore`; the reusable `ExploreNextSection` keeps its inner `#explore-next` anchor for existing deep links. Below `lg`, its static-comparison grid shows only the first 4 briefs — the rest stay in the DOM behind `hidden lg:flex` (links remain crawlable) with a `+N more comparison briefs` link to the peg-family page.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the context zone (inside `ContagionSnapshot`) and are not top-level scrollspy entries.
+- Only `ContagionSnapshot`'s graph is viewport-gated with the existing `LazySection` default margin. Its existing 22rem placeholder reserves space until the graph approaches the viewport, deferring offscreen SVG logo requests; the heading, variant links, and collateral context remain rendered independently.
 - `ControlPostureCard` renders after `CustodyCard` in the `xl+` summary rail and, as an `xl:hidden` in-flow copy folded inside `RailCopyFold`, immediately before the `FreezeSeizureCard` copy that closes the Context zone's folded review stack. It appears only when the legacy `governanceQuality` field is authored, labels the concept as **Control posture**, and explicitly presents the classification as descriptive rather than scored. Its six-cell category map has no numeric marker or safer direction; dense taxonomy, scoring, and variant distinctions stay folded behind `Classification details`. The footer links to methodology but does not claim sources or a reviewed date because the field has no dedicated sourced review object.
 - `ContagionSnapshot` uses the shared dependency graph in `minimalChrome` mode, and takes the wider column (`3fr`) of the split against the variant and collateral-usage rail (`2fr`). On detail pages, crowded maps keep the compact node treatment with a 1.33x internal logo zoom; maps with 10 or fewer visible stablecoins render ticker labels and 1.5x node/text scale, and maps with 5 or fewer visible stablecoins use 2x scale. Raster token logos are capped at `MAX_RASTER_LOGO_RADIUS` so a scaled-up sparse map never upscales a 50px source into pixelation; vector logos are exempt.
 - `DistributionSection` renders after the chart in the Market zone, outside the top-level rail.

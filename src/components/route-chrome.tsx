@@ -9,9 +9,16 @@ function isDigestPath(pathname: string | null): boolean {
   return pathname === "/digest" || pathname?.startsWith("/digest/") === true;
 }
 
-export function RouteChrome({ children }: { children: ReactNode }) {
+// Exact public workspaces whose content owns the focusable #data target.
+const DATA_TABLE_PATHS = new Set([
+  "/", "/liquidity", "/screener", "/flows", "/timeline", "/safety-scores",
+  "/freezewatch", "/depeg", "/compliance", "/yield",
+]);
+
+export function RouteChrome({ children, dataTableOnly = false }: { children: ReactNode; dataTableOnly?: boolean }) {
   const pathname = usePathname();
   if (isChromelessPath(pathname) || isOpsPath(pathname)) return null;
+  if (dataTableOnly && (!pathname || !DATA_TABLE_PATHS.has(pathname.replace(/\/$/, "") || "/"))) return null;
   return children;
 }
 

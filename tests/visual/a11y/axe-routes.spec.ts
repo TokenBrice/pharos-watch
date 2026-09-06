@@ -2,6 +2,11 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { TAGS, summarizeViolations } from "./axe-shared";
 
+test.beforeEach(async ({ page }) => {
+  const { blockAnalyticsCollection } = await import("../../../scripts/maintenance/audit-seo-render-budget.mjs");
+  await blockAnalyticsCollection(page, { blockedAnalyticsRequests: 0 });
+});
+
 /**
  * Wave 6 IDEA-16: automated axe-core regression floor.
  *
@@ -28,6 +33,7 @@ const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   // `out/stablecoin/` listing. The council brief named `/stablecoin/usdt`
   // but the routed slug is `usdt-tether`.
   { path: "/stablecoin/usdt-tether", tier: "detail" },
+  { path: "/stablecoin/hkdap-anchorpoint", tier: "pre-launch detail" },
   // Mythos P1-14: the original 4-route floor left ~36 route families
   // unscanned; confirmed violations (the /yield tablist, the mini-app tabs)
   // shipped in exactly that blind spot.
@@ -44,7 +50,7 @@ test("a11y: open mobile nav drawer (overlay)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/about");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("dialog").waitFor();
 
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();

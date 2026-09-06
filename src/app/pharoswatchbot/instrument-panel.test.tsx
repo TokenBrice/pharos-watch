@@ -153,14 +153,16 @@ describe("InstrumentPanel", () => {
   it("renders a loading state and an honest unavailable state", () => {
     mockPulse(undefined, { isLoading: true });
     const { unmount } = render(<InstrumentPanel />);
-    const loading = screen.getByLabelText("Loading Telegram adoption metrics");
+    const loading = screen.getByRole("status", { name: "Loading Telegram adoption metrics" });
     expect(loading.getAttribute("aria-live")).toBe("polite");
     expect(loading.getAttribute("aria-busy")).toBe("true");
     unmount();
 
     mockPulse(undefined, { isError: true });
     render(<InstrumentPanel />);
-    expect(screen.getByLabelText("Telegram adoption metrics unavailable")).toBeTruthy();
+    const unavailable = screen.getByRole("status", { name: "Telegram adoption metrics unavailable" });
+    expect(unavailable.getAttribute("aria-live")).toBe("polite");
+    expect(unavailable.getAttribute("aria-busy")).toBe("false");
     expect(screen.getByText(/temporarily unavailable/i)).toBeTruthy();
   });
 });

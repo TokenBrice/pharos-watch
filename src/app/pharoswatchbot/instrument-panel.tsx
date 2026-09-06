@@ -147,7 +147,7 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
 
 function PanelLoading() {
   return (
-    <div aria-label="Loading Telegram adoption metrics" aria-live="polite" aria-busy="true" className="mt-10 space-y-8">
+    <div role="status" aria-label="Loading Telegram adoption metrics" aria-live="polite" aria-busy="true" className="mt-10 space-y-8">
       <div className="grid gap-x-8 gap-y-10 lg:grid-cols-3">
         <Skeleton className="h-28 lg:col-span-2" />
         <Skeleton className="h-28" />
@@ -198,7 +198,7 @@ export function InstrumentPanel() {
         {isLoading ? <PanelLoading /> : null}
 
         {!isLoading && (!data || isError) ? (
-          <div aria-label="Telegram adoption metrics unavailable" aria-live="polite" aria-busy="false" className="mt-10">
+          <div role="status" aria-label="Telegram adoption metrics unavailable" aria-live="polite" aria-busy="false" className="mt-10">
             <p className="border-t border-border/55 pt-6 text-sm text-muted-foreground">
               Public Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and
               setup commands keep working.

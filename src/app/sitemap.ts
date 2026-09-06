@@ -17,6 +17,8 @@ import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
+import aiSummaries from "../../data/ai-summaries.json";
+import type { StablecoinAiSummariesById } from "@shared/types";
 import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
 import { changelogs } from "@/data/changelogs";
 import { BLOG_POSTS } from "@/data/blog";
@@ -36,6 +38,7 @@ export const dynamic = "force-static";
 const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = CostsFileSchema.parse(costsData);
 const fundingDonations = DonationsFileSchema.parse(donationsData);
+const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 
 type SitemapChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
 type StaticPageSpec = readonly [
@@ -73,6 +76,13 @@ function fundingLastModified(): Date {
       fundingDonations.last_updated_at * 1000,
     ),
   );
+}
+
+/** A summary edit belongs to this profile, not every row in its shared JSON file. */
+function stablecoinLastModified(id: string): Date {
+  const edited = lastEdited(buildStablecoinUrl(id));
+  const summaryMs = Date.parse(typedSummaries[id]?.updatedAt ?? "");
+  return Number.isFinite(summaryMs) && summaryMs > edited.getTime() ? new Date(summaryMs) : edited;
 }
 
 /** /changelog/ moves when a new weekly entry lands, not with the daily data snapshot. */
@@ -202,7 +212,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({
     url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-    lastModified: lastEdited(buildStablecoinUrl(coin.id)),
+    lastModified: stablecoinLastModified(coin.id),
     changeFrequency: "daily" as const,
     priority: 0.6,
   }));
