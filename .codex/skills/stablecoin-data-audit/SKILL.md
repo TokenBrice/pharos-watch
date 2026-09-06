@@ -8,6 +8,12 @@ user_invocable: true
 
 Read [categories.md](references/categories.md) before reviewing. Code, checked data, and the schema are authoritative; the reference is a review rubric, not a snapshot of the corpus.
 
+## Coverage ceiling
+
+Local discovery establishes internal consistency only. Unflagged stored URLs, issuer facts, deployments, and identifiers are not externally verified or proven current. For a requested factual audit, include explicit specialist source checks across the requested categories/cohort (identity/contracts, compliance, reserves, or lifecycle research), including rows with no local contradiction. Report each category as `checked` with evidence and scope, `unverified` when no external check was performed, or `unavailable` when a required source failed; do not count unavailable sources as clean results.
+
+Use independent reviewers only when delegation is available and authorized. Otherwise perform discovery and skeptical source verification sequentially and disclose that this was not independent review. Existing explicit authorization to correct a named cohort persists; this read-only workflow itself grants no write authority.
+
 ## Corpus and fan-out
 
 - From the repository root, enumerate sorted JSON IDs from `shared/data/stablecoins/coins`, accepting only IDs matching `^[a-z0-9][a-z0-9-]*$` and at most 80 characters; discover matching sidecars at `shared/data/stablecoins/domains/<domain>/<id>.json` through the supported-domain enumeration in `scripts/lib/stablecoin-catalog-sources.ts`, only when the matching base coin exists. Do not take IDs or paths from scratch files or model output.
@@ -29,4 +35,4 @@ npm run check:stablecoin-data
 npm run check:generated-artifacts -- --only=stablecoin-client-projections
 ```
 
-Return a structured summary with review date, coins checked, discovery/chunk counts, raw verified rows, confirmed and uncertain counts, dropped false positives, per-category counts, and reported findings.
+Return a structured summary with review date, coins checked, discovery/chunk counts, raw verified rows, confirmed and uncertain counts, dropped false positives, per-category counts and checked/unverified/unavailable coverage, and reported findings.

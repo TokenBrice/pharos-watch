@@ -4,10 +4,9 @@ Applies to reusable product components under `src/components/`.
 
 ## Read First
 
-- [Design language](../../docs/design-language.md)
-- [Design tokens](../../docs/design-tokens.md)
-- [Data visualization](../../docs/data-visualization.md)
-- [Design context](../../docs/design-language.md#context)
+- Read the owning sections returned by the router. Visual/design changes start with [Design context](../../docs/design-language.md#context).
+- Token changes: [Usage guidelines](../../docs/design-tokens.md#usage-guidelines), then the matching token layer.
+- Charts and data displays: [Encoding](../../docs/data-visualization.md#encoding), [Accessibility](../../docs/data-visualization.md#accessibility), and the section for the affected interaction.
 
 ## Invariants
 

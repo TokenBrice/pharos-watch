@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { SpawnCommand } from "../lib/command-runner.mts";
 
@@ -45,12 +46,15 @@ describe("focused checks", () => {
     )).toBe(false);
   });
 
-  it("keeps directory test coverage for non-module changes", () => {
+  it("keeps directory test coverage for non-module and deleted files", () => {
+    expect(buildFocusedCheckPlan(["src/deleted-module.ts"]).checks.map((check) => check.command)).toContain("npx vitest run src");
     expect(buildFocusedCheckPlan(["src/app/globals.css"]).checks.map((check) => check.command)).toContain("npx vitest run src");
   });
 
   it("passes paths containing spaces as single related-test arguments", async () => {
-    const file = "src/components/planned widget.tsx";
+    const dir = mkdtempSync(resolve("src/components/agent-check-"));
+    const file = relative(process.cwd(), join(dir, "planned widget.tsx"));
+    writeFileSync(file, "export const fixture = true;\n");
     const runCommandImpl = vi.fn<(command: SpawnCommand) => Promise<number>>(async () => 0);
     const warning = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
@@ -60,6 +64,7 @@ describe("focused checks", () => {
         args: ["vitest", "related", "--run", "--passWithNoTests=false", file],
       });
     } finally {
+      rmSync(dir, { recursive: true, force: true });
       warning.mockRestore();
     }
   });
@@ -81,7 +86,7 @@ describe("focused checks", () => {
     const report = JSON.parse(stdout.output());
     expect(report.changedFiles).toEqual(["worker/src/cron/sync-yield-data.ts"]);
     expect(report.checks).toEqual(buildFocusedCheckPlan(["worker/src/cron/sync-yield-data.ts"]).checks);
-    expect(runCommandImpl).toHaveBeenCalledTimes(5);
+    expect(runCommandImpl).toHaveBeenCalledTimes(6);
     expect(report.status).toBe("passed");
   });
 
@@ -129,7 +134,7 @@ describe("focused checks", () => {
     expect(plan.checks).toMatchObject([
       { command: "npm run lint:changed", source: "frontend-routes" },
       { command: "npm run typecheck", source: "frontend-routes" },
-      { command: "npx vitest related --run --passWithNoTests=false src/unclassified.ts", source: "frontend-routes" },
+      { command: "npx vitest run src", source: "frontend-routes" },
     ]);
     expect(plan.fallbackOnlyPaths).toBe(0);
   });
@@ -263,6 +268,7 @@ describe("smallest-adequate matrix routing", () => {
         "npm run check:cron-sync",
         "npm run check:cron-connections",
         "npx vitest run worker/src/cron worker/src/handlers/scheduled",
+        "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts",
       ],
     },
     {

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import {
   V9_EVALUATION_BUILD_DIGEST_DOMAIN,
   V9_EVALUATION_BUILD_SOURCE_PATHS,
@@ -22,6 +23,20 @@ function fixtureRoot(): string {
 }
 
 describe("Safety Score v9 evaluation-build manifest", () => {
+  it("enrolls every fixed identity input and recursive capture summaries for regeneration", () => {
+    for (const source of [...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "shared/data/safety-score-v9/mechanism-measurements/one.summary.json",
+      "shared/data/safety-score-v9/mechanism-measurements/nested/deleted.summary.json",
+      "scripts/lib/mechanism-measurement/capture-summary.ts",
+    ]) {
+      expect(selectChangedGeneratedArtifactIds([source]), source).toContain("safety-score-v9-evaluation-build");
+    }
+    for (const source of ["shared/lib/cron-jobs.ts", "shared/lib/safety-score-v9/public.ts",
+      "worker/src/lib/safety-score-v9/candidate.ts", "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+    ]) {
+      expect(selectChangedGeneratedArtifactIds([source]), source).not.toContain("safety-score-v9-evaluation-build");
+    }
+  });
   it("uses an explicit evaluator and fact-producer allowlist", () => {
     const root = fixtureRoot();
     const paths = collectV9EvaluationBuildSourcePaths(root);

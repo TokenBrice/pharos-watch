@@ -47,6 +47,14 @@ describe("generated documentation contract blocks", () => {
     expect(drift.map((entry) => entry.id)).toContain(block.id);
   });
 
+  it("rejects duplicate markers even when the first block is current", () => {
+    const block = DOC_CONTRACT_BLOCKS[0];
+    for (const extra of [renderDocContractBlock(block), docContractStartMarker(block.id), docContractEndMarker(block.id)]) {
+      const drift = findDocContractDrift((file) => readDocument(file) + (file === block.file ? extra : ""));
+      expect(drift.map((entry) => entry.id)).toContain(block.id);
+    }
+  });
+
   it("keeps the source-backed endpoint examples under the existing API marker", () => {
     const document = readDocument("docs/api-reference.md");
     const start = document.indexOf(API_START_MARKER);

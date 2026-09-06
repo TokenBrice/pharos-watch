@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
 import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
@@ -45,33 +46,6 @@ function normalizeDoc(reference: DocReference): { anchor?: string; path: string 
   return typeof reference === "string" ? { path: reference } : reference;
 }
 
-function githubSlug(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+\{#[^}]+\}\s*$/, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/[`*_~]/g, "")
-    .replace(/[^\p{Letter}\p{Number}\s-]/gu, "")
-    .replace(/\s/g, "-");
-}
-
-function headingAnchors(path: string): Set<string> {
-  const counts = new Map<string, number>();
-  const anchors = new Set<string>();
-  const contents = readFileSync(resolve(REPO_ROOT, path), "utf8");
-  for (const line of contents.split(/\r?\n/)) {
-    const match = line.match(/^#{1,6}\s+(.+?)\s*#*$/);
-    if (!match) continue;
-    const explicit = match[1].match(/\s+\{#([^}]+)\}\s*$/)?.[1];
-    const base = explicit ?? githubSlug(match[1]);
-    const seen = counts.get(base) ?? 0;
-    counts.set(base, seen + 1);
-    anchors.add(seen === 0 ? base : `${base}-${seen}`);
-  }
-  return anchors;
-}
-
 function matchesAny(file: string, patterns: readonly string[]): boolean {
   return patterns.some((pattern) => createOwnershipGlobMatcher(pattern)(file));
 }
@@ -82,6 +56,18 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
 }
 
 describe("doc-ownership registry integrity", () => {
+  it("requires bounded references for a short document at the byte threshold", () => {
+    expect(requiresDocNavigation("x".repeat(50 * 1024))).toBe(true);
+    expect(requiresDocNavigation("short document")).toBe(false);
+  });
+
+  it("matches globstar directories at zero or multiple depths", () => {
+    const match = createOwnershipGlobMatcher("scripts/**/check-*.ts");
+    expect(match("scripts/check-docs.ts")).toBe(true);
+    expect(match("scripts/ci/nested/check-docs.ts")).toBe(true);
+    expect(match("worker/check-docs.ts")).toBe(false);
+  });
+
   it("uses mappings as the sole authored routing model", () => {
     expect(mappings.length).toBeGreaterThan(0);
     expect(mappings.length).toBeLessThanOrEqual(20);
@@ -112,14 +98,13 @@ describe("doc-ownership registry integrity", () => {
       expect(existsSync(resolve(REPO_ROOT, reference.path)), reference.path).toBe(true);
       if (reference.anchor) {
         expect(
-          headingAnchors(reference.path).has(reference.anchor),
+          collectMarkdownReferences(readFileSync(resolve(REPO_ROOT, reference.path), "utf8")).anchors.has(reference.anchor),
           `${reference.path}#${reference.anchor}`,
         ).toBe(true);
       }
 
       if (reference.path.endsWith(".md")) {
-        const lineCount = readFileSync(resolve(REPO_ROOT, reference.path), "utf8").split(/\r?\n/).length;
-        if (lineCount > 400) {
+        if (requiresDocNavigation(readFileSync(resolve(REPO_ROOT, reference.path), "utf8"))) {
           expect(reference.anchor, `${reference.path} requires a bounded anchor`).toBeTruthy();
         }
       }

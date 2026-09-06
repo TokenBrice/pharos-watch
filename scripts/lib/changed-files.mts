@@ -15,8 +15,8 @@ interface ChangedFileOptions {
 
 type GitPathMode =
   | { kind: "range"; base: string; head: string; noRenames?: boolean; diffFilter?: string }
-  | { kind: "staged"; diffFilter?: string }
-  | { kind: "working"; includeUntracked?: boolean; diffFilter?: string };
+  | { kind: "staged"; noRenames?: boolean; diffFilter?: string }
+  | { kind: "working"; noRenames?: boolean; includeUntracked?: boolean; diffFilter?: string };
 
 export function splitNullDelimited(output: string | Buffer | null | undefined): string[] {
   return String(output ?? "")
@@ -36,7 +36,7 @@ export function collectGitPaths(
   const diffArgs = ["diff"];
   if (mode.kind === "staged") diffArgs.push("--cached");
   diffArgs.push("--name-only");
-  if (mode.kind === "range" && mode.noRenames) diffArgs.push("--no-renames");
+  if (mode.noRenames) diffArgs.push("--no-renames");
   if (mode.diffFilter) diffArgs.push(`--diff-filter=${mode.diffFilter}`);
   diffArgs.push("-z");
   if (mode.kind === "range") diffArgs.push(`${mode.base}...${mode.head}`);
@@ -94,7 +94,7 @@ export function collectChangedFiles({
   head = "HEAD",
 }: ChangedFileOptions = {}) {
   return [...new Set(collectGitPaths(
-    { kind: "range", base, head, diffFilter: "ACMR" },
+    { kind: "range", base, head, noRenames: true },
     { cwd, execFile },
   ))].sort();
 }
@@ -105,11 +105,11 @@ export function collectChangedFiles({
  */
 export function collectStagedFiles({
   cwd = process.cwd(),
-  diffFilter = "ACMR",
+  diffFilter = "ACMRD",
   execFile = execFileSync as GitDiffExec,
 }: { cwd?: string; diffFilter?: string; execFile?: GitDiffExec } = {}) {
   return [...new Set(collectGitPaths(
-    { kind: "staged", diffFilter },
+    { kind: "staged", diffFilter, noRenames: true },
     { cwd, execFile },
   ))].sort();
 }

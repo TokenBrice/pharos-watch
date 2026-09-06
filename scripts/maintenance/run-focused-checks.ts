@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
+
 import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -157,7 +159,7 @@ export function buildFocusedCheckPlan(
           if (retainedCommands.has(command)) continue;
           const files = classification.changedFiles.filter((file) => family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)));
           if (family.id === "frontend-routes" && command === "npx vitest run src"
-            && files.every((file) => /\.[cm]?[jt]sx?$/.test(file))) {
+            && files.every((file) => /\.[cm]?[jt]sx?$/.test(file) && existsSync(file))) {
             argv = ["npx", "vitest", "related", "--run", "--passWithNoTests=false", ...files];
             plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
           } else if (command === "npm run check:generated-artifacts") {

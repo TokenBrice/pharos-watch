@@ -23,6 +23,8 @@ Review only concrete factual or internal-consistency errors in these categories:
 - resilience: factual bridge-route, custody-model, or collateral-quality basis
 - other: a concrete factual field that does not fit another category
 
+Local contradiction screening does not establish external freshness for any category. A requested factual audit must include primary-source checks for its full requested category/cohort, not only locally flagged rows. Record checked, unverified, and unavailable coverage explicitly.
+
 ## Source sets
 
 Discovery should prefer in-file contradictions: one-liner versus collateral/reserves, flags versus `yieldConfig`, collateral currency versus peg currency, address length, and archetype versus mechanism prose. It may cite only repo-relative paths. Verification may use primary issuer/regulator/register sources, official chain documentation and explorers, RWA.xyz, and the named identity providers. A provider must resolve to this token, not a same-name asset or affiliate; record the URL and what it proves.

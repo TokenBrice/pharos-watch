@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { localBin } from "../lib/local-bin.mts";
-import { normalizeRepoPaths, parseChangedFileArgs, splitNullDelimited } from "../lib/changed-files.mts";
+import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import { withCiVitestArgs } from "../lib/vitest-ci-args.mts";
 
@@ -16,12 +17,16 @@ function collectChangedFilePaths(
   env: NodeJS.ProcessEnv,
   spawn: typeof spawnSync,
 ): string[] {
-  const result = spawn("git", ["diff", "--name-only", "--diff-filter=ACMR", "-z", `${base}...${head}`], {
-    encoding: "utf8",
-    env,
+  return collectChangedFiles({
+    base,
+    head,
+    execFile: (file, args, options) => {
+      const result = spawn(file, [...args], { ...options, env });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error(`Git change selection failed: ${String(result.stderr ?? "").trim()}`);
+      return String(result.stdout ?? "");
+    },
   });
-  if (result.error || result.status !== 0) return [];
-  return normalizeRepoPaths(splitNullDelimited(result.stdout));
 }
 
 export function runPrTests({
@@ -42,7 +47,7 @@ export function runPrTests({
   }
 
   const changedFiles = collectChangedFilePaths(base, head, env, spawn);
-  const files = selectPrTestFiles(parseVitestFileList(String(listResult.stdout ?? "")), undefined, changedFiles);
+  const files = selectPrTestFiles(parseVitestFileList(String(listResult.stdout ?? "")), undefined, changedFiles).filter((file) => existsSync(file));
   const result = spawn(vitest, withCiVitestArgs(["run", ...files, ...rest], env), {
     env,
     stdio: "inherit",

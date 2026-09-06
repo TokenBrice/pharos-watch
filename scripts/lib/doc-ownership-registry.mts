@@ -83,7 +83,7 @@ function escapeRegexCharacter(value: string): string {
 }
 
 function compileSimpleOwnershipGlob(pattern: string): RegExp | null {
-  if (!/^[\w./*-]+$/.test(pattern)) return null;
+  if (!/^[\w./*-]+$/.test(pattern) || pattern.includes("**/")) return null;
 
   let source = "^";
   for (let index = 0; index < pattern.length; index += 1) {

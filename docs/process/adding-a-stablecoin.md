@@ -791,19 +791,17 @@ For a normal stablecoin addition, generate the working-tree projections and run 
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
-npm test
-cd worker && npx tsc --noEmit
+npx vitest run shared/lib/__tests__/stablecoins.test.ts
+npm run typecheck:worker
 ```
 
-Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically — no separate settle step is required. Validate the committed snapshot:
+Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically and is not committed. Use the [smallest adequate checks](../testing.md#smallest-adequate-check-per-area) and the generated-artifact IDs selected by the router:
 
 ```bash
-npm run check:generated-artifacts
-npm run check:pr -- --base=origin/main
-npm run build
+npm run check:generated-artifacts -- --only=stablecoin-client-projections
 ```
 
-Commit the sitemap output separately or amend it into the source commit without changing the source author date. Run `check:stablecoin-data` first for fast feedback, then run the focused generated-artifact checks selected by the change. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
+Run `check:stablecoin-data` first for fast feedback, then the focused generated-artifact checks selected by the change. Run `npm run build` when rendering changed or an explicit production-build rehearsal is requested. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
 
 You can also run the individual checks directly when iterating:
 

@@ -2,7 +2,7 @@
 
 **Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `compliance-research` skill (`genius` regime) encodes the workflow; this spec encodes the rules.
 
-GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing-non-goals).
+GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing--non-goals).
 
 ---
 
@@ -45,7 +45,7 @@ Required: `applicability`, `authorizationStatus`, `issuerPathway`, `reviewer` (s
 | `monthlyAttestationPresent` | boolean | Monthly reserve attestation exists. |
 | `latestReportDate` | `YYYY-MM-DD` | Date of the latest reserve report. |
 | `notes` | string | Reviewer notes / caveats. |
-| `references` | `GeniusReference[]` | See [Sourcing](#sourcing-source-kinds). |
+| `references` | `GeniusReference[]` | See [Sourcing](#sourcing--source-kinds). |
 | `negativeEvidenceReview` | `{ sourcesChecked[], summary (≥12), reviewer, reviewedAt, references? }` | **Required** when `no-public-authorization-found`. |
 | `reviewer` | string | Who performed the review (e.g. `"Pharos compliance research"`). |
 | `reviewedAt` | `YYYY-MM-DD` | When. |
@@ -94,7 +94,7 @@ The headline `authorizationStatus`. **When uncertain between two statuses, pick 
 | `not-applicable` | The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture (pairs with an excluded/`non-payment-token` applicability). | — |
 | `unknown` | Public posture not resolved from available sources. | — |
 
-**HARD RULE:** never assert `ppsi-approved`, `state-qualified`, or `official-application-pending` without a regulator-grade reference that names the issuer of *this* token (not a same-name affiliate). No fabricated approvals. While the regime is in rulemaking (see [Regime state](#regime-state-effective-date)), genuine `ppsi-approved`/`state-qualified` rows should be exceedingly rare — most honest answers are `issuer-announced-intent` or `no-public-authorization-found`.
+**HARD RULE:** never assert `ppsi-approved`, `state-qualified`, or `official-application-pending` without a regulator-grade reference that names the issuer of *this* token (not a same-name affiliate). No fabricated approvals. While the regime is in rulemaking (see [Regime state](#regime-state--effective-date)), genuine `ppsi-approved`/`state-qualified` rows should be exceedingly rare — most honest answers are `issuer-announced-intent` or `no-public-authorization-found`.
 
 ---
 

@@ -189,7 +189,10 @@ export function findDocContractDrift(
     const expected = renderDocContractBlock(block);
     const start = document.indexOf(docContractStartMarker(block.id));
     const end = document.indexOf(docContractEndMarker(block.id), Math.max(0, start));
-    const found = start >= 0 && end >= start
+    const uniqueMarkers = document.indexOf(docContractStartMarker(block.id), start + 1) === -1
+      && document.indexOf(docContractEndMarker(block.id)) === end
+      && document.indexOf(docContractEndMarker(block.id), end + 1) === -1;
+    const found = start >= 0 && end >= start && uniqueMarkers
       ? document.slice(start, end + docContractEndMarker(block.id).length)
       : null;
     if (found !== expected) drift.push({ file: block.file, id: block.id, expected, found });

@@ -12,10 +12,10 @@ Accept optional ISO `from`/`to`, `--force` for an intentional overlap, and `--co
 
 ## Collect And Curate
 
-1. Collect newest-first, non-merge commits with eight-character hashes:
+1. Treat `from` and `to` as inclusive UTC calendar days (derive today in UTC too). Collect newest-first, non-merge commits with eight-character hashes:
 
 ```bash
-git log --no-merges --abbrev=8 --since="<from>" --until="<to> 23:59:59" --format="%h %s"
+git log --no-merges --abbrev=8 --since="<from> 00:00:00 +0000" --until="<to> 23:59:59 +0000" --format="%h %s"
 ```
 
 2. Remove generated-refresh, ratchet/baseline, dependency-bump, `[skip ci]`, documentation-cleanup, and revert-of-revert noise from both analysis and the manifest. Scan subject frequencies first so new dominant automation wording is not mistaken for product work. If more than half is filtered, warn the reviewer.

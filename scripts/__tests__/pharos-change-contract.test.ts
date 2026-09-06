@@ -111,7 +111,7 @@ describe("classifyChangedFiles", () => {
     const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
 
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
 
   });
   it("routes Telegram delivery changes to the unified Telegram contract", () => {
@@ -174,7 +174,7 @@ describe("representative --file routing", () => {
   it("routes a screener component through the shared frontend route contract", () => {
     const contract = route("src/components/screener/screener-table.tsx");
     expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
     expect(docKeys(contract).length).toBeLessThanOrEqual(3);
     expect(contract.checks).toContain("npm run typecheck");
   });
@@ -216,7 +216,7 @@ describe("representative --file routing", () => {
   it("routes the homepage entrypoint through the shared frontend route contract", () => {
     const contract = route("src/app/page.tsx");
     expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
     expect(docKeys(contract).length).toBeLessThanOrEqual(3);
     expect(contract.checks).toContain("npm run typecheck");
   });
@@ -491,7 +491,7 @@ describe("Codex hook outputs", () => {
 
     expect(context.split("\n")).toEqual([
       "Pharos change contract — explicit files (1 files) — deploy: pages=y, worker=n",
-      "Read first: docs/architecture.md, docs/process/agent-start-here.md",
+      "Read first: docs/architecture.md#frontend-runtime-and-seo-surface, docs/process/agent-start-here.md",
       "Scoped context: src/app/AGENTS.md, src/AGENTS.md",
       "Focused checks: npm run lint:changed, npm run typecheck, npx vitest run src",
       "Route a planned path: npm run agent:route -- --file <path>",
