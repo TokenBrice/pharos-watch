@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
+import { FRONTEND_API_QUERY_DESCRIPTORS, projectStablecoinLiveSummary, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
 import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {
@@ -83,6 +83,28 @@ function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescripto
 }
 
 describe("frontend API query descriptors", () => {
+  it("preserves canonical price provenance without copying provider history into the summary", () => {
+    const provenance = {
+      price: 0.9998,
+      priceSource: "coingecko+binance",
+      priceConfidence: "high" as const,
+      priceUpdatedAt: 1_700_000_000,
+      priceObservedAt: 1_699_999_990,
+      priceObservedAtMode: "upstream" as const,
+      priceSyncedAt: 1_700_000_005,
+      consensusSources: ["coingecko", "binance"],
+      agreeSources: ["coingecko", "binance"],
+    };
+    const summary = projectStablecoinLiveSummary({
+      ...provenance,
+      tokens: [{ date: 1_700_000_000, totalCirculatingUSD: { peggedUSD: 123 } }],
+    });
+
+    expect(summary).toMatchObject(provenance);
+    expect(summary.circulating).toEqual({ peggedUSD: 123 });
+    expect(summary).not.toHaveProperty("tokens");
+  });
+
   it("keeps the summary projection isolated from the detailed rankings cache", () => {
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings).toMatchObject({
       queryKey: ["yield-rankings"],

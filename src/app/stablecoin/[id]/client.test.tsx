@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { useRef, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -221,23 +221,22 @@ describe("StablecoinDetailClient", () => {
     expect(container.textContent).toContain("Loading research dossier");
   });
 
-  it("passes near-viewport section gates into supplemental query controls", () => {
+  it("loads hero metrics and near-viewport sections without requiring interaction", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(false, true, false);
 
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
-    act(() => window.dispatchEvent(new Event("scroll")));
 
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         supplementalQueryControls: {
           liquidity: true,
-          reportCards: false,
+          reportCards: true,
           redemption: true,
           yield: true,
-          stress: false,
+          stress: true,
           flows: true,
           blacklist: true,
           reserves: false,
@@ -253,7 +252,6 @@ describe("StablecoinDetailClient", () => {
     render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
-    act(() => window.dispatchEvent(new Event("scroll")));
 
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -271,7 +269,7 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  it("keeps only the hero yield query enabled before interaction", () => {
+  it("keeps hero metric queries eager while offscreen-only lanes remain disabled", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(false, false, false);
 
@@ -283,7 +281,10 @@ describe("StablecoinDetailClient", () => {
       expect.objectContaining({
         supplementalQueryControls: {
           ...DISABLED_DETAIL_QUERY_CONTROLS,
+          liquidity: true,
+          reportCards: true,
           yield: true,
+          stress: true,
         },
       }),
     );

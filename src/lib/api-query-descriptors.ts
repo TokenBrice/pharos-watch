@@ -3,7 +3,7 @@ import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
-import { PriceConfidenceSchema } from "@shared/types/core";
+import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
@@ -95,6 +95,10 @@ export const StablecoinLiveSummarySchema = z.object({
   priceConfidence: PriceConfidenceSchema.nullable(),
   priceUpdatedAt: z.number().nullable(),
   priceObservedAt: z.number().nullable(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
+  priceSyncedAt: z.number().nullable().optional(),
+  consensusSources: z.array(z.string()).optional(),
+  agreeSources: z.array(z.string()).optional(),
   supplyObservedAt: z.number().nullable(),
   circulating: StablecoinDetailPegBucketsSchema,
   circulatingPrevDay: StablecoinDetailPegBucketsSchema,
@@ -134,6 +138,10 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     priceConfidence: detail.priceConfidence ?? null,
     priceUpdatedAt: detail.priceUpdatedAt ?? null,
     priceObservedAt: detail.priceObservedAt ?? detail.priceUpdatedAt ?? null,
+    priceObservedAtMode: detail.priceObservedAtMode,
+    priceSyncedAt: detail.priceSyncedAt,
+    consensusSources: detail.consensusSources,
+    agreeSources: detail.agreeSources,
     supplyObservedAt: latestDate,
     circulating: latest?.totalCirculatingUSD ?? {},
     circulatingPrevDay: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400),

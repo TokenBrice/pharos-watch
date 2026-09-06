@@ -64,12 +64,12 @@ function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
   return "Data is stale.";
 }
 
-export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
+export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
   const updatedAtMs = input.meta?.updatedAt != null && input.meta.updatedAt > 0
     ? input.meta.updatedAt * 1000
     : input.dataUpdatedAt;
-  const ageMs = updatedAtMs > 0 ? Math.max(0, Date.now() - updatedAtMs) : null;
+  const ageMs = updatedAtMs > 0 ? Math.max(0, nowMs - updatedAtMs) : null;
   const classifiedState = pickBaseState(ageMs, input.staleTime);
   const hasDegradationFloor = hasServerDegradation(input.meta);
   const baseState = !hasDegradationFloor
@@ -186,6 +186,7 @@ export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {
 export function formatDataHealthTimestamp(
   timestampMs: number | null,
   locale?: Intl.LocalesArgument,
+  timeZone?: string,
 ): string {
   if (!timestampMs || timestampMs <= 0) return "never";
   return new Date(timestampMs).toLocaleString(locale, {
@@ -194,5 +195,6 @@ export function formatDataHealthTimestamp(
     hour: "numeric",
     minute: "2-digit",
     timeZoneName: "short",
+    timeZone,
   });
 }

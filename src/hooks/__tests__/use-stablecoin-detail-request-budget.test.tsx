@@ -52,7 +52,7 @@ describe("stablecoin detail request budget", () => {
     expect(queryClient.getQueryData(["supply-history", "usdt-tether", 90])).toEqual([]);
   });
 
-  it("keeps the hero yield metric eager and below-fold lanes gated", async () => {
+  it("loads all hero metrics while leaving offscreen-only lanes gated", async () => {
     const requests: string[] = [];
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       requests.push(String(input));
@@ -71,11 +71,11 @@ describe("stablecoin detail request budget", () => {
         coin,
         summary: null,
         supplementalQueryControls: {
-          liquidity: false,
-          reportCards: false,
+          liquidity: true,
+          reportCards: true,
           redemption: false,
           yield: true,
-          stress: false,
+          stress: true,
           flows: flowsNear,
           blacklist: false,
           reserves: false,
@@ -84,18 +84,21 @@ describe("stablecoin detail request budget", () => {
       { initialProps: { flowsNear: false }, wrapper },
     );
 
-    await waitFor(() => expect(requests).toHaveLength(4));
+    await waitFor(() => expect(requests).toHaveLength(7));
     expect(requests).toEqual(expect.arrayContaining([
       expect.stringContaining("/api/stablecoin/usdt-tether"),
       expect.stringContaining("/api/peg-summary"),
       expect.stringContaining("/api/supply-history?stablecoin=usdt-tether&days=90"),
       expect.stringContaining("/api/yield-rankings"),
+      expect.stringContaining("/api/dex-liquidity"),
+      expect.stringContaining("/api/report-cards/v9"),
+      expect.stringContaining("/api/stress-signals"),
     ]));
 
     rerender({ flowsNear: true });
 
-    await waitFor(() => expect(requests).toHaveLength(5));
-    expect(requests[4]).toContain("/api/mint-burn-flows");
+    await waitFor(() => expect(requests).toHaveLength(8));
+    expect(requests[7]).toContain("/api/mint-burn-flows");
     queryClient.clear();
   });
 

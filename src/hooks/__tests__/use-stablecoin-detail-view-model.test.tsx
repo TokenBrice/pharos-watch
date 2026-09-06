@@ -192,6 +192,10 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.useMintBurnFlows).toHaveBeenCalledWith(24, { enabled: false });
     expect(mocks.useBlacklistSummary).toHaveBeenCalledWith({ enabled: false });
     expect(mocks.useStablecoinReserves).toHaveBeenCalledWith(coin.id, false);
+    const { queries } = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0];
+    expect(queries.dexLiquidity.enabled).toBe(false);
+    expect(queries.reportCards.enabled).toBe(false);
+    expect(queries.redemptionBackstops.enabled).toBe(false);
   });
 
   it("reuses the built view model when inputs have not changed", () => {
