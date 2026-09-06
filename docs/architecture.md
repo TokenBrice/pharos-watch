@@ -90,6 +90,7 @@ Worker cron refactors should place reusable stage helpers under `worker/src/cron
 
 ### Runtime host and env rules
 
+- `src/hooks/use-url-filters.ts` subscribes to browser history through React's external-store API. Static HTML and first hydration use a query-free snapshot; `isReady` distinguishes that phase from a genuinely empty browser query. URL normalization and one-time consumer initialization must wait for readiness. Filter writes preserve the current hash, and push/replace/popstate keep consumers synchronized.
 - `src/lib/api-url.ts` is the frontend runtime source of truth for API origin selection; `src/lib/api.ts` re-exports those helpers and layers request/freshness handling on top.
 - `src/lib/request.ts` owns bespoke frontend JSON, text, blob, and raw-response lifecycles outside the endpoint-query registry. Its timeout covers response-body consumption, caller and timeout signals are merged, failures are classified, and `RequestSequence` cancels superseded UI requests and rejects late completions. TanStack endpoint reads continue through `src/lib/api.ts` and `useRegisteredApiQuery()`, with the query signal forwarded to the transport.
 - `NEXT_PUBLIC_API_BASE` is an optional explicit override, mainly for local `next dev` against `wrangler dev`.

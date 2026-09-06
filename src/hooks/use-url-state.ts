@@ -12,7 +12,7 @@ type UseUrlStateOptions<T> = {
 };
 
 export function useUrlState<T>(schema: UrlStateSchema<T>, options?: UseUrlStateOptions<T>) {
-  const { searchParams, replaceParams } = useUrlFilters();
+  const { searchParams, isReady, replaceParams } = useUrlFilters();
   const enabled = options?.enabled;
   const fallback = options?.fallback;
   const clear = options?.clear;
@@ -35,14 +35,14 @@ export function useUrlState<T>(schema: UrlStateSchema<T>, options?: UseUrlStateO
   );
 
   useEffect(() => {
-    if (!normalizeKey || enabled === false) return;
+    if (!isReady || !normalizeKey || enabled === false) return;
     const value = new URLSearchParams(encodeState(state, schema)).get(normalizeKey);
     if (searchParams.get(normalizeKey) === value) return;
     replaceParams((params) => {
       if (value === null) params.delete(normalizeKey);
       else params.set(normalizeKey, value);
     });
-  }, [enabled, normalizeKey, replaceParams, schema, searchParams, state]);
+  }, [enabled, isReady, normalizeKey, replaceParams, schema, searchParams, state]);
 
   return { state, replaceState, patchState, searchParams };
 }

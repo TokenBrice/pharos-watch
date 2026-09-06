@@ -42,6 +42,7 @@ Focused chart inspection stays on the same route through query-param state:
 
 The canonical route remains `/alt-pegs/`; focused query states are shareable inspection views, not separate canonical pages.
 On the share chart, `range=all` means all currently loaded points from the `non-usd-share` endpoint window rather than unbounded history.
+Closing a focused chart retains its selected range in the overview, including when the focused view was opened from a deep link after hydration.
 
 ---
 

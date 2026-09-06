@@ -35,6 +35,8 @@ Changes to ranking, exclusion, missing-data, tie-break, explanation, or determin
 
 Desktop uses a stepwise wizard; browser history walks completed steps. Mobile uses the compact form and a single result commit after required inputs are complete.
 
+The one-time repair of an over-advanced URL step waits for the shared URL snapshot to be ready; the query-free static hydration snapshot must not consume that repair.
+
 Step changes are announced politely and move focus to the active question. Loading states expose `aria-busy`; result generation and snapshot replay move focus to the result summary. Option cards, skipped rows, near misses, relax actions, and result links remain keyboard operable and usable at narrow widths and 200 percent zoom.
 
 Result actions include adjusting answers, verifying the projected filters in `/screener/`, creating a share link, and contextual compare, Telegram, Yield, or per-coin links when the output supports them. `src/lib/selector-handoff.ts` is the authority for the Screener URL and human-readable filter chips. The handoff emits only keys recognized by `SCREENER_URL_SCHEMA`, uses V9-native Backing and Exit names, and includes the recommendation IDs in `coins=`. Constraints the Screener cannot reproduce—yield/source warnings, Bluechip, inherited blacklist exposure, active-depeg, legal uncertainty, and one-hour effective TVL—remain explicit Picker-only divergence chips.

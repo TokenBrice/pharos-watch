@@ -85,11 +85,13 @@ function getInitialPortfolioState(initialUrlParam?: string): {
 
 export function usePortfolio(
   initialUrlParam?: string,
+  urlReady = true,
 ): PortfolioState {
-  const [bootState] = useState(() => getInitialPortfolioState(initialUrlParam));
+  // During hydration the caller has a server snapshot, not an empty shared URL.
+  const [bootState] = useState(() => getInitialPortfolioState(urlReady ? initialUrlParam : undefined));
   const [holdings, setHoldings] = useState<PortfolioHolding[]>(bootState.holdings);
   const [isFromUrl] = useState(bootState.isFromUrl);
-  const initialized = bootState.initialized;
+  const initialized = bootState.initialized && urlReady;
 
   // Persist to localStorage when holdings change (only if NOT from URL)
   useEffect(() => {
@@ -149,9 +151,9 @@ export function usePortfolio(
 
   return {
     initialized,
-    holdings,
-    totalUsd,
-    isFromUrl,
+    holdings: initialized ? holdings : [],
+    totalUsd: initialized ? totalUsd : 0,
+    isFromUrl: initialized && isFromUrl,
     addCoin,
     removeCoin,
     setAmount,

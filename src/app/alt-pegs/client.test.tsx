@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
@@ -254,6 +256,29 @@ describe("AltPegsClient", () => {
 
     expect(screen.getByText(/share-chart focused 90d/i)).toBeTruthy();
     expect(screen.getByText(/cohort-chart default 1y/i)).toBeTruthy();
+  });
+
+  it("preserves a hydrated focused range when returning to the overview", async () => {
+    window.history.replaceState(null, "", "/alt-pegs/?view=focused&chart=share&range=90d#charts");
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<AltPegsClient />);
+    document.body.append(container);
+    const errors: unknown[] = [];
+    let root: ReturnType<typeof hydrateRoot>;
+    await act(async () => {
+      root = hydrateRoot(container, <AltPegsClient />, { onRecoverableError: (error) => errors.push(error) });
+    });
+    try {
+      expect(screen.getByText(/share-chart focused 90d/i)).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "close-share" }));
+      await waitFor(() => expect(screen.getByText(/share-chart default 90d/i)).toBeTruthy());
+      expectFocusSearch({});
+      expect(window.location.hash).toBe("#charts");
+      expect(errors).toEqual([]);
+    } finally {
+      act(() => root!.unmount());
+      container.remove();
+    }
   });
 
   it("opens and updates a focused share chart through URL state", async () => {
