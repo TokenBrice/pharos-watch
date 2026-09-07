@@ -234,6 +234,8 @@ Current explicitly deferred major cohort:
 - `eslint@10` — next review: 2026-08-15
 - `typescript@6` — next review: 2026-08-15
 
+The root `fflate` override pins Satori’s transitive dependency to patched `0.7.5` for [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Keep it until Satori releases a compatible dependency update; the Worker OG renderer uses Satori for font decoding and rendering.
+
 Risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale. There are currently no active exceptions.
 
 The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The `audit` job in `weekly-validation.yml` runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.ts`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
