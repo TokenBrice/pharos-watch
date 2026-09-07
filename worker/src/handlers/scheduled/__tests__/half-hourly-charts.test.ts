@@ -244,7 +244,7 @@ describe("half-hourly charts scheduling", () => {
     });
   });
 
-  it("refreshes prices without publishing liquidity on odd-hour :16", async () => {
+  it("publishes recovered quote evidence with liquidity on odd-hour :16", async () => {
     mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
       status: "ok",
       itemCount: 1,
@@ -261,12 +261,15 @@ describe("half-hourly charts scheduling", () => {
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
-        publishLiquidity: false,
+        publishLiquidity: true,
         publishShadowTargets: false,
         stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
       },
     );
-    expect(mocks.runCronSentinel).not.toHaveBeenCalled();
+    expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
+      mode: "turnover",
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it("reuses the exact current generation at :46 without consuming a source stage", async () => {

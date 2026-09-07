@@ -46,8 +46,7 @@ export function isHourlyDexPriceSlot(slotStartedAtSec: number): boolean {
 }
 
 export function isDexLiquidityPublicationSlot(slotStartedAtSec: number): boolean {
-  const slot = new Date(slotStartedAtSec * 1_000);
-  return slot.getUTCMinutes() === 16 && slot.getUTCHours() % 2 === 0;
+  return isHourlyDexPriceSlot(slotStartedAtSec);
 }
 
 export function isDailyDexShadowTargetPublicationSlot(slotStartedAtSec: number): boolean {
@@ -61,13 +60,16 @@ export function isDailyDexShadowTargetPublicationSlot(slotStartedAtSec: number):
  * `CRON_INTERVALS`) so the evaluator pins this module instead of the whole
  * schedule authority.
  *
- * `shared/lib/__tests__/cron-cadences.test.ts` asserts every entry equals
- * `CRON_INTERVALS[job]`, so a producer moving to a different lane fails CI
- * rather than silently leaving the evaluator on the old cadence.
+ * DEX retains its reviewed two-hour baseline even though publication now runs
+ * hourly: faster recovery must not tighten the existing four-hour evidence
+ * window or the separate three-hour measured-history confidence window.
+ * Tests pin that exception and match the other entries to `CRON_INTERVALS`.
  */
+export const DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC = 4 * 3600;
+
 export const V9_EVIDENCE_PRODUCER_INTERVAL_SEC = {
   "sync-live-reserves": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
   "sync-stablecoins": CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec,
-  "sync-dex-liquidity": CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery.intervalSec,
+  "sync-dex-liquidity": DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC / 2,
   "sync-redemption-backstops": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
 } as const;

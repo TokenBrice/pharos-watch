@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -31,7 +31,7 @@ import { fnv1aHash } from "../lib/hash";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
 
-const DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
+const DEX_LIQUIDITY_FRESHNESS_SEC = DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC;
 
 function getAllowedMissingCapacityCount(configuredCount: number): number {
   if (configuredCount <= 0) return 0;

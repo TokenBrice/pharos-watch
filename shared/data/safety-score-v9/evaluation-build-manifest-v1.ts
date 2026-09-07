@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-cadences.ts",
-      "sha256": "638355a6bdad1587fe8dbb6abb41b1ad15eb75ff8f6951ea0924fbdec75abb64"
+      "sha256": "ef5e24b9af3dc9c0560a7f88338ace8b7e6f16ed66c68ebb5bef255f461ef510"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -358,7 +358,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/measured-execution.ts",
-      "sha256": "99ee0ca2610c2e10865f0b510c91ea179c92971e399fb7035e81683d6cf03002"
+      "sha256": "654d4d0b4e29d26fff83048886e1a755a5756777e2ef4575bb07e044a2cde597"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -603,7 +603,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-03-block-25895460-shock-coverage.json.gz"
     }
   ],
-  "digest": "5873308b1dccbf64a3ea51f2de8466b310c5b62de6107ee928aff5505fc37a2b"
+  "digest": "1f568e68c809588a87253c6c22555fcaa817d67c4f887259d66cc3fd0710ac04"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
