@@ -221,7 +221,7 @@ async function runGenerator(
     );
   }
 
-  const child = spawn("npx", ["tsx", SCRIPT, "--out", pngPath, ...(options.args ?? [])], {
+  const child = spawn(process.execPath, ["--import", "tsx", SCRIPT, "--out", pngPath, ...(options.args ?? [])], {
     cwd: REPO_ROOT,
     env: {
       ...process.env,
