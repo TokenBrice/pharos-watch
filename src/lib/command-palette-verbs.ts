@@ -109,7 +109,7 @@ function detectVsPhrase(input: string): string[] | null {
  * resolve to a curated `STATIC_COMPARE_PAIRS` entry (either order), open the
  * pre-rendered static page; otherwise fall back to the live compare URL.
  */
-export function buildCompareVerbHref(coinIds: readonly string[]): string {
+function buildCompareVerbHref(coinIds: readonly string[]): string {
   if (coinIds.length === 2) {
     const [left, right] = coinIds;
     const pair = STATIC_COMPARE_PAIRS.find(
