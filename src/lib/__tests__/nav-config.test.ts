@@ -77,9 +77,9 @@ describe("nav-config", () => {
     expect(more?.columns?.map((column) => column.key)).toEqual(["research", "watch", "pharos"]);
     expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Watch", "Pharos"]);
     expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
-      ["Learn", "Mechanisms", "Case Studies", "Glossary", "Methodology"],
+      ["Learn", "Mechanisms", "Case Studies", "Glossary", "Methodology", "Coverage"],
       ["Daily Digest", "Timeline", "Alert Bot"],
-      ["About", "Changelog", "Blog", "API Access", "Status", "PharosVille"],
+      ["About", "Funding", "Changelog", "Blog", "API Access", "Status", "PharosVille"],
     ]);
     // `items` must stay the exact flattening, or the mobile drawer and
     // /sitemap-tree/ silently drop rows the desktop panel still shows.
@@ -111,13 +111,14 @@ describe("nav-config", () => {
     expect(NAV_ITEMS.find((item) => item.href === "/safety-scores/")?.shortLabel).toBeUndefined();
   });
 
-  it("keeps footer-only routes searchable through the palette page index", () => {
-    // /coverage/ and /funding/ left the menus in the 2026-09-04 revamp; search
-    // must still find them or the demotion becomes a disappearance.
-    const hrefs = COMMAND_PALETTE_PAGES.map((page) => page.href);
+  it("keeps coverage and funding available in navigation and search", () => {
+    const groupedHrefs = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.href));
+    const searchableHrefs = COMMAND_PALETTE_PAGES.map((page) => page.href);
 
-    expect(hrefs).toContain("/coverage/");
-    expect(hrefs).toContain("/funding/");
+    expect(groupedHrefs).toContain("/coverage/");
+    expect(groupedHrefs).toContain("/funding/");
+    expect(searchableHrefs).toContain("/coverage/");
+    expect(searchableHrefs).toContain("/funding/");
   });
 
   it("exposes every navigable route exactly once to shared nav consumers", () => {

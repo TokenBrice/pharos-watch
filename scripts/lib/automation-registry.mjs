@@ -293,7 +293,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 1,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-legacy-stablecoin-redirects.ts",
-    sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
+    sourcePaths: [
+      "shared/data/stablecoins/coins.generated.json",
+      "shared/data/stablecoins/legacy-route-redirects.json",
+      "shared/lib/stablecoin-id.ts",
+      "public/_redirects",
+    ],
   }),
   generatedArtifact({
     id: "stablecoin-client-registry",

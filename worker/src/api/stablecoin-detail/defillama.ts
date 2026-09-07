@@ -208,6 +208,8 @@ export function normalizeDefiLlamaDetailBody(
       if (!nativeBuckets) {
         entry.totalCirculating = rawTotalCirculatingUsd;
       }
+    } else if (nativeBuckets && price != null) {
+      entry.totalCirculatingUSD = scalePegBuckets(nativeBuckets, price);
     }
   }
 

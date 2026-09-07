@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/font/local", () => ({
@@ -36,10 +37,19 @@ describe("DigestArchivePage", () => {
     expect(screen.queryByText("Weekly market recaps")).toBeNull();
   });
 
-  it("keeps every digest in the crawlable archive index", () => {
-    render(<DigestArchivePage />);
-    const index = screen.getByRole("navigation", { name: "Digest archive index" });
-    expect(within(index).getAllByRole("link")).toHaveLength(digests.length);
+  it("keeps every daily and weekly digest in the static monthly archive index", () => {
+    const html = renderToStaticMarkup(<DigestArchivePage />);
+    const document = new DOMParser().parseFromString(html, "text/html");
+    const index = document.querySelector('nav[aria-labelledby="digest-month-index"]')!;
+    expect(index).not.toBeNull();
+    expect(index.classList.contains("sr-only")).toBe(false);
+    const links = Array.from(index.querySelectorAll("details ul a"));
+    expect(links.map((link) => link.getAttribute("href")?.replace(/\/$/, "")).sort()).toEqual(
+      digests.map((entry) => `/digest/${entry.date}`).sort(),
+    );
+    expect(index.querySelectorAll("summary")).toHaveLength(
+      new Set(digests.map((entry) => entry.date.slice(0, 7))).size,
+    );
   });
 
   it("renders the Telegram subscribe wire and one-line colophon", () => {

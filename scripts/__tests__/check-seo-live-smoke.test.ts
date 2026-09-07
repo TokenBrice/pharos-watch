@@ -20,6 +20,28 @@ afterEach(() => {
 });
 
 describe("check-seo-live-smoke sitemap URL checks", () => {
+  it.each([
+    { robots: "index, follow", canonical: "https://pharos.watch/", header: "", expected: [] },
+    { robots: "index, follow", canonical: "https://pharos.watch/", header: "noindex, follow", expected: ["noindexed by X-Robots-Tag"] },
+    { robots: "none", canonical: "https://pharos.watch/", header: "", expected: ["is noindexed"] },
+    { robots: "index, follow", canonical: "https://pharos.watch/compare/", header: "", expected: ["canonical must match itself"] },
+    { robots: "index, follow", canonical: "", header: "", expected: ["got missing"] },
+  ])("checks live indexability and canonical signals: $robots $canonical $header", async ({ robots, canonical, header, expected }) => {
+    mockFetchStrict([{
+      match: "https://pharos.watch/",
+      outcomes: [{ response: new Response(
+        `<html><head><meta content='${robots}' name='googlebot'>${canonical ? `<link href='${canonical}' rel='canonical'>` : ""}</head></html>`,
+        { headers: { "content-type": "text/html", "x-robots-tag": header } },
+      ) }],
+    }]);
+    const errors: string[] = [];
+
+    await checkSitemapUrls(["https://pharos.watch/"], 1, errors);
+
+    expect(errors).toHaveLength(expected.length);
+    expected.forEach((message, index) => expect(errors[index]).toContain(message));
+  });
+
   it("rejects duplicate locations in the live sitemap", async () => {
     const sitemap = responseWithBody(200, "application/xml");
     vi.spyOn(sitemap.response, "text").mockResolvedValue(

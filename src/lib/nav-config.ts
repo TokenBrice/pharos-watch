@@ -29,6 +29,8 @@ import {
   BookMarked,
   BookA,
   Coins,
+  Heart,
+  TableProperties,
   createLucideIcon,
 } from "lucide-react";
 
@@ -153,6 +155,7 @@ const MORE_COLUMNS: readonly NavColumn[] = [
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs" },
       { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined" },
       { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions" },
+      { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "What Pharos tracks, coin by coin" },
     ],
   },
   {
@@ -169,6 +172,7 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     label: "Pharos",
     items: [
       { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists" },
+      { href: "/funding/", label: "Funding", icon: Heart, description: "Costs, donations, and sustainability" },
       { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates" },
       { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story" },
       { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference" },

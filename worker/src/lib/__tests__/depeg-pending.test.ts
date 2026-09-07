@@ -238,4 +238,41 @@ describe("buildUpsertPendingDepegStmt", () => {
 
     sqlite.close();
   });
+
+  it("resets same-direction candidates when their quote domain changes in either direction", () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    const recorder = makePreparedStatementRecorder();
+    const observations = [
+      { price: 0.0125104, pegReference: 0.012274, bps: 193, reason: "confirmation-window" },
+      { price: 1.01847, pegReference: 1, bps: 185, reason: "confirmation-window+native-origin" },
+      { price: 0.01252, pegReference: 0.012274, bps: 200, reason: "confirmation-window" },
+    ];
+    try {
+      for (const [index, observation] of observations.entries()) {
+        const seenAt = 1_700_000_000 + index * 900;
+        const stmt = buildUpsertPendingDepegStmt(recorder, {
+          stablecoinId: "a7a5-old-vector",
+          symbol: "A7A5",
+          pegType: "peggedRUB",
+          direction: "above",
+          seenAt,
+          ...observation,
+        }) as unknown as { sql: string; boundValues: unknown[] };
+        sqlite.prepare(stmt.sql).run(...(stmt.boundValues as never[]));
+        expect(sqlite.prepare("SELECT * FROM depeg_pending WHERE stablecoin_id = ?").get("a7a5-old-vector"))
+          .toMatchObject({
+            first_seen_at: seenAt,
+            first_seen_bps: observation.bps,
+            first_price: observation.price,
+            last_price: observation.price,
+            peak_seen_bps: observation.bps,
+            peak_price: observation.price,
+            peg_reference: observation.pegReference,
+            reason: observation.reason,
+          });
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
 });

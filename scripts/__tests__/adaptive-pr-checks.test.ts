@@ -133,9 +133,12 @@ describe("adaptive PR checks", () => {
     );
   });
 
-  it("keeps the always-on contract diet at exactly thirty unique files", () => {
-    expect(ALWAYS_RUN_TEST_FILES).toHaveLength(30);
-    expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(30);
+  it("keeps thirty-one unique contracts including real OG rendering for dependency changes", () => {
+    expect(ALWAYS_RUN_TEST_FILES).toHaveLength(31);
+    expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(31);
+    for (const source of ["worker/package.json", "package-lock.json", "worker/src/api/og.tsx"]) {
+      expect(selectPrTestFiles([], undefined, [source])).toContain("scripts/__tests__/og-worker-runtime.test.ts");
+    }
   });
 
   it("selects importing owners for changed critical source files", () => {

@@ -187,7 +187,7 @@ function safetyScoreOgPresentation(
 // SVG → PNG render pipeline
 // ---------------------------------------------------------------------------
 
-async function renderPng(element: React.ReactNode): Promise<Uint8Array> {
+export async function renderPng(element: React.ReactNode): Promise<Uint8Array> {
   await ensureWasm();
 
   const svg = await satori(element, {

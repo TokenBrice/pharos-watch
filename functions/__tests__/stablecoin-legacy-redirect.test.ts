@@ -29,6 +29,23 @@ describe("stablecoin legacy redirects", () => {
     expect(ctx.assetsFetch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["cg-syrupusdc", "/stablecoin/syrupusdc-maple/"],
+    ["gold-kau", "/stablecoin/kau-kinesis/"],
+    ["430", "/stablecoin/sofid-sofi/"],
+    ["185", "/cemetery/"],
+    ["gyd-gyroscope", "/cemetery/"],
+    ...["usp-pareto-credit", "xai-silo-finance", "krwo-gimswap", "veur-vnx", "phpm-mento", "usd-nubank"]
+      .map((alias) => [alias, "/coverage/"]),
+  ])("resolves reviewed legacy alias %s without depending on asset redirects", async (alias, destination) => {
+    const ctx = makeContext(new Request(`https://pharos.watch/stablecoin/${alias}/?utm_source=google`, { method: "HEAD" }));
+    ctx.assetsFetch.mockImplementation(async () => new Response("missing", { status: 404 }));
+    const response = await onRequest(ctx);
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe(`https://pharos.watch${destination}?utm_source=google`);
+    expect(ctx.assetsFetch).not.toHaveBeenCalled();
+  });
+
   it("preserves query strings on numeric redirects", async () => {
     const ctx = makeContext(new Request("https://pharos.watch/stablecoin/343/?utm_source=google"));
 
@@ -51,8 +68,8 @@ describe("stablecoin legacy redirects", () => {
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
   });
 
-  it("passes unknown numeric stablecoin routes through to static 404 handling", async () => {
-    const request = new Request("https://pharos.watch/stablecoin/999999/");
+  it.each(["999999", "411"])("passes unreviewed numeric stablecoin %s through to static 404 handling", async (id) => {
+    const request = new Request(`https://pharos.watch/stablecoin/${id}/`);
     const ctx = makeContext(request);
 
     await onRequest(ctx);

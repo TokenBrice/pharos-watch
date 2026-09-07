@@ -165,6 +165,8 @@ Stablecoin and depeg cards read DEWS through `stress-signals-current-rows.ts`, t
 
 These are the OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.
 
+The Worker pins Satori to `0.32.0`. Satori `0.33.x` introduces HarfBuzz initialization that reads `self.location.href`, which is unavailable in workerd and makes every dynamic card fail with `503`. Upgrade only after the real Worker render check passes: `npx vitest run scripts/__tests__/og-worker-runtime.test.ts worker/src/api/__tests__/og.test.tsx`. The runtime check executes the production Satori/Yoga/resvg pipeline in local workerd and decodes cold and warm 1200×628 PNG responses; the existing Node SVG tests cover the individual card templates. After deployment, verify actual `GET` responses for all five dynamic card families return decodable `image/png` data. `HEAD` and mocked handler tests do not prove rendering health.
+
 The shared frame inlines the Pharos brand mark as SVG paths (`worker/src/lib/og-templates/shared.tsx`) because satori cannot fetch a same-origin asset. It is the **on-light** variant — the same art as `public/pharos-mark-on-light.svg` — because the card background is light. Keep the two in sync by hand when the mark changes; a mark swap needs a **Worker deploy** and invalidates the 15-minute OG cache.
 
 ## CI guardrails
