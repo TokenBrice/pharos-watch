@@ -175,18 +175,25 @@ const MORE_COLUMNS: readonly NavColumn[] = [
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg", keywords: "mechanism archetype design how it works collateral algorithmic" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs", keywords: "case study retrospective post-mortem history terra ust svb" },
       { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined", keywords: "glossary terms definitions vocabulary dictionary" },
-      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version" },
-      { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "What Pharos tracks, coin by coin", keywords: "coverage tracked supported data availability" },
     ],
   },
   {
     key: "watch",
-    label: "Updates & Alerts",
+    label: "Updates",
     items: [
       { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market", keywords: "digest daily news recap newsletter today" },
       { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change", keywords: "timeline tape events history feed" },
-      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch dates", keywords: "upcoming launch pre-launch calendar new coins pipeline" },
-      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches", keywords: "alert bot telegram notifications subscribe watch" },
+      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates", keywords: "changelog release notes what's new updates" },
+      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story", keywords: "blog posts articles announcements" },
+    ],
+  },
+  {
+    key: "methods",
+    label: "Transparency",
+    items: [
+      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version" },
+      { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "What Pharos tracks, coin by coin", keywords: "coverage tracked supported data availability" },
+      { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline", keywords: "status health uptime pipeline outage" },
     ],
   },
   {
@@ -196,10 +203,6 @@ const MORE_COLUMNS: readonly NavColumn[] = [
       START_HERE_NAV_ITEM,
       { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists", keywords: "about team independent sources mission" },
       { href: "/funding/", label: "Funding", icon: Heart, description: "Costs, donations, and sustainability", keywords: "funding donate support costs sponsor" },
-      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates", keywords: "changelog release notes what's new updates" },
-      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story", keywords: "blog posts articles announcements" },
-      { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference", keywords: "api key developer access endpoint docs integration" },
-      { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline", keywords: "status health uptime pipeline outage" },
       {
         href: "https://pharosville.pharos.watch/",
         label: "PharosVille",
@@ -230,6 +233,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Mint and burn pressure by chain", keywords: "flows mint burn issuance redemption supply change" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Stablecoin share and health by chain", keywords: "chains network ethereum solana tron l2 by chain" },
       { href: "/alt-pegs/", label: "Non-USD Pegs", icon: Globe, description: "Market structure beyond the dollar", keywords: "non-usd euro eur gbp chf jpy brl gold alt pegs currency" },
+      { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch dates", keywords: "upcoming launch pre-launch calendar new coins pipeline" },
     ],
   },
   {
@@ -249,6 +253,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Filter every stablecoin on any axis", keywords: "screener filter find search criteria" },
       { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Peer sets and substitutes side by side", keywords: "compare vs versus side by side alternative" },
       { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Your holdings as one stablecoin book", keywords: "portfolio holdings my coins wallet exposure" },
+      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches", keywords: "alert bot telegram notifications subscribe watch" },
+      { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference", keywords: "api key developer access endpoint docs integration" },
     ],
   },
   {

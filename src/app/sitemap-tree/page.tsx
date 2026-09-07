@@ -27,7 +27,7 @@ import { PUBLIC_ROUTE_INVENTORY } from "@/lib/public-route-inventory";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Sitemap: Stablecoin Dashboard Route Index",
   description:
-    "Every public Pharos route grouped by Markets, Risk, Tools, Research, Updates & Alerts, and About Pharos. The full surface area of the stablecoin dashboard on a single page.",
+    "Every public Pharos route grouped by Markets, Risk, Tools, Research, Updates, Transparency, and About Pharos. The full surface area of the stablecoin dashboard on a single page.",
   canonical: "/sitemap-tree/",
 });
 
@@ -207,7 +207,7 @@ const TIERS: readonly TierColumn[] = [
     key: "markets",
     label: "Markets",
     kicker: "Market structure",
-    intro: "The stablecoin directory, liquidity, flows, chain distribution, and non-USD peg cohorts.",
+    intro: "The stablecoin directory, liquidity, flows, chain distribution, non-USD peg cohorts, and upcoming launches.",
     primary: MARKETS_GROUP?.items.map(navToRow) ?? [],
     sub: [
       {
@@ -231,28 +231,35 @@ const TIERS: readonly TierColumn[] = [
     key: "tools",
     label: "Tools",
     kicker: "Research tools",
-    intro: "Power-user surfaces for filtering, peer comparison, and portfolio review.",
+    intro: "Power-user surfaces for filtering, peer comparison, portfolio review, push alerts, and API access.",
     primary: TOOLS_GROUP?.items.map(navToRow) ?? [],
   },
   {
     key: "research",
     label: "Research",
     kicker: "Reference",
-    intro: "Mechanism explainers, case studies, the vocabulary, the scoring methodology, and coverage.",
+    intro: "Mechanism explainers, case studies, and the vocabulary.",
     primary: moreColumnRows("research"),
   },
   {
     key: "watch",
-    label: "Updates & Alerts",
+    label: "Updates",
     kicker: "What changed",
-    intro: "Daily digest, the unified event timeline, launch watch, and push alerts.",
+    intro: "Daily digest, the unified event timeline, release notes, and long-form posts.",
     primary: moreColumnRows("watch"),
+  },
+  {
+    key: "methods",
+    label: "Transparency",
+    kicker: "How Pharos works",
+    intro: "The scoring methodology, what is tracked, and pipeline health.",
+    primary: moreColumnRows("methods"),
   },
   {
     key: "pharos",
     label: "About Pharos",
     kicker: "The product",
-    intro: "Start Here, product context, release notes, long-form posts, API access, and pipeline health.",
+    intro: "Start Here, product context, funding, and PharosVille.",
     primary: moreColumnRows("pharos"),
     sub: [
       {
@@ -373,10 +380,10 @@ export default function SitemapTreePage() {
       path="/sitemap-tree/"
       title="All pages"
       leadParagraphs={[
-        "Every public Pharos route, grouped by the same Markets / Risk / Tools sections as the top nav, plus the Research, Updates & Alerts, and About Pharos columns behind its Resources menu. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
+        "Every public Pharos route, grouped by the same Markets / Risk / Tools sections as the top nav, plus the Research, Updates, Transparency, and About Pharos columns behind its Resources menu. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
       ]}
     >
-      <div className="grid gap-10 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 xl:gap-8">
+      <div className="grid gap-10 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 xl:gap-8">
         {TIERS.map((tier) => (
           <TierBlock key={tier.key} tier={tier} />
         ))}

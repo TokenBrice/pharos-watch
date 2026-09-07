@@ -56,7 +56,7 @@ The page is organized into these sections, in order:
 ## Navigation Contract
 
 - `/about/` remains a top-level route in the `Resources` menu's `About Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Start Here`, `Funding`, `Changelog`, `Blog`, `API Access`, `System Status`, and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Upcoming`, and `Alert Bot` fill the `Updates & Alerts` column, and Learn surfaces plus `Methodology` and `Coverage` fill the `Research` column. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
+- `/about/` is the reference hub for low-frequency reference surfaces. `Start Here`, `Funding`, and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
