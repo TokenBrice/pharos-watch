@@ -1,7 +1,7 @@
 import type { DepegDirection } from "./depeg-signals";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { coerceDepegDirection, pickMoreSevereBps } from "./depeg-signals";
-import type { PendingDepegReason } from "./depeg-helpers";
+import { NATIVE_ORIGIN_PENDING_REASON_FLAG, type PendingDepegReason } from "./depeg-helpers";
 
 export interface PendingDepegRow {
   id: number;
@@ -106,7 +106,9 @@ export function buildUpsertPendingDepegStmt(
 ): D1PreparedStatement {
   const preservesEpisode =
     `depeg_pending.direction = excluded.direction AND ` +
-    `excluded.last_seen_at - depeg_pending.last_seen_at <= ${DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC}`;
+    `excluded.last_seen_at - depeg_pending.last_seen_at <= ${DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC} AND ` +
+    `(instr('+' || COALESCE(depeg_pending.reason, '') || '+', '+${NATIVE_ORIGIN_PENDING_REASON_FLAG}+') > 0) = ` +
+    `(instr('+' || excluded.reason || '+', '+${NATIVE_ORIGIN_PENDING_REASON_FLAG}+') > 0)`;
   return db.prepare(
     `INSERT INTO depeg_pending (
        stablecoin_id,

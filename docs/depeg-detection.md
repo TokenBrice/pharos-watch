@@ -87,6 +87,8 @@ CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NUL
 
 For live non-USD events opened from a CoinGecko native-fiat quote, `peg_reference = 1` and all populated event prices remain in that native quote domain. Later USD-primary or USD-DEX observations may close the row when policy permits, but they leave `recovery_price = NULL` unless a same-domain native recovery quote is available.
 
+Pending upserts preserve an onset only when direction, observation continuity, and quote domain agree. Switching between USD-primary and `native-origin` observations resets the candidate's onset time, reference, and price fields, so confirmation cannot combine a native price with a retained USD reference (or vice versa). Other reason-flag changes within one quote domain preserve continuity.
+
 ### depeg_pending
 
 ```sql
