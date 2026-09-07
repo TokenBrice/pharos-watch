@@ -6,8 +6,8 @@
  * conservative — only fires when the input starts with one of the verb
  * keywords followed by a space — so plain search remains the default.
  *
- * Verbs:
- *   compare TOKEN [TOKEN ...]     → /compare?coins=<ids>
+ *   compare TOKEN [TOKEN ...]     → /compare?coins=<ids> (static pair page when curated)
+ *   "<a> vs <b>"                  → compare verb without the keyword
  *   screen filter=value [...]     → /screener?<encoded>
  *   pin TOKEN                     → mutates watchlist (add)
  *   unpin TOKEN | all             → mutates watchlist (remove or clear)
@@ -16,7 +16,7 @@
 
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { MAX_COMPARE_COINS } from "@/lib/compare-config";
-import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildLiveCompareUrl, buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } from "@/lib/compare-links";
 import { encodeState, type UrlStateField } from "@/lib/url-state";
 import {
   SCREENER_URL_SCHEMA,
@@ -27,7 +27,7 @@ import {
 // ── Result types ────────────────────────────────────────────────────────────
 
 export type ParsedVerb =
-  | { kind: "compare"; coinSymbols: string[]; resolvedCoinIds: string[]; unresolved: string[] }
+  | { kind: "compare"; coinSymbols: string[]; resolvedCoinIds: string[]; unresolved: string[]; href: string }
   | { kind: "screen"; filters: Record<string, string | string[] | number>; href: string }
   | { kind: "pin"; coinSymbol: string; resolvedCoinId: string | null }
   | { kind: "unpin"; coinSymbol: string | "all"; resolvedCoinId: string | null }
@@ -75,6 +75,73 @@ function resolveCoinIdFromToken(token: string): string | null {
   }
 
   return exactSymbol ?? exactId ?? prefixSymbol ?? prefixId ?? prefixName;
+}
+
+// ── Compare verb resolution ─────────────────────────────────────────────────
+
+const COMPARE_SEPARATOR_TOKENS = new Set(["vs", "versus", "vs."]);
+/** "X vs Y" sugar accepts 2–4 coin tokens around the separator(s). */
+const VS_PHRASE_MAX_COIN_TOKENS = 4;
+
+function isCompareSeparator(token: string): boolean {
+  return COMPARE_SEPARATOR_TOKENS.has(token.toLowerCase());
+}
+
+/**
+ * Detect the "<a> vs <b>" / "<a> versus <b>" / "<a> vs. <b>" phrasing and
+ * return the coin tokens. Conservative: needs 2–4 coin tokens with a separator
+ * between them, never leading or trailing ("vs usdt" stays a plain query).
+ */
+function detectVsPhrase(input: string): string[] | null {
+  const tokens = input.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length < 3 || tokens.length > 2 * VS_PHRASE_MAX_COIN_TOKENS - 1) return null;
+  const coinTokens = tokens.filter((token) => !isCompareSeparator(token));
+  const separatorCount = tokens.length - coinTokens.length;
+  if (separatorCount === 0 || coinTokens.length < 2 || coinTokens.length > VS_PHRASE_MAX_COIN_TOKENS) {
+    return null;
+  }
+  if (isCompareSeparator(tokens[0]!) || isCompareSeparator(tokens.at(-1)!)) return null;
+  return coinTokens;
+}
+
+/**
+ * Single compare-URL builder for the palette verb: when exactly two coins
+ * resolve to a curated `STATIC_COMPARE_PAIRS` entry (either order), open the
+ * pre-rendered static page; otherwise fall back to the live compare URL.
+ */
+export function buildCompareVerbHref(coinIds: readonly string[]): string {
+  if (coinIds.length === 2) {
+    const [left, right] = coinIds;
+    const pair = STATIC_COMPARE_PAIRS.find(
+      ([pairLeft, pairRight]) =>
+        (pairLeft === left && pairRight === right) || (pairLeft === right && pairRight === left),
+    );
+    if (pair) return `/compare/${buildStaticComparisonSlug(pair[0], pair[1])}/`;
+  }
+  return buildLiveCompareUrl(coinIds);
+}
+
+function buildCompareVerb(tokens: string[]): Extract<ParsedVerb, { kind: "compare" }> {
+  const limited = tokens.slice(0, MAX_COMPARE_COINS);
+  const resolved: string[] = [];
+  const unresolved: string[] = [];
+  const seen = new Set<string>();
+  for (const token of limited) {
+    const id = resolveCoinIdFromToken(token);
+    if (id && !seen.has(id)) {
+      resolved.push(id);
+      seen.add(id);
+    } else if (!id) {
+      unresolved.push(token);
+    }
+  }
+  return {
+    kind: "compare",
+    coinSymbols: limited,
+    resolvedCoinIds: resolved,
+    unresolved,
+    href: buildCompareVerbHref(resolved),
+  };
 }
 
 // ── Verb keyword detection ──────────────────────────────────────────────────
@@ -287,68 +354,65 @@ function buildTapeHref(filters: Record<string, string>): string {
 
 export function parsePaletteInput(input: string): ParsedVerb {
   const lead = detectVerbLead(input);
-  if (!lead) return { kind: "none" };
-
-  switch (lead.keyword) {
-    case "compare": {
-      const tokens = lead.rest.split(/[\s,]+/).filter(Boolean);
-      if (tokens.length === 0) {
-        return { kind: "compare", coinSymbols: [], resolvedCoinIds: [], unresolved: [] };
-      }
-      const limited = tokens.slice(0, MAX_COMPARE_COINS);
-      const resolved: string[] = [];
-      const unresolved: string[] = [];
-      const seen = new Set<string>();
-      for (const token of limited) {
-        const id = resolveCoinIdFromToken(token);
-        if (id && !seen.has(id)) {
-          resolved.push(id);
-          seen.add(id);
-        } else if (!id) {
-          unresolved.push(token);
+  if (lead) {
+    switch (lead.keyword) {
+      case "compare": {
+        // Tolerate "compare a vs b" — the separator is never a coin token.
+        const tokens = lead.rest
+          .split(/[\s,]+/)
+          .filter(Boolean)
+          .filter((token) => !isCompareSeparator(token));
+        if (tokens.length === 0) {
+          return {
+            kind: "compare",
+            coinSymbols: [],
+            resolvedCoinIds: [],
+            unresolved: [],
+            href: buildCompareVerbHref([]),
+          };
         }
+        return buildCompareVerb(tokens);
       }
-      return {
-        kind: "compare",
-        coinSymbols: limited,
-        resolvedCoinIds: resolved,
-        unresolved,
-      };
-    }
 
-    case "screen": {
-      const filters = parseScreenTokens(lead.rest);
-      return {
-        kind: "screen",
-        filters,
-        href: buildScreenerHrefFromFilters(filters),
-      };
-    }
-
-    case "pin": {
-      const token = lead.rest.split(/\s+/)[0] ?? "";
-      const resolvedCoinId = token ? resolveCoinIdFromToken(token) : null;
-      return { kind: "pin", coinSymbol: token, resolvedCoinId };
-    }
-
-    case "unpin": {
-      const token = lead.rest.split(/\s+/)[0] ?? "";
-      if (token.toLowerCase() === "all") {
-        return { kind: "unpin", coinSymbol: "all", resolvedCoinId: null };
+      case "screen": {
+        const filters = parseScreenTokens(lead.rest);
+        return {
+          kind: "screen",
+          filters,
+          href: buildScreenerHrefFromFilters(filters),
+        };
       }
-      const resolvedCoinId = token ? resolveCoinIdFromToken(token) : null;
-      return { kind: "unpin", coinSymbol: token, resolvedCoinId };
-    }
 
-    case "tape:": {
-      const filters = parseTapeTokens(lead.rest);
-      return {
-        kind: "tape",
-        filters,
-        href: buildTapeHref(filters),
-      };
+      case "pin": {
+        const token = lead.rest.split(/\s+/)[0] ?? "";
+        const resolvedCoinId = token ? resolveCoinIdFromToken(token) : null;
+        return { kind: "pin", coinSymbol: token, resolvedCoinId };
+      }
+
+      case "unpin": {
+        const token = lead.rest.split(/\s+/)[0] ?? "";
+        if (token.toLowerCase() === "all") {
+          return { kind: "unpin", coinSymbol: "all", resolvedCoinId: null };
+        }
+        const resolvedCoinId = token ? resolveCoinIdFromToken(token) : null;
+        return { kind: "unpin", coinSymbol: token, resolvedCoinId };
+      }
+
+      case "tape:": {
+        const filters = parseTapeTokens(lead.rest);
+        return {
+          kind: "tape",
+          filters,
+          href: buildTapeHref(filters),
+        };
+      }
     }
   }
+
+  // "<a> vs <b>" phrasing is the compare verb without the keyword.
+  const vsTokens = detectVsPhrase(input);
+  if (vsTokens) return buildCompareVerb(vsTokens);
+  return { kind: "none" };
 }
 
 // ── Reusable helper for compare-watchlist action ────────────────────────────

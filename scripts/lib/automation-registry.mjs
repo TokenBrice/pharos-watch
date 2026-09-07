@@ -151,7 +151,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-case-study-client-index.ts",
-    sourcePaths: ["src/lib/case-studies/**"],
+    sourcePaths: ["src/lib/case-studies/**", "shared/data/dead-stablecoins.json", "shared/data/stablecoins/coins.client.list.generated.json"],
   }),
   generatedArtifact({
     id: "docs-metadata",
