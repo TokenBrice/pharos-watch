@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { QUICK_NAV_ITEMS } from "@/lib/nav-config";
+import { trackEvent } from "@/lib/analytics";
+import { QUICK_NAV_ITEMS, isNavItemActive } from "@/lib/nav-config";
 import { openNavDrawer } from "@/lib/nav-drawer";
-import { isRouteActive } from "@/lib/navigation";
 
 const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => item.href !== "/stability-index/");
 
@@ -20,13 +20,16 @@ export function MobileBottomNav() {
       <div className="grid h-[var(--mobile-bottom-nav-height)] grid-cols-5">
         {MOBILE_ROUTE_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = isRouteActive(pathname, item.href);
+          const active = isNavItemActive(pathname, item);
 
           return (
             <Link
               key={item.href}
               prefetch={false}
               href={item.href}
+              onClick={() => {
+                trackEvent("nav_click", { surface: "bottom_bar", group: "rail", href: item.href });
+              }}
               aria-current={active ? "page" : undefined}
               className={
                 active

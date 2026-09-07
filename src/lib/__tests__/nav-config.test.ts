@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  BOTTOM_NAV_ITEMS,
   NAV_GROUPS,
   NAV_ITEMS,
   QUICK_NAV_ITEMS,
+  START_HERE_NAV_ITEM,
+  isNavItemActive,
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_PAGES } from "@/components/command-palette-model";
 
@@ -48,11 +49,11 @@ describe("nav-config", () => {
 
   it("splits market structure, failure modes, and interactive tools", () => {
     expect(NAV_GROUPS.find((group) => group.key === "markets")?.items.map((item) => item.href)).toEqual([
+      "/stablecoins/",
       "/liquidity/",
       "/flows/",
       "/chains/",
       "/alt-pegs/",
-      "/upcoming/",
     ]);
 
     expect(NAV_GROUPS.find((group) => group.key === "risk")?.items.map((item) => item.href)).toEqual([
@@ -66,20 +67,21 @@ describe("nav-config", () => {
       "/screener/",
       "/compare/",
       "/portfolio/",
-      "/stablecoins/",
     ]);
   });
 
-  it("organizes Resources into research, monitoring, and product columns", () => {
+  it("organizes Resources into research, updates, and product columns", () => {
     const more = NAV_GROUPS.find((group) => group.key === "more");
 
     expect(more?.label).toBe("Resources");
     expect(more?.columns?.map((column) => column.key)).toEqual(["research", "watch", "pharos"]);
-    expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Watch", "Pharos"]);
+    expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Updates & Alerts", "About Pharos"]);
+    // Start Here gets its permanent desktop home as the first About Pharos row.
+    expect(more?.columns?.find((column) => column.key === "pharos")?.items[0]).toEqual(START_HERE_NAV_ITEM);
     expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
       ["Learn", "Mechanisms", "Case Studies", "Glossary", "Methodology", "Coverage"],
-      ["Daily Digest", "Timeline", "Alert Bot"],
-      ["About", "Funding", "Changelog", "Blog", "API Access", "Status", "PharosVille"],
+      ["Daily Digest", "Timeline", "Upcoming", "Alert Bot"],
+      ["Start Here", "About", "Funding", "Changelog", "Blog", "API Access", "Status", "PharosVille"],
     ]);
     // `items` must stay the exact flattening, or the mobile drawer and
     // /sitemap-tree/ silently drop rows the desktop panel still shows.
@@ -128,7 +130,6 @@ describe("nav-config", () => {
     for (const href of [
       ...NAV_GROUPS.flatMap((group) => group.items.map((item) => item.href)),
       ...QUICK_NAV_ITEMS.map((item) => item.href),
-      ...BOTTOM_NAV_ITEMS.map((item) => item.href),
     ]) {
       expect(hrefs).toContain(href);
     }
@@ -143,5 +144,36 @@ describe("nav-config", () => {
       expect(item.description ?? "", item.label).toBeTruthy();
       expect((item.description ?? "").length, item.label).toBeLessThanOrEqual(40);
     }
+  });
+
+  it("seeds NAV_ITEMS with the canonical rail items ahead of groups and aliases", () => {
+    // Canonical entries win the dedupe so index consumers surface primary
+    // routes ("Yield Intelligence", not the rail's "Yield") first.
+    expect(NAV_ITEMS.slice(0, 5).map((item) => item.href)).toEqual(QUICK_NAV_ITEMS.map((item) => item.href));
+    expect(NAV_ITEMS.slice(0, 5).map((item) => item.label)).toEqual([
+      "Dashboard",
+      "Safety Scores",
+      "Yield Intelligence",
+      "Depeg & Recovery",
+      "Stability Index",
+    ]);
+  });
+
+  it("gives every indexed nav item search keywords", () => {
+    for (const item of NAV_ITEMS) {
+      expect(item.keywords, item.label).toBeTruthy();
+    }
+  });
+
+  it("matches detail routes through activePrefixes while the dashboard stays exact", () => {
+    const directory = NAV_GROUPS.find((group) => group.key === "markets")?.items.find(
+      (item) => item.href === "/stablecoins/",
+    );
+    const dashboard = NAV_ITEMS.find((item) => item.href === "/");
+
+    // Coin profiles share no route prefix with the directory; only the
+    // explicit activePrefixes bridge them.
+    expect(isNavItemActive("/stablecoin/usdc-circle/", directory!)).toBe(true);
+    expect(isNavItemActive("/stablecoins/", dashboard!)).toBe(false);
   });
 });

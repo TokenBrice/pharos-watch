@@ -10,7 +10,6 @@ import {
 import {
   NAV_GROUPS,
   NAV_ITEMS,
-  BOTTOM_NAV_ITEMS,
   QUICK_NAV_ITEMS,
   normalizeNavPath,
   type NavItem,
@@ -28,7 +27,7 @@ import { PUBLIC_ROUTE_INVENTORY } from "@/lib/public-route-inventory";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Sitemap: Stablecoin Dashboard Route Index",
   description:
-    "Every public Pharos route grouped by Markets, Risk, Tools, Learn, Updates, and Pharos. The full surface area of the stablecoin dashboard on a single page.",
+    "Every public Pharos route grouped by Markets, Risk, Tools, Research, Updates & Alerts, and About Pharos. The full surface area of the stablecoin dashboard on a single page.",
   canonical: "/sitemap-tree/",
 });
 
@@ -175,11 +174,6 @@ const MORE_REFERENCE_ROUTES: readonly RouteRow[] = [
     description: "Public documentation for methods and data contracts",
   },
   {
-    href: "/start/",
-    label: "Start Here",
-    description: "Shortest route into Pharos for new and returning users",
-  },
-  {
     href: "/privacy/",
     label: "Privacy",
     description: "Privacy policy for web, API, and alert surfaces",
@@ -213,7 +207,7 @@ const TIERS: readonly TierColumn[] = [
     key: "markets",
     label: "Markets",
     kicker: "Market structure",
-    intro: "Liquidity, flows, chain distribution, peg cohorts, and launch watch.",
+    intro: "The stablecoin directory, liquidity, flows, chain distribution, and non-USD peg cohorts.",
     primary: MARKETS_GROUP?.items.map(navToRow) ?? [],
     sub: [
       {
@@ -237,28 +231,28 @@ const TIERS: readonly TierColumn[] = [
     key: "tools",
     label: "Tools",
     kicker: "Research tools",
-    intro: "Power-user surfaces for filtering, peer comparison, portfolio review, and directory browsing.",
+    intro: "Power-user surfaces for filtering, peer comparison, and portfolio review.",
     primary: TOOLS_GROUP?.items.map(navToRow) ?? [],
   },
   {
     key: "research",
     label: "Research",
     kicker: "Reference",
-    intro: "Mechanism explainers, case studies, the vocabulary, and the scoring methodology.",
+    intro: "Mechanism explainers, case studies, the vocabulary, the scoring methodology, and coverage.",
     primary: moreColumnRows("research"),
   },
   {
     key: "watch",
-    label: "Watch",
+    label: "Updates & Alerts",
     kicker: "What changed",
-    intro: "Daily digest, the unified event timeline, and push alerts.",
+    intro: "Daily digest, the unified event timeline, launch watch, and push alerts.",
     primary: moreColumnRows("watch"),
   },
   {
     key: "pharos",
-    label: "Pharos",
+    label: "About Pharos",
     kicker: "The product",
-    intro: "Product context, release notes, long-form posts, API access, and pipeline health.",
+    intro: "Start Here, product context, release notes, long-form posts, API access, and pipeline health.",
     primary: moreColumnRows("pharos"),
     sub: [
       {
@@ -281,7 +275,6 @@ const CANONICAL_NAV_LABELS = new Map(NAV_ITEMS.map((item) => [normalizeNavPath(i
 const QUICK_ROWS: readonly RouteRow[] = QUICK_NAV_ITEMS.map((item) =>
   navToRow({ ...item, label: CANONICAL_NAV_LABELS.get(normalizeNavPath(item.href)) ?? item.label }),
 );
-const BOTTOM_ROWS: readonly RouteRow[] = BOTTOM_NAV_ITEMS.map(navToRow);
 
 const HUMAN_SITEMAP_LISTED_PATHS = new Set([
   ...TIERS.flatMap((tier) => [
@@ -289,7 +282,6 @@ const HUMAN_SITEMAP_LISTED_PATHS = new Set([
     ...(tier.sub?.flatMap((group) => group.rows.map((row) => row.href)) ?? []),
   ]),
   ...QUICK_ROWS.map((row) => row.href),
-  ...BOTTOM_ROWS.map((row) => row.href),
 ]);
 
 const INDEXED_ARCHIVE_ROWS: readonly RouteRow[] = PUBLIC_ROUTE_INVENTORY
@@ -381,7 +373,7 @@ export default function SitemapTreePage() {
       path="/sitemap-tree/"
       title="All pages"
       leadParagraphs={[
-        "Every public Pharos route, grouped by the same Markets / Risk / Tools sections as the top nav, plus the Learn, Updates, and Pharos columns behind its More menu. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
+        "Every public Pharos route, grouped by the same Markets / Risk / Tools sections as the top nav, plus the Research, Updates & Alerts, and About Pharos columns behind its Resources menu. Use this when you want to see the whole surface area in one place, or when you remember the section but not the slug.",
       ]}
     >
       <div className="grid gap-10 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 xl:gap-8">
@@ -390,7 +382,7 @@ export default function SitemapTreePage() {
         ))}
       </div>
 
-      {(QUICK_ROWS.length > 0 || BOTTOM_ROWS.length > 0) && (
+      {QUICK_ROWS.length > 0 && (
         <section
           aria-labelledby="sitemap-quick-access"
           className="mt-10 space-y-4 border-t border-border/60 pt-8"
@@ -404,11 +396,11 @@ export default function SitemapTreePage() {
               Daily entry points
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              The routes promoted to the masthead quick rail, plus the guided entry point for new readers.
+              The routes promoted to the masthead quick rail.
             </p>
           </header>
           <ul className="grid gap-0.5 sm:grid-cols-2">
-            {[...QUICK_ROWS, ...BOTTOM_ROWS].map((row) => (
+            {QUICK_ROWS.map((row) => (
               <li key={row.href}>
                 <RouteRowLink row={row} />
               </li>

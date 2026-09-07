@@ -65,14 +65,14 @@ what shipped, what's next, and why.
   llms.txt regeneration.
 - **Discovery** is wired once and needs no per-post work: the sitemap, the
   sitemap-tree page, and the RSS feed enumerate posts straight from the
-  registry; the nav `More` menu's `Updates` column, footer, command palette,
+  registry; the nav `Resources` menu's `Updates & Alerts` column, footer, command palette,
   and the feed `<link>` in `layout.tsx` are static links to the `/blog/` hub
   and `/feed/blog.xml`.
 
 ## Changelog
 
 `/changelog/` is the other half of the boundary above: one entry per week,
-linked from the nav `More` menu's `Updates` column (`src/lib/nav-config.ts`).
+linked from the nav `Resources` menu's `Updates & Alerts` column (`src/lib/nav-config.ts`).
 It shares nothing with the blog contract — separate registry, no post bodies,
 no RSS feed.
 
