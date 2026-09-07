@@ -154,6 +154,40 @@ describe("normalizeDefiLlamaDetailBody", () => {
     });
   });
 
+  it.each(["circulating", "totalCirculating"])("fills missing USD totals from %s and the detail price", (field) => {
+    const body = JSON.stringify({
+      price: 0.99,
+      tokens: [
+        { date: 1_700_000_000, [field]: { peggedUSD: 100 } },
+        { date: 1_700_086_400, [field]: { peggedUSD: 200 } },
+        { date: 1_700_172_800, [field]: { peggedUSD: 0 } },
+      ],
+    });
+
+    const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }));
+    expect(normalized.tokens).toEqual([100, 200, 0].map((supply, index) => ({
+      date: 1_700_000_000 + index * 86_400,
+      [field]: { peggedUSD: supply },
+      totalCirculating: { peggedUSD: supply },
+      totalCirculatingUSD: { peggedUSD: supply * 0.99 },
+    })));
+  });
+
+  it.each([undefined, null, 0, -1, "1"])("does not invent USD totals with invalid price %s", (price) => {
+    const body = JSON.stringify({ price, tokens: [{ circulating: { peggedUSD: 100 } }] });
+    const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }));
+    expect(normalized.tokens[0].totalCirculatingUSD).toBeUndefined();
+  });
+
+  it("preserves explicit zero USD totals", () => {
+    const body = JSON.stringify({
+      price: 0.99,
+      tokens: [{ circulating: { peggedUSD: 100 }, totalCirculatingUSD: { peggedUSD: 0 } }],
+    });
+    const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }));
+    expect(normalized.tokens[0].totalCirculatingUSD).toEqual({ peggedUSD: 0 });
+  });
+
   it("overrides stale DefiLlama top-level address with the curated registry contract", () => {
     const body = JSON.stringify({
       address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
