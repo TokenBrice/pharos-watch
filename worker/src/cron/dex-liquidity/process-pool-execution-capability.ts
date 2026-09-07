@@ -22,6 +22,8 @@ import {
   buildUniswapV4MeasuredExecutionTarget,
   buildUniV3MeasuredExecutionTarget,
   parseUniV3FeePips,
+  type UniV3ExecutionCandidate,
+  type UniswapV4ExecutionCandidate,
 } from "../measured-execution/inventory";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
@@ -189,6 +191,40 @@ export function applyRegisteredExecutionTargetOutput(
     if (value === undefined) delete extra[key];
     else Object.assign(extra, { [key]: value });
   }
+}
+
+function findExactUniV3Candidates(
+  candidatesByKey: ReadonlyMap<string, readonly UniV3ExecutionCandidate[]>,
+  chain: string,
+  poolId: string,
+): UniV3ExecutionCandidate[] {
+  const exactPoolKey = canonicalExitRouteAssetKey(chain, poolId);
+  const matches: UniV3ExecutionCandidate[] = [];
+  for (const candidates of candidatesByKey.values()) {
+    for (const candidate of candidates) {
+      if (canonicalExitRouteAssetKey(candidate.chain, candidate.poolAddress) === exactPoolKey) {
+        matches.push(candidate);
+      }
+    }
+  }
+  return matches;
+}
+
+function findExactUniswapV4Candidates(
+  candidatesByKey: ReadonlyMap<string, readonly UniswapV4ExecutionCandidate[]>,
+  chain: string,
+  poolId: string,
+): UniswapV4ExecutionCandidate[] {
+  const exactPoolKey = canonicalExitRouteAssetKey(chain, poolId);
+  const matches: UniswapV4ExecutionCandidate[] = [];
+  for (const candidates of candidatesByKey.values()) {
+    for (const candidate of candidates) {
+      if (canonicalExitRouteAssetKey(candidate.chain, candidate.poolId) === exactPoolKey) {
+        matches.push(candidate);
+      }
+    }
+  }
+  return matches;
 }
 
 /**
@@ -825,7 +861,11 @@ export function buildPoolExecutionCapability(
       : null;
 
   const uniV3FeePips =
-    protocol === "uniswap-v3" ? parseUniV3FeePips(pool.poolMeta) : null;
+    protocol === "uniswap-v3"
+      ? parseUniV3FeePips(pool.poolMeta) ??
+        enrichment.feeTierForExtra ??
+        null
+      : null;
   const uniV3ExecutionKey =
     protocol === "uniswap-v3"
       ? buildUniV3ExecutionCandidateKey(
@@ -834,9 +874,15 @@ export function buildPoolExecutionCapability(
           uniV3FeePips,
         )
       : null;
-  const uniV3Candidates = uniV3ExecutionKey
+  const keyedUniV3Candidates = uniV3ExecutionKey
     ? (context.uniV3ExecutionCandidates.get(uniV3ExecutionKey) ?? [])
     : [];
+  const exactUniV3Candidates =
+    protocol === "uniswap-v3"
+      ? findExactUniV3Candidates(context.uniV3ExecutionCandidates, chainNorm, pool.pool)
+      : [];
+  const uniV3Candidates =
+    exactUniV3Candidates.length > 0 ? exactUniV3Candidates : keyedUniV3Candidates;
   const uniV3MeasuredTarget =
     protocol === "uniswap-v3" && uniV3Candidates.length === 1
       ? buildUniV3MeasuredExecutionTarget({
@@ -861,9 +907,17 @@ export function buildPoolExecutionCapability(
           uniswapV4FeePips,
         )
       : null;
-  const uniswapV4Candidates = uniswapV4ExecutionKey
+  const keyedUniswapV4Candidates = uniswapV4ExecutionKey
     ? (context.uniswapV4ExecutionCandidates.get(uniswapV4ExecutionKey) ?? [])
     : [];
+  const exactUniswapV4Candidates =
+    protocol === "uniswap-v4"
+      ? findExactUniswapV4Candidates(context.uniswapV4ExecutionCandidates, chainNorm, pool.pool)
+      : [];
+  const uniswapV4Candidates =
+    exactUniswapV4Candidates.length > 0
+      ? exactUniswapV4Candidates
+      : keyedUniswapV4Candidates;
   const uniswapV4MeasuredTarget =
     protocol === "uniswap-v4" && uniswapV4Candidates.length === 1
       ? buildUniswapV4MeasuredExecutionTarget({
@@ -877,6 +931,7 @@ export function buildPoolExecutionCapability(
           capturedAt: context.measuredTargetCapturedAt,
         })
       : null;
+
   const measuredExecutionTarget =
     curveCryptoSwapMeasuredTarget ??
     curveStableSwapNgMeasuredTarget ??
@@ -917,6 +972,12 @@ export function buildPoolExecutionCapability(
       poolAddress: pool.pool,
       tokenAddresses: pool.underlyingTokens ?? [],
       tokenSymbols: parsePoolSymbols(pool.symbol),
+      confirmedStable:
+        protocol === "aerodrome"
+          ? context.aerodromeIsStable.get(
+              canonicalExitRouteAssetKey(chainNorm, pool.pool),
+            )
+          : undefined,
     });
   const executionCapabilityGate =
     curveExecutionCapability.gate &&
@@ -925,12 +986,15 @@ export function buildPoolExecutionCapability(
     !curveCompositeMeasuredTarget
       ? curveExecutionCapability.gate
       : measuredExecutionGate;
-  const registeredTarget = buildRegisteredDexExecutionTarget({
-    context,
-    identity,
-    enrichment,
-    stablecoinId,
-  });
+  const registeredTarget =
+    measuredExecutionTarget == null
+      ? buildRegisteredDexExecutionTarget({
+          context,
+          identity,
+          enrichment,
+          stablecoinId,
+        })
+      : {};
 
   return {
     ...(curveExecutionCapability.executionModel

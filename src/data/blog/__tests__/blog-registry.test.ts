@@ -1,6 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- reads blog post
-   sources from the checked-in registry, rooted at process.cwd(); this test is
-   the guard that justifies the fs.readFileSync carve-out in the blog route. */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";

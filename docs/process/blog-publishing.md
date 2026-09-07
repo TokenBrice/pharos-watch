@@ -13,6 +13,7 @@ what shipped, what's next, and why.
   `src/app/blog/[slug]/page.tsx` (react-markdown, `remarkGfm` + `rehypeSlug` — no
   heading autolinks, unlike `/docs`).
 - **Hub:** `src/app/blog/page.tsx` lists posts newest-first.
+- **Publication line:** post headers credit Pharos and link to `/about/#editorial-ai-policy`, matching the Article-family organization author. The visible published date comes from the registry, not git modification time; it makes no human-review claim.
 - **Feed:** `src/app/feed/blog.xml/route.ts` → `/feed/blog.xml` (the legacy
   extensionless `/feed/blog` path is a `_redirects` 301).
 - **Homepage banner:** `src/components/home-blog-banner.tsx` advertises the
@@ -64,15 +65,16 @@ what shipped, what's next, and why.
   llms.txt regeneration.
 - **Discovery** is wired once and needs no per-post work: the sitemap, the
   sitemap-tree page, and the RSS feed enumerate posts straight from the
-  registry; the nav Reference group, footer, command palette, and the feed
-  `<link>` in `layout.tsx` are static links to the `/blog/` hub and
-  `/feed/blog.xml`.
+  registry; the nav `More` menu's `Updates` column, footer, command palette,
+  and the feed `<link>` in `layout.tsx` are static links to the `/blog/` hub
+  and `/feed/blog.xml`.
 
 ## Changelog
 
 `/changelog/` is the other half of the boundary above: one entry per week,
-linked from the global utility nav (`src/lib/nav-config.ts`). It shares nothing
-with the blog contract — separate registry, no post bodies, no RSS feed.
+linked from the nav `More` menu's `Updates` column (`src/lib/nav-config.ts`).
+It shares nothing with the blog contract — separate registry, no post bodies,
+no RSS feed.
 
 - **Registry:** one file per week at `src/data/changelogs/<dateRange.to>.ts`
   exporting `entry`, imported into the `src/data/changelogs/index.ts` barrel,

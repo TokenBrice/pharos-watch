@@ -66,7 +66,7 @@ The route renders:
    - `/openapi.json`
    - `/postman/pharos-api.postman_collection.json`
    - `/postman/pharos-api.postman_environment.json`
-6. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`; Dataset nodes that use `includedInDataCatalog` include the catalog `@id`, `name`, and `url` so Google can validate the nested catalog reference in isolation
+6. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`; Dataset nodes that use `includedInDataCatalog` include the catalog `@id`, `name`, and `url` so Google can validate the nested catalog reference in isolation. The `public-datasets` section renders the four mirror descriptions from `PUBLIC_DATASET_JSON_LD_DESCRIPTORS` with JSON, CSV, NDJSON and Sheets CSV links, explicitly distinguishing published snapshots from live API responses. Each mirror Dataset's `url` and `sameAs` target the matching visible `/about/api/#dataset-<topic>` description; stable Dataset IDs and `distribution.contentUrl` downloads are unchanged.
 7. A visible API access FAQ rendered with matching `FAQPage` JSON-LD
 8. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
 9. A top-level scrollspy rail driven by the concise rendered H2 sections and the endpoint directory
@@ -89,6 +89,7 @@ The route renders:
 Inline rendering supports:
 
 - inline code
+- inline code wraps long host lists, token examples and paths at narrow widths; fenced code blocks retain their own horizontal scrolling
 - bold text
 - absolute `http(s)` links
 - root-relative site links

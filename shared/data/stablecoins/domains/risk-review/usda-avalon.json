@@ -181,7 +181,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (15,057 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x423e47f9bcb654b4aeac93fb5dbd710850e17ab4 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
-        "controllerAddress": "0x9356086146be5158e98ad827e21b5cf944699894",
+        "controllerAddress": "0x423e47f9bcb654b4aeac93fb5dbd710850e17ab4",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:bsc:0x9356086146be5158e98ad827e21b5cf944699894"
@@ -214,7 +214,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (15,057 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x12c71f3611234e5e4175de656fc37e6402299968 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "mantle",
-        "controllerAddress": "0x075df695b8e7f4361fa7f8c1426c63f11b06e326",
+        "controllerAddress": "0x12c71f3611234e5e4175de656fc37e6402299968",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:mantle:0x075df695b8e7f4361fa7f8c1426c63f11b06e326"
@@ -247,7 +247,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x8773c75c83d497135cef197bd862930a04da77ff (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "klaytn",
-        "controllerAddress": "0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6",
+        "controllerAddress": "0x8773c75c83d497135cef197bd862930a04da77ff",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:klaytn:0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6"
@@ -280,7 +280,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30362 = Berachain). owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "berachain",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -346,7 +346,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (24,005-byte LayerZero endpoint, eid() = 30369 = Nibiru). owner() = 5-of-6 Safe 0xfe0a8730c0a782d7db369e70ceb5f009d25d4f43 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "nibiru",
-        "controllerAddress": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
+        "controllerAddress": "0xfe0a8730c0a782d7db369e70ceb5f009d25d4f43",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:nibiru:0xf4e097e36d2064e2bdca96e60439f3a369522003"
@@ -379,7 +379,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30332 = Sonic). owner() = 5-of-6 Safe 0x2c14c3cbc8d0e11a9eafe8289813edbb98b7445b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "sonic",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0x2c14c3cbc8d0e11a9eafe8289813edbb98b7445b",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:sonic:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -412,7 +412,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 (eth_getCode = 0 on Taiko; one of the six Avalon Safe signers). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "taiko",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0xd955f0c167adbf7d553fc4d59a964a1b115cc093",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:taiko:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -445,7 +445,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "sei",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:sei:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -478,7 +478,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30314 = Bitlayer). owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bitlayer",
-        "controllerAddress": "0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
+        "controllerAddress": "0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:bitlayer:0x91bd7f5e328aecd1024e4118ade0ccb786f55db1"
@@ -511,7 +511,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (15,057 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x61e7b331622b4dbbe22d70d1772af96a64fa2f72 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. The ethereum OFT's peers(30184) returns exactly this address (configured mesh peer), and totalSupply = 48.925168 USDa matches DefiLlama's Base balance exactly. A legacy USDa deployment also exists on Base at 0xff12470a969dd362eb6595ffb44c82c959fe9acc (same 15,057-byte OFT code, EOA owner) but holds zero totalSupply and is not the tracked deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
-        "controllerAddress": "0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f",
+        "controllerAddress": "0x61e7b331622b4dbbe22d70d1772af96a64fa2f72",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:base:0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f"
@@ -544,7 +544,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x691f73f1ff3e915667441bc5e08b4decf222aa26 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30106) on the ethereum OFT returns exactly this address; totalSupply = 4.0 USDa matches DefiLlama's Avalanche balance.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "avalanche",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0x691f73f1ff3e915667441bc5e08b4decf222aa26",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:avalanche:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -577,7 +577,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (69,856 bytes). endpoint() = 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf (LayerZero endpoint on ZKsync Era, eid() = 30165). owner() = EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 (eth_getCode = 0 on ZKsync Era; one of the six Avalon Safe signers). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30165) on the ethereum OFT returns exactly this address; totalSupply = 10 USDa matches DefiLlama's ZKsync Era balance.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "zksync",
-        "controllerAddress": "0xb8d7d88d042880ae87bb61de2dfff8441768766d",
+        "controllerAddress": "0xd955f0c167adbf7d553fc4d59a964a1b115cc093",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:zksync:0xb8d7d88d042880ae87bb61de2dfff8441768766d"
@@ -610,7 +610,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30279) on the ethereum OFT returns exactly this address; totalSupply = 22.00267 USDa matches DefiLlama's BOB balance. name()/symbol() = USDa/USDa.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bob",
-        "controllerAddress": "0x250fc55c82bce84c991ba25698a142b21cdc778a",
+        "controllerAddress": "0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:bob:0x250fc55c82bce84c991ba25698a142b21cdc778a"
@@ -643,7 +643,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint on Morph, eid() = 30322). owner() = 5-of-6 Safe 0x00ab697b428250ab40a31a11c258215feb3d3a65 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30322) on the ethereum and BSC OFTs returns exactly this address; totalSupply = 131.421519 USDa matches DefiLlama's Morph balance.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "morph-l2",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0x00ab697b428250ab40a31a11c258215feb3d3a65",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:morph-l2:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -676,7 +676,7 @@
         "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint on Zircuit, eid() = 30303). owner() = EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 (eth_getCode = 0 on Zircuit; one of the six Avalon Safe signers). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30303) on the ethereum OFT returns exactly this address; totalSupply = 18.780684 USDa matches DefiLlama's Zircuit balance exactly.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "zircuit",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0xd955f0c167adbf7d553fc4d59a964a1b115cc093",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:zircuit:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
@@ -709,7 +709,7 @@
         "reviewNote": "Verified 2026-07-20 via the Corn Blockscout explorer (all public Corn RPCs are key-gated or rate-limited, so evidence is the verified contract source plus explorer-indexed event logs rather than direct eth_call). The contract is source-verified as Avalon's USDa OFT (contract USDa is OFT, AccessControl, Pausable; MINT_ROLE/BURN_ROLE/ADMIN_ROLE/MANAGER_ROLE/PAUSE_ROLE, blacklist), constructor _lzEndpoint = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, _delegate = 0xd955f0c167adbf7d553fc4d59a964a1b115cc093. Event logs: OwnershipTransferred 0x0 -> 0xd955f0c1... (deploy) then -> 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (block 107627), the same 5-of-6 Avalon Safe used on berachain/sei/bitlayer/bob; RoleGranted DEFAULT_ADMIN_ROLE and ADMIN_ROLE to that Safe, and MINT_ROLE + BURN_ROLE to 0x2152282f361d6345ada3b8a9476b5d8174d4973a. DefiLlama reports zero Corn supply (explorer total_supply 58.34 USDa, 17 holders).",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "corn",
-        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "controllerAddress": "0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b",
         "failureDomainKeys": [
           "protocol:layerzero",
           "contract:corn:0xff12470a969dd362eb6595ffb44c82c959fe9acc"

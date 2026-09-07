@@ -207,6 +207,30 @@ export function runGitleaksConfigSelfTest(
         `Credential-shaped Falcon-path control was not detected (status ${credentialControl.status ?? "unknown"})`,
       );
     }
+
+    rmSync(fixturePath);
+    const solanaMint = ["Cfuy5T6osdazUeLego5LF", "ycBQebm9PP3H7VNdCndXXEN"].join("");
+    const gitbookUuid = ["54e9714e-c65f-4b0c", "-8bcf-c7869956dd20"].join("");
+    const publicControls = [
+      {
+        path: "shared/data/stablecoins/domains/risk-review/usdh-hubble.json",
+        value: { key: `kamino-ktoken:${solanaMint}` },
+      },
+      {
+        path: "shared/data/stablecoins/coins/xaum-matrixdock.json",
+        value: { url: `https://2505056629-files.gitbook.io/a.pdf?alt=media&token=${gitbookUuid}` },
+      },
+    ];
+    const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");
+    for (const control of publicControls) {
+      const path = resolve(root, control.path);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, `${JSON.stringify(control.value)}\n`);
+      if (scan().status !== 0) throw new Error(`Public identifier control failed: ${control.path}`);
+      writeFileSync(path, `${JSON.stringify({ ...control.value, aws_access_key_id: awsKey })}\n`);
+      if (scan().status !== 1) throw new Error(`Mixed-line credential was hidden: ${control.path}`);
+      rmSync(path);
+    }
   } finally {
     rmSync(root, { force: true, recursive: true });
   }

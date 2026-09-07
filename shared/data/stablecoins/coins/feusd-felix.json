@@ -80,7 +80,7 @@
           "risk": "very-high"
         },
         {
-          "name": "kHYPE (KittenFinance)",
+          "name": "kHYPE (Kinetiq)",
           "holder": "0xbfd0b103a49faf426f36864d19f5d871bf411a5a",
           "token": {
             "chain": "hyperevm",

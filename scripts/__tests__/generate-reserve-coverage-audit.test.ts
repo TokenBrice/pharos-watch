@@ -209,13 +209,57 @@ describe("generate-reserve-coverage-audit", () => {
             uncertainty: "Provider shares are not disclosed.",
           },
         }),
+        coin({
+          id: "aup",
+          symbol: "AUP",
+          reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+          reserveReview: {
+            reviewedAt: "2026-07-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Review", url: "https://example.com/review" }],
+            rationale: "Fixture review rationale",
+            compositionBasis: "Fixture disclosure",
+            compositionAsOf: "2026-07-01",
+            scope: "full-composition",
+            knownUnknownExposure: "No material known unknown exposure.",
+            knownUnknownExposurePct: 0,
+          },
+          proofOfReserves: {
+            type: "agreed-upon-procedures",
+            url: "https://example.com/proof",
+            cadence: "monthly",
+          },
+        }),
+        coin({
+          id: "attested",
+          symbol: "ATT",
+          reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+          reserveReview: {
+            reviewedAt: "2026-07-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Review", url: "https://example.com/review" }],
+            rationale: "Fixture review rationale",
+            compositionBasis: "Fixture disclosure",
+            compositionAsOf: "2026-07-01",
+            scope: "full-composition",
+            knownUnknownExposure: "No material known unknown exposure.",
+            knownUnknownExposurePct: 0,
+          },
+          proofOfReserves: {
+            type: "attestation",
+            url: "https://example.com/proof",
+            cadence: "monthly",
+          },
+        }),
       ],
       generatedAt: "2026-07-13T00:00:00.000Z",
     });
 
     expect(audit.summary).toMatchObject({
       activeStructuredReserveSliceCount: 1,
-      activeWithReserveReviewCount: 2,
+      activeWithReserveReviewCount: 4,
       activeMissingReserveReviewCount: 0,
       activeStaleReserveReviewCount: 1,
       activeStaleCompositionCount: 1,
@@ -223,6 +267,10 @@ describe("generate-reserve-coverage-audit", () => {
       activeOpaqueReserveSliceCount: 1,
       activeIndependentAuditCount: 2,
       activeIndependentAuditMissingLatestReportCount: 1,
+      activeAgreedUponProceduresCount: 1,
+      activeAgreedUponProceduresMissingLatestReportCount: 1,
+      activeAttestationCount: 1,
+      activeAttestationMissingLatestReportCount: 1,
       activeWithLatestProofReportCount: 1,
       activeLatestProofAssetsAndLiabilitiesCount: 1,
       activeExplicitCustodyModelCount: 2,
@@ -235,7 +283,8 @@ describe("generate-reserve-coverage-audit", () => {
       disposition: "basket-needs-split",
     });
     expect(audit.independentAuditMissingLatestReport.map((row) => row.coinId)).toEqual(["reviewed"]);
-    expect(audit.custodyConsistencyWarnings[0]?.reason).toContain("onchain custodyModel");
+    expect(audit.agreedUponProceduresMissingLatestReport.map((row) => row.coinId)).toEqual(["aup"]);
+    expect(audit.attestationMissingLatestReport.map((row) => row.coinId)).toEqual(["attested"]);
   });
 
   it("renders missing score-grade independent configs when report cards are supplied", () => {

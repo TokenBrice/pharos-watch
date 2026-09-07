@@ -17,7 +17,7 @@
         "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
       ],
       "implementationAddresses": [
-        "0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe"
+        "0x8e02392855a51D9d5d18d71a7cFC731F56c68Ea5"
       ],
       "adminAddresses": [
         "0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa",
@@ -163,47 +163,6 @@
           }
         ],
         "evidence": "At block 27099366, getOwners() returned five EOAs and getThreshold() returned 4. The Safe can propose upgrades through the 48-hour timelock but cannot execute an unscheduled upgrade."
-      },
-      {
-        "label": "yzUSD limit/restriction manager Safe (3-of-5)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "parameter-only",
-        "chain": "plasma",
-        "address": "0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
-        "deploymentRefs": [
-          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
-        ],
-        "threshold": 3,
-        "signerCount": 5,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "safe": {
-          "owners": [
-            "0x1c6aCBdC24f88cc538ca9b2A4f872019e8d39F95",
-            "0x87B39bacc760A39822807e358BF21Bd5772D7CE2",
-            "0xA92Cb0695913B0FAC4Dc87048f958105d2E2ca7c",
-            "0x1eC4d0023c89c34903026AB8A3056e5b21490483",
-            "0x0939DC5CC492C4Ba54ba1fAb0EE3B3e1B4adb60f"
-          ],
-          "threshold": 3,
-          "observedBlock": 27099366,
-          "observedAt": "2026-07-14",
-          "source": "onchain"
-        },
-        "observedAt": "2026-07-14",
-        "observedBlock": 27099366,
-        "sources": [
-          {
-            "label": "Plasmascan 3-of-5 manager Safe",
-            "url": "https://plasmascan.to/address/0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d#readContract"
-          },
-          {
-            "label": "Plasma RPC fixed-block role and Safe reads",
-            "url": "https://plasma.drpc.org"
-          }
-        ],
-        "evidence": "RoleGranted/RoleRevoked logs reconciled with current hasRole calls at block 27099366 show this 3-of-5 Safe directly holds both LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE. Its five owners are the same as the 4-of-5 upgrade Safe's, but its threshold is 3."
       },
       {
         "label": "yzUSD limit/restriction timelock (12 hours)",

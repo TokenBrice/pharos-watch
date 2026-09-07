@@ -6,7 +6,7 @@
       "pct": 100,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Apollo Crypto (strategy manager) via Midas mAPOLLO liquid-yield token",
+      "issuerOrObligor": "Midas Software GmbH (certificate issuer and obligor); ACM International Ltd is the investment manager of the notional reference portfolio, not the obligor.",
       "riskFactors": [
         "basis",
         "counterparty",

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "WHYPE",
-      "pct": 79,
+      "pct": 82.7,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Hyperliquid native HYPE asset and WHYPE wrapper",
@@ -11,17 +11,17 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "kHYPE (KittenFinance)",
-      "pct": 14.1,
+      "name": "kHYPE (Kinetiq)",
+      "pct": 8.2,
       "risk": "very-high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "KittenFinance liquid-staking protocol",
+      "issuerOrObligor": "Kinetiq liquid-staking protocol",
       "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "UBTC (bridged Bitcoin)",
-      "pct": 4.9,
+      "pct": 6,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "UBTC bridge and Bitcoin custody operators",
@@ -30,7 +30,7 @@
     },
     {
       "name": "wstHYPE",
-      "pct": 2,
+      "pct": 3.1,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Hyperliquid liquid-staking protocol and wstHYPE wrapper",
@@ -39,7 +39,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
+    "reviewedAt": "2026-09-04",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -49,12 +49,16 @@
       },
       {
         "label": "Felix CollateralRegistry 0x9de1e57049c475736289cb006212f3e1dce4711b",
-        "url": "https://explorer.hyperliquid.xyz/address/0x9de1e57049c475736289cb006212f3e1dce4711b"
+        "url": "https://hyperevmscan.io/address/0x9de1e57049c475736289cb006212f3e1dce4711b"
+      },
+      {
+        "label": "DefiLlama current Felix collateral token prices",
+        "url": "https://coins.llama.fi/prices/current/hyperevm%3A0x5555555555555555555555555555555555555555,hyperevm%3A0xfd739d4e423301ce9385c1fb8850539d657c296d,hyperevm%3A0xefbd9cfe88235f0e648aefb52c8e8dc152a9ad6f,hyperevm%3A0x94e8396e0869c9f2200760af0621afd240e1cf38"
       }
     ],
-    "rationale": "The independent Liquity-branch snapshot observed at 2026-07-15T12:13:55Z enumerates the same four collateral branches as Felix's official CollateralRegistry. The live weights are retained exactly and each non-stable crypto collateral is classified as an exogenous asset with its protocol, bridge, custody, liquidity, and market failure domains. The pinned 2026-07-14 mechanism journal independently verifies the four-branch registry and active-pool balances.",
-    "compositionBasis": "Independent Felix branch balances observed at 2026-07-15T12:13:55Z",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The independent Liquity-branch snapshot observed at 2026-09-04 enumerates the same four collateral branches as Felix's official CollateralRegistry. Latest HyperEVM calls returned 337,030.2850 WHYPE, 32,560.0295 kHYPE, 26.181784 feUBTC, and 12,220.7422 wstHYPE; DefiLlama prices normalized these to approximately 82.7%, 8.2%, 6.0%, and 3.1%. Each non-stable crypto collateral is classified as an exogenous asset with its protocol, bridge, custody, liquidity, and market failure domains.",
+    "compositionBasis": "Independent Felix branch balances observed at 2026-09-04 and valued with current DefiLlama collateral-token prices",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
     "knownUnknownExposure": "Every captured branch is identified and classified; the collateral assets are untracked exogenous cryptoassets rather than unresolved baskets.",
     "knownUnknownExposurePct": 0,
@@ -62,28 +66,28 @@
       {
         "reserveIndex": 0,
         "reserveName": "WHYPE",
-        "pct": 79,
+        "pct": 82.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WHYPE is an exogenous crypto collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "kHYPE (KittenFinance)",
-        "pct": 14.1,
+        "reserveName": "kHYPE (Kinetiq)",
+        "pct": 8.2,
         "disposition": "untracked-exogenous-asset",
         "rationale": "kHYPE is an exogenous liquid-staking collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "UBTC (bridged Bitcoin)",
-        "pct": 4.9,
+        "pct": 6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "UBTC is an exogenous bridged Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "wstHYPE",
-        "pct": 2,
+        "pct": 3.1,
         "disposition": "untracked-exogenous-asset",
         "rationale": "wstHYPE is an exogenous liquid-staking collateral rather than a tracked stablecoin dependency."
       }

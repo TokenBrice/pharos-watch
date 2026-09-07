@@ -926,6 +926,14 @@ async function executeBackfillSupplyHistory(
 
   for (const meta of coins) {
     throwIfAborted(signal);
+    // Historical totalSupply eligibility is independent of the configured detail
+    // provider. Keep this path ahead of provider dispatch so correcting an asset's
+    // provider does not silently remove its on-chain supply fallback.
+    if (HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS.has(meta.id)) {
+      await runCoinGeckoMarketChartBackfill(meta, "CoinGecko backfill failed");
+      continue;
+    }
+
     // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
     const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
     if (isCommodity && meta.geckoId) {

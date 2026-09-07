@@ -86,6 +86,19 @@ vi.mock("../evm-rpc", () => ({
   resolveClosestBlockAtOrBeforeTimestamp: (...args: unknown[]) => resolveClosestBlockAtOrBeforeTimestampMock(...args),
 }));
 
+const kavaFetchLivePriceMock = vi.fn();
+
+vi.mock("../authoritative-price-sources/kava-pricefeed", async (importOriginal) => {
+  const actual = await importOriginal<typeof KavaPricefeedModule>();
+  return {
+    ...actual,
+    kavaUsdxPricefeedProvider: {
+      ...actual.kavaUsdxPricefeedProvider,
+      fetchLivePrice: (...args: unknown[]) => kavaFetchLivePriceMock(...args),
+    },
+  };
+});
+
 vi.mock("../../api/backfill-price-sources", () => ({
   fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
 }));
@@ -104,9 +117,11 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   encodeUint256,
   fetchVaultAssetsPerShareViaSelector,
+  VALIDATED_LIVE_PRICE_NO_QUOTE,
   type Erc4626NavVaultConfig,
   type PriceSourceProvider,
 } from "../authoritative-price-sources/helpers";
+import type * as KavaPricefeedModule from "../authoritative-price-sources/kava-pricefeed";
 import { asset, fetchLiveOverrides, freshParent, unpricedChild } from "./authoritative-price-sources.test-support";
 import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -563,6 +578,76 @@ describe("authoritative-price-sources", () => {
       consecutiveFailures: 1,
     });
     warnSpy.mockRestore();
+  });
+
+  it("heals the asset-scoped circuit after a validated no-quote result without publishing a price", async () => {
+    kavaFetchLivePriceMock.mockReset().mockResolvedValue(VALIDATED_LIVE_PRICE_NO_QUOTE);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchLiveOverrides([unpricedChild("usdx-kava")], { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      emptyCount: 1,
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+  });
+
+  it("records a dedicated circuit success when the asset-scoped provider publishes an override", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    kavaFetchLivePriceMock.mockReset().mockResolvedValue({
+      price: 0.66,
+      source: "kava-pricefeed",
+      confidence: "high",
+      observedAt: nowSec,
+    });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const overrides = await fetchLiveOverrides([unpricedChild("usdx-kava")], { db });
+
+    expect(overrides.get("usdx-kava")).toMatchObject({
+      price: 0.66,
+      source: "kava-pricefeed",
+      confidence: "high",
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
   });
 
   it("records parent-derived live RPC nulls as grouped protocol-redeem failures", async () => {

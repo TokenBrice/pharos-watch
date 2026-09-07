@@ -562,16 +562,6 @@ async function fetchAnalytics(
   return parseAnalyticsEnvelope(payload);
 }
 
-export async function getCacheBlobSizes(db: D1Database): Promise<Record<string, number>> {
-  const rows = await db
-    .prepare("SELECT key, LENGTH(value) as bytes FROM cache")
-    .all<{ key: string; bytes: number }>();
-  const sizes: Record<string, number> = {};
-  for (const row of rows.results ?? []) {
-    sizes[row.key] = row.bytes;
-  }
-  return sizes;
-}
 
 export async function getD1UsageSummary(
   config: CloudflareD1StatusConfig,

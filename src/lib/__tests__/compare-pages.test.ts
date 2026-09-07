@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   buildComparisonAtAGlanceRows,
+  buildComparisonFaqItems,
   buildComparisonSnippetAnswer,
   buildStaticComparisonJsonLd,
+  getStaticComparisonPagesForCoin,
   STATIC_COMPARE_PAIRS,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
@@ -26,6 +28,29 @@ describe("compare page blacklist copy", () => {
 });
 
 describe("STATIC_COMPARISON_PAGES", () => {
+  it("keeps sourced editorial bounded and prioritizes it without reordering other pairs", () => {
+    const enriched = STATIC_COMPARISON_PAGES.filter((page) => page.editorial);
+    expect(enriched.map((page) => page.slug)).toEqual([
+      "usde-ethena-vs-susde-ethena", "paxg-paxos-vs-xaut-tether", "usdc-circle-vs-usdg-paxos",
+    ]);
+    for (const page of enriched) {
+      expect(page.intro).toBe(page.editorial!.intro);
+      expect(buildComparisonSnippetAnswer(page).answer).toBe(page.editorial!.answer);
+      expect(buildComparisonFaqItems(page)[0].answer).toBe(page.editorial!.answer);
+      expect(page.editorial!.sections).toHaveLength(2);
+      for (const section of page.editorial!.sections) {
+        expect(section.sources.length).toBeGreaterThan(0);
+        expect(section.sources.every((source) => new URL(source.href).protocol === "https:")).toBe(true);
+      }
+      expect(getStaticComparisonPagesForCoin(page.left.id)[0]).toBe(page);
+    }
+    const original = STATIC_COMPARISON_PAGES.filter((page) =>
+      (page.left.id === "usdc-circle" || page.right.id === "usdc-circle") && !page.editorial,
+    );
+    expect(getStaticComparisonPagesForCoin("usdc-circle").filter((page) => !page.editorial)).toEqual(original);
+    expect(getStaticComparisonPagesForCoin("unknown-coin")).toEqual([]);
+  });
+
   it("keeps the static pair set capped", () => {
     // The cap is a deliberate brake on programmatic expansion: pairs ship in
     // reviewed, demand-led batches (SEO growth plan 2026-07-09, P1.3), never

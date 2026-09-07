@@ -1,6 +1,6 @@
 import type { CaseStudy } from "@/lib/case-studies/types";
 
-export const CASE_STUDY_WORDS_PER_MINUTE = 200;
+const CASE_STUDY_WORDS_PER_MINUTE = 200;
 
 function caseStudyReadableText(study: CaseStudy): string {
   return [

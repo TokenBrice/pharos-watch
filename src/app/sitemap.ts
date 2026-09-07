@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getActiveChainIds } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
@@ -17,6 +17,8 @@ import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
+import aiSummaries from "../../data/ai-summaries.json";
+import type { StablecoinAiSummariesById } from "@shared/types";
 import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
 import { changelogs } from "@/data/changelogs";
 import { BLOG_POSTS } from "@/data/blog";
@@ -36,6 +38,7 @@ export const dynamic = "force-static";
 const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = CostsFileSchema.parse(costsData);
 const fundingDonations = DonationsFileSchema.parse(donationsData);
+const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 
 type SitemapChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
 type StaticPageSpec = readonly [
@@ -75,6 +78,13 @@ function fundingLastModified(): Date {
   );
 }
 
+/** A summary edit belongs to this profile, not every row in its shared JSON file. */
+function stablecoinLastModified(id: string): Date {
+  const edited = lastEdited(buildStablecoinUrl(id));
+  const summaryMs = Date.parse(typedSummaries[id]?.updatedAt ?? "");
+  return Number.isFinite(summaryMs) && summaryMs > edited.getTime() ? new Date(summaryMs) : edited;
+}
+
 /** /changelog/ moves when a new weekly entry lands, not with the daily data snapshot. */
 function changelogLastModified(): Date {
   return new Date(
@@ -104,6 +114,7 @@ function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]):
     Math.max(
       lastEdited(buildStablecoinUrl(page.left.id)).getTime(),
       lastEdited(buildStablecoinUrl(page.right.id)).getTime(),
+      page.editorial ? new Date(page.editorial.updatedAt).getTime() : 0,
     ),
   );
 }
@@ -169,6 +180,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/about/": ["monthly", 0.5],
     "/about/api/": ["monthly", 0.5],
     "/about/bluechip/": ["monthly", 0.5],
+    "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
     "/learn/": ["monthly", 0.5],
     "/learn/glossary/": ["monthly", 0.5],
     "/sitemap-tree/": ["monthly", 0.3],
@@ -198,9 +210,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...buildStaticSitemapEntries(referencePageSpecs, lastEdited),
   ];
 
-  const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({
+  const stablecoinPages: MetadataRoute.Sitemap = CLIENT_TRACKED_STABLECOINS.map((coin) => ({
     url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-    lastModified: lastEdited(buildStablecoinUrl(coin.id)),
+    lastModified: stablecoinLastModified(coin.id),
     changeFrequency: "daily" as const,
     priority: 0.6,
   }));

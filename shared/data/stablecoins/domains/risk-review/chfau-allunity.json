@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "AllUnity publishes CHFAU as an issuer-native asset on Ethereum, Polygon, Base, and Tempo. The three EVM deployments share AllUnity's deterministic UUPS proxy, implementation, minter, and admin; Tempo is an issuer-announced native TIP-20 deployment rather than an unaffiliated bridge representation.",
+    "summary": "AllUnity publishes CHFAU as an issuer-native asset on Ethereum, Polygon, Base, Tempo, and Solana. The three EVM deployments share AllUnity's deterministic UUPS proxy, implementation, minter, and admin; Tempo is an issuer-announced native TIP-20 deployment, and Solana is an issuer-listed Token-2022 mint with direct mint authority rather than an unaffiliated bridge representation.",
     "reviewedAt": "2026-07-21",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
@@ -135,6 +135,42 @@
             "label": "AllUnity CHFAU Tempo launch",
             "url": "https://allunity.com/news/allunitys-swiss-franc-stablecoin-chfau-goes-live-on-tempo"
           }
+        ]
+      },
+      {
+        "id": "solana:3GJfXJvPcjuAu6VQZmcs9pAXQau8nz3z88CCpBztgQSv",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "3GJfXJvPcjuAu6VQZmcs9pAXQau8nz3z88CCpBztgQSv",
+        "protocol": "AllUnity native CHFAU (Solana Token-2022)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "solana",
+        "controllerAddress": "APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Solana slot 444316617, the Token-2022 mint returned name 'AllUnity CHFAU', symbol 'CHFAU', 6 decimals, and direct mint, freeze, permanent-delegate, and pausable authority APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP; AllUnity lists this exact Solana mainnet deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 444316617,
+        "sources": [
+          {
+            "label": "AllUnity CHFAU supported blockchains",
+            "url": "https://allunity.com/chfau"
+          },
+          {
+            "label": "CHFAU Solana Token-2022 metadata",
+            "url": "https://raw.githubusercontent.com/All-Unity/stablecoins/refs/heads/main/Solana/CHFAU/metadata/meta.json"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "failureDomainKeys": [
+          "authority:solana:APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP"
         ]
       }
     ]

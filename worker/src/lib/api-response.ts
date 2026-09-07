@@ -113,30 +113,3 @@ export function cacheControlForDegradedPayload(payload: { _meta: { degraded: boo
 export function jsonFreshDegradedResponse(payload: { _meta: { degraded: boolean } }, updatedAt: number, maxAgeSec: number): Response {
   return jsonFreshResponse(payload, { cacheControl: cacheControlForDegradedPayload(payload), updatedAt, maxAgeSec });
 }
-
-export async function respondWithFreshSnapshot<T extends { updatedAt: number }>(args: {
-  load: () => Promise<T>;
-  cacheControl: string;
-  maxAgeSec: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  unavailableError: new (...a: any[]) => Error;
-  unavailableMessage: string;
-}): Promise<Response> {
-  let snapshot: T;
-  try {
-    snapshot = await args.load();
-  } catch (err) {
-    if (err instanceof args.unavailableError) {
-      return errorResponse(503, args.unavailableMessage);
-    }
-    throw err;
-  }
-  if (snapshot.updatedAt === 0) {
-    return errorResponse(503, "Data not yet available");
-  }
-  return jsonFreshResponse(snapshot, {
-    cacheControl: args.cacheControl,
-    updatedAt: snapshot.updatedAt,
-    maxAgeSec: args.maxAgeSec,
-  });
-}

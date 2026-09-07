@@ -4,13 +4,15 @@
 
 This runbook covers the three unauthenticated public POST entrypoints that authenticate with Telegram credentials inside the Worker. `api.pharos.watch` uses the canonical limiter budget shown below; requests reaching the same paths on another Worker host use a separate noncanonical-host budget.
 
-| Route                                 | Worker per-colo ceiling | Body cap |
-| ------------------------------------- | ----------------------: | -------: |
-| `POST /api/telegram-webhook`          |               2,400/min |  128 KiB |
-| `POST /api/telegram-mini-app/session` |               1,600/min |   16 KiB |
-| `POST /api/telegram-mini-app/mutate`  |               9,600/min |   16 KiB |
+| Route | Aggregate per-colo ceiling | Per-source ceiling | Body cap |
+| --- | ---: | ---: | ---: |
+| `POST /api/telegram-webhook` | 2,400/min | 1,200/min | 128 KiB |
+| `POST /api/telegram-mini-app/session` | 1,600/min | 800/min | 16 KiB |
+| `POST /api/telegram-mini-app/mutate` | 9,600/min | 4,800/min | 16 KiB |
 
 The Worker ceilings are native Cloudflare Workers [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). They are permissive, eventually consistent, and local to the Cloudflare location serving the request. They bound work; they are not exact accounting. Noncanonical hosts share a separate key per route, so preview, site-data, or ops-origin traffic cannot consume the canonical public API budget while still remaining pre-auth rate limited.
+
+Each source bucket uses the route/host-lane key plus the existing 128-bit HMAC-SHA256 client-IP hash, keyed with the Worker's `SITE_API_SHARED_SECRET`. Raw IPs never enter limiter keys or logs. Missing client IPs share an `unknown` source bucket; missing hash secret fails closed. Secret rotation resets source buckets but does not reset aggregate counters. Source admission runs first, so rejected repeats cannot spend aggregate headroom. A single source can consume at most half the route budget; distributed sources can still exhaust the aggregate cap, and shared NAT/Telegram egress shares its source ceiling. This improves single-source fairness, not guaranteed admission under distributed abuse.
 
 There are no active Telegram-specific WAF rules. The account-state source of truth, `scripts/ci/cloudflare-account-state-manifest.json`, records one deliberately disabled broad API rule because the zone's free plan has one rate-limiting slot. `wrangler deploy` installs only the Worker bindings.
 
@@ -20,7 +22,7 @@ There are no active Telegram-specific WAF rules. The account-state source of tru
 
 1. Match the exact pathname and `POST` method. `api.pharos.watch` uses the canonical route key; every other routed hostname uses the route's shared noncanonical-host key before continuing to the normal host/lane gate.
 2. Reject malformed declared `Content-Length` with `400` and declared oversize bodies with `413`.
-3. Charge the path-specific Rate Limiting binding. Exhaustion returns `429`; a missing or failed binding fails closed with `503` and `Retry-After: 1`.
+3. Charge the source-specific Rate Limiting binding, then only on success charge the existing aggregate path binding. Exhaustion of either returns `429`; a missing or failed binding/hash secret fails closed with `503` and `Retry-After: 1`.
 4. Read at most the path body cap so chunked or misleading requests cannot bypass the declared-size check.
 5. Rebuild the request from the bounded bytes without the stale `Content-Length` or `Transfer-Encoding` headers.
 6. Continue to schema parsing, webhook-secret or Mini App HMAC validation, D1, and authenticated usage analytics.
@@ -29,7 +31,7 @@ An over-budget request therefore does not read its body, execute Telegram HMAC w
 
 ## Edge WAF posture
 
-The three Worker bindings are the live pre-auth budget. Planning note (non-authoritative): if an edge rule is proposed later, first verify current Cloudflare plan capacity, then reconcile the proposal with the account-state manifest and drift fixtures in one review. An exact-path rule cannot be treated as active until the manifest records it and the read-only account-state check passes.
+The three source bindings and three aggregate bindings are the live pre-auth budget. Planning note (non-authoritative): if an edge rule is proposed later, first verify current Cloudflare plan capacity, then reconcile the proposal with the account-state manifest and drift fixtures in one review. An exact-path rule cannot be treated as active until the manifest records it and the read-only account-state check passes.
 
 ## Telemetry
 
@@ -66,6 +68,8 @@ npx wrangler deploy --dry-run --config worker/wrangler.toml --outdir /tmp/pharos
 The tests enforce exact host/path/method matching, request cost order, streamed body caps, fail-closed binding behavior, the launch-burst fixture, route isolation, telemetry fields, and Wrangler binding budgets. The account-state drift tests separately own deployed edge posture.
 
 After production rollout, verify one ordinary Mini App launch and mutation, then confirm no unexpected `429` or `503` increase. Do not generate enough requests to trip production limits merely to test the rule.
+
+The same-origin Pages CTA counter (`POST /pharoswatchbot-adoption`, forwarded to `/api/telegram-adoption`) is separate from these Telegram-authenticated routes. Pages buffers at most 512 bytes with a five-second read deadline before forwarding; declared, chunked, or understated overflow and unreadable/timed-out bodies return empty `400`, matching Worker body validation status (not `413`). Empty bodies, malformed JSON, and wrong content types within the cap remain Worker-validated. The Worker retains its independent 512-byte cap.
 
 ## Tuning And Rollback
 

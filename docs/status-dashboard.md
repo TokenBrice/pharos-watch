@@ -83,7 +83,7 @@ The active frontend operator mode is now:
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
 - Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale, or a tighter per-cache override — see "Per-cache availability overrides" below), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows and stale cache age remain stale, and cached-fallback mode degrades a lane even when the age ratio is still inside target. Stale or degraded producer-source freshness can still appear as an admin `/api/status` warning cause without becoming a public impacted-surface callout by itself until the public availability budget is breached.
 - The public mint/burn card, hero tile, and impacted-surface callout now follow the same backend lane contract as `/api/health`: sync freshness is primary, but a fresh cache still degrades publicly when the critical mint/burn lane's latest run is unhealthy
-- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and the asset-scoped `kava-pricefeed`, `jusd-citrea-bridge`, and `aznd-curve-pool` breakers remain available in raw health and admin provider diagnostics, but they do not make the public `/status/` surface report a source-wide outage. Missing output from an asset-scoped route is owned by exact active-price coverage instead. The retired `mento-broker` and `usx-stable-pools` keys remain excluded if encountered in a legacy payload but are filtered from active Worker diagnostics.
+- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and the asset-scoped `kava-pricefeed` and `aznd-curve-pool` breakers remain available in raw health and admin provider diagnostics, but they do not make the public `/status/` surface report a source-wide outage. Missing output from an asset-scoped route is owned by exact active-price coverage instead. The retired `mento-broker`, `usx-stable-pools`, and `jusd-citrea-bridge` (removed with the delisted JuiceDollar route) keys remain excluded if encountered in a legacy payload but are filtered from active Worker diagnostics.
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks
@@ -95,7 +95,7 @@ The active frontend operator mode is now:
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards/v9`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
-  - The desktop lighthouse menu enables `useHealth()` only while the menu is open. Its status link reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim.
+  - The desktop `More` menu enables `useHealth()` only while the menu is open. Its `System Status` row reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim. There is deliberately no always-on masthead health dot: it would add `/api/health` polling to every desktop page view.
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Public `/status/` browser canaries use only `/api/health`, `/api/stablecoins`, `/api/peg-summary`, `/api/dex-liquidity`, and `/api/report-cards/v9`, with `staleTime: 900_000`, `refetchInterval: 1_800_000`, `retry: 0`
@@ -201,6 +201,8 @@ Related extracted loaders:
 - Requires a valid admin credential (`requireAdmin`)
 - Response cache policy: `Cache-Control: no-store`
 
+`StatusResponseSchema` validates required fields for each retained nested section; malformed section payloads fail closed at the admin query boundary instead of being treated as typed-but-unchecked objects. Optional additive top-level fields remain passthrough-compatible, while the four retired projections listed above are not emitted.
+
 `computeRawStatus()` now performs the DB sentinel first and returns an explicit stale fallback snapshot when that sentinel fails, instead of throwing before the dashboard can show operator-visible degraded state.
 
 ### Cron health model
@@ -242,6 +244,7 @@ For the split DEX pipeline:
 - `sync-dex-liquidity` reports the exact-slot `16,46` scoring/publication consumer. Its `degraded` result retains staged source diagnostics and explicitly captures non-fatal upstream degradation or near-guard coverage drops, with machine-readable `failedSources`, `fallbackMode`, `sourceCoverage`, staged-pool merge counters, and staged skip-reason breakdowns for exact-identity vs unique-derived-identity dedup.
 - `sync-mint-burn` is now the critical lane, while `sync-mint-burn-extended` drains long-tail backlog on its own offset schedule. The status surface tracks them independently so extended backlog pressure does not mask critical freshness.
 - `crons[*].inFlight` exposes live `cron_run_progress` state (`stage`, `itemsDone`, `itemsTotal`, `message`, `updatedAt`, `stale`) for long-running leased jobs such as blacklist, mint/burn, DEX discovery, stablecoin price enrichment, and yield evaluation. The API suppresses orphaned progress rows once their matching lease is gone, so `running-stale` means "still leased but heartbeat stalled", not "some old progress row never got cleaned up". Suppressed rows and expired leases are available in `crons[*].staleArtifacts` for operator cleanup/readout.
+- `status-self-check` records its monitoring, probe, computation, and publication phases. A distinct `route-probe:<path>` stage is persisted before each selected route so abandonment evidence identifies the last entered probe without progress coalescing hiding it; a phase alone does not identify the allocation responsible for a memory termination.
 - `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec` expose running scheduled-slot rows; `budgetOnlySurface*` summary counters separately report missing, stale, or error telemetry for budget-only side work.
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
 - `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded.
@@ -347,7 +350,7 @@ Ratio-based on-chain stale/degraded thresholds are also gated until the active m
 - `stale -> degraded`: requires 2 consecutive raw degraded checks (+ stale dwell)
 - `stale -> healthy`: requires 3 consecutive raw healthy checks (+ stale dwell)
 
-`/api/health` evaluates current public-impact evidence directly and fails closed when required evidence is unreadable; it does not reuse the persisted effective state. A newly degraded sample can therefore make `/api/health` and the public `/status/` page degraded while `/api/status.overallStatus` remains healthy until the second consecutive status self-check. The desktop lighthouse menu follows `/api/health`, while operator diagnostics expose both the raw and effective states.
+`/api/health` evaluates current public-impact evidence directly and fails closed when required evidence is unreadable; it does not reuse the persisted effective state. A newly degraded sample can therefore make `/api/health` and the public `/status/` page degraded while `/api/status.overallStatus` remains healthy until the second consecutive status self-check. The desktop `More` menu's status row follows `/api/health`, while operator diagnostics expose both the raw and effective states.
 
 Additional response fields:
 
@@ -362,7 +365,7 @@ Additional response fields:
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`)
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
-- `alertBroker`: retained compatibility block with zero counts, no active keys/timestamp, and `queryFailed=false`; historical broker tables are not queried
+- Public health diagnostics such as `alertBroker` remain on `/api/health`; `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and duplicate `alertBroker` projection
 
 ### Cron error escalation
 
@@ -388,6 +391,8 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 - `blacklist`: last successful `sync-blacklist` run, not `MAX(blacklist_events.timestamp)`
 - `mintBurn`: last successful critical/extended mint-burn writer run, not `MAX(mint_burn_events.timestamp)`
 - `depegs`: last successful `sync-stablecoins` run, not `MAX(depeg_events.started_at)`
+
+The `dex_pricing_bridge_stale` diagnostic compares the `dex-liquidity` dataset publication age with its descriptor's endpoint budget (14,400 seconds; the exact boundary remains eligible). Its `dexLiquidityAgeSeconds` metric does not measure individual `dex_prices` observations, whose independent trust window remains 4,500 seconds.
 
 `dataQuality` now also exposes:
 

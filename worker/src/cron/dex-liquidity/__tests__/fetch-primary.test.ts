@@ -30,8 +30,9 @@ import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
 import type { CurvePool, LlamaPool } from "../types";
-import { buildCurveLookups, fetchDataSources } from "../fetch-primary";
+import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "../fetch-primary";
 import { buildPoolFingerprint } from "../pool-helpers";
+import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
 import { CURVE_CHAINS } from "../constants";
 import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
@@ -329,6 +330,42 @@ describe("fetchDataSources", () => {
     expect(vi.mocked(buildDlStablecoinPoolsCache)).toHaveBeenCalledWith([
       expect.objectContaining({ pool: "yield-cache-only" }),
     ]);
+  });
+
+  it.each([true, false])("keeps list measurements and yield UUIDs when V4 identity enrichment succeeds=%s", async (succeeds) => {
+    const token0 = "0x6c3ea9036406852006290770bedfcaba0e23a0e8";
+    const token1 = "0xdc035d45d973e3ec169d2276ddab16f1e407384f";
+    const uuid = "0899ff3d-adc8-4dae-a516-a94998db3332";
+    const physicalId = "0xe63e32b2ae40601662f760d6bf5d771057324fbd97784fe1d3717069f7b75d45";
+    const row = { ...FAKE_DL_POOLS[0], pool: uuid, chain: "Ethereum", project: "uniswap-v4",
+      exposure: "multi", underlyingTokens: [token0, token1], poolMeta: "0.00%" };
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      const key = String(url);
+      if (key.includes("poolsPro?")) return succeeds
+        ? { response: new Response(""), body: { data: [{ ...row, pool_old: `${physicalId}-ethereum-uniswap-v4`, tvlUsd: 1 }] } }
+        : null;
+      if (key.includes("yields.llama.fi")) return { response: new Response(""), body: { data: [row, ...FAKE_DL_POOLS] } };
+      if (key.includes("api.llama.fi/protocols")) return { response: new Response(""), body: [] };
+      return { response: new Response(""), body: { data: { poolData: [] } } };
+    });
+    const result = await fetchDataSources(null, createMockDb(), {
+      chainAddressToId: new Map([[`ethereum:${token0}`, "pyusd-paypal"]]),
+      symbolToChainScopedIds: new Map(),
+    });
+    expect(result?.pools).toEqual([expect.objectContaining({ pool: succeeds ? physicalId : uuid, tvlUsd: 100000 })]);
+    expect(vi.mocked(buildDlStablecoinPoolsCache)).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ pool: "pool-0" }),
+    ]));
+    if (succeeds) {
+      const known = buildKnownPoolAddresses(result!.pools, new Set(["uniswap-v4"]), new Map(), new Map(), new Map());
+      const incoming = buildPoolIdentity({ chain: "ethereum", protocol: "uniswap-v4",
+        poolAddressOrId: physicalId, tokenAddresses: [token0, token1] });
+      expect(getIdentityDedupReason(incoming, known, { derived: 2, wildcard: 2 })).toBe("exact");
+    }
+    expect(vi.mocked(fetchJsonWithRetry)).toHaveBeenCalledWith(
+      expect.stringContaining("poolsPro?project=uniswap-v4"),
+      expect.anything(), 0, { timeoutMs: 10_000, maxResponseBytes: 4 * 1024 * 1024 },
+    );
   });
 
   it("fails the yields source closed when a malformed row prevents compaction", async () => {

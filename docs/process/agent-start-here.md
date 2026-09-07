@@ -28,6 +28,8 @@ The machine-readable routing source of truth is [`doc-ownership.json`](../doc-ow
 
 The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--file` input accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > `--base-ref`/`--head-ref` flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree.
 
+Routing rejects unknown options, missing values, invalid hook modes, and failed Git selections instead of reporting an empty successful contract. Git-based selection retains deletions and both sides of renames; commands that require existing files filter those paths only when executing. Ordinary text and JSON output include every required doc, check, and rule; SessionStart remains a bounded hint and explicitly reports unavailable Git evidence.
+
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
 - matched ownership mappings and risk;
@@ -57,21 +59,13 @@ Use [`docs/README.md`](../README.md) to choose between public reference, enginee
 
 ## 3. Core Repository Rules
 
-- Prefer the smallest root-cause fix; avoid unrelated refactors.
-- Update matching docs for behavior, API, pipeline, methodology, or data-source changes.
-- Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides. Supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe.
-- Keep Tailwind classes as static strings.
-- Do not edit shadcn primitives in `src/components/ui/` unless explicitly required.
-- Use `getCirculatingRaw()` for circulating supply and `@shared/lib/...` / `@shared/types...` for shared imports; avoid relative cross-boundary imports.
-- Cron-backed hooks use `staleTime = producer interval` and `refetchInterval = 2x producer interval`.
-- Consume Worker response bodies before opening more fetches; Pharos's trigger-wide connection budget is six.
-- D1 migrations run before the new Worker is live. Destructive cleanup is a separate coordinated rollout.
+The repository's working rules and hard rules are owned by the root [`CLAUDE.md`](../../CLAUDE.md) and its generated `AGENTS.md` mirror — supply and import contracts, static Tailwind classes, cron hook polling windows, the six-connection trigger budget, and migration ordering. The root rules are authoritative; read them before editing. This page does not repeat them.
 
 ## 4. Scratch Work
 
-Put plans, research, screenshots, reports, captures, and handoffs under ignored `agents/<YYYY-MM-DD>-<slug>/`. Durable product, process, API, methodology, and operating truth belongs in the closest verified page under `docs/`, not in scratch.
+Create scratch files only when useful; put plans, research, screenshots, reports, captures, and handoffs under ignored `agents/<YYYY-MM-DD>-<slug>/`. Durable product, process, API, methodology, and operating truth belongs in the closest verified page under `docs/`, not in scratch.
 
-Every campaign needs a README that records its owner, status, created and last-reviewed dates, source or plan, durable destinations, retention rule, and safe-to-remove condition. Follow the ledger and handoff convention in [Agent Artifacts](./agent-artifacts.md). Never infer that an ignored or old artifact is disposable.
+Campaign READMEs, ledgers, dispatch packets, and retention records are for substantial work spanning sessions or requiring coordinated agent handoffs. Bounded fixes and reviews need no scratch ledger. Follow the scope and handoff convention in [Agent Artifacts](./agent-artifacts.md#campaign-index-and-handoff). Never infer that an ignored or old artifact is disposable.
 
 ## 5. Scope Safety
 
@@ -85,21 +79,13 @@ Choose the smallest adequate checks from [Testing: Smallest adequate check per a
 
 Passing deployment proves activation, not runtime health. Cron, scheduler, ingestion, migration, and other operationally risky changes also require the first relevant production execution or observation before being called operationally complete.
 
-## 7. Handoff
+## 7. Handoff and Finish
 
-The final message must state:
-
-- status: complete, partial, or blocked;
-- exact changed files;
-- verification commands and outcomes, including known failures;
-- blockers and deferred items; and
-- the next owner or action.
-
-For a campaign, also update its ledger so every task ID ends as complete, deferred, superseded, or blocked. Record actual changed files and net LOC when the campaign contract requests them.
+For bounded fixes and reviews, complete the authorized work, run focused validation, and briefly report changes or findings, checks, and unresolved work. Substantial campaigns also follow the [Agent Artifacts campaign index and closeout contract](./agent-artifacts.md#campaign-index-and-handoff).
 
 ## 8. Commit And Release
 
-Group changes into logical commits. Use a descriptive subject and a useful body explaining what changed and why. Batch commit bodies must include the stable scratch plan path and task IDs, for example:
+Group changes into logical commits. Use a descriptive subject and a useful body explaining what changed and why. For substantial campaigns, include the existing scratch plan path and task IDs; bounded changes need neither. Campaign example:
 
 ```text
 Plan: agents/<YYYY-MM-DD>-<slug>/IMPLEMENTATION-PLAN.md
@@ -111,7 +97,3 @@ The pre-commit hook may regenerate and stage registered artifacts marked `autoSt
 ## 9. Methodology Changes
 
 Methodology history is structured under `shared/data/methodology-changelogs/` and rendered by the public `/methodology/*-changelog/` routes. ADR-3 in [`architecture.md`](../architecture.md#architectural-decision-records) lists every target a methodology change must update. Do not create a second Markdown timeline. Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
-
-## 10. Finish
-
-Report the final artifact or plan path, verification and CI/deploy evidence, and any operational acceptance still pending. Name scratch as safe to remove only when its recorded condition is satisfied and its owner confirms closure. The handoff is complete when the next owner can continue without reconstructing scope, state, or evidence.

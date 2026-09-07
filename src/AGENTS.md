@@ -4,8 +4,8 @@ Applies to `src/`.
 
 ## Read First
 
-- Route-specific docs from `docs/README.md`; architecture boundaries from `docs/architecture.md` § “Frontend Runtime And SEO Surface”.
-- Design work: `docs/design-language.md#context`, `docs/design-language.md`, and `docs/design-tokens.md`.
+- Read the owning route sections returned by `npm run agent:route -- --file <path>` and `docs/architecture.md#frontend-runtime-and-seo-surface`.
+- Design work: start with `docs/design-language.md#context`; token changes also use `docs/design-tokens.md#usage-guidelines` and its matching layer section.
 
 Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>`.
 

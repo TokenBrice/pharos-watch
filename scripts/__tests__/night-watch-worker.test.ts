@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -364,26 +364,46 @@ describe("night-watch-worker", () => {
     expect(markdown).toContain("dex-liquidity: degraded");
   });
 
-  it("writes dry-run report and evidence without collecting production data", async () => {
+  it.each([false, true])("preserves existing and absent evidence in dry-run (fixture=%s)", async (withFixture) => {
     const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-"));
-    const write = vi.fn(() => true);
+    const write = vi.fn((_text: string) => true);
     const stdout = { write } as unknown as typeof process.stdout;
     const reportPath = relative(process.cwd(), join(dir, "report.md"));
     const evidencePath = relative(process.cwd(), join(dir, "evidence.json"));
-
-    await expect(runCli([
+    const checkpointPath = join(dir, "checkpoint.jsonl");
+    const fixturePath = join(dir, "fixture.json");
+    if (withFixture) writeFileSync(fixturePath, JSON.stringify(evidence()));
+    const fetch = vi.fn(() => { throw new Error("dry-run must not fetch"); });
+    vi.stubGlobal("fetch", fetch);
+    const args = [
       "--dry-run",
+      "--include-d1",
+      "--include-status",
       "--start",
       generatedAt,
       "--output",
       reportPath,
       "--evidence-json",
       evidencePath,
-    ], stdout)).resolves.toBe(0);
-
-    expect(readFileSync(resolve(process.cwd(), reportPath), "utf8")).toContain("# Worker Night Watch Report");
-    expect(JSON.parse(readFileSync(resolve(process.cwd(), evidencePath), "utf8")).snapshots).toEqual([]);
-    expect(write).toHaveBeenCalledWith(expect.stringContaining("Night-watch report written"));
+      "--checkpoint-jsonl",
+      checkpointPath,
+      ...(withFixture ? ["--fixture", fixturePath] : []),
+    ];
+    const paths = [resolve(reportPath), resolve(evidencePath), checkpointPath];
+    try {
+      await expect(runCli(args, stdout)).resolves.toBe(0);
+      expect(paths.map((path) => existsSync(path))).toEqual([false, false, false]);
+      for (const path of paths) writeFileSync(path, `existing evidence at ${path}`);
+      const before = paths.map((path) => readFileSync(path, "utf8"));
+      await expect(runCli([...args, "--json"], stdout)).resolves.toBe(0);
+      expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
+      expect(write).toHaveBeenCalledWith(expect.stringContaining("# Worker Night Watch Report"));
+      expect(JSON.parse(write.mock.calls.at(-1)![0]).snapshots).toHaveLength(withFixture ? 1 : 0);
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("renders from a fixture while honoring output paths", async () => {

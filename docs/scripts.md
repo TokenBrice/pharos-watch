@@ -6,9 +6,15 @@
 
 Operational and CI helper scripts live in `scripts/`, while worker-bound operational tooling that imports `worker/src/**` lives in `worker/scripts/`. Together they support build integrity, smoke checks, data sync, and targeted maintenance tasks.
 
+Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries for 5xx and caller-declared transient statuses. Before retrying they cancel the failed response body. One 30-second `AbortSignal.timeout` deadline (caller-overridable with `timeoutMs`, composed with caller cancellation) covers attempts, waits, and returned-body reads; aborts are not retried.
+
+`scripts/maintenance/audit-seo-render-budget.mjs` measures public-page resource budgets and defaults to the live site. It blocks Google Analytics collection requests before navigation so synthetic audit visits do not enter analytics, but retains GTM/gtag script downloads to measure their JavaScript cost. Each JSON row reports `blockedAnalyticsRequests`; the table labels that count `gaBlocked`. This suppression is specific to the audit and does not change intentional GA acceptance in `smoke-ui.mjs`.
+
 ## Safety Score Map Refresh
 
 `npm run build:safety-score-map` fetches one canonical set of report cards, stablecoin supply, and Stability Index data, then renders it. The map does not compare scores, grades, tier populations, leaders, or supply movements with an earlier run; those audits belong to the Safety Score publication pipeline. It retains only input-contract and renderability checks, so a schema-valid held or aged Safety Score publication still produces a poster while malformed data, unusable supply joins, stale PSI context, invalid geometry, missing fonts, or a wrong-size raster fail closed.
+
+Schema rejections use canonical diagnostics (the first failing field path and schema issue), rather than translating errors into historical map-specific wording. Valid payloads still pass the map's score/grade, duplicate-ID, supply-join, and geometry checks.
 
 `.github/workflows/safety-map-refresh.yml` schedules the refresh at 02:20, 04:20, and 06:20 UTC, plus manual dispatch. GitHub scheduled starts are best-effort and can arrive hours late, so the additional slots only improve the odds. The digest is independent of winning this race and can carry forward a recent dated map within its bounded continuity window.
 
@@ -21,6 +27,27 @@ Every committed source file that reads `process.argv` is enrolled by exact path 
 For these scripts, `--dry-run` means no mutation: a command may read local state or fetch remote data to validate the planned operation, but it does not write files or call a mutating API. `register-telegram.ts --check` remains a compatibility alias for its no-network dry run. `sync-digests.ts --check` remains the narrower no-network wiring check; it conflicts with `--dry-run` so the selected behavior is unambiguous. Existing no-flag workflow invocations retain their prior live behavior.
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
+
+## Safety Score Capture-Time Replay
+
+`npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
+exports a registry-bound wrapper with normalized `fixedInput` and a verified
+`registrySnapshot`. `--registry-ref <git-sha>` loads the trusted local commit
+that produced a historical capture; otherwise export requires a matching local
+registry. `--normalized-only` emits plain input for current-curation workflows
+and cannot be combined with `--registry-ref`.
+
+`npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
+uses that commit's verified registry metadata and transfer reviews. Embedded
+snapshots are selected automatically when no ref is supplied. A missing or
+mismatched snapshot never falls back to local classifications. The separate
+`--allow-registry-mismatch` mode still means code-plus-current-curation and
+cannot be combined with `--registry-ref`; on a wrapper it explicitly ignores
+the snapshot for scoring while checking its integrity.
+
+Use `jq '(.fixedInput // .).clockSec'` to read either export shape. See the
+[equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay)
+for integrity, trusted-Git execution, and production-digest limitations.
 
 ## D1 Insights Capture
 
@@ -57,7 +84,7 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and 14-day Telegram dispatch planning telemetry, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. |
+| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and the complete 14-day Telegram dispatch capture, reduce rows-written share and real-event first-enqueue latency, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. Incomplete windows, missing write denominators, or missing real-event samples remain explicitly undecided. |
 
 ## Routing Index
 
@@ -88,19 +115,21 @@ npm run test:a11y:hydrated
 
 ### Build And Generated Artifacts
 
-Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Every registry entry declares a build lifecycle: `compile-input` for files the static export needs before compilation, `post-refresh` for projections rebuilt after release data refresh, or `maintenance-only` for explicitly maintained outputs. Plain `prebuild` selects only compile inputs.
+The stablecoin client projection generator counts the public cemetery as curated dead records plus frozen tracked profiles. Its lightweight generated cemetery count is shared by About copy and root metadata; it is not the curated-only source count.
+
+Use the generated-artifact commands in `package.json` for generation, freshness checks, bootstrap, and staged-artifact synchronization. `scripts/lib/automation-registry.mjs` is the authority for artifact dependencies, lifecycle, output paths, checkability, and automatic staging. Every registry entry declares a build lifecycle: `compile-input` for files the static export needs before compilation, `post-refresh` for projections rebuilt after release data refresh, or `maintenance-only` for explicitly maintained outputs. Plain `prebuild` selects only compile inputs. Ordinary `bootstrap:generated` is offline: detail snapshots use a bootstrap-specific command that writes schema-valid empty envelopes before any credential loading or fetch. Compile/release generation retains live detail and supply lanes. The snapshot artifact declares the catalog prerequisite and a concrete output directory so isolated selection and bootstrap rehearsal work on fresh checkouts. CI setup then compares tracked checkable bootstrap outputs against `HEAD`, including after a cache-only restore, and rejects nonignored registered outputs absent from Git (including manifests recreated after a committed deletion). Repaired outputs must be regenerated and committed with their sources; ignored compile outputs remain allowed.
 
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
 ### PR And Release Gates
 
-Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. [Testing: Commands](./testing.md#commands) owns their behavior and [Testing: CI Pipeline](./testing.md#ci-pipeline) owns lane membership and check selection. The [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns the protected-PR and production release sequence. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
+Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and the focused check commands in `package.json` for diagnosis. In mixed docs/source plans the docs lane owns `check:doc-sync`; `check:pr` and the generated CI matrix pass `--skip-doc-sync` to the static lane in that composition, while standalone `npm run check:pr:static` keeps its own doc-sync selection. [Testing: Commands](./testing.md#commands) owns their behavior and [Testing: CI Pipeline](./testing.md#ci-pipeline) owns lane membership and check selection. The [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns the protected-PR and production release sequence. Boundary exceptions are documented in [Worker Import Boundary Waivers](./process/boundary-waivers.md).
 
 For `check:focused` selection and preview behavior, use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
 
 ### Smoke And Operations
 
-Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance).
+Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance). `night-watch-worker --dry-run` prints its preview to stdout (`--json` selects JSON), preserves report, evidence, and checkpoint files, and performs no remote collection, including with `--fixture`. Ordinary fixture rendering remains a file-writing mode.
 
 ### Curation Audits
 
@@ -109,6 +138,10 @@ Use the `audit:*`, `candidates:*`, and `calibrate:*` commands in `package.json`.
 Safety Score V9 curation has one typed queue source: `safety-score-v9:missing-data-registry`. `safety-score-v9:curation-worklist` renders its operator-oriented Markdown view, while `safety-score-v9:expiry-queue` adds only the preventive time-window view using production reserve admission. The low-level evidence-gap and mint-posture entrypoints remain directly invocable compatibility reports without npm aliases; they do not own curation routing.
 
 The V9 calibration analyzer consumes normalized replay artifacts, rebuilds them through the shared replay primitive, and reads its pinned distribution and binding expectations from `scripts/__tests__/fixtures/safety-score-v9-calibration-baseline.json`. It does not read measurement capture bodies. The retired replay-summary, B1 root-ledger, and composite-ceiling aliases remain available as direct one-time entrypoints where an archived runbook names them.
+
+Annotation and AI-summary candidate request deadlines remain active through JSON body consumption. Annotation collection uses fixed 14-day windows and serial cursor pagination, bounded to 25 pages and 30 seconds per source with a 6-second request/body timeout. Partial results retain explicit incomplete coverage. Full queues, digest, and logs are immutable Actions artifacts retained for 90 days; issue excerpts link to those artifacts.
+
+`npm run candidates:annotations -- --replay agents/annotation-history` recursively reads downloaded `annotation-candidates.json` snapshots and merges them with local unresolved rows offline. Reviewer-owned `agents/annotation-review.json` dispositions suppress only explicitly promoted or dropped IDs, preserve deferrals, and admit distinct same-day events. Generation never advances legacy `last_swept_at`, writes review decisions, or edits product annotations. AI-summary liquidity findings assert retirement only with explicit legacy Safety Score context; current or ambiguous DEX claims receive neutral review without an invented comparison.
 
 ### One-Time And Operator Tools
 
@@ -144,7 +177,7 @@ In the standard local npm setup, `package.json` runs `scripts/maintenance/prepar
 git config core.hooksPath .githooks
 ```
 
-The pre-commit hook runs `npm run sync:staged-artifacts` and regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its auto-stage path is strictly offline: no `autoStage` entry may be `network-derived`, so outputs such as `public-datasets` require manual regeneration with `npm run generate:public-datasets`. Staged selection includes deletions, and the sync preflights all selected generators and source state before running them; it stages outputs in one all-or-nothing operation only after every generator succeeds. The source guard includes untracked paths that match registered source globs. `PHAROS_SKIP_ARTIFACT_HOOK=1` is an explicit bypass, not evidence that generated outputs are current.
+The pre-commit hook runs `npm run sync:staged-artifacts` and regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its auto-stage path is strictly offline: no `autoStage` entry may be `network-derived`, so outputs such as `public-datasets` require manual regeneration with `npm run generate:public-datasets`. Staged selection includes deletions, and the sync preflights all selected generators and source state before running them; it stages outputs in one all-or-nothing operation only after every generator succeeds. The execution plan includes declared offline prerequisites in dependency order, while only `autoStage` outputs are added to the index. Network-derived prerequisites are refused. The source guard includes unstaged and untracked inputs throughout that dependency closure; dirty output files are rejected before any generator runs. On failure, clean tracked outputs are restored from the index, newly created files matching registered output globs are removed, and existing ignored prerequisite files regain their original bytes. Rollback preserves pre-existing glob members; empty directories may remain. The evaluation manifest and registry share the authored fixed hash-input inventory; recursive capture summaries and their parser also trigger regeneration without broadening the score identity to unrelated operational code. `PHAROS_SKIP_ARTIFACT_HOOK=1` is an explicit bypass, not evidence that generated outputs are current.
 
 The hook does not run a local test/build gate; [Testing](./testing.md#commands) owns local validation behavior.
 

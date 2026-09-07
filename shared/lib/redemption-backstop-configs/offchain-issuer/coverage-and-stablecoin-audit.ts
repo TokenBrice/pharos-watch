@@ -73,22 +73,22 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
   "mf-one-midas": {
     missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The reviewed standard-redemption fee is retained, but no dated terms establish mF-ONE executable capacity, the holdback share, or its release SLA at the scoring notional.",
+      "The reviewed standard-redemption fee is retained, but the Midas documentation URLs and mF-ONE page checked on 2026-09-04 still publish no dated terms establishing mF-ONE executable capacity, the holdback share, or its release SLA at the scoring notional.",
   },
   "mhyper-midas": {
     missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The reviewed mHYPER fee is retained, but generic Midas liquidity materials do not establish product-level executable capacity or a binding calendar-day settlement SLA.",
+      "The reviewed mHYPER fee is retained, but the Midas documentation URLs and product materials checked on 2026-09-04 still publish no product-level executable capacity or binding calendar-day settlement SLA.",
   },
   "mmev-midas": {
     missingScoringFields: ["capacity", "settlement", "cost"],
     rationale:
-      "The product was discontinued, and the reviewed materials do not establish which residual mMEV route remains executable or its post-retirement capacity, settlement SLA, and all-in cost.",
+      "The product was discontinued, and the reviewed materials checked on 2026-09-04 do not establish which residual mMEV route remains executable or its post-retirement capacity, settlement SLA, and all-in cost.",
   },
   "mapollo-midas": {
     missingScoringFields: ["capacity", "settlement", "cost"],
     rationale:
-      "The shared Midas liquidity architecture establishes a redemption mechanism, but no dated mAPOLLO terms establish current executable capacity, a binding calendar-day fallback SLA, or all-in cost.",
+      "The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials checked on 2026-09-04 publish no current executable capacity, binding calendar-day fallback SLA, or all-in cost.",
   },
 };
 
@@ -115,7 +115,7 @@ const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromE
         scoringDisposition: "bounded-terms-gap",
         missingScoringFields: termsGap.missingScoringFields,
         rationale: termsGap.rationale,
-        reviewedAt: "2026-08-24",
+        reviewedAt: "2026-09-04",
         docs: [...config.docs],
       };
     }
@@ -277,14 +277,16 @@ const SPIKO_FUNDS: readonly [
     sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
     () => ({
+      settlementModel: "same-day",
+      settlementDelaySec: 86_400,
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
+      missingScoringFields: ["capacity", "cost"],
       rationale:
-        "The governing documents establish the ordinary D+1 schedule and no exit charge, but the stress request crosses the 25%-of-NAV gate and no terms establish completion timing, executable capacity, or the resulting swing adjustment.",
-      reviewedAt: "2026-08-24",
+        "The SICAV prospectus published 2026-09-01 specifies same-day NAV and settlement of redemption orders cleared by 11:30 a.m. Paris time, and its fee table lists no subscription or redemption fees. It also permits a redemption cap when net redemptions reach 10% of net assets, with deferred orders, so it is not a guaranteed stress-capacity lower bound; investor-paid DLT transaction fees and up to EUR 500 excluding VAT for technical wallet recovery leave all-in cost unbounded.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef(
-          "Spiko SICAV prospectus",
+          "Spiko SICAV prospectus (published 2026-09-01)",
           "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
           ["route", "capacity", "settlement", "fees"],
         ),
@@ -452,11 +454,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Stablecorp documents a qualified-holder redemption mechanism, but no reviewed public terms establish an executable limit, accepted-request-to-bank-credit SLA, or all-in redemption cost.",
-      reviewedAt: "2026-08-24",
+        "Stablecorp transparency published 2026-08-21 confirms that QCAD is backed 1:1 and redeemable, but it does not publish an executable redemption limit, accepted-request-to-bank-credit SLA, or all-in redemption cost; the 2026-09-04 re-open found no dated terms adding those bounds.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef("Stablecorp", "https://stablecorp.ca/", ["route", "access"]),
-        sourceRefRouteCapacity("Stablecorp transparency", "https://stablecorp.ca/transparency"),
+        sourceRef("Stablecorp transparency (published 2026-08-21)", "https://stablecorp.ca/transparency", ["route"]),
       ],
     },
     docs: [
@@ -564,22 +566,27 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Public primary materials establish a daily-liquidity redemption mechanism, but not a guaranteed executable amount, maximum settlement SLA, or operative fee schedule.",
-      reviewedAt: "2026-08-24",
+        "The 2025-05-13 launch release and current Securitize VBILL page describe daily or real-time liquidity, but the 2026-09-04 re-open found no current dated governing terms for a guaranteed executable amount, maximum settlement SLA, or operative fee schedule; launch marketing is not a stress-capacity bound.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", [
           "route",
           "access",
           "settlement",
         ]),
+        sourceRef(
+          "VanEck VBILL launch (published 2025-05-13)",
+          "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
+          ["route", "access", "settlement"],
+        ),
       ],
     },
     docs: [
-      sourceRefFull("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill"),
+      sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", ["route", "access", "settlement"]),
       sourceRef(
-        "VanEck VBILL launch",
+        "VanEck VBILL launch (published 2025-05-13)",
         "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
-        ["route", "capacity", "access", "settlement"],
+        ["route", "access", "settlement"],
       ),
     ],
     notes: [
@@ -624,14 +631,19 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "Anemoy describes daily access and settlement, but no dated public governing terms establish the scored notional's executable capacity, maximum settlement SLA, gates, or holder-paid charges.",
-      reviewedAt: "2026-08-24",
+        "Anemoy's JAAA page and the dated 2025-06-05 launch announcement describe daily access and institutional liquidity, but the 2026-09-04 re-open found no dated governing terms establishing the scored notional's executable capacity, maximum settlement SLA, gates, or holder-paid charges.",
+      reviewedAt: "2026-09-04",
       docs: [
-        sourceRefFull("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa"),
+        sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", ["route", "access", "settlement"]),
+        sourceRef(
+          "Anemoy JAAA launch (published 2025-06-05)",
+          "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+          ["route", "access"],
+        ),
       ],
     },
     docs: [
-      sourceRefFull("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa"),
+      sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", ["route", "access", "settlement"]),
       sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
         "route",
         "access",

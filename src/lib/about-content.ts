@@ -77,7 +77,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> CHFAU StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation, Starknet RPC reads, and DFINITY ICRC REST indexer reads for ICP), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including MegaETH public RPC, EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> CHFAU StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation, Starknet RPC reads, and DFINITY ICRC REST indexer reads for ICP), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage; Astherus asUSDF's public BSC (BNB Chain) EVM RPC with a Multicall3 aggregate3 read of the custom asUSDFEarn contract (not ERC-4626) to observe USDF backing net of unvested yield; and Initia interwoven-1 LCD REST reads at /cosmos/bank/v1beta1/supply/by_denom, /initia/move/v1/view/json, and /initia/move/v1/accounts/{address}/resources/by_struct_tag to observe iUSD's AUSD0 vault backing and pin vault/metadata identities (Pharos's first Initia read path)",
   },
   {
     label: "Ratings & Reference",
@@ -92,7 +92,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "DEX Data",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Midas NAV oracles, Re Protocol, Morpho, Pendle, Royco Dawn, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), vaults.fyi as an optional gated supplemental yield source that is disabled by default and rankable only for explicitly allowlisted vaults, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Jupiter direct-route quotes, Meteora API, Stellar Horizon classic-AMM pools, Aquarius Spiko Soroban pools, TzKT Tezos uUSD holder/reserve census, Balanced bnUSD pools on ICON, Kava x/swap native USDX pools, PancakeSwap subgraphs, SUN.io SunSwap V2 pool census plus Smart Router and pinned V2 Router proofs with TronGrid RPC state, reviewed Uniswap V3, PancakeSwap V3, and Aerodrome Slipstream QuoterV2/factory RPC reads, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
+      "DeFiLlama Yields & Protocols (including exact Ethereum Uniswap V4 pool identity joins), protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Midas NAV oracles, Re Protocol, Morpho, Pendle, Royco Dawn, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), vaults.fyi as an optional gated supplemental yield source that is disabled by default and rankable only for explicitly allowlisted vaults, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Jupiter direct-route quotes, Meteora API, Stellar Horizon classic-AMM pools, Aquarius Spiko Soroban pools, TzKT Tezos uUSD holder/reserve census, Balanced bnUSD pools on ICON, Kava x/swap native USDX pools, PancakeSwap subgraphs, SUN.io SunSwap V2 pool census plus Smart Router and pinned V2 Router proofs with TronGrid RPC state, reviewed Uniswap V3, PancakeSwap V3, and Aerodrome Slipstream QuoterV2/factory RPC reads, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest and Monday weekly recap)" },
 ] as const;
@@ -250,7 +250,7 @@ export function getTrackedFeatures({
     {
       title: "Bluechip safety ratings",
       description:
-        "Independent SMIDGE (Security, Management, Insurance, Decentralization, Governance, Escrow) coverage for rated stablecoins, pulled in as an outside reference signal.",
+        "Independent SMIDGE (Stability, Management, Implementation, Decentralization, Governance, Externals) coverage for rated stablecoins, pulled in as an outside reference signal.",
       icon: ShieldCheck,
       href: "https://bluechip.org",
       external: true,

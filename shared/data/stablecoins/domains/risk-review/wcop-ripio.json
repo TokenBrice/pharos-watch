@@ -314,6 +314,36 @@
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           }
         ]
+      },
+      {
+        "id": "celo:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "destinationChain": "celo",
+        "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Ripio's 2026-07-31 Celo announcement and GeckoTerminal identify this address as wCOP (Colombian Peso) with 18 decimals and live supply. The reviewed Celo bridge-adapter read at block 75019312 shows Safe-controlled minting, but no token-level mint path or conservation proof establishes native issuance versus a bridge representation; the route remains unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 75019312,
+        "sources": [
+          {
+            "label": "Ripio wFIAT Celo launch announcement",
+            "url": "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo"
+          },
+          {
+            "label": "GeckoTerminal Celo wCOP token",
+            "url": "https://api.geckoterminal.com/api/v2/networks/celo/tokens/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ]
       }
     ],
     "controls": [
@@ -326,7 +356,8 @@
           "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
           "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
           "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
-          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"
         ],
         "capabilities": [
           "bridge-mint",
@@ -362,7 +393,7 @@
           "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WCOP and an authorized operator fulfills destination minting through LimitedMinterBridge; Ethereum route configurations to Base, Worldchain, BSC, Polygon, Gnosis, and Celo were enabled with a fixed 57 WCOP fee.",
           "pausersAdminsUpgraders": "LimitedMinterBridge is source-verified and non-upgradeable. Its admin surface controls token registration, daily limits, and pause; Ethereum DEFAULT_ADMIN_ROLE was held by the issuer EOA and Ripio Safe, with no timelock evidenced.",
           "onchainAmountBounds": "BridgeDeposit exposes totalBurnedTo/totalMintedFrom accounting and the Worldchain counters were nonzero at the observed Ethereum block, but paired source/destination reconciliation was not completed. The issuer EOA's adapter MINTER_ROLE creates a capped arbitrary-recipient bypass of burn proof.",
-          "unsupportedReason": "Ripio's July 31, 2026 Celo announcement publishes this wCOP adapter address; at Celo block 75019312, the Ripio Safe held DEFAULT_ADMIN_ROLE and MINTER_ROLE while the issuer EOA did not. The Safe-controlled direct mint leaves Celo's canonical-versus-conserved provenance unresolved, and Celo is not an authored WCOP token route."
+          "unsupportedReason": "Ripio's July 31, 2026 Celo announcement publishes this wCOP adapter address; at Celo block 75019312, the Ripio Safe held DEFAULT_ADMIN_ROLE and MINTER_ROLE while the issuer EOA did not. The Safe-controlled direct mint leaves Celo's canonical-versus-conserved provenance unresolved; the Celo token deployment is represented by an unresolved route row."
         },
         "timelockDelaySec": 0,
         "observedAt": "2026-08-16",
@@ -393,7 +424,7 @@
             "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCOP MINTER_ROLE on the six authored native deployments and Celo, and its wCOP configuration returned the daily cap above. The verified source defines issuer-operated bridge minting, per-token daily limits, admin-controlled registration and limits, pause, and arbitrary-recipient minting. Ethereum role enumeration found the issuer EOA and BridgeDeposit as MINTER_ROLE holders and the issuer EOA and Safe as DEFAULT_ADMIN_ROLE holders. Celo's Safe-controlled direct MINTER_ROLE remains an unresolved canonicality and conservation question; its evidence is retained here rather than as a non-token route row. The adapter is therefore route-scoped Bridge Risk and is not global native Mint Authority."
+        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCOP MINTER_ROLE on the six authored native deployments and Celo, and its wCOP configuration returned the daily cap above. The verified source defines issuer-operated bridge minting, per-token daily limits, admin-controlled registration and limits, pause, and arbitrary-recipient minting. Ethereum role enumeration found the issuer EOA and BridgeDeposit as MINTER_ROLE holders and the issuer EOA and Safe as DEFAULT_ADMIN_ROLE holders. Celo's Safe-controlled direct MINTER_ROLE remains an unresolved canonicality and conservation question; it is represented by the unresolved Celo token route row. The adapter is therefore route-scoped Bridge Risk and is not global native Mint Authority."
       },
       {
         "id": "wcop-bridge-admin-safe",

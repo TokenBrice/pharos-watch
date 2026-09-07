@@ -70,8 +70,8 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "EURI on Etherscan",
-            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+            "label": "EURI on BscScan",
+            "url": "https://bscscan.com/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
           }
         ]
       }

@@ -69,6 +69,7 @@ The hub at `/learn/mechanisms/` renders the same shell with its own headline, a 
 - Title: hand-tuned per archetype, all ending in `, Explained` (see `MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts`, imported by the route module and reused by the OG-image script); template `%s | Pharos` adds the suffix.
 - Description: hand-tuned per archetype, ~150-165 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
+- Methodology cross-links retain the `/methodology/` page and target its current section anchors; algorithmic and synthetic-delta-neutral explanations link to `#pegscore-dews-methodology` for PegScore/DEWS. The mechanism registry test checks these cross-reference fragments against `METHODOLOGY_SECTIONS`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the manual staging, rasterization, and review workflow.
 - JSON-LD: `BreadcrumbJsonLd` rendered by `LearnPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 
@@ -88,13 +89,13 @@ These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og
 
 ## Inbound Surfaces
 
-- **Shared navigation:** `src/lib/nav-config.ts` LEARN group → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
+- **Shared navigation:** `src/lib/nav-config.ts` `More` menu → `Learn` column → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
 - **Coin detail (`src/components/stablecoin-detail/peg-stability-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, plus the header info affordance, both gated on the resolved mechanism archetype.
 - **Mechanism review panel (`src/components/stablecoin-detail/mechanism-review-panel.tsx`):** "How <archetype> stablecoins work" link, rendered in both the compact rail card and the embedded risk-context fold, gated on a resolved mechanism review.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`PegStabilityCard` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn how each stablecoin design produces its peg" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
-- **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn / Reference group.
+- **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn group.
 
 No footer entry. The hub is the only entry in the header/mobile nav rail; per-archetype pages are reachable from the command palette's `Mechanism archetypes` section (`PALETTE_MECHANISMS` in `src/components/command-palette-model.ts`) and from in-page links on methodology, cemetery, and coin-detail surfaces.
 

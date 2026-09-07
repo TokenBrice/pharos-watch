@@ -210,6 +210,7 @@ interface CommonConsistencyOptions {
   exactLabel: "Exact fixed input" | "Native V9 input";
   requireProducerBindings: boolean;
   validateNavPriceIds: boolean;
+  navAssetIds?: ReadonlySet<string>;
   dexActiveRowsLabel?: string;
 }
 
@@ -223,7 +224,9 @@ export function assertCommonFixedInputConsistency(
     }
     if (options.validateNavPriceIds) {
       const invalidNavPriceIds = Object.keys(input.navPriceById ?? {}).filter(
-        (id) => ACTIVE_STABLECOINS.find((coin) => coin.id === id)?.flags.navToken !== true,
+        (id) => options.navAssetIds
+          ? !options.navAssetIds.has(id)
+          : ACTIVE_STABLECOINS.find((coin) => coin.id === id)?.flags.navToken !== true,
       );
       if (invalidNavPriceIds.length > 0) {
         throw new Error(`${options.laneLabel} NAV price rows target non-NAV assets: ${invalidNavPriceIds.join(",")}`);

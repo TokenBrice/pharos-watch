@@ -36,7 +36,6 @@ import {
 } from "../../lib/depeg-resolver-publication-store";
 import {
   loadPredictionErrata as loadPredictionErrataStore,
-  type DdrPredictionErratum as StoreDdrPredictionErratum,
 } from "../../lib/depeg-resolver-errata-store";
 import { recordValue } from "./utils";
 
@@ -380,26 +379,9 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
     return manifest ? mapStorePublicationManifest(manifest) : null;
   },
   async loadPredictionErrata(db, filters) {
-    const rows = await loadPredictionErrataStore(db, {
+    return loadPredictionErrataStore(db, {
       incidentKeys: filters.incidentKeys,
       publicPredictionIds: filters.publicPredictionIds,
     });
-    return rows.map(mapStoreErratum);
   },
 };
-function mapStoreErratum(row: StoreDdrPredictionErratum): Record<string, unknown> {
-  return {
-    id: row.id,
-    publicPredictionId: row.publicPredictionId,
-    incidentKey: row.incidentKey,
-    eventId: row.eventId,
-    assessmentId: row.assessmentId,
-    reason: row.reason,
-    operatorNote: row.operatorNote,
-    replacementAssessmentId: row.replacementAssessmentId,
-    replacementRowHash: row.replacementRowHash,
-    rowHashBefore: row.rowHashBefore,
-    createdAt: row.createdAt,
-    createdBy: row.createdBy,
-  };
-}

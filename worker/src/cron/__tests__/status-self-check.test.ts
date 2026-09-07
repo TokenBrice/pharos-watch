@@ -159,6 +159,39 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.probeRotation?.selectedDeepProbeCount).toBe(1);
   });
 
+  it("persists each probe boundary before entering the route", async () => {
+    let persistedStage: string | null | undefined;
+    const reportProgress = vi.fn(async (update: { stage?: string | null; metadata?: Record<string, unknown> | null }) => {
+      await Promise.resolve();
+      persistedStage = update.stage;
+    });
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => {
+      expect(persistedStage).toBe(`route-probe:${url.pathname}${url.search}`);
+      expect(reportProgress).toHaveBeenLastCalledWith(expect.objectContaining({
+        stage: `route-probe:${url.pathname}${url.search}`,
+        metadata: { path: `${url.pathname}${url.search}` },
+      }));
+      return buildProbeResponse(url);
+    });
+
+    await runStatusSelfCheck({} as D1Database, {
+      ctx: { waitUntil: vi.fn() } as unknown as ExecutionContext,
+      reportProgress,
+    });
+
+    expect(routeMock).toHaveBeenCalled();
+    expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
+      "d1-capacity",
+      "d1-table-growth",
+      ...routeMock.mock.calls.map(([{ url }]) => `route-probe:${url.pathname}${url.search}`),
+      "external-probes",
+      "probe-persistence",
+      "raw-status",
+      "status-supplements",
+      "snapshot-publication",
+    ]);
+  });
+
   it("persists a raw status snapshot after status evaluation", async () => {
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "secret",

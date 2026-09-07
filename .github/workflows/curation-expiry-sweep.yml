@@ -39,7 +39,7 @@ jobs:
             > agents/sweep/capture.raw.json
           npm run report-cards:capture-fixed-input -- \
             --exact-cache-export agents/sweep/capture.raw.json \
-            --output agents/sweep/capture.json
+            --output agents/sweep/capture.json --normalized-only
           echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
       - name: Replay and generate the curation queues and missing-data registry
         id: generate

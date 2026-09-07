@@ -25,7 +25,7 @@
         "0xa2f6ef3144753f31fcd728910b96a92bbbb462c9",
         "0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b",
         "0x05eadc08ffd13ee7b1e28a883c4ce45e46a063ae",
-        "0x0d12bd2941f61b84f01342b3248ef1dedcd0c344",
+        "0x0d12ee02bca670c3d6e5b1a4d84aee95e284c344",
         "TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT"
       ],
       "adminAddresses": [
@@ -34,7 +34,7 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "HLSCOPE shared EVM token owner",
-      "observedAt": "2026-07-14",
+      "observedAt": "2026-09-04",
       "sources": [
         {
           "label": "Securitize HLSCOPE",
@@ -162,14 +162,14 @@
           },
           {
             "label": "Plume HLSCOPE implementation",
-            "url": "https://explorer.plume.org/address/0x0d12bd2941f61b84f01342b3248ef1dedcd0c344?tab=contract"
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x0d12ee02bca670c3d6e5b1a4d84aee95e284c344"
           },
           {
             "label": "Plume mainnet RPC",
             "url": "https://rpc.plume.org"
           }
         ],
-        "evidence": "At Plume block 81057700, HLSCOPE was a UUPS proxy with implementation 0x0d12bd2941f61b84f01342b3248ef1dedcd0c344 and a zero EIP-1967 admin slot. owner() returned code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee; its trust service returned role 1 (MASTER) for that owner, satisfying the verified DSToken issuance and UUPS authorization gates."
+        "evidence": "At Plume block 81057700, HLSCOPE was a UUPS proxy with implementation 0x0d12ee02bca670c3d6e5b1a4d84aee95e284c344 and a zero EIP-1967 admin slot. owner() returned code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee; its trust service returned role 1 (MASTER) for that owner, satisfying the verified DSToken issuance and UUPS authorization gates."
       },
       {
         "chain": "tron",
@@ -229,7 +229,7 @@
           },
           {
             "label": "Plume HLSCOPE implementation",
-            "url": "https://explorer.plume.org/address/0x0d12bd2941f61b84f01342b3248ef1dedcd0c344?tab=contract"
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x0d12ee02bca670c3d6e5b1a4d84aee95e284c344"
           },
           {
             "label": "Ethereum PublicNode RPC",

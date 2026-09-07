@@ -22,19 +22,19 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "cNGN transparency and reserve disclosure",
+        "label": "cNGN transparency and reserve disclosure (retrieved 2026-09-04; page metrics as of 2026-08-31, no itemized reserve composition)",
         "url": "https://cngn.co/transparency"
       },
       {
-        "label": "WrappedCBDC cNGN terms (1:1 Naira-only minting and reserve backing)",
+        "label": "WrappedCBDC cNGN terms (1:1 Naira-only minting and reserve backing; retrieved 2026-09-04; no dated composition report)",
         "url": "https://cngn.co/terms-and-condition"
       },
       {
-        "label": "Africa Stablecoin Consortium FAQ (partner-bank reserve and audit disclosures)",
+        "label": "Africa Stablecoin Consortium FAQ (partner-bank reserve and audit disclosures; retrieved 2026-09-04; no dated composition report)",
         "url": "https://asc.africa/faqs"
       }
     ],
-    "rationale": "2026-07-31 re-open: cNGN's transparency page states that tokens are maintained 1:1 with Naira in licensed custodian banks and that reserve funds receive monthly audits. WrappedCBDC's terms limit minting to Naira deposits and require each token to be backed 1:1 by Naira held in reserve; the ASC FAQ independently describes partner commercial-bank reserve accounts and traditional-currency/cash-equivalent backing. No dated reserve-attestation artifact or custodian-bank names were retrievable, so the current structured envelope remains 100% Naira bank deposits and does not preserve the earlier unsupported 54%/46% split.",
+    "rationale": "Negative search 2026-09-04: the cNGN transparency page rendered metrics as of August 31, 2026, but those dated metrics cover trading and on-chain activity only; it provides no itemized reserve instruments, allocation weights, reserve balance total, or dated reserve examination. The page's aggregate 1:1 Naira/licensed-custodian-bank claim, WrappedCBDC's 1:1 Naira-deposit terms, and the ASC FAQ's partner-bank reserve description support the single 100% Naira bank-deposit category but do not establish a dated composition as of 2026-08-31. No dated reserve-attestation artifact or custodian-bank names were retrievable. The structured envelope therefore remains 100% Naira deposits with confidence probable and compositionAsOf 2026-07-31; it remains open rather than treating the August 31 activity date as a reserve-composition date.",
     "compositionBasis": "Current cNGN issuer transparency disclosure",
     "compositionAsOf": "2026-07-31",
     "scope": "full-composition",

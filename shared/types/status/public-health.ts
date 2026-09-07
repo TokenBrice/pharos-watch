@@ -5,6 +5,7 @@ import { CacheStatusSchema } from "./schema-primitives";
 import {
   RESERVE_ALERT_SOURCE_STATE_VALUES,
   SAFETY_ALERT_SOURCE_STATE_VALUES,
+  TelegramPendingDeliveryBacklogSchema,
 } from "./telegram";
 
 const SafetyAlertFieldsNullableSchemaShape = {
@@ -47,7 +48,7 @@ export const PublicStatusHistoryResponseSchema = z
   .passthrough();
 export type PublicStatusHistoryResponse = z.output<typeof PublicStatusHistoryResponseSchema>;
 
-const CircuitRecordSchema = z.object({
+export const CircuitRecordSchema = z.object({
   state: z.enum(["closed", "half-open", "open"]),
   consecutiveFailures: z.number(),
   lastFailureAt: z.number().nullable(),
@@ -60,23 +61,7 @@ const TelegramHealthSummarySchema = z.object({
   totalChats: z.number(),
   pendingDeliveries: z.number().nullable(),
   pendingDeliveryLifecycleStatus: z.enum(["available", "unknown"]).optional(),
-  pendingDeliveryBacklog: z.object({
-    claimable: z.number(),
-    due: z.number(),
-    deferred: z.number(),
-    expired: z.number(),
-    nearTtl: z.number().optional(),
-    sending: z.number().optional(),
-    pendingSending: z.number().optional(),
-    freshSending: z.number().optional(),
-    executionUnknown: z.number().optional(),
-    pendingExecutionUnknown: z.number().optional(),
-    freshExecutionUnknown: z.number().optional(),
-    oldestExecutionUnknownAgeSec: z.number().nullable().optional(),
-    executionUnknownSampleLimit: z.number().optional(),
-    executionUnknownLowerBound: z.boolean().optional(),
-    sentCleanup: z.number().optional(),
-  }).optional(),
+  pendingDeliveryBacklog: TelegramPendingDeliveryBacklogSchema.required({ claimable: true }).optional(),
   lastDispatchAt: z.number().nullable(),
   lastDispatchStatus: z.string().nullable(),
   ...SafetyAlertFieldsNullableSchemaShape,

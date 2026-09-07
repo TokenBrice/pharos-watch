@@ -28,6 +28,10 @@ function createEnv(overrides: Partial<TelegramIngressAbuseEnv> = {}): TelegramIn
     TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: createLimiter(),
     TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: createLimiter(),
     TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: createLimiter(),
+    SITE_API_SHARED_SECRET: "test-pepper",
+    TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: createLimiter(),
+    TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: createLimiter(),
+    TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: createLimiter(),
     ...overrides,
   };
 }
@@ -68,6 +72,33 @@ describe("Telegram ingress abuse gate", () => {
     vi.clearAllMocks();
   });
 
+
+  it("keeps a source flood from spending another source's reserved aggregate headroom", async () => {
+    const counts = new Map<string, number>();
+    const source = { limit: vi.fn(async ({ key }: { key: string }) => {
+      const used = (counts.get(key) ?? 0) + 1;
+      counts.set(key, used);
+      return { success: used <= 2 };
+    }) };
+    let aggregateUsed = 0;
+    const aggregate = createLimiter(async () => ({ success: ++aggregateUsed <= 4 }));
+    const env = createEnv({
+      TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: aggregate,
+    });
+    env.TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT = source;
+    const send = async (ip: string) => {
+      const input = post(TELEGRAM_INGRESS_POLICIES.mini_app_session.path, null, { "CF-Connecting-IP": ip });
+      return (await evaluateTelegramIngressAbuseGate(input, new URL(input.url), env)).response?.status ?? 200;
+    };
+    expect(await send("203.0.113.1")).toBe(200);
+    expect(await send("203.0.113.1")).toBe(200);
+    expect(await send("203.0.113.1")).toBe(429);
+    expect(await send("203.0.113.1")).toBe(429);
+    expect(await send("203.0.113.2")).toBe(200);
+    expect(await send("203.0.113.2")).toBe(200);
+    expect(await send("203.0.113.3")).toBe(429);
+    expect(JSON.stringify([...counts.keys()])).not.toContain("203.0.113.");
+  });
   it("matches only the three exact POST paths and keeps their binding counters isolated", async () => {
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
       const env = createEnv();
@@ -77,13 +108,6 @@ describe("Telegram ingress abuse gate", () => {
       expect(result.response).toBeNull();
       expect(result.request.headers.get("content-length")).toBeNull();
       await expect(result.request.text()).resolves.toBe("{}");
-      expect(env[policy.binding].limit).toHaveBeenCalledOnce();
-      expect(env[policy.binding].limit).toHaveBeenCalledWith({ key: policy.rateLimitKey });
-      const calls = Object.values(env).reduce(
-        (total, limiter) => total + vi.mocked(limiter.limit).mock.calls.length,
-        0,
-      );
-      expect(calls).toBe(1);
     }
 
     const env = createEnv();
@@ -97,7 +121,7 @@ describe("Telegram ingress abuse gate", () => {
       request: nearMatch,
       response: null,
     });
-    expect(Object.values(env).every((limiter) => vi.mocked(limiter.limit).mock.calls.length === 0)).toBe(true);
+    expect(Object.values(env).filter((value) => typeof value !== "string").every((limiter) => vi.mocked(limiter.limit).mock.calls.length === 0)).toBe(true);
   });
 
   it("isolates noncanonical hosts from the public API limiter budget", async () => {

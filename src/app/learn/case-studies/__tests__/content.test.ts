@@ -16,6 +16,7 @@ import {
 } from "@/lib/case-study-client-index";
 import { resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows } from "@/lib/case-study-event-window";
 import type { CaseStudy } from "@/lib/case-studies/types";
+import { eventBySlug } from "@/lib/depeg-event-page-data";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
@@ -127,6 +128,18 @@ function isKnownInternalRoute(href: string): boolean {
 }
 
 describe("case-study content", () => {
+  it("links the pmUSD, USR, and apxUSD studies to their registered event records exactly once", () => {
+    for (const [studySlug, eventSlug] of [
+      ["pmusd-precious-metals", "pmusd-2026-05-02"],
+      ["usr-resolv-2026", "usr-2026-03-22"],
+      ["apxusd-dat-collateral", "apxusd-2026-06-02"],
+    ]) {
+      const study = CASE_STUDIES[studySlug];
+      expect(eventBySlug.get(eventSlug)?.stablecoinId).toBe(study.primaryCoinId);
+      expect(study.crossLinks.filter((link) => link.href === `/depeg/${eventSlug}/`)).toHaveLength(1);
+    }
+  });
+
   it("derives the shared outcome totals from the canonical registry", () => {
     expect(Object.values(CASE_STUDY_OUTCOME_COUNTS).reduce((sum, count) => sum + count, 0)).toBe(CASE_STUDY_LIST.length);
     for (const outcome of VALID_OUTCOMES) {

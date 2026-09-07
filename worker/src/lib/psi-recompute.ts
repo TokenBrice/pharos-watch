@@ -9,7 +9,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { getDepegThresholdBpsForPegCurrency } from "./constants";
 import { deriveDepegSignal } from "./depeg-signals";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
@@ -134,10 +134,7 @@ export function buildStabilityInputForDay(
     let usedPeakFallback = false;
     const snapshot = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
     const snapshotPrice = snapshot?.price;
-    const thresholdBps =
-      PSI_ELIGIBLE_META_BY_ID.get(coinId)?.flags.pegCurrency === "USD"
-        ? DEPEG_THRESHOLD_BPS
-        : DEPEG_THRESHOLD_BPS_NON_USD;
+    const thresholdBps = getDepegThresholdBpsForPegCurrency(PSI_ELIGIBLE_META_BY_ID.get(coinId)?.flags.pegCurrency);
 
     for (const event of events) {
       const replayBps = computeHistoricalEventBps(event, snapshotPrice, day, thresholdBps);

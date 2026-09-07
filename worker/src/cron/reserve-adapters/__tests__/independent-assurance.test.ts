@@ -115,7 +115,6 @@ async function verify(manifestOverride: Partial<IndependentAssuranceManifest> = 
 }
 
 function readIndexFixture(name: string): string {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- test-only fixture reads with literal names from this file.
   return readFileSync(resolve(TEST_DIR, "fixtures", name), "utf8");
 }
 
@@ -273,7 +272,7 @@ describe("independent-assurance manifest framework", () => {
   it("still fails closed when the USDGO family has two reports for the reviewed latest date", async () => {
     const fixture = "usdgo-transparency.html";
     const ambiguous = readIndexFixture(fixture) +
-      '<a href="https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Jun revised</a>';
+      '<a href="https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Jul revised</a>';
     await expect(
       verifyRealIndexFixture("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
     ).rejects.toThrow("reviewed report URL is missing or duplicated");
@@ -287,11 +286,12 @@ describe("independent-assurance manifest framework", () => {
       const product = coin.symbol.toUpperCase() as "XSGD" | "XUSD" | "AUDX";
       const reviewed = getIndependentAssuranceManifest(product);
       const reviewedCandidate = assuranceCandidate(product, reviewed.reportUrl, reviewed.reportDate);
-      const nextDate = `${reviewed.reportDate.slice(0, 5)}07-31`;
+      const nextYear = Number(reviewed.reportDate.slice(0, 4)) + 1;
+      const nextDate = `${nextYear}-07-31`;
       const newerUrl = new URL(
         product === "AUDX"
           ? `report-${nextDate}.pdf`
-          : `${product}-SCS-Reserve-Account-Report-31-July-2026.pdf`,
+          : `${product}-SCS-Reserve-Account-Report-31-July-${nextYear}.pdf`,
         reviewed.reportUrl,
       ).toString();
       const newerCandidate = assuranceCandidate(product, newerUrl, nextDate);

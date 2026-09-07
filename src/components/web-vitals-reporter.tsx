@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useReportWebVitals } from "next/web-vitals";
 import { usePathname } from "next/navigation";
-import { trackEvent } from "@/lib/analytics";
-import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
+import { isAnalyticsAllowed, trackEvent } from "@/lib/analytics";
 
 type WebVitalMetric = {
   name: "CLS" | "FCP" | "INP" | "LCP" | "TTFB" | "FID" | "Next.js-hydration" | "Next.js-route-change-to-render" | "Next.js-render";
@@ -24,10 +23,10 @@ export function WebVitalsReporter() {
 
   // Inline arrow would capture `pathname` and re-subscribe `onCLS/onLCP/...`
   // on every render → duplicate GA events on client navigation. Reading the
-  // ref keeps the callback identity stable across renders while still seeing
+  // ref inside useCallback keeps its identity stable across renders while seeing
   // the latest path at metric-fire time.
-  useReportWebVitals((metric: WebVitalMetric) => {
-    if (isTelegramMiniAppPath(pathnameRef.current ?? "")) return;
+  const reportWebVital = useCallback((metric: WebVitalMetric) => {
+    if (!isAnalyticsAllowed(pathnameRef.current)) return;
 
     trackEvent("web_vital", {
       name: metric.name,
@@ -37,7 +36,9 @@ export function WebVitalsReporter() {
       navigation_type: metric.navigationType ?? "navigate",
       page_path: pathnameRef.current ?? "",
     });
-  });
+  }, []);
+
+  useReportWebVitals(reportWebVital);
 
   return null;
 }

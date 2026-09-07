@@ -2,6 +2,7 @@ import type { DepegDirection } from "../../types/market";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "../../types/depeg-resolver";
 import type {
   DdrrActualEvent,
+  DdrrActualOutcome,
   DdrrAssessment,
   DdrrCoverageCause,
   DdrrCoveragePredictionState,
@@ -48,6 +49,7 @@ export interface DdrrV2IncidentInputBase {
 
 export interface DdrrV2CoverageInput extends DdrrV2IncidentInputBase {
   sourceEventState: DdrrSourceEventState;
+  actualOutcome: DdrrActualOutcome;
   terminalEvidenceAt?: number | null;
   terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;
   terminalEvidencePrecision?: DdrrTerminalEvidencePrecision | null;

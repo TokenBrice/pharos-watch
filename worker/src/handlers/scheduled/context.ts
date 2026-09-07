@@ -12,7 +12,7 @@ import {
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
-import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
+import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
@@ -298,10 +298,7 @@ export function createScheduledRuntimeContext(
 
           const leaseMeta = buildLeaseMeta(lease);
 
-          const metadata = mergeCronMetadataWithLease(
-            normalizeCronMetadata(result),
-            leaseMeta,
-          );
+          const metadata = normalizeCronMetadataWithLease(result, leaseMeta);
 
           await reportProgress({
             stage: "completed",

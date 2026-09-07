@@ -2,52 +2,56 @@
   "id": "usdsui-sui",
   "reserves": [
     {
-      "name": "Bridge USD reserve envelope (cash, on-chain stablecoins, short-dated Treasuries, Treasury repos, and government MMFs)",
-      "pct": 100,
+      "name": "Cash",
+      "pct": 10.2288,
       "risk": "low",
-      "assetClass": "other",
-      "issuerOrObligor": "United States Treasury, Bridge-approved stablecoin issuers, and permitted reserve counterparties",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
+      "assetClass": "cash",
+      "issuerOrObligor": "Bridge-approved bank counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Treasury",
+      "pct": 89.7712,
+      "risk": "low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Grok wave-8 reserve re-verification",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge reserve management (re-opened 2026-07-28)",
-        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+        "label": "Bridge live USDsui transparency response (2026-09-04T17:30:29Z)",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
       },
       {
-        "label": "Bridge stablecoins FAQ (re-opened 2026-07-28)",
-        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
-      },
-      {
-        "label": "Bridge reporting and transparency",
+        "label": "Bridge reporting and transparency documentation",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
-      },
-      {
-        "label": "Sui USDsui launch announcement (2026-03-04)",
-        "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
       }
     ],
-    "rationale": "Re-opened 2026-07-28: Bridge reserve-management docs still state issued stablecoins are at least 100% collateralized with equivalent fiat value and allocate across on-demand liquid assets (fiat/stablecoins) and Treasuries, naming Lead Bank, BlackRock, Fidelity, Superstate USTB, and BUIDL as partners. Bridge FAQ independently states 1:1 USD backing via short-dated US Treasuries, overnight Treasury repos, money market funds, and cash held in segregated accounts for token holders and custodied by BlackRock and Fidelity. No public USDsui-specific reserve report, independent assurance artifact, or authenticated reserve-API output identifies current weights or holdings, so the complete basket remains one aggregate slice with knownUnknownExposurePct=100.",
-    "compositionBasis": "Bridge Open Issuance reserve categories; USDsui-specific component weights are undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Bridge's public USDsui transparency endpoint returned total reserves of $74,111,161.57 at 2026-09-04T17:30:29Z, comprising cash of $7,580,669.70 (10.2288%) and Treasury of $66,530,491.87 (89.7712%). The two disclosed categories account for the full reserve composition and collateralization ratio 1.0; provider-level allocations remain outside this composition capture.",
+    "compositionBasis": "Bridge public USDsui transparency API capture normalized by disclosed reserve category",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve categories are identified, but USDsui-specific weights, stablecoin identities, and individual bank, repo, and money-market-fund counterparties are not published.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Bridge USD reserve envelope (cash, on-chain stablecoins, short-dated Treasuries, Treasury repos, and government MMFs)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Bridge publishes the permitted reserve categories but not the current USDsui allocation among them."
-      }
-    ]
+    "knownUnknownExposure": "The public USDsui transparency API discloses the complete USDsui composition as cash and Treasury; provider-level custody and instrument details are not part of this composition capture.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [

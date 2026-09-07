@@ -1151,10 +1151,10 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.length).toBeGreaterThan(0);
   });
 
-  it("records the native-only bridge join decision for FUSD's four reviewed routes", () => {
+  it("records the bridge join decision for FUSD's five deployment routes, including its unresolved Solana route", () => {
     const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const routes = profile.routes ?? [];
-    expect(routes).toHaveLength(4);
+    expect(routes).toHaveLength(5);
     const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
       selectedBridgeRoutes: routes.map((candidate) => ({
         deploymentRouteKey: candidate.id,
@@ -1178,21 +1178,68 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       v9TestClockSec(),
     );
 
-    expect(adapted.review.status.applicability.state).toBe("not-applicable");
+    expect(adapted.review.status.applicability.state).toBe("required");
     expect(adapted.review.diagnostics).toEqual({
-      profileRouteCount: 4,
-      canonicalSupplyRowCount: 4,
+      profileRouteCount: 5,
+      canonicalSupplyRowCount: 5,
       unmatchedRowIdentities: [],
       reviewedNativeCoverage: {
-        reviewedRowCount: 4,
-        canonicalSupplyRowCount: 4,
+        reviewedRowCount: 5,
+        canonicalSupplyRowCount: 5,
         supplyShare: 1,
         complete: true,
       },
-      bridgeClaimControls: [],
-      applicabilityBranch: "native-only-not-applicable",
-      // The not-applicable branch never reaches the sub-threshold join proof.
-      unprovenRouteJoins: [],
+      bridgeClaimControls: ["bridge-meta:fusd-finchain:6eab582043abc2d8dfb6"],
+      applicabilityBranch: "applicable",
+      // The unresolved Solana route keeps this join applicable even though the
+      // fixture supplies native classifications for every selected row.
+      unprovenRouteJoins: [
+        {
+          deploymentRouteKey: "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+          supplyShare: 0.2,
+          joinedControlKeys: ["bridge-meta:fusd-finchain:fb58c7781c1cd8f9b313"],
+          joinedControlSemanticsResolved: true,
+          joinedControlSupplyShare: 0.2,
+        },
+        {
+          deploymentRouteKey: "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+          supplyShare: 0.2,
+          joinedControlKeys: ["bridge-meta:fusd-finchain:8ecd81d85544e42fc320"],
+          joinedControlSemanticsResolved: true,
+          joinedControlSupplyShare: 0.2,
+        },
+        {
+          deploymentRouteKey: "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+          supplyShare: 0.2,
+          joinedControlKeys: ["bridge-meta:fusd-finchain:c4300a0fa9166b49f358"],
+          joinedControlSemanticsResolved: true,
+          joinedControlSupplyShare: 0.2,
+        },
+        {
+          deploymentRouteKey: "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+          supplyShare: 0.2,
+          joinedControlKeys: ["bridge-meta:fusd-finchain:6eab582043abc2d8dfb6"],
+          joinedControlSemanticsResolved: false,
+          joinedControlSupplyShare: 0.2,
+        },
+        {
+          deploymentRouteKey: "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+          supplyShare: 0.2,
+          joinedControlKeys: ["bridge-meta:fusd-finchain:73de3b5b7fecf0037809"],
+          joinedControlSemanticsResolved: true,
+          joinedControlSupplyShare: 0.2,
+        },
+      ],
     });
   });
 
@@ -1204,7 +1251,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         ...routes.map((candidate) => ({
           deploymentRouteKey: candidate.id,
           supplyUsd: 1,
-          supplyShare: 0.2,
+          supplyShare: 0.8 / routes.length,
           reviewState: "selected-reviewed" as const,
           reviewedRouteKind: "native" as const,
         })),
@@ -1233,19 +1280,19 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(adapted.review.status.applicability.state).toBe("required");
     expect(adapted.review.diagnostics).toMatchObject({
-      profileRouteCount: 4,
-      canonicalSupplyRowCount: 4,
+      profileRouteCount: 5,
+      canonicalSupplyRowCount: 5,
       unmatchedRowIdentities: ["Future Network"],
       reviewedNativeCoverage: {
-        reviewedRowCount: 4,
-        canonicalSupplyRowCount: 4,
+        reviewedRowCount: 5,
+        canonicalSupplyRowCount: 5,
         supplyShare: 0.8,
         complete: false,
       },
       applicabilityBranch: "applicable",
     });
-    // ODR-D5a: the four native rows join bridge controls, and the $1 unmatched
-    // row is at the common-mode floor, so all five are named as unproven with
+    // ODR-D5a: the five native rows join bridge controls, and the $1 unmatched
+    // row is at the common-mode floor, so all six are named as unproven with
     // their deploymentRouteKey — the diagnostic that was previously absent.
     expect(
       adapted.review.diagnostics?.unprovenRouteJoins.map((row) => row.deploymentRouteKey),

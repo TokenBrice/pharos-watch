@@ -676,7 +676,6 @@ describe("api endpoint registry", () => {
     expect(referencedRunbooks.length).toBeGreaterThan(0);
     for (const runbookPath of referencedRunbooks) {
       expect(allowedRunbookPaths.has(runbookPath)).toBe(true);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is constrained by the allowlist above.
       expect(existsSync(resolve(process.cwd(), runbookPath))).toBe(true);
     }
   });

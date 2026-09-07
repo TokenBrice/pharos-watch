@@ -17,7 +17,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-13",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Codex Wave 5 R-A1 reserve research",
     "confidence": "verified",
     "sources": [
@@ -27,16 +27,16 @@
       },
       {
         "label": "CADC July 2026 report object",
-        "url": "https://storage.googleapis.com/loon-attestations/CADC_Bank_Attestation_Jul_2026.pdf"
+        "url": "https://loon.finance/api/attestations"
       },
       {
         "label": "Loon CADC transparency",
         "url": "https://loon.finance/transparency/"
       }
     ],
-    "rationale": "The issuer API listed a July 2026 bank confirmation uploaded 2026-08-11. The ATB Financial form confirms CAD 1,817,260.14 in a Business Growth Plus deposit as of 2026-07-31. The single disclosed reserve asset is Canadian-dollar cash at the named bank. The form is not an accountant's opinion or audit and does not state CADC circulation or reconcile liabilities; account number, account legal safeguards, and withdrawal terms remain undisclosed.",
-    "compositionBasis": "ATB Financial bank confirmation for PayTrie AB Inc as listed in Loon's July 2026 attestation API",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "The issuer API listed an August 2026 bank confirmation uploaded 2026-09-01. The ATB Financial form confirms CAD 1,820,785.35 in a Business Growth Plus deposit as of 2026-08-31. The single disclosed reserve asset is Canadian-dollar cash at the named bank. The form is not an accountant's opinion or audit and does not state CADC circulation or reconcile liabilities; account number, account legal safeguards, and withdrawal terms remain undisclosed.",
+    "compositionBasis": "ATB Financial bank confirmation for PayTrie AB Inc as listed in Loon's August 2026 attestation API",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class is unclassified. The confirmation does not establish CADC liability coverage, account legal safeguards, or withdrawal terms.",
     "knownUnknownExposurePct": 0,

@@ -14,6 +14,22 @@
         "Which Kinesis-native deployment and current authority create and govern the parent KAG liabilities?",
         "What exact Kinesis-side reserve-locking and redemption accounting invariant binds the Ethereum KMS Labs representation to native KAG?"
       ],
+      "noLocalIssuance": {
+        "kind": "external-only-representation",
+        "reviewedAt": "2026-09-05",
+        "reviewer": "OpenAI Codex Safety Score gap campaign",
+        "rationale": "The sole authored deployment is the Ethereum KMS Labs representation. Kinesis identifies that ERC-20 as a 1:1 claim on Kinesis KAG held by KMS Labs S.A., with native KAG issued separately by Kinesis Cayman. The reviewed Ethereum representation route covers the entire authored deployment inventory; its uncapped minter, default-admin and UUPS controls remain scored under Bridge Risk at the opaque-or-unknown route tier. This exception establishes no local canonical issuance, without claiming that the unresolved native Kinesis authority or reserve-locking invariant has been verified.",
+        "sources": [
+          {
+            "label": "Kinesis Silver product disclosure distinguishing native KAG from the KMS Labs ERC-20 claim",
+            "url": "https://kinesis.money/silver/"
+          },
+          {
+            "label": "Authored Ethereum KAG representation contract",
+            "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+          }
+        ]
+      },
       "evidence": "Kinesis official material identifies native KAG as issued by Kinesis Cayman on the Kinesis network and the Ethereum ERC-20 as a KMS Labs 1:1 claim on Kinesis KAG held in KMS Labs reserves. The catalog does not author a Kinesis-native deployment or expose its current issuance authority. The Ethereum representation's ERC20F minter, default-admin, and UUPS upgrade facts are reviewed under Bridge Risk; they do not establish native Kinesis issuance. The semiannual physical-metal audit and redemption wording do not establish a complete KMS Labs ERC-20-supply-to-reserve reconciliation or a mechanical Kinesis-side lock/mint invariant.",
       "reviewer": "Pharos mint-authority boundary review; FIX-08 migration",
       "reviewedAt": "2026-08-16",

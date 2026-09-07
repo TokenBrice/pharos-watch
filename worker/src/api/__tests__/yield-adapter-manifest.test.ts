@@ -6,6 +6,7 @@ import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-version
 import {
   RATE_DERIVED_CONFIGS,
   YIELD_POOL_MAP,
+  YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
 import {
@@ -121,15 +122,10 @@ describe("handleYieldAdapterManifest", () => {
       sourceKeyPattern: "onchain:scrvusd-curve",
     });
 
-    const variantRow = body.entries.find((entry) =>
-      entry.stablecoinId === "iusd-infinifi" &&
-      entry.family === "defillama" &&
-      entry.sourceKeyPattern === "defillama:<runtime-pool-uuid>"
-    );
-    expect(variantRow).toMatchObject({
-      sourceKey: null,
-      lifecycle: "active",
+    expect(YIELD_VARIANT_MAP["iusd-infinifi"]).toMatchObject({
+      variantSymbol: "siUSD",
     });
+    expect(body.entries.some((entry) => entry.stablecoinId === "iusd-infinifi")).toBe(false);
 
     for (const baseAssetId of ["dola-inverse-finance", "gho-aave", "reusd-re-protocol"]) {
       expect(

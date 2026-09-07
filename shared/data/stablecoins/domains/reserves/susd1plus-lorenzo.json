@@ -2,11 +2,9 @@
   "id": "susd1plus-lorenzo",
   "reserves": [
     {
-      "name": "Lorenzo USD1+ OTF strategy shares settled in WLFI USD1 (RWA, CeFi quant, and DeFi yield strategies)",
+      "name": "Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)",
       "pct": 100,
       "risk": "high",
-      "coinId": "usd1-world-liberty-financial",
-      "depType": "wrapper",
       "assetClass": "fund-share",
       "issuerOrObligor": "Lorenzo Protocol USD1+ OTF vault and its undisclosed strategy execution team; settlement asset USD1 issued by BitGo for World Liberty Financial",
       "riskFactors": [
@@ -43,12 +41,21 @@
         "url": "https://phemex.com/academy/what-is-lorenzo-protocol"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: Lorenzo's mainnet launch post states sUSD1+ is the non-rebasing NAV fund share of USD1+ OTF, a triple-yield strategy (tokenized RWA / primarily Treasuries sleeve, CeFi delta-neutral basis trading on CEX, and DeFi returns), with deposits of USD1/USDT/USDC, redemptions settled exclusively in WLFI USD1, 7 to 14 day settlement cycles, and off-chain execution under custody mirrored onto a CEX quant desk; Lorenzo does not manage user funds and publishes no strategy-level weights. The companion OTF guide re-states RWA+CeFi quant+DeFi aggregation, USD1 settlement, 7-day minimum hold, biweekly settlement, and FAL on-chain-fundraising / off-chain-execution / on-chain-settlement. Independent corroboration: public BSC eth_call of sUSD1+ underlying() at block 0x6b4e24e returns 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d and that token's symbol() is USD1; Phemex Academy (updated 2026-07-20) independently describes sUSD1+ as Lorenzo's stablecoin OTF packaging DeFi, quantitative trading, and tokenized RWA with off-chain managers/custodians and settlement cycles. Wrapper dependency on tracked USD1 (usd1-world-liberty-financial, depType wrapper, 100% fund-share) is dual-sourced; no portfolio breakdown exists, so scope remains dependency-relationships. Risk stays high: delta-neutral alone would tier medium, but undisclosed off-chain CeFi/RWA sleeve weights, CEX/custody counterparties, and basis/liquidity/legal exposure keep the riskier tier.",
-    "compositionBasis": "Lorenzo USD1+ OTF mainnet + OTF guide issuer publications re-opened 2026-07-28; BSC underlying() call at block 0x6b4e24e; Phemex Academy independent overview",
+    "rationale": "Re-opened 2026-09-04 against Lorenzo's issuer launch publication dated 2025-07-21. The publication identifies sUSD1+ as a non-rebasing fund share in USD1+ OTF, accepts USD1, USDT, and USDC deposits, and combines RWA, CeFi quantitative, and DeFi strategies before settling redemptions in WLFI USD1. The BSC proxy underlying() read at block 0x6b4e24 during the 2026-07-28 review points to USD1, but that settlement and contract reference does not establish that 100% of the strategy portfolio is USD1. The issuer publishes no weights for the accepted inputs or strategy sleeves and no reconciled custody inventory, so this portfolio cannot be represented as a single tracked-parent reserve link.",
+    "compositionBasis": "Lorenzo USD1+ OTF issuer launch publication dated 2025-07-21 and companion OTF guide; BSC underlying() call at block 0x6b4e24; Phemex Academy overview updated 2026-07-20",
     "compositionAsOf": "2026-07-28",
-    "scope": "dependency-relationships",
-    "knownUnknownExposure": "The linked USD1 wrapper relationship is disclosed and on-chain confirmed; the internal allocation across RWA, CeFi quant, and DeFi strategies, named execution counterparties, and strategy-level custody are not published.",
-    "knownUnknownExposurePct": 0
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 100% strategy portfolio is not split among accepted USD1, USDT, and USDC deposits or the RWA, CeFi quantitative, and DeFi positions; no single-parent USD1 share is established.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer publication dated 2025-07-21 names USD1, USDT, and USDC as accepted inputs and identifies RWA, CeFi quantitative, and DeFi sleeves, but publishes no weights. The BSC underlying() pointer confirms USD1 settlement and cannot prove 100% USD1 reserve exposure."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

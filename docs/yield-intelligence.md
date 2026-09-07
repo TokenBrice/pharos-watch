@@ -417,6 +417,8 @@ sustainabilityMult  = max(0.3, 1.0 - apyVarianceScore)
 PYS                 = clamp(round(yieldEfficiency * sustainabilityMult * scalingFactor), 0, 100)
 ```
 
+Coordinator evaluation reuses one `computePysComponents()` result for the score and null explanation. The standalone full-input APIs retain their finite-positive APY/scaling guards before component computation.
+
 **Components:**
 
 | Component                      | Range                    | Meaning                                                                                                                                                             |
@@ -580,10 +582,11 @@ The methodology above is the durable public contract. Runtime topology, storage 
 
 - `worker/migrations/0000_baseline.sql`, later yield migrations, and `worker/migrations/MANIFEST.md` own the D1 schema.
 - `yield_data` stores the current multi-source snapshot; `yield_history` stores recent source-aware observations and publish-time scoring evidence, while `yield_history_daily` stores the last published point per stablecoin/source/UTC day for the older public window.
+- `worker/src/cron/yield-sync/publication-view.ts` builds selected-source evidence, ordered candidates, decision ledgers, and per-source provenance once. Rankings and persistence consume the same selection; both preview and final validation remain in place.
 - `yield_publication_generations` and `yield_source_decisions` record publication state and bounded source-selection evidence. Repeated unchanged anomaly evidence is 30-day audit data; source switches and anomaly-episode boundaries remain durable.
 - Public rankings expose only a validated published generation. Failed validation, stale-writer, or publication attempts leave the previous public snapshot intact.
 - The final resolve-stage eligibility pass removes null, non-finite, or thin measured venue-TVL candidates in the three deposit-venue classes before evaluation and arbitration, across tracked, explicit, auto-discovered, supplemental, and linked-variant paths. Only eligible candidates can reach a validated published generation.
-- History retention is enforced by the producer. Legacy rows remain explicitly partial rather than receiving invented evidence.
+- History retention is enforced by the producer. Idempotent cleanup retries transient D1 overloads with the shared bounded, abort-aware retry policy; exhausted retries and schema errors still fail visibly without replaying publication. Legacy rows remain explicitly partial rather than receiving invented evidence.
 
 ### Producers And Consumers
 
@@ -614,6 +617,8 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 
 ### Presentation Boundaries
 
+- The workbench emits `yield_zero_results` only after ranking data has loaded without a query error. Loading, absent-data, and failed-refresh states are not counted as empty-result exposures; a loaded empty payload still is. This event measures an empty view, not a completed conversion or necessarily a failed search.
+- URL filter normalization also waits for loaded, error-free ranking data, so data-derived options cannot erase a valid incoming filter while the request is pending.
 - Leaderboard rows keep a fixed visual budget: confidence, freshness, and warning/source-risk severity. Additional evidence belongs in the expanded panel or detail page.
 - The stablecoin detail section is an at-a-glance summary; `/stablecoin/<id>/yield/` is the history-first workbench. The two surfaces must not duplicate whole panels.
 - Deep-link workbenches are runtime analysis surfaces and remain `noindex`; `/yield/` and stablecoin detail pages are the indexable surfaces.

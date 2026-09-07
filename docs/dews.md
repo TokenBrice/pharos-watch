@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/methodology-versions/depeg-dews.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.21`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.22`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-dews.ts`
 
@@ -116,6 +116,8 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 ### S_black — Blacklist Activity
 
 Only for stablecoin IDs with direct live blacklist tracker configs. Recent `blacklist_events` rows are resolved through tracker provenance (`config_key` / `contract_address`) to the owning canonical stablecoin ID before scoring, so same-symbol siblings do not inherit each other's freeze events. Legacy rows without provenance fall back only when the symbol maps to a single tracker-owned stablecoin ID. Uses 24h event count with spike detection relative to 7d daily average.
+
+Only public events (`suppression_reason IS NULL`) enter either window. Suppressed EURC mirror-zero rows remain stored for provenance but cannot create a blacklist surge. The daily digest applies the same public-event eligibility before counting its rolling 24-hour activity or selecting candidates; unsuppressed zero-value events remain eligible. Excluding rows can change both the numerator and the 7-day baseline, so it does not imply every resulting DEWS score decreases.
 
 ### S_flow — Mint/Burn Flow
 
@@ -276,7 +278,7 @@ Repair modes:
 | ------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
 | `DEWSBadge`   | `src/components/dews-badge.tsx`   | Table rows (hidden when CALM)                                                         |
 | `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
-| `DEWSSummary` | `src/components/dews-summary.tsx` | Depeg-page hero radar; title-level contextual methodology hint                         |
+| `DEWSRadarPanel` | `src/components/dews-summary.tsx` | Embedded in the `/depeg/` hero (`DepegOutlookHero`), which supplies the heading and contextual methodology hint |
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/api-hooks.ts`
 
@@ -284,13 +286,13 @@ Repair modes:
 
 **Design tokens:** `--dews-calm` through `--dews-danger`, plus radar contrast tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`, `--dews-radar-band-ring-opacity`, `--dews-radar-outer-ring-opacity`, `--dews-radar-calm-dot-bloom`, `--dews-radar-calm-dot-core`) in `src/styles/tokens/semantic.css`
 
-### Radar Layout (`DEWSSummary`)
+### Radar Layout (`DEWSRadarPanel`)
 
 The radar is center-is-danger: higher threat bands occupy inner rings, CALM coins form an ambient starfield at the periphery.
 
 | Zone           | Radius range | Description                                                                     |
 | -------------- | ------------ | ------------------------------------------------------------------------------- |
-| Center label   | r 0–38       | `SCANNING` status label + total monitored count                                 |
+| Center label   | r 0–38       | `SCANNING` status label + total DEWS-covered count                              |
 | DANGER         | r 45–90      | Innermost elevated ring                                                         |
 | WARNING        | r 95–140     |                                                                                 |
 | ALERT          | r 143–175    |                                                                                 |

@@ -297,12 +297,10 @@ async function main(): Promise<void> {
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values.replay === "string", "--replay is required");
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   const replay = ReplaySchema.parse(JSON.parse(readFileSync(String(values.replay), "utf8")));
   const rows = buildLiveWithheldCounterfactualReport(replay);
   const markdown = renderLiveWithheldCounterfactualReport(rows);
   if (typeof values.output === "string") {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
     writeFileSync(values.output, markdown, "utf8");
   } else {
     process.stdout.write(markdown);

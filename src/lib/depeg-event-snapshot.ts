@@ -54,7 +54,6 @@ function parseEventArray(raw: string, path: string): DepegEventEntry[] {
 function readDepegEventShard(path: string): DepegEventEntry[] {
   // The caller restricts this path to a discovered YYYY.json shard below the
   // repository's depeg-event data directory.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   return parseEventArray(readFileSync(path, "utf8"), path);
 }
 

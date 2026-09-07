@@ -8,9 +8,15 @@ import {
 } from "@shared/types/dependency-types";
 import {
   V9AccessReviewV2Schema,
+  V9ControlAuthoritySchema,
   V9EconomicControlReviewV2Schema,
+  V9IncidentStateSchema,
+  V9KeyCustodySchema,
+  V9ModulesOrGuardsSchema,
   V9ReserveAssetClassSchema,
   V9ResolvedMechanismArchetypeSchema,
+  V9RouteSettlementSlaSecSchema,
+  V9RouteSettlementUsdAmountSchema,
   V9VariantKindSchema,
 } from "@shared/types/safety-score-v9-facts";
 import {
@@ -232,11 +238,11 @@ export const RouteReviewSchema = z
     coverageClass: V9RouteCoverageClassSchema,
     capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
     settlementModel: V9RouteSettlementModelSchema,
-    settlementSlaSec: z.number().int().nonnegative().nullable(),
+    settlementSlaSec: V9RouteSettlementSlaSecSchema,
     settlementHorizonSec: z.number().int().nonnegative().optional(),
-    queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
-    dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
-    minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
+    queueDepthUsd: V9RouteSettlementUsdAmountSchema,
+    dailyLimitUsd: V9RouteSettlementUsdAmountSchema,
+    minRedeemUsd: V9RouteSettlementUsdAmountSchema,
     physicalResourceKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value),
     executionCosts: canonicalArrayBy(
       RouteExecutionCostSchema,
@@ -287,40 +293,15 @@ const ControlOverlaySchema = z
     capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
-    authority: z
-      .object({
-        authorityKey: CanonicalTextSchema,
-        // AUTHORITY-LADDER 9.46: mirrors the published fact schema's model union
-        // (`shared/types/safety-score-v9-facts.ts`); `validator-quorum` is the
-        // external message-validation quorum rung.
-        model: z.enum([
-          "none",
-          "eoa",
-          "multisig",
-          "governance",
-          "contract",
-          "issuer-backend",
-          "validator-quorum",
-          "unknown",
-        ]),
-        threshold: z
-          .object({ required: z.number().int().positive(), total: z.number().int().positive() })
-          .strict()
-          .nullable(),
-      })
-      .strict()
-      .nullable(),
+    authority: V9ControlAuthoritySchema,
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
     // A reviewer authored a fresh scoped open question naming this control;
     // mirrors the compiled control fact (`V9DeploymentControlFactV2`).
     scopedQuestionFresh: z.boolean().optional(),
-    // Reviewed key-custody attestation and Safe module/guard surface. Both
-    // mirror the compiled control fact (`V9DeploymentControlFactV2`); see the
-    // field comments there.
-    keyCustody: z.enum(["mpc", "hsm", "unknown"]).default("unknown"),
-    modulesOrGuards: z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown"),
-    incidentState: z.enum(["none", "active", "resolved", "unknown"]),
+    keyCustody: V9KeyCustodySchema,
+    modulesOrGuards: V9ModulesOrGuardsSchema,
+    incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict();

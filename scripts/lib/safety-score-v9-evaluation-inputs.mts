@@ -1,0 +1,191 @@
+/**
+ * The pure, production-shaped evaluator and the narrow contracts it consumes.
+ * Research harnesses, readiness/coverage gates, public response projection,
+ * and operational publication code do not change score construction.
+ */
+export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
+  "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+  "shared/lib/dependency-graph.ts",
+  "shared/lib/exit-route-scoring.ts",
+  "shared/lib/sha256.ts",
+  "shared/lib/stable-json.ts",
+  "shared/lib/safety-score-v9/access-posture.ts",
+  "shared/lib/safety-score-v9/aggregation.ts",
+  "shared/lib/safety-score-v9/archetypes/algorithmic.ts",
+  "shared/lib/safety-score-v9/archetypes/cdp.ts",
+  "shared/lib/safety-score-v9/archetypes/index.ts",
+  "shared/lib/safety-score-v9/archetypes/rwa-credit-fund.ts",
+  "shared/lib/safety-score-v9/archetypes/synthetic-delta-neutral.ts",
+  "shared/lib/safety-score-v9/backing.ts",
+  "shared/lib/safety-score-v9/compile.ts",
+  "shared/lib/safety-score-v9/control.ts",
+  "shared/lib/safety-score-v9/dependencies.ts",
+  "shared/lib/safety-score-v9/evaluate-asset.ts",
+  "shared/lib/safety-score-v9/evaluate-set.ts",
+  "shared/lib/safety-score-v9/evidence.ts",
+  "shared/lib/safety-score-v9/exit.ts",
+  "shared/lib/safety-score-v9/facts.ts",
+  "shared/lib/safety-score-v9/formula.ts",
+  "shared/lib/safety-score-v9/mechanism-profiles.ts",
+  "shared/lib/safety-score-v9/operational-resilience.ts",
+  "shared/lib/safety-score-v9/policy.ts",
+  "shared/lib/safety-score-v9/primitives.ts",
+  "shared/lib/safety-score-v9/reasons.ts",
+  "shared/lib/safety-score-v9/scoped-risk.ts",
+  "shared/lib/safety-score-v9/score.ts",
+  "shared/lib/safety-score-v9/stress.ts",
+  "shared/lib/safety-score-v9/trace.ts",
+  "shared/lib/safety-score-v9/wrapper-risk.ts",
+  "shared/types/safety-score-v9-backing.ts",
+  "shared/types/safety-score-v9-fact-primitives.ts",
+  "shared/types/safety-score-v9-facts.ts",
+  "shared/types/safety-score-v9-operational-resilience.ts",
+  "shared/types/safety-score-v9-public-facts.ts",
+  "shared/types/safety-score-v9-public-internal.ts",
+  "shared/types/safety-score-v9-public.ts",
+  "shared/types/safety-score-v9-wrapper.ts",
+  "shared/types/safety-score-v9.ts",
+] as const;
+
+/**
+ * Exact-input normalization, V2 fact compilation, and stable methodology or
+ * capability declarations that can change the facts presented to the pure
+ * evaluator. Point-in-time registry/source data remains in the fact digest.
+ *
+ * IMPORT CLOSURE (VER-010): every score-bearing module imported by a listed
+ * producer must itself be listed — an omitted import can change fact output
+ * without changing the build identity. When adding an import to any listed
+ * file, add its score-bearing transitive sources here too.
+ *
+ * `shared/lib/math.ts` (clampScore, roundScore, bandFromThresholds) and the
+ * `shared/lib/methodology-versions/` subtree reached through the two version
+ * re-export shims were closure holes: a rounding rule or a published methodology
+ * version could change with no movement in the build identity. Both are listed
+ * now.
+ *
+ * Deliberately still open: the *literal* transitive closure of the listed
+ * producers is ~131 further modules, almost all worker I/O infrastructure
+ * (`db.ts`, `cron-lease.ts`, `fetch-retry.ts`, `chain-registry.ts`) reached
+ * through the fact-set producers. Those shape when and how facts are fetched,
+ * not what the pure evaluator computes from them, and listing them would churn
+ * the manifest on every unrelated worker edit. Widening the list to them is a
+ * separate decision about what "score-bearing" means here, not an oversight.
+ * `shared/lib/format.ts` and the `methodology-changelogs/{liquidity-score,
+ * redemption-backstop}/v*.ts` entries sit just past this boundary for the same
+ * reason: they feed version *labels* rather than scoring behaviour.
+ */
+export const V9_FACT_PRODUCER_SOURCE_PATHS = [
+  "shared/data/safety-score-v9/incident-reviews-v1.json",
+  "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
+  "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
+  "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
+  "shared/lib/classification/resolve-mechanism-archetype.ts",
+  // Cadence numbers only (WS7.1). shared/lib/cron-jobs.ts stays the ADR-7
+  // schedule authority but is deliberately NOT pinned: a cron-expression,
+  // label, or connection-budget edit must not rotate the evaluation build.
+  "shared/lib/cron-cadences.ts",
+  "shared/lib/dependency-derivation.ts",
+  "shared/lib/exit-route-identity.ts",
+  "shared/lib/exit-route-output.ts",
+  "shared/lib/math.ts",
+  "shared/lib/measured-execution-deployment-policies.ts",
+  "shared/lib/methodology-versions/base.ts",
+  "shared/lib/methodology-versions/constants.ts",
+  "shared/lib/methodology-versions/current-version.json",
+  "shared/lib/methodology-versions/liquidity-score.ts",
+  "shared/lib/methodology-versions/redemption-backstop.ts",
+  "shared/lib/p4-exit-route-amm-simulation.ts",
+  "shared/lib/p4-exit-route-capability-policy.ts",
+  "shared/lib/p4-exit-route-capacity.ts",
+  "shared/lib/p4-exit-route-measured-profile-validation.ts",
+  "shared/lib/p4-exit-route-observation-assembly.ts",
+  "shared/lib/redemption-backstop-capacity.ts",
+  "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
+  "shared/lib/redemption-backstop-configs/factory.ts",
+  "shared/lib/redemption-backstop-configs/index.ts",
+  "shared/lib/redemption-backstop-configs/manifest.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/index.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
+  "shared/lib/redemption-backstop-configs/offchain-issuer/shared.ts",
+  "shared/lib/redemption-backstop-configs/policies.ts",
+  "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
+  "shared/lib/redemption-backstop-configs/queue-redeem.ts",
+  "shared/lib/redemption-backstop-configs/review-dates.ts",
+  "shared/lib/redemption-backstop-configs/schema.ts",
+  "shared/lib/redemption-backstop-configs/shared.ts",
+  "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
+  "shared/lib/redemption-backstop-configs/stablecoin-redeem/shared.ts",
+  "shared/lib/redemption-backstop-docs.ts",
+  "shared/lib/redemption-backstop-providers.ts",
+  "shared/lib/redemption-backstop-scoring.ts",
+  "shared/lib/redemption-backstops.ts",
+  "shared/lib/report-cards-base-input-identity.ts",
+  "shared/lib/report-cards-fixed-input-identity.ts",
+  "shared/lib/supply.ts",
+  "shared/lib/type-guards.ts",
+  "shared/types/core.ts",
+  "shared/types/dependency-types.ts",
+  "shared/types/exit-route.ts",
+  "shared/types/market.ts",
+  "shared/types/measured-execution.ts",
+  "shared/types/redemption.ts",
+  "shared/types/report-card-grade.ts",
+  "shared/types/report-cards-base-input.ts",
+  "shared/types/reserves.ts",
+  "shared/types/safety-schema-primitives.ts",
+  "shared/types/safety-score-history.ts",
+  "shared/types/safety-score-v9-mechanism-overlays.ts",
+  "shared/types/safety-score-v9-incidents.ts",
+  "shared/types/safety-score-v9-mechanism-profile.ts",
+  "shared/types/safety-score-v9-operational-resilience-overlays.ts",
+  "shared/types/safety-score-v9-transfer-overlays.ts",
+  "shared/types/stablecoin-taxonomy.ts",
+  "shared/lib/chains/index.ts",
+  "shared/lib/exit-route-capacity-point.ts",
+  "worker/src/lib/redemption-exit-route-observations.ts",
+  "worker/src/lib/report-cards-fixed-input.ts",
+  "worker/src/lib/safety-score-v9/extension.ts",
+  "worker/src/lib/safety-score-v9/extension-bridge.ts",
+  "worker/src/lib/safety-score-v9/extension-incidents.ts",
+  "worker/src/lib/safety-score-v9/extension-mechanism.ts",
+  "worker/src/lib/safety-score-v9/extension-oracle.ts",
+  "worker/src/lib/safety-score-v9/extension-operational-resilience.ts",
+  "worker/src/lib/safety-score-v9/extension-reserves.ts",
+  "worker/src/lib/safety-score-v9/extension-routes.ts",
+  "worker/src/lib/safety-score-v9/extension-shared.ts",
+  "worker/src/lib/safety-score-v9/extension-shock.ts",
+  "worker/src/lib/safety-score-v9/extension-supply.ts",
+  "worker/src/lib/safety-score-v9/extension-transfer.ts",
+  "worker/src/lib/safety-score-v9/extension-wrapper-allocation.ts",
+  "worker/src/lib/safety-score-v9/fact-set.ts",
+  "worker/src/lib/safety-score-v9/fact-set-backing.ts",
+  "worker/src/lib/safety-score-v9/fact-set-boundary.ts",
+  "worker/src/lib/safety-score-v9/fact-set-context.ts",
+  "worker/src/lib/safety-score-v9/fact-set-control.ts",
+  "worker/src/lib/safety-score-v9/fact-set-exit.ts",
+  "worker/src/lib/safety-score-v9/fact-set-operational-resilience.ts",
+  "worker/src/lib/safety-score-v9/fact-set-peg-supply.ts",
+  "worker/src/lib/safety-score-v9/fact-set-schema.ts",
+  "worker/src/lib/safety-score-v9/fact-set-wrapper.ts",
+  "worker/src/lib/evm-rpc.ts",
+  "worker/src/lib/evm-selectors.ts",
+  "worker/src/lib/fetch-retry.ts",
+  "worker/src/lib/safety-score-v9/centrifuge-supply-observer.ts",
+  "worker/src/lib/safety-score-v9/supply-observation-primitives.ts",
+  "worker/src/lib/safety-score-v9/supply-attribution.ts",
+  "worker/src/lib/safety-score-v9/supply-attribution-source.ts",
+  "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
+  "worker/src/lib/safety-score-v9/wm-supply-observer.ts",
+  "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
+  "worker/src/lib/safety-score-v9/xaut-supply-observer.ts",
+] as const;
+export const V9_EVALUATION_BUILD_SOURCE_PATHS = [
+  ...V9_SCORE_EVALUATOR_SOURCE_PATHS,
+  ...V9_FACT_PRODUCER_SOURCE_PATHS,
+] as const;
+

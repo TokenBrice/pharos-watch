@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-08-31 to 2026-09-06
+
+Global navigation and the depeg route are rebuilt while the browser registry drops from 1.52 MB to 247 KB.
+
+- **V9 evidence closures**: Safety Score V9 moved 9.45 to 9.461: an external validator quorum now counts as a named authority, and evaluator defects on bridge joins and commodity exits were corrected without adding evidence.
+- **Exact exit measurement**: Liquidity Score 6.2 and 6.3 pin the LUSD/3Crv metapool for on-chain get_dy_underlying quotes and collapse Curve registry aliases by address; exact Uniswap V4 pool identities were recovered from DefiLlama.
+- **Navigation and depeg rebuild**: Global navigation became a quick rail plus four disclosure menus with real hover intent, mobile categories drill down instead of expanding accordions, and the depeg route was rebuilt around a signature hero.
+- **Lighter first load**: The browser stablecoin registry split into a 247 KB list plus per-coin detail projections, down from 1.52 MB. The immutable shell separated from the interactive provider, and below-fold detail lanes now load on viewport.
+- **Worker cost diet**: One cron sentinel replaced seven watchdog jobs, telemetry writes dropped to 60 second heartbeats, /api/health serves the 15-minute snapshot with operator fields on /api/status, and V9 capture bodies moved to R2.
+- **Digest publication**: A quarantine registry stops a retracted daily claim from re-entering the weekly recap, editions moved to Opus 5 at a bounded ceiling for 36% less spend per day, and a watchdog covers Telegram media and the weekly X post.
+- **Coverage and pricing**: Pricing 6.215 added canonical sUSDS and sUSDe vault NAV coverage, redemption backstop 4.42 requires current depeg evidence for market-implied impairment, and Lisk, Asset Chain and Chiliz entered the chain registry.
+- **Repo gates and routing**: One PR lane manifest feeds both check:pr and the GitHub workflow, coverage shards derive from import ownership, API reference sections generate from OpenAPI, and agent routing collapsed to 16 mappings.
+
 ## 2026-08-24 to 2026-08-30
 
 The orbital Safety Map ships as Safety Score V9 reaches 9.45; four new swap census providers close chain gaps.

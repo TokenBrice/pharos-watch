@@ -54,6 +54,40 @@ describe("PR lane manifest", () => {
     })).toEqual({ include: [{ lane: "docs", timeout: 15 }] });
   });
 
+  it("gives the docs lane sole doc-sync ownership in the mixed matrix", () => {
+    const mixed = buildPrWorkflowMatrix({
+      criticalCoverageChanged: false,
+      criticalCoverageShards: 0,
+      docsChanged: true,
+      docsOnly: false,
+    }).include;
+    expect(mixed.find((entry) => entry.lane === "static")).toMatchObject({ skipDocSync: true });
+    expect(mixed.find((entry) => entry.lane === "docs")).toBeDefined();
+  });
+
+  it("keeps the static lane owning doc-sync when the docs lane is not selected", () => {
+    const sourceOnly = buildPrWorkflowMatrix({
+      criticalCoverageChanged: false,
+      criticalCoverageShards: 0,
+      docsChanged: false,
+      docsOnly: false,
+    }).include;
+    const staticEntry = sourceOnly.find((entry) => entry.lane === "static");
+    expect(staticEntry).toBeDefined();
+    expect(staticEntry?.skipDocSync).toBeUndefined();
+    expect(sourceOnly.some((entry) => entry.lane === "docs")).toBe(false);
+  });
+
+  it("forwards skipDocSync to the static lane command only when set", () => {
+    const staticCommand = getPrLane("static").commands[0];
+    expect(buildPrLaneCommandArgs(staticCommand, { base: "base", head: "HEAD", skipDocSync: true })).toEqual([
+      "run", "check:pr:static", "--", "--base=base", "--head=HEAD", "--skip-doc-sync",
+    ]);
+    expect(buildPrLaneCommandArgs(staticCommand, { base: "base", head: "HEAD" })).toEqual([
+      "run", "check:pr:static", "--", "--base=base", "--head=HEAD",
+    ]);
+  });
+
   it("uses the same strict commands for local and sharded execution", () => {
     const gitleaks = getPrLane("preflight").commands.find((command) => command.id === "gitleaks");
     const tests = getPrLane("tests").commands[0];

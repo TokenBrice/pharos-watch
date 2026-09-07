@@ -8,7 +8,7 @@ import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
 import { CHAIN_META } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
 import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
@@ -22,7 +22,7 @@ const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
 const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbitrum", "polygon", "gnosis"];
 // Floor to the nearest 10 so the share message reads as a round figure and stays
 // honestly conservative as canonical-order grows.
-const TRACKED_COUNT_FLOOR = Math.floor(TRACKED_STABLECOINS.length / 10) * 10;
+const TRACKED_COUNT_FLOOR = Math.floor(CLIENT_TRACKED_STABLECOINS.length / 10) * 10;
 const PHAROS_SHARE_MESSAGE = `Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks ${TRACKED_COUNT_FLOOR}+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch/funding/`;
 
 // Brand-marked icons matching the footer (lucide has no X/Telegram icons).

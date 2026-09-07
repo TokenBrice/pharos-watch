@@ -56,6 +56,11 @@
       "decimals": 18
     },
     {
+      "chain": "tac",
+      "address": "0x0a72ed3c34352ab2dd912b30f2252638c873d6f0",
+      "decimals": 18
+    },
+    {
       "chain": "starknet",
       "address": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
       "decimals": 18

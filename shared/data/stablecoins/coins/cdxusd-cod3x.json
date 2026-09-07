@@ -28,16 +28,8 @@
   "protocolSlug": "cod3x",
   "links": [
     {
-      "label": "Website",
-      "url": "https://www.cod3x.org/"
-    },
-    {
       "label": "Twitter",
       "url": "https://x.com/Cod3xOrg"
-    },
-    {
-      "label": "Docs",
-      "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
     }
   ],
   "contracts": [

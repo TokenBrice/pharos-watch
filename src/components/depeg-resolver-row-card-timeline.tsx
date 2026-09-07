@@ -97,13 +97,13 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
             className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center gap-0.5"
             style={{ left: `${stop.x}%` }}
           >
-            <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">{cell.horizon}</span>
+            <span className="pharos-meta font-medium uppercase tracking-wide">{cell.horizon}</span>
             {hasProb ? (
-              <span className="font-mono text-[10px] leading-none text-sky-700 dark:text-sky-400">
+              <span className="pharos-numeric text-xs leading-none text-sky-700 dark:text-sky-400">
                 {Math.round((cell.probability ?? 0) * 100)}%
               </span>
             ) : (
-              <span aria-hidden="true" className="font-mono text-[10px] leading-none text-muted-foreground/50">·</span>
+              <span aria-hidden="true" className="pharos-numeric text-xs leading-none text-muted-foreground">·</span>
             )}
           </div>
         );
@@ -139,7 +139,7 @@ function ForwardCap({ tone, label }: { tone: "terminal" | "muted"; label: string
   return (
     <div className="absolute inset-0 flex items-center">
       <span className={cn("h-px flex-1", lineTone)} aria-hidden="true" />
-      <span className={cn("px-2 text-center text-[10px] font-medium leading-tight", textTone)}>{label}</span>
+      <span className={cn("px-2 text-center text-xs font-medium leading-tight", textTone)}>{label}</span>
       <span className={cn("h-px flex-1", lineTone)} aria-hidden="true" />
     </div>
   );
@@ -186,7 +186,7 @@ export function ForecastTimeline({ row }: { row: DdrDisplayRow }) {
       role="img"
       aria-label={ariaLabel}
     >
-      <div className="grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+      <div className="pharos-kicker grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2">
         <span className="truncate">
           {lockAnchored ? "At lock" : "So far"}{" "}
           <span className="font-mono normal-case text-muted-foreground/90">· {formatElapsedSeconds(ageSec)}</span>

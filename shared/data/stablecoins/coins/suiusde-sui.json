@@ -34,6 +34,8 @@
       "decimals": 6
     }
   ],
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
   "governanceQuality": "single-entity",
   "launchDate": "2026-02-11"
 }

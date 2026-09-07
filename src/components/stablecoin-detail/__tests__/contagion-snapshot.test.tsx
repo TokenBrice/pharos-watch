@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 
 import { render, screen } from "@testing-library/react";
+import Link from "next/link";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 const useReportCardsV9Mock = vi.hoisted(() => vi.fn());
 const useStablecoinsMock = vi.hoisted(() => vi.fn());
+const useNearViewportMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/hooks/use-near-viewport", () => ({ useNearViewport: useNearViewportMock }));
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCardsV9: useReportCardsV9Mock,
@@ -72,6 +76,7 @@ function makeDependencyResponse() {
 
 describe("ContagionSnapshot", () => {
   beforeEach(() => {
+    useNearViewportMock.mockReturnValue({ ref: vi.fn(), near: true });
     useReportCardsV9Mock.mockReset();
     useReportCardsV9Mock.mockReturnValue({
       data: makeDependencyResponse(),
@@ -93,6 +98,30 @@ describe("ContagionSnapshot", () => {
     });
   });
 
+  it("defers only the offscreen graph while keeping context and links available", () => {
+    const ref = vi.fn();
+    useNearViewportMock.mockReturnValue({ ref, near: false });
+    const content = () => (
+      <ContagionSnapshot
+        stablecoinId="usdc-circle"
+        variantRelationshipCard={<Link href="/stablecoin/usde-ethena/">Related asset</Link>}
+        hasCollateralUsage
+        collateralUsageEntries={[]}
+      />
+    );
+    const { rerender } = render(content());
+    expect(screen.queryByTestId("contagion-graph")).toBeNull();
+    expect(screen.getByText("Loading dependency graph...").className).toContain("min-h-[22rem]");
+    expect(screen.getByText("Dependency Context")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Related asset" }).getAttribute("href")).toBe("/stablecoin/usde-ethena");
+    expect(screen.getByTestId("collateral-usage-mock")).toBeTruthy();
+
+    useNearViewportMock.mockReturnValue({ ref, near: true });
+    rerender(content());
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-focus")).toBe("usdc-circle");
+    expect(screen.queryByText("Loading dependency graph...")).toBeNull();
+    expect(screen.getByRole("link", { name: "Related asset" })).toBeTruthy();
+  });
 
   it("renders the focused dependency map for the current asset", () => {
     render(

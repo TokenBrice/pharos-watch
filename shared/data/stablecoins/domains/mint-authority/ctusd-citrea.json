@@ -7,16 +7,23 @@
     "summary": "ctUSD is the canonical Citrea M0-backed extension; its native wrapping routes through the Citrea SwapFacility while inherited base M issuance remains on the Ethereum MinterGateway. The M0 issuance and extension checks below are native liability controls, not bridge machinery. Current M0 Portal configuration does not authorize a direct ctUSD bridge representation, and Bridge Risk retains the reviewed Citrea native route only.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d"
+      ],
       "proxyAddresses": [
-        "0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+        "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d"
       ],
       "implementationAddresses": [
-        "0xd87c75a92db19fe334fe7812890f893449ff1bda"
+        "0xd87c75a92db19fe334fe7812890f893449ff1bda",
+        "0xF15E4De65ADF1d0a5c057f0165A50072Fd76804C"
       ],
       "adminAddresses": [
-        "0x0f38d8a5583f9316084e9c40737244870c565924"
+        "0x0f38d8a5583f9316084e9c40737244870c565924",
+        "0x802356e6AEA29769A32C46C918FDF1674871480F"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "M0 SwapFacility extension router",
       "observedAt": "2026-06-11",
       "observedBlock": 8546189,
@@ -80,6 +87,40 @@
           }
         ],
         "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment. Native extension checks retained from the legacy routeChecks block: SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply; the cap follows M supply and can change through the M0 governance/admin path; and the earlier review had not independently read a Citrea proxy-admin slot. These are canonical ctUSD extension issuance checks, not bridge machinery."
+      },
+      {
+        "chain": "citrea",
+        "address": "0x55a8103041a1bda35C6AE4c8E4C26656Fa83e961",
+        "deploymentRefs": [
+          "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d"
+        ],
+        "label": "ctUSD canonical ProxyAdmin owner EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "chain": "citrea",
+        "address": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "deploymentRefs": [
+          "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d"
+        ],
+        "label": "ctUSD SwapFacility ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "source": "onchain",
+          "observedBlock": 8546189
+        }
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -373,6 +373,31 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeyCount);
   });
 
+  it("refreshes the adapter clock after time spent earlier in the reserve queue", async () => {
+    const startedMs = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(startedMs);
+    const fetch = mockAdapterRegistry(async () => ({
+      slices: [{ name: "Cash", pct: 100, risk: "low" as const }],
+    }));
+    fetch.mockImplementationOnce(async () => {
+      clock.mockReturnValue(startedMs + 180_000);
+      return {
+        slices: [{ name: "Cash", pct: 100, risk: "low" as const }],
+        metadata: { freshnessMode: "not-applicable" as const },
+      };
+    });
+    try {
+      const { syncLiveReserves } = await import("../sync-live-reserves");
+      await syncLiveReserves(mockD1(), new AbortController().signal, {});
+      expect(fetch).toHaveBeenCalledWith(
+        expect.anything(), expect.anything(), expect.anything(),
+        expect.objectContaining({ nowSec: Math.floor(startedMs / 1_000) + 180 }),
+      );
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
 
   it("reuses identical shared HTTP reserve sources within a run", async () => {
     const adapterFetch = mockAdapterRegistry(async () => ({

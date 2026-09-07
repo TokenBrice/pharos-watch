@@ -1,8 +1,9 @@
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
+import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import { escapeHtml, type InlineKeyboardButton } from "../lib/telegram";
 import { formatTelegramAge } from "../lib/telegram/format-age";
-import { MANAGE_PAGE_SIZE, isPausedSentinel } from "../lib/telegram/constants";
+import { MANAGE_PAGE_SIZE } from "../lib/telegram/constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram/webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram/alerts";
 import type { TelegramPresetDefinition, TelegramPresetId } from "../lib/telegram/presets";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
@@ -10,6 +10,7 @@ import {
   buildCurrentMap,
   extractFindings,
   extractSummaryFindings,
+  fetchJson,
   type Current,
 } from "../build-ai-summary-staleness-candidates";
 import { buildMaintenanceApiRequest } from "../../lib/maintenance-api";
@@ -98,7 +99,7 @@ describe("AI summary V9 current-value projection", () => {
 
     const findings = extractFindings(
       "It has an A safety grade at 90, backing grade of B, exit grade of A, " +
-        "economic control grade of C, dependency risk grade of D, and a liquidity score of 72.",
+        "economic control grade of C, dependency risk grade of D. Its old Safety Score liquidity score of 72 is stale.",
       current,
     );
 
@@ -117,6 +118,26 @@ describe("AI summary V9 current-value projection", () => {
       ]),
     );
   });
+
+  it.each([
+    "Its DEX liquidity score is 80.",
+    "Its liquidity score is 80.",
+    "Its DEX liquidity grade of A remains strong.",
+    "Its liquidity grade of A remains strong.",
+    "Safety Score v8 had other pillars. Its DEX liquidity score is 80.",
+  ])("does not declare a current or ambiguous liquidity claim retired: %s", (text) => {
+    const findings = extractFindings(text, {} as Current);
+    expect(findings).toEqual([expect.objectContaining({ current: expect.stringContaining("manual dated/source review"), severity: "low" })]);
+    expect(findings.some((finding) => finding.current.includes("retired"))).toBe(false);
+  });
+
+  it.each(["Safety Score v8 liquidity score is 80.", "Its old Safety Score liquidity grade of A was strong."])(
+    "keeps explicit legacy liquidity claims actionable: %s", (text) => {
+      expect(extractFindings(text, {} as Current)).toEqual([
+        expect.objectContaining({ current: "retired in Safety Score v9", severity: "medium" }),
+      ]);
+    },
+  );
 
   it("queues volatile adoption, cross-chain drift, holder scope, and financing comparisons", () => {
     const current: Current = {
@@ -199,5 +220,37 @@ describe("AI summary V9 current-value projection", () => {
     }, current)).toEqual([
       expect.objectContaining({ kind: "legacy-dependency-grade" }),
     ]);
+  });
+});
+
+describe("AI candidate body deadlines", () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+  const endpoint = { apiPath: "/api/test", fixtureName: "test" };
+
+  it("aborts a stalled body after immediate successful headers", async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+      signal = init.signal;
+      return { ok: true, json: () => new Promise((_resolve, reject) => {
+        signal!.addEventListener("abort", () => reject(new Error("body aborted")), { once: true });
+      }) };
+    }));
+    const result = fetchJson(endpoint, "fixture");
+    const rejected = expect(result).rejects.toThrow("body aborted");
+    await vi.advanceTimersByTimeAsync(30_000);
+    await rejected;
+    expect(signal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("returns parsed success and rejects HTTP errors and malformed JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json({ success: true }))
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response("invalid")));
+    await expect(fetchJson(endpoint, "fixture")).resolves.toEqual({ success: true });
+    await expect(fetchJson(endpoint, "fixture")).rejects.toThrow("GET /api/test -> 503 unavailable");
+    await expect(fetchJson(endpoint, "fixture")).rejects.toThrow();
   });
 });

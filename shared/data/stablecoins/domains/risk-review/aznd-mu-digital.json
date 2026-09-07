@@ -1,11 +1,24 @@
 {
   "id": "aznd-mu-digital",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: AZND resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Monadscan verified AZND source and ABI",
+        "url": "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code"
+      },
+      {
+        "label": "Monad mainnet RPC capability probes",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Mu Digital contract-address registry",
+        "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md"
+      }
+    ],
+    "evidence": "Direct review on 2026-09-04: the verified Monad AZND token surface exposes ERC-20 methods plus mint, burn, and setAccessManager, but no token-level pause, freeze, blacklist, force-transfer, or equivalent transfer-restriction function.",
     "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedAt": "2026-09-04"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -97,7 +110,7 @@
         "sourceChain": "monad",
         "canonicalChain": "monad",
         "controllerChain": "ethereum",
-        "controllerAddress": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+        "controllerAddress": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",

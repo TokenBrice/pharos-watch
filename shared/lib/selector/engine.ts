@@ -6,6 +6,11 @@
  * single time input, threaded by the caller.
  */
 import {
+  COVERAGE_SPARSE_FRACTION,
+  COVERAGE_UNEVEN_FRACTION,
+  LOW_CONFIDENCE_THRESHOLD,
+} from "./coverage-policy";
+import {
   evaluateExclusions,
   hasRequiredSignals,
   HOWEY_UNCERTAIN_ASSETS,
@@ -217,8 +222,8 @@ function computeCoverageState(
   skippedForCoverage: readonly SkippedCoin[],
 ): CoverageState {
   const skippedFrac = universeLength > 0 ? skippedForCoverage.length / universeLength : 0;
-  const sparse = skippedFrac > 0.25;
-  const uneven = !sparse && skippedFrac > 0.15;
+  const sparse = skippedFrac > COVERAGE_SPARSE_FRACTION;
+  const uneven = !sparse && skippedFrac > COVERAGE_UNEVEN_FRACTION;
   return { sparse, uneven };
 }
 
@@ -387,7 +392,7 @@ export function runSelector(
     usedRelaxedFallback ||
     coverageState.sparse ||
     recommendations.recommended.length === 0 ||
-    (recommendations.recommended[0]?.confidence ?? 100) < 70;
+    (recommendations.recommended[0]?.confidence ?? 100) < LOW_CONFIDENCE_THRESHOLD;
 
   const output: SelectorOutput = {
     profile: input.profile,

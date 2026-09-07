@@ -9,6 +9,7 @@ import type {
   StablecoinMeta,
 } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
+import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 
 /**
  * Client-safe projection of the curated reserve slices' quality attributes
@@ -137,13 +138,6 @@ const RISK_FACTOR_LABELS: Record<ReserveRiskFactor, string> = {
   legal: "legal",
   concentration: "concentration",
   leverage: "leverage",
-};
-
-const CONFIDENCE_LABELS: Record<string, string> = {
-  verified: "Verified",
-  probable: "Probable",
-  "manual-review": "Manual review",
-  unknown: "Unknown",
 };
 
 /** Distinct asset classes rendered inline before the tail folds into one segment. */
@@ -358,7 +352,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     asOf: review?.compositionAsOf ?? null,
     sliceCount: slices.length,
     confidenceLabel:
-      typeof review?.confidence === "string" ? (CONFIDENCE_LABELS[review.confidence] ?? review.confidence) : null,
+      typeof review?.confidence === "string" ? (RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] ?? review.confidence) : null,
     reviewedAt: review?.reviewedAt ?? null,
     compositionBasis: review?.compositionBasis ?? null,
     knownUnknownExposureNote: review?.knownUnknownExposure ?? null,

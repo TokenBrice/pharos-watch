@@ -28,6 +28,8 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 | ESLint `no-restricted-syntax` (layout files) | every `npm run lint` | `<Script strategy="beforeInteractive">` and inline `<script>` JSX in any `src/app/**/layout.{ts,tsx}` |
 | `check:safe-browsing` | daily GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
 
+The pinned Gitleaks runner (`node --import tsx scripts/ci/run-gitleaks.ts --worktree`, or `--range`) runs its configuration self-test before scanning. Solana registry exceptions match only the prefixed finding in risk-review JSON, scoped to `generic-api-key`. GitBook exceptions match only explicitly reviewed public CDN UUIDs in stablecoin/safety-score JSON, also scoped to that rule; new UUIDs require review. Both path and token predicates must match (`condition = "AND"`). Neither exception may suppress a whole source line. Self-tests require public identifiers to pass and an adjacent synthetic AWS credential on the same line to remain detectable. Historical fingerprint ignores are unchanged.
+
 ## Monitoring
 
 ### Google Search Console

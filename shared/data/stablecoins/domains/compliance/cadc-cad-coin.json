@@ -23,7 +23,7 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Loon Technology Inc.",
     "issuerDomicile": "Canada",
-    "licensingRegulator": "FINTRAC; Money Services Business registration C10001420",
+    "licensingRegulator": "FINTRAC (AML/ATF supervisor); MSB registration C10001420 is held by Loon Payments Inc., an entity distinct from the stored issuerEntity Loon Technology Inc.",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -109,6 +109,6 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-09-05"
   }
 }

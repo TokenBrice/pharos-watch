@@ -19,7 +19,7 @@ function healthHex(band: HealthBand | null): string {
   return band ? HEALTH_HEX_FILL[band] : NAUTICAL_PALETTE.unrated;
 }
 
-export function ShipCargoMarks({
+function ShipCargoMarks({
   entryName,
   cargoTitle,
   cargoMarks,
@@ -80,7 +80,7 @@ export function ShipCargoMarks({
   );
 }
 
-export function ShipSeal({
+function ShipSeal({
   clipId,
   accentColor,
   healthColor,

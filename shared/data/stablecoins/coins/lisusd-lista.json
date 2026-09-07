@@ -1,13 +1,13 @@
 {
   "id": "lisusd-lista",
   "name": "Lista USD",
-  "symbol": "LISUSD",
+  "symbol": "lisUSD",
   "oneLiner": "LISUSD is Lista DAO's overcollateralized stablecoin on BNB Chain, minted from BNB and LST vaults with a PSM enabling 1:1 swaps against USDT, USDC, and FDUSD.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "BNB, ETH, LSTs, and BTCB via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
+  "collateral": "BNB, ETH, LSTs, BTCB, and additional GemJoin assets including sUSDX, USDF, asUSDF, and USD1 through Lista CDPs; PSM facilities separately support 1:1 USDT, USDC, and FDUSD swaps, while D3M is a distinct credit-based direct-deposit exposure",
   "pegMechanism": "PSM enabling 1:1 swaps with centralized stablecoins; CDP overcollateralization and liquidation",
   "mechanismArchetype": "cdp",
   "llamaId": "79",
@@ -40,80 +40,5 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "lista",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "lisusd-lista",
-    "display": {
-      "url": "https://lista.org/borrow-lisusd",
-      "label": "Lista CDP GemJoin balances"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "bsc",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "branches": [
-        {
-          "name": "slisBNB (Lista BNB LST) GemJoin",
-          "holder": "0x91e49983598685dd5acac90ceb4061a772f6e5ae",
-          "token": {
-            "chain": "bsc",
-            "address": "0xb0b84d294e0c75a6abe60171b70edeb2efd14a1b",
-            "decimals": 18
-          },
-          "risk": "high"
-        },
-        {
-          "name": "wBETH (Binance ETH LST) GemJoin",
-          "holder": "0xf45c3b619ee86f653805e007fe211b7e930e0b3b",
-          "token": {
-            "chain": "bsc",
-            "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
-            "decimals": 18
-          },
-          "risk": "medium"
-        },
-        {
-          "name": "BTCB GemJoin",
-          "holder": "0xad9eaae95617c39019acc42301a1dca4ea5b6f65",
-          "token": {
-            "chain": "bsc",
-            "address": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
-            "decimals": 18
-          },
-          "risk": "medium"
-        },
-        {
-          "name": "USDT GemJoin",
-          "holder": "0xad406ccf75f9e6216fa4349635b0cd77d0059b1f",
-          "token": {
-            "chain": "bsc",
-            "address": "0x55d398326f99059fF775485246999027B3197955",
-            "decimals": 18
-          },
-          "risk": "low",
-          "coinId": "usdt-tether",
-          "depType": "collateral"
-        },
-        {
-          "name": "FDUSD GemJoin",
-          "holder": "0x2202a491752fee0e616f06a89e2ef416e2fcd7e9",
-          "token": {
-            "chain": "bsc",
-            "address": "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409",
-            "decimals": 18
-          },
-          "risk": "low",
-          "coinId": "fdusd-first-digital",
-          "depType": "collateral"
-        }
-      ]
-    }
-  },
   "launchDate": "2022-08-19"
 }

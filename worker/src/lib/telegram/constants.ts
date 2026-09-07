@@ -40,20 +40,6 @@ export const SNOOZE_SECONDS = {
   "24h": 24 * 60 * 60,
 } as const;
 
-/**
- * Sentinel `alert_snooze_until_ts` value marking a chat as durably "Paused"
- * (`/pause`). 2100-01-01 UTC — far enough out that the snooze filter treats the
- * chat as indefinitely suppressed, while a normal timed snooze (max 24h) can
- * never collide with it. Paused is a value convention layered on the existing
- * snooze column, so no migration or routing change is needed.
- */
-export const PAUSE_SENTINEL_TS = 4102444800;
-
-/** True when a snooze timestamp is the durable Paused sentinel (exact match). */
-export function isPausedSentinel(ts: number | null | undefined): boolean {
-  return ts === PAUSE_SENTINEL_TS;
-}
-
 // ---------- Top-N insight views ----------
 
 /** Recognized `/top` view names (used for routing + did-you-mean suggestions). */

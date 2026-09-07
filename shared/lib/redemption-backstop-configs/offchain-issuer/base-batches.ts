@@ -23,15 +23,14 @@ const WARS_BOUNDED_TERMS_GAP: RedemptionV9RouteReviewTerms = {
   scoringDisposition: "bounded-terms-gap",
   missingScoringFields: ["capacity", "settlement", "cost"],
   rationale:
-    "Ripio establishes a 1:1 local-currency redemption mechanism, but reviewed public materials do not establish executable capacity, bank settlement SLA, or all-in redemption cost.",
-  reviewedAt: "2026-08-24",
+    "Ripio documents the 1:1 local-currency mechanism, but the current page's dated 2026-03-31 wARS attestation is reserve evidence rather than an executable capacity, bank settlement SLA, or all-in redemption-cost term; the 2026-09-04 review found no newer binding terms.",
+  reviewedAt: "2026-09-04",
   docs: [
-    sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
-      "route",
-      "capacity",
-      "fees",
-      "access",
-    ]),
+    sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", ["route", "access"]),
+    sourceRef(
+      "Independent public accountant certification for wARS (published 2026-03-31)",
+      "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf",
+    ),
   ],
 };
 

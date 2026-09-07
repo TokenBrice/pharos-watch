@@ -19,8 +19,8 @@
   "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-02",
-  "launchPhase": "announced",
-  "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. A public waitlist opened May 21 2026 (waitlist.gyndore.com), reviving social activity after the GitHub repo (last commit Mar 7) and Medium (last post Feb 2) went quiet. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
+  "launchPhase": "testnet",
+  "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. A public waitlist opened May 21 2026 (waitlist.gyndore.com), reviving social activity after the GitHub repo (last commit Mar 7) and Medium (last post Feb 2) went quiet. A public testnet on Base Sepolia (chain 84532) is open to any EVM wallet using free test assets, running alongside the DropWave points campaign; the testnet was live by August 25 2026, though neither gyndore.com nor Medium records an opening date. The app schedules a Gyndore Liquidity Bootstrapping Event for September 15 2026 to raise launch capital. That event is a capital raise rather than a mainnet date: gyndore.com still lists contract addresses as 'Coming Soon', the footer Audits link resolves to nothing, and no mainnet date has been published, so Pharos records no expected launch date. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
   "milestones": [
     {
       "date": "2026-02-02",
@@ -35,6 +35,20 @@
       "title": "Public waitlist opened at waitlist.gyndore.com",
       "description": "Gyndore opens a public waitlist; the project remains pre-launch with no token, launch date, or live metrics, and no third-party coverage.",
       "sourceUrl": "https://x.com/gyndore"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "testnet",
+      "title": "Public testnet open on Base Sepolia with the DropWave points campaign",
+      "description": "Third-party coverage records the public testnet as live on Base Sepolia (chain 84532), open to any EVM wallet using free test assets, alongside the DropWave points campaign. The date is the first observed coverage; the issuer published no opening date.",
+      "sourceUrl": "https://www.gizmotimes.com/blockchain/cryptocurrency/gyndore-public-testnet-guide/51238"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "milestone",
+      "title": "Gyndore Liquidity Bootstrapping Event scheduled",
+      "description": "The Gyndore app schedules the Liquidity Bootstrapping Event, a community initiative to raise launch capital, for September 15 2026. It is the project's first dated commitment; mainnet contracts remain unpublished.",
+      "sourceUrl": "https://app.gyndore.com/dropwave"
     }
   ],
   "featuredContent": [],

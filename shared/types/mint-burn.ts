@@ -42,7 +42,7 @@ const MintBurnSyncSchema = z.object({
   criticalLaneHealthy: z.boolean(),
 });
 
-const MintBurnCoverageStatusSchema = z.enum([
+export const MintBurnCoverageStatusSchema = z.enum([
   "full",
   "partial-history",
   "lagging",

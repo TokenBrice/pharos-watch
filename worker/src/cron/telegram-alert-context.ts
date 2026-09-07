@@ -1,4 +1,5 @@
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
+import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../lib/telegram/usd-profile";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -12,23 +13,13 @@ import { safeJsonParse } from "../lib/api-cache-read";
 
 /** 24h mint/burn flow older than this is omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
-const ALERT_USD_PROFILE = {
-  decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },
-  invalidFallback: "n/a",
-  maximumTier: "billion",
-  signPosition: "after-currency",
-} as const;
 
 function formatUsdCompact(value: number | null | undefined): string {
-  return formatCompactUsdWithOptions(value, ALERT_USD_PROFILE);
+  return formatCompactUsdWithOptions(value, TELEGRAM_USD_PROFILE);
 }
 
 function formatSignedUsdCompact(value: number): string {
-  return formatCompactUsdWithOptions(value, {
-    ...ALERT_USD_PROFILE,
-    positiveSign: true,
-    signPosition: "before-currency",
-  });
+  return formatCompactUsdWithOptions(value, TELEGRAM_SIGNED_USD_PROFILE);
 }
 
 export async function buildAlertContextLines(

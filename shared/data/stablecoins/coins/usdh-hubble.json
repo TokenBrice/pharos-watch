@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "94.4468% USDC deposited through the Peg Stability Module and 5.5532% Hubble CDP-backed issuance at the latest pinned read; the CDP collateral-asset weights remain incomplete",
+  "collateral": "94.4468% USDC in the Peg Stability Module and 5.5532% CDP-backed issuance; the reviewed CDP branch is split across mSOL, SOL, kUSDH-USDC Orca kToken, daoSOL, BTC, and grouped residual collateral.",
   "pegMechanism": "Borrowers mint USDH against overcollateralized Solana vaults, while the Peg Stability Module supports zero-slippage USDH/USDC conversion and holds deposited USDC as direct backing",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {

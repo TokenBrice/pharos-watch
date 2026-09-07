@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.21`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.22`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/depeg-dews.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -528,7 +528,7 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 
 ### Depeg dashboard stat context
 
-`DepegTrackerStats` (`src/components/depeg-tracker-stats.tsx`) now uses the shared contextual methodology pattern on the key cards (`Active Depegs`, `Coins at Peg`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology.
+`DepegOutlookHero` (`src/components/depeg-outlook-hero.tsx`) uses the shared contextual methodology pattern on its key figures (`Active depegs`, `Holding peg`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology. It replaced the route's earlier stat-card stack; route composition is owned by [depeg-page.md](./depeg-page.md).
 
 ### Component: DepegHistory (`depeg-history.tsx`)
 

@@ -60,14 +60,32 @@ describe("snapshotSupply", () => {
     await expect(snapshotSupply(mockD1(), controller.signal)).rejects.toThrow("snapshot supply aborted");
   });
 
-  it("returns itemCount 0 when cache is stale (>1200s)", async () => {
-    const staleUpdatedAt = Math.floor(Date.now() / 1000) - 1500;
+  it("skips the snapshot once the cache is older than two producer intervals (>1800s)", async () => {
+    const staleUpdatedAt = Math.floor(Date.now() / 1000) - 1801;
     const cacheValue = JSON.stringify({
       peggedAssets: [makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } })],
     });
     const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: staleUpdatedAt } });
     const result = await snapshotSupply(db);
     expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "cache_stale" });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+  });
+
+  it("still snapshots a cache age of 1799s (boundary below the two-interval skip gate)", async () => {
+    const boundaryUpdatedAt = Math.floor(Date.now() / 1000) - 1799;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }),
+        makeSnapshotAsset({ id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } }),
+      ],
+    });
+    const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: boundaryUpdatedAt } });
+    const result = await snapshotSupply(db);
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(2);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(true);
   });
 
   it("does not consume the daily write marker when the cache predates the scheduled slot", async () => {

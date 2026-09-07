@@ -11,11 +11,11 @@ const HOOKS_PATH = resolve(ROOT, ".codex/hooks.json");
 const CODEX_CONFIG_PATH = resolve(homedir(), ".codex/config.toml");
 const WORKTREE_NOTE =
   "Codex hooks are per-checkout; re-run with PHAROS_INSTALL_CODEX_HOOKS=1 in this worktree.";
-const DISABLED_HOOK_HINT = "Enable in Codex: /hooks or set enabled = true";
+const DISABLED_HOOK_HINT = "Review disabled hooks in Codex /hooks; installation alone does not prove invocation.";
 
 const command = 'node --import tsx "$(git rev-parse --show-toplevel)/scripts/ci/pharos-change-contract.ts"';
-// Observed in one captured Codex payload: apply_patch, exec_command.
-const CODEX_SHELL_AND_WRITE_MATCHER = "^(apply_patch|exec_command)$";
+// Canonical Codex shell name plus the previously captured compatibility name.
+const CODEX_SHELL_AND_WRITE_MATCHER = "^(Bash|apply_patch|exec_command)$";
 
 type CodexHookEvent = "PermissionRequest" | "PreToolUse" | "SessionStart";
 
@@ -161,6 +161,7 @@ function reportCodexHookStates({ hooksPath, configPath, installed }: { hooksPath
     hasDisabledHook ||= enabled === false;
   }
 
+  console.log("Invocation: unverified; confirm a safe tool call in the active Codex session. Recorded per-hook state does not include feature or managed-policy overrides.");
   if (hasDisabledHook) {
     console.log(DISABLED_HOOK_HINT);
   }

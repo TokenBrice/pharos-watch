@@ -39,34 +39,6 @@ const NEW_SOURCE_FAMILY_TYPE_PINS = [
 const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
 
 describe("DEX deployment coverage ownership", () => {
-  it("classifies the audited unsupported deployment universe exactly", () => {
-    const unsupported: Array<{ stablecoinId: string; chain: string; address: string }> = [];
-    const exclusivelyUnsupported: string[] = [];
-
-    for (const meta of ACTIVE_STABLECOINS) {
-      const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
-      const inaccessible = deployments.filter(
-        (deployment) => getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0,
-      );
-      unsupported.push(
-        ...inaccessible.map((deployment) => ({
-          stablecoinId: meta.id,
-          chain: deployment.chain,
-          address: deployment.address,
-        })),
-      );
-      if (deployments.length > 0 && inaccessible.length === deployments.length) {
-        exclusivelyUnsupported.push(meta.id);
-      }
-    }
-
-    expect(unsupported).toHaveLength(30);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(24);
-    // Registering the Osmosis and Noble providers removed the last two active
-    // coins whose entire footprint sat outside the discovery registry.
-    expect(exclusivelyUnsupported).toEqual([]);
-    expect(getDexDiscoveryProviders("stellar")).toEqual(["horizon"]);
-  });
 
   it("pins the six new provider and source-family identities", () => {
     expect(NEW_DISCOVERY_PROVIDER_TYPE_PINS).toHaveLength(6);

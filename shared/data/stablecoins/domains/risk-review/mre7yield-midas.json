@@ -53,9 +53,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "Ethereum and Etherlink are reviewed as Midas issuer-native issuance, while the tracked Starknet address is a canonical StarkGate lock-mint representation of Ethereum mRe7YIELD. StarkGate's Ethereum MultiBridge escrows the canonical token and its Starknet bridge L1 handler mints the mapped Starknet token; the route's Starknet governance account and zero-delay bridge/token upgrade paths are authored below. The generic Across liquidity/intent listing is not treated as a material mRe7YIELD route.",
-    "reviewedAt": "2026-08-17",
-    "reviewer": "Codex Mint/Bridge boundary migration RELOC-10",
+    "summary": "Ethereum, Etherlink, and TAC have reviewed Midas issuer-native issuance, while the tracked Starknet address is a canonical StarkGate lock-mint representation of Ethereum mRe7YIELD. StarkGate's Ethereum MultiBridge escrows the canonical token and its Starknet bridge L1 handler mints the mapped Starknet token; the route's Starknet governance account and zero-delay bridge/token upgrade paths are authored below. The generic Across liquidity/intent listing is not treated as a material mRe7YIELD route.",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Codex Mint/Bridge boundary migration RELOC-10; TAC deployment closeout",
     "confidence": "verified",
     "protocols": [
       {
@@ -149,6 +149,40 @@
           {
             "label": "Etherlink mRe7YIELD proxy",
             "url": "https://explorer.etherlink.com/address/0x733d504435a49fc8c4e9759e756c2846c92f0160"
+          }
+        ]
+      },
+      {
+        "id": "tac:0x0a72ed3c34352ab2dd912b30f2252638c873d6f0",
+        "destinationChain": "tac",
+        "contractAddress": "0x0a72ed3c34352ab2dd912b30f2252638c873d6f0",
+        "protocol": "Midas mRe7YIELD native issuance on TAC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At TAC block 24815585, the token returns Midas Re7 Yield, 18 decimals, and accessControl 0x2365d68d462e9a5660a3208f817519334a706a45. Current hasRole checks confirm M_RE7_MINT_OPERATOR_ROLE for chain-local MRe7DepositVault proxy 0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69 and EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d. The verified mRE7 implementation gates mint() through that role, establishing local issuer issuance rather than inferring it merely from a token ABI.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-05",
+        "observedBlock": 24815585,
+        "sources": [
+          {
+            "label": "TAC mRe7YIELD proxy and verified implementation",
+            "url": "https://explorer.tac.build/address/0x0a72ed3c34352ab2dd912b30f2252638c873d6f0"
+          },
+          {
+            "label": "TAC MRe7DepositVault",
+            "url": "https://explorer.tac.build/address/0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69"
+          },
+          {
+            "label": "TAC MidasAccessControl role grants",
+            "url": "https://explorer.tac.build/address/0x2365d68d462e9a5660a3208f817519334a706a45"
+          },
+          {
+            "label": "TAC official mainnet RPC",
+            "url": "https://rpc.tac.build"
           }
         ]
       },

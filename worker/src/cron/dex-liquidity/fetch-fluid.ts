@@ -11,6 +11,7 @@ import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeAddress } from "../../lib/evm-selectors";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { rawAmountToDecimal } from "./staged-pool-recovery";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { rethrowIfAborted } from "../../lib/abort";
 import type { LiquidityFallbackCounters } from "./types";
@@ -83,18 +84,6 @@ function formatInvalidFluidPoolId(value: unknown): string {
     : value;
 }
 
-function bigintToDecimalNumber(value: bigint, decimals: number): number {
-  if (decimals <= 0) return Number(value);
-  const negative = value < 0n;
-  const absolute = negative ? -value : value;
-  const base = 10n ** BigInt(decimals);
-  const whole = absolute / base;
-  const fraction = absolute % base;
-  const fractionDigits = fraction.toString().padStart(decimals, "0").slice(0, 12);
-  const asString = `${negative ? "-" : ""}${whole.toString()}.${fractionDigits}`.replace(/\.$/, "");
-  return Number(asString);
-}
-
 function encodeFluidAddressCall(selector: string, address: string): string {
   return `${selector}${encodeAddress(address)}`;
 }
@@ -161,8 +150,8 @@ async function enrichFluidPool(
   if (token0Balance > 0n || token1Balance > 0n) {
     if (Number.isFinite(token0Decimals) && token0Decimals > 0 && Number.isFinite(token1Decimals) && token1Decimals > 0) {
       pool.balances = [
-        bigintToDecimalNumber(token0Balance, token0Decimals),
-        bigintToDecimalNumber(token1Balance, token1Decimals),
+        rawAmountToDecimal(token0Balance, token0Decimals),
+        rawAmountToDecimal(token1Balance, token1Decimals),
       ];
       pool.balancesNormalized = true;
     } else {

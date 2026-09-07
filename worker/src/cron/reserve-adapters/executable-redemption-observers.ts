@@ -10,10 +10,7 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
 } from "../../lib/evm-rpc";
-import {
-  keccak256,
-  parseAbi,
-} from "viem/utils";
+import { parseAbi } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
@@ -27,6 +24,7 @@ import type {
   EvmCodeIdentity,
   EvmObservationSnapshot,
 } from "./evm-observation-plan";
+import { runtimeCodeHash } from "./onchain-identity";
 
 type Hex = `0x${string}`;
 
@@ -229,10 +227,8 @@ const DEFAULT_CLIENT: ExecutableRedemptionReadClient = {
     getStableObservationBlockNumber(await fetchEvmBlockNumber(CHAIN, options)),
   blockTimestamp: (blockNumber, options) =>
     fetchEvmBlockTimestamp(CHAIN, blockNumber, options),
-  codeHash: async (address, blockNumber, options) => {
-    const code = await fetchEvmCodeAtBlock(CHAIN, address, blockNumber, options);
-    return code ? keccak256(code).toLowerCase() : null;
-  },
+  codeHash: async (address, blockNumber, options) =>
+    runtimeCodeHash(await fetchEvmCodeAtBlock(CHAIN, address, blockNumber, options)),
   storage: (address, position, blockNumber, options) =>
     fetchEvmStorageAtBlock(CHAIN, address, position, blockNumber, options),
   multicall: (calls, blockNumber, options) =>

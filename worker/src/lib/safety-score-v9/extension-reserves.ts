@@ -312,6 +312,8 @@ function independentlyAttestedComposition(
     reviewAtSec === null ||
     compositionAtSec === null ||
     !validateReserveCompositionTotal(rows, "full") ||
+    // Audit-grade admission is fail-closed: AUP and independent attestation
+    // types remain outside this path.
     proof?.type !== "independent-audit" ||
     !attestorIndependent ||
     !proof.provider?.trim() ||
@@ -464,6 +466,7 @@ export function addReviewedStaticReserveEvidence(
       reviewAtSec !== null &&
       compositionAtSec !== null &&
       validateReserveCompositionTotal(rows, "full") &&
+      // Keep AUP and independent attestation out of expired audit evidence.
       proof?.type === "independent-audit" &&
       attestorIndependent &&
       Boolean(proof?.provider?.trim()) &&

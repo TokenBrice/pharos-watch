@@ -60,7 +60,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       },
     ]);
 
-    const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
+    const dlListPrices = new Map([
+      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
+    ]);
     const { results, stats } = await fixtureFetchPrimaryPrices(
       assets,
       db,
@@ -107,7 +109,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       },
     ]);
 
-    const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
+    const dlListPrices = new Map([
+      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
+    ]);
     const { results } = await fixtureFetchPrimaryPrices(
       assets,
       db,
@@ -146,7 +150,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       },
     ]);
 
-    const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
+    const dlListPrices = new Map([
+      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
+    ]);
     const { results } = await fixtureFetchPrimaryPrices(
       assets,
       db,

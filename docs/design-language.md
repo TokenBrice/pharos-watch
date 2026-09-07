@@ -156,6 +156,8 @@ Check the current declarations before depending on exact padding, radius, shadow
 
 `.pharos-control-pill` is the canonical compact option shell. Use `.pharos-control-pill-active` for its selected state, keep labels short enough to wrap safely, and expose group/pressed semantics appropriate to the interaction. The current visual values live in `src/app/globals.css`.
 
+Use `ControlPillToggle` in `src/components/control-pill-toggle.tsx` for plain controlled, pressed-option groups. Callers retain labels, layout, responsive density, and state ownership. Keep radio controls, directional sort buttons, and bespoke icon/count/action or focus treatments local rather than adding modes to the primitive.
+
 ### Tape (Special)
 
 `/timeline/` deliberately uses a wire-service treatment rather than the standard analytics card language. [tape-page.md](./tape-page.md) owns that route's aesthetic lock and exact implementation.

@@ -69,6 +69,7 @@ export function buildStablecoinTableRowModel({
             ? "pharos-row-risk-warning"
             : "",
     pegRef,
+    pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
     priceCell: pegRef == null ? "—" : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
     pegDeviationColorClass: absPegDeviationBps === null

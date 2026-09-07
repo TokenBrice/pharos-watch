@@ -29,6 +29,8 @@ export interface StablecoinDetailSnapshot {
   version: 1;
   stablecoinId: string;
   generatedAt: number;
+  /** Per-lane producer timestamps in milliseconds; generatedAt is artifact provenance only. */
+  updatedAt: { liveSummary?: number; supplyHistory?: number };
   lanes: {
     liveSummary?: StablecoinLiveSummary;
     supplyHistory?: SupplyHistoryPoint[];
@@ -40,8 +42,9 @@ export function seedStablecoinDetailQueryCache(
   queryClient: QueryClient,
   snapshot: StablecoinDetailSnapshot,
 ): void {
-  const updatedAt = snapshot.generatedAt;
-  const seedIfCurrent = <T>(queryKey: readonly unknown[], data: T): void => {
+  const seedIfCurrent = <T>(queryKey: readonly unknown[], data: T, sourceUpdatedAt: number | undefined): void => {
+    // Old artifacts without source clocks may render, but must immediately refetch.
+    const updatedAt = sourceUpdatedAt ?? 0;
     const existingState = queryClient.getQueryState<T>(queryKey);
     if ((existingState?.dataUpdatedAt ?? 0) > updatedAt) return;
     queryClient.setQueryData(queryKey, data, { updatedAt });
@@ -51,6 +54,7 @@ export function seedStablecoinDetailQueryCache(
     seedIfCurrent(
       FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(snapshot.stablecoinId).queryKey,
       snapshot.lanes.liveSummary,
+      snapshot.updatedAt?.liveSummary,
     );
   }
 
@@ -61,6 +65,7 @@ export function seedStablecoinDetailQueryCache(
         STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
       ).queryKey,
       snapshot.lanes.supplyHistory,
+      snapshot.updatedAt?.supplyHistory,
     );
   }
 }

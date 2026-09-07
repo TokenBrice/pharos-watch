@@ -4,9 +4,9 @@ import type { ContractDeployment } from "@shared/types/core";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { DISCOVERY_TIERS } from "./types";
 import {
-  DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY,
-  getRuntimeDexDiscoveryProviders,
-} from "./provider-registry";
+  DEX_DISCOVERY_PROVIDER_REGISTRY,
+  getDexDiscoveryProviders,
+} from "@shared/lib/dex-deployment-coverage";
 
 /**
  * Per-coin wall-clock crawl budget, shared by every provider stage of one coin
@@ -46,7 +46,7 @@ export function discoveryTargetCursorKey(deployment: ContractDeployment): string
  * their census rows are re-asserted from the static registry every run.
  */
 export function estimateDeploymentCrawlCostMs(chain: string, address?: string): number {
-  return DEX_DISCOVERY_PROVIDER_RUNTIME_REGISTRY.reduce(
+  return DEX_DISCOVERY_PROVIDER_REGISTRY.reduce(
     (sum, provider) => sum + (
       provider.lifecycle === "active" && provider.supports(chain, address)
         ? provider.requestCostMs
@@ -88,7 +88,7 @@ export function selectDiscoveryTargetWindow({
 
   const grouped = new Map<string, ContractDeployment[]>();
   for (const target of targets) {
-    const signature = getRuntimeDexDiscoveryProviders(target.chain, target.address).join("+") || "unsupported";
+    const signature = getDexDiscoveryProviders(target.chain, target.address).join("+") || "unsupported";
     const rows = grouped.get(signature) ?? [];
     rows.push(target);
     grouped.set(signature, rows);

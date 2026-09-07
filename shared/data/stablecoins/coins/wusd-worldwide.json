@@ -25,7 +25,7 @@
     },
     {
       "label": "Whitepaper",
-      "url": "https://www.wspn.io/Documents/Whitepaper%20for%20WSPN.pdf"
+      "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
     }
   ],
   "jurisdiction": {
@@ -77,5 +77,5 @@
       }
     }
   },
-  "launchDate": "2024-12-13"
+  "launchDate": "2023-12-07"
 }

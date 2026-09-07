@@ -1,19 +1,16 @@
 {
   "id": "vcred-vcred",
-  "name": "vCred",
-  "symbol": "vCRED",
+  "name": "VCRED",
+  "symbol": "VCRED",
   "oneLiner": "vCRED is a Hemi-based credit-token dollar backed by protocol-managed crypto and credit collateral, with admin-controlled mint authority on a young chain.",
   "flags": {
     "backing": "crypto-backed",
-    "governance": "centralized-dependent",
-    "yieldBearing": true,
-    "navToken": true
+    "governance": "centralized-dependent"
   },
   "collateral": "Hemi-based credit and crypto collateral backing vCRED",
   "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
   "detailProvider": "coingecko",
   "geckoId": "vcred",
-  "protocolSlug": "vcred",
   "links": [
     {
       "label": "Website",
@@ -53,10 +50,6 @@
     "params": {
       "rpcUrl": "https://rpc.hemi.network/rpc"
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "vCRED protocol vault share value",
-    "yieldType": "nav-appreciation"
   },
   "mechanismArchetype": "rwa-credit-fund",
   "implementationLaunchDate": "2025-05-19",

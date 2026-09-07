@@ -99,7 +99,7 @@ describe("adaptive PR checks", () => {
     ]);
     expect(execFile).toHaveBeenCalledWith(
       "git",
-      ["diff", "--name-only", "--diff-filter=ACMR", "-z", "a...b"],
+      ["diff", "--name-only", "--no-renames", "-z", "a...b"],
       expect.objectContaining({ encoding: "utf8" }),
     );
   });
@@ -174,6 +174,44 @@ describe("adaptive PR checks", () => {
       .toContain("check:doc-sync");
   });
 
+  it("skips the static lane's doc-sync copy only when the docs lane owns it", () => {
+    const changedFiles = ["docs/testing.md", "shared/lib/classification.ts"];
+    const composed = buildPrStaticCheckPlan(changedFiles, { skipDocSync: true }).commands.map(
+      (command) => command.name,
+    );
+    expect(composed).not.toContain("check:doc-sync");
+    // Standalone semantics are unchanged: the same diff without the
+    // composition flag still validates source-owned docs here.
+    const standalone = buildPrStaticCheckPlan(changedFiles).commands.map((command) => command.name);
+    expect(standalone).toContain("check:doc-sync");
+  });
+
+  it("accepts --skip-doc-sync as a composition-only static runner option", async () => {
+    const stdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const stderr = { write: vi.fn<(chunk: string) => unknown>() };
+    const runCommandImpl = vi.fn(async () => ({ status: 0, aborted: false, output: "" }));
+
+    await expect(runPrStaticChecks({
+      argv: ["--json", "--skip-doc-sync", "--base=HEAD", "--head=HEAD"],
+      env: process.env,
+      runCommandImpl: runCommandImpl as never,
+      stderr,
+      stdout,
+    })).resolves.toBe(0);
+
+    expect(stderr.write.mock.calls.map(([chunk]) => chunk).join("")).toContain(
+      "doc-sync owned by the docs lane",
+    );
+
+    await expect(runPrStaticChecks({
+      argv: ["--bogus-flag", "--base=HEAD", "--head=HEAD"],
+      env: process.env,
+      runCommandImpl: runCommandImpl as never,
+      stderr: { write: vi.fn() },
+      stdout: { write: vi.fn() },
+    })).rejects.toThrow("Unknown option");
+  });
+
   it("runs the critical-coverage completeness guard for every non-doc PR path", () => {
     expect(buildPrStaticCheckPlan(["worker/src/lib/auth.ts"]).commands.map((command) => command.name)).toContain(
       "check:critical-coverage-completeness",
@@ -195,7 +233,6 @@ describe("adaptive PR checks", () => {
         "check:generated-artifacts",
       ]),
     );
-    expect(partition.deferred.map((command) => command.name)).toEqual(["test"]);
     expect(partition.sequential.map((command) => command.name)).toContain("check:worker-package");
   });
 
@@ -263,22 +300,5 @@ describe("adaptive PR checks", () => {
     expect(names).toContain("check:structural");
     expect(names).not.toContain("check:clone-ratchet");
     expect(names).not.toContain("check:cron-console-usage");
-  });
-
-  it("runs the editorial policy gate for every registered extractor family", () => {
-    const representativePaths = [
-      "data/ai-summaries.json",
-      "src/data/changelogs/example.ts",
-      "src/data/blog/posts/example.md",
-      "scripts/lib/editorial-baseline.json",
-      "scripts/lib/editorial-exceptions.json",
-    ];
-    const plan = buildPrStaticCheckPlan(representativePaths);
-    const editorialCommand = plan.commands.find((command) => command.name === "test");
-    expect(editorialCommand).toEqual({
-      name: "test",
-      args: ["scripts/__tests__/editorial-policy.test.ts"],
-    });
-    expect(buildPrStaticCheckPlan(["src/lib/not-an-editorial-surface.ts"]).commands).not.toContainEqual(editorialCommand);
   });
 });

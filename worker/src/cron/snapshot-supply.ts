@@ -11,6 +11,7 @@ import { prepareCacheUpsert } from "../lib/db-cache";
 import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
@@ -27,8 +28,13 @@ import {
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
 
-const CACHE_MAX_AGE_SEC = 1200;
-const CACHE_DEGRADED_AGE_SEC = 600;
+// Freshness gates follow the stablecoins producer cadence (`sync-stablecoins`
+// via the shared lane descriptor): the snapshot logs a degraded-freshness
+// warning after one missed interval and skips after two, so a cadence change
+// moves these gates with it instead of stranding unanchored literals.
+const STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC = CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
+const CACHE_DEGRADED_AGE_SEC = STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC;
+const CACHE_MAX_AGE_SEC = 2 * STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC;
 
 interface SnapshotSupplyOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
@@ -167,7 +173,8 @@ export async function snapshotSupply(
     });
   }
 
-  // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
+  // Verify cache freshness — skip once the cache has missed two producer
+  // intervals, to avoid snapshotting outdated data
   if (cacheAge > CACHE_MAX_AGE_SEC) {
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
     return createCronResult({

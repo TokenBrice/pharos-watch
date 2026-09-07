@@ -1,4 +1,5 @@
 import type { BridgeRouteRiskConfidence, StablecoinLink, StablecoinMeta } from "@shared/types";
+import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 /**
@@ -43,13 +44,6 @@ const TIER_TONES: Record<string, string> = {
   "opaque-or-unknown": SEVERITY_TONE_CLASS.alert.pill,
 };
 
-const CONFIDENCE_LABELS: Record<string, string> = {
-  verified: "Verified",
-  probable: "Probable",
-  "manual-review": "Manual review",
-  unknown: "Unknown",
-};
-
 export function projectBridgeRouteRiskClientSummary(coin: StablecoinMeta): BridgeRouteRiskClientSummary | null {
   const profile = coin.bridgeRouteRisk;
   if (!profile) return null;
@@ -69,7 +63,7 @@ export function projectBridgeRouteRiskClientSummary(coin: StablecoinMeta): Bridg
     summary: profile.summary,
     reviewedAt: profile.reviewedAt,
     confidence: profile.confidence,
-    confidenceLabel: CONFIDENCE_LABELS[profile.confidence] ?? profile.confidence,
+    confidenceLabel: RESEARCH_REVIEW_CONFIDENCE_LABELS[profile.confidence] ?? profile.confidence,
     routeCount: routes.length,
     chainCount: chains.size,
     canonicalRouteCount,

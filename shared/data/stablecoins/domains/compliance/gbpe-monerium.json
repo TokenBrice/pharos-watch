@@ -5,7 +5,7 @@
     "tokenType": "EMT",
     "authorizationType": "emi",
     "competentAuthority": "Central Bank of Iceland",
-    "authorizedEntity": "Monerium ehf",
+    "authorizedEntity": "Monerium hf",
     "references": [
       {
         "label": "ESMA interim MiCA EMT register - Monerium ehf",

@@ -6,10 +6,10 @@ import type {
   CustodyRehypothecation,
   CustodySegregation,
   MechanismArchetype,
-  ResearchReviewConfidence,
   StablecoinLink,
   StablecoinMeta,
 } from "@shared/types";
+import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { dedupeStablecoinLinksByUrl } from "@/lib/stablecoin-detail-links-client";
 
@@ -72,13 +72,6 @@ const REHYPOTHECATION_LABELS: Record<CustodyRehypothecation, string> = {
   prohibited: "Prohibited",
   permitted: "Permitted",
   conditional: "Conditional",
-  unknown: "Unknown",
-};
-
-const CONFIDENCE_LABELS: Record<ResearchReviewConfidence, string> = {
-  verified: "Verified",
-  probable: "Probable",
-  "manual-review": "Manual review",
   unknown: "Unknown",
 };
 
@@ -186,7 +179,7 @@ export function projectCustodyClientSummary(coin: StablecoinMeta): CustodyClient
       profile.rehypothecation === "permitted" || profile.rehypothecation === "conditional"
         ? SEVERITY_TONE_CLASS.watch.text
         : null,
-    confidenceLabel: CONFIDENCE_LABELS[profile.confidence],
+    confidenceLabel: RESEARCH_REVIEW_CONFIDENCE_LABELS[profile.confidence],
     uncertainty: profile.uncertainty || null,
     reviewedAt: profile.reviewedAt,
     sources: dedupeStablecoinLinksByUrl(profile.sources ?? []),

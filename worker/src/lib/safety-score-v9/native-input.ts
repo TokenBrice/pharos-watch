@@ -223,7 +223,7 @@ export function computeNativeDexLiquidityPayloadFingerprint(
 
 function assertNativeV9InputConsistency(
   input: NativeSafetyScoreV9Input,
-  options: { verifyBaseInputGenerationId: boolean } = { verifyBaseInputGenerationId: true },
+  options: { verifyBaseInputGenerationId: boolean; navAssetIds?: ReadonlySet<string> } = { verifyBaseInputGenerationId: true },
 ): void {
   assertCommonFixedInputConsistency(input, {
     phase: "identity",
@@ -231,6 +231,7 @@ function assertNativeV9InputConsistency(
     exactLabel: "Native V9 input",
     requireProducerBindings: true,
     validateNavPriceIds: true,
+    navAssetIds: options.navAssetIds,
     dexActiveRowsLabel: "Native V9 input DEX active rows",
   });
 
@@ -291,7 +292,7 @@ const NativeSafetyScoreV9InputIntakeSchema = NativeSafetyScoreV9InputSchema.omit
 }).extend({ baseInputGenerationId: z.string().optional() });
 
 /** Canonicalizes record ordering, derives the base generation id, and validates. */
-export function normalizeNativeV9Input(value: unknown): NativeSafetyScoreV9Input {
+export function normalizeNativeV9Input(value: unknown, navAssetIds?: ReadonlySet<string>): NativeSafetyScoreV9Input {
   const parsed = NativeSafetyScoreV9InputIntakeSchema.safeParse(value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -314,6 +315,7 @@ export function normalizeNativeV9Input(value: unknown): NativeSafetyScoreV9Input
   });
   assertNativeV9InputConsistency(normalized, {
     verifyBaseInputGenerationId: suppliedBaseInputGenerationId !== undefined,
+    navAssetIds,
   });
   return normalized;
 }
@@ -331,9 +333,9 @@ function isNativeV9InputShape(value: unknown): boolean {
  * The v3 branch is the frozen-capture replay lane and delegates to the legacy
  * normalizer unchanged, so historical captures keep replaying byte-for-byte.
  */
-export function normalizeSafetyScoreV9CompilerInput(value: unknown): SafetyScoreV9CompilerInput {
-  if (isNativeV9InputShape(value)) return normalizeNativeV9Input(value);
-  return normalizeFixedInput(value);
+export function normalizeSafetyScoreV9CompilerInput(value: unknown, navAssetIds?: ReadonlySet<string>): SafetyScoreV9CompilerInput {
+  if (isNativeV9InputShape(value)) return normalizeNativeV9Input(value, navAssetIds);
+  return normalizeFixedInput(value, navAssetIds);
 }
 
 export async function buildNativeV9InputCacheEntry(
@@ -370,7 +372,7 @@ export interface NativeV9InputCacheArtifact {
   safetyScoreIdentity: SafetyScoreV9InputIdentity;
 }
 
-export async function parseNativeV9InputCacheArtifact(value: unknown): Promise<NativeV9InputCacheArtifact> {
+export async function parseNativeV9InputCacheArtifact(value: unknown, navAssetIds?: ReadonlySet<string>): Promise<NativeV9InputCacheArtifact> {
   const { envelope, payload } = await parseFixedInputCacheEntry({
     value,
     envelopeSchema: NativeV9InputCacheEnvelopeSchema,
@@ -378,7 +380,7 @@ export async function parseNativeV9InputCacheArtifact(value: unknown): Promise<N
     malformedPayloadLabel: "Malformed native V9 input cache payload",
     artifactLabel: "Native V9 input cache artifact",
   });
-  const input = normalizeNativeV9Input(payload);
+  const input = normalizeNativeV9Input(payload, navAssetIds);
   if (input.sourceGeneration !== envelope.sourceGeneration) {
     throw new Error("Native V9 input cache generation mismatch");
   }
@@ -392,8 +394,8 @@ export async function parseNativeV9InputCacheArtifact(value: unknown): Promise<N
   return { input, safetyScoreIdentity: envelope.safetyScoreIdentity };
 }
 
-export async function parseNativeV9InputCacheValue(value: unknown): Promise<NativeSafetyScoreV9Input> {
-  return (await parseNativeV9InputCacheArtifact(value)).input;
+export async function parseNativeV9InputCacheValue(value: unknown, navAssetIds?: ReadonlySet<string>): Promise<NativeSafetyScoreV9Input> {
+  return (await parseNativeV9InputCacheArtifact(value, navAssetIds)).input;
 }
 
 /**
@@ -401,7 +403,7 @@ export async function parseNativeV9InputCacheValue(value: unknown): Promise<Nati
  * carries a retained v3 exact fixed input and is routed to the untouched legacy
  * parser so frozen operator captures keep replaying byte-for-byte.
  */
-export async function parseSafetyScoreV9InputCacheValue(value: unknown): Promise<SafetyScoreV9CompilerInput> {
+export async function parseSafetyScoreV9InputCacheValue(value: unknown, navAssetIds?: ReadonlySet<string>): Promise<SafetyScoreV9CompilerInput> {
   const parsedEnvelope = typeof value === "string" ? parseJson(value) : null;
   if (parsedEnvelope && !parsedEnvelope.ok) {
     throw new Error(`Malformed V9 input cache envelope: ${parsedEnvelope.message}`);
@@ -409,6 +411,6 @@ export async function parseSafetyScoreV9InputCacheValue(value: unknown): Promise
   const raw = parsedEnvelope?.ok ? parsedEnvelope.value : value;
   const schemaVersion =
     raw !== null && typeof raw === "object" ? (raw as { schemaVersion?: unknown }).schemaVersion : undefined;
-  if (schemaVersion === 1) return parseReportCardsFixedInputCacheValue(raw);
-  return parseNativeV9InputCacheValue(raw);
+  if (schemaVersion === 1) return parseReportCardsFixedInputCacheValue(raw, navAssetIds);
+  return parseNativeV9InputCacheValue(raw, navAssetIds);
 }

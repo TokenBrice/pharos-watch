@@ -35,6 +35,8 @@ describe("ExploreNextSection", () => {
     expect(screen.getByRole("link", { name: "See all CDP stablecoins" }).getAttribute("href")).toBe(
       "/screener/?mechanisms=cdp&lifecycle=active",
     );
+    expect(screen.getByRole("link", { name: "Browse stablecoin comparisons" }).getAttribute("href")).toBe("/compare/");
+    expect(screen.queryByRole("link", { name: /watchlist.*preset/i })).toBeNull();
   });
 
   it("links static comparison tiles to the crawlable brief, not only the live tool", () => {

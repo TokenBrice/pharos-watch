@@ -4,7 +4,7 @@ import type { TapeEventInsert, TapeEventRow } from "./tape-event-types";
 
 const WATERMARK_KEY_PREFIX = "tape-projector:cursor:";
 
-function tapeProjectorCursorKey(eventClass: string): string {
+export function tapeProjectorCursorKey(eventClass: string): string {
   return `${WATERMARK_KEY_PREFIX}${eventClass}`;
 }
 

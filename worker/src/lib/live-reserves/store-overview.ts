@@ -1,3 +1,4 @@
+import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEventArgs } from "../structured-log";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -7,7 +8,6 @@ import {
   LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
-  emptyReserveCompositionOverview,
   type AuthoritativeReserveSnapshot,
   type LiveReserveScoringMap,
   type ReserveCompositionRow,
@@ -16,6 +16,7 @@ import {
 import { loadReserveCompositionRowMap, loadReserveSyncStateMap } from "./store-read";
 import {
   hasConsistentSnapshotState,
+  isReserveSnapshotStale,
   hasScoringEligibleLiveReserveFreshness,
   hasUncertainWriteState,
 } from "./store-snapshot-state";
@@ -215,7 +216,7 @@ function countCoinsByStatus(
       continue;
     }
 
-    if (ageSec > freshnessSec) {
+    if (isReserveSnapshotStale(parsed.record, coin, now, freshnessSec)) {
       staleCoins++;
       if (uncertainWrite) writeTimeoutUncertain++;
       continue;
@@ -364,7 +365,7 @@ async function loadFreshAuthoritativeReserveSnapshots(
     const parsed = parseReserveCompositionRow(compositionRow, syncState);
     if (!parsed.record) continue;
     if (options?.requireOkStatus && syncState?.lastStatus !== "ok") continue;
-    if (now - parsed.record.fetchedAt > freshnessSec) continue;
+    if (isReserveSnapshotStale(parsed.record, coin, now, freshnessSec)) continue;
     if (parsed.record.slices.length < minSlices) continue;
 
     if (allowedSourceModels && !allowedSourceModels.has(parsed.record.adapterSourceModel)) {

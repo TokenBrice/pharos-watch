@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldClient } from "@/components/yield/yield-client";
@@ -18,6 +18,7 @@ const {
   leaderboardPropsMock,
   scatterPropsMock,
   staleQueriesMock,
+  trackEventMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsSummaryMock: vi.fn(),
@@ -28,7 +29,10 @@ const {
   leaderboardPropsMock: vi.fn(),
   scatterPropsMock: vi.fn(),
   staleQueriesMock: vi.fn(),
+  trackEventMock: vi.fn(),
 }));
+
+vi.mock("@/lib/analytics", () => ({ trackEvent: trackEventMock }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -152,6 +156,47 @@ describe("YieldClient", () => {
     expect(screen.queryByTestId("yield-scatter-plot")).toBeNull();
   });
 
+  it.each([
+    { data: undefined, isLoading: true, error: null },
+    { data: undefined, isLoading: false, error: null },
+    { data: undefined, isLoading: false, error: new Error("Unavailable") },
+    { data: makeResponse(), isLoading: false, error: new Error("Refresh failed") },
+  ])("waits for loaded error-free data before tracking an empty view (%#)", (pending) => {
+    searchParamsMock.set("q", "zzzz-no-match");
+    const ready = useYieldRankingsSummaryMock();
+    useYieldRankingsSummaryMock.mockReturnValue({ ...ready, ...pending });
+    const { rerender } = render(<YieldClient />);
+    expect(trackEventMock).not.toHaveBeenCalledWith("yield_zero_results", expect.anything());
+
+    useYieldRankingsSummaryMock.mockReturnValue(ready);
+    rerender(<YieldClient />);
+    expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
+    rerender(<YieldClient />);
+    expect(trackEventMock.mock.calls.filter(([name]) => name === "yield_zero_results")).toHaveLength(1);
+  });
+
+  it("still tracks a successfully loaded empty payload", () => {
+    useYieldRankingsSummaryMock.mockReturnValue({
+      ...useYieldRankingsSummaryMock(),
+      data: { ...makeResponse(), rankings: [] },
+    });
+    render(<YieldClient />);
+    expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
+  });
+
+  it("preserves a valid incoming yield-type filter while ranking options load", () => {
+    searchParamsMock.set("yieldType", "lending-opportunity");
+    const ready = useYieldRankingsSummaryMock();
+    useYieldRankingsSummaryMock.mockReturnValue({ ...ready, data: undefined, isLoading: true });
+    const { rerender } = render(<YieldClient />);
+    expect(replaceParamsMock).not.toHaveBeenCalled();
+
+    useYieldRankingsSummaryMock.mockReturnValue(ready);
+    rerender(<YieldClient />);
+    expect(replaceParamsMock).not.toHaveBeenCalled();
+    expect(searchParamsMock.get("yieldType")).toBe("lending-opportunity");
+  });
+
   it("resolves comparison rows independently of the current filters", () => {
     searchParamsMock.set("q", "zzzz-no-match");
 
@@ -171,6 +216,38 @@ describe("YieldClient", () => {
     expect(useYieldRankingsSummaryMock).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
+  });
+
+  it("shows the top three PYS rows as a ranked hero podium", () => {
+    const podiumRows = [
+      makeYieldRanking({ id: "rank-three", name: "Third Coin", symbol: "THREE", pharosYieldScore: 63 }),
+      makeYieldRanking({ id: "rank-one", name: "First Coin", symbol: "ONE", pharosYieldScore: 91 }),
+      makeYieldRanking({ id: "rank-four", name: "Fourth Coin", symbol: "FOUR", pharosYieldScore: 42 }),
+      makeYieldRanking({ id: "rank-two", name: "Second Coin", symbol: "TWO", pharosYieldScore: 78 }),
+    ];
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: projectYieldRankingsSummary({
+        rankings: podiumRows,
+        riskFreeRate: 4.25,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+      }),
+      meta: null,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
+    });
+
+    render(<YieldClient />);
+
+    const podium = screen.getByRole("group", { name: "Top three Pharos Yield Scores" });
+    expect(within(podium).getByRole("button", { name: "Rank 1: First Coin (ONE), PYS 91.0" })).toBeTruthy();
+    expect(within(podium).getByRole("button", { name: "Rank 2: Second Coin (TWO), PYS 78.0" })).toBeTruthy();
+    expect(within(podium).getByRole("button", { name: "Rank 3: Third Coin (THREE), PYS 63.0" })).toBeTruthy();
+    expect(within(podium).queryByText("FOUR")).toBeNull();
   });
 
   it("passes every filtered opportunity to the scatter plot", () => {

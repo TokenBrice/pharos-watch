@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Goldman Sachs STBXX (CUSIP 38151N205)",
-      "pct": 11.510182,
+      "pct": 8.904468,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Goldman Sachs Financial Square Government Fund",
@@ -18,7 +18,7 @@
     },
     {
       "name": "JPMorgan JLTXX (CUSIP 46655R119)",
-      "pct": 67.540584,
+      "pct": 62.116731,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "JPMorgan Liquidity Funds",
@@ -33,7 +33,7 @@
     },
     {
       "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
-      "pct": 19.856381,
+      "pct": 27.987907,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -49,7 +49,7 @@
     },
     {
       "name": "Cash at FDIC-insured depository institutions",
-      "pct": 1.092853,
+      "pct": 0.990893,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major commercial banks",
@@ -62,22 +62,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Pharos night watch primary-source report review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - June 30, 2026",
-        "url": "https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf"
+        "label": "Anchorage USDGO Reserve Report - July 31, 2026",
+        "url": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
         "label": "Anchorage USDGO reserve attestations",
         "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
       }
     ],
-    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass): reserves $861,072,523 against 859,224,943 redeemable USDGO (Solana + Morph) - money market funds $680,684,425 (CUSIP 38151N205 $99,111,018; CUSIP 46655R119 $581,573,407), BUIDL at fair value $170,977,843 (Avalanche, self-custodied; private unregistered BVI fund with no secondary market), and $9,410,255 cash at FDIC-insured institutions ($9,160,255 uninsured). Surplus $1,847,580.",
-    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "Deloitte's July 31, 2026 examination, issued August 28, reports reserves of $1,116,301,304 against 1,112,640,495 redeemable USDGO on Solana; Morph liabilities are zero. Reserves comprise $99,400,695 STBXX, $693,409,879 JLTXX, $312,429,373 BUIDL on Solana in segregated Anchorage custody, and $11,061,357 cash at FDIC-insured banks ($10,811,357 uninsured). Surplus is $3,660,809. BUIDL is a private unregistered BVI fund without a secondary market.",
+    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The two money market fund CUSIPs are disclosed but their issuer names and underlying portfolio composition are not identified in the report.",
     "knownUnknownExposurePct": 0
@@ -94,13 +94,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL V9 R4 evidence review",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Pharos night watch primary-source report review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - May 31, 2026",
-        "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        "label": "Anchorage USDGO Reserve Report - July 31, 2026",
+        "url": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
         "label": "USDGO transparency page (names reserve fund issuers, accessed 2026-07-17)",
@@ -115,6 +115,6 @@
         "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
       }
     ],
-    "uncertainty": "The report says reserve assets are held in segregated fiduciary trust accounts for token holders and identifies Anchorage as the issuer and qualified custodian. It does not state a general rehypothecation prohibition. It also does not name the FDIC-insured banks holding the $1.6M cash slice or any money-market-fund subcustodian; the issuer transparency page (accessed 2026-07-17) identifies the two money market funds as the Goldman Sachs Stablecoin Reserves Fund and the JPMorgan OnChain Liquidity-Token Money Market Fund, but their underlying fund custodians remain undisclosed. Anchorage self-custodies the BUIDL slice in segregated wallets (Avalanche 0xC1d56E817d8f6C53D42eD50Ed0D789eEb1495b5e per the May 31, 2026 report)."
+    "uncertainty": "The July report states that reserve assets are held in segregated fiduciary trust accounts for token holders and identifies Anchorage as issuer and qualified custodian. It does not state a general rehypothecation prohibition or name the banks holding $11,061,357 cash. Fund custodians remain undisclosed. Anchorage self-custodies the $312,429,373 BUIDL slice in segregated Solana wallets; the report identifies 9yGxs2pSFFBZhJVrwRAgbKHaLQnuHa7BpmCRsHuzG968. The report-time Solana token balance has not been independently replayed by Pharos."
   }
 }

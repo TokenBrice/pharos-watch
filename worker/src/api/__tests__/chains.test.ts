@@ -163,6 +163,82 @@ describe("handleChains", () => {
     });
   });
 
+  it("publishes chain-detail coin rows from the same chain-local aggregate", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+    const db = mockD1([
+      stablecoinsCache([
+        asset("usdc-circle", { Ethereum: { current: 100 } }, {
+          chainCirculating: {
+            Ethereum: {
+              current: 100,
+              circulatingPrevDay: 80,
+              circulatingPrevWeek: 70,
+              circulatingPrevMonth: 50,
+            },
+          },
+        }),
+        asset("usdt-tether", { Ethereum: { current: 300 } }, {
+          chainCirculating: {
+            Ethereum: {
+              current: 300,
+              circulatingPrevDay: 250,
+              circulatingPrevWeek: 200,
+              circulatingPrevMonth: 150,
+            },
+          },
+        }),
+      ]),
+    ]);
+
+    const detailResponse = await handleChains(db, new URL("https://pharos.watch/api/chains?chain=ethereum"));
+    const detailBody = await detailResponse.json() as {
+      chains: Array<{ id: string; totalUsd: number }>;
+      chainDetail?: {
+        chainId: string;
+        totalUsd: number;
+        coins: Array<Record<string, unknown>>;
+      };
+    };
+
+    expect(detailResponse.status).toBe(200);
+    expect(detailBody.chainDetail?.chainId).toBe("ethereum");
+    expect(detailBody.chainDetail?.totalUsd).toBe(detailBody.chains.find((chain) => chain.id === "ethereum")?.totalUsd);
+    expect(detailBody.chainDetail?.coins).toEqual([
+      expect.objectContaining({
+        id: "usdt-tether",
+        name: "usdt-tether",
+        supplyUsd: 300,
+        chainShare: 0.75,
+        change24h: 50,
+        change24hPct: 0.2,
+        change7d: 100,
+        change7dPct: 0.5,
+        change30d: 150,
+        change30dPct: 1,
+      }),
+      expect.objectContaining({
+        id: "usdc-circle",
+        supplyUsd: 100,
+        chainShare: 0.25,
+        change24h: 20,
+        change24hPct: 0.25,
+      }),
+    ]);
+
+    const leaderboardResponse = await handleChains(db);
+    const leaderboardBody = await leaderboardResponse.json() as Record<string, unknown>;
+    expect(leaderboardBody).not.toHaveProperty("chainDetail");
+  });
+
+  it("rejects an unknown chain detail scope", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+    const db = mockD1([stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })])]);
+
+    const response = await handleChains(db, new URL("https://pharos.watch/api/chains?chain=not-a-chain"));
+
+    expect(response.status).toBe(400);
+  });
+
   it("fails closed when the canonical V9 publication is unavailable", async () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue({
       kind: "error",

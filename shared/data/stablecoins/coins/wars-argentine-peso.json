@@ -3,7 +3,7 @@
   "llamaId": "379",
   "detailProvider": "defillama",
   "name": "Argentine Peso",
-  "symbol": "WARS",
+  "symbol": "wARS",
   "oneLiner": "WARS is Ripio's wrapped Argentine peso stablecoin targeting 1 WARS = 1 ARS, backed by ARS bank deposits and local-currency instruments via wFIAT.",
   "flags": {
     "backing": "rwa-backed",
@@ -79,13 +79,18 @@
       "chain": "gnosis",
       "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
       "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
     "provider": "Pablo Eduardo Soto, Contador Público, CPCECABA T.275 F.153 (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",

@@ -428,7 +428,7 @@
     "providers": [
       {
         "name": "Fordefi (institutional MPC wallets, policy threshold 4-of-n with default block)",
-        "role": "custodian"
+        "role": "other"
       },
       {
         "name": "Accountable (third-party reserve attestation and monitoring)",

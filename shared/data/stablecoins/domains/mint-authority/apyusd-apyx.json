@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. The canonical Ethereum wrapper mints shares only through deposit/mint flows against apxUSD, while its UUPS mint-logic path is controlled by the Apyx AccessManager and 3/6 Safe. Durable apxUSD issuance is inherited from the reviewed apxUSD issuer authority; recurring TID monitoring reconciles the Ethereum wrapper and inherited backing path.",
+    "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. The canonical Ethereum wrapper mints shares only through deposit/mint flows against apxUSD, while its UUPS mint-logic path is controlled by the Apyx AccessManager and 4/7 Safe. Durable apxUSD issuance is inherited from the reviewed apxUSD issuer authority; recurring TID monitoring reconciles the Ethereum wrapper and inherited backing path.",
     "inheritedFrom": "apxusd-apyx",
     "controls": [
       {
@@ -64,28 +64,28 @@
         "deploymentRefs": [
           "ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a"
         ],
-        "label": "Apyx apyUSD UUPS upgrade authority - 3/6 Safe",
+        "label": "Apyx apyUSD UUPS upgrade authority - 4/7 Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
-        "threshold": 3,
-        "signerCount": 6,
+        "threshold": 4,
+        "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
           "ethereum:apyusd-uups"
         ],
         "safe": {
-          "threshold": 3,
+          "threshold": 4,
           "enabledModules": [],
           "guard": null,
           "version": "1.4.1",
-          "observedBlock": 25770413,
-          "observedAt": "2026-08-16",
+          "observedBlock": 25905191,
+          "observedAt": "2026-09-04",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770413,
+        "observedAt": "2026-09-04",
+        "observedBlock": 25905191,
         "sources": [
           {
             "label": "Apyx ApyUSD source",
@@ -96,7 +96,7 @@
             "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
           }
         ],
-        "evidence": "At Ethereum block 25770413, the apyUSD proxy implementation slot held 0xfd616567ecc1607f61073951a1e822f7315bb112 and authority() returned 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Ethereum AccessManager maps upgradeToAndCall to role 24, and the 3/6 Safe holds that role with a 259200-second delay. The Apyx ApyUSD source gates _authorizeUpgrade() through AccessManager's restricted modifier; Base's separate CCIP representation and AccessManager are recorded under Bridge Risk."
+        "evidence": "At Ethereum block 25905191, the apyUSD proxy implementation slot held 0xfd616567ecc1607f61073951a1e822f7315bb112 and authority() returned 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Ethereum AccessManager maps upgradeToAndCall to role 24, and the 4/7 Safe holds that role with a 259200-second delay. The Safe added owner 0x6c927e5B7B895E7f41fBE8B35328Ad2d5E324e79 and raised its threshold from 3 to 4 in transaction 0xd7692f068fd795bae4418b828087e0e86c3cc85ad102af25a2717176f87f5aae at block 25877561. The Apyx ApyUSD source gates _authorizeUpgrade() through AccessManager's restricted modifier; Base's separate CCIP representation and AccessManager are recorded under Bridge Risk."
       }
     ],
     "upgradeability": {
@@ -114,9 +114,9 @@
         "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Apyx apyUSD UUPS upgrade authority - 3/6 Safe",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25770413,
+      "controlRef": "Apyx apyUSD UUPS upgrade authority - 4/7 Safe",
+      "observedAt": "2026-09-04",
+      "observedBlock": 25905191,
       "sources": [
         {
           "label": "Ethereum apyUSD proxy",
@@ -166,7 +166,7 @@
           "url": "https://tidresearch.com/reports/apyusd/"
         }
       ],
-      "evidence": "At Ethereum block 25770413, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Apyx source defines apyUSD as an ERC-4626 wrapper over apxUSD: local shares mint against deposited apxUSD, while durable apxUSD issuance remains inherited from the reviewed parent profile. The Ethereum AccessManager role 24 controls upgradeToAndCall and resolves to the same 3/6 Safe with a 259200-second delay. TID Research's apyUSD dashboard monitors Ethereum backing and reconciliation hourly, and Wolf & Company's recurring examinations establish attestation-only supervision. Base, BNB, and Solana bridge representations and their unresolved administrative surfaces are retained under Bridge Risk rather than Mint Authority.",
+      "evidence": "At Ethereum block 25905191, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Apyx source defines apyUSD as an ERC-4626 wrapper over apxUSD: local shares mint against deposited apxUSD, while durable apxUSD issuance remains inherited from the reviewed parent profile. The Ethereum AccessManager role 24 controls upgradeToAndCall and resolves to the same 4/7 Safe with a 259200-second delay; the Safe added owner 0x6c927e5B7B895E7f41fBE8B35328Ad2d5E324e79 and raised its threshold from 3 to 4 in transaction 0xd7692f068fd795bae4418b828087e0e86c3cc85ad102af25a2717176f87f5aae at block 25877561. TID Research's apyUSD dashboard monitors Ethereum backing and reconciliation hourly, and Wolf & Company's recurring examinations establish attestation-only supervision. Base, BNB, and Solana bridge representations and their unresolved administrative surfaces are retained under Bridge Risk rather than Mint Authority.",
       "reviewer": "Codex mint/bridge boundary migration; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

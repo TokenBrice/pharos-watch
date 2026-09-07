@@ -10,8 +10,7 @@
         "label": "Goal3 owner EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "chain": "zksync",
+        "directMintAbility": "can-authorize",
         "address": "0x49a67aff9d3807351b8bb450f37ffc98af9def4d",
         "canRaiseCap": true,
         "evidence": "At zkSync Era block 71160345, owner() on both the zkUSD token and Goal3 portal returned 0x49a67aff9d3807351b8bb450f37ffc98af9def4d; eth_getCode on that address returned empty bytecode. The portal retained MINTER_ROLE on the token. Verified portal source calls returnToken.mint() in the lock path, and verified token source restricts mint() to MINTER_ROLE."

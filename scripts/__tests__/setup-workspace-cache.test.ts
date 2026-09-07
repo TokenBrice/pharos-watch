@@ -16,6 +16,16 @@ function extractStepByNeedle(needle: string): string {
 }
 
 describe("setup-workspace caches", () => {
+  it("guards committed outputs after bootstrap and on restore-only consumers before cache post-save", () => {
+    const guard = extractStepByNeedle("name: Verify bootstrap preserved committed artifacts");
+    expect(guard).toContain("inputs.workspace-cache == 'true' ||");
+    expect(guard).toContain("inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true'");
+    expect(guard).toContain("assertBootstrapTrackedOutputsUnchanged();");
+    expect(guard).not.toContain("continue-on-error");
+    expect(action.indexOf(guard)).toBeGreaterThan(action.indexOf("run: npm run bootstrap:generated:history"));
+    // actions/cache's post-save runs only on job success; no explicit early save.
+    expect(action).not.toContain("actions/cache/save@");
+  });
   it("keeps independently restorable static, Next, and browser caches", () => {
     const staticStep = extractStepByNeedle("key: static-cache-");
     const nextStep = extractStepByNeedle("key: next-cache-");

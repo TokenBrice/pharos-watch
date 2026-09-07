@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { parseSourceFile } from "../lib/ts-ast.mts";
+import { collectScriptEntrypoints } from "./check-script-entrypoints";
+import { parse as parseYaml } from "yaml";
 import {
   DEBT_EXPORTS,
   DEBT_MODULES,
@@ -68,12 +70,70 @@ const VENDORED_UI_PREFIX = "src/components/ui/";
 const VENDORED_UI_EXEMPTION_REASON =
   "vendored shadcn primitives retain their upstream export surface and are not unused-code debt";
 
+// Established test-support locations: the vitest setup/helper/fixture
+// directories, plus the colocated filename conventions (`*.fixture.ts`,
+// `*[-.]test-support.ts`, `*fixtures.ts`, `__fixtures__/`) that live next to
+// the suites they serve. These files exist to serve tests, so they are never
+// reported — and, like test files, they cannot keep a production module alive:
+// a production module whose only consumers are test fixtures is dead, exactly
+// like one whose only consumers are test files.
+const TEST_SUPPORT_DIR_PREFIXES = [
+  "src/test/",
+  "src/test-utils/",
+  "shared/test-utils/",
+  "worker/src/__mocks__/",
+  "worker/src/test-helpers/",
+];
+const TEST_SUPPORT_FILE_PATTERNS = [
+  /(^|\/)__fixtures__\//,
+  /\.fixture\.[cm]?[jt]sx?$/,
+  /[-.]test-support\.[cm]?[jt]sx?$/,
+  /fixtures\.[cm]?[jt]sx?$/,
+];
+
+// Explicit framework entrypoints. Next.js loads app-router files by filename
+// convention, so only those basenames under src/app/ are roots; arbitrary
+// helpers colocated under src/app are ordinary modules that must be reached by
+// a production import chain. Cloudflare Pages routes every functions/** file
+// by path, and wrangler loads the two worker entrypoints below.
+const NEXT_APP_ROUTE_BASENAMES: Record<string, true> = {
+  page: true,
+  layout: true,
+  template: true,
+  loading: true,
+  error: true,
+  "global-error": true,
+  "not-found": true,
+  forbidden: true,
+  unauthorized: true,
+  default: true,
+  route: true,
+  sitemap: true,
+  robots: true,
+  manifest: true,
+  icon: true,
+  "apple-icon": true,
+  favicon: true,
+  "opengraph-image": true,
+  "twitter-image": true,
+};
 const ROOT_ENTRYPOINT_PATTERNS = [
-  /^src\/app\//,
   /^functions\//,
   /^worker\/src\/index\.ts$/,
   /^worker\/src\/handlers\/scheduled\.ts$/,
 ];
+
+// Reference surfaces that can invoke an entrypoint the import graph cannot
+// see. Discovery reads ONLY executable command bodies — package.json script
+// strings and the `run:` steps parsed out of workflow/composite-action YAML —
+// never raw file text: metadata keys, comments, prose, and registry rows like
+// sourcePaths/outputPaths are not consumers. Imports written inside repo
+// scripts are not rediscovered from text either; script files are AST-scanned
+// like every other module, and script-to-script spawning stays the reverse
+// audit's concern in check-script-entrypoints. docs/ is excluded for the same
+// reason it is there — a documentation row does not keep code reachable.
+const COMMAND_BODY_REFERENCE_ROOTS = [".github/workflows", ".github/actions"];
+const YAML_EXTENSIONS = new Set([".yml", ".yaml"]);
 
 // Both allowlists keep their section so the audit can name it in failures.
 const withSection = (
@@ -95,6 +155,7 @@ const VITEST_ALIASES = loadVitestAliases();
 
 const files = collectSourceFiles();
 const fileSet = new Set(files);
+const relPathByFile = new Map(files.map((file) => [file, relative(ROOT, file).replaceAll("\\", "/")]));
 const moduleInfo = new Map(files.map((file) => [file, analyzeModule(file)]));
 
 const runtimeInbound = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
@@ -151,6 +212,38 @@ while (usageChanged) {
   }
 }
 
+const stringReferencedEntrypoints = collectStringReferencedEntrypoints();
+
+// Production reachability. Roots are explicit entrypoints — Next.js app-router
+// filename conventions, the Pages Functions route tree, the wrangler-loaded
+// worker entrypoints, and files named as strings by workflows, package.json, or
+// other scripts — plus every repo script, whose own reference audit lives in
+// check-script-entrypoints. Any other module is live only when a live
+// production file imports or re-exports it. Test files and test-support
+// fixtures never vouch, so a production module whose only consumers are its
+// tests is reported as dead instead of being kept alive by them.
+const productionReachable = new Set<string>();
+const reachableQueue: string[] = [];
+for (const file of files) {
+  const rel = relPathByFile.get(file);
+  if (!rel || isTestFile(rel) || isTestSupportFile(rel)) continue;
+  if (isRootEntrypoint(rel) || isScriptConsumerDir(rel) || isStringReferencedEntrypoint(rel)) {
+    productionReachable.add(file);
+    reachableQueue.push(file);
+  }
+}
+while (reachableQueue.length > 0) {
+  const file = reachableQueue.pop();
+  if (!file) break;
+  for (const dependency of moduleInfo.get(file)?.dependencies ?? []) {
+    if (!fileSet.has(dependency.resolved) || productionReachable.has(dependency.resolved)) continue;
+    const rel = relPathByFile.get(dependency.resolved);
+    if (!rel || isTestFile(rel) || isTestSupportFile(rel)) continue;
+    productionReachable.add(dependency.resolved);
+    reachableQueue.push(dependency.resolved);
+  }
+}
+
 const deadModules: DeadModule[] = [];
 const unusedExports: UnusedExport[] = [];
 const unusedModuleKeys = new Set<string>();
@@ -160,18 +253,22 @@ for (const file of files) {
   const rel = relative(ROOT, file).replaceAll("\\", "/");
   const info = moduleInfo.get(file);
   if (!info) throw new Error(`Missing module analysis for ${file}`);
-  if (!isReportableModule(rel) || isTestFile(rel) || isRootEntrypoint(rel) || isVendoredUiPrimitive(rel)) continue;
+  if (
+    !isReportableModule(rel) ||
+    isTestFile(rel) ||
+    isTestSupportFile(rel) ||
+    isRootEntrypoint(rel) ||
+    isScriptConsumerDir(rel) ||
+    isStringReferencedEntrypoint(rel) ||
+    isVendoredUiPrimitive(rel)
+  ) {
+    continue;
+  }
 
-  if ((runtimeInbound.get(file)?.size ?? 0) === 0) {
+  if (!productionReachable.has(file)) {
     unusedModuleKeys.add(rel);
     if (!MODULE_ALLOWLIST.has(rel)) {
-      deadModules.push({
-        file: rel,
-        reason:
-          info.exports.size === 0 && info.hasSideEffectsOnly
-            ? "unreferenced module"
-            : "unreferenced module or dead shim",
-      });
+      deadModules.push({ file: rel, reason: deadModuleReason(file, info) });
     }
     // Either way the module verdict covers the whole file: reporting each of its
     // exports again would just duplicate the same finding.
@@ -185,7 +282,7 @@ for (const file of files) {
     const exportKey = `${rel}::${name}`;
     if (usedNames.has(name) || info.localTypeUsage.has(name)) continue;
     unusedExportKeys.add(exportKey);
-    if (EXPORT_ALLOWLIST.has(exportKey)) continue;
+    if (EXPORT_ALLOWLIST.has(exportKey) || isCoveredByDefinitionSiteWaiver(file, name)) continue;
     unusedExports.push({ file: rel, name });
   }
 }
@@ -460,6 +557,20 @@ function findExportDefinition(file: string, symbol: string, visited = new Set<st
   return null;
 }
 
+/**
+ * A waiver declared on a symbol's defining module also covers that symbol's
+ * re-export hops: the hop routes the same public surface (e.g. the Mini App
+ * type barrel re-exporting the external telegram contract), so it inherits the
+ * definition's consumer story. A hop whose resolved definition is not waived
+ * is still reported, as is anything the barrel exports under its own name.
+ */
+function isCoveredByDefinitionSiteWaiver(file: string, name: string): boolean {
+  const definition = findExportDefinition(file, name);
+  if (!definition || definition === file) return false;
+  const definitionRel = relative(ROOT, definition).replaceAll("\\", "/");
+  return EXPORT_ALLOWLIST.has(`${definitionRel}::${name}`);
+}
+
 function collectImportDependencies(node: ts.ImportDeclaration, resolved: string): Dependency[] {
   const deps: Dependency[] = [];
   const importClause = node.importClause;
@@ -656,7 +767,163 @@ function isVendoredUiPrimitive(relPath: string): boolean {
 }
 
 function isRootEntrypoint(relPath: string): boolean {
-  return ROOT_ENTRYPOINT_PATTERNS.some((pattern) => pattern.test(relPath));
+  return ROOT_ENTRYPOINT_PATTERNS.some((pattern) => pattern.test(relPath)) || isNextAppRouterEntrypoint(relPath);
+}
+
+function isNextAppRouterEntrypoint(relPath: string): boolean {
+  if (!relPath.startsWith("src/app/")) return false;
+  const fileName = relPath.slice(relPath.lastIndexOf("/") + 1);
+  const dot = fileName.indexOf(".");
+  if (dot <= 0) return false;
+  return NEXT_APP_ROUTE_BASENAMES[fileName.slice(0, dot)] === true;
+}
+
+function isTestSupportFile(relPath: string): boolean {
+  return (
+    TEST_SUPPORT_DIR_PREFIXES.some((prefix) => relPath.startsWith(prefix)) ||
+    TEST_SUPPORT_FILE_PATTERNS.some((pattern) => pattern.test(relPath))
+  );
+}
+
+function isScriptConsumerDir(relPath: string): boolean {
+  return relPath.startsWith("scripts/") || relPath.startsWith("worker/scripts/");
+}
+
+function isStringReferencedEntrypoint(relPath: string): boolean {
+  return (
+    stringReferencedEntrypoints.has(relPath) ||
+    stringReferencedEntrypoints.has(relPath.replace(/\.[cm]?[jt]sx?$/, ""))
+  );
+}
+
+/** Distinguish "nothing points here" from "only tests keep it alive". */
+function deadModuleReason(file: string, info: ModuleInfo): string {
+  const importers = runtimeInbound.get(file);
+  if (!importers || importers.size === 0) {
+    return info.exports.size === 0 && info.hasSideEffectsOnly
+      ? "unreferenced module"
+      : "unreferenced module or dead shim";
+  }
+  const hasProductionImporter = [...importers].some((importer) => {
+    const rel = relPathByFile.get(importer);
+    return rel !== undefined && !isTestFile(rel) && !isTestSupportFile(rel);
+  });
+  return hasProductionImporter
+    ? "only referenced from modules that are not production-reachable"
+    : "only referenced by tests or test fixtures";
+}
+
+/**
+ * Entry points the import graph cannot see because they are invoked as text.
+ * Discovery is restricted to actual executable command bodies — package.json
+ * script strings and the `run:` steps of workflows and composite actions,
+ * extracted by parsing the YAML/JSON rather than scanning raw file text, so
+ * metadata keys, prose, and comments never root anything. Inside a body the
+ * recognizer honors actual `node`/`tsx` command targets (the reused
+ * check-script-entrypoints extractor) and actual import expressions — the
+ * workflow-heredoc form deploy-cloudflare.yml uses — after stripping `#` and
+ * `//` comment lines. Repo script source is deliberately NOT text-scanned:
+ * script imports are AST edges like every other module, and script-to-script
+ * spawn references stay the reverse audit's concern in
+ * check-script-entrypoints.
+ */
+function collectStringReferencedEntrypoints(): Set<string> {
+  const scannedPaths = new Set<string>();
+  for (const rel of relPathByFile.values()) {
+    scannedPaths.add(rel);
+    scannedPaths.add(rel.replace(/\.[cm]?[jt]sx?$/, ""));
+  }
+
+  const referenced = new Set<string>();
+  const record = (specifier: string): void => {
+    const normalized = specifier.replace(/^\.\//, "");
+    if (scannedPaths.has(normalized)) referenced.add(normalized);
+  };
+
+  const packageJsonPath = resolve(ROOT, "package.json");
+  if (tryStat(packageJsonPath)?.isFile()) {
+    let pkg: unknown = null;
+    try {
+      pkg = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+    } catch {
+      pkg = null;
+    }
+    if (pkg && typeof pkg === "object" && "scripts" in pkg) {
+      const scripts = pkg.scripts;
+      if (scripts && typeof scripts === "object") {
+        for (const command of Object.values(scripts)) {
+          if (typeof command === "string") recordCommandBody(command, record);
+        }
+      }
+    }
+  }
+
+  for (const referenceRoot of COMMAND_BODY_REFERENCE_ROOTS) {
+    const yamlFiles = collectSourceFilesUnderRoot(referenceRoot, ROOT, {
+      extensions: YAML_EXTENSIONS,
+      excludedDirs: new Set(["node_modules"]),
+    });
+    for (const yamlFile of yamlFiles) {
+      const rel = relative(ROOT, yamlFile).replaceAll("\\", "/");
+      if (isTestFile(rel)) continue;
+      for (const body of collectRunStepBodies(readFileSync(yamlFile, "utf8"))) {
+        recordCommandBody(body, record);
+      }
+    }
+  }
+  return referenced;
+}
+
+/** Recognize command targets and import expressions inside one executable body. */
+function recordCommandBody(body: string, record: (specifier: string) => void): void {
+  for (const entrypoint of collectScriptEntrypoints(body, { allowLineBreaks: true })) {
+    // Same trailing-punctuation normalization as check-script-entrypoints.
+    record(entrypoint.replace(/[\\.,;:]+$/, ""));
+  }
+  const executable = body
+    .split("\n")
+    .filter((line) => !/^\s*(#|\/\/)/.test(line))
+    .join("\n");
+  for (const match of executable.matchAll(/\bfrom\s*["']([^"']+)["']/g)) {
+    record(match[1] ?? "");
+  }
+  for (const match of executable.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) {
+    record(match[1] ?? "");
+  }
+}
+
+/** Pull every `run:` step body out of a workflow or composite-action YAML file. */
+function collectRunStepBodies(yamlText: string): string[] {
+  let document: unknown;
+  try {
+    document = parseYaml(yamlText);
+  } catch {
+    // A malformed reference file has no readable executable body; nothing roots.
+    return [];
+  }
+  if (!document || typeof document !== "object") return [];
+
+  const bodies: string[] = [];
+  const visitSteps = (steps: unknown): void => {
+    if (!Array.isArray(steps)) return;
+    for (const step of steps) {
+      if (!step || typeof step !== "object" || !("run" in step)) continue;
+      if (typeof step.run === "string") bodies.push(step.run);
+    }
+  };
+  const visitJobs = (jobs: unknown): void => {
+    if (!jobs || typeof jobs !== "object") return;
+    for (const job of Object.values(jobs)) {
+      if (!job || typeof job !== "object" || !("steps" in job)) continue;
+      visitSteps(job.steps);
+    }
+  };
+
+  if ("jobs" in document) visitJobs(document.jobs);
+  if ("runs" in document && document.runs && typeof document.runs === "object" && "steps" in document.runs) {
+    visitSteps(document.runs.steps);
+  }
+  return bodies;
 }
 
 function isTestFile(relPath: string): boolean {

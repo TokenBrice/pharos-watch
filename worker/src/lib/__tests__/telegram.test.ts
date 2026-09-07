@@ -9,59 +9,17 @@ const {
   buildTelegramRecapCta,
   buildTelegramMessage,
   editMessage,
-  postDigestToTelegram,
   schedulePerChatBatches,
   sendPhotoToChat,
   sendToChat,
   sendBatch,
 } = await import("../telegram");
 
-const digestCreds = {
-  botToken: "bot-token",
-  chatId: "12345",
-};
-
 beforeEach(() => {
   fetchSpy = mockFetch([], { requireMatch: true });
 });
 
 describe("sendToChat", () => {
-  it("drains the success response body for digest sends", async () => {
-    const response = new Response(JSON.stringify({ ok: true }), { status: 200 });
-    fetchSpy.mockResolvedValueOnce(response);
-
-    await postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds);
-
-    expect(response.bodyUsed).toBe(true);
-  });
-
-  it("drains the error response body for digest sends", async () => {
-    const response = new Response("Forbidden", { status: 403 });
-    fetchSpy.mockResolvedValueOnce(response);
-
-    await expect(postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds)).rejects.toThrow(
-      "Telegram API 403:",
-    );
-    expect(response.bodyUsed).toBe(true);
-  });
-
-  it("posts a rollout-gated private recap CTA when requested", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    await postDigestToTelegram(
-      "Daily Digest",
-      "PSI held steady.",
-      "2026-03-21",
-      digestCreds,
-      null,
-      null,
-      { mode: "public", allowedChatIds: new Set() },
-    );
-
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string) as { text: string };
-    expect(body.text).toContain("private /recap");
-  });
-
   it("sends HTML message and returns ok", async () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const result = await sendToChat("12345", "<b>Test</b>", "bot-token");

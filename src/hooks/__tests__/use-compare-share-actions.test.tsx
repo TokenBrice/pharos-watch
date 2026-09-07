@@ -3,6 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCompareShareActions } from "../use-compare-share-actions";
+import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 
 const shareImageMocks = vi.hoisted(() => ({
@@ -16,7 +17,7 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
-function makeCoin(id: string, symbol: string) {
+function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
   return {
     id,
     symbol,
@@ -37,10 +38,10 @@ function makeCoin(id: string, symbol: string) {
         pegCurrency: "USD",
       },
     } as unknown as StablecoinMeta,
-    pegScore: 99,
-    liquidityScore: 88,
-    safetyGrade: "A",
-  };
+    pegDetails: { pegScore: 99 },
+    liquidity: { liquidityScore: 88 },
+    safetyCard: { grade: "A" },
+  } as unknown as ComparisonCoinEntry;
 }
 
 function renderShareActions() {

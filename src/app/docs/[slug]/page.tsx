@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- source paths come from PUBLIC_DOCS and are guarded by public-docs tests. */
 
 import fs from "node:fs";
 import path from "node:path";

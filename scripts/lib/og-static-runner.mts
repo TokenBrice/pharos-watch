@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- callers provide validated generated paths. */
 import { firefox } from "playwright";
 import {
   existsSync,

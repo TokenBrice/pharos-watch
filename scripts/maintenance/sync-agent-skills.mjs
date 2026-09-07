@@ -86,6 +86,23 @@ function realPath(path) {
   }
 }
 
+/** @param {string} rootDir @param {string} skillPath @param {string[]} violations */
+function checkCanonicalSymlinks(rootDir, skillPath, violations) {
+  const rootRealPath = realPath(rootDir);
+  for (const entry of readDirectoryEntries(skillPath) ?? []) {
+    if (entry.isSymlink) {
+      const target = realPath(entry.path);
+      if (!target) {
+        violations.push(`${displayPath(rootDir, entry.path)} is a broken symlink`);
+      } else if (!rootRealPath || (target !== rootRealPath && !isInside(rootRealPath, target))) {
+        violations.push(`${displayPath(rootDir, entry.path)} resolves outside repository`);
+      }
+    } else if (entry.isDirectory) {
+      checkCanonicalSymlinks(rootDir, entry.path, violations);
+    }
+  }
+}
+
 /** @param {string} facadePath @param {string} canonicalPath */
 function expectedSymlinkTarget(facadePath, canonicalPath) {
   return relative(dirname(facadePath), canonicalPath).split(sep).join("/");
@@ -409,6 +426,7 @@ export function inspectAgentSkills(rootDir = process.cwd()) {
   for (const skillName of [...canonicalSkillEntries.keys()].sort()) {
     const canonicalSkillPath = canonicalSkillEntries.get(skillName).path;
     canonicalSkillPaths.push(canonicalSkillPath);
+    checkCanonicalSymlinks(resolvedRoot, canonicalSkillPath, violations);
     checkFrontmatter(join(canonicalSkillPath, "SKILL.md"), skillName, violations);
 
     const facadeSkillEntry = facadeSkillEntries.get(skillName);

@@ -8,15 +8,8 @@ import {
   type EnrichmentProgressReporter,
 } from "./enrich-prices-progress";
 
-export { isReasonablePrice } from "../../lib/price-validation";
-export {
-  applyPoolChallenge,
-  fetchPrimaryPrices,
-  type PriceValidationStats,
-  type PrimaryPriceResult,
-} from "./enrich-prices-primary";
-
-export type { PeggedAsset } from "./enrich-prices-shared";
+export { fetchPrimaryPrices } from "./enrich-prices-primary";
+export type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 export { applyResolvedPrice, hasMissingPrice } from "./enrich-prices-shared";
 
 export interface EnrichmentStats {

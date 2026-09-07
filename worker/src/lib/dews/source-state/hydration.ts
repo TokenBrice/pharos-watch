@@ -10,7 +10,7 @@
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../cache-json";
-import type { BlacklistPersistedRow } from "../../blacklist/shared";
+import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
 import {
@@ -376,7 +376,7 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
         `SELECT /* pharos:dews:blacklist-events-7d */
            stablecoin, chain_id, config_key, contract_address, timestamp
          FROM blacklist_events
-         WHERE timestamp >= ?`,
+         WHERE timestamp >= ? AND ${BLACKLIST_PUBLIC_EVENT_SQL}`,
       )
       .bind(ctx.nowSec - 7 * DAY_SECONDS)
       .all<BlacklistEventHydrationRow>();

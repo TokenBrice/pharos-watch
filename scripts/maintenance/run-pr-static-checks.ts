@@ -22,10 +22,6 @@ import {
   type OutputWriter,
 } from "../lib/report-violations.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
-import {
-  EDITORIAL_POLICY_TEST_COMMAND,
-  hasEditorialPolicyImpact,
-} from "../lib/editorial-surface-registry";
 import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
@@ -59,7 +55,6 @@ const PARALLEL_STATIC_CHECKS = new Set([
   "check:structural",
   "check:generated-artifacts",
 ]);
-const DEFERRED_STATIC_CHECKS = new Set<string>([EDITORIAL_POLICY_TEST_COMMAND.name]);
 
 type StructuralCheckImpact = "none" | "test-only" | "production";
 
@@ -92,16 +87,16 @@ export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
 
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
   return {
-    sequential: commands.filter(
-      (command) => !PARALLEL_STATIC_CHECKS.has(command.name) && !DEFERRED_STATIC_CHECKS.has(command.name),
-    ),
+    sequential: commands.filter((command) => !PARALLEL_STATIC_CHECKS.has(command.name)),
     parallel: commands.filter((command) => PARALLEL_STATIC_CHECKS.has(command.name)),
-    deferred: commands.filter((command) => DEFERRED_STATIC_CHECKS.has(command.name)),
   };
 }
 
 
-export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
+export function buildPrStaticCheckPlan(
+  changedFiles: readonly string[],
+  { skipDocSync = false }: { skipDocSync?: boolean } = {},
+) {
   const classification = classifyChangedFiles(changedFiles);
   const commands: PrStaticCheckCommand[] = [
     { name: "lint:changed" },
@@ -116,7 +111,10 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
     commands.push({ name: "audit:deps" });
   }
 
-  if (hasOwnedDocsImpact(changedFiles)) {
+  // `skipDocSync` is the composition-context option passed by `check:pr` and
+  // the CI matrix when the docs lane already owns `check:doc-sync` in the same
+  // plan; standalone runs never set it, so source-owned docs stay validated.
+  if (!skipDocSync && hasOwnedDocsImpact(changedFiles)) {
     commands.push({ name: "check:doc-sync" });
   }
 
@@ -128,19 +126,9 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
       commands.push({ name: "check:clone-ratchet" }, { name: "check:cron-console-usage" });
       break;
   }
-  if (hasEditorialPolicyImpact(changedFiles)) {
-    commands.push({
-      name: EDITORIAL_POLICY_TEST_COMMAND.name,
-      args: [...EDITORIAL_POLICY_TEST_COMMAND.args],
-    });
-  }
 
   if (classification.pagesChanged) {
-    commands.push(
-      { name: "check:client-registry-imports" },
-      { name: "check:site-csp-sync" },
-      { name: "check:stablecoin-data" },
-    );
+    commands.push({ name: "check:site-csp-sync" }, { name: "check:stablecoin-data" });
   }
 
   // A generated artifact must be regenerated in the same commit as the source
@@ -184,15 +172,17 @@ export async function runPrStaticChecks({
   const startedAt = Date.now();
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   const json = rest.includes("--json");
-  const unknownOptions = rest.filter((arg) => arg !== "--json");
+  const skipDocSync = rest.includes("--skip-doc-sync");
+  const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== "--skip-doc-sync");
   if (unknownOptions.length > 0) throw new Error(`Unknown option(s): ${unknownOptions.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });
-  const { classification, commands } = buildPrStaticCheckPlan(changedFiles);
+  const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { skipDocSync });
   const logOutput = json ? stderr : stdout;
   const log = (message: string) => logOutput.write(message + "\n");
   log(
     `[check:pr:static] ${changedFiles.length} changed file(s); ` +
-      `pages=${classification.pagesChanged}, worker=${classification.workerChanged}.`,
+      `pages=${classification.pagesChanged}, worker=${classification.workerChanged}` +
+      `${skipDocSync ? ", doc-sync owned by the docs lane" : ""}.`,
   );
   const runnableCommands = commands.map((command) => ({
     ...command,
@@ -201,7 +191,7 @@ export async function runPrStaticChecks({
         ? [`--base=${base}`, `--head=${head}`]
         : (command.args ?? []),
   }));
-  const { sequential, parallel, deferred } = partitionPrStaticCheckPlan(runnableCommands);
+  const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
   const maxParallel = Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3;
   const reporter = {
@@ -228,9 +218,6 @@ export async function runPrStaticChecks({
   const parallelUnits = parallel.map((command) => createExecutionUnit([
     createTrackedCommand(command),
   ]));
-  const deferredUnit = createExecutionUnit(
-    deferred.map((command) => createTrackedCommand(command)),
-  );
   const trackedRunner: CommandImplementation<NpmScriptCommand> = async (command, extraEnv, options) => {
     const index = laneIndexes.get(command);
     const commandStartedAt = Date.now();
@@ -278,19 +265,8 @@ export async function runPrStaticChecks({
       signal: controller.signal,
     })),
   ]);
-  const initialFailed = [sequentialResult, parallelResult].some(
-    (result) => result.status !== 0 && !result.aborted,
-  );
-  const deferredResult = initialFailed
-    ? { status: 0, aborted: true, failedCmd: null }
-    : await stopOnFailure(runExecutionUnit<NpmScriptCommand>(deferredUnit, {
-        getCommandEnv,
-        reporter,
-        runCommandImpl: trackedRunner,
-        signal: controller.signal,
-      }));
   const failed = laneReports.some((lane) => lane.status === "failed") ||
-    [sequentialResult, parallelResult, deferredResult].some((result) => result.status !== 0 && !result.aborted);
+    [sequentialResult, parallelResult].some((result) => result.status !== 0 && !result.aborted);
   const report: GateReport<typeof classification> = {
     base,
     head,
@@ -300,7 +276,7 @@ export async function runPrStaticChecks({
     status: failed ? "failed" : "passed",
     durationMs: Math.max(0, Date.now() - startedAt),
   };
-  const failure = [sequentialResult, parallelResult, deferredResult].find(
+  const failure = [sequentialResult, parallelResult].find(
     (result) => result.status !== 0 && !result.aborted,
   );
   if (!json && failure) throw new Error(formatNpmFailure(failure));

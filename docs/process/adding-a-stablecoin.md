@@ -708,6 +708,7 @@ Notes:
 - `data/logos.json` keys are canonical stablecoin IDs today, though some values still point at legacy numeric filenames such as `/logos/1-usdt.svg`. Ignore that for new work.
 - `scripts/maintenance/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
+- Oversized tracked logos (over 64px in either dimension and over 2500 bytes) also need a compact 32x32 WebP derivative. These are checked-in generated artifacts owned by the `compact-logos` registry entry: staging a `public/logos/*.{png,jpg,jpeg,webp}` source regenerates and stages `public/logos/compact/**` plus `src/lib/logo-variants.generated.json` automatically via the pre-commit hook, `npm run logos:compact` regenerates them manually (pruning orphans), and `npm run check:generated-artifacts -- --only=compact-logos` verifies freshness. Two source logos sharing one basename (for example `foo.png` and `foo.jpg`) collide on `compact/foo.webp` and are rejected — keep basenames unique.
 
 ### 6b. Editorial summary
 
@@ -790,19 +791,17 @@ For a normal stablecoin addition, generate the working-tree projections and run 
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
-npm test
-cd worker && npx tsc --noEmit
+npx vitest run shared/lib/__tests__/stablecoins.test.ts
+npm run typecheck:worker
 ```
 
-Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically — no separate settle step is required. Validate the committed snapshot:
+Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically and is not committed. Use the [smallest adequate checks](../testing.md#smallest-adequate-check-per-area) and the generated-artifact IDs selected by the router:
 
 ```bash
-npm run check:generated-artifacts
-npm run check:pr -- --base=origin/main
-npm run build
+npm run check:generated-artifacts -- --only=stablecoin-client-projections
 ```
 
-Commit the sitemap output separately or amend it into the source commit without changing the source author date. Run `check:stablecoin-data` first for fast feedback, then run the focused generated-artifact checks selected by the change. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
+Run `check:stablecoin-data` first for fast feedback, then the focused generated-artifact checks selected by the change. Run `npm run build` when rendering changed or an explicit production-build rehearsal is requested. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
 
 You can also run the individual checks directly when iterating:
 

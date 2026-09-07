@@ -1,15 +1,14 @@
 // src/lib/dews-radar-utils.ts
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
+import { DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { deterministicHash } from "@/lib/layout-utils";
 
 type ElevatedBand = Exclude<ThreatBand, "CALM">;
 
-const BAND_SCORE: Record<ElevatedBand, [number, number]> = {
-  WATCH:   [16, 35],
-  ALERT:   [36, 55],
-  WARNING: [56, 75],
-  DANGER:  [76, 100],
-};
+// Score intervals follow the shared DEWS band ladder: each elevated band spans the previous band's upper + 1 through its own.
+const BAND_SCORE = Object.fromEntries(
+  DEWS_THREAT_BANDS.slice(1).map(({ band, upper }, index) => [band, [DEWS_THREAT_BANDS[index].upper + 1, upper]]),
+) as Record<ElevatedBand, [number, number]>;
 
 const BAND_RADIUS: Record<ElevatedBand, [number, number]> = {
   WATCH:   [178, 208],

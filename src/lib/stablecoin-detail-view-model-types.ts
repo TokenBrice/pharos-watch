@@ -34,6 +34,7 @@ export interface DetailQueryResource<TData> {
   dataUpdatedAt: number;
   error: unknown | null;
   meta: ApiMeta | null;
+  enabled?: boolean;
 }
 
 export interface DetailSupplyHistoryInput {
@@ -109,6 +110,7 @@ export interface StablecoinDetailStaleQuery {
   error: unknown | null;
   hasData: boolean;
   meta: ApiMeta | null;
+  enabled?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;

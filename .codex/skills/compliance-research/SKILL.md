@@ -17,7 +17,7 @@ For `genius`, read `docs/genius-tracker.md`, `shared/lib/compliance-regime-state
 2. Use web search to locate candidates, fetch primary regulator/register and issuer sources, and use browser inspection only when a primary page blocks ordinary fetches. See `docs/process/agent-artifacts.md#harness-configuration` for harness adapters.
 3. Map token → legal issuer → exact authorization/public posture. Reject same-name affiliates and token-unspecific licenses.
 4. Apply the owning tracker’s schema and conservative classification. “Not assessed” is absence of a row; it is not an out-of-scope finding.
-5. Present the proposed object, source URLs/dates, access date, and confidence. Stop there for research-only requests. Before writes or each 3–5 coin batch, obtain the user’s approval.
+5. Present the proposed object, source URLs/dates, access date, and confidence. Stop there for research-only requests. Before writes, establish approval for the proposed scope. Prior explicit cohort authorization persists across its 3–5 coin batches; ask only for changes outside that authorization.
 6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. Then run:
 
 ```bash
@@ -34,7 +34,7 @@ npm run check:stablecoin-data
 
 ## Batch mode
 
-Use this mode for a bounded multi-coin review. It is read-only until the caller obtains approval for a write or for each 3–5 coin batch.
+Use this mode for a bounded multi-coin review. It is read-only unless the caller already has explicit write authorization for the cohort or obtains it. Batch size does not expire that authorization. If delegation is unavailable, perform research and skeptical primary-source reopening sequentially and disclose that review was not independent.
 
 ### Select and fan out
 
@@ -57,6 +57,6 @@ Use the response envelopes in [batch-schema.md](references/batch-schema.md); the
 
 The verifier independently reopens the base and sidecar, checks every proposed URL and highest-stakes authorization claim against primary sources, confirms the issuer is this token’s issuer, and checks current enums/cross-field rules. Default to rejection for unsupported upgrades. For each regime return one of `confirm-no-change`, `apply-correction`, `flag-for-approval`, `reject-proposal`, `unable-to-verify`, or `not-applicable`, plus `safeToAutoApply`, `isNewRow`, `finalJson`, `changeSummary`, and concrete `issues`.
 
-Set `safeToAutoApply=true` only for a non-empty candidate editing an existing row, with no removal or downgrade, and no stronger authorization escalation unless that claim was already present and equally or better sourced. Limit it to reference refinement, descriptive fields, a more-conservative enum correction, or a date refresh. New rows always need approval. `unable-to-verify` makes no change and needs more research. Treat the flag as advisory, never as permission.
+Set `safeToAutoApply=true` only for a non-empty candidate editing an existing row, with no removal or downgrade, and no stronger authorization escalation unless that claim was already present and equally or better sourced. Limit it to reference refinement, descriptive fields, a more-conservative enum correction, or a date refresh. New rows need explicit approval covering their addition; prior cohort authorization that explicitly includes new rows satisfies this requirement. `unable-to-verify` makes no change and needs more research. Treat the flag as advisory, never as permission.
 
 Return a deterministic manifest containing date, counts, safe changes, flagged changes, flags, gap proposals, regime-state notes, and per-coin verdict rows. The parent owns deduplication, approval, merge, and `npm run check:stablecoin-data`.

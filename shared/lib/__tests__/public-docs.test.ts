@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- tests read checked-in public docs from the repository root only. */
 
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";

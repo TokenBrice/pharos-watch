@@ -199,17 +199,47 @@ describe("dispatchTelegramAlerts", () => {
         presetResolutionFailures: 0,
         subscribersNotified: 1,
         messagesSent: 1,
-        planningStatements: expect.any(Number),
-        planningMs: expect.any(Number),
-        sourceEventsProcessed: 1,
-        pendingRowsEnqueued: expect.any(Number),
+        planningRowsWritten: expect.any(Number),
+        d1RowsWritten: expect.any(Number),
         noWorkRun: false,
       });
+      expect(metadata.planningRowsWritten).toBeGreaterThan(0);
       expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "direct-chat" })]);
       expect(parseLogRecords(warnSpy).some((record) => record.action === "preset-resolution")).toBe(false);
     } finally {
       warnSpy.mockRestore();
     }
+  });
+  it("uses rows_written for mixed planning batches instead of changes", async () => {
+    const run = async (options: Parameters<typeof createDispatchHarness>[1] = {}) => {
+      const harness = createDispatchHarness([], options);
+      sources(harness, { dews: { "usdc-circle": "CALM" } });
+      harness.cache("stablecoins", STABLECOINS_CACHE_WITH_USDC);
+      harness.seed(dewsDirect("rows-written-chat"));
+      return JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata) as {
+        planningRowsWritten: number;
+        d1RowsWritten: number;
+      };
+    };
+    const changesBased = await run();
+    const rowsWrittenBased = await run({
+      rowsWritten: (_sql, changes) => changes + 10,
+    });
+
+    expect(rowsWrittenBased.planningRowsWritten).toBeGreaterThan(changesBased.planningRowsWritten);
+    expect(rowsWrittenBased.d1RowsWritten).toBeGreaterThan(changesBased.d1RowsWritten);
+    expect(rowsWrittenBased.planningRowsWritten).toBeLessThan(rowsWrittenBased.d1RowsWritten);
+  });
+  it("marks rows-written metrics unavailable when D1 omits rows_written", async () => {
+    const harness = createDispatchHarness([], { rowsWritten: () => null });
+    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    harness.cache("stablecoins", STABLECOINS_CACHE_WITH_USDC);
+    harness.seed(dewsDirect("missing-rows-written-chat"));
+
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata.planningRowsWritten).toBeNull();
+    expect(metadata.d1RowsWritten).toBeNull();
   });
 
   it("holds direct targets durably when dynamic preset resolution must resume", async () => {

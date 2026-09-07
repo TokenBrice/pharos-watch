@@ -69,10 +69,12 @@ function createJsonResponse(body: string, cacheControl: string): Response {
 }
 
 export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: number): Response {
-  return createJsonResponse(
+  const response = createJsonResponse(
     cachedValue,
     buildPerCoinCacheControl(CACHE_TTL_SECONDS - ageSeconds),
   );
+  response.headers.set("X-Data-Age", String(Math.max(0, ageSeconds)));
+  return response;
 }
 
 export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: number): Response {

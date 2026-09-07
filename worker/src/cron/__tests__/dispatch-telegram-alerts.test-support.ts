@@ -15,6 +15,7 @@ import {
   insertTelegramSubscriber,
   type TelegramSubscriberSeed,
 } from "./telegram-subscriber.test-support";
+import type { SqliteD1Options } from "../../test-helpers/sqlite-d1";
 
 const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
   peggedAssets: [
@@ -482,6 +483,7 @@ export interface DispatchOperationFault {
   error: Error;
   remaining?: number;
 }
+export type DispatchHarnessOptions = Pick<SqliteD1Options, "rowsWritten">;
 
 export interface DispatchHarness {
   sqlite: DatabaseSync;
@@ -743,8 +745,11 @@ function seedDispatchFixture(sqlite: DatabaseSync, input: DispatchSeed): void {
   for (const row of input.targets ?? []) seedTarget(sqlite, row);
 }
 
-function createDispatchHarness(faults: DispatchOperationFault[] = []): DispatchHarness {
-  const { sqlite, db: sqliteDb } = createLatestSchemaSqlite();
+function createDispatchHarness(
+  faults: DispatchOperationFault[] = [],
+  options: DispatchHarnessOptions = {},
+): DispatchHarness {
+  const { sqlite, db: sqliteDb } = createLatestSchemaSqlite(options);
   fixtureSqliteDatabases.push(sqlite);
   const operations: DispatchOperationTranscriptEntry[] = [];
   return {

@@ -1,7 +1,11 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 import type { StablecoinMeta } from "@shared/types";
 
-function scoreRelatedStablecoin(candidate: StablecoinMeta, current: StablecoinMeta): number {
+function scoreRelatedStablecoin(
+  candidate: Pick<StablecoinMeta, "flags">,
+  current: Pick<StablecoinMeta, "flags">,
+): number {
   let score = 0;
   if (candidate.flags.governance === current.flags.governance) score += 3;
   if (candidate.flags.backing === current.flags.backing) score += 2;
@@ -10,13 +14,13 @@ function scoreRelatedStablecoin(candidate: StablecoinMeta, current: StablecoinMe
 }
 
 export function getRelatedStablecoins(
-  current: StablecoinMeta,
+  current: Pick<StablecoinMeta, "id" | "flags">,
   options: {
     limit?: number;
-    candidates?: readonly StablecoinMeta[];
+    candidates?: readonly StablecoinClientListMeta[];
   } = {},
-): StablecoinMeta[] {
-  const { limit = 6, candidates = ACTIVE_STABLECOINS } = options;
+): StablecoinClientListMeta[] {
+  const { limit = 6, candidates = CLIENT_ACTIVE_STABLECOINS } = options;
 
   return candidates
     .filter((candidate) => candidate.id !== current.id)

@@ -1,8 +1,9 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { formatCurrency } from "@shared/lib/format";
 import { FROZEN_IDS, FROZEN_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { CauseOfDeath, DeadStablecoin } from "@shared/types/market";
+import type { DeadStablecoin } from "@shared/types/market";
 import { getCache, setCache } from "../db-cache";
 import { escapeHtml } from "../telegram";
 
@@ -11,14 +12,6 @@ const CEMETERY_FOOTER_INDEX_CACHE_KEY = "telegram:cemetery-footer-index";
 const TRACKED_SNAPSHOT_CACHE_KEY = "telegram:tracked-stablecoins-snapshot";
 const TRACKED_PENDING_CACHE_KEY = "telegram:tracked-stablecoins-pending";
 const FROZEN_SNAPSHOT_CACHE_KEY = "frozen_ids_snapshot";
-
-const CAUSE_LABELS: Record<CauseOfDeath, string> = {
-  "algorithmic-failure": "Algorithmic Failure",
-  "counterparty-failure": "Counterparty Failure",
-  "liquidity-drain": "Liquidity Drain",
-  regulatory: "Regulatory",
-  abandoned: "Abandoned",
-};
 
 export const CEMETERY_FOOTERS = [
   "The cemetery remains a growth sector.",
@@ -140,7 +133,7 @@ function parseFooterIndex(raw: string | null): number {
 }
 
 function formatCemeteryCoin(coin: DeadStablecoin): string {
-  const header = `<code>${escapeHtml(coin.symbol)}</code> ${escapeHtml(coin.name)} (${escapeHtml(coin.deathDate)}; ${CAUSE_LABELS[coin.causeOfDeath]})`;
+  const header = `<code>${escapeHtml(coin.symbol)}</code> ${escapeHtml(coin.name)} (${escapeHtml(coin.deathDate)}; ${CAUSE_META[coin.causeOfDeath].label})`;
   const lines = [header];
 
   if (coin.epitaph) {

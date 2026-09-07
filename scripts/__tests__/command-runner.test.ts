@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import {
   createExecutionUnit,
   createLocalVitestCommand,
@@ -16,6 +20,83 @@ afterEach(() => {
 });
 
 describe("command runner", () => {
+  it.each(["batches", "parallel"])("settles aborted siblings after a rejecting runner in %s", async (coordinator) => {
+    const error = new Error("runner rejected");
+    let settled = false;
+    const units = [createExecutionUnit(["throw"]), createExecutionUnit(["wait"])];
+    const options = {
+      reporter: {},
+      runCommandImpl: async (cmd: string, _env?: Record<string, string>, { signal }: { signal?: AbortSignal } = {}) => {
+        if (cmd === "throw") throw error;
+        return new Promise<number>((resolve) => {
+          signal?.addEventListener("abort", () => {
+            setTimeout(() => { settled = true; resolve(130); }, 10);
+          }, { once: true });
+        });
+      },
+    };
+    const result = coordinator === "batches"
+      ? await runCommandBatches([units], options)
+      : await runParallelExecutionUnits(units, options);
+    expect(result).toMatchObject({ status: 1, failedCmd: "throw", error });
+    expect(settled).toBe(true);
+  });
+
+  it.each(["batches", "parallel"])("kills a real sibling before returning a missing-executable failure in %s", async (coordinator) => {
+    const root = mkdtempSync(join(tmpdir(), "command-cleanup-"));
+    const output = join(root, "late-output");
+    const missing = createSpawnCommand(join(root, "missing-executable"), []);
+    const sibling = createSpawnCommand(process.execPath, ["-e",
+      `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(output)}, 'late'), 100)`,
+    ]);
+    try {
+      const units = [createExecutionUnit([missing]), createExecutionUnit([sibling])];
+      const options = { reporter: {}, runCommandImpl: runSpawnCommand };
+      const result = coordinator === "batches"
+        ? await runCommandBatches([units], options)
+        : await runParallelExecutionUnits(units, options);
+      expect(result).toMatchObject({ status: 1, failedCmd: missing.cmd, error: { code: "ENOENT" } });
+      await delay(180);
+      expect(existsSync(output)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("continues after thrown failures when explicitly requested and removes the outer abort listener", async () => {
+    const controller = new AbortController();
+    const remove = vi.spyOn(controller.signal, "removeEventListener");
+    const calls: string[] = [];
+    const result = await runParallelExecutionUnits([
+      createExecutionUnit(["throw"]), createExecutionUnit(["next"]),
+    ], {
+      reporter: {}, continueOnError: true, maxParallel: 1, signal: controller.signal,
+      runCommandImpl: (cmd: string) => { calls.push(cmd); if (cmd === "throw") throw new Error("failure"); return 0; },
+    });
+    expect(calls).toEqual(["throw", "next"]);
+    expect(result.failures).toHaveLength(1);
+    expect(result.results.map((entry) => entry.status)).toEqual([1, 0]);
+    expect(remove).toHaveBeenCalledWith("abort", expect.any(Function));
+  });
+
+  it.each(["batches", "parallel"])("cleans up even when the failure reporter throws in %s", async (coordinator) => {
+    let settled = false;
+    const units = [createExecutionUnit(["fail"]), createExecutionUnit(["wait"])];
+    const options = {
+      reporter: { failure: () => { throw new Error("reporter failed"); } },
+      runCommandImpl: (cmd: string, _env?: Record<string, string>, { signal }: { signal?: AbortSignal } = {}) => {
+        if (cmd === "fail") return 1;
+        return new Promise<number>((resolve) => {
+          signal?.addEventListener("abort", () => { settled = true; resolve(130); }, { once: true });
+        });
+      },
+    };
+    await expect(coordinator === "batches"
+      ? runCommandBatches([units], options)
+      : runParallelExecutionUnits(units, options)).rejects.toThrow("reporter failed");
+    expect(settled).toBe(true);
+  });
+
   it("runs commands in order with label logging and per-command env", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const calls: Array<{ cmd: string; env: Record<string, string> }> = [];

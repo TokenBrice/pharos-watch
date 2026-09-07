@@ -26,9 +26,9 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 
 1. Fetch, parse, and validate the object-shaped cached "stablecoins" payload via `loadStablecoinsCache(db, { mode: "strict" })`
 2. For the 08:00 UTC safety-net fallback, require the `stablecoins` cache row to have `updated_at >= slotStartedAt`; if it still reflects the previous 07:45 quarter-hourly run, return `status: "degraded"` with `reason: "stablecoins_cache_before_slot"` and do not consume the daily write marker --- unless the UTC day is already complete under the current coverage identity, in which case the run returns healthy with `reason: "already_written_today_before_freshness_gate"`
-3. Verify cache freshness:
-   - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
-   - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
+3. Verify cache freshness (both snapshot crons derive these gates from the `sync-stablecoins` producer cadence — 900 s via the shared cache-freshness lane — instead of unanchored literals):
+   - Cache age > 1800 seconds (two producer intervals): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
+   - Cache age > 900 seconds (one producer interval): log warning but proceed (degraded freshness)
 4. Filter to `PSI_ELIGIBLE_STABLECOINS`; the eligibility registry owns the active and shadow composition
 5. Floor current date/time to UTC midnight:
    ```typescript
@@ -114,7 +114,8 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 | `stablecoin_count` | INTEGER | Number of core-aggregate active stablecoins (`CORE_AGGREGATE_ACTIVE_IDS`) with positive supply on this chain |
 
 - **Populated by:** `snapshot-chain-supply` cron stage (`worker/src/cron/snapshot-chain-supply.ts`) running in the `*/15 * * * *` quarter-hourly slot, chained after `snapshot-supply`.
-- **Normalization:** the cron canonicalizes raw DefiLlama chain labels through the shared chain resolver before writing, so display-name aliases and tracked metadata names collapse into the same `chain_id`.
+- **Cache admission gate:** `snapshot-chain-supply` applies the same producer-cadence freshness gate as `snapshot-supply` — it skips with `status: "degraded"` and `reason: "cache_stale"` once the stablecoins cache is older than two `sync-stablecoins` intervals (> 1800 s).
+- **Normalization:** the cron preserves upstream/display labels as `chainCirculating` object keys for compatibility, while producers attach an optional canonical `chainId`; the shared resolver uses that explicit ID first and falls back to the label for older or malformed rows before writing `chain_id`.
 - **Write pattern:** atomic UTC-date replacement — delete the cron-owned date, multi-row `INSERT OR REPLACE` the recomputed aggregate, and write the same coverage-version 2 identity marker in one D1 batch. Re-runs therefore remove chains that disappeared from the aggregate instead of retaining stale rows.
 - **Volume:** ~50 rows/day (one row per active chain per UTC day).
 - **Primary use:** future trend charts on chain profile pages (`/chains/[chain]/`). The live `/api/chains` leaderboard does not read this table — it computes aggregates on-the-fly from the stablecoins cache.
@@ -134,7 +135,9 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 - If the DefiLlama live list collapses a tracked asset to zero supply but recent DefiLlama chart history still has a fresh non-zero total, the worker repairs the current plus 1d/7d/30d total supply buckets from that chart history and tags the asset `supplySource = "defillama-history-gap-fill"`. This covers list-endpoint regressions such as TRYB where the per-chain live row zeroes out while DefiLlama history remains populated.
 - If a tracked asset collapses to zero supply and DefiLlama chart history is missing, stale, or below the $1M current-point floor, the worker falls back to the curated on-chain aggregate read (`applyCuratedOnChainSupplyGap`) and republishes the asset as `supplySource = "onchain-total-supply"`, rewriting `chainCirculating` and clearing the 1d/7d/30d buckets; an unreadable leg fails closed and leaves the zero row untouched.
 
-The snapshot cron records the canonical DefiLlama list totals as-is; only the single-chain CoinGecko remainder is retained in the cached per-chain map.
+The snapshot cron records the canonical DefiLlama list totals as-is; only the single-chain CoinGecko remainder is retained in the cached per-chain map. Synthetic and supplemental rows keep their display-label keys and carry `chainId` when the producer knows the canonical identity, so downstream aggregation does not need to infer identity from presentation text.
+
+`canonicalizeChainCirculating()` retains the label fallback for legacy or upstream rows that have no usable `chainId`. That tolerance is intentional: the Safety Score V9 supply extension still receives raw upstream labels and pools unrecognized labels into its reviewed uncanonicalized-chain-label control path rather than silently assigning them to a different chain.
 
 **Supplemental on-chain exceptions:** `syncStablecoins()` can admit `detailProvider === "coingecko"` assets through an on-chain supply fallback: a curated multi-deployment aggregate read (`fetchCuratedAggregateOnChainMcap`, which fails closed when any configured leg is unreadable and can reallocate a canonical chain's supply across representation legs) where one is configured, otherwise a single-deployment `totalSupply()` read. The default label is `supplySource = "onchain-total-supply"`. For narrow protocol-inventory cases, the worker can subtract configured live holder balances from that same total-supply read and publish `supplySource = "onchain-circulating-supply"`; if any configured balance read fails, the fallback is skipped for that run. The snapshot cron records the cached USD total and does not repeat those RPC reads.
 
@@ -252,7 +255,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 | Condition | Behavior |
 |-----------|----------|
 | `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, `filtered-malformed-entries`, `published-contract-invalid`, or `cache-read-failed`); a legacy array payload fails as `invalid-payload-shape` |
-| Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
+| Cache older than two producer intervals (> 1800 s) | Return degraded (`reason: "cache_stale"`) |
 | Today's UTC snapshot has a version 2 marker matching the current exact ID/waiver digest and no required ID recovered since that write | Skip the row write (`reason: "already_written_today"`, or `"repaired_missing_prices_today"` when the same-day pass filled null prices) |
 | Same-day null-price repair query fails | `recordCronFailure()`, then return degraded (`reason: "same_day_price_repair_failed"`) |
 | 0 prepared rows with a non-empty active set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the exact-set guard |

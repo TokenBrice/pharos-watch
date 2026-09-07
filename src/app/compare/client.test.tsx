@@ -93,10 +93,6 @@ function makeComparisonCoin(
     name: symbol,
     data: { id, symbol, name: symbol },
     meta: { id, symbol, name: symbol, flags },
-    pegScore: null,
-    liquidityScore: null,
-    safetyGrade: null,
-    netFlow30d: null,
   } as unknown as ComparisonCoinEntry;
 }
 

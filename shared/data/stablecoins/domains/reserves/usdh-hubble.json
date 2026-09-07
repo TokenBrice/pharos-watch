@@ -119,10 +119,6 @@
         "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
       },
       {
-        "label": "Hubble official SDK source",
-        "url": "https://github.com/hubbleprotocol/hubble-common"
-      },
-      {
         "label": "Solana mainnet RPC (PSM and borrowing-market reads, slot 438037097)",
         "url": "https://api.mainnet-beta.solana.com"
       },

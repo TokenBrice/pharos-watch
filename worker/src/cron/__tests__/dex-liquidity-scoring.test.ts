@@ -60,6 +60,7 @@ import {
   computeDepthStability,
   computeDexPrices,
   computeStablecoinScores,
+  publishStablecoinScoreTargets,
   DEX_LIQUIDITY_SCORING_BATCH_SIZE,
   loadConfidentHistoryStability,
   selectDexRouteObservations,
@@ -1352,6 +1353,14 @@ describe("dex-liquidity scoring", () => {
       undefined,
       shadowTargets,
     );
+
+    expect(result.diagnostics.measuredExecution.shadowTargetPublication).toEqual({
+      status: "skipped", reason: "liquidity-candidate-not-published",
+    });
+    expect(db.scoringTestState.measuredTargetRows).toBe(0);
+    expect(result.measuredTargetInventory.shadow).toHaveLength(1);
+    await publishStablecoinScoreTargets(db, result.measuredTargetInventory, result.diagnostics, 1_700_000_100);
+    expect(result.measuredTargetInventory.shadow).toHaveLength(0);
 
     expect(result.diagnostics.measuredExecution).toMatchObject({
       inventoryTargetCount: 0,

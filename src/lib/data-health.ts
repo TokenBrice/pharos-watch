@@ -21,6 +21,7 @@ export interface DataHealthInfo {
   ageMs: number | null;
   staleTime: number;
   meta: ApiMeta | null;
+  degradationReason?: "age" | "source" | "refresh";
 }
 
 interface MergedDataHealth {
@@ -63,12 +64,12 @@ function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
   return "Data is stale.";
 }
 
-export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
+export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
   const updatedAtMs = input.meta?.updatedAt != null && input.meta.updatedAt > 0
     ? input.meta.updatedAt * 1000
     : input.dataUpdatedAt;
-  const ageMs = updatedAtMs > 0 ? Math.max(0, Date.now() - updatedAtMs) : null;
+  const ageMs = updatedAtMs > 0 ? Math.max(0, nowMs - updatedAtMs) : null;
   const classifiedState = pickBaseState(ageMs, input.staleTime);
   const hasDegradationFloor = hasServerDegradation(input.meta);
   const baseState = !hasDegradationFloor
@@ -109,6 +110,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
       label: input.label,
       state,
       message: "Using last successful data while refresh retries.",
+      degradationReason: "refresh",
       dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,
@@ -134,6 +136,11 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
     label: input.label,
     state: baseState,
     message,
+    ...(baseState === "degraded" ? {
+      degradationReason: classifiedState === "degraded" || input.meta?.warning?.startsWith("110 ")
+        ? "age" as const
+        : "source" as const,
+    } : {}),
     dataUpdatedAt: updatedAtMs,
     ageMs,
     staleTime: input.staleTime,
@@ -179,6 +186,7 @@ export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {
 export function formatDataHealthTimestamp(
   timestampMs: number | null,
   locale?: Intl.LocalesArgument,
+  timeZone?: string,
 ): string {
   if (!timestampMs || timestampMs <= 0) return "never";
   return new Date(timestampMs).toLocaleString(locale, {
@@ -187,5 +195,6 @@ export function formatDataHealthTimestamp(
     hour: "numeric",
     minute: "2-digit",
     timeZoneName: "short",
+    timeZone,
   });
 }

@@ -58,6 +58,29 @@ describe("AI summary claim tokens", () => {
     ]);
   });
 
+  it("rejects shape-valid but calendar-invalid factsAsOf dates", () => {
+    expect(validateAiSummaryClaimTokens("Grade {{grade}}.", [{
+      ...gradeToken,
+      factsAsOf: "2026-99-99",
+    }])).toEqual([{ code: "invalid-facts-as-of", token: "grade" }]);
+    expect(validateAiSummaryClaimTokens("Grade {{grade}}.", [{
+      ...gradeToken,
+      factsAsOf: "2026-02-30",
+    }])).toEqual([{ code: "invalid-facts-as-of", token: "grade" }]);
+    expect(validateAiSummaryClaimTokens("Grade {{grade}}.", [gradeToken])).toEqual([]);
+  });
+
+  it("renders malformed and unregistered tokens as N/A instead of raw braces", () => {
+    expect(resolveAiSummaryClaims("Grade {{grade}}.", [{
+      ...gradeToken,
+      factsAsOf: "2026-99-99",
+    }]).text).toBe("Grade N/A.");
+    expect(resolveAiSummaryClaims("Grade {{grade}}.", undefined).text).toBe("Grade N/A.");
+    expect(resolveAiSummaryClaims("Grade {{grade}}.", [
+      { ...gradeToken, placeholder: "{{score}}" } as unknown as AiSummaryClaimToken,
+    ]).text).toBe("Grade N/A.");
+  });
+
   it("keeps every data-file claim token in one-to-one schema parity", () => {
     const summaries = JSON.parse(readFileSync(resolve("data/ai-summaries.json"), "utf8")) as Record<
       string,

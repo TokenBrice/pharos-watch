@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
 import type { PeggedAsset } from "../enrich-prices";
-import { mergeCronMetadataWithLease, normalizeCronMetadata } from "../../../lib/cron-metadata";
+import { normalizeCronMetadataWithLease } from "../../../lib/cron-metadata";
 import {
   compactCronMetadataForPersistence,
   MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
@@ -137,7 +137,7 @@ describe("stablecoins pricing metadata", () => {
       MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
     );
     expect(result.metadata).not.toContain(sentinel);
-    const enrichedMetadata = mergeCronMetadataWithLease(normalizeCronMetadata(result), {
+    const enrichedMetadata = normalizeCronMetadataWithLease(result, {
       leaseOwner: "sync-stablecoins:scheduled:00000000-0000-4000-8000-000000000000",
       renewFailures: 0,
       leaseLost: false,

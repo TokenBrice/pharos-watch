@@ -52,6 +52,18 @@ function isFullyGitIgnored(artifact: RegistryArtifact): boolean {
 }
 
 describe("generated artifact lifecycle", () => {
+  it("uses offline snapshots for bootstrap and live generation for compile inputs", () => {
+    const snapshot = (options: Record<string, unknown>) => buildGeneratedArtifactPhases(options)
+      .flatMap(({ artifacts }) => artifacts).find((artifact) => artifact.id === "stablecoin-detail-snapshots")!;
+    expect(snapshot({ bootstrap: true }).command).toContain("PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP=1");
+    expect(snapshot({ buildLifecycles: ["compile-input"] }).command).not.toContain("PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP");
+    expect(snapshot({ check: true }).command).toContain("PHAROS_DETAIL_SNAPSHOT_CHECK=1");
+    expect(selectedIds({ only: ["stablecoin-detail-snapshots"] })).toEqual([
+      "stablecoin-catalog", "stablecoin-detail-snapshots",
+    ]);
+    expect(registry.filter((artifact) => artifact.bootstrap).flatMap((artifact) => artifact.outputPaths)
+      .filter((path) => /[*?\[\]{}]/.test(path))).toEqual([]);
+  });
   it("declares one positive build lifecycle for every artifact", () => {
     expect(new Set(registry.map((artifact) => artifact.buildLifecycle))).toEqual(
       new Set(["compile-input", "post-refresh", "maintenance-only"]),

@@ -153,6 +153,13 @@ runs:
       shell: bash
       run: npm run bootstrap:generated:history
 
+    # Runs for both fresh setup and restore-only consumers. actions/cache saves
+    # in its success-only post step, so repaired tracked bytes cannot be saved.
+    - name: Verify bootstrap preserved committed artifacts
+      if: ${{ inputs.workspace-cache == 'true' || (inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true') }}
+      shell: bash
+      run: node --input-type=module -e 'import { assertBootstrapTrackedOutputsUnchanged } from "./scripts/lib/bootstrap-tracked-outputs.mts"; assertBootstrapTrackedOutputsUnchanged();'
+
     - if: ${{ inputs.install-playwright-chromium == 'true' }}
       shell: bash
       run: npx --no-install playwright install --with-deps chromium

@@ -75,6 +75,24 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-source pre-authentication rate limiter for Telegram webhook requests.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
+    key: "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-source pre-authentication rate limiter for Telegram Mini App session requests.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
+    key: "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-source pre-authentication rate limiter for Telegram Mini App mutation requests.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
     key: "CORS_ORIGIN",
     valueType: "string",
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",

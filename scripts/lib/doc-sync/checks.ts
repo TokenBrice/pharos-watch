@@ -3,7 +3,6 @@ import {
   expectEqual,
   findLineValue,
   read,
-  requireTableRow,
 } from "./shared";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
 import {
@@ -40,27 +39,6 @@ function checkMethodologyCommitProvenance(failures: Failure[]): void {
   }
 }
 
-function checkReportCardsDoc(failures: Failure[]): void {
-  const file = "docs/report-cards.md";
-  const doc = read(file);
-
-  for (const requiredText of [
-    "`GET /api/report-cards/v9`",
-    "`report-cards:v9`",
-    "`report-cards:v9:publication-health`",
-    "at least 90% of active assets remain unaffected",
-  ]) {
-    if (!doc.includes(requiredText)) {
-      failures.push({
-        file,
-        label: "canonical V9 publication contract",
-        expected: requiredText,
-        found: null,
-      });
-    }
-  }
-}
-
 function checkWorkerInfrastructureIsolateStateDoc(failures: Failure[]): void {
   const file = "docs/worker-infrastructure.md";
   const doc = read(file);
@@ -77,41 +55,6 @@ function checkWorkerInfrastructureIsolateStateDoc(failures: Failure[]): void {
     found,
     renderIsolateLocalStateDocumentation(),
   );
-}
-
-function checkChainsApiDoc(failures: Failure[], doc: string): void {
-  const file = "docs/api-reference.md";
-  const chainsMetaRow = requireTableRow(doc, file, "`GET /api/chains`");
-  expectEqual(
-    failures,
-    file,
-    "/api/chains freshness metadata source",
-    chainsMetaRow[1],
-    "`worker/src/api/chains.ts`",
-  );
-}
-
-function checkChainsPageDoc(failures: Failure[]): void {
-  const file = "docs/chains-page.md";
-  const doc = read(file);
-
-  if (!doc.includes("`src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)`")) {
-    failures.push({
-      file,
-      label: "profile route coordination hook",
-      expected: "useChainProfileData(chainId)",
-      found: "missing",
-    });
-  }
-
-  if (doc.includes("uses `useChains()` plus `useChainStablecoins(chainId)`")) {
-    failures.push({
-      file,
-      label: "legacy profile hook contract",
-      expected: "removed",
-      found: "uses `useChains()` plus `useChainStablecoins(chainId)`",
-    });
-  }
 }
 
 function checkRedemptionBackstopsDoc(failures: Failure[]): void {
@@ -152,14 +95,10 @@ function checkRedemptionBackstopsDoc(failures: Failure[]): void {
 
 export function runDocSyncChecks(): Failure[] {
   const failures: Failure[] = [];
-  const apiReferenceDoc = read("docs/api-reference.md");
 
   checkGeneratedDocContractBlocks(failures);
   checkMethodologyCommitProvenance(failures);
-  checkReportCardsDoc(failures);
   checkWorkerInfrastructureIsolateStateDoc(failures);
-  checkChainsApiDoc(failures, apiReferenceDoc);
-  checkChainsPageDoc(failures);
   checkRedemptionBackstopsDoc(failures);
 
   return failures;

@@ -137,11 +137,11 @@ export const useBluechipRatings = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESC
 export const useDailyDigest = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dailyDigest);
 export const useDexLiquidity = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidity, undefined);
 
-export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
+export function useDexLiquidityHistory(stablecoinId: string, days?: number) {
   return useQuery<DexLiquidityHistoryPoint[], Error>(dexLiquidityHistoryQueryOptions(stablecoinId, days));
 }
 
-export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90) {
+export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days?: number) {
   return asPlainQueryOptions<DexLiquidityHistoryPoint[]>(
     createRegisteredApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
       FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory(stablecoinId, days),
@@ -239,7 +239,7 @@ export function useYieldAdapterManifest() {
 
 export const useStressSignals = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stressSignals, undefined);
 
-export function useStressSignalDetail(stablecoinId: string, days = 30) {
+export function useStressSignalDetail(stablecoinId: string, days?: number) {
   return useRegisteredApiQuery<StressSignalDetailResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.stressSignalDetail(stablecoinId, days),
     { enabled: !!stablecoinId },

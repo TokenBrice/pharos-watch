@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DependencyTypeSchema, type DependencyType } from "./dependency-types";
+import { DependencyTypeSchema } from "./dependency-types";
 
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
@@ -50,23 +50,7 @@ const RESERVE_LIQUIDITY_HORIZON_VALUES = ["immediate", "one-day", "seven-days", 
 export type ReserveLiquidityHorizon = (typeof RESERVE_LIQUIDITY_HORIZON_VALUES)[number];
 const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
 
-export interface ReserveSlice {
-  sourceKey?: string;
-  name: string;
-  pct: number;
-  risk: ReserveRisk;
-  coinId?: string;
-  depType?: DependencyType;
-  blacklistable?: boolean;
-  blacklistabilityExposure?: ReserveBlacklistabilityExposure;
-  assetClass?: ReserveAssetClass;
-  issuerOrObligor?: string;
-  riskFactors?: ReserveRiskFactor[];
-  liquidityHorizon?: ReserveLiquidityHorizon;
-  maturityDaysMax?: number;
-}
-
-export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
+export const ReserveSliceSchema = z.object({
   sourceKey: z.string()
     .trim()
     .min(3)
@@ -97,6 +81,7 @@ export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
     });
   }
 });
+export type ReserveSlice = z.infer<typeof ReserveSliceSchema>;
 
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 

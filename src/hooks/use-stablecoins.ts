@@ -26,7 +26,7 @@ export function useStablecoins() {
 
 export function supplyHistoryQueryOptions(
   id: string,
-  days = 1825,
+  days?: number,
   overrides?: QueryControlOverrides,
 ) {
   return asPlainQueryOptions<SupplyHistoryPoint[]>(
@@ -39,7 +39,7 @@ export function supplyHistoryQueryOptions(
 
 export function useSupplyHistory(
   id: string,
-  days = 1825,
+  days?: number,
   overrides?: QueryControlOverrides,
 ) {
   const query = useQuery<SupplyHistoryPoint[], Error>(supplyHistoryQueryOptions(id, days, overrides));

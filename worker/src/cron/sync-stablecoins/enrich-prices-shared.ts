@@ -1,4 +1,13 @@
 import type { ContractDeployment, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import { stampPriceMetadata } from "./shared";
+
+export interface PriceValidationStats {
+  attempted: number;
+  high: number;
+  singleSource: number;
+  cgOnly: number;
+  low: number;
+}
 
 export interface PrimaryPriceResult {
   price: number;
@@ -70,12 +79,13 @@ export function applyResolvedPrice(
   observedAtMode: PriceObservedAtMode = "local_fetch",
 ): void {
   asset.price = price;
-  asset.priceSource = source;
-  asset.priceSelectedSource = source;
-  asset.priceConfidence = confidence;
-  asset.priceUpdatedAt = updatedAtSec;
-  asset.priceObservedAt = updatedAtSec;
-  asset.priceObservedAtMode = observedAtMode;
-  asset.priceSyncedAt = updatedAtSec;
-  asset.consensusSources = [source];
+  stampPriceMetadata(asset, source, confidence, updatedAtSec, observedAtMode, [source], undefined, updatedAtSec, source);
+}
+
+// DefiLlama returns the literal string "wrong" as the geckoId for assets whose
+// CoinGecko id could not be resolved; treat that exact sentinel as unusable.
+const INVALID_GECKO_ID_SENTINEL = "wrong";
+
+export function isUsableGeckoId(geckoId: unknown): geckoId is string {
+  return typeof geckoId === "string" && geckoId.length > 0 && geckoId !== INVALID_GECKO_ID_SENTINEL;
 }

@@ -153,6 +153,8 @@ The `/blog/` hub uses the authored shared `public/og-blog.png` card. Individual 
 
 Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached 15 minutes via `API_CACHE_PROFILES.ogImage`. The shared frame follows the current light product shell and semantic status colors. **Self-renewing — no manual step.**
 
+Stablecoin and depeg cards read DEWS through `stress-signals-current-rows.ts`, the same publication owner as `/api/stress-signals`. They honor completed-generation coverage rather than selecting raw maximum timestamps, so superseded or staged rows cannot override the published generation. Both use the API's eight-times-freshness fallback threshold for materialized rows and retain the owner's last-valid/history fallback (including an older single-coin result); unavailable authority yields no DEWS row. Existing rendering and response-cache limits are unchanged.
+
 | Route | Source |
 | --- | --- |
 | `/api/og/stablecoin/:id` | per-stablecoin card (referenced from `src/lib/page-metadata.ts → buildStablecoinDetailMetadata`) |

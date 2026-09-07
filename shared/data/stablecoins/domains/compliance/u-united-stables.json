@@ -8,7 +8,7 @@
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
+    "daspOfferSaleStatus": "restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.u.tech/",
     "redemptionPolicyPresent": true,

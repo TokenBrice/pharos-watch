@@ -6,7 +6,7 @@ Public ledger of Pharos's running costs, donations, and sustainability path. The
 
 - `src/app/funding/page.tsx` renders through `FeaturePageShell` and uses `buildPageMetadata(...)`.
 - `src/app/sitemap.ts` includes `/funding/`; `lastModified` uses the latest of the route edit date, `costs.last_reviewed_at`, and `donations.last_updated_at`.
-- `src/lib/nav-config.ts` places Funding in the `Reference` group.
+- `src/lib/nav-config.ts` no longer lists Funding: it is reachable from the global footer meta row, the about page, and the homepage donate card.
 - `src/components/footer.tsx` includes Funding in the footer route list.
 - `scripts/maintenance/generate-llms-txt.ts` includes Funding in the public LLM-facing index.
 - `public/_headers` must not emit `X-Robots-Tag: noindex` for `/funding/*`.

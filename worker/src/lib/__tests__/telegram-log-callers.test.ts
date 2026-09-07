@@ -25,7 +25,6 @@ const FORBIDDEN_EXACT_KEYS = new Set([
 ]);
 
 function sourceFiles(directory: string): string[] {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- recursion is confined to repo-owned directory entries.
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) return sourceFiles(fullPath);
@@ -40,7 +39,6 @@ describe("Telegram structured log callers", () => {
 
     for (const file of sourceFiles(path.resolve("worker/src"))) {
       if (file.includes(`${path.sep}__tests__${path.sep}`) || file.endsWith(`${path.sep}telegram${path.sep}log.ts`)) continue;
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- files come only from sourceFiles(worker/src).
       const sourceText = readFileSync(file, "utf8");
       const source = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true);
 

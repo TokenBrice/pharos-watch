@@ -12,6 +12,7 @@ import {
 } from "./stablecoin-detail/shared";
 import { applyCuratedDetailAddress } from "./stablecoin-detail/defillama";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
+import { enrichMissingDetailPrice } from "./stablecoin-detail/price";
 
 interface SharedDetailRefreshResponse {
   body: ArrayBuffer;
@@ -112,7 +113,7 @@ function scheduleStablecoinDetailRefresh(config: {
   );
 }
 
-export const handleStablecoinDetail = async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
+const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
     const cacheKey = `detail:${id}`;
     const cached = await getCache(db, cacheKey);
     const meta = TRACKED_META_BY_ID.get(id);
@@ -164,3 +165,11 @@ export const handleStablecoinDetail = async (db: D1Database, id: string, ctx: Ex
     });
     return createResponseFromSharedResponse(response);
   };
+
+export const handleStablecoinDetail = async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
+  const response = await resolveStablecoinDetail(db, id, ctx, coingeckoApiKey);
+  const meta = TRACKED_META_BY_ID.get(id);
+  return meta && isActiveStablecoinMeta(meta)
+    ? enrichMissingDetailPrice(db, id, response)
+    : response;
+};

@@ -19,15 +19,15 @@
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Users can receive shares against USD1 deposits, but the manager can separately configure KYT signers and direct minter bits; the wrapper never mints base USD1.",
-        "observedAt": "2026-07-26",
-        "observedBlock": 112282205,
+        "observedAt": "2026-09-04",
+        "observedBlock": 119953746,
         "sources": [
           {
             "label": "sUSD1+ BSC proxy and verified implementation",
             "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#code"
           }
         ],
-        "evidence": "At BSC block 112282205, the proxy resolves to verified UUPS implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13. The implementation's onlyManager modifier requires msg.sender == cedefiManager; its setRole() writes the direct MINTER/BURNER/DEPOSIT bitmask and setSigner() writes the KYT signer set. underlying() remains BSC USD1 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d, confirming the inherited parent relationship."
+        "evidence": "At BSC block 119953746 (0x7265952), the proxy's EIP-1967 implementation slot returned 0x972c27ee69b19d7648cef365700c22713a9a31fd; deployed code is nonempty and it returns an EIP-1822 UUID, confirming the UUPS model. The implementation's onlyManager modifier requires msg.sender == cedefiManager; its setRole() writes the direct MINTER/BURNER/DEPOSIT bitmask and setSigner() writes the KYT signer set. underlying() remains BSC USD1 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d, confirming the inherited parent relationship."
       },
       {
         "chain": "bsc",
@@ -97,7 +97,7 @@
         "0x4f2760b32720f013e900dc92f65480137391199b"
       ],
       "implementationAddresses": [
-        "0xaafe784a51f119d38e57717fd8a00f844bd86f13"
+        "0x972c27ee69b19d7648cef365700c22713a9a31fd"
       ],
       "adminAddresses": [
         "0x507ec48ef26919a205a9f3b8aaf69532e20c0987",
@@ -106,12 +106,12 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "sUSD1+ CeDeFiManager BOSS_ROLE Safe",
-      "observedAt": "2026-07-26",
-      "observedBlock": 112282205,
+      "observedAt": "2026-09-04",
+      "observedBlock": 119953746,
       "sources": [
         {
           "label": "sUSD1+ BSC verified implementation",
-          "url": "https://bscscan.com/address/0xaafe784a51f119d38e57717fd8a00f844bd86f13#code"
+          "url": "https://bscscan.com/address/0x972c27ee69b19d7648cef365700c22713a9a31fd#code"
         },
         {
           "label": "sUSD1+ CeDeFiManager BSC proxy",
@@ -127,7 +127,7 @@
       "sources": [
         {
           "label": "sUSD1+ BSC verified implementation",
-          "url": "https://bscscan.com/address/0xaafe784a51f119d38e57717fd8a00f844bd86f13#code"
+          "url": "https://bscscan.com/address/0x972c27ee69b19d7648cef365700c22713a9a31fd#code"
         },
         {
           "label": "sUSD1+ CeDeFiManager BSC proxy and role history",
@@ -146,9 +146,9 @@
           "url": "https://github.com/Lorenzo-Protocol/audit-report"
         }
       ],
-      "evidence": "Re-reviewed 2026-07-26 at BSC block 112282205. The verified current sUSD1+ UUPS implementation resolves the prior ambiguity: its _authorizeUpgrade uses onlyManager, and onlyManager is exactly cedefiManager() = 0x507ec48ef26919a205a9f3b8aaf69532e20c0987. The separate usd1PlusVault() field = 0xaefc9cece593b28faead5c096856d68082254867 is declared but unused by the current implementation, so it is not attributed to the current wrapper upgrade path. CeDeFiManager's verified source defines BOSS_ROLE as the sole manager-upgrade role, BOSS_ROLE as its own admin, MANAGER_ROLE as the CREATE_VAULT_ROLE admin, and executeCommand as the operator route into allowlisted registered vault calls. BscScan's full manager transaction history contains 42 transactions; replaying every RoleGranted/RoleRevoked receipt and confirming hasRole at the observation block leaves one terminal holder of BOSS_ROLE, MANAGER_ROLE, and CREATE_VAULT_ROLE: Safe 0x60707dfd714c3ac2f086d284145cd8cc6915262f. DEFAULT_ADMIN_ROLE has no grant in that complete history and no current holder. The Safe is 2-of-3 EOA-controlled, v1.4.1, with no enabled modules, guard, or module guard and no timelock. It can immediately upgrade CeDeFiManager, or through its current operator role execute sUSD1+'s allowlisted upgradeToAndCall, setRole, and setSigner functions; direct minter and signer membership is therefore not needed to identify the terminal controlling authority. The wrapper's complete RoleSetted/signers history is not attributed because public keyless BSC RPC log access remains range-limited, but no unknown operational key is presented as a terminal controller. Base USD1 issuance remains inherited from usd1-world-liberty-financial; no independent reconciliation or named prudential supervisor is established for the local strategy wrapper. Economic-posture fields reviewed 2026-08-15: the 2-of-3 Safe can authorize uncapped local minting immediately, while no whole-supply reconciliation or prudential supervisor is evidenced. Re-research 2026-08-15 covered Lorenzo's mainnet OTF publication, OTF guide, current product page, and public audit-report index: they describe sUSD1+ as fund shares with NAV based on vault assets, liabilities, and total shares, but the strategy combines RWA, CeFi, and DeFi positions with off-chain execution; no dated recurring report or live reserve feed reconciling total sUSD1+ liabilities to those strategy assets was found, and USD1 parent attestations do not reconcile the local wrapper, so reconciliation remains unknown. Mint/bridge boundary: these controls and the UUPS path cover native BSC wrapper issuance only. Lorenzo's official sUSD1+ bridge selection redirects to an Interport route, but no Ethereum token or bridge authority was verified; that evidence gap is recorded under bridgeRouteRisk and is not attributed to Mint Authority.",
+      "evidence": "Re-reviewed 2026-09-04 at BSC block 119953746. The verified current sUSD1+ UUPS implementation is 0x972c27ee69b19d7648cef365700c22713a9a31fd and resolves the prior ambiguity: its _authorizeUpgrade uses onlyManager, and onlyManager is exactly cedefiManager() = 0x507ec48ef26919a205a9f3b8aaf69532e20c0987. The separate usd1PlusVault() field = 0xaefc9cece593b28faead5c096856d68082254867 is declared but unused by the current implementation, so it is not attributed to the current wrapper upgrade path. CeDeFiManager's verified source defines BOSS_ROLE as the sole manager-upgrade role, BOSS_ROLE as its own admin, MANAGER_ROLE as the CREATE_VAULT_ROLE admin, and executeCommand as the operator route into allowlisted registered vault calls. BscScan's full manager transaction history contains 42 transactions; replaying every RoleGranted/RoleRevoked receipt and confirming hasRole at the observation block leaves one terminal holder of BOSS_ROLE, MANAGER_ROLE, and CREATE_VAULT_ROLE: Safe 0x60707dfd714c3ac2f086d284145cd8cc6915262f. DEFAULT_ADMIN_ROLE has no grant in that complete history and no current holder. The Safe is 2-of-3 EOA-controlled, v1.4.1, with no enabled modules, guard, or module guard and no timelock. It can immediately upgrade CeDeFiManager, or through its current operator role execute sUSD1+'s allowlisted upgradeToAndCall, setRole, and setSigner functions; direct minter and signer membership is therefore not needed to identify the terminal controlling authority. The wrapper's complete RoleSetted/signers history is not attributed because public keyless BSC RPC log access remains range-limited, but no unknown operational key is presented as a terminal controller. Base USD1 issuance remains inherited from usd1-world-liberty-financial; no independent reconciliation or named prudential supervisor is established for the local strategy wrapper. Economic-posture fields reviewed 2026-08-15: the 2-of-3 Safe can authorize uncapped local minting immediately, while no whole-supply reconciliation or prudential supervisor is evidenced. Re-research 2026-08-15 covered Lorenzo's mainnet OTF publication, OTF guide, current product page, and public audit-report index: they describe sUSD1+ as fund shares with NAV based on vault assets, liabilities, and total shares, but the strategy combines RWA, CeFi, and DeFi positions with off-chain execution; no dated recurring report or live reserve feed reconciling total sUSD1+ liabilities to those strategy assets was found, and USD1 parent attestations do not reconcile the local wrapper, so reconciliation remains unknown. Mint/bridge boundary: these controls and the UUPS path cover native BSC wrapper issuance only. Lorenzo's official sUSD1+ bridge selection redirects to an Interport route, but no Ethereum token or bridge authority was verified; that evidence gap is recorded under bridgeRouteRisk and is not attributed to Mint Authority.",
       "reviewer": "CTRL-susd1plus-lorenzo; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16",
+      "reviewedAt": "2026-09-04",
       "disposition": "scoreable"
     }
   }

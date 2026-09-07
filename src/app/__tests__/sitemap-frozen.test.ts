@@ -12,6 +12,7 @@ import { PUBLIC_ROUTE_PATHS } from "@/lib/public-route-inventory";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
+import aiSummaries from "../../../data/ai-summaries.json";
 import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
@@ -43,7 +44,8 @@ describe("sitemap", () => {
       ["/pharoswatchbot/", "weekly", 0.7], ["/methodology/", "monthly", 0.6],
       ["/changelog/", "weekly", 0.5], ["/blog/", "weekly", 0.6], ["/about/", "monthly", 0.5],
       ["/about/api/", "monthly", 0.5], ["/about/bluechip/", "monthly", 0.5],
-      ["/learn/", "monthly", 0.5], ["/learn/glossary/", "monthly", 0.5],
+      ["/depeg/archive/", "monthly", 0.5], ["/learn/", "monthly", 0.5],
+      ["/learn/glossary/", "monthly", 0.5],
       ["/sitemap-tree/", "monthly", 0.3], ["/api/", "monthly", 0.5],
       ["/stablecoins/", "weekly", 0.7], ["/stablecoins/backing/", "weekly", 0.6],
       ["/stablecoins/governance/", "weekly", 0.6], ["/stablecoins/infrastructure/", "weekly", 0.6],
@@ -73,6 +75,37 @@ describe("sitemap", () => {
     }
   });
 
+  it("advances only the edited profile for a summary-only content update", () => {
+    const summary = aiSummaries["sgho-aave"];
+    const originalDate = summary.updatedAt;
+    const before = sitemap();
+    const targetUrl = `${SITE_ORIGIN}${buildStablecoinUrl("sgho-aave")}`;
+    const laterDate = new Date(Math.max(...before.map((entry) => (entry.lastModified as Date).getTime())) + 86_400_000);
+
+    try {
+      summary.updatedAt = laterDate.toISOString();
+      const after = sitemap();
+      expect(after.find((entry) => entry.url === targetUrl)?.lastModified).toEqual(laterDate);
+      expect(after.filter((entry) => entry.url !== targetUrl)).toEqual(before.filter((entry) => entry.url !== targetUrl));
+    } finally {
+      summary.updatedAt = originalDate;
+    }
+  });
+
+  it.each(["", "not-a-date", "2000-01-01"])("keeps the Git date floor for an unusable or older summary date: %s", (date) => {
+    const summary = aiSummaries["sgho-aave"];
+    const originalDate = summary.updatedAt;
+    const path = buildStablecoinUrl("sgho-aave");
+    try {
+      summary.updatedAt = date;
+      expect(sitemap().find((entry) => entry.url === `${SITE_ORIGIN}${path}`)?.lastModified).toEqual(
+        new Date((sitemapDates as Record<string, string>)[path]),
+      );
+    } finally {
+      summary.updatedAt = originalDate;
+    }
+  });
+
   it("lists the canonical compliance route and omits the retired MiCA route", () => {
     const entries = sitemap();
     const urls = new Set(entries.map((entry) => entry.url));
@@ -98,6 +131,18 @@ describe("sitemap", () => {
     );
 
     expect(entriesByUrl.get(`${SITE_ORIGIN}${pair!.href}`)?.lastModified).toEqual(expectedPairLastModified);
+  });
+
+  it("includes substantive editorial dates in enriched comparison lastmod", () => {
+    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const lastEdited = sitemapDates as Record<string, string>;
+    for (const pair of STATIC_COMPARISON_PAGES.filter((page) => page.editorial)) {
+      expect(entries.get(`${SITE_ORIGIN}${pair.href}`)?.lastModified).toEqual(new Date(Math.max(
+        new Date(lastEdited[buildStablecoinUrl(pair.left.id)]).getTime(),
+        new Date(lastEdited[buildStablecoinUrl(pair.right.id)]).getTime(),
+        new Date(pair.editorial!.updatedAt).getTime(),
+      )));
+    }
   });
 
   it("stamps /changelog/ from the latest changelog entry, floored by its git edit date", () => {

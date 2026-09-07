@@ -24,7 +24,7 @@ Use owner documents for semantics; this skill coordinates queues, comparisons, a
 
 1. **Classify in `docs/report-cards.md` and the policy JSON.** Route curation, producer, DDRR, or methodology work; never infer missing evidence from a schema gap.
 2. **Capture/replay with `npm run safety-score-v9:replay`.** Use the harness clock; allow registry mismatch only for an attributed curation/code comparison.
-3. **Drain with `npm run safety-score-v9:expiry-queue` and `npm run safety-score-v9:evidence-gaps`.** Follow claim-group decisions, current primary evidence, and a named promote/reject/defer trigger.
+3. **Generate and drain the typed missing-data registry and curation worklist.** Run `npm run safety-score-v9:missing-data-registry` and `npm run safety-score-v9:curation-worklist` with the capture/output arguments from the linked missing-data procedure. Use `npm run safety-score-v9:expiry-queue` separately for preventive time-window review; it is not the complete missing-evidence inventory. Follow claim-group decisions, current primary evidence, and a named promote/reject/defer trigger.
 4. **Refresh with `docs/process/mechanism-overlay-evidence-standard.md`, `docs/process/shock-coverage-refresh.md`, `docs/process/protocol-api-mechanism-refresh.md`, and `docs/process/ddrr-calibration.md`.** Require evidence-backed overlays and shock attestations; keep protocol artifacts producer-only; treat DDRR as advisory.
 5. **Compare with `npm run safety-score-v9:diff` and `npm run safety-score-v9:movers`.** Use two captures for pre-activation; require empty neutral diffs or a reviewed mover manifest. Unexpected movers stop release.
 6. **Regenerate with `npm run generate:safety-score-v9-evaluation-build`.** Run `npm run check:generated-artifacts -- --only=safety-score-v9-evaluation-build`; never edit the generated manifest, and complete the post-deploy check.
@@ -35,7 +35,8 @@ Use owner documents for semantics; this skill coordinates queues, comparisons, a
 - `npm run safety-score-v9:diff`
 - `npm run safety-score-v9:movers`
 - `npm run safety-score-v9:expiry-queue`
-- `npm run safety-score-v9:evidence-gaps`
+- `npm run safety-score-v9:missing-data-registry`
+- `npm run safety-score-v9:curation-worklist`
 - `npm run generate:safety-score-v9-evaluation-build`
 - `npm run check:generated-artifacts -- --only=safety-score-v9-evaluation-build`
 - `npx vitest run worker/scripts/__tests__/replay-safety-score-v9.test.ts worker/scripts/__tests__/diff-safety-score-v9-replays.test.ts shared/types/__tests__/safety-score-v9-overlays.test.ts`

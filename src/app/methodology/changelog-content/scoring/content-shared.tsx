@@ -28,7 +28,7 @@ export const changelogTableClassNames = {
   numericCell: "pharos-numeric whitespace-normal px-0 py-2 pr-4 text-right align-top last:pr-0",
 };
 
-export function ChangelogTable({
+function ChangelogTable({
   ariaLabel,
   children,
   tableId,

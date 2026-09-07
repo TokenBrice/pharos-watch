@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test-only fixture walker rooted in this checked-in test directory. */
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

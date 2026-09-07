@@ -50,6 +50,8 @@ Each detail page renders:
 
 Case-study JSON-LD lives in `case-study-json-ld.tsx`: the hub emits an `ItemList`; detail pages emit an `Article` with image `public/og-learn-case-<slug>.png`.
 
+The article's visible metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays the authored `datePublished` in UTC alongside reading time. This agrees with organization authorship in Article JSON-LD. Git-derived modification dates are not presented as human review or substantive-update dates; no individual reviewer is implied.
+
 Reverse lookup helpers in the content registry let other surfaces deep-link into case studies:
 
 - `CASE_STUDY_BY_DEPEG_SLUG`
@@ -82,7 +84,7 @@ Glossary entries live in `src/lib/glossary-content.ts`. Each entry owns:
 
 Primary inbound surfaces:
 
-- Top-nav Learn group in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
+- Top-nav `More` menu, `Learn` column in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
 - Start Here content in `src/lib/start-here-content.ts`
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`

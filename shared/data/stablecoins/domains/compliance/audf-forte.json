@@ -44,7 +44,7 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.forteaud.com/reserves",
+    "reserveDisclosureUrl": "https://www.forteaud.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "notes": "AUDF is an Australian AUD-backed non-cash payment product with a contractual 1:1 AUD redemption path for eligible Forte Account wholesale clients. Pharos found no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception. The regime remains in proposed-rules phase as of 2026-08-14; Australian ASIC/AFSL and the Australian stablecoin distribution exemption are not GENIUS authorization.",
@@ -74,10 +74,10 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Forte AUDF reserve reports",
-        "url": "https://www.forteaud.com/reserves",
+        "label": "Forte AUDF transparency page",
+        "url": "https://www.forteaud.com/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-09-05"
       }
     ],
     "negativeEvidenceReview": {

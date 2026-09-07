@@ -361,6 +361,7 @@ describe("getRedemptionBackstopConfig", () => {
     });
 
     expect(getRedemptionBackstopConfig("aznd-mu-digital")).toMatchObject({
+      outputAssets: ["usdc-circle"],
       routeFamily: "queue-redeem",
       accessModel: "whitelisted-onchain",
       settlementModel: "days",
@@ -846,9 +847,9 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
       outputAssets: ["usdc-circle"],
-      // Upgraded from the reviewed supply-full model to live redeemer-float
-      // telemetry in v4.34.
-      capacityModel: { kind: "reserve-sync-metadata" },
+      // Reverted to the reviewed eventual-supply model after the invalid
+      // live reserve-composition adapter was removed.
+      capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
       costModel: { kind: "fee-bps", feeBps: 10 },
       reviewedAt: "2026-08-12",
     });
@@ -1189,7 +1190,6 @@ describe("getRedemptionBackstopConfig", () => {
     // unresolved: no documented payout asset, untracked output, or no fixed
     // documented output set.
     for (const id of [
-      "aznd-mu-digital",
       "witry-brix",
       "dllr-sovryn",
       "deuro-deuro",
@@ -1219,10 +1219,8 @@ describe("getRedemptionBackstopConfig", () => {
       "asset:itry",
     ]);
     expect(getRedemptionBackstopConfig("witry-brix")?.unresolvedOutputDisposition).toBe("reviewed-external");
-    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputAssetKeys).toBeUndefined();
-    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputDisposition).toBe(
-      "issuer-undisclosed",
-    );
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.outputAssets).toEqual(["usdc-circle"]);
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputDisposition).toBeUndefined();
 
     expect(getRedemptionBackstopConfig("eearn-ember")).toMatchObject({
       outputAssets: ["usdc-circle"],

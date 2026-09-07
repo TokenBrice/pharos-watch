@@ -132,7 +132,7 @@ describe("confirmPendingDepegs", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending_outcomes").get()).toEqual({ count: 0 });
   });
 
-  it("promotes a pending depeg after independent DEX groups confirm the deviation", async () => {
+  it("promotes with independent DEX confirmations even when Binance throws", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     const { sqlite, db } = openFixture();
     const pending = makePendingRow({ id: 10, first_seen_bps: -220, first_price: 0.978 });
@@ -141,6 +141,7 @@ describe("confirmPendingDepegs", () => {
       { price: 0.97, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
       { price: 0.969, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
     ]);
+    vi.mocked(fetchBinancePricesDetailed).mockRejectedValueOnce(new Error("Binance transport failed"));
 
     await confirmPendingDepegs(db, [
       makeAsset({

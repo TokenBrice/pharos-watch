@@ -3,7 +3,7 @@ import { median } from "@shared/lib/stats";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
-  type DdrrRow,
+  type DdrrResponseRow,
 } from "@shared/types/depeg-resolver-review";
 import {
   DDR_COVERAGE_LABELS,
@@ -71,7 +71,7 @@ export interface DdrTrackRecordSummary {
 /** Incident rows rendered inline; the rest fold into a count with a /depeg link. */
 const INCIDENT_DISPLAY_LIMIT = 6;
 
-function getOutcomeChip(row: DdrrRow): { label: string; toneClass: string } {
+function getOutcomeChip(row: DdrrResponseRow): { label: string; toneClass: string } {
   switch (row.kind) {
     case "prediction_review":
       return {
@@ -90,14 +90,14 @@ function getOutcomeChip(row: DdrrRow): { label: string; toneClass: string } {
   }
 }
 
-function getDurationLabel(row: DdrrRow): string {
+function getDurationLabel(row: DdrrResponseRow): string {
   if (row.kind !== "prediction_review") return DDR_DURATION_LABELS.duration_unscored;
   const label = DDR_DURATION_LABELS[row.durationReview];
   const signed = row.signedDurationErrorSec;
   return signed != null && Number.isFinite(signed) ? `${formatDdrSignedDuration(signed)} ${label}` : label;
 }
 
-function getErratumLabel(row: DdrrRow): string | null {
+function getErratumLabel(row: DdrrResponseRow): string | null {
   if (row.kind !== "invalidated_prediction") return null;
   const count = Number.isFinite(row.errataCount) ? row.errataCount : 0;
   if (count <= 0) return null;
@@ -160,7 +160,7 @@ export function projectDdrTrackRecordSummary(
   if (!data || !Array.isArray(data.rows) || !stablecoinId) return null;
 
   const rows = data.rows.filter(
-    (row): row is DdrrRow =>
+    (row): row is DdrrResponseRow =>
       row != null && row.stablecoinId === stablecoinId && Number.isFinite(row.startedAt),
   );
   if (!rows.some((row) => row.kind !== "coverage")) return null;

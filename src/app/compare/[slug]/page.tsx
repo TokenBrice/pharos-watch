@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bell, Code2, Rss, Star } from "lucide-react";
+import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -106,13 +106,6 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
               <Code2 aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               API access
             </Link>
-            <Link
-              href="/compare/"
-              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              <Star aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
-              Watchlist preset
-            </Link>
           </div>
         </div>
 
@@ -130,6 +123,31 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
           </p>
         </aside>
       </section>
+
+      {page.editorial && (
+        <section className="space-y-4" aria-labelledby="comparison-differences-title">
+          <h2 id="comparison-differences-title" className="text-lg font-semibold">What differs in practice</h2>
+          {page.editorial.sections.map((section) => (
+            <article key={section.question} className="pharos-card-shell px-4 py-4">
+              <h3 className="text-base font-semibold text-foreground">{section.question}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{section.answer}</p>
+              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                {section.sources.map((source) => (
+                  <li key={source.href}>
+                    <a href={source.href} className="pharos-focus-ring rounded-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                      {source.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Issuer sources checked <time dateTime={page.editorial.sourcesCheckedAt}>{page.editorial.sourcesCheckedAt}</time>.
+            {" "}These describe product mechanics and terms, not an independent audit or a live reserve snapshot.
+          </p>
+        </section>
+      )}
 
       <section className="grid gap-4 lg:grid-cols-2">
         {[page.left, page.right].map((coin) => (

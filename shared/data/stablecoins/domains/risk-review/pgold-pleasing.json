@@ -97,7 +97,7 @@
         "reviewNote": "At ApeChain block 46540614 (2026-08-16), endpoint() returned LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peers(30110) returned the Arbitrum OFT Adapter 0xbfd47e6098017c04957ba218dade65e23f661793. At block 46540809, a current owner-originated mint simulation reverted. This deployment is therefore the Pleasing Gold OFT representation; its cross-chain mint/burn path is assessed under Bridge Risk rather than native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "apechain",
-        "controllerAddress": "0x64ae250e044688ddd04262f17daca23c28d241c2",
+        "controllerAddress": "0x25a6a7fbe039c14b06adb6bda434b960981dbaed",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:apechain:0x64ae250e044688ddd04262f17daca23c28d241c2",

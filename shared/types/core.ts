@@ -79,7 +79,19 @@ export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 
 export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlags;
 
-export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
+/**
+ * Engagement class of the proof-of-reserves artefact. `agreed-upon-procedures`
+ * is a third-party engagement that expresses no assurance opinion, while
+ * `attestation` is an independent verification-agent report distinct from
+ * both audit-grade assurance and issuer self-reporting.
+ */
+export const PROOF_OF_RESERVES_TYPE_VALUES = [
+  "independent-audit",
+  "agreed-upon-procedures",
+  "attestation",
+  "real-time",
+  "self-reported",
+] as const;
 
 /**
  * Attestor quality ladder. `none` is a *reviewed* negative — a reviewer

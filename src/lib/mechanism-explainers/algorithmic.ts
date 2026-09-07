@@ -93,7 +93,7 @@ export const content: ArchetypeContent = {
       label: "How PSI replays the May 2022 UST event",
     },
     {
-      href: "/methodology/#depeg-methodology",
+      href: "/methodology/#pegscore-dews-methodology",
       label: "How PegScore and DEWS treat algorithmic deviators",
     },
     {

@@ -2,7 +2,7 @@
 
 **Status: shipped as part of `/compliance/`.** MiCA metadata remains the `mica` metadata extension, but the public route moved from `/mica/` to the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`. `/mica` is a 301 legacy redirect only.
 
-The tracker maps assessed stablecoins to their standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. Missing `mica` metadata means "not assessed", not out-of-scope or non-compliant. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing-non-goals).
+The tracker maps assessed stablecoins to their standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. Missing `mica` metadata means "not assessed", not out-of-scope or non-compliant. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing--non-goals).
 
 The data foundation already exists in the tracked registry: many coins carry a `jurisdiction` block, EU regulators and `"EMI (MiCA)"` licenses appear as free text, and EUR-pegged plus major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort. Derive current inventory counts from the registry rather than freezing them in this doc.
 

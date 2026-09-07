@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/pricing-source-registry";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { getReferencePriceForContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
+import { getReferencePriceForContext, isFixedPegContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
@@ -66,10 +66,6 @@ function priceValidationModeForAsset(asset: PriceAssetPublicationLike): "primary
     : "primary_authoritative";
 }
 
-function isFixedPegValidationContext(context: PriceValidationContext): boolean {
-  return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
-}
-
 function sourceLineageFamily(source: string): string | null {
   const entry = getPricingSourceRegistryEntry(source);
   if (!entry) return null;
@@ -90,7 +86,7 @@ function isFallbackSearchOnlySource(source: string | null | undefined): boolean 
 }
 
 function fixedPegDeviationBps(input: PublishablePriceInput): number | null {
-  if (!isFixedPegValidationContext(input.validationContext)) return null;
+  if (!isFixedPegContext(input.validationContext)) return null;
   const referencePrice = getReferencePriceForContext(input.validationContext, input.validationReferences);
   if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) return null;
   return Math.abs(input.price - referencePrice) / referencePrice * 10_000;
@@ -212,7 +208,7 @@ function allowsWeakFallbackFixedPegDepegPublication(input: PublishablePriceInput
 }
 
 export function shouldWithholdTemporalJump(input: PublishablePriceInput): boolean {
-  if (!isFixedPegValidationContext(input.validationContext)) return false;
+  if (!isFixedPegContext(input.validationContext)) return false;
   const previousTrustedPrice = input.previousTrustedPrice?.price;
   if (previousTrustedPrice == null || !Number.isFinite(previousTrustedPrice) || previousTrustedPrice <= 0) {
     return false;

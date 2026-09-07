@@ -14,11 +14,11 @@ import {
 import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "@shared/lib/ops-limits";
 import { CIRCUIT_SOURCE } from "./constants";
 import { WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
+import { CircuitRecordSchema, type CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
 import { logWorkerEvent } from "./structured-log";
 
 export type CircuitRecord = SharedCircuitRecord;
-export type CircuitState = "closed" | "open" | "half-open";
+export type CircuitState = CircuitRecord["state"];
 export type CircuitOutcomeDecision = "success" | "failure" | "neutral";
 export interface CircuitOutcomeRecord {
   before: CircuitRecord;
@@ -73,22 +73,6 @@ function invalidateCircuitRecord(db: D1Database, source: string): void {
   cache.versions.set(source, (cache.versions.get(source) ?? 0) + 1);
 }
 
-function isNullableNumber(value: unknown): value is number | null {
-  return value === null || typeof value === "number";
-}
-
-function isCircuitRecord(value: unknown): value is CircuitRecord {
-  if (!value || typeof value !== "object") return false;
-  const record = value as Partial<CircuitRecord>;
-  return (
-    (record.state === "closed" || record.state === "open" || record.state === "half-open") &&
-    typeof record.consecutiveFailures === "number" &&
-    isNullableNumber(record.lastFailureAt) &&
-    isNullableNumber(record.lastSuccessAt) &&
-    isNullableNumber(record.openedAt)
-  );
-}
-
 function cacheKey(source: string): string {
   return `circuit:${source}`;
 }
@@ -105,7 +89,8 @@ function circuitRecordPolicy(source: string): CachePolicy<CircuitRecord> {
     decode: (value) => {
       try {
         const parsed: unknown = JSON.parse(value);
-        return isCircuitRecord(parsed) ? parsed : null;
+        // Validate with the public contract while retaining forward-compatible cache fields.
+        return CircuitRecordSchema.safeParse(parsed).success ? parsed as CircuitRecord : null;
       } catch {
         return null;
       }
@@ -324,7 +309,7 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
     const source = row.key.replace("circuit:", "");
     try {
       const parsed = JSON.parse(row.value);
-      if (isCircuitRecord(parsed)) {
+      if (CircuitRecordSchema.safeParse(parsed).success) {
         states[source] = parsed;
       }
     } catch {

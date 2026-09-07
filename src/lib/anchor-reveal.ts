@@ -30,3 +30,31 @@ export function revealAnchorId(sectionId: string): HTMLElement | null {
   revealAnchorTarget(target);
   return target;
 }
+
+/** Re-align a cold-load nested anchor while lazy dossier sections settle. */
+export function alignAnchorAfterHydration(sectionId: string): () => void {
+  const initialHash = window.location.hash;
+  let cancelled = false;
+  const align = () => {
+    if (cancelled || window.location.hash !== initialHash) return;
+    // An initial-position correction must not animate through every lazy
+    // section: CSS smooth scrolling delays mounting and retargets mid-flight.
+    revealAnchorId(sectionId)?.scrollIntoView({ block: "start", behavior: "instant" });
+  };
+  // Match the bounded passport-link cadence; instant also respects reduced motion.
+  const frame = window.requestAnimationFrame(align);
+  const timers = [160, 480, 960, 1800].map((delay) => window.setTimeout(align, delay));
+  const stop = () => {
+    cancelled = true;
+    window.cancelAnimationFrame(frame);
+    timers.forEach((timer) => window.clearTimeout(timer));
+    for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+      window.removeEventListener(event, stop);
+    }
+  };
+  // Never pull readers back after they take over navigation themselves.
+  for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+    window.addEventListener(event, stop, { passive: true });
+  }
+  return stop;
+}

@@ -31,12 +31,9 @@ const FIXTURES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../tes
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 function resolveMigrationPath(file: string): string {
   const fixture = resolve(FIXTURES_DIR, file);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
   return existsSync(fixture) ? fixture : resolve(MIGRATIONS_DIR, file);
 }
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
 const HISTORY_V2_MIGRATION = readFileSync(resolveMigrationPath("0201_safety_score_history_v2.sql"), "utf8");
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
 const HISTORY_V2_IDENTITY_SCHEMA_MIGRATION = readFileSync(
   resolveMigrationPath("0204_safety_score_history_v2_identity_schema.sql"),
   "utf8",

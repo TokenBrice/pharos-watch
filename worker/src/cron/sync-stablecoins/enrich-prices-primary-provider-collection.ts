@@ -1,12 +1,12 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { PriceObservedAtMode } from "@shared/types/core";
 import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
-import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
+import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
+import { parsePositiveNumber } from "../../lib/number-utils";
 import { throwIfAborted } from "../../lib/abort";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
@@ -25,7 +25,6 @@ import {
   getRedstoneMetaSymbolForStablecoinId,
   REDSTONE_TRACKED_STABLECOIN_IDS,
 } from "../../lib/redstone";
-import type { AddressPriceQuote } from "../../lib/address-price-providers";
 import {
   createDexPriceSourceLoadTelemetry,
   loadDexPriceRows,
@@ -33,13 +32,12 @@ import {
   type DexPriceSourceLoadTelemetry,
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
-import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
-import type { PeggedAsset } from "./enrich-prices-shared";
-import { isUsableGeckoId } from "./enrich-prices-primary-shared";
+import { isUsableGeckoId, type PeggedAsset } from "./enrich-prices-shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 // crvUSD PriceAggregator contract. Consulted as a regular primary-consensus
@@ -58,7 +56,6 @@ interface ReserveNavRow {
   fetched_at: number;
   source: string;
   metadata: string;
-  last_success_at: number | null;
 }
 
 const NAV_TELEMETRY_PRICE_SOURCES = new Set<NavTelemetryPriceSource>(["chainlink-nav", "superstate-liquidity"]);
@@ -89,9 +86,7 @@ export interface PrimaryPricePlan {
 }
 
 export interface PrimaryConsensusQuoteMaps {
-  cgPrices: Map<string, number>;
-  cgObservedAtByGeckoId: Map<string, number>;
-  cgObservedAtModeByGeckoId: Map<string, PriceObservedAtMode>;
+  cgQuotes: Map<string, CoingeckoSimplePriceEntry>;
   cgObservedAt: number | null;
   cgTickerPrices: Map<string, number>;
   cgTickerObservedAt: number | null;
@@ -109,14 +104,11 @@ export interface PrimaryConsensusQuoteMaps {
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
-  addressProviderQuotes: Map<string, AddressPriceQuote[]>;
 }
 
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
   return {
-    cgPrices: new Map(),
-    cgObservedAtByGeckoId: new Map(),
-    cgObservedAtModeByGeckoId: new Map(),
+    cgQuotes: new Map(),
     cgObservedAt: null,
     cgTickerPrices: new Map(),
     cgTickerObservedAt: null,
@@ -134,7 +126,6 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     curveOraclePrice: null,
     curveOracleObservedAt: null,
     navPrices: new Map(),
-    addressProviderQuotes: new Map(),
   };
 }
 
@@ -148,11 +139,6 @@ function isNavTelemetryPriceEligible(
 ): boolean {
   const adapter = metaById.get(assetId)?.liveReservesConfig?.adapter;
   return isNavTelemetryPriceSource(adapter);
-}
-
-function parsePositiveFiniteNumber(value: unknown): number | null {
-  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
 
 function getMetadataRecord(value: string): Record<string, unknown> | null {
@@ -185,19 +171,20 @@ function resolveNavUsdRate(params: {
 async function loadReserveNavPriceQuotes(params: {
   db: D1Database;
   candidates: PeggedAsset[];
+  navPriceIds: string[];
   references?: PriceValidationReferences;
   metaById?: Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
 }): Promise<Map<string, NavTelemetryQuote>> {
   const metaById = params.metaById ?? new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
-  const eligibleIds = new Set(
-    params.candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
-  );
+  // NAV-eligible IDs were collected during the plan's candidate pass; every
+  // eligible asset is a candidate by construction, so no re-filtering here.
+  const eligibleIds = new Set(params.navPriceIds);
   if (eligibleIds.size === 0) return new Map();
 
   try {
     const rows = await runWithOverloadRetry(() => params.db
       .prepare(
-        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata, s.last_success_at
+        `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata
            FROM reserve_composition c
            JOIN reserve_sync_state s
              ON s.stablecoin_id = c.stablecoin_id
@@ -210,7 +197,8 @@ async function loadReserveNavPriceQuotes(params: {
     const quotes = new Map<string, NavTelemetryQuote>();
     for (const row of rows.results ?? []) {
       if (!eligibleIds.has(row.stablecoin_id)) continue;
-      if (row.last_success_at !== row.fetched_at) continue;
+      // last_success_at/fetched_at agreement is enforced by the query's
+      // `s.last_success_at = c.fetched_at` equality — the only data path here.
       if (!isNavTelemetryPriceSource(row.source)) continue;
 
       const asset = assetById.get(row.stablecoin_id);
@@ -219,9 +207,9 @@ async function loadReserveNavPriceQuotes(params: {
       const metadata = getMetadataRecord(row.metadata);
       if (!metadata) continue;
 
-      const navPerToken = parsePositiveFiniteNumber(metadata.navPerToken);
+      const navPerToken = parsePositiveNumber(metadata.navPerToken);
       const sourceTimestamp =
-        parsePositiveFiniteNumber(metadata.sourceTimestamp) ?? parsePositiveFiniteNumber(metadata.oracleUpdatedAt);
+        parsePositiveNumber(metadata.sourceTimestamp) ?? parsePositiveNumber(metadata.oracleUpdatedAt);
       if (navPerToken == null || sourceTimestamp == null) continue;
 
       const usdRate = resolveNavUsdRate({
@@ -273,7 +261,7 @@ async function runPrimaryProviderFetch(
 export async function buildPrimaryPricePlan(
   assets: PeggedAsset[],
   db: D1Database,
-  dlListPrices?: Map<string, number | DlListQuote>,
+  dlListPrices?: Map<string, DlListQuote>,
 ): Promise<PrimaryPricePlan> {
   const metaById = new Map(ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]));
   const nowSec = Math.floor(Date.now() / 1000);
@@ -287,10 +275,16 @@ export async function buildPrimaryPricePlan(
   const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
   curveEligibleIds.add("crvusd-curve");
 
-  const candidates = assets.filter((asset) => {
+  const candidates: PeggedAsset[] = [];
+  const navPriceIds: string[] = [];
+  for (const asset of assets) {
     const symbolUpper = asset.symbol.toUpperCase();
     const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
-    return (
+    // NAV telemetry eligibility implies candidacy (a disjunct below), so the
+    // eligible ID list is collected in this same pass instead of re-filtering.
+    const navEligible = isNavTelemetryPriceEligible(asset.id, metaById);
+    if (navEligible) navPriceIds.push(asset.id);
+    if (
       hasValidGeckoId ||
       (dlListPrices?.has(asset.id) ?? false) ||
       coinbaseKnownSet.has(symbolUpper) ||
@@ -298,11 +292,13 @@ export async function buildPrimaryPricePlan(
       bitstampKnownSet.has(symbolUpper) ||
       redstoneStablecoinIdSet.has(asset.id) ||
       curveEligibleIds.has(asset.id) ||
-      isNavTelemetryPriceEligible(asset.id, metaById) ||
+      navEligible ||
       dexRows.has(asset.id) ||
       dexPriceSources.has(asset.id)
-    );
-  });
+    ) {
+      candidates.push(asset);
+    }
+  }
 
   if (candidates.length === 0) {
     return {
@@ -316,7 +312,7 @@ export async function buildPrimaryPricePlan(
       krakenSymbols: [],
       shouldFetchBitstamp: false,
       redstoneSymbols: [],
-      navPriceIds: [],
+      navPriceIds,
       sourceAllowed: {
         cg: false,
         cgTicker: false,
@@ -392,7 +388,7 @@ export async function buildPrimaryPricePlan(
     krakenSymbols,
     shouldFetchBitstamp,
     redstoneSymbols,
-    navPriceIds: candidates.filter((asset) => isNavTelemetryPriceEligible(asset.id, metaById)).map((asset) => asset.id),
+    navPriceIds,
     sourceAllowed: {
       cg: cgAllowed,
       cgTicker: cgTickerAllowed,
@@ -433,9 +429,7 @@ export async function collectPrimaryProviderQuotes(params: {
 
   const emptyQuoteMaps = createEmptyPrimaryConsensusQuoteMaps();
   const {
-    cgPrices,
-    cgObservedAtByGeckoId,
-    cgObservedAtModeByGeckoId,
+    cgQuotes,
     binancePrices,
     krakenPrices,
     bitstampPrices,
@@ -447,7 +441,6 @@ export async function collectPrimaryProviderQuotes(params: {
     bitstampObservedAtBySymbol,
     coinbaseObservedAtBySymbol,
     navPrices,
-    addressProviderQuotes,
   } = emptyQuoteMaps;
 
   let curveOraclePrice: number | null = null;
@@ -468,6 +461,7 @@ export async function collectPrimaryProviderQuotes(params: {
       const quotes = await loadReserveNavPriceQuotes({
         db,
         candidates: plan.candidates,
+        navPriceIds,
         references,
       });
       for (const [coinId, quote] of quotes) {
@@ -481,11 +475,7 @@ export async function collectPrimaryProviderQuotes(params: {
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_PRICES, "CG price API", async () => {
         const outcome = await fetchCoingeckoSimplePrices(geckoIds, coingeckoApiKey ?? null, signal, nowSec);
         for (const [geckoId, entry] of outcome.value) {
-          cgPrices.set(geckoId, entry.price);
-          if (entry.observedAt != null && entry.observedAtMode != null) {
-            cgObservedAtByGeckoId.set(geckoId, entry.observedAt);
-            cgObservedAtModeByGeckoId.set(geckoId, entry.observedAtMode);
-          }
+          cgQuotes.set(geckoId, entry);
         }
         if (outcome.value.size > 0) {
           cgObservedAt = Math.floor(Date.now() / 1000);
@@ -648,9 +638,7 @@ export async function collectPrimaryProviderQuotes(params: {
 
   return {
     quoteMaps: {
-      cgPrices,
-      cgObservedAtByGeckoId,
-      cgObservedAtModeByGeckoId,
+      cgQuotes,
       cgObservedAt,
       cgTickerPrices,
       cgTickerObservedAt,
@@ -668,7 +656,6 @@ export async function collectPrimaryProviderQuotes(params: {
       curveOraclePrice,
       curveOracleObservedAt,
       navPrices,
-      addressProviderQuotes,
     },
     providerDiagnostics,
   };

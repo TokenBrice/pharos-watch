@@ -1,7 +1,7 @@
 import type { RedemptionRouteFamily } from "../../types";
 import type { RedemptionBackstopConfig } from "./shared";
 import { COLLATERAL_REDEEM_BACKSTOP_ENTRIES } from "./collateral-redeem";
-import { configsFromBackstopEntries, defineBackstopRegistry, type RedemptionBackstopRegistryEntry } from "./factory";
+import { defineBackstopRegistry, type RedemptionBackstopRegistryEntry } from "./factory";
 import { OFFCHAIN_ISSUER_BACKSTOP_ENTRIES } from "./offchain-issuer/index";
 import { PSM_AND_BASKET_BACKSTOP_ENTRIES } from "./psm-and-basket";
 import { QUEUE_REDEEM_BACKSTOP_ENTRIES } from "./queue-redeem";
@@ -14,7 +14,6 @@ export interface RedemptionBackstopConfigManifestEntry {
    * Canonical family state, including per-id override reasons and source paths.
    */
   entries: readonly RedemptionBackstopRegistryEntry[];
-  readonly configs: Record<string, RedemptionBackstopConfig>;
   allowedRouteFamilies: readonly RedemptionRouteFamily[];
   reviewerLane?: string;
 }
@@ -23,7 +22,6 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "offchain-issuer",
     filePath: "shared/lib/redemption-backstop-configs/offchain-issuer/index.ts",
-    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: OFFCHAIN_ISSUER_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["offchain-issuer"],
     reviewerLane: "issuer/legal redemption rails",
@@ -31,7 +29,6 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "psm-and-basket",
     filePath: "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: PSM_AND_BASKET_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["basket-redeem", "psm-swap"],
     reviewerLane: "onchain swap and basket rails",
@@ -39,7 +36,6 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "collateral-redeem",
     filePath: "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: COLLATERAL_REDEEM_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["collateral-redeem"],
     reviewerLane: "collateral redemption rails",
@@ -47,7 +43,6 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "queue-redeem",
     filePath: "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: QUEUE_REDEEM_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["queue-redeem"],
     reviewerLane: "queued redemption rails",
@@ -55,7 +50,6 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   {
     name: "stablecoin-redeem",
     filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-    get configs() { return configsFromBackstopEntries(this.entries); },
     entries: STABLECOIN_REDEEM_BACKSTOP_ENTRIES,
     allowedRouteFamilies: ["stablecoin-redeem"],
     reviewerLane: "protocol stablecoin redemption rails",

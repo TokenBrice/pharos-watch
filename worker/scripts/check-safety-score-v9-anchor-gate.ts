@@ -71,7 +71,6 @@ export interface SafetyScoreV9AnchorGateIo {
 }
 
 const DEFAULT_IO: SafetyScoreV9AnchorGateIo = {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
   stdout: process.stdout,
 };

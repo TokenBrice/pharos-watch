@@ -1360,16 +1360,13 @@ describe("StablecoinMeta schema — real fixture smoke tests", () => {
   // fields. Sidecars carry exactly their domain's fields plus `id`.
   function composeSourceAsset(fixture: string): unknown {
     const dataDir = join(__dirname, "../../../../shared/data/stablecoins");
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
     const composed = JSON.parse(readFileSync(join(dataDir, "coins", `${fixture}.json`), "utf8")) as Record<
       string,
       unknown
     >;
     for (const domain of STABLECOIN_SOURCE_DOMAIN_VALUES) {
       const sidecarPath = join(dataDir, "domains", domain, `${fixture}.json`);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
       if (!existsSync(sidecarPath)) continue;
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
       const { id: _id, ...fields } = JSON.parse(readFileSync(sidecarPath, "utf8")) as Record<string, unknown>;
       Object.assign(composed, fields);
     }

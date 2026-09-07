@@ -17,7 +17,7 @@ export interface ResolvedAiSummaryClaims {
 }
 
 const CLAIM_PLACEHOLDER_PATTERN = /\{\{(?:grade|score|supplyUsd)\}\}/g;
-const ISO_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function formatSupplyUsd(value: number): string {
   if (!Number.isFinite(value) || value < 0) return "N/A";
@@ -68,7 +68,14 @@ export function validateAiSummaryClaimTokens(
     if (seen.has(claim.token)) issues.push({ code: "duplicate-token", token: claim.token });
     seen.add(claim.token);
     declaredPlaceholders.add(claim.placeholder);
-    if (!ISO_DAY_PATTERN.test(claim.factsAsOf)) {
+    const day = ISO_DAY_PATTERN.exec(claim.factsAsOf);
+    const timestamp = day
+      ? Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
+      : Number.NaN;
+    if (
+      !Number.isFinite(timestamp)
+      || new Date(timestamp).toISOString().slice(0, 10) !== claim.factsAsOf
+    ) {
       issues.push({ code: "invalid-facts-as-of", token: claim.token });
     }
     if (text.split(claim.placeholder).length - 1 !== 1) {
@@ -103,6 +110,10 @@ export function resolveAiSummaryClaims(
     );
     factsAsOf.add(claim.factsAsOf);
   }
+  // Fail closed: an unregistered or malformed token must never render the
+  // internal placeholder syntax, so unresolved placeholders resolve to the
+  // same N/A sentinel as a missing live value.
+  resolvedText = resolvedText.replace(CLAIM_PLACEHOLDER_PATTERN, "N/A");
 
   return { text: resolvedText, factsAsOf: [...factsAsOf].sort(), issues };
 }

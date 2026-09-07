@@ -125,6 +125,10 @@ export const content: CaseStudy = {
       label: "USR on Pharos",
     },
     {
+      href: "/depeg/usr-2026-03-22/",
+      label: "Pharos event record: USR, March 2026",
+    },
+    {
       href: "/cemetery/",
       label: "Stablecoin cemetery",
     },

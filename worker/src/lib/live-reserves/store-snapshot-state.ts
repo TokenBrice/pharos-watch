@@ -1,5 +1,7 @@
-import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
-import type { ReserveSyncStateRecord } from "./store-shared";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveAdapterValidationPolicy, LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
+import type { ReserveCompositionRecord, ReserveSyncStateRecord } from "./store-shared";
 
 export function hasConsistentSnapshotState(
   syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null | undefined,
@@ -69,4 +71,23 @@ export function shouldUseLegacySnapshotFallback(
     && syncState.lastAttemptedAt === syncState.lastSuccessAt
     && syncState.lastStatus !== "error"
     && syncState.lastStatus !== "skipped";
+}
+
+/** Fetch liveness and disclosure age have separate budgets (monthly reports are not daily feeds). */
+export function isReserveSnapshotStale(
+  record: Pick<ReserveCompositionRecord, "fetchedAt" | "metadata">,
+  coin: StablecoinMeta,
+  now: number,
+  fetchFreshnessSec: number,
+): boolean {
+  if (now - record.fetchedAt > fetchFreshnessSec) return true;
+  if (record.metadata.freshnessMode !== "verified") return false;
+  const sourceTimestamp = record.metadata.sourceTimestamp;
+  if (typeof sourceTimestamp !== "number" || !Number.isFinite(sourceTimestamp)) return false;
+  const config = coin.liveReservesConfig;
+  const adapter = config && getLiveReserveAdapterDefinition(config.adapter);
+  const validation: LiveReserveAdapterValidationPolicy | undefined = adapter && "validation" in adapter ? adapter.validation : undefined;
+  const adapterMaxAge = validation?.maxSourceAgeSec;
+  const sourceMaxAge = Math.min(config?.scoring?.maxSourceAgeSec ?? Infinity, adapterMaxAge ?? Infinity);
+  return now - sourceTimestamp > (Number.isFinite(sourceMaxAge) ? sourceMaxAge : fetchFreshnessSec);
 }

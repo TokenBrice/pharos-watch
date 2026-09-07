@@ -1,8 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { AlchemyLogEntry } from "../../lib/alchemy-logs";
+import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { budgetExhausted, createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
-import type { TopicFilter } from "../../lib/evm-logs";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
@@ -201,7 +200,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       continue;
     }
 
-    const topics: TopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
+    const topics: AlchemyTopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
     if (eventDef.filterTopic) {
       topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
     }

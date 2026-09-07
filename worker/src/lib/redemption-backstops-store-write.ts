@@ -51,18 +51,18 @@ export const SNAPSHOT_ROW_COLUMNS = [
 ] as const;
 
 const SNAPSHOT_ROW_UPDATE_COLUMNS = SNAPSHOT_ROW_COLUMNS.filter((column) => column !== "stablecoin_id");
+const SNAPSHOT_RUN_ROW_COLUMNS = ["snapshot_run_id", ...SNAPSHOT_ROW_COLUMNS];
+const SNAPSHOT_RUN_ROW_INSERT_COLUMNS = SNAPSHOT_RUN_ROW_COLUMNS.map((column) => `         ${column}`).join(",\n");
+const SNAPSHOT_RUN_ROW_PLACEHOLDERS = SNAPSHOT_RUN_ROW_COLUMNS.map(() => "?").join(", ");
+const SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS = SNAPSHOT_ROW_UPDATE_COLUMNS
+  .map((column) => `         ${column} = excluded.${column}`)
+  .join(",\n");
+const SNAPSHOT_RUN_ROW_UPSERT_SQL = `INSERT INTO redemption_backstop_run_rows (
+${SNAPSHOT_RUN_ROW_INSERT_COLUMNS}
+       ) VALUES (${SNAPSHOT_RUN_ROW_PLACEHOLDERS})
+       ON CONFLICT(snapshot_run_id, stablecoin_id) DO UPDATE SET
+${SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS}`;
 
-function formatColumnList(columns: readonly string[]): string {
-  return columns.map((column) => `         ${column}`).join(",\n");
-}
-
-function formatUpdateAssignments(columns: readonly string[]): string {
-  return columns.map((column) => `         ${column} = excluded.${column}`).join(",\n");
-}
-
-function placeholderList(count: number): string {
-  return Array.from({ length: count }, () => "?").join(", ");
-}
 
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
@@ -142,15 +142,8 @@ function buildRunRowUpsert(
   record: RedemptionBackstopSnapshotRecord,
   runId: string,
 ): D1PreparedStatement {
-  const columns = ["snapshot_run_id", ...SNAPSHOT_ROW_COLUMNS];
   return db
-    .prepare(
-      `INSERT INTO redemption_backstop_run_rows (
-${formatColumnList(columns)}
-       ) VALUES (${placeholderList(columns.length)})
-       ON CONFLICT(snapshot_run_id, stablecoin_id) DO UPDATE SET
-${formatUpdateAssignments(SNAPSHOT_ROW_UPDATE_COLUMNS)}`,
-    )
+    .prepare(SNAPSHOT_RUN_ROW_UPSERT_SQL)
     .bind(runId, ...buildSnapshotRowValues(record));
 }
 

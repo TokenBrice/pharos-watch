@@ -129,6 +129,10 @@ export interface ReserveCoverageAudit {
     activeLatestProofAssetsAndLiabilitiesCount: number;
     activeIndependentAuditCount: number;
     activeIndependentAuditMissingLatestReportCount: number;
+    activeAgreedUponProceduresCount: number;
+    activeAgreedUponProceduresMissingLatestReportCount: number;
+    activeAttestationCount: number;
+    activeAttestationMissingLatestReportCount: number;
     activeStaleLatestProofReportCount: number;
     activeExplicitCustodyModelCount: number;
     activeWithCustodyProfileCount: number;
@@ -152,6 +156,8 @@ export interface ReserveCoverageAudit {
   materialUnknownExposure: MaterialUnknownExposureRow[];
   opaqueReserveSlices: OpaqueReserveSliceRow[];
   independentAuditMissingLatestReport: ReserveEvidenceGapRow[];
+  agreedUponProceduresMissingLatestReport: ReserveEvidenceGapRow[];
+  attestationMissingLatestReport: ReserveEvidenceGapRow[];
   staleLatestProofReport: ReserveEvidenceGapRow[];
   missingCustodyProfile: ReserveEvidenceGapRow[];
   custodyConsistencyWarnings: ReserveEvidenceGapRow[];
@@ -324,6 +330,8 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   const materialUnknownExposure: MaterialUnknownExposureRow[] = [];
   const opaqueReserveSlices: OpaqueReserveSliceRow[] = [];
   const independentAuditMissingLatestReport: ReserveEvidenceGapRow[] = [];
+  const agreedUponProceduresMissingLatestReport: ReserveEvidenceGapRow[] = [];
+  const attestationMissingLatestReport: ReserveEvidenceGapRow[] = [];
   const staleLatestProofReport: ReserveEvidenceGapRow[] = [];
   const missingCustodyProfile: ReserveEvidenceGapRow[] = [];
   const custodyConsistencyWarnings: ReserveEvidenceGapRow[] = [];
@@ -333,6 +341,8 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   let activeLatestProofAssetsOnlyCount = 0;
   let activeLatestProofAssetsAndLiabilitiesCount = 0;
   let activeIndependentAuditCount = 0;
+  let activeAgreedUponProceduresCount = 0;
+  let activeAttestationCount = 0;
   let activeExplicitCustodyModelCount = 0;
   let activeWithCustodyProfileCount = 0;
 
@@ -407,6 +417,22 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
         if (!coin.proofOfReserves.latestReport) {
           independentAuditMissingLatestReport.push(
             evidenceGap(coin, "independent-audit label has no structured latestReport"),
+          );
+        }
+      }
+      if (coin.proofOfReserves.type === "agreed-upon-procedures") {
+        activeAgreedUponProceduresCount += 1;
+        if (!coin.proofOfReserves.latestReport) {
+          agreedUponProceduresMissingLatestReport.push(
+            evidenceGap(coin, "agreed-upon-procedures label has no structured latestReport"),
+          );
+        }
+      }
+      if (coin.proofOfReserves.type === "attestation") {
+        activeAttestationCount += 1;
+        if (!coin.proofOfReserves.latestReport) {
+          attestationMissingLatestReport.push(
+            evidenceGap(coin, "attestation label has no structured latestReport"),
           );
         }
       }
@@ -499,6 +525,10 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
       activeLatestProofAssetsAndLiabilitiesCount,
       activeIndependentAuditCount,
       activeIndependentAuditMissingLatestReportCount: independentAuditMissingLatestReport.length,
+      activeAgreedUponProceduresCount,
+      activeAgreedUponProceduresMissingLatestReportCount: agreedUponProceduresMissingLatestReport.length,
+      activeAttestationCount,
+      activeAttestationMissingLatestReportCount: attestationMissingLatestReport.length,
       activeStaleLatestProofReportCount: staleLatestProofReport.length,
       activeExplicitCustodyModelCount,
       activeWithCustodyProfileCount,
@@ -522,6 +552,8 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
     materialUnknownExposure,
     opaqueReserveSlices,
     independentAuditMissingLatestReport,
+    agreedUponProceduresMissingLatestReport,
+    attestationMissingLatestReport,
     staleLatestProofReport,
     missingCustodyProfile,
     custodyConsistencyWarnings,
@@ -606,6 +638,10 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Latest proof reports scoped assets-and-liabilities: ${audit.summary.activeLatestProofAssetsAndLiabilitiesCount}`,
     `- Active independent-audit labels: ${audit.summary.activeIndependentAuditCount}`,
     `- Independent-audit labels missing latest report: ${audit.summary.activeIndependentAuditMissingLatestReportCount}`,
+    `- Active agreed-upon-procedures labels: ${audit.summary.activeAgreedUponProceduresCount}`,
+    `- Agreed-upon-procedures labels missing latest report: ${audit.summary.activeAgreedUponProceduresMissingLatestReportCount}`,
+    `- Active attestation labels: ${audit.summary.activeAttestationCount}`,
+    `- Attestation labels missing latest report: ${audit.summary.activeAttestationMissingLatestReportCount}`,
     `- Stale latest proof reports: ${audit.summary.activeStaleLatestProofReportCount}`,
     `- Active explicit custodyModel summaries: ${audit.summary.activeExplicitCustodyModelCount}`,
     `- Active coins with custody profile: ${audit.summary.activeWithCustodyProfileCount}`,
@@ -669,7 +705,12 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     "",
     "## Proof Report Gaps",
     "",
-    ...renderEvidenceGapRows([...audit.independentAuditMissingLatestReport, ...audit.staleLatestProofReport]),
+    ...renderEvidenceGapRows([
+      ...audit.independentAuditMissingLatestReport,
+      ...audit.agreedUponProceduresMissingLatestReport,
+      ...audit.attestationMissingLatestReport,
+      ...audit.staleLatestProofReport,
+    ]),
     "",
     "## Custody Evidence Gaps",
     "",

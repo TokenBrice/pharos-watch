@@ -90,6 +90,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_LANE_ID: ${{ matrix.lane }}
+          PR_SKIP_DOC_SYNC: ${{ matrix.skipDocSync }}
           PR_LANE_SHARD: ${{ matrix.shard }}
           PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run

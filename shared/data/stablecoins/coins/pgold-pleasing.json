@@ -2,7 +2,7 @@
   "id": "pgold-pleasing",
   "name": "Pleasing Gold",
   "symbol": "PGOLD",
-  "oneLiner": "PGOLD is Pleasing's gold-backed token; each unit represents one troy ounce of LBMA-standard 99.99% bullion under issuer custody with KYC-gated redemption.",
+  "oneLiner": "Pleasing's gold-backed token: LBMA-standard 99.99% bullion, 1 troy ounce per unit, held by undisclosed qualified custodians in Hong Kong; KYC-gated redemption.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -57,6 +57,32 @@
   ],
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report",
+    "provider": "VISTO CPA LIMITED (independent limited assurance; partial physical observation and Arbitrum-only liability scope)",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "latestReport": {
+      "periodEnd": "2026-06-25",
+      "publishedAt": "2026-06-25",
+      "assuranceMethod": "review",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Pharos reserve research (Kimi P0 re-verification)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "PGOLD live Reserve Report",
+          "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report"
+        },
+        {
+          "label": "VISTO CPA PGOLD independent assurance report - 2026-06-25",
+          "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5"
+        }
+      ]
+    }
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

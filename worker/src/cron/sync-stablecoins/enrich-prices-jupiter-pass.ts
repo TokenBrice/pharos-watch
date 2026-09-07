@@ -21,10 +21,6 @@ import {
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 import {
-  buildPriceReasonablenessOptions,
-  isReasonablePrice,
-} from "../../lib/price-validation";
-import {
   applyResolvedPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
@@ -32,6 +28,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
+  isUsableFallbackPrice,
   SOLANA_MINT_BY_ID,
 } from "./enrich-prices-pass-common";
 
@@ -167,12 +164,7 @@ export async function runJupiterPass(
       if (blockId == null || !isFreshJupiterBlock(blockId, currentSlot)) continue;
       if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) continue;
 
-      if (!isReasonablePrice(
-        usdPrice,
-        entry.asset.pegType as string | undefined,
-        fxRates,
-        buildPriceReasonablenessOptions(entry.asset),
-      )) {
+      if (!isUsableFallbackPrice(entry.asset, usdPrice, fxRates)) {
         continue;
       }
 

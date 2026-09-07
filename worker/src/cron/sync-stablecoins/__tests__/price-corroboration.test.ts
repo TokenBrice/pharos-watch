@@ -1,10 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import * as enrichment from "../enrich-prices";
+import * as shared from "../shared";
+import { PRICE_CORROBORATION_OBSERVATIONS_KEY } from "../price-corroboration-observations";
 import type { AddressPriceQuote } from "../../../lib/address-price-providers";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   buildPriceCorroborationCacheEntries,
   buildPriceCorroborationCohort,
   isPriceCorroborationSlot,
+  runPriceCorroboration,
 } from "../price-corroboration";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -21,6 +27,30 @@ function quote(stablecoinId: string, priceUsd: number): AddressPriceQuote {
 }
 
 describe("hourly price corroboration", () => {
+  it("stages fetched observations without promoting the previous published reference", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    const previous = makePeggedAsset({ id: "usdt-tether", price: 1, priceSource: "coingecko", priceConfidence: "single-source" });
+    const previousLoad = vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({
+      previousAssetsById: new Map([[previous.id, previous]]), cacheState: { state: "ok" },
+    });
+    const collect = vi.spyOn(enrichment, "enrichMissingPrices").mockImplementation(async (assets) => {
+      expect(assets[0]?.price).toBeNull();
+      // No provider returned a fresh quote. The published reference cannot enter the handoff.
+      return {} as Awaited<ReturnType<typeof enrichment.enrichMissingPrices>>;
+    });
+    try {
+      await runPriceCorroboration({ db, syncStartSec: 1_800_000_000 });
+      const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(PRICE_CORROBORATION_OBSERVATIONS_KEY);
+      expect(JSON.parse(String(row?.value))).toEqual([]);
+    } finally {
+      previousLoad.mockRestore();
+      collect.mockRestore();
+      sqlite.close();
+    }
+  });
+
   it("runs only for the top-of-hour quarter-hour invocation", () => {
     expect(isPriceCorroborationSlot(1_800_000_000)).toBe(true);
     expect(isPriceCorroborationSlot(1_800_000_900)).toBe(false);

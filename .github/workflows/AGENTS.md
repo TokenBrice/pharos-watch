@@ -4,7 +4,8 @@ Applies to GitHub Actions workflows and their shared workspace setup.
 
 ## Read First
 
-- `docs/deployment-process.md`
+- `docs/deployment-process.md#ci-deploy-sequence`
+- Publishing/release changes also require `docs/deployment-process.md#core-rules` and the affected deployment stage.
 - `docs/testing.md#ci-pipeline`
 
 ## Invariants

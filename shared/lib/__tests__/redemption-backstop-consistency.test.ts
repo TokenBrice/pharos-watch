@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "@shared/lib/redemption-backstop-configs";
-import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
+import { configsFromBackstopEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -58,7 +58,7 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
-    const clockSec = Date.UTC(2026, 7, 26) / 1_000;
+    const clockSec = Date.UTC(2026, 8, 5) / 1_000;
     const reviewed = entries.filter(([, config]) => config.v9RouteReviewTerms?.settlementModel != null);
     expect(reviewed.length).toBeGreaterThan(0);
     for (const [id, config] of reviewed) {
@@ -238,7 +238,7 @@ describe("redemption backstop config consistency", () => {
     const duplicates: string[] = [];
 
     for (const moduleEntry of familyModules) {
-      for (const id of Object.keys(moduleEntry.configs)) {
+      for (const id of Object.keys(configsFromBackstopEntries(moduleEntry.entries))) {
         const previous = seenById.get(id);
         if (previous) {
           duplicates.push(`${id}: ${previous}, ${moduleEntry.name}`);
@@ -252,22 +252,9 @@ describe("redemption backstop config consistency", () => {
     expect(seenById.size).toBe(Object.keys(REDEMPTION_BACKSTOP_CONFIGS).length);
   });
 
-  it("manifest registry build matches the exported runtime registry", () => {
-    expect(buildRedemptionBackstopRegistry()).toEqual(REDEMPTION_BACKSTOP_CONFIGS);
-  });
-
-  it("keeps every finalized manifest entry deeply equal to its family and final registries", () => {
-    for (const moduleEntry of familyModules) {
-      for (const entry of moduleEntry.entries) {
-        expect(entry.config).toEqual(moduleEntry.configs[entry.id]);
-        expect(entry.config).toEqual(REDEMPTION_BACKSTOP_CONFIGS[entry.id]);
-      }
-    }
-  });
-
   it("family modules only contain their declared route families", () => {
     const violations = familyModules.flatMap((moduleEntry) =>
-      Object.entries(moduleEntry.configs)
+      Object.entries(configsFromBackstopEntries(moduleEntry.entries))
         .filter(([, config]) => {
           const allowedRouteFamilies: readonly RedemptionRouteFamily[] = moduleEntry.allowedRouteFamilies;
           return !allowedRouteFamilies.includes(config.routeFamily);

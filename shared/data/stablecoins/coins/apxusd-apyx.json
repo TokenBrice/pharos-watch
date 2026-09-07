@@ -50,6 +50,11 @@
       "decimals": 18
     },
     {
+      "chain": "solana",
+      "address": "HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe",
+      "decimals": 6
+    },
+    {
       "chain": "bsc",
       "address": "0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
       "decimals": 18

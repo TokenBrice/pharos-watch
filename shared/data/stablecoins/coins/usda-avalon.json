@@ -57,7 +57,7 @@
     {
       "chain": "movement",
       "address": "0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650",
-      "decimals": 18
+      "decimals": 8
     },
     {
       "chain": "nibiru",
@@ -121,6 +121,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "institutional-top",
   "governanceQuality": "multisig",
   "launchDate": "2024-11-03"
 }

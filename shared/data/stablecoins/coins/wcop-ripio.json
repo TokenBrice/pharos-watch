@@ -3,7 +3,7 @@
   "llamaId": "382",
   "detailProvider": "defillama",
   "name": "Ripio wCOP",
-  "symbol": "WCOP",
+  "symbol": "wCOP",
   "oneLiner": "WCOP is Ripio's Colombian-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
@@ -13,7 +13,7 @@
   "collateral": "Colombian-peso fiat cash deposited in a Colombian bank account, backing Ripio wCOP one-to-one against the Colombian peso per Ripio's wFIAT token certification",
   "pegMechanism": "WCOP is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf",
     "provider": "Pablo Eduardo Soto (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
@@ -54,9 +54,6 @@
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
     }
   ],
-  "jurisdiction": {
-    "country": "Colombia"
-  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -85,6 +82,11 @@
     },
     {
       "chain": "gnosis",
+      "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
       "address": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
       "decimals": 18
     }

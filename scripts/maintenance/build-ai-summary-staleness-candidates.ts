@@ -177,11 +177,14 @@ interface LiveEndpoint {
   fixtureName: string;
 }
 
-async function fetchJson(endpoint: LiveEndpoint): Promise<unknown> {
+export async function fetchJson(
+  endpoint: LiveEndpoint,
+  apiKey = API_KEY,
+): Promise<unknown> {
   if (FIXTURES_DIR) {
     return JSON.parse(readFileSync(resolve(FIXTURES_DIR, `${endpoint.fixtureName}.json`), "utf8"));
   }
-  const request = buildMaintenanceApiRequest(endpoint.apiPath, API_KEY, API_BASE_URL);
+  const request = buildMaintenanceApiRequest(endpoint.apiPath, apiKey, API_BASE_URL);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -192,7 +195,7 @@ async function fetchJson(endpoint: LiveEndpoint): Promise<unknown> {
     if (!res.ok) {
       throw new Error(`GET ${endpoint.apiPath} -> ${res.status} ${(await res.text()).slice(0, 160)}`);
     }
-    return res.json();
+    return await res.json();
   } finally {
     clearTimeout(timer);
   }
@@ -330,6 +333,24 @@ function retiredDimensionFinding(
   };
 }
 
+function liquidityFinding(text: string, match: RegExpMatchArray, claimed: string, metric: "grade" | "score"): Finding {
+  // Only a local, explicit old Safety Score context establishes retirement.
+  // DEX liquidity is still a current metric; no live DEX comparison is loaded here.
+  const start = match.index ?? 0;
+  const sentenceStart = Math.max(text.lastIndexOf(".", start), text.lastIndexOf("\n", start)) + 1;
+  const sentenceEnd = text.indexOf(".", start + match[0].length);
+  const context = text.slice(sentenceStart, sentenceEnd < 0 ? text.length : sentenceEnd);
+  const legacy = /\b(?:Safety\s+Score\s+(?:v[1-8]\b|(?:legacy|old|former))|(?:v[1-8]|legacy|old|former)\s+Safety\s+Score)\b/i.test(context)
+    && !/\bDEX\b/i.test(context);
+  return {
+    kind: legacy ? `legacy-liquidity-${metric}` : `liquidity-${metric}-review`,
+    claim: match[0],
+    claimed,
+    current: legacy ? "retired in Safety Score v9" : "manual dated/source review required; no current DEX comparison loaded",
+    severity: legacy ? "medium" : "low",
+  };
+}
+
 export function extractFindings(text: string, cur: Current): Finding[] {
   const t = normalize(text);
   const out: Finding[] = [];
@@ -448,8 +469,14 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   for (const [dimRe, label] of legacyDims) {
     const fwd = new RegExp(`${GRADE_TOKEN}(?:\\s+grade)?\\s+(?:in\\s+)?(?:${dimRe.source})`, "gi");
     const rev = new RegExp(`(?:${dimRe.source})(?:\\s+grade)?\\s+(?:of\\s+)?(?:an?\\s+)?${GRADE_TOKEN}`, "gi");
-    for (const m of t.matchAll(fwd)) push(retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
-    for (const m of t.matchAll(rev)) push(retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
+    for (const pattern of [fwd, rev]) {
+      for (const m of t.matchAll(pattern)) {
+        if (!isGrade(m[1])) continue;
+        push(label === "liquidity"
+          ? liquidityFinding(t, m, m[1], "grade")
+          : retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
+      }
+    }
   }
 
   // 5. DEWS band (+ optional score): "in the Calm band", "DEWS at 10 in the Calm band",
@@ -487,6 +514,10 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   const legacyScoreRe =
     /\b(liquidity|resilience|decentralization|dependency(?:\s+risk)?)\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi;
   for (const m of t.matchAll(legacyScoreRe)) {
+    if (m[1].toLowerCase() === "liquidity") {
+      push(liquidityFinding(t, m, m[2], "score"));
+      continue;
+    }
     push({
       kind: `legacy-${m[1].toLowerCase().replace(/\s+/g, "-")}-score`,
       claim: m[0],

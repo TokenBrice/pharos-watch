@@ -46,7 +46,7 @@
         "sources": [
           {
             "label": "CAD Coin",
-            "url": "https://cadcoin.org/"
+            "url": "https://etherscan.io/token/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
           }
         ]
       },
@@ -68,7 +68,7 @@
         "sources": [
           {
             "label": "CAD Coin",
-            "url": "https://cadcoin.org/"
+            "url": "https://polygonscan.com/token/0x9de41aff9f55219d5bf4359f167d1d0c772a396d"
           }
         ]
       },
@@ -90,7 +90,7 @@
         "sources": [
           {
             "label": "CAD Coin",
-            "url": "https://cadcoin.org/"
+            "url": "https://arbiscan.io/token/0x2b28e826b55e399f4d4699b85f68666ac51e6f70"
           }
         ]
       },
@@ -112,7 +112,7 @@
         "sources": [
           {
             "label": "CAD Coin",
-            "url": "https://cadcoin.org/"
+            "url": "https://basescan.org/token/0x043eb4b75d0805c43d7c834902e335621983cf03"
           }
         ]
       },
@@ -134,7 +134,7 @@
         "sources": [
           {
             "label": "CAD Coin",
-            "url": "https://cadcoin.org/"
+            "url": "https://loon.finance/"
           }
         ]
       },
@@ -156,7 +156,7 @@
         "sources": [
           {
             "label": "CAD Coin",
-            "url": "https://cadcoin.org/"
+            "url": "https://solscan.io/token/9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7"
           }
         ]
       }

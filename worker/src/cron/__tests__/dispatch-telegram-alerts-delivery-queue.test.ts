@@ -103,12 +103,12 @@ describe("dispatchTelegramAlerts", () => {
       subscribersNotified: 0,
       safetyAlertSourceState: "missing",
       safetyAlertsSuppressed: true,
-      planningStatements: 0,
-      planningMs: 0,
-      sourceEventsProcessed: 0,
-      pendingRowsEnqueued: 0,
+      planningRowsWritten: expect.any(Number),
+      d1RowsWritten: expect.any(Number),
       noWorkRun: false,
     });
+    expect(metadata.planningRowsWritten).toBe(0);
+    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 6 });
     expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
@@ -126,17 +126,15 @@ describe("dispatchTelegramAlerts", () => {
       eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0 },
       messagesSent: 0,
       pendingAttempted: 0,
-      planningStatements: 0,
-      planningMs: 0,
-      sourceEventsProcessed: 0,
-      pendingRowsEnqueued: 0,
+      planningRowsWritten: expect.any(Number),
+      d1RowsWritten: expect.any(Number),
       noWorkRun: true,
     });
-    expect(Object.keys(metadata).slice(-5)).toEqual([
-      "planningStatements",
-      "planningMs",
-      "sourceEventsProcessed",
-      "pendingRowsEnqueued",
+    expect(metadata.planningRowsWritten).toBe(0);
+    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
+    expect(Object.keys(metadata).slice(-3)).toEqual([
+      "planningRowsWritten",
+      "d1RowsWritten",
       "noWorkRun",
     ]);
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -327,14 +325,14 @@ describe("dispatchTelegramAlerts", () => {
       pendingDrained: 1,
       messagesSent: 1,
       subscribersNotified: 1,
-      planningStatements: 0,
-      planningMs: 0,
-      sourceEventsProcessed: 1,
-      pendingRowsEnqueued: 0,
+      planningRowsWritten: expect.any(Number),
+      d1RowsWritten: expect.any(Number),
       noWorkRun: false,
     });
+    expect(metadata.planningRowsWritten).toBeGreaterThan(0);
+    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
     expect(result.itemCount).toBe(1);
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: `pending-${scenario.label}` })]);
-    expect(mockRecordOutcome).toHaveBeenCalledWith(harness.db, "telegram-api", true);
+    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
   });
 });

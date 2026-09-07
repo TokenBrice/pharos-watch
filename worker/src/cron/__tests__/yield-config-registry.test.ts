@@ -35,7 +35,6 @@ const directProtocolApiIds = new Set(
     .map((entry) => entry.stablecoinId),
 );
 const trackedCoinsById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin] as const));
-const NON_YIELD_BEARING_ONCHAIN_IDS = new Set(["usdf-falcon"]);
 const WAVE_1_DETERMINISTIC_PROMOTION_IDS = [
   "gtusdc-gauntlet",
   "susdc-spark",
@@ -111,8 +110,10 @@ describe("yield config registry", () => {
     for (const config of ON_CHAIN_RATE_CONFIGS) {
       const coin = TRACKED_STABLECOINS.find((entry) => entry.id === config.stablecoinId);
       expect(coin, config.stablecoinId).toBeDefined();
-      if (!NON_YIELD_BEARING_ONCHAIN_IDS.has(config.stablecoinId)) {
-        expect(coin?.flags.yieldBearing, config.stablecoinId).toBe(true);
+      if (!coin?.flags.yieldBearing) {
+        const variant = YIELD_VARIANT_MAP[config.stablecoinId];
+        expect(variant?.variantAddress?.toLowerCase(), config.stablecoinId).toBe(config.contract.toLowerCase());
+        expect(variant?.variantChain, config.stablecoinId).toBe(config.chain);
       }
       expect((coin?.contracts ?? []).length, config.stablecoinId).toBeGreaterThan(0);
     }

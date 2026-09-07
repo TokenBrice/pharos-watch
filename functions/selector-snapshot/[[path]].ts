@@ -11,7 +11,7 @@ import {
 } from "@shared/lib/selector/snapshot";
 import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
 import { readBoundedRequestBody } from "../lib/bounded-request-body";
-import { hashClientIp } from "../lib/client-ip-hash";
+import { hashClientIp } from "@shared/lib/client-ip-hash";
 import { NOINDEX_HEADER_VALUE } from "../lib/noindex";
 import { jsonError } from "../lib/proxy-utils";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";

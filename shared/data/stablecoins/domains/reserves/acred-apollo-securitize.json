@@ -36,7 +36,7 @@
     "compositionBasis": "Chainlink ACRED NAV oracle (the configured live-reserve surface) and Securitize fund disclosures",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The fund's current allocation across its credit strategies, positions, maturities, and cash is not published as dated weights; only strategy-level descriptions are public.",
+    "knownUnknownExposure": "The June 30, 2026 SEC schedule publishes dated position descriptions, principal amounts, rates, maturities, values, and portfolio totals. Remaining unknown exposure is limited to changes after that report date and any classifications or feeder-level details not disclosed in the filing.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -51,7 +51,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Apollo Diversified Credit Fund (underlying fund vehicle; custodian undisclosed in reviewed sources)",
+        "name": "Bank of New York Mellon Trust Company, National Association",
         "role": "custodian",
         "jurisdiction": "United States"
       },
@@ -63,7 +63,7 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
-    "rehypothecation": "unknown",
+    "rehypothecation": "permitted",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
     "confidence": "manual-review",

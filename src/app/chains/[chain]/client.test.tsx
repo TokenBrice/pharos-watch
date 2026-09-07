@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RatioSchema } from "@shared/types/ratio";
 import { ChainProfileClient } from "./client";
 import { makeChain, makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
 
@@ -40,20 +41,12 @@ function makeHookState(overrides: Record<string, unknown> = {}) {
     chain: makeChain(),
     coins: [makeCoin()],
     totalUsd: 500_000_000,
-    canRenderDetailedSections: true,
     canConfirmMissingChain: true,
-    detailedSectionNotice: null,
     hasAnyData: true,
     isInitialLoading: false,
     routeError: null,
-    snapshotConsistency: "matched",
     chainsQuery: {
       data: { chains: [makeChain()] },
-      error: null,
-      dataUpdatedAt: 1_710_500_000_000,
-      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-    },
-    stablecoinsQuery: {
       error: null,
       dataUpdatedAt: 1_710_500_000_000,
       meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
@@ -117,24 +110,6 @@ describe("ChainProfileClient", () => {
     expect(screen.getByText("Ethereum")).toBeTruthy();
   });
 
-  it("hides detailed sections behind a sync notice when snapshots do not match", () => {
-    useChainProfileDataMock.mockReturnValue(makeHookState({
-      canRenderDetailedSections: false,
-      detailedSectionNotice: "Detailed stablecoin composition is syncing to the latest chain snapshot. Breakdown sections are hidden until both sources match exactly.",
-      snapshotConsistency: "mismatched",
-      stablecoinsQuery: {
-        error: null,
-        dataUpdatedAt: 1_710_499_100_000,
-        meta: { updatedAt: 1_710_499_100, ageSeconds: 960, status: "degraded" },
-      },
-    }));
-
-    render(<ChainProfileClient chainId="ethereum" />);
-
-    expect(screen.getByText(/Detailed stablecoin composition is syncing/i)).toBeTruthy();
-    expect(screen.queryByText("Stablecoin Composition")).toBeNull();
-    expect(screen.queryByText("All Stablecoins")).toBeNull();
-  });
 
   it("explains when Chain Health is unavailable because report-card inputs are stale", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
@@ -182,8 +157,8 @@ describe("ChainProfileClient", () => {
           id: "dai-maker",
           name: "DAI",
           symbol: "DAI",
-          supplyOnChain: 400_000_000,
-          chainShare: 0.4,
+          supplyUsd: 400_000_000,
+          chainShare: RatioSchema.parse(0.4),
           backing: "crypto-backed",
         }),
       ],
@@ -204,7 +179,7 @@ describe("ChainProfileClient", () => {
     expect(push).toHaveBeenCalledWith("/stablecoin/dai-maker/");
   });
 
-  it("shows a route loading state before both data sources complete initial load", () => {
+  it("shows a route loading state before the chain response completes initial load", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       chain: null,
       isInitialLoading: true,

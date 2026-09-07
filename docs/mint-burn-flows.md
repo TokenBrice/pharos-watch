@@ -76,7 +76,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
-Token identity resolves from the canonical checked-in per-coin metadata under `shared/data/stablecoins/coins/*.json`. The validated full aggregate generates `coins.worker-runtime.generated.json`, a narrow identity/lifecycle/contract projection used by mint/burn so the extended scheduled lane does not initialize the evidence-rich full registry inside its 128 MB isolate. `npm run check:mint-burn-runtime-imports` bundles the extended scheduled entrypoint (and, since 2026-09-02, the five-minute Telegram entrypoint, which shares the projection) and rejects any runtime path back to the full registry. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
+Token identity resolves from the canonical checked-in per-coin metadata under `shared/data/stablecoins/coins/*.json`. The validated full aggregate generates `coins.worker-runtime.generated.json`, a narrow identity/lifecycle/contract projection used by mint/burn so the extended scheduled lane does not initialize the evidence-rich full registry inside its 128 MB isolate. `npm run check:runtime-reachability` bundles the extended scheduled entrypoint (and, since 2026-09-02, the five-minute Telegram entrypoint, which shares the projection) and rejects any runtime path back to the full registry. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
 
 ### Registry ownership
 
@@ -312,6 +312,7 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 - **Activation:** `riskyNet24h < -$100M` AND `safeNet24h > +$100M`
 - **Intensity:** `min(100, |riskyNet24h| / $1B * 100)`
 - Safe/risky cohorts come from the report-card cache: `B-` or better is safe, `C+` through `C-` is neutral, and grades below `C-` are risky. If the complete identified report-card cache is unavailable, flight-to-quality classification is unavailable rather than falling back to hardcoded safe havens.
+- On aggregate API reads, a changed publication identity triggers FTQ recomputation from the validated cached per-coin `netFlow24hUsd` values and current cohorts. This updates only the response's FTQ fields, classification identity, and classification warning; the cached flow data, producer timestamps, freshness headers, and database row are preserved. Missing, held, stale, or malformed Safety Score sources and invalid cached coin inputs still fail closed.
 
 ---
 

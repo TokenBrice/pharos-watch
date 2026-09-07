@@ -9,7 +9,7 @@
       },
       {
         "label": "USDD sUSDD mechanism: sUSDD is an ERC-4626 interest-bearing tokenized vault whose value grows with rewards",
-        "url": "https://docs.usdd.io/susdd-mechanism"
+        "url": "https://docs.usdd.io/system-architecture/susdd-mechanism"
       },
       {
         "label": "USDD savings guide: users deposit USDD and receive sUSDD as interest accrues",
@@ -31,7 +31,7 @@
         },
         {
           "label": "USDD sUSDD mechanism",
-          "url": "https://docs.usdd.io/susdd-mechanism",
+          "url": "https://docs.usdd.io/system-architecture/susdd-mechanism",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
         }

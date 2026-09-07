@@ -98,7 +98,7 @@ export const content: ArchetypeContent = {
   ],
   crossLinks: [
     {
-      href: "/methodology/#depeg-methodology",
+      href: "/methodology/#pegscore-dews-methodology",
       label: "Depeg methodology and DEWS",
     },
     {

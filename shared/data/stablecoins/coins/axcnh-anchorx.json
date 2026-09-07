@@ -34,7 +34,7 @@
     "url": "https://anchorx.org/transparency",
     "provider": "Kreston ITH Digital Assets",
     "attestorTier": "regional",
-    "cadence": "monthly",
+    "cadence": "quarterly",
     "latestReport": {
       "periodEnd": "2026-06-30",
       "publishedAt": "2026-07-15",
@@ -109,5 +109,5 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2025-08-14"
+  "launchDate": "2025-09-17"
 }

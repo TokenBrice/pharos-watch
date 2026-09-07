@@ -9,6 +9,15 @@
     "startedAt": 1787695308
   },
   {
+    "slug": "eurs-2026-08-25",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 536,
+    "startedAt": 1787692588
+  },
+  {
     "slug": "xaum-2026-08-14",
     "stablecoinId": "xaum-matrixdock",
     "symbol": "XAUm",
@@ -104,7 +113,7 @@
     "symbol": "MSUSD",
     "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": -3853,
+    "peakDeviationBps": -5561,
     "startedAt": 1784804700
   },
   {

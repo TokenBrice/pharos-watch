@@ -55,8 +55,8 @@ The page is organized into these sections, in order:
 
 ## Navigation Contract
 
-- `/about/` remains a top-level route in the `Reference` group (the `NAV_GROUPS` entry keyed `"reference"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, `Coverage`, and `Blog` sit beside it in the top-nav `Reference` group. Learn surfaces stay in the Learn group; API Access, Changelog, and System Status stay in the lighthouse menu.
+- `/about/` remains a top-level route in the `More` menu's `Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
+- `/about/` is the reference hub for low-frequency reference surfaces. `Methodology`, `API Access`, `System Status`, and `PharosVille` sit beside it in that column; `Blog`, `Daily Digest`, `Timeline`, `Changelog`, and `Alert Bot` fill the `Updates` column, and Learn surfaces fill the `Learn` column. `Coverage` and `Funding` are footer-only routes. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
@@ -66,6 +66,7 @@ The page is organized into these sections, in order:
 ## Content Notes
 
 - The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
+- Cemetery counts in the hero, tracked-feature copy, and FAQ use the generated lightweight `DEAD_STABLECOIN_COUNT`: curated obituaries plus frozen tracked profiles, matching the public cemetery and export cohort rather than the curated-only source file. The root layout's cemetery description shares that projection.
 - The `Get in Touch` copy describes Pharos as MIT-licensed open source and links to the GitHub repository.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together. The visible source roster lives in `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts`; keep that module as the current roster source instead of duplicating long provider lists here.
 - Pricing copy should continue to disclose market-data sources, oracle sources, DEX-derived pricing, and protocol redemption quotes when they are externally visible in the UI.

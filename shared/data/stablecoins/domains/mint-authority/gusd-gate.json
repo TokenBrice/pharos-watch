@@ -4,9 +4,10 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "Gate GUSD uses OpenZeppelin AccessControl on a UUPS ERC1967 proxy. MINTER_ROLE is held by one EOA; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are held by a second EOA with no timelock.",
+    "summary": "Ethereum Gate GUSD uses OpenZeppelin AccessControl on a UUPS ERC1967 proxy. MINTER_ROLE is held by one EOA; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are held by a second EOA with no timelock. These native authority facts are scoped to Ethereum; the GateLayer OFT representation is reviewed under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": ["ethereum:0xaf6186b3521b60e27396b5d23b48abc34bf585c5"],
       "proxyAddresses": [
         "0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
       ],
@@ -39,6 +40,7 @@
     "controls": [
       {
         "chain": "ethereum",
+        "deploymentRefs": ["ethereum:0xaf6186b3521b60e27396b5d23b48abc34bf585c5"],
         "address": "0x83393a1796eadda65e8b46900f0c1845d433c609",
         "label": "Gate GUSD MINTER_ROLE holder",
         "role": "direct-minter",
@@ -57,6 +59,7 @@
       },
       {
         "chain": "ethereum",
+        "deploymentRefs": ["ethereum:0xaf6186b3521b60e27396b5d23b48abc34bf585c5"],
         "address": "0x191af8dade347e8f93a0798ec84ab5ef07c981be",
         "label": "Gate GUSD DEFAULT_ADMIN_ROLE holder",
         "role": "minter-admin",
@@ -75,6 +78,7 @@
       },
       {
         "chain": "ethereum",
+        "deploymentRefs": ["ethereum:0xaf6186b3521b60e27396b5d23b48abc34bf585c5"],
         "address": "0xaf6186B3521B60E27396B5d23b48ABc34bF585C5",
         "label": "Gate GUSD Ethereum token proxy",
         "role": "other",

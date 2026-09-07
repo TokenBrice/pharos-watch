@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- tests read checked-in stablecoin JSON from the repository root only. */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

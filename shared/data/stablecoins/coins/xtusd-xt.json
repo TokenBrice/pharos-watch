@@ -32,7 +32,6 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "xtusd",
-  "protocolSlug": "xt-com",
   "links": [
     {
       "label": "Website",
@@ -48,7 +47,7 @@
   },
   "implementationLaunchDate": "2022-07-07",
   "custodyModel": "cex",
-  "governanceQuality": "immutable-code",
+  "governanceQuality": "dao-governance",
   "notices": [
     {
       "type": "info",

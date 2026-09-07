@@ -58,7 +58,7 @@ describe("buildPublicDatasetMirrorJsonLd", () => {
       "@type": "Dataset",
       "@id": "https://pharos.watch/datasets/scores-latest/#dataset",
       name: "Pharos Latest Stablecoin Scores Dataset",
-      url: "https://pharos.watch/datasets/scores-latest/latest.json",
+      url: "https://pharos.watch/about/api/#dataset-scores-latest",
       creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
@@ -69,7 +69,7 @@ describe("buildPublicDatasetMirrorJsonLd", () => {
         url: "https://pharos.watch/about/api/",
       },
       identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:scores-latest" }],
-      sameAs: "https://pharos.watch/datasets/scores-latest/latest.json",
+      sameAs: "https://pharos.watch/about/api/#dataset-scores-latest",
     });
     const distribution = jsonLd.distribution as Array<{ contentUrl: string; encodingFormat: string }>;
     expect(distribution.map((entry) => entry.contentUrl)).toEqual([

@@ -15,6 +15,7 @@ import {
 import { enrichMissingPrices, type EnrichmentStats } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
+import { writePriceCorroborationObservations } from "./price-corroboration-observations";
 
 const PRICE_CORROBORATION_SOURCE_DEPTH = 3;
 
@@ -177,7 +178,7 @@ export async function runPriceCorroboration(params: {
       sourceAllowed,
       config: params.addressProvider,
       signal: params.signal,
-      nowSec: params.syncStartSec,
+      nowSec: Math.floor(Date.now() / 1_000),
     });
     addressQuotes = result.quotesByStablecoinId;
     providerDiagnosticCount = result.diagnostics.length;
@@ -188,9 +189,17 @@ export async function runPriceCorroboration(params: {
     }
   }
 
+  const fallbackProbesById = new Map(fallbackProbes.map((asset) => [asset.id, asset]));
+  // Only this run's fetched observations enter the handoff, never published references.
+  const observations = cohort.flatMap((asset) => {
+    const fallback = fallbackObservation(fallbackProbesById.get(asset.id));
+    return [...(fallback ? [fallback] : []), ...addressObservations(addressQuotes.get(asset.id))]
+      .map((observation) => ({ ...observation, id: asset.id, observedAtMode: observation.observedAtMode ?? null }));
+  });
+  await writePriceCorroborationObservations(params.db, observations, params.syncStartSec, params.signal);
   const entries = buildPriceCorroborationCacheEntries({
     publishedAssets: cohort,
-    fallbackProbes: new Map(fallbackProbes.map((asset) => [asset.id, asset])),
+    fallbackProbes: fallbackProbesById,
     addressQuotes,
     syncedAt: params.syncStartSec,
   });

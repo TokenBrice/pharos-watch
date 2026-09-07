@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -23,6 +23,7 @@ import {
   buildPayloadWithObservedAt,
   makeBenchmarkMeta,
   makeEvaluatedSource,
+  makePublicationViews,
   makeSafetySnapshotMeta,
   makeYieldSourceMeta,
   mockD1,
@@ -34,7 +35,6 @@ const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtu
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 function resolveMigrationPath(file: string): string {
   const fixture = path.join(FIXTURES_DIR, file);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
   return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
 }
 
@@ -101,10 +101,12 @@ describe("publishYieldCoordinatorResults", () => {
       signal: overrides.signal,
       previewRankingsPayload: overrides.previewRankingsPayload ?? buildPayloadWithObservedAt(startSec),
       evaluatedSources,
-      bestSourceKeyByCoin: overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
+      publicationViews: makePublicationViews(
+        evaluatedSources,
+        overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
+        startSec,
+      ),
       startSec,
-      medianApy: 4.5,
-      dlPoolsMeta: makeYieldSourceMeta(),
       degradationReasons: overrides.degradationReasons ?? [],
       resolvedCount: 1,
       rowsRejected: 0,
@@ -396,7 +398,11 @@ describe("publishYieldCoordinatorResults", () => {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const previewRankingsPayload = buildYieldRankingsPayloadFromEvaluatedSources({
       evaluatedSources: [best, altA, altB, altC],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      publicationViews: makePublicationViews(
+        [best, altA, altB, altC],
+        new Map([[best.id, best.sourceKey]]),
+        startSec,
+      ),
       rankingProvenanceByKey: new Map(),
       riskFreeRate: makeBenchmarkMeta().rate,
       riskFreeRateMeta: makeBenchmarkMeta(),
@@ -548,6 +554,24 @@ describe("publishYieldCoordinatorResults", () => {
 });
 
 describe("pruneYieldTables", () => {
+  it("retries transient retention overload without dropping cleanup", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const prepare = db.prepare.bind(db);
+    let retentionAttempts = 0;
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      if (sql.includes("pharos:yield-sync:daily-history-retention-delete") && ++retentionAttempts === 1) {
+        throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+      }
+      return prepare(sql);
+    });
+    try {
+      await pruneYieldTables(db, Math.floor(FIXED_NOW.getTime() / 1000));
+      expect(retentionAttempts).toBe(2);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("surfaces a missing mandatory daily-history table during materialization", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -820,9 +844,7 @@ describe("yield publication migration compatibility", () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
     try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
       sqlite.exec(readFileSync(resolveMigrationPath("0000_baseline.sql"), "utf8"));
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
       sqlite.exec(readFileSync(resolveMigrationPath("0125_yield_publication_generations.sql"), "utf8"));
 
       sqlite

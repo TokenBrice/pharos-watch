@@ -1,8 +1,8 @@
-import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import type { CgPool, CgPoolAttributes } from "../../lib/coingecko-onchain";
 import { parseCgPoolVolume } from "../../lib/coingecko-onchain";
 import type { ParsedPool } from "./crawl-helpers";
+import { parseGtShapedPool } from "./geckoterminal-shared";
 import { getGtDexQuality } from "./pool-normalization";
 
 export interface CgPoolClassification {
@@ -20,30 +20,14 @@ function parseOptionalFiniteNumber(value: string | null | undefined): number | n
 }
 
 export function parseCgPool(pool: CgPool, chain: string): ParsedPool | null {
-  const attrs = pool.attributes;
-  const dexId = pool.relationships?.dex?.data?.id;
-  const poolAddress = canonicalExitRouteScopedId(chain, attrs.address ?? "");
-  const baseTokenId = pool.relationships?.base_token?.data?.id;
-  const quoteTokenId = pool.relationships?.quote_token?.data?.id;
-  const baseTokenAddress = canonicalExitRouteScopedId(chain, baseTokenId?.split("_").pop() ?? "");
-  const quoteTokenAddress = canonicalExitRouteScopedId(chain, quoteTokenId?.split("_").pop() ?? "");
-
-  if (!dexId || !poolAddress || !baseTokenAddress || !quoteTokenAddress) {
-    return null;
-  }
-
-  return {
-    dexId,
-    poolAddress,
-    tvlUsd: Number.parseFloat(attrs.reserve_in_usd ?? ""),
-    volume24hUsd: parseCgPoolVolume(attrs),
-    baseTokenAddress,
-    quoteTokenAddress,
-    baseTokenPriceUsd: Number.parseFloat(attrs.base_token_price_usd ?? ""),
-    quoteTokenPriceUsd: Number.parseFloat(attrs.quote_token_price_usd ?? ""),
-    createdAt: attrs.pool_created_at ?? null,
-    poolName: attrs.name,
-  };
+  // Volume and createdAt stay CG-specific: the flat Pro `h24_volume_usd` wins
+  // when positive (fallback: nested `volume_usd.h24`); absent created_at → null.
+  return parseGtShapedPool(
+    pool,
+    chain,
+    parseCgPoolVolume(pool.attributes),
+    pool.attributes.pool_created_at ?? null,
+  );
 }
 
 export function classifyCgPool(

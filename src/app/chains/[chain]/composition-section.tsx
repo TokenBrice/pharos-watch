@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { formatCompactUsd } from "@shared/lib/format";
-import type { ChainStablecoin } from "@/hooks/use-chains";
+import type { ChainDetailCoin } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { logosById } from "@/lib/logos";
@@ -17,7 +17,7 @@ function CompositionBlock({
   percentage,
   shouldSpan,
 }: {
-  coin: ChainStablecoin;
+  coin: ChainDetailCoin;
   percentage: number;
   shouldSpan: boolean;
 }) {
@@ -44,7 +44,7 @@ function CompositionBlock({
         {(percentage * 100).toFixed(1)}%
       </span>
       <span className="font-mono text-xs opacity-70 transition-opacity group-hover:opacity-100">
-        {formatCompactUsd(coin.supplyOnChain)}
+        {formatCompactUsd(coin.supplyUsd)}
       </span>
       <div className="absolute right-2 top-2 flex items-center gap-1 -translate-x-1 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
         <span className="text-xs font-medium text-primary/70">View</span>
@@ -63,7 +63,7 @@ function CompositionOthersBlock({
   count: number;
   total: number;
   totalUsd: number;
-  coins: ChainStablecoin[];
+  coins: ChainDetailCoin[];
 }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const percentage = totalUsd > 0 ? (total / totalUsd) * 100 : 0;

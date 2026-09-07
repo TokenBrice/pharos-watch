@@ -217,7 +217,7 @@
             "0x98bE74D3d5604904D0686eEf9b4267F681F9520a",
             "0xCEf3d04f13A6C1A7614657641aB574C2d29D4cc6",
             "0x4e1D7121544A586B0a1C35d7e196b0DD9Ba7f572",
-            "0x315e376Ca228d8e1376CCcad2Abb0b4aa8A77F3A",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
             "0x6d303F4E0e3406C397855551A006c8b33D4F3240"
           ],
           "threshold": 3,
@@ -225,7 +225,8 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1dE2FE6b99BE3d9d37841FeD19F573804",
           "version": "1.3.0+L2",
-          "observedBlock": 25295096,
+          "observedBlock": 25647797,
+          "observedAt": "2026-07-30",
           "source": "safe-api"
         },
         "observedAt": "2026-08-16",

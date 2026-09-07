@@ -8,11 +8,10 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { SITE_DATA_PATH_PREFIX, SITE_DATA_PROXY_SECRET_HEADER, toSiteDataPath } from "@shared/lib/site-data-lane";
 import { SITE_API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
-
-import { sleep } from "./smoke-runtime.mjs";
 
 interface ResolveApiUrlOptions {
   /** CLI flag label used in error messages, e.g. `--api-url`. */
@@ -54,6 +53,8 @@ interface FetchWithRetryOptions {
   logLabel: string;
   attempts?: number;
   backoffMs?: readonly number[];
+  /** Overall deadline across attempts, waits, and reading the returned body. */
+  timeoutMs?: number;
   /** Additional response statuses that are known to be transient for this caller. */
   retryStatuses?: readonly number[];
 }
@@ -63,10 +64,9 @@ interface FetchWithRetryOptions {
  *
  * Deliberately simpler than the worker's `worker/src/lib/fetch-retry.ts`: these
  * scripts run in Node (local/CI), not inside a Cloudflare cron, so they do not
- * need AbortSignal composition, the Worker's trigger-budget response-body draining, or
- * Retry-After/529 exponential backoff. A fixed backoff array with a `status < 500`
- * short-circuit is enough for transient upstream 5xx during a snapshot pull, so
- * the two retry policies are intentionally not unified.
+ * need the Worker's trigger budget or Retry-After/529 exponential backoff.
+ * Failed retry bodies are cancelled, and one deadline covers the entire pull.
+ * The fixed backoff/status policy remains intentionally script-local.
  */
 export async function fetchWithRetry(
   url: string,
@@ -76,29 +76,34 @@ export async function fetchWithRetry(
   const attempts = retryOptions.attempts ?? 3;
   const backoff = retryOptions.backoffMs ?? [1000, 2000];
   const retryStatuses = new Set(retryOptions.retryStatuses ?? []);
+  const timeout = AbortSignal.timeout(retryOptions.timeoutMs ?? 30_000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   for (let i = 0; i < attempts; i++) {
+    signal.throwIfAborted();
     let res: Response;
     try {
-      res = await fetch(url, options);
+      res = await fetch(url, { ...options, signal });
     } catch (err) {
+      signal.throwIfAborted();
       const reason = err instanceof Error ? err.message : String(err);
       if (i < attempts - 1) {
         const delay = backoff[i] ?? backoff[backoff.length - 1];
         console.log(
           `[${retryOptions.logLabel}] Attempt ${i + 1}/${attempts} failed (${reason}); retrying in ${delay}ms...`,
         );
-        await sleep(delay);
+        await sleep(delay, undefined, { signal });
         continue;
       }
       throw err;
     }
     if (res.ok || (res.status < 500 && !retryStatuses.has(res.status))) return res;
     if (i < attempts - 1) {
+      await res.body?.cancel();
       const delay = backoff[i] ?? backoff[backoff.length - 1];
       console.log(
         `[${retryOptions.logLabel}] Attempt ${i + 1}/${attempts} failed (HTTP ${res.status}); retrying in ${delay}ms...`,
       );
-      await sleep(delay);
+      await sleep(delay, undefined, { signal });
     } else {
       return res;
     }

@@ -89,18 +89,18 @@
       "rifBucket": {
         "address": "0xa27024ed70035e46dba712609fc2afa1c97aa36a",
         "expectedProxyCodeHash": "0x146015dd2944fa6e6d87c95119399290c52ddea7e7a09f62ef54f04ee300463a",
-        "expectedImplementationAddress": "0x7d41de4fe6a9c57f13032b4d5489a8b7690d3fdc",
-        "expectedImplementationCodeHash": "0xe74d8993933d2fa17f50aeadcdd26df50dc9d609463cd0987df6bdbc8bbdc252",
+        "expectedImplementationAddress": "0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f",
+        "expectedImplementationCodeHash": "0xdaf1fdd739f2a2030fe5e92db559631b2c0dabf28e0d97abf6e48446f73da78e",
         "collateralToken": "0x2acc95758f8b5f583470ba265eb685a8f45fc9d5",
         "collateralDecimals": 18,
-        "expectedPegContainerProvider": "0x6a5b2c84e63b5c1330bf4cccff1ad6f23116cc14",
+        "expectedPegContainerProvider": "0xafb1b8c320acc776c1279bcdb24ab8f84ab727a4",
         "expectedPriceProvider": "0x6a343488338b944c6fcc89906646fac1e8e91ce5"
       },
       "docBucket": {
         "address": "0x697535055aa7afd2c280523c7b062b1f05284661",
         "expectedProxyCodeHash": "0x5dcd44a0907ccf27e9d5f19c9466dac15c4dba10b0f30776d531269a30cfcde3",
-        "expectedImplementationAddress": "0x2f5b77f2ed6d6947917e4d9746108e26275b3b66",
-        "expectedImplementationCodeHash": "0xdf1ccdda002e33133f8169380e689969709477a5bc10f297fab924ac94359a3c",
+        "expectedImplementationAddress": "0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f",
+        "expectedImplementationCodeHash": "0xdaf1fdd739f2a2030fe5e92db559631b2c0dabf28e0d97abf6e48446f73da78e",
         "collateralToken": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
         "collateralDecimals": 18,
         "expectedPegContainerProvider": "0x6a343488338b944c6fcc89906646fac1e8e91ce5",
@@ -108,7 +108,9 @@
       },
       "sourceUrls": [
         "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054",
-        "https://rootstock.blockscout.com/address/0xa27024ed70035e46dba712609fc2afa1c97aa36a"
+        "https://rootstock.blockscout.com/address/0xa27024ed70035e46dba712609fc2afa1c97aa36a",
+        "https://rootstock.blockscout.com/address/0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f?tab=contract",
+        "https://rootstock.blockscout.com/block/9214021"
       ]
     }
   },

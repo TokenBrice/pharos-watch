@@ -1,7 +1,6 @@
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
-import { logWorkerEventArgs } from "./structured-log";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 import { escapeHtml } from "./telegram/html";
 import { logTelegramEvent } from "./telegram/log";
@@ -126,40 +125,6 @@ export function buildTelegramMessage(
     recapCta ?? "",
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");
-}
-
-/** Post a raw text message to a Telegram channel. Throws on API error. */
-export async function postTelegramMessage(text: string, creds: TelegramCreds): Promise<void> {
-  const result = await sendToChat(creds.chatId, text, creds.botToken);
-  if (!result.ok) {
-    throw new Error(`Telegram API ${result.statusCode ?? "?"}: ${result.errorClass}`);
-  }
-}
-
-/**
- * Format and post a digest to the Telegram channel.
- * The caller is responsible for catching errors (this is non-fatal).
- */
-export async function postDigestToTelegram(
-  title: string,
-  extended: string,
-  date: string,
-  creds: TelegramCreds,
-  editionNumber?: number | null,
-  appendixHtml?: string | null,
-  recapRollout?: TelegramRecapRolloutPolicy | null,
-): Promise<void> {
-  const text = buildTelegramMessage(
-    title,
-    extended,
-    date,
-    editionNumber,
-    appendixHtml,
-    null,
-    recapRollout,
-  );
-  await postTelegramMessage(text, creds);
-  logWorkerEventArgs("lib", "info", `[telegram] Posted digest (${text.length} chars)`);
 }
 
 /**
@@ -643,18 +608,13 @@ export async function editMessage(
   opts?: EditMessageOpts,
 ): Promise<boolean> {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text,
-        parse_mode: "HTML",
-        ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
-        ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
-      }),
-      signal: AbortSignal.timeout(10_000),
+    const res = await postTelegramBotApi(botToken, "editMessageText", {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: "HTML",
+      ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+      ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
     });
     const responseText = await res.text();
     if (res.ok) return true;
@@ -679,19 +639,11 @@ export async function answerCallbackQuery(
   botToken: string,
   options: { text?: string; showAlert?: boolean } = {},
 ): Promise<void> {
-  const res = await fetch(
-    `https://api.telegram.org/bot${botToken}/answerCallbackQuery`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        callback_query_id: callbackQueryId,
-        text: options.text,
-        show_alert: options.showAlert ?? false,
-      }),
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
+  const res = await postTelegramBotApi(botToken, "answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    text: options.text,
+    show_alert: options.showAlert ?? false,
+  });
   await drainResponseBody(res);
   if (!res.ok) {
     logTelegramEvent({

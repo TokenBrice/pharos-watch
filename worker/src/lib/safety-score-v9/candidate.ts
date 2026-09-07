@@ -20,6 +20,7 @@ import {
   type V9AssetQuarantine,
 } from "./fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./extension";
+import type { BuildSafetyScoreV9BaselineExtensionOptions } from "./extension";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -137,6 +138,7 @@ export interface BuildSafetyScoreV9CandidateInput {
    * `BuildSafetyScoreV9BaselineExtensionOptions.allowRegistryMismatch`.
    */
   allowRegistryMismatch?: boolean;
+  registry?: Pick<BuildSafetyScoreV9BaselineExtensionOptions, "metaById" | "registryFingerprint" | "reviewedTransferFacts">;
 }
 
 export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
@@ -448,7 +450,9 @@ export function buildSafetyScoreV9Candidate(
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
   return buildSafetyScoreV9CandidateFromNormalizedInput({
     ...input,
-    fixedInput: normalizeSafetyScoreV9CompilerInput(input.fixedInput),
+    fixedInput: normalizeSafetyScoreV9CompilerInput(input.fixedInput, input.registry?.metaById
+      ? new Set([...input.registry.metaById].filter(([, meta]) => meta.flags?.navToken === true).map(([id]) => id))
+      : undefined),
   });
 }
 
@@ -505,6 +509,7 @@ function buildSafetyScoreV9CandidatePipeline(
       buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         fixedInput,
         {
+          ...input.registry,
           ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
           transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
         },

@@ -43,11 +43,10 @@ export function PortfolioClient() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  // URL sync: keep query string in sync with portfolio holdings. The router-
-  // aware initial `p` param seeds the portfolio so a shared/soft-navigated URL
-  // restores state without reading window.location inside the hook.
-  const { getParam, setParam } = useUrlFilters();
-  const portfolio = usePortfolio(getParam("p"));
+  // Wait for the browser URL snapshot before exposing or writing holdings;
+  // the portfolio bootstrap preserves incoming shares during hydration.
+  const { getParam, isReady, setParam } = useUrlFilters();
+  const portfolio = usePortfolio(getParam("p"), isReady);
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);

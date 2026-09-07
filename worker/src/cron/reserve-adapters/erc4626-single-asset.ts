@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
+import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
   DECIMALS_SELECTOR,
   PAUSED_SELECTOR,
@@ -40,16 +41,16 @@ import {
 import {
   observeExecutableRedemptionRoute,
 } from "./executable-redemption-observers";
+import { multicallResultByLabel } from "./onchain-identity";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 const EXECUTABLE_REDEMPTION_COIN_IDS = new Set(["eearn-ember", "sdusd-dtrinity"]);
 
 function successfulMulticallResult(
-  results: Awaited<ReturnType<typeof fetchOnchainMulticall3>>,
+  results: EvmMulticall3Result[] | null,
   label: string,
 ): string | null {
-  const result = results?.find((candidate) => candidate.label === label);
-  return result?.success && result.returnData !== "0x" ? result.returnData : null;
+  return results ? multicallResultByLabel(results, label) : null;
 }
 
 interface SingleAssetSliceConfig {

@@ -31,7 +31,6 @@ function validateFixture(
     {
       name: "fixture",
       filePath: "fixture.ts",
-      configs,
       entries: defineRecordEntries(configs),
       allowedRouteFamilies: ["offchain-issuer", "stablecoin-redeem", "psm-swap"],
       ...manifestOverrides,

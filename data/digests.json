@@ -1,5 +1,38 @@
 [
   {
+    "date": "2026-09-04",
+    "title": "USDC's Week Lands In One Day",
+    "text": "USDC added $775.15M in a session, more than its $562.28M seven-day net, which puts the prior six days at roughly $213M negative. Supply $74.46B, 7% under April's peak.",
+    "extended": "USDC added $775.15M in a single session, more than the $562.28M it added across the whole week. The arithmetic leaves the preceding six days at roughly $213M net negative, so the week's growth arrived in one sitting. Supply stands at $74.46B, 7% below the $79.75B high set on 11 April. Ethereum took $560.06M of net on-chain flow.\n\nPYUSD ran the same way, up $102.55M on the day against $245.77M for the week, while USDS shed $45.05M. Total stablecoin supply is $319.43B, fractionally above the $319.03B Digest-window high set six days ago. PSI rose to 92.6 from 92.3, a 73rd consecutive BEDROCK day, with severity at 0.03 and breadth at 6.59.\n\nUSDA holds 3098 bps below peg on $145.58M with no live price available. pmUSD widened to 5166 bps at $0.483 and MSUSD to 5238 bps at $0.476, while apxUSD narrowed to 283 bps at $0.971, still unresolved since the 2 June STRC drawdown. DEWS counts nine ALERT coins against six yesterday, with the WATCH band up to 113 from 90. A second USDC session at or above $970M would make this rotation; below that, it stays one large mint.",
+    "generatedAt": 1788509126,
+    "digestType": "daily",
+    "editionNumber": 192,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-03",
+    "title": "MSUSD Slips Below Fifty Cents",
+    "text": "MSUSD widened 927 bps in a day to 5,070 bps off peg, $0.493 on $23.7M of supply, Safety score 0. RLUSD added $271M in a week and lost eight points of DEX liquidity score while its pool TVL rose.",
+    "extended": "MSUSD trades at $0.493, 5,070 basis points below peg and 927 bps wider than the previous edition, within 491 bps of its 5,561 bps peak. Its Pharos Safety score (V9, 3 September) reads 0: no published reserve composition, no same-notional redemption route. pmUSD widened on the same tape, to 4,953 bps at $0.505. Two coins holding $71.1M between them are now trading near half of par.\n\n**Supply and depth.** RLUSD added $270.73M over seven days to $2.38B, a market cap at its Digest-window high and short of the record $360.84M week set ten days ago. Its DEX liquidity score fell from 56 to 48 while pool TVL rose 1.9% to $154.56M on mixed coverage; the TVL change alone accounts for roughly +0.1 points, so the composite decline came from the other components.\n\nPSI reads 91.7, a 72nd consecutive day in BEDROCK, with severity at 0.03 despite 19 active depegs; the index weights by market cap and the stressed names are small. Four coins sit at ALERT in DEWS, none above $31M. PYUSD ran $54.40M of net flow in 24 hours at maximum pressure intensity: if the Bank Run Gauge drops from -10.1 to -20, flow stress replaces peg stress as the lead signal.",
+    "generatedAt": 1788422769,
+    "digestType": "daily",
+    "editionNumber": 191,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
+    "date": "2026-09-02",
+    "title": "USTB Adds Its Entire Market Cap",
+    "text": "USTB's 7d supply change is +$637.75M, matching its entire current market cap and doubling its prior weekly record. The whole market added $477.16M over the same week.",
+    "extended": "USTB's supply series shows +$637.75M over seven days, a figure identical to its current market cap of $637.75M and roughly double its previous largest weekly change of $321.57M, recorded 10 days ago. The match between the weekly move and the full float points to a series that restarted rather than $638M of fresh issuance. Either reading leaves USTB 40% below its $1.06B peak from 20 May.\n\nThe whole stablecoin market added $477.16M over the same week, so one issuer's seven days exceeded the market's by $161M. The offsets are visible elsewhere: USDG has shed $178.20M over the week, $126.31M of that in the past day, and BUIDL is down $49.73M in a day. Total supply of $318.04B sits 0.31% below the Digest-window high set four days ago.\n\nAt the top of the tape, day flows run the other way. USDC added $214.70M in 24 hours against a flat week, USDe added $112.50M on $61.14M of net mints, and PYUSD lost $91.48M with mint/burn pressure at -100 versus its 30-day baseline. The Bank Run Gauge recovered to 23.8 from -26.1 yesterday.\n\n**Peg tape** Nineteen depegs remain active. apxUSD narrowed to 324 bps below par at $0.967, day 78 after the STRC drawdown that took it near $0.89. USDA widened from 460 to 504 bps, and DEWS holds seven names at ALERT after ALUSD was promoted from WATCH on cross-source divergence. PSI is unchanged at 91.6, its 71st day in BEDROCK. A second USDC session above $270M would mark rotation rather than a one-day rebalance.",
+    "generatedAt": 1788336362,
+    "digestType": "daily",
+    "editionNumber": 190,
+    "editorialStyleVersion": "1.2",
+    "editorialStyleHash": "baf6b0f7f9efd4cc"
+  },
+  {
     "date": "2026-09-01",
     "title": "DAI Adds Depth, Loses Confidence",
     "text": "One day brought $17.15M of DAI against $11.71M for the whole trailing week, and its DEX pools gained 11.4% TVL while the liquidity score slid 73 to 62. A $25M single-day print turns drift into rotation.",

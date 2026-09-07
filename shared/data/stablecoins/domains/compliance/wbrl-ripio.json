@@ -18,9 +18,9 @@
     ]
   },
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "wBRL is a 1:1 BRL-backed, redeemable local stablecoin marketed for payments, transfers, and DeFi settlement by Ripio.",
+      "summary": "wBRL is a 1:1 BRL-backed local stablecoin marketed for payments, transfers, and DeFi settlement by Ripio, but issuer materials conflict on whether holders have any redemption right.",
       "references": [
         {
           "label": "Ripio local stablecoins",
@@ -38,7 +38,6 @@
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Ripio",
     "issuerDomicile": "Brazil",
     "licensingRegulator": "Brazilian local regulatory framework; Ripio U.S. money-transmitter/MSB context",
     "foreignExceptionStatus": "unknown",
@@ -104,6 +103,6 @@
       "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-09-05"
   }
 }

@@ -3,6 +3,8 @@
   "name": "Fluid DigitalDollar",
   "symbol": "DUSD",
   "oneLiner": "DUSD is a legacy Fluid Finance USD token on Arbitrum whose current reserve composition, custody, and redemption operability are not publicly verified.",
+  "status": "frozen",
+  "frozenAt": "2024-04-22",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
@@ -27,14 +29,6 @@
   "detailProvider": "defillama",
   "links": [
     {
-      "label": "Website",
-      "url": "https://fluid.ch/"
-    },
-    {
-      "label": "DUSD",
-      "url": "https://fluid.ch/dusd/"
-    },
-    {
       "label": "Twitter",
       "url": "https://x.com/fluid_fi"
     }
@@ -49,7 +43,7 @@
       "decimals": 6
     }
   ],
-  "collateralQuality": "rwa",
+  "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "implementationLaunchDate": "2021-12-31",
@@ -69,6 +63,14 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2024-04-22",
+    "epitaph": "Bankruptcy closed Fluid's dollar rail",
+    "obituary": "Fluid Finance SA was dissolved by bankruptcy and renamed in liquidation effective 2024-04-22. Its DUSD and issuer websites no longer resolve, so Pharos freezes DUSD as an archived legacy asset rather than an active issuance venue.",
+    "sourceUrl": "https://www.moneyhouse.ch/en/company/fluid-finance-sa-en-liquidation-20212209121",
+    "sourceLabel": "Moneyhouse Fluid Finance liquidation record"
   },
   "notices": [
     {

@@ -52,7 +52,32 @@ export function fetchGtTokenPools(
   });
 }
 
-export function parseGtPool(pool: GtPool, chain: string): ParsedPool | null {
+// GT-shaped pool input shared by the GeckoTerminal API and CoinGecko's
+// GT-compat onchain format; gated fields are optional because neither
+// transport validates rows.
+type GtShapedPool = {
+  attributes: {
+    address?: string;
+    name: string;
+    base_token_price_usd?: string | null;
+    quote_token_price_usd?: string | null;
+    reserve_in_usd?: string | null;
+  };
+  relationships?: {
+    base_token?: { data?: { id?: string } };
+    quote_token?: { data?: { id?: string } };
+    dex?: { data?: { id?: string } };
+  };
+};
+
+// Shared projection for both GT-shaped providers; the 24h volume and the
+// pool_created_at normalization are provider-specific and passed in.
+export function parseGtShapedPool(
+  pool: GtShapedPool,
+  chain: string,
+  volume24hUsd: number,
+  createdAt: string | null,
+): ParsedPool | null {
   const attrs = pool.attributes;
   const dexId = pool.relationships?.dex?.data?.id;
   const poolAddress = canonicalExitRouteScopedId(chain, attrs.address ?? "");
@@ -66,14 +91,23 @@ export function parseGtPool(pool: GtPool, chain: string): ParsedPool | null {
     dexId,
     poolAddress,
     tvlUsd: parseFloat(attrs.reserve_in_usd ?? ""),
-    volume24hUsd: parseFloat(attrs.volume_usd?.h24 ?? "0"),
+    volume24hUsd,
     baseTokenAddress,
     quoteTokenAddress,
     baseTokenPriceUsd: parseFloat(attrs.base_token_price_usd ?? ""),
     quoteTokenPriceUsd: parseFloat(attrs.quote_token_price_usd ?? ""),
-    createdAt: attrs.pool_created_at,
+    createdAt,
     poolName: attrs.name,
   };
+}
+
+export function parseGtPool(pool: GtPool, chain: string): ParsedPool | null {
+  return parseGtShapedPool(
+    pool,
+    chain,
+    parseFloat(pool.attributes.volume_usd?.h24 ?? "0"),
+    pool.attributes.pool_created_at,
+  );
 }
 
 // Concentrated-liquidity DEX IDs (GeckoTerminal `relationships.dex.data.id`).

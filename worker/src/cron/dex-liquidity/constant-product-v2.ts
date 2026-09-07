@@ -271,11 +271,6 @@ function gateReference(reference: CandidateReference, reason: V2GateReason): voi
   reference.pool.extra = extra;
 }
 
-function clearCandidate(reference: CandidateReference): void {
-  if (!reference.pool.extra) return;
-  delete reference.pool.extra.evmV2ExecutionCandidate;
-}
-
 function decodeAddressResult(result: EvmMulticall3Result | undefined): `0x${string}` | null {
   if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) return null;
   const address = `0x${result.returnData.slice(-40).toLowerCase()}` as `0x${string}`;
@@ -337,19 +332,22 @@ function parseVerifiedPairState(
   if (!expectedTokens.has(token0) || !expectedTokens.has(token1)) {
     return { state: null, reason: "ambiguous-token-identity" };
   }
-
-  const decimalsByAddress = new Map<`0x${string}`, number>();
   const decimals0 = decodeDecimalsResult(results.get(`${prefix}-decimals0`));
   const decimals1 = decodeDecimalsResult(results.get(`${prefix}-decimals1`));
   if (decimals0 == null || decimals1 == null) {
     return { state: null, reason: "incomplete-exact-capture" };
   }
-  decimalsByAddress.set(probe.candidate.tokenAddresses[0], decimals0);
-  decimalsByAddress.set(probe.candidate.tokenAddresses[1], decimals1);
+  const decimalsByAddress = new Map<string, number>([
+    [probe.candidate.tokenAddresses[0]!.toLowerCase(), decimals0],
+    [probe.candidate.tokenAddresses[1]!.toLowerCase(), decimals1],
+  ]);
+  const token0Decimals = decimalsByAddress.get(token0.toLowerCase());
+  const token1Decimals = decimalsByAddress.get(token1.toLowerCase());
+  if (token0Decimals == null || token1Decimals == null) {
+    return { state: null, reason: "incomplete-exact-capture" };
+  }
   const reserves = decodeReservesResult(results.get(`${prefix}-reserves`));
-  const token0Decimals = decimalsByAddress.get(token0);
-  const token1Decimals = decimalsByAddress.get(token1);
-  if (!reserves || token0Decimals == null || token1Decimals == null) {
+  if (!reserves) {
     return { state: null, reason: "incomplete-exact-capture" };
   }
   const balance0 = Number(reserves[0]) / 10 ** token0Decimals;
@@ -673,7 +671,7 @@ export async function enrichEvmV2ExecutionModels(input: {
   }
   if (references.length === 0) return;
   if (!input.chainRpcs) {
-    for (const reference of references) clearCandidate(reference);
+    for (const reference of references) gateReference(reference, "incomplete-exact-capture");
     return;
   }
 

@@ -19,9 +19,9 @@ interface CompareCoinForShare {
   name: string;
   data: StablecoinData;
   meta: ComparisonMeta;
-  pegScore: number | null;
-  liquidityScore: number | null;
-  safetyGrade: string | null;
+  pegDetails?: { pegScore: number | null } | null;
+  liquidity?: { liquidityScore: number | null } | null;
+  safetyCard?: { grade: string | null } | null;
 }
 
 interface CompareRadarCard {
@@ -95,13 +95,13 @@ export function useCompareShareActions({
         name: coin.name,
         price: formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, pegRef),
         marketCap: formatCurrency(cap),
-        pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}` : "—",
+        pegScore: coin.pegDetails?.pegScore != null ? `${coin.pegDetails.pegScore.toFixed(1)}` : "—",
         weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "—",
-        liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}` : "—",
+        liquidityScore: coin.liquidity?.liquidityScore != null ? `${coin.liquidity.liquidityScore.toFixed(1)}` : "—",
         governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
         backing: BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing,
         pegCurrency: coin.meta.flags.pegCurrency,
-        safetyRating: coin.safetyGrade,
+        safetyRating: coin.safetyCard?.grade ?? null,
         logoImg: logoImages[index],
       };
     });

@@ -8,7 +8,7 @@
     "upgradeability": {
       "model": "custom",
       "implementationAddresses": [
-        "0x341079b42e21bb7996a515d7dd1e6b11f845e71e03aa647fbb37f5188b864d42"
+        "0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc"
       ],
       "adminAddresses": [
         "0xe3dbc438a73460dba6442cbefeab033462fb8a97302a6cc28b8ad7ef08b2440d"

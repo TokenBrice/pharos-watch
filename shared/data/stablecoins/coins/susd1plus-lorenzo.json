@@ -46,7 +46,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "cex",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Lorenzo USD1+ staking",

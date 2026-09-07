@@ -55,12 +55,12 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions"
       }
     },
     "params": {
-      "priceUrl": "https://api.nest.credit/v1/vaults/nest-alpha-vault/price",
-      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
+      "priceUrl": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price",
+      "lastPriceUpdateUrl": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update"
     }
   },
   "yieldConfig": {

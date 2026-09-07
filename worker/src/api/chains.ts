@@ -1,6 +1,7 @@
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -150,7 +151,7 @@ function buildChainsFreshnessMeta(
   };
 }
 
-export const handleChains = async (db: D1Database): Promise<Response> => {
+export const handleChains = async (db: D1Database, url?: URL): Promise<Response> => {
   const stablecoinsResult = await loadStablecoinsCache(db, {
     mode: "strict",
     contract: "published",
@@ -161,6 +162,16 @@ export const handleChains = async (db: D1Database): Promise<Response> => {
 
   const { peggedAssets, fxFallbackRates } = stablecoinsResult.payload;
   const activePeggedAssets = peggedAssets.filter(isActiveChainAggregateAsset);
+
+  // Optional chain scope: publish the full per-chain coin rows the chain-detail
+  // route renders. Unknown ids are rejected rather than silently dropping the
+  // detail payload, so a stale client cannot mistake a filtered leaderboard for
+  // a chain with no supply.
+  const rawDetailChainId = url?.searchParams.get("chain") ?? null;
+  const detailChainId = rawDetailChainId === "" ? null : rawDetailChainId;
+  if (detailChainId != null && !(detailChainId in CHAIN_META)) {
+    return errorResponse(400, "Unknown chain");
+  }
 
   // Derive peg rates for non-USD peg stability calculation
   const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
@@ -180,6 +191,7 @@ export const handleChains = async (db: D1Database): Promise<Response> => {
     peggedAssets: activePeggedAssets,
     safetyScores,
     pegRates,
+    ...(detailChainId != null ? { detailChainId } : {}),
   });
 
   const freshness = buildChainsFreshnessMeta(stablecoinsResult.updatedAt, reportCards, safetyScoreIdentity);

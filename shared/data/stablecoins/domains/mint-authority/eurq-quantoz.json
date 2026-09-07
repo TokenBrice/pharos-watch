@@ -98,9 +98,6 @@
       },
       {
         "deploymentRefs": [
-          "algorand:2768422954",
-          "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
-          "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
           "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
         ],
         "label": "EURQ XRPL issuer account",
@@ -119,10 +116,7 @@
       },
       {
         "deploymentRefs": [
-          "algorand:2768422954",
-          "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
-          "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
-          "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+          "algorand:2768422954"
         ],
         "label": "EURQ Algorand ASA manager",
         "role": "direct-minter",
@@ -172,10 +166,8 @@
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
-        "algorand:2768422954",
         "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
-        "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
-        "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+        "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3"
       ],
       "adminAddresses": [
         "0xa6724f792002D5677a7Bc370986E1B580b8773E7",

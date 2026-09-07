@@ -4,7 +4,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import { markdownValue } from "./markdown-report";
+import { markdownValue, renderMarkdownRows } from "./markdown-report";
 import { isDirectRun } from "./smoke-runtime.mjs";
 
 export { isRecord, markdownValue, numberValue, stringValue };
@@ -280,12 +280,7 @@ export function renderMarkdownTable(
   rows: readonly (readonly unknown[])[],
   { limit }: { limit?: number } = {},
 ): string[] {
-  const selected = limit == null ? rows : rows.slice(0, limit);
-  return [
-    headings.map(markdownValue).join(" | "),
-    headings.map(() => "---").join(" | "),
-    ...selected.map((row) => row.map(markdownValue).join(" | ")),
-  ];
+  return renderMarkdownRows({ headings, rows, cells: (row) => row, limit });
 }
 
 export function renderMarkdownAuditDocument(title: string, sections: readonly {

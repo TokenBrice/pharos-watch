@@ -4,7 +4,7 @@ Applies to `src/app/` route entrypoints, layouts, metadata, and route-local UI.
 
 ## Read First
 
-- Route-spec examples: [homepage](../../docs/homepage.md), [screener](../../docs/screener-page.md), [stablecoin detail](../../docs/stablecoin-detail-page.md)
+- Read the owning page spec returned by the router; use [the docs index](../../docs/README.md) only to locate an unmatched route.
 - [Frontend runtime and SEO](../../docs/architecture.md#frontend-runtime-and-seo-surface)
 
 ## Invariants

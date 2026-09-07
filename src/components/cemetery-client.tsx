@@ -4,8 +4,8 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { type CemeterySortMode, sortCemeteryCoins } from "@/lib/cemetery";
-import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS: { value: CemeterySortMode; label: string }[] = [
   { value: "newest", label: "Newest first" },
@@ -66,22 +66,12 @@ export function CemeteryClient({ entries }: { entries: CemeteryEntry[] }) {
                 : "Oldest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."}
             </p>
           </div>
-          <div className="inline-flex w-full flex-wrap gap-2 sm:w-auto">
-            {SORT_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={cn(
-                  "pharos-focus-ring pharos-control-pill",
-                  sortMode === option.value && "pharos-control-pill-active",
-                )}
-                onClick={() => setSortMode(option.value)}
-                aria-pressed={sortMode === option.value}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          <ControlPillToggle
+            className="inline-flex w-full flex-wrap gap-2 sm:w-auto"
+            options={SORT_OPTIONS}
+            value={sortMode}
+            onChange={setSortMode}
+          />
         </div>
         <CemeteryTombstones coins={orderedCoins} onSelect={handleTombstoneSelect} />
       </section>

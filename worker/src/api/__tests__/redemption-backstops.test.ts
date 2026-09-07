@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1";
 import { handleRedemptionBackstops } from "../redemption-backstops";
+import type * as RedemptionBackstopsStoreModule from "../../lib/redemption-backstops-store";
 
 function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -393,5 +394,58 @@ describe("handleRedemptionBackstops", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.success ? parsed.data.updatedAt : null).toBe(1_699_999_990);
     assertAllD1MatchesUsed(db);
+  });
+
+  it("returns 503 when the newest completed run populated no rows (zero updatedAt)", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-empty",
+            completed_at: 1_700_000_010,
+            expected_count: 0,
+            written_count: 0,
+            min_updated_at: null,
+            max_updated_at: 0,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-empty"],
+        rows: [],
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: "Data not yet available" });
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("rethrows unexpected snapshot building errors instead of masking them as 503", async () => {
+    // The real store wraps every load failure in its unavailable error, so this
+    // boundary needs a scoped module mock; the dynamic import re-resolves the
+    // handler against the mocked store for this test only.
+    vi.doMock("../../lib/redemption-backstops-store", async (importOriginal) => {
+      const actual = await importOriginal<typeof RedemptionBackstopsStoreModule>();
+      return {
+        ...actual,
+        buildRedemptionBackstopsSnapshot: vi.fn(async () => {
+          throw new Error("boom");
+        }),
+      };
+    });
+    try {
+      vi.resetModules();
+      const { handleRedemptionBackstops: handlerWithFailingStore } = await import("../redemption-backstops");
+      await expect(handlerWithFailingStore({} as D1Database)).rejects.toThrow("boom");
+    } finally {
+      vi.doUnmock("../../lib/redemption-backstops-store");
+      vi.resetModules();
+    }
   });
 });

@@ -1,6 +1,5 @@
 import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
-import { GENIUS_COMPLIANCE_PROFILE_BY_ID } from "@shared/lib/stablecoins/genius-compliance-registry";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
@@ -28,12 +27,19 @@ import type { GeniusComplianceProfile } from "@shared/types/stablecoin-client-me
 interface ComplianceProjectionEntry {
   id: string;
   mica?: MicaProfile;
+  genius?: GeniusComplianceProfile;
 }
 
 const MICA_COMPLIANCE_PROFILE_BY_ID = new Map(
   (complianceAsset as ComplianceProjectionEntry[])
     .filter((entry) => entry.mica != null)
     .map((entry) => [entry.id, entry.mica!] as const),
+);
+
+const GENIUS_COMPLIANCE_PROFILE_BY_ID = new Map(
+  (complianceAsset as ComplianceProjectionEntry[])
+    .filter((entry) => entry.genius != null)
+    .map((entry) => [entry.id, entry.genius!] as const),
 );
 
 export const COMPLIANCE_REGIME_VALUES = ["all", "mica", "genius"] as const;

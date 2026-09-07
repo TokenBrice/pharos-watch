@@ -115,10 +115,10 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
-1. Check out full history, install the workspace without a browser, and restore the dedicated `.next/cache` compiler cache. Full history remains required for per-route and per-doc generated timestamps.
+1. Check out full history and install the workspace without a browser. Production Pages builds do not restore `.next/cache`: stale Webpack/PostCSS entries can pair new Tailwind class names in HTML with an older generated stylesheet. Full history remains required for per-route and per-doc generated timestamps.
 2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests, confirmed depeg events, and public dataset mirrors concurrently through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning. The orchestration command also writes a machine-readable result JSON under its refresh directory.
-3. Materialize `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it, and build with the production feature-flag environment and restored Next compiler cache. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
-4. Run feature-flag inlining, build-size, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
+3. Materialize `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it, and build with the production feature-flag environment and clean compiler state. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
+4. Run feature-flag inlining, build-size/CSS-integrity, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The CSS-integrity gate reads the emitted `out/_next/static/css` bundles and requires the desktop search-width utility, preventing a stale Tailwind stylesheet from shipping beside newer header HTML. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
 6. Record the commit, run URL, artifact size/file count, refresh mode, immutable deployment URL, marker result, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
 
@@ -136,6 +136,27 @@ Workflow success proves activation identity, not every runtime behavior. The rea
 | D1 migration plus runtime use   | Migration and Worker activation steps succeed          | First affected read/write or scheduled path succeeds; rollback notes acknowledge that Worker rollback does not revert D1 |
 
 The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. The job records no cron probe at all, because a short deploy job cannot safely wait for and correlate a future scheduled run; observing the first matching scheduled execution stays a human step. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
+
+### Monitoring Without Model Polling
+
+Before observing, record the target SHA/run ID, affected jobs, Worker activation time, expected result/publication contract, and observation deadline. Use one deterministic watcher per target, with progress redirected to the campaign's ignored `agents/` directory. Do independent work while it runs; use completion notifications where supported, otherwise the fewest completion checks the harness permits. Do not repeatedly fetch unchanged state or assign a sub-agent solely to wait.
+
+For GitHub, resolve the exact run for the target SHA once. Native watch mode handles refreshes without model turns. For example, after setting `release_run_id` and `watch_log` to the verified run ID and campaign log path:
+
+```bash
+python3 -c 'import subprocess, sys; subprocess.run(sys.argv[1:], timeout=1800, check=True)' \
+  gh run watch "$release_run_id" --repo TokenBrice/pharos-watch --exit-status --compact --interval 30 \
+  > "$watch_log" 2>&1
+```
+
+The wrapper bounds the watch to 30 minutes; choose another explicit deadline when the run warrants it. For PR checks, use the same wrapper with `gh pr checks <pr-number> --repo TokenBrice/pharos-watch --required --watch --fail-fast --interval 30`. On completion, inspect the exit status and a bounded log tail. Timeout leaves checks/deployment pending; failure routes to CI triage. Do not silently restart the watcher.
+
+For Worker acceptance, reuse the existing commands:
+
+- `npm run ops:watch-worker-cron -- --json` collects a **single snapshot**, not a wait-until-healthy loop. Use it when the relevant execution should already have completed.
+- `npm run ops:night-watch-worker -- --start <iso> --end <iso> --interval-minutes 15 --include-d1 --output <report.md> --evidence-json <evidence.json> --checkpoint-jsonl <samples.jsonl>` collects a fixed observation window. Set campaign-specific scratch paths and a window covering the affected schedule plus its expected runtime. Add admin probes only when needed; supply credentials through the documented environment, never command arguments. Use a process deadline with collection grace beyond the observation end, because the window alone does not bound a stuck external command.
+
+These collectors write evidence; exit zero does not certify health, and night-watch does not stop early on a healthy sample. Read the report and correlate a new affected execution with activation and its expected status, duration, memory, and publication evidence. Pre-deploy successes do not satisfy acceptance. Missing evidence at the deadline remains pending with the next scheduled opportunity recorded. A longer unattended watch belongs in an external scheduler/event-triggered workflow, not an indefinitely continuing agent goal.
 
 ## GitHub Deploy Inputs
 

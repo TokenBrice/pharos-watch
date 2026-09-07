@@ -40,7 +40,7 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market, subject to a per-asset supply cap; the launch supply cap was 2,000,000 HOLLAR.",
-        "evidence": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market pallet with a per-asset supply cap (launch cap 2,000,000 HOLLAR); Hydration governance can raise the cap, so the bound is raiseable. The pallet-backed EVM shim at 0x531a654d1696ed52e7275a8cede955e82620f99a has no proxy admin or owner().",
+        "evidence": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market pallet with a per-asset supply cap (launch cap 2,000,000 HOLLAR); Hydration governance can raise the cap, so the bound is raiseable. The Hydration EVM contract at 0x531a654d1696ed52e7275a8cede955e82620f99a carries full deployed GhoToken bytecode with role-based mint, burn, and grantRole selectors, not a two-byte pallet shim; DEFAULT_ADMIN_ROLE is held by pallet-derived address 0xaa7e0000000000000000000000000000000aa7e, so the runtime/OpenGov authority conclusion stands.",
         "failureDomainKeys": [
           "module:hydration:aave-money-market"
         ]
@@ -106,7 +106,7 @@
           "url": "https://docs.hydration.net/quick_start/hollar/"
         }
       ],
-      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs. On-chain read via Hydration EVM RPC (https://rpc.nice.hydration.cloud, block 0x14fb62 ≈ 1,375,074) showed HOLLAR at 0x531a654d1696ed52e7275a8cede955e82620f99a is a two-byte pallet-backed EVM shim with no proxy admin slot and no owner(). Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin; the runtime composes OpenGov Referenda and a root track. The current Hydration RPC at block 13133392 reported specVersion 428, confirming the runtime-governance path is the relevant mint-logic authority rather than an EVM admin key."
+      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs. Live read via Hydration EVM RPC (https://rpc.hydradx.cloud, block 14207306) showed HOLLAR at 0x531a654d1696ed52e7275a8cede955e82620f99a carries full deployed GhoToken bytecode with role-based mint, burn, and grantRole selectors; DEFAULT_ADMIN_ROLE is held by pallet-derived address 0xaa7e0000000000000000000000000000000aa7e. Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin; the runtime composes OpenGov Referenda and a root track, confirming the runtime/OpenGov governance path rather than an EVM admin key."
     }
   }
 }

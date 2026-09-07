@@ -323,6 +323,7 @@ export function buildDdrrCoverageRow(input: DdrrV2CoverageInput): DdrrV2Coverage
     lineage: input.lineage,
     kind: "coverage",
     predictionState: input.predictionState,
+    actualOutcome: input.actualOutcome,
     actualEndedAt: input.actualEndedAt ?? null,
     terminalEvidenceSourceDate: input.terminalEvidenceSourceDate ?? null,
     coverageCause: input.coverageCause,

@@ -63,7 +63,7 @@
           "off-chain-signer",
           "single-eoa"
         ],
-        "note": "EOA that deployed the EVM contracts and holds owner/mint rights; the off-chain bridge control surface."
+        "note": "EOA that deployed the EVM contracts (creator of 0x8685…a856 on Ethereum, Base, Arbitrum); owner/mint rights were transferred to and are held by bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (owner() on all three EVM chains)."
       },
       {
         "source": "issuer",

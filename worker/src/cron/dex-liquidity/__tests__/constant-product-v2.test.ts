@@ -90,9 +90,25 @@ function makeAerodromeCandidate() {
 async function runV2PriceLegScenario({
   chainAddressToId,
   stablecoinPriceById,
+  candidateTokenAddresses = [KAG, XAUT],
+  candidateTokenSymbols = ["KAG", "XAUt"],
+  actualToken0 = KAG,
+  actualToken1 = XAUT,
+  candidateDecimals0 = 18n,
+  candidateDecimals1 = 6n,
+  actualReserve0 = 14n * 10n ** 18n,
+  actualReserve1 = 1n * 10n ** 6n,
 }: {
   chainAddressToId: Map<string, string>;
   stablecoinPriceById: Map<string, number>;
+  candidateTokenAddresses?: readonly string[];
+  candidateTokenSymbols?: readonly string[];
+  actualToken0?: string;
+  actualToken1?: string;
+  candidateDecimals0?: bigint;
+  candidateDecimals1?: bigint;
+  actualReserve0?: bigint;
+  actualReserve1?: bigint;
 }) {
   const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "uniswap-v2")!;
   const candidate = buildEvmV2ExecutionCandidate({
@@ -100,8 +116,8 @@ async function runV2PriceLegScenario({
     protocol: "uniswap-v2",
     poolType: "generic",
     poolAddress: KAG_XAUT_PAIR,
-    tokenAddresses: [KAG, XAUT],
-    tokenSymbols: ["KAG", "XAUt"],
+    tokenAddresses: candidateTokenAddresses,
+    tokenSymbols: candidateTokenSymbols,
   })!;
   const metric = initMetrics("kag-kinesis", "KAG");
   metric.topPools.push({
@@ -109,7 +125,7 @@ async function runV2PriceLegScenario({
     project: "uniswap-v2",
     chain: "Ethereum",
     tvlUsd: 1_519,
-    symbol: "KAG / XAUt",
+    symbol: candidateTokenSymbols.join(" / "),
     volumeUsd1d: 200,
     poolType: "cg-amm",
     source: "cg_onchain",
@@ -142,14 +158,16 @@ async function runV2PriceLegScenario({
           returnData: call.label.endsWith("-pair")
             ? addressWord(KAG_XAUT_PAIR)
             : call.label.endsWith("-token0")
-              ? addressWord(KAG)
+              ? addressWord(actualToken0)
               : call.label.endsWith("-token1")
-                ? addressWord(XAUT)
+                ? addressWord(actualToken1)
                 : call.label.endsWith("-reserves")
-                  ? reservesWord(14n * 10n ** 18n, 1n * 10n ** 6n)
+                  ? reservesWord(actualReserve0, actualReserve1)
                   : call.label.endsWith("-decimals0")
-                    ? word(18n)
-                    : word(6n),
+                    ? word(candidateDecimals0)
+                    : call.label.endsWith("-decimals1")
+                      ? word(candidateDecimals1)
+                      : word(6n),
         })),
       ) as never,
       hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -797,6 +815,36 @@ describe("constant-product V2 execution", () => {
         { address: XAUT, referencePriceSource: "tracked-market", referencePriceUsd: 4_300 },
       ],
     });
+  });
+
+  it("scales reversed V2 candidates by their actual pair-token identities", async () => {
+    const metric = await runV2PriceLegScenario({
+      chainAddressToId: new Map([
+        [canonicalExitRouteAssetKey("ethereum", KAG), "kag-kinesis"],
+        [canonicalExitRouteAssetKey("ethereum", XAUT), "xaut-tether"],
+      ]),
+      stablecoinPriceById: new Map([["xaut-tether", 4_300]]),
+      candidateTokenAddresses: [XAUT, KAG],
+      candidateTokenSymbols: ["XAUt", "KAG"],
+      actualToken0: KAG,
+      actualToken1: XAUT,
+      candidateDecimals0: 6n,
+      candidateDecimals1: 18n,
+      actualReserve0: 14n * 10n ** 18n,
+      actualReserve1: 1n * 10n ** 6n,
+    });
+
+    const model = metric.topPools[0]!.extra?.ammExecutionModel;
+    expect(model).toMatchObject({
+      source: "uniswap-v2",
+      trackedTokenIndex: 0,
+      tokens: [
+        { address: KAG, decimals: 18, balance: 14 },
+        { address: XAUT, decimals: 6, balance: 1 },
+      ],
+    });
+    const curve = buildAmmCapacityCurve(model!, 1);
+    expect(curve.map((point) => point.executableUsd)).toEqual([74.82, 74.82, 74.82, 74.82]);
   });
 
   it("still gates a captured V2 pair when no token has a trusted quote leg", async () => {

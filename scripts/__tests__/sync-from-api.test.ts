@@ -83,6 +83,33 @@ describe("fetchWithRetry", () => {
     });
   });
 
+  it("cancels a failed streaming body before retrying", async () => {
+    let cancelled = false;
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => {
+      if (calls++ === 0) {
+        return new Response(new ReadableStream({ cancel() { cancelled = true; } }), { status: 503 });
+      }
+      expect(cancelled).toBe(true);
+      return new Response("ok");
+    });
+    const response = await fetchWithRetry("https://api.pharos.watch/api/health", {}, {
+      logLabel: "test", backoffMs: [0],
+    });
+    expect(await response.text()).toBe("ok");
+  });
+
+  it("aborts a hung fetch at the overall deadline without retrying", async () => {
+    const fetchMock = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      options.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchWithRetry("https://api.pharos.watch/api/health", {}, {
+      logLabel: "test", timeoutMs: 10, backoffMs: [0],
+    })).rejects.toMatchObject({ name: "TimeoutError" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("retries caller-declared transient statuses", async () => {
     const fetchMock = mockFetchStrict([{
       match: "https://api.pharos.watch/api/health",

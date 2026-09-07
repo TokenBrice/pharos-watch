@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Multipli issues rwaUSDi natively on Ethereum, Base, Monad, and Arbitrum; the four reviewed routes remain issuer-native. The latest implementation is CCIP-admin/IBurnMintERC20-compatible, but official Chainlink Token Manager/CCIP Directory lookups for the exact token addresses returned no configured-network row in this review, and no TokenPool, remote token, or active lane was verified. The unresolved CCIP binding is bridge-evidence follow-up in Bridge Risk; it does not make the four authored deployments representations. Ethereum in the peripheral route rows is an identity/accounting convention, not evidence that Base, Monad, or Arbitrum are bridged.",
+    "summary": "Multipli issues rwaUSDi natively on Ethereum, Base, Monad, Arbitrum, X Layer, Robinhood Chain, and Pharos; the seven reviewed routes remain issuer-native. The latest implementation is CCIP-admin/IBurnMintERC20-compatible, but the three added implementations expose no remote-token or route-peer configuration, and Robinhood Chain and Pharos TokenAdminRegistry getPool(token) reads were zero. The unresolved CCIP binding is bridge-evidence follow-up in Bridge Risk; it does not make the seven authored deployments representations. Ethereum in the peripheral route rows is an identity/accounting convention, not evidence that the other deployments are bridged.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "manual-review",
@@ -146,6 +146,99 @@
           {
             "label": "Multipli",
             "url": "https://multipli.fi/"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x3b274e3fe48e34f032920f766f750bdeafd80068",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3b274e3fe48e34f032920f766f750bdeafd80068",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At X Layer block 69778511 on 2026-09-04, the proxy implementation is 0x43a045f016848117c10a8d89cf99432d8112432c; owner() and getCCIPAdmin() return Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25. authority() returns RolesAuthority 0x09cbef791ed2e3d0f99a9e0ddbfd64837d54c7c7, owned by the same Safe, and canCall returns true for the shared minter EOA and mint(address,uint256). No route-peer configuration is exposed in the reviewed implementation, so this is native issuance rather than a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 69778511,
+        "sources": [
+          {
+            "label": "X Layer rwaUSDi token",
+            "url": "https://www.oklink.com/x-layer/evm/token/0x3b274e3fe48e34f032920f766f750bdeafd80068"
+          },
+          {
+            "label": "X Layer JSON-RPC",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Multipli",
+            "url": "https://multipli.fi/"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0x9000123cb195804f35cee9553e2596978227910f",
+        "destinationChain": "robinhood",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9000123cb195804f35cee9553e2596978227910f",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Robinhood Chain block 54488921 on 2026-09-04, the proxy implementation is 0x9eb058189d7352e3e0986e3e21f6c998fbc41a22; owner() and getCCIPAdmin() return Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25. authority() returns RolesAuthority 0x3b274e3fe48e34f032920f766f750bdeafd80068, owned by the same Safe, and canCall returns true for the shared minter EOA and mint(address,uint256). The Chainlink TokenAdminRegistry getPool(token) read is zero and no route-peer configuration is exposed in the reviewed implementation, so this is native issuance rather than a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 54488921,
+        "sources": [
+          {
+            "label": "Robinhood Chain rwaUSDi token",
+            "url": "https://robinhoodchain.blockscout.com/token/0x9000123cb195804f35cee9553e2596978227910F"
+          },
+          {
+            "label": "Robinhood Chain JSON-RPC",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Robinhood Chain CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/robinhood-mainnet"
+          }
+        ]
+      },
+      {
+        "id": "pharos:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "destinationChain": "pharos",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Pharos block 16732484 on 2026-09-04, the proxy implementation is 0xec9c824543dd3d635c1d71029f385a6eba511dc0; owner() and getCCIPAdmin() return Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25. authority() returns RolesAuthority 0x16b9ed3d5293d300c4c4d4b297bd766fd8fffd52, owned by the same Safe, and canCall returns true for the shared minter EOA and mint(address,uint256). The Chainlink TokenAdminRegistry getPool(token) read is zero and no route-peer configuration is exposed in the reviewed implementation, so this is native issuance rather than a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 16732484,
+        "sources": [
+          {
+            "label": "Pharos rwaUSDi token",
+            "url": "https://www.pharosscan.xyz/token/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
+          },
+          {
+            "label": "Pharos JSON-RPC",
+            "url": "https://rpc.pharos.xyz"
+          },
+          {
+            "label": "Pharos Chainlink CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/pharos-mainnet"
           }
         ]
       }

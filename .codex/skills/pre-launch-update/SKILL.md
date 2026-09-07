@@ -20,7 +20,7 @@ Optional discovery of untracked candidates is research-only: search recent issue
 
 ## Apply Approved Changes
 
-Approval is per coin. Preserve canonical identity, flags, and historical milestones. Add milestones oldest-first with a primary `sourceUrl`; add only notable featured content.
+Approval must cover each coin and action; an earlier explicit cohort instruction covering those coins remains valid. Ask again only for an uncovered addition, promotion, or other scope change. Preserve canonical identity, flags, and historical milestones. Add milestones oldest-first with a primary `sourceUrl`; add only notable featured content.
 
 Before every `expectedLaunchDate` change, append the old value to `dateHistory` as `{ "date": "<old>", "setOn": "<today>" }`; never reconstruct guessed history.
 

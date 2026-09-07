@@ -322,18 +322,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   ...expandIds(["usdq-quantoz", "eurq-quantoz"], quantozBase),
   "usd1-world-liberty-financial": {
     ...issuerBase,
+    settlementModel: "days",
     ...reviewedDirectRedemptionSupplyFull,
     v9RouteReviewTerms: {
-      settlementModel: "days",
-      settlementDelaySec: 172_800,
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "cost"],
+      missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "BitGo's dated terms establish processing within two business days when required information is complete, but executable capacity remains discretionary and the client-platform fee is not publicly quantified.",
-      reviewedAt: "2026-03-25",
+        "BitGo's terms last updated 2026-03-25 describe two-business-day processing only as a target estimate, expressly not a service-level commitment, and allow delay for bank, payment-rail, network, outage, liquidity, or legal reasons; no binding end-to-end settlement SLA, executable capacity, or public client-platform fee bound is available.",
+      reviewedAt: "2026-09-04",
       docs: [
         sourceRef(
-          "BitGo coin minting and redemption services terms",
+          "BitGo coin minting and redemption services terms (last updated 2026-03-25)",
           "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
           ["route", "capacity", "fees", "settlement"],
         ),

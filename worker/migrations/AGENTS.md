@@ -4,8 +4,8 @@ Applies to worker/migrations and its D1 schema lineage.
 
 ## Read First
 
-- `worker/migrations/MANIFEST.md`
-- `docs/process/d1-baseline-squash-plan.md`
+- `worker/migrations/MANIFEST.md#baseline-0000`, `#individual-migrations-current-active-files`, and `#rollout-safety`. Before selecting a sequence, also inspect the manifest’s squashed and retired lineage sections; never reuse historical numbers.
+- Baseline/squash work: `docs/process/d1-baseline-squash-plan.md#scheduling-gate`, then its preconditions/procedure. Cleanup or rollback work also requires the corresponding manifest queue/rollback section.
 - `docs/worker-infrastructure.md#completed-d1-schema-cleanup`
 
 ## Invariants

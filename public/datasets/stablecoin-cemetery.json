@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:aee76b7a686fbe814851b8335c7af6f41094795a09c374b014035622819e720a",
+  "sourceChecksum": "sha256:c571d90f78c2ab3cf9f69129e40295616251380b2cd6cc2b7ff975cef43619c3",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,12 +16,12 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:d07ecd46c870e3e7b8ab486bab33c6629117493673d837002d12b74cf5833985",
+      "checksum": "sha256:53a3ebdefceae9d4b2cc66838a46be024d3f6ea13791493d6629b6bb24ad33e6",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     }
   ],
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 109,
+  "rowCount": 110,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -1985,6 +1985,32 @@
         }
       ],
       "pharosUrl": "https://pharos.watch/cemetery/#bean-bean-2024-05"
+    },
+    {
+      "id": "dusd-fluid",
+      "name": "Fluid DigitalDollar",
+      "symbol": "DUSD",
+      "llamaId": "70",
+      "logoUrl": "https://pharos.watch/logos/dusd-fluid.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2024-04-22",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "Bankruptcy closed Fluid's dollar rail",
+      "obituary": "Fluid Finance SA was dissolved by bankruptcy and renamed in liquidation effective 2024-04-22. Its DUSD and issuer websites no longer resolve, so Pharos freezes DUSD as an archived legacy asset rather than an active issuance venue.",
+      "sourceUrl": "https://www.moneyhouse.ch/en/company/fluid-finance-sa-en-liquidation-20212209121",
+      "sourceLabel": "Moneyhouse Fluid Finance liquidation record",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "arbitrum",
+          "address": "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/dusd-fluid/"
     },
     {
       "id": "xai-silo-finance",

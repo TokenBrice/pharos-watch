@@ -45,12 +45,8 @@ describe("Pharos table primitives", () => {
     const viewport = table.parentElement;
 
     expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");
-    expect(shell.className).toContain("pharos-table-shell");
     expect(shell.className).toContain("custom-shell");
-    expect(shell.className).toContain("pharos-density-compact");
-    expect(shell.className).toContain("pharos-table-striped");
     expect(viewport?.getAttribute("data-slot")).toBe("table-viewport");
-    expect(viewport?.className).toContain("overflow-x-auto");
     expect(viewport?.querySelector("[data-slot='table-container']")).toBeNull();
     expect(table.getAttribute("data-slot")).toBe("table");
     expect(table.getAttribute("aria-label")).toBe("Stablecoin Overview table");

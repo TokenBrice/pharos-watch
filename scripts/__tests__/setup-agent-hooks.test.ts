@@ -25,8 +25,8 @@ describe("agent hook setup", () => {
   it("uses the observed shell/write tool matcher and keeps SessionStart unchanged", () => {
     const config = buildCodexHookConfig();
 
-    expect(config.hooks.PermissionRequest[0].matcher).toBe("^(apply_patch|exec_command)$");
-    expect(config.hooks.PreToolUse[0].matcher).toBe("^(apply_patch|exec_command)$");
+    expect(config.hooks.PermissionRequest[0].matcher).toBe("^(Bash|apply_patch|exec_command)$");
+    expect(config.hooks.PreToolUse[0].matcher).toBe("^(Bash|apply_patch|exec_command)$");
     expect(config.hooks.PermissionRequest[0].hooks[0].timeout).toBe(5);
     expect(config.hooks.PreToolUse[0].hooks[0].timeout).toBe(5);
     expect(config.hooks.SessionStart[0].matcher).toBe("startup|resume|clear|compact");
@@ -80,7 +80,7 @@ describe("agent hook setup", () => {
     expect(output).toContain("pre_tool_use[0]: installed, enabled=false");
     expect(output).toContain("permission_request[0]: installed, unknown (no state recorded)");
     expect(output).toContain("session_start[0]: installed, unknown (no state recorded)");
-    expect(output).toContain("Enable in Codex: /hooks or set enabled = true");
+    expect(output).toContain("Review disabled hooks in Codex /hooks; installation alone does not prove invocation.");
   });
 
   it("detects linked worktrees from injected Git paths", () => {

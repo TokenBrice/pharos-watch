@@ -824,7 +824,7 @@ describe("handleStatus", () => {
     });
   });
 
-  it("surfaces providerDiagnostics and gtProbe from sync-stablecoins metadata", async () => {
+  it("omits retired diagnostics from the status response", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -903,25 +903,15 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      priceProviderDiagnostics: Array<Record<string, unknown>> | null;
-      gtProbe: Record<string, unknown> | null;
-    };
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
 
-    expect(body).toHaveProperty("priceProviderDiagnostics");
-    expect(body).toHaveProperty("gtProbe");
-    expect(body.priceProviderDiagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ source: "binance", endpoint: expect.any(String), status: 403 }),
-      ]),
-    );
-    expect(body.gtProbe).toEqual(
-      expect.objectContaining({
-        updatedCount: expect.any(Number),
-        budgetExhausted: expect.any(Boolean),
-        transports: expect.any(Object),
-      }),
-    );
+    for (const key of ["priceProviderDiagnostics", "gtProbe", "cacheBlobSizes", "alertBroker"]) {
+      expect(body).not.toHaveProperty(key);
+    }
+    expect(body).toHaveProperty("priceSourceHealth");
+    expect(body).toHaveProperty("coingeckoPriceDiff");
+    expect(body).toHaveProperty("d1Usage");
+    expect(body).toHaveProperty("mintBurnReconciliation");
   });
 
   it("treats cron history query failure as unknown telemetry instead of stale cron health", async () => {

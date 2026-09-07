@@ -277,63 +277,6 @@ function formatCanonicalSchemaError(label: string, error: { issues: readonly { p
   return `${label} response is malformed${path} — ${issue?.message ?? "canonical schema rejected it"}`;
 }
 
-/**
- * Preserve the established operator-facing messages for map-specific bad-card
- * inputs. The canonical schema is still attempted first; this only translates
- * its rejection after the fact and never makes an invalid payload acceptable.
- */
-function reportCardCompatibilityError(payload: unknown): string | null {
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
-  const root = payload as Record<string, unknown>;
-  if (!Array.isArray(root.cards)) return "Report-card response is malformed — expected a cards array";
-  const methodology = root.methodology;
-  if (typeof methodology !== "object" || methodology === null || Array.isArray(methodology)) {
-    return "Report-card response is malformed — methodology.version is missing";
-  }
-  const methodologyVersion = (methodology as Record<string, unknown>).version;
-  if (typeof methodologyVersion !== "string" || methodologyVersion.length === 0) {
-    return "Report-card response is malformed — methodology.version is missing";
-  }
-  const asOfSec = root.asOfSec;
-  if (typeof asOfSec !== "number" || !Number.isFinite(asOfSec) || !Number.isInteger(asOfSec)) {
-    return "Report-card response is malformed — asOfSec must be a finite integer";
-  }
-  const updatedAt = root.updatedAt;
-  if (updatedAt !== undefined && (typeof updatedAt !== "number" || !Number.isFinite(updatedAt))) {
-    return "Report-card response is malformed — updatedAt must be finite when present";
-  }
-  const ids = new Set<string>();
-  for (const [index, rawCard] of root.cards.entries()) {
-    if (typeof rawCard !== "object" || rawCard === null || Array.isArray(rawCard)) {
-      return `Report-card response is malformed — cards[${index}] is not an object`;
-    }
-    const card = rawCard as Record<string, unknown>;
-    const id = card.id;
-    if (typeof id !== "string" || id.length === 0) {
-      return `Report-card response is malformed — cards[${index}].id is missing`;
-    }
-    if (ids.has(id)) return `Duplicate report-card id "${id}" — refusing to build an ambiguous map`;
-    ids.add(id);
-    const grade = card.grade;
-    if (typeof grade !== "string" || !VALID_CARD_GRADES.has(grade)) {
-      return `Unknown grade "${String(grade)}" for ${id} — the tier map (${TIER_ORDER.join("/")}) is out of date`;
-    }
-    const score = card.score;
-    if (grade === "NR") {
-      if (score !== null) return `Score/grade disagreement for ${id}: NR cards must have a null score`;
-    } else {
-      if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) {
-        return `Invalid score for ${id}: expected a finite value in the 0-100 range`;
-      }
-      const expectedGrade = scoreToGrade(score);
-      if (expectedGrade !== grade) {
-        return `Score/grade disagreement for ${id}: score ${score} maps to ${expectedGrade}, not ${grade}`;
-      }
-    }
-  }
-  return null;
-}
-
 export function parseMapReportCards(payload: unknown): {
   cards: MapReportCard[];
   methodologyVersion: string;
@@ -341,12 +284,7 @@ export function parseMapReportCards(payload: unknown): {
   updatedAt: number;
   publicationHealth: ReportCardsV9CurrentResponse["publicationHealth"];
 } {
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(payload);
-  if (!parsed.success) {
-    const compatibilityError = reportCardCompatibilityError(payload);
-    throw new Error(compatibilityError ?? formatCanonicalSchemaError("Report-card", parsed.error));
-  }
-  const response = parsed.data;
+  const response = parseCanonicalPayload("Report-card", ReportCardsV9CurrentResponseSchema, payload);
   const ids = new Set<string>();
   const cards = response.cards.map((card) => {
     if (ids.has(card.id)) throw new Error(`Duplicate report-card id "${card.id}" — refusing to build an ambiguous map`);

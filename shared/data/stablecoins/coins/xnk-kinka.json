@@ -34,7 +34,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
-    "provider": "Kinka whitepaper (no reserve artefact has ever been published: full site media library enumerated 2026-08-08 holds no vault report, custodian certificate, or attestation; the promised 'regular audits by a Japanese auditing firm' refers to the TSE-listed parent's statutory audit, unpublished; site appears dormant since late 2024)",
+    "provider": "Kinka whitepaper (no dated XNK-specific reserve artifact was located: full site media library enumerated 2026-08-08 holds no vault report, custodian certificate, or attestation; the promised 'regular audits by a Japanese auditing firm' refers to the TSE-listed parent's statutory audit, unpublished)",
     "attestorTier": "none",
     "cadence": "none",
     "attestorJurisdiction": "British Virgin Islands"
@@ -100,5 +100,16 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2024-02-21"
+  "launchDate": "2024-02-21",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-08-18",
+    "reason": "Issuer notice dated 2026-08-18 announces final exchange trading suspensions and sets 2026-10-30 buyback and gold-exchange request deadlines.",
+    "source": {
+      "label": "Kinka Gold issuer delisting and wind-down notice",
+      "url": "https://kinka-gold.com/"
+    }
+  },
+  "windDownAnnouncedAt": "2026-08-18",
+  "windDownSourceUrl": "https://kinka-gold.com/"
 }

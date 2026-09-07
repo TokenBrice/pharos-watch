@@ -26,20 +26,20 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Zoth ZeUSD product documentation (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+        "label": "Zoth ZeUSD product documentation (archived 2026-06-06)",
+        "url": "https://web.archive.org/web/20260606203655/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
       },
       {
-        "label": "Zoth ZeUSD mechanics (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+        "label": "Zoth ZeUSD mechanics (archived 2026-05-19)",
+        "url": "https://web.archive.org/web/20260519034706/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
       },
       {
-        "label": "Zoth ZeUSD terms and conditions (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
+        "label": "Zoth ZeUSD terms and conditions (archived 2026-05-19)",
+        "url": "https://web.archive.org/web/20260519041506/https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
       },
       {
-        "label": "Zoth contract deployments (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        "label": "Zoth contract deployments (archived 2026-05-19)",
+        "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments"
       },
       {
         "label": "ZeUSD V1 Ethereum implementation source",
@@ -81,16 +81,16 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Zoth ZeUSD mechanics (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+        "label": "Zoth ZeUSD mechanics (archived 2026-05-19)",
+        "url": "https://web.archive.org/web/20260519034706/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
       },
       {
-        "label": "Zoth ZeUSD terms and conditions (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
+        "label": "Zoth ZeUSD terms and conditions (archived 2026-05-19)",
+        "url": "https://web.archive.org/web/20260519041506/https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
       },
       {
-        "label": "Zoth contract deployments (re-opened 2026-07-28)",
-        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        "label": "Zoth contract deployments (archived 2026-05-19)",
+        "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments"
       }
     ],
     "uncertainty": "Re-opened 2026-07-28: mechanics and Terms still document mixed custody channels, isolated access-controlled escrow smart-contract vaults for on-chain assets and traditional/omnibus escrow for off-chain assets, grounding the mixed segregation rating, but they name no escrow agent, bank, or custodian, publish no account terms, and describe no trust, SPV, or other bankruptcy-remoteness structure, so bankruptcyRemoteness and rehypothecation remain unknown. The Terms still assert a 'fully non-custodial CDP', which holds only for the smart-contract channel; the off-chain escrow channel is custodial by construction and its operator is unidentified. The Terms also give Zoth discretion to liquidate or reinvest collateral into the same RWA product. The tracked V1 stack remains labeled deprecated on the deployments page, and router depositsPaused() was true at Ethereum block 25627223; the March 2025 admin-key compromise that drained roughly $8.4M from a Zoth sub-vault remains direct precedent that access-controlled vault custody can fail. Current collateral inventory, if any, is unreconciled."

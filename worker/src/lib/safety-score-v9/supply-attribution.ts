@@ -165,12 +165,32 @@ interface SupplyAttributionAssetDescriptor {
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
 
+/**
+ * Single owner of the asset → journal sourceId binding; the descriptor table
+ * and the generation-side binding assertions resolve through it.
+ */
+export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET: Readonly<
+  Record<string, SupplyAttributionJournalV1["sourceId"]>
+> = {
+  [XAUT_ASSET_ID]: "xaut.canonical-lock-mint-group-partition.v2",
+  "wm-m0": "wm.reviewed-deployment-unit-partition.v1",
+  ...Object.fromEntries(
+    CENTRIFUGE_BURN_MINT_ASSET_IDS.map(
+      (assetId): [string, SupplyAttributionJournalV1["sourceId"]] => [
+        assetId,
+        "centrifuge.reviewed-deployment-unit-partition.v1",
+      ],
+    ),
+  ),
+};
+
 function supplyAttributionAssetDescriptors():
   SupplyAttributionAssetDescriptor[] {
   return [
     {
       assetId: XAUT_ASSET_ID,
-      sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+      sourceId:
+        SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET[XAUT_ASSET_ID],
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest:
         () => buildXautRepresentationGroupInventory()?.digest ?? null,
@@ -178,7 +198,7 @@ function supplyAttributionAssetDescriptors():
     },
     {
       assetId: "wm-m0",
-      sourceId: "wm.reviewed-deployment-unit-partition.v1",
+      sourceId: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET["wm-m0"],
       sourceOriginClass: "onchain-observation",
       routeInventoryDigest:
         () => buildReviewedDeploymentRouteInventory("wm-m0")?.digest ?? null,
@@ -187,7 +207,8 @@ function supplyAttributionAssetDescriptors():
     ...CENTRIFUGE_BURN_MINT_ASSET_IDS.map(
       (assetId): SupplyAttributionAssetDescriptor => ({
         assetId,
-        sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+        sourceId:
+          SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET[assetId],
         sourceOriginClass: "onchain-observation",
         routeInventoryDigest:
           () => buildReviewedDeploymentRouteInventory(assetId)?.digest ?? null,

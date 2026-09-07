@@ -48,7 +48,7 @@ export function RecentRunLegend() {
   );
 }
 
-export function CronRunDots({ runs }: { runs: CronRun[] }) {
+function CronRunDots({ runs }: { runs: CronRun[] }) {
   if (runs.length === 0) {
     return <span className="text-xs text-muted-foreground">No recent runs</span>;
   }

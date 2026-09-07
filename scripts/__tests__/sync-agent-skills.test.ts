@@ -106,6 +106,29 @@ describe("sync-agent-skills", () => {
     expect(result.allowlisted).toContain(".codex/skills/example-skill/agents/openai.yaml");
   });
 
+  it("validates nested canonical symlinks while preserving relative in-repo targets", () => {
+    const fixture = makeFixture();
+    const references = join(fixture.canonicalSkill, "references/nested");
+    mkdirSync(references, { recursive: true });
+    const link = join(references, "reference.md");
+    symlinkSync("../../SKILL.md", link);
+    expect(syncAgentSkills({ rootDir: fixture.root, write: true }).status).toBe(0);
+
+    const outside = makeFixture();
+    rmSync(link);
+    symlinkSync(join(outside.canonicalSkill, "SKILL.md"), link);
+    expect(inspectAgentSkills(fixture.root).violations).toContain(
+      ".codex/skills/example-skill/references/nested/reference.md resolves outside repository",
+    );
+
+    rmSync(link);
+    symlinkSync("missing.md", link);
+    expect(inspectAgentSkills(fixture.root).violations).toContain(
+      ".codex/skills/example-skill/references/nested/reference.md is a broken symlink",
+    );
+    expect(readlinkSync(link)).toBe("missing.md");
+  });
+
   it("does not allowlist other files under agents", () => {
     const fixture = makeFixture({ extraAgentMetadata: true });
 

@@ -56,12 +56,16 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Midas mMEV issuance and redemption vault contracts (Ethereum)",
+        "name": "Midas mMEV issuance and redemption vault contracts (Ethereum; administrative policy share)",
         "role": "other",
         "jurisdiction": "Ethereum"
       },
       {
-        "name": "MEV Capital strategy wallets and trading venues (undisclosed)",
+        "name": "Fordefi mMEV strategy workspace (MPC infrastructure provider)",
+        "role": "custodian"
+      },
+      {
+        "name": "Current mMEV strategy manager (2025 manager MPC share; post-RockawayX allocation unverified) and trading venues (undisclosed)",
         "role": "other"
       }
     ],

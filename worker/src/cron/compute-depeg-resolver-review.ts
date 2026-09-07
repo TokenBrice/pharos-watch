@@ -33,10 +33,9 @@ import {
   coverageRowForIncident,
   failedPublicationCoverageRow,
 } from "./depeg-resolver-review/coverage-rows";
-import { buildDdrrResponseEnvelope } from "../lib/depeg-resolver-review-response";
+import { buildDdrrResponseEnvelope, DDRR_V2_INCIDENT_ROW_CAP } from "../lib/depeg-resolver-review-response";
 import { loadActualEventsByEventIds } from "./depeg-resolver-review/terminal-evidence";
 
-const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
 const DDRR_AUTO_REPAIR_CREATED_BY = [
   "ddr-worker:auto-sealed-tail",
   "ddr-worker:repair-task-runner-v1",
@@ -366,7 +365,6 @@ async function buildDurableDdrV2ReviewSnapshot(
     summary,
     rows,
     assessedEventCount: source.incidents.length,
-    assessmentRowsTruncated: false,
     incidentRowLimit: source.incidentRowLimit,
     incidentRowsTruncated: source.incidentRowsTruncated,
     methodologyVersions,

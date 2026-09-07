@@ -4,16 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "nOPAL has independent native issuance on Ethereum, Plume, and BSC. On each native deployment, the nOPAL BoringVault is owned by the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (172,800-second minimum delay), while the Teller and Manager are owned by the same current 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. These are native issuance controls on three independent liability surfaces, not bridge-admin controls; issuance remains unbounded and no independent whole-supply reconciliation or prudential supervision was found.",
+    "summary": "nOPAL has independent native issuance on Ethereum, Plume, BSC, and Plasma. On each native deployment, the nOPAL BoringVault is owned by the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (172,800-second minimum delay), while the Teller and Manager are owned by the same current 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982; fresh 2026-09-05 Plasma reads confirm the same graph there, including the Manager's vault() linkage and the Safe holding proposer and canceller roles on the Plasma Timelock. The Plasma deployment is live per the issuer registry but dormant, with zero supply at the reviewed block, and the Plasma Safe's modules state could not be read this pass, so no Plasma Safe control row is authored. These are native issuance controls on four independent liability surfaces, not bridge-admin controls; issuance remains unbounded and no independent whole-supply reconciliation or prudential supervision was found.",
     "upgradeability": {
       "model": "immutable",
       "deploymentRefs": [
         "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
         "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
-        "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "plasma:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-08-16",
+      "observedAt": "2026-09-05",
       "observedBlock": 25770766,
       "sources": [
         {
@@ -27,6 +28,10 @@
         {
           "label": "Nest smart contracts",
           "url": "https://docs.nest.credit/developers/smart-contracts"
+        },
+        {
+          "label": "Plasma nOPAL direct deployment (EIP-1967 slot zero via Plasma RPC, block 31652535)",
+          "url": "https://rpc.plasma.to"
         }
       ]
     },
@@ -397,15 +402,90 @@
         "observedAt": "2026-08-16",
         "observedBlock": 116356466,
         "evidence": "At BSC block 116356466, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. The same Safe is the current proposer and canceller, while the verified BoringVault owner-authenticated enter() path has no supply cap."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — Plasma",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "plasma",
+        "address": "0xA5F8e5843dd597a179453bF782844e8Bf808A90b",
+        "deploymentRefs": [
+          "plasma:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-05",
+        "observedBlock": 31654043,
+        "sources": [
+          {
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults"
+          },
+          {
+            "label": "Plasma public JSON-RPC",
+            "url": "https://rpc.plasma.to"
+          }
+        ],
+        "evidence": "At Plasma block 31654043 on 2026-09-05, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b (deployed at the same address as on Ethereum, Plume, and BSC) returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. On Plasma that Safe has threshold 3, six owners, the Safe v1.3.0 L1 singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea at slot 0, and a zero guard slot. A complete Safe modules read on Plasma was not obtainable this pass, so no Plasma Safe control row is authored."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin) — Plasma",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "plasma",
+        "address": "0xea452B14FC86847182F8DD0486206eb56dDA0393",
+        "deploymentRefs": [
+          "plasma:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-05",
+        "observedBlock": 31654043,
+        "sources": [
+          {
+            "label": "Plasma public JSON-RPC",
+            "url": "https://rpc.plasma.to"
+          }
+        ],
+        "evidence": "At Plasma block 31654043 on 2026-09-05, owner() on the Manager 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the Plasma nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165, tying the Plasma Manager to the dormant Plasma share token."
+      },
+      {
+        "label": "Nest nOPAL token owner Timelock — Plasma",
+        "role": "direct-minter",
+        "authorityType": "timelock",
+        "directMintAbility": "direct",
+        "chain": "plasma",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "deploymentRefs": [
+          "plasma:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-05",
+        "observedBlock": 31654043,
+        "sources": [
+          {
+            "label": "Plasma nOPAL token and Timelock reads via public RPC",
+            "url": "https://rpc.plasma.to"
+          },
+          {
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults"
+          }
+        ],
+        "evidence": "At Plasma block 31652535 on 2026-09-05, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and at block 31654043 the Timelock's getMinDelay() returned 172800 seconds with hasRole() confirming the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 holds PROPOSER_ROLE and CANCELLER_ROLE (role hashes read from the contract's own getters). The Plasma token's runtime bytecode is byte-for-byte the Ethereum nOPAL share contract except chain-specific immutables, so the same owner-authenticated enter() path with no supply cap applies; the deployment is dormant with totalSupply 0 at the reviewed block."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Reviewed 2026-08-16 across the complete native scope: Nest's current vault registry identifies the nOPAL share token and Teller, while verified Manager contracts on Ethereum, Plume, and BSC return the nOPAL deployment from vault(); direct owner() reads confirm the same per-chain control graph. The nOPAL token owner Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a returned a 172800-second minimum delay on all three chains; the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 is the current proposer and canceller on each Timelock, with no enabled Safe modules. Fixed observations on 2026-08-16 recorded nonzero totalSupply on Ethereum (19,094,202.277440 at block 25770421), Plume (12,981,544.220067 at block 87678480), and BSC (13,997,699.499774 at block 116347230). These are three independent native liabilities; the route inventory's Plume and BSC rows are native-issuance routes, not bridge representations. Nest's issuer-operated hourly NAV, live vault composition, and flow-of-funds pages do not provide independent recurring reconciliation of total nOPAL liabilities across deployments, and Nest DAO LLC is not a prudentially supervised fund issuer. No public bridge topology, OFT, lockbox, adapter, or destination-token mint role was identified. The owner Safe controls the Teller and Manager issuance path, and the owner Timelock can call the owner-authenticated BoringVault enter() path; no economic cap was verified. The existing evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nOPAL supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nOPAL liabilities across deployments. Reconciliation review 2026-08-15: Nest's dated Available Vaults snapshot describes nOPAL as a multi-asset vault share and its Audits register lists smart-contract audits, but no named third-party report or recurring attestation reconciling total nOPAL liabilities across its EVM and Solana deployments to the portfolio was found; the available evidence therefore remains insufficient for periodic reconciliation.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; FIX2-09 Mint/Bridge boundary migration 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Reviewed 2026-08-16 across the complete native scope: Nest's current vault registry identifies the nOPAL share token and Teller, while verified Manager contracts on Ethereum, Plume, and BSC return the nOPAL deployment from vault(); direct owner() reads confirm the same per-chain control graph. The nOPAL token owner Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a returned a 172800-second minimum delay on all three chains; the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 is the current proposer and canceller on each Timelock, with no enabled Safe modules. Fixed observations on 2026-08-16 recorded nonzero totalSupply on Ethereum (19,094,202.277440 at block 25770421), Plume (12,981,544.220067 at block 87678480), and BSC (13,997,699.499774 at block 116347230). These are three independent native liabilities; the route inventory's Plume and BSC rows are native-issuance routes, not bridge representations. Nest's issuer-operated hourly NAV, live vault composition, and flow-of-funds pages do not provide independent recurring reconciliation of total nOPAL liabilities across deployments, and Nest DAO LLC is not a prudentially supervised fund issuer. No public bridge topology, OFT, lockbox, adapter, or destination-token mint role was identified. The owner Safe controls the Teller and Manager issuance path, and the owner Timelock can call the owner-authenticated BoringVault enter() path; no economic cap was verified. The existing evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nOPAL supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nOPAL liabilities across deployments. Reconciliation review 2026-08-15: Nest's dated Available Vaults snapshot describes nOPAL as a multi-asset vault share and its Audits register lists smart-contract audits, but no named third-party report or recurring attestation reconciling total nOPAL liabilities across its EVM and Solana deployments to the portfolio was found; the available evidence therefore remains insufficient for periodic reconciliation. U5 Plasma closeout 2026-09-05: Plasma native coverage added. At Plasma block 31652535 the nOPAL token read 'Nest BlackOpal LiquidStone II Vault'/nOPAL/6 decimals/totalSupply 0 with owner() the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and an empty EIP-1967 implementation slot; at block 31654043 the Teller and Manager owner() reads returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, Manager vault() returned the Plasma token, the Timelock returned a 172,800-second minimum delay with the Safe as proposer and canceller, and the Plasma USDT NestVault 0x5e949fa6401d7c49cdcb48e3a8bdc28f60657a2c owner() returned the Nest Timelock. The Plasma Safe singleton (slot 0) is 0xfb1bffc9d739b8d520daf37df666da4c687191ea (v1.3.0 L1) with a zero guard slot, but getModulesPaginated reads on Plasma reverted, so the Plasma Safe's modules state is an explicit gap and no Plasma Safe control row is authored; bridge-representation chains (World Chain, Avalanche, Solana) are out of mint-authority scope and no bridge-only controls were added.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; FIX2-09 Mint/Bridge boundary migration 2026-08-16; U5 Nest rail closeout 2026-09-05",
+      "reviewedAt": "2026-09-05",
       "disposition": "scoreable",
       "sources": [
         {
@@ -463,6 +543,10 @@
         {
           "label": "Nest smart-contract audit register",
           "url": "https://docs.nest.credit/security-and-compliance/audits/"
+        },
+        {
+          "label": "Plasma public JSON-RPC",
+          "url": "https://rpc.plasma.to"
         }
       ]
     }

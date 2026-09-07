@@ -37,6 +37,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { shouldRetainCurveCompositePoolIdentity } from "../measured-execution/curve-composite-identities";
+import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
@@ -238,6 +239,26 @@ export async function fetchDataSources(
     });
   }
   llamaResult = null;
+
+  // One bounded serial identity request after both DL bodies have been consumed.
+  // DL rounds V4 fee metadata (5 pips becomes "0.00%"); UUID joins recover
+  // physical pool IDs without guessing fees, ticks, hooks, or pool measurements.
+  if (pools.some((pool) => pool.project === "uniswap-v4" && pool.chain.toLowerCase() === "ethereum")) {
+    const identities = await fetchJsonWithRetry<unknown>(
+      DEFILLAMA_V4_IDENTITIES_URL,
+      { headers: { "User-Agent": USER_AGENT }, signal },
+      0,
+      { timeoutMs: 10_000, maxResponseBytes: 4 * 1024 * 1024 },
+    );
+    const attachedPoolCount = identities?.response.ok
+      ? attachDefiLlamaV4PoolIdentities(pools, identities.body)
+      : 0;
+    logWorkerEvent({
+      scope: "lib", job: "sync-dex-liquidity", level: attachedPoolCount > 0 ? "info" : "warn",
+      event: "defillama-v4-identities", message: "Joined exact DeFiLlama V4 pool identities",
+      metadata: { attachedPoolCount },
+    });
+  }
 
   // --- DL Protocols (consume body to release connection) ---
   const dexProjects = new Set<string>();
@@ -675,7 +696,7 @@ export function buildKnownPoolAddresses(
   let derivedCount = 0;
   const enforceDexProjectFilter = dexProjects.size > 0;
 
-  // DeFiLlama pools are identity-poor, so only their derived keys are trustworthy.
+  // UUID-only DeFiLlama pools use derived keys; verified V4 PoolIds also register exact keys.
   for (const pool of pools) {
     if (!pool.tvlUsd || pool.tvlUsd < DEX_LIQUIDITY_POOL_MIN_TVL_USD) continue;
     if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue;

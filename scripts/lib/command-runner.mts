@@ -227,28 +227,31 @@ export async function runExecutionUnit<TCommand extends RunnerCommand>(
 ): Promise<ExecutionResult> {
   const run = runCommandImpl ?? (runShellCommand as CommandImplementation<TCommand>);
   for (const command of unit.commands) {
-    const cmd = getUnitCommandText(command);
-    if (signal?.aborted) {
-      return { status: 130, failedCmd: cmd, aborted: true };
-    }
+    let cmd = typeof command === "string" ? command : command.cmd;
+    try {
+      cmd = getUnitCommandText(command);
+      if (signal?.aborted) {
+        return { status: 130, failedCmd: cmd, aborted: true };
+      }
 
-    if (reporter) reporter.start?.(cmd);
-    else console.log(`[${label}] Running: ${cmd}`);
-    const startedAt = Date.now();
-    const result = normalizeCommandResult(await run(command, getCommandEnv(command), { signal }));
-    if (result.error) throw result.error;
-    if (result.status !== 0) {
+      if (reporter) reporter.start?.(cmd);
+      else console.log(`[${label}] Running: ${cmd}`);
+      const startedAt = Date.now();
+      const result = normalizeCommandResult(await run(command, getCommandEnv(command), { signal }));
+      if (result.status !== 0 || result.error) {
+        return { ...result, status: result.status || 1, failedCmd: cmd };
+      }
+      const durationMs = Date.now() - startedAt;
+      if (reporter) reporter.success?.(cmd, durationMs);
+      else console.log(`[${label}] Finished: ${cmd} (${(durationMs / 1000).toFixed(1)}s)`);
+    } catch (error) {
       return {
-        status: result.status,
+        status: signal?.aborted ? 130 : 1,
         failedCmd: cmd,
-        aborted: result.aborted,
-        ...(result.signal ? { signal: result.signal } : {}),
-        ...(result.output !== undefined ? { output: result.output } : {}),
+        aborted: signal?.aborted === true,
+        error: error instanceof Error ? error : new Error(String(error)),
       };
     }
-    const durationMs = Date.now() - startedAt;
-    if (reporter) reporter.success?.(cmd, durationMs);
-    else console.log(`[${label}] Finished: ${cmd} (${(durationMs / 1000).toFixed(1)}s)`);
   }
 
   return { status: 0, failedCmd: null, aborted: false };
@@ -259,7 +262,7 @@ function reportFailedCommand(result: ExecutionResult, label?: string, reporter?:
     return;
   }
   if (reporter) reporter.failure?.(result);
-  else console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}`);
+  else console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}${result.error ? `: ${result.error.message}` : ""}`);
 }
 
 export async function runCommandBatches<TCommand extends RunnerCommand>(
@@ -304,18 +307,19 @@ export async function runCommandBatches<TCommand extends RunnerCommand>(
       ]),
     );
 
-    while (pending.size > 0) {
-      const settled = await Promise.race(pending.values());
-      pending.delete(settled.index);
+    try {
+      while (pending.size > 0) {
+        const settled = await Promise.race(pending.values());
+        pending.delete(settled.index);
 
-      if (settled.result.status !== 0) {
-        reportFailedCommand(settled.result, label, reporter);
-        for (const [index] of pending) {
-          controllers[index].abort();
+        if (settled.result.status !== 0) {
+          reportFailedCommand(settled.result, label, reporter);
+          return settled.result;
         }
-        await Promise.allSettled(pending.values());
-        return settled.result;
       }
+    } finally {
+      for (const [index] of pending) controllers[index].abort();
+      await Promise.allSettled(pending.values());
     }
   }
 
@@ -393,8 +397,14 @@ export async function runParallelExecutionUnits<
   }
 
   if (!reporter) console.log(`[${label}] Running ${units.length} command groups with max parallel ${concurrency}.`);
-  await Promise.all(Array.from({ length: concurrency }, () => runNext()));
-  signal?.removeEventListener("abort", abortActive);
+  const workers = Array.from({ length: concurrency }, () => runNext());
+  try {
+    await Promise.all(workers);
+  } finally {
+    abortActive();
+    await Promise.allSettled(workers);
+    signal?.removeEventListener("abort", abortActive);
+  }
 
   if (failures.length > 0) {
     const first = failures[0];
@@ -402,6 +412,7 @@ export async function runParallelExecutionUnits<
       status: first.status,
       failedCmd: first.failedCmd,
       aborted: false,
+      ...(first.error ? { error: first.error } : {}),
       failures,
       results: results.filter((result): result is ExecutionUnitResult<TUnit> => result != null),
     };

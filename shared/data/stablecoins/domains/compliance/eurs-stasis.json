@@ -5,7 +5,7 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "ESMA interim MiCA register: EMTWP.csv (EMT issuer white papers); STASIS/STSS not present in 20-issuer list",
+        "label": "ESMA interim MiCA register: EMTWP.csv; STASIS, STSS and EURS absent from 43 current records (23 distinct issuer legal names; register last updated 21 August 2026)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {

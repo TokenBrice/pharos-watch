@@ -10,7 +10,6 @@ describe("detail cache generation fencing", () => {
     const sqlite = new DatabaseSync(":memory:");
     const migrationsDir = join(process.cwd(), "worker/migrations");
     for (const file of readdirSync(migrationsDir).filter((entry) => entry.endsWith(".sql")).sort()) {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-owned migration fixture
       sqlite.exec(readFileSync(join(migrationsDir, file), "utf8"));
     }
     const db = createSqliteD1(sqlite);

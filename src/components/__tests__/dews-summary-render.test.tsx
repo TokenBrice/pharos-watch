@@ -2,7 +2,7 @@
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { DEWSSummary } from "@/components/dews-summary";
+import { DEWSRadarPanel } from "@/components/dews-summary";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 
 vi.mock("next/navigation", () => ({
@@ -34,10 +34,10 @@ beforeAll(() => {
 });
 
 
-describe("DEWSSummary radar logos", () => {
+describe("DEWSRadarPanel radar logos", () => {
   it("renders stablecoin logos for alert-or-higher dots while leaving watch dots plain", () => {
     const { container } = render(
-      <DEWSSummary
+      <DEWSRadarPanel
         logos={{
           "frax-frax": "/logos/frax.svg",
           "usdc-circle": "/logos/usdc.svg",
@@ -56,7 +56,7 @@ describe("DEWSSummary radar logos", () => {
 
   it("scales logo marks up by escalation tier", () => {
     const { container } = render(
-      <DEWSSummary
+      <DEWSRadarPanel
         logos={{
           "frax-frax": "/logos/frax.svg",
           "usdc-circle": "/logos/usdc.svg",

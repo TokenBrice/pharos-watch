@@ -20,18 +20,6 @@
         "modulesOrGuardsStatus": "not-applicable"
       },
       {
-        "label": "Youves DAO contract (YOU governance) + break-glass guardian",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "chain": "tezos",
-        "address": "KT1C3T98TqCm38cHPauZ4SopkQ4torCsxgab",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-07-20",
-        "evidence": "2026-07-20 TzKT reads: this contract is aliased 'Youves DAO' and appears in the Vault Creator engine's administrators bigmap. Youves docs state the Murmuration-derived DAO contract is set as administrator over all Youves contracts (changing parameters via YOU-staker-voted Michelson lambdas), with a keyholder multisig retained as a break-glass guardian.",
-        "modulesOrGuardsStatus": "not-applicable"
-      },
-      {
         "chain": "tezos",
         "address": "KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4",
         "label": "FlatYouves DEX Admin — 4-of-7 Tezos multisig (admin of all three uUSD engines)",

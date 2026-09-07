@@ -12,7 +12,7 @@
     "issuerPathway": "unknown",
     "issuerEntity": "MoonPay USA LLC",
     "issuerDomicile": "United States",
-    "licensingRegulator": "NYDFS (Limited Purpose Trust Charter + BitLicense) / state Money Transmitter Licenses (49 states); potential GENIUS pathway undeclared",
+    "licensingRegulator": "MoonPay USA LLC: NYDFS BitLicense and Money Transmitter License plus other state MTLs; MoonPay Trust Company, LLC separately holds the NY limited-purpose trust charter; potential GENIUS pathway undeclared",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -20,7 +20,7 @@
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MoonPay positions ctUSD as 'designed to align with the forthcoming GENIUS Act guidelines' (Citrea launch blog, Jan 2026) and MoonPay VP Harrison described GENIUS as a regulatory 'permission slip' at Consensus Miami 2026 (May 8, 2026). No token-specific PPSI application, state-qualified approval, or OCC/FDIC filing was found as of 2026-06-18. The application framework remains in NPRM stage. MoonPay holds a NYDFS Limited Purpose Trust Charter (2025) and MTLs in 49 states, which could support a state-qualified or federal-qualified-nonbank pathway under GENIUS, but no pathway has been publicly declared.",
+    "notes": "MoonPay positions ctUSD as 'designed to align with the forthcoming GENIUS Act guidelines' (Citrea launch blog, Jan 2026) and MoonPay VP Harrison described GENIUS as a regulatory 'permission slip' at Consensus Miami 2026 (May 8, 2026). No token-specific PPSI application, state-qualified approval, or OCC/FDIC filing was found as of 2026-06-18. The application framework remains in NPRM stage. MoonPay USA LLC holds the NYDFS BitLicense and New York Money Transmitter License plus money-transmission licenses in other U.S. jurisdictions; MoonPay Trust Company, LLC separately holds the NY limited-purpose trust charter for custody and OTC trading. No GENIUS pathway has been publicly declared.",
     "references": [
       {
         "label": "MoonPay stablecoin issuance",
@@ -78,6 +78,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-05"
   }
 }

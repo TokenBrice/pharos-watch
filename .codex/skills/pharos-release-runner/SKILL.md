@@ -27,6 +27,8 @@ A request to push/publish/release authorizes the necessary release branch and pr
 
 Watch the `Deploy to Cloudflare` run for the merged SHA and record classifier-selected Pages/Worker surfaces plus activation/marker proof. Apply the acceptance rules in `docs/deployment-process.md`: deployment proof and runtime health are separate, and cron/scheduler/ingestion/memory/migration work remains pending until its first relevant production observation.
 
+Follow [Monitoring Without Model Polling](../../../docs/deployment-process.md#monitoring-without-model-polling): use one deadline-bounded native GitHub watcher and the existing Worker evidence commands. Keep samples in scratch files; inspect completion evidence instead of cycling through sleep/status calls or assigning polling-only sub-agents. A missing matching execution at the deadline is pending acceptance, not a reason to restart the watch indefinitely.
+
 When the user authorizes delegation, use [references/subagents.md](references/subagents.md) for a read-only readiness review or dirty-tree classification. The parent alone stages, commits, pushes, merges, and makes final judgments.
 
 Report commits, focused checks, generated-artifact status, PR/run/deploy evidence, operational acceptance or pending window, excluded dirty files, and skipped checks with reasons.

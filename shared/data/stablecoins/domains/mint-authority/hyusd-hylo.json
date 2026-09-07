@@ -11,7 +11,7 @@
         "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
       ],
       "adminAddresses": [
-        "DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL"
+        "GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Hylo program upgrade authority (Squads v4 multisig vault)",
@@ -60,9 +60,9 @@
         "role": "governor",
         "authorityType": "multisig",
         "directMintAbility": "parameter-only",
-        "threshold": 1,
-        "signerCount": 4,
-        "timelockDelaySec": 0,
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 7200,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The admin can change fees, the SOL/USD oracle, oracle confidence tolerance, stability thresholds, treasury, the LST registry and the admin key itself, but the IDL exposes no mint-cap instruction and no admin mint path, so it cannot mint hyUSD or raise a cap.",
@@ -82,14 +82,14 @@
       },
       {
         "chain": "solana",
-        "address": "DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL",
+        "address": "GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP",
         "label": "Hylo program upgrade authority (Squads v4 multisig vault)",
         "role": "proxy-admin",
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "threshold": 3,
         "signerCount": 4,
-        "timelockDelaySec": 0,
+        "timelockDelaySec": 21600,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Redeploying the exchange program can rewrite mint logic and lift the collateral invariant that currently bounds hyUSD supply, so this authority can raise any effective bound. Upgrades are not timelocked and the upgrade authority is not renounced.",

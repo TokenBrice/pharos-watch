@@ -3,6 +3,7 @@ import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import {
   DEX_FRESHNESS_SEC,
+  MAX_OPEN_DEPEG_EVENTS,
   POOL_CHALLENGE_MIN_TVL,
 } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
@@ -11,16 +12,13 @@ import {
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
+  logOpenDepegEventLimitReached,
 } from "../../lib/depeg-helpers";
 import {
   fetchCurrentNativePegQuotes,
   type NativePegQuoteSession,
 } from "../../lib/native-peg-quotes";
-import { logWorkerEvent } from "../../lib/structured-log";
 import type { DepegDetectionRow, HydratedDepegDetection } from "./types";
-
-/** Bound open-event hydration so one detection pass cannot materialize an unbounded set. */
-export const MAX_OPEN_DEPEG_EVENTS = 200;
 
 export async function hydrateDepegDetection(
   db: D1Database,
@@ -68,14 +66,7 @@ export async function hydrateDepegDetection(
   const openRows = openResult.results ?? [];
   const openRowsLimitReached = openRows.length >= MAX_OPEN_DEPEG_EVENTS;
   if (openRowsLimitReached) {
-    logWorkerEvent({
-      scope: "handler",
-      level: "warn",
-      event: "depeg_open_event_limit_reached",
-      message: "Skipped depeg detection because the open-event query reached its limit",
-      status: "degraded",
-      metadata: { pass: "detection", maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
-    });
+    logOpenDepegEventLimitReached("detection");
   }
 
   return {

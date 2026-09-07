@@ -7,13 +7,13 @@
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "MU Digital",
+    "issuerEntity": "Bash Bros Inc",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
     "notes": "AZND is the non-yield-bearing Asia Dollar base token; yield accrues only after depositing it into the separate loAZND vault. GENIUS treatment remains unresolved.",
     "references": [
@@ -56,6 +56,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-05"
   }
 }

@@ -155,6 +155,7 @@ export interface ReportCardsFixedInputCacheArtifact {
 
 export async function parseReportCardsFixedInputCacheArtifact(
   value: unknown,
+  navAssetIds?: ReadonlySet<string>,
 ): Promise<ReportCardsFixedInputCacheArtifact> {
   const { envelope, payload } = await parseFixedInputCacheEntry({
     value,
@@ -163,7 +164,7 @@ export async function parseReportCardsFixedInputCacheArtifact(
     malformedPayloadLabel: "Malformed exact report-card fixed input cache payload",
     artifactLabel: "Exact report-card fixed input cache artifact",
   });
-  const input = normalizeFixedInput(payload);
+  const input = normalizeFixedInput(payload, navAssetIds);
   if (input.captureKind !== "exact-publication-inputs") {
     throw new Error("Cached report-card fixed input is not publication-exact");
   }
@@ -184,8 +185,8 @@ export async function parseReportCardsFixedInputCacheArtifact(
   };
 }
 
-export async function parseReportCardsFixedInputCacheValue(value: unknown): Promise<ReportCardsFixedInput> {
-  return (await parseReportCardsFixedInputCacheArtifact(value)).input;
+export async function parseReportCardsFixedInputCacheValue(value: unknown, navAssetIds?: ReadonlySet<string>): Promise<ReportCardsFixedInput> {
+  return (await parseReportCardsFixedInputCacheArtifact(value, navAssetIds)).input;
 }
 
 export type ReportCardsFixedInputDraft = Omit<
@@ -244,7 +245,7 @@ export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): 
 
 function assertFixedInputConsistency(
   input: ReportCardsFixedInput,
-  options: { verifyBaseInputGenerationId: boolean } = { verifyBaseInputGenerationId: true },
+  options: { verifyBaseInputGenerationId: boolean; navAssetIds?: ReadonlySet<string> } = { verifyBaseInputGenerationId: true },
 ): void {
   assertCommonFixedInputConsistency(input, {
     phase: "identity",
@@ -252,6 +253,7 @@ function assertFixedInputConsistency(
     exactLabel: "Exact fixed input",
     requireProducerBindings: input.captureKind === "exact-publication-inputs",
     validateNavPriceIds: input.captureKind === "exact-publication-inputs",
+    navAssetIds: options.navAssetIds,
     ...(input.captureKind === "exact-publication-inputs"
       ? { dexActiveRowsLabel: "Exact fixed input DEX active rows" }
       : {}),
@@ -314,7 +316,7 @@ function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput | Leg
   throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
 }
 
-export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
+export function normalizeFixedInput(value: unknown, navAssetIds?: ReadonlySet<string>): ReportCardsFixedInput {
   const input = parseReportCardsFixedInput(value);
   const redemptionBackstopMap = normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap);
   const suppliedBaseInputGenerationId = "baseInputGenerationId" in input ? input.baseInputGenerationId : undefined;
@@ -337,6 +339,7 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
   });
   assertFixedInputConsistency(normalized, {
     verifyBaseInputGenerationId: suppliedBaseInputGenerationId !== undefined,
+    navAssetIds,
   });
   return normalized;
 }

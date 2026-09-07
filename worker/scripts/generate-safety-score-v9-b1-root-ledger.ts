@@ -199,7 +199,6 @@ function parseArgs(argv: readonly string[]): Args | null {
 }
 
 async function readJson<T>(path: string): Promise<T> {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   return JSON.parse(await readFile(resolve(path), "utf8")) as T;
 }
 
@@ -682,13 +681,11 @@ async function generateB1RootLedger(args: Args): Promise<void> {
       provenance,
       fixedInput: postFix as Omit<FixedInput, "baseInputGenerationId">,
     };
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
     await writeFile(
       resolve(args.postFixFixedInputOutput),
       `${JSON.stringify(postFixArtifact, null, 2)}\n`,
     );
   }
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   await writeFile(resolve(args.output), `${JSON.stringify(output, null, 2)}\n`);
   process.stdout.write(
     `Wrote ${assets.length}-asset B1 ledger: ${beforeFactCount} -> ${afterFactCount} (${resolve(args.output)})\n`,

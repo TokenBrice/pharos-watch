@@ -9,6 +9,7 @@ import { GoogleAnalytics } from "@/components/google-analytics";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { RegimeBar } from "@/components/regime-bar";
 import { CoreTopRail } from "@/components/core-top-rail";
 import { TopNav } from "@/components/top-nav";
@@ -108,7 +109,7 @@ export default function RootLayout({
             Skip to main content
           </a>
         </RouteChrome>
-        <RouteChrome>
+        <RouteChrome dataTableOnly>
           <a
             href="#data"
             className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-44 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
@@ -136,9 +137,13 @@ export default function RootLayout({
               <GlobalFooterChrome>
                 <Footer />
               </GlobalFooterChrome>
+              <RouteChrome>
+                <div className="h-[var(--mobile-bottom-nav-safe-height)] shrink-0 lg:hidden" aria-hidden="true" />
+              </RouteChrome>
             </div>
           </div>
           <RouteChrome>
+            <MobileBottomNav />
             <MobileUtilityDock />
             <ScrollToTop />
             <FeedbackButton />

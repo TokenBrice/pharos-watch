@@ -5,6 +5,7 @@ import type {
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 import {
   resolveMintAuthorityScoreDisplay,
   type MintAuthorityScoreDisplay,
@@ -183,13 +184,6 @@ const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   "concentrated-admin": "elevated",
   "unbounded-or-compromised": "elevated",
   unknown: "neutral",
-};
-
-const CONFIDENCE_LABELS: Record<string, string> = {
-  verified: "Verified",
-  probable: "Probable",
-  "manual-review": "Manual review",
-  unknown: "Unknown",
 };
 
 const CONTROL_ROLE_LABELS: Record<string, string> = {
@@ -419,7 +413,7 @@ export function buildMintAuthorityDetailViewModel(
     mintPathShortLabel: labelFromMap(candidate.mintPath, MINT_PATH_PASSPORT_LABELS),
     authorityPostureLabel: labelFromMap(candidate.authorityPosture, AUTHORITY_POSTURE_LABELS),
     authorityPostureTone: postureToneFrom(candidate.authorityPosture),
-    confidenceLabel: labelFromMap(candidate.confidence, CONFIDENCE_LABELS),
+    confidenceLabel: labelFromMap(candidate.confidence, RESEARCH_REVIEW_CONFIDENCE_LABELS),
     confidenceVerified: candidate.confidence === "verified",
     summary: candidate.summary,
     inheritedFrom: candidate.inheritedFrom ?? null,

@@ -36,7 +36,7 @@
     "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "daily"
   },
   "links": [
     {

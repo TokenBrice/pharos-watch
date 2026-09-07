@@ -11,19 +11,16 @@ import type {
 } from "@shared/types/yield";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
-import {
-  isRealSourceSwitch,
-  LEGACY_BEST_YIELD_SOURCE_KEY,
-} from "../../lib/yield-history-ownership-handoffs";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
 import {
-  buildPublicDecisionLedger,
+  buildSelectionRankBySourceKey,
   deriveRejectionReasonCode,
   deriveYieldSourceRole,
 } from "./decision-public";
+import type { YieldCoinPublicationView } from "./publication-view";
 import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
 import { classifyYieldBenchmarkFreshness } from "./benchmarks";
@@ -98,16 +95,6 @@ function evaluatedSourceToRanking(
         }
       : null,
   };
-}
-
-function buildSelectionRankBySourceKey(candidates: EvaluatedYieldSource[]): Map<string, number> {
-  const selectionRankBySourceKey = new Map<string, number>();
-  candidates.forEach((candidate, index) => {
-    if (!selectionRankBySourceKey.has(candidate.sourceKey)) {
-      selectionRankBySourceKey.set(candidate.sourceKey, index + 1);
-    }
-  });
-  return selectionRankBySourceKey;
 }
 
 function buildAltYieldSource(params: {
@@ -236,28 +223,10 @@ function buildAlternateSummary(
   };
 }
 
-export function resolveApy30dDeltaFromPrevious(input: {
-  selected: EvaluatedYieldSource;
-  candidates: EvaluatedYieldSource[];
-  previousBestSourceKey: string | null;
-}): number | null {
-  if (!isRealSourceSwitch(input.previousBestSourceKey, input.selected.sourceKey)) {
-    return null;
-  }
-
-  const previous = input.candidates.find(
-    (candidate) => candidate.sourceKey === input.previousBestSourceKey,
-  );
-  if (!previous || !Number.isFinite(previous.apy30d) || !Number.isFinite(input.selected.apy30d)) {
-    return null;
-  }
-  return input.selected.apy30d - previous.apy30d;
-}
-
 export function buildYieldRankingsPayloadFromEvaluatedSources(
   input: {
     evaluatedSources: EvaluatedYieldSource[];
-    bestSourceKeyByCoin: Map<string, string>;
+    publicationViews: Map<string, YieldCoinPublicationView>;
     rankingProvenanceByKey: Map<string, Record<string, unknown>>;
     riskFreeRate: number;
     riskFreeRateMeta: YieldBenchmarkMeta;
@@ -269,8 +238,11 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     publication?: YieldPublicationMetadata | null;
   },
 ) {
+  // The publication views are the sole owner of the selection decision: each
+  // view froze the winning source key when it was built, so rankings cannot
+  // mix a different best-source map with the frozen decision evidence.
   const bestRows = input.evaluatedSources
-    .filter((source) => input.bestSourceKeyByCoin.get(source.id) === source.sourceKey)
+    .filter((source) => input.publicationViews.get(source.id)?.selected.sourceKey === source.sourceKey)
     .sort((a, b) =>
       (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) -
       (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
@@ -280,40 +252,23 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
   const rankings = bestRows.map((source, index) => {
     const key = buildHistoryKey(source.id, source.sourceKey);
     const provenance = input.rankingProvenanceByKey.get(key) ?? null;
-    const candidates = input.evaluatedSources
-      .filter((candidate) => candidate.id === source.id)
-      .sort(compareCandidates);
-    const rejectedCount = candidates.filter((candidate) => candidate.rejected).length;
-    const previousBestSourceKey =
-      source.previousBestSourceKey != null &&
-      source.previousBestSourceKey !== LEGACY_BEST_YIELD_SOURCE_KEY
-        ? source.previousBestSourceKey
-        : null;
-    const sourceSwitch = isRealSourceSwitch(previousBestSourceKey, source.sourceKey);
-    const apy30dDeltaFromPrevious = resolveApy30dDeltaFromPrevious({
-      selected: source,
-      candidates,
-      previousBestSourceKey,
-    });
-    const decisionLedger = buildPublicDecisionLedger({
-      selected: source,
-      candidates,
-      rejectedCount,
-      previousBestSourceKey,
-      sourceSwitch,
-      apy30dDeltaFromPrevious,
-    });
+    const view = input.publicationViews.get(source.id);
+    if (view == null) {
+      throw new Error(
+        `yield-publication view missing for selected source ${source.id}:${source.sourceKey}`,
+      );
+    }
     const ranking = evaluatedSourceToRanking(
       source,
       provenance,
       publicationGenerationId,
       index + 1,
-      decisionLedger,
+      view.decisionLedger,
     );
-    const altCandidates = buildUniqueAltCandidates(source, candidates);
+    const altCandidates = buildUniqueAltCandidates(source, view.candidates);
     ranking.altSources = buildAltSourcesForRanking({
       selected: source,
-      candidates,
+      candidates: view.candidates,
       rankingProvenanceByKey: input.rankingProvenanceByKey,
     });
     const alternateSummary = buildAlternateSummary(source, altCandidates);

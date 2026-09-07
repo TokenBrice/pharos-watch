@@ -14,6 +14,7 @@ function detailSnapshot(generatedAt: number): StablecoinDetailSnapshot {
     version: 1,
     stablecoinId: "usdt-tether",
     generatedAt,
+    updatedAt: { liveSummary: generatedAt, supplyHistory: generatedAt },
     lanes: {
       liveSummary: {
         price: 1,
@@ -52,7 +53,23 @@ describe("stablecoin detail request budget", () => {
     expect(queryClient.getQueryData(["supply-history", "usdt-tether", 90])).toEqual([]);
   });
 
-  it("starts at three eager requests and arms a below-fold lane on viewport entry", async () => {
+  it("preserves independent producer clocks and cannot replace newer live data with a later build", () => {
+    const queryClient = new QueryClient();
+    const snapshot = detailSnapshot(1_700_000_900_000);
+    snapshot.updatedAt = { liveSummary: 1_700_000_100_000, supplyHistory: 1_699_900_000_000 };
+    seedStablecoinDetailQueryCache(queryClient, snapshot);
+    const liveKey = ["stablecoin-live-summary", "usdt-tether"];
+    const historyKey = ["supply-history", "usdt-tether", 90];
+    expect(queryClient.getQueryState(liveKey)?.dataUpdatedAt).toBe(snapshot.updatedAt.liveSummary);
+    expect(queryClient.getQueryState(historyKey)?.dataUpdatedAt).toBe(snapshot.updatedAt.supplyHistory);
+    const live = { ...snapshot.lanes.liveSummary!, price: 1.01 };
+    queryClient.setQueryData(liveKey, live, { updatedAt: 1_700_000_500_000 });
+    seedStablecoinDetailQueryCache(queryClient, snapshot);
+    expect(queryClient.getQueryData(liveKey)).toEqual(live);
+    queryClient.clear();
+  });
+
+  it("loads all hero metrics while leaving offscreen-only lanes gated", async () => {
     const requests: string[] = [];
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       requests.push(String(input));
@@ -66,35 +83,39 @@ describe("stablecoin detail request budget", () => {
     );
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const { rerender } = renderHook(
-      ({ yieldNear }) => useStablecoinDetailViewModel({
+      ({ flowsNear }) => useStablecoinDetailViewModel({
         id: coin.id,
         coin,
         summary: null,
         supplementalQueryControls: {
-          liquidity: false,
-          reportCards: false,
+          liquidity: true,
+          reportCards: true,
           redemption: false,
-          yield: yieldNear,
-          stress: false,
-          flows: false,
+          yield: true,
+          stress: true,
+          flows: flowsNear,
           blacklist: false,
           reserves: false,
         },
       }),
-      { initialProps: { yieldNear: false }, wrapper },
+      { initialProps: { flowsNear: false }, wrapper },
     );
 
-    await waitFor(() => expect(requests).toHaveLength(3));
+    await waitFor(() => expect(requests).toHaveLength(7));
     expect(requests).toEqual(expect.arrayContaining([
       expect.stringContaining("/api/stablecoin/usdt-tether"),
       expect.stringContaining("/api/peg-summary"),
       expect.stringContaining("/api/supply-history?stablecoin=usdt-tether&days=90"),
+      expect.stringContaining("/api/yield-rankings"),
+      expect.stringContaining("/api/dex-liquidity"),
+      expect.stringContaining("/api/report-cards/v9"),
+      expect.stringContaining("/api/stress-signals"),
     ]));
 
-    rerender({ yieldNear: true });
+    rerender({ flowsNear: true });
 
-    await waitFor(() => expect(requests).toHaveLength(4));
-    expect(requests[3]).toContain("/api/yield-rankings");
+    await waitFor(() => expect(requests).toHaveLength(8));
+    expect(requests[7]).toContain("/api/mint-burn-flows");
     queryClient.clear();
   });
 

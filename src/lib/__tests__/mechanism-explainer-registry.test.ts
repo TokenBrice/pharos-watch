@@ -5,11 +5,23 @@ import {
   MECHANISM_EXPLAINER_TITLES,
 } from "@/lib/mechanism-explainer-registry";
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
+import { METHODOLOGY_SECTIONS } from "@/app/methodology/methodology-shared";
 
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
 const KEBAB_CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 describe("mechanism explainer registry", () => {
+  it("links methodology cross-references to existing section anchors", () => {
+    const sectionIds = new Set<string>(METHODOLOGY_SECTIONS.map(({ id }) => id));
+    for (const content of Object.values(ARCHETYPE_CONTENT)) {
+      for (const { href } of content.crossLinks) {
+        if (href.startsWith("/methodology/#")) {
+          expect(sectionIds.has(href.split("#")[1]), href).toBe(true);
+        }
+      }
+    }
+  });
+
   it("owns one non-empty title for every mechanism archetype", () => {
     expect(Object.keys(MECHANISM_EXPLAINER_TITLES).sort()).toEqual([...MECHANISM_ARCHETYPE_VALUES].sort());
     for (const title of Object.values(MECHANISM_EXPLAINER_TITLES)) {

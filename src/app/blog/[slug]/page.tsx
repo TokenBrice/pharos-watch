@@ -1,8 +1,8 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- source paths are derived from BLOG_POSTS slugs and guarded by blog-registry.test.ts. */
 
 import fs from "node:fs";
 import path from "node:path";
 import type React from "react";
+import Link from "next/link";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
@@ -70,6 +70,8 @@ function renderBlogPost(post: (typeof BLOG_POST_BY_SLUG extends ReadonlyMap<stri
       leadParagraphs={[post.description]}
       headerSupplement={
         <p className="pharos-meta">
+          By <Link href="/about/#editorial-ai-policy" className="pharos-focus-ring underline underline-offset-4">Pharos</Link>
+          {" · Published "}
           <time dateTime={post.datePublished}>{formatPublishedDate(post.datePublished)}</time>
         </p>
       }

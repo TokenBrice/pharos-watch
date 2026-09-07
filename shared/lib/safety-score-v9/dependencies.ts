@@ -389,12 +389,22 @@ function collectCommonModes(
   assets: readonly V9DependencyPlanningAsset[],
   selectedPaths: readonly V9DependencyPathPlan[],
 ): V9CommonModeGroup[] {
-  const groups = new Map<string, { failureDomain: V9FailureDomainRef; members: V9CommonModeMember[] }>();
+  const groups = new Map<
+    string,
+    { failureDomain: V9FailureDomainRef; members: V9CommonModeMember[]; memberKeys: Set<string> }
+  >();
   const add = (domain: V9FailureDomainRef, member: V9CommonModeMember) => {
     const canonical = canonicalPlanningDomain(domain);
     const key = domainKey(canonical);
-    const group = groups.get(key) ?? { failureDomain: canonical, members: [] };
-    if (!group.members.some((candidate) => stableJsonStringifyV1(candidate) === stableJsonStringifyV1(member))) {
+    const group =
+      groups.get(key) ?? { failureDomain: canonical, members: [], memberKeys: new Set<string>() };
+    // One canonical serialization per insertion replaces the quadratic pairwise
+    // stringify comparison; stable-JSON equality on the flat member record is
+    // exactly the previous comparison's equality (sorted keys + JSON escaping
+    // keep distinct members' keys distinct, NUL included).
+    const memberKey = stableJsonStringifyV1(member);
+    if (!group.memberKeys.has(memberKey)) {
+      group.memberKeys.add(memberKey);
       group.members.push(member);
     }
     groups.set(key, group);
@@ -428,9 +438,9 @@ function collectCommonModes(
     }
   }
   return [...groups.values()]
-    .map((group) => ({
-      failureDomain: group.failureDomain,
-      members: [...group.members].sort(
+    .map(({ failureDomain, members }) => ({
+      failureDomain,
+      members: [...members].sort(
         (left, right) =>
           compareText(left.assetId, right.assetId) ||
           compareText(left.owner, right.owner) ||

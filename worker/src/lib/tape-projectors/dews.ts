@@ -215,6 +215,35 @@ function buildEvent(t: BandTransition): TapeEventInsert {
   };
 }
 
+/**
+ * Read published samples after `since`, seed each coin's prior band from its
+ * last sample at-or-before `since`, and classify transitions. Returns null
+ * when the window holds no samples (callers keep their nothing-to-do result).
+ */
+async function scanDewsBandTransitions(
+  db: D1Database,
+  since: number,
+  until: number | null,
+  limit: number,
+): Promise<{ transitions: BandTransition[]; maxCursor: number } | null> {
+  const rows = await fetchSamplesSince(db, since, until, limit);
+  if (rows.length === 0) return null;
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.computed_at - b.computed_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
+
+  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
+  const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);
+
+  let maxCursor = since;
+  for (const row of rows) {
+    if (row.computed_at > maxCursor) maxCursor = row.computed_at;
+  }
+  return { transitions: classifyTransitions(rows, priorByCoin), maxCursor };
+}
+
 async function projectDewsByVariant(
   db: D1Database,
   variant: "escalated" | "deescalated",
@@ -226,28 +255,13 @@ async function projectDewsByVariant(
   }
   const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
-  const rows = await fetchSamplesSince(db, since, until, limit);
-  if (rows.length === 0) return { projected: 0, advanced: null };
-  rows.sort((a, b) => (
-    a.stablecoin_id === b.stablecoin_id
-      ? a.computed_at - b.computed_at
-      : a.stablecoin_id.localeCompare(b.stablecoin_id)
-  ));
+  const scan = await scanDewsBandTransitions(db, since, until, limit);
+  if (!scan) return { projected: 0, advanced: null };
 
-  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);
-
-  const transitions = classifyTransitions(rows, priorByCoin);
-  const wanted = transitions.filter((t) => t.direction === variant);
-
-  const events = wanted.map(buildEvent);
-
-  let maxCursor = since;
-  for (const row of rows) {
-    if (row.computed_at > maxCursor) maxCursor = row.computed_at;
-  }
-
-  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
+  const events = scan.transitions
+    .filter((t) => t.direction === variant)
+    .map(buildEvent);
+  return finalizeProjectorBatch(db, { events, maxCursor: scan.maxCursor, cursorKey, options });
 }
 
 export function projectDewsEscalated(
@@ -290,32 +304,17 @@ export async function projectDewsBandTransitions(
   const until = options?.until ?? null;
   const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
 
-  const rows = await fetchSamplesSince(db, since, until, limit);
-  if (rows.length === 0) return { projected: 0, advanced: null };
-  rows.sort((a, b) => (
-    a.stablecoin_id === b.stablecoin_id
-      ? a.computed_at - b.computed_at
-      : a.stablecoin_id.localeCompare(b.stablecoin_id)
-  ));
+  const scan = await scanDewsBandTransitions(db, since, until, limit);
+  if (!scan) return { projected: 0, advanced: null };
 
-  const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);
-
-  const transitions = classifyTransitions(rows, priorByCoin);
-  const events = transitions.map(buildEvent);
-
-  let maxCursor = since;
-  for (const row of rows) {
-    if (row.computed_at > maxCursor) maxCursor = row.computed_at;
-  }
-
+  const events = scan.transitions.map(buildEvent);
   return finalizeProjectorBatch(db, {
     events,
-    maxCursor,
+    maxCursor: scan.maxCursor,
     options,
     cursorUpdates: [
-      { key: "dews.escalated", value: Math.max(escWatermark, maxCursor) },
-      { key: "dews.deescalated", value: Math.max(deescWatermark, maxCursor) },
+      { key: "dews.escalated", value: Math.max(escWatermark, scan.maxCursor) },
+      { key: "dews.deescalated", value: Math.max(deescWatermark, scan.maxCursor) },
     ],
   });
 }

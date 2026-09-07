@@ -58,11 +58,14 @@ export type StablecoinDetailViewModel =
 
 export type { StablecoinDetailSummary };
 
-function useGatedQuerySlice<TData>(query: QueryResultLike<TData>, enabled: boolean): QuerySlice<TData> {
+function useGatedQuerySlice<TData>(
+  query: QueryResultLike<TData>,
+  enabled: boolean,
+): QuerySlice<TData> & { enabled: boolean } {
   const slice = useQuerySlice(query);
   return useMemo(
     () => enabled
-      ? slice
+      ? { ...slice, enabled: true }
       : {
           data: undefined,
           isLoading: false,
@@ -70,6 +73,7 @@ function useGatedQuerySlice<TData>(query: QueryResultLike<TData>, enabled: boole
           error: null,
           dataUpdatedAt: 0,
           meta: null,
+          enabled: false,
         },
     [enabled, slice],
   );
@@ -93,10 +97,10 @@ function projectLiveSummary(
     priceConfidence: summary.priceConfidence,
     priceUpdatedAt: summary.priceUpdatedAt,
     priceObservedAt: summary.priceObservedAt,
-    priceObservedAtMode: null,
-    priceSyncedAt: null,
-    consensusSources: [],
-    agreeSources: [],
+    priceObservedAtMode: summary.priceObservedAtMode ?? null,
+    priceSyncedAt: summary.priceSyncedAt ?? null,
+    consensusSources: summary.consensusSources ?? [],
+    agreeSources: summary.agreeSources ?? [],
     supplySource: "stablecoin-detail",
     ...(summary.supplyObservedAt != null ? { supplyObservedAt: summary.supplyObservedAt } : {}),
     circulating: summary.circulating,

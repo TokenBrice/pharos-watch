@@ -42,7 +42,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "wsrUSD has one native Ethereum ERC-4626 wrapper and 16 reviewed LayerZero/Solana bridge representations. The Ethereum MyOFTAdapter locks the canonical wrapper while LayerZero OFTs burn and mint on remote routes; the shared Reservoir owner can configure peers, delegates, and LayerZero OApp settings. Berachain source/destination peer asymmetry and unresolved endpoint validator configuration keep this bridge review at manual-review confidence, and the adapter lockbox balance must not be added to destination supplies.",
+    "summary": "wsrUSD has one native Ethereum ERC-4626 wrapper and 20 reviewed LayerZero/Solana bridge representations. The Ethereum MyOFTAdapter locks the canonical wrapper while LayerZero OFTs burn and mint on remote routes; the shared Reservoir owner can configure peers, delegates, and LayerZero OApp settings. Berachain source/destination peer asymmetry and unresolved endpoint validator configuration keep this bridge review at manual-review confidence, and the adapter lockbox balance must not be added to destination supplies.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration; wsrusd-reservoir finding",
     "confidence": "manual-review",
@@ -792,6 +792,184 @@
           {
             "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
             "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reservoir's official contract registry lists this Plasma wsrUSD OFT; PlasmaScan verifies WsrusdOft and RPC reads at block 31607063 return name 'Wrapped Savings rUSD', symbol 'wsrUSD', 18 decimals, and owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. The LayerZero OFT source burns source tokens and mints destination tokens.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 31607063,
+        "controllerChain": "plasma",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:plasma:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:plasma:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
+        ],
+        "sources": [
+          {
+            "label": "Reservoir official contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "PlasmaScan verified wsrUSD WsrusdOft",
+            "url": "https://plasmascan.to/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Plasma mainnet RPC ERC-20/OFT reads",
+            "url": "https://rpc.plasma.to"
+          },
+          {
+            "label": "LayerZero OFT source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
+          }
+        ]
+      },
+      {
+        "id": "megaeth:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
+        "destinationChain": "megaeth",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reservoir's official contract registry lists this MegaETH wsrUSD OFT; MegaETH Blockscout verifies WsrusdOft and RPC reads at block 25750619 return name 'Wrapped Savings rUSD', symbol 'wsrUSD', 18 decimals, and owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. The LayerZero OFT source burns source tokens and mints destination tokens.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 25750619,
+        "controllerChain": "megaeth",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:megaeth:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:megaeth:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
+        ],
+        "sources": [
+          {
+            "label": "Reservoir official contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "MegaETH Blockscout verified wsrUSD WsrusdOft",
+            "url": "https://megaeth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "MegaETH mainnet RPC ERC-20/OFT reads",
+            "url": "https://mainnet.megaeth.com/rpc"
+          },
+          {
+            "label": "LayerZero OFT source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000aeed2ec36a54d0e5",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000aeed2ec36a54d0e5",
+        "protocol": "LayerZero OFT adapter (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reservoir's official contract registry lists the Tempo wsrUSD OFT adapter 0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f and TIP-20 token 0x20c000000000000000000000aeed2ec36a54d0e5. Tempo explorer/RPC reads at block 37998314 identify the token as Wrapped Savings rUSD (wsrUSD), 6 decimals, and the adapter's token() returns it. Tempo TIP-20 specifies role-controlled mint/burn while the adapter is the LayerZero transfer rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 37998314,
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:tempo:0x20c000000000000000000000aeed2ec36a54d0e5",
+          "contract:tempo:0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f"
+        ],
+        "sources": [
+          {
+            "label": "Reservoir official contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "Tempo Explorer wsrUSD TIP-20",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000aeED2eC36A54d0e5"
+          },
+          {
+            "label": "Tempo Explorer wsrUSD OFT adapter",
+            "url": "https://explore.tempo.xyz/address/0x31d1a36a59A38c3A72E8D8567f5a98D5C777C98f"
+          },
+          {
+            "label": "Tempo mainnet RPC token and adapter reads",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Tempo TIP-20 specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "LayerZero OFT source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
+          }
+        ]
+      },
+      {
+        "id": "xdc:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
+        "destinationChain": "xdc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reservoir's official contract registry lists this XDC wsrUSD OFT; XDCScan verifies WsrusdOft and RPC reads at block 106844375 return name 'Wrapped Savings rUSD', symbol 'wsrUSD', 18 decimals, and owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. The LayerZero OFT source burns source tokens and mints destination tokens.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-04",
+        "observedBlock": 106844375,
+        "controllerChain": "xdc",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:xdc:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:xdc:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
+        ],
+        "sources": [
+          {
+            "label": "Reservoir official contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "XDCScan verified wsrUSD WsrusdOft",
+            "url": "https://xdcscan.com/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "XDC mainnet RPC ERC-20/OFT reads",
+            "url": "https://erpc.xinfin.network"
+          },
+          {
+            "label": "LayerZero OFT source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
           }
         ]
       }

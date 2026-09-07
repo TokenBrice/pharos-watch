@@ -11,8 +11,8 @@
   "pegMechanism": "Bridge Open Issuance mint and burn rail: Bridge mints USDsui when fiat or supported crypto/stablecoin deposits are allocated to reserves, and burns USDsui on redemption before releasing equivalent fiat value or supported stablecoin output",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge issuance FAQ (no published USDsui reserve report; FAQ audit statement is forward-looking and Bridge treats independent-accountant attestations as an optional paid add-on)",
+    "url": "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+    "provider": "Bridge's public self-reported real-time transparency API",
     "attestorTier": "self",
     "cadence": "none",
     "attestorJurisdiction": "United States"

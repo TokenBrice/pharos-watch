@@ -10,7 +10,8 @@
   "collateral": "ETH, wstETH, rETH, cbETH, and cbBTC in separate overcollateralized Liquity V2-style borrowing branches on Base; AERO and Aerodrome LP collateral are planned but were not live at launch",
   "pegMechanism": "Overcollateralized CDPs with user-set interest rates, direct on-chain redemption for system collateral, and branch-specific Stability Pools that absorb liquidations and receive borrower and liquidation fees",
   "mechanismArchetype": "cdp",
-  "detailProvider": "coingecko",
+  "llamaId": "434",
+  "detailProvider": "defillama",
   "links": [
     {
       "label": "Website",

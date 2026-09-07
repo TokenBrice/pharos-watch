@@ -10,14 +10,14 @@
  *   kept on purpose or until a deletion pass reaches it. Target: empty. Removing
  *   an entry from here is a real cleanup; adding one needs a checkable reason.
  *
- * DEBT is empty and should stay that way. It previously held 106 entries whose
- * claims had rotted: most symbols were only ever used inside their own module
- * and simply needed the `export` keyword dropped, several had acquired genuine
- * importers, and a batch named modules that no longer declared the symbol at all
- * because it had moved behind a barrel re-export. The audit could not see any of
- * that, so the list grew and stopped meaning anything. The checker now rejects an
- * entry whose finding has gone away, whose keyed module only re-exports the
- * symbol, or which duplicates the vendored `src/components/ui/**` path policy.
+ * DEBT previously held 106 entries whose claims had rotted: most symbols were
+ * only ever used inside their own module and simply needed the `export` keyword
+ * dropped, several had acquired genuine importers, and a batch named modules
+ * that no longer declared the symbol at all because it had moved behind a
+ * barrel re-export. The audit could not see any of that, so the list grew and
+ * stopped meaning anything. The checker now rejects an entry whose finding has
+ * gone away, whose keyed module only re-exports the symbol, or which duplicates
+ * the vendored `src/components/ui/**` path policy.
  *
  * Every entry carries a one-line reason. The allowlist audit fails on a missing
  * reason, a missing file, or a symbol the file no longer exports, so entries
@@ -29,8 +29,8 @@
 
 /** Modules whose only importers are invisible to the static scan. */
 export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {
-  "src/test/setup.ts":
-    "vitest.config.ts registers it via the src project's setupFiles, which is a config path string rather than an import.",
+  "shared/lib/pharosville-api-contract.ts":
+    "External consumer contract: the standalone PharosVille app (docs/architecture.md) validates against these schemas, so no local production importer is expected; local references are tests and deploy path-filter metadata.",
 };
 
 /** Exports whose only consumers are invisible to the static scan. */
@@ -38,13 +38,14 @@ export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
   "src/components/chart-primitives/data-table.tsx::ChartDataTable":
     "scripts/ci/check-table-primitives.ts matches the exported component name as a string, not through an import.",
   "shared/lib/telegram-mini-app-contract.ts::TelegramDewsBand":
-    "The src/app Mini App type barrel re-exports this public typing surface from a root entrypoint that the static graph does not use as a consumer.",
+    "Public Mini App typing contract; external Mini App code consumes this surface, which the src/app/pharoswatchbot/app/types.ts barrel re-exports for it.",
   "shared/lib/telegram-mini-app-contract.ts::TelegramSafetyMode":
-    "The src/app Mini App type barrel re-exports this public typing surface from a root entrypoint that the static graph does not use as a consumer.",
+    "Public Mini App typing contract; external Mini App code consumes this surface, which the src/app/pharoswatchbot/app/types.ts barrel re-exports for it.",
 };
-
-/** Unreferenced modules kept on purpose; deletion is a separate pass. */
-export const DEBT_MODULES: Record<string, string> = {};
+export const DEBT_MODULES: Record<string, string> = {
+  "shared/data/safety-score-v9/matched-invariants-v1.ts":
+    "Curated matched-invariant corpus for the publication-exact safety-score equivalence suites; deliberately test-only, not product data.",
+};
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */
 export const DEBT_EXPORTS: Record<string, string> = {};

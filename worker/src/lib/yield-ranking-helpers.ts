@@ -27,6 +27,20 @@ interface PysNullReasonInput {
   sourceRiskPenalty?: number | null;
 }
 
+// Raw apy30d/scalingFactor accompany effectiveYield because computePysComponents
+// folds a non-finite apy30d to 0, hiding it from this ladder.
+export function derivePysNullReasonFromComponents(
+  apy30d: number,
+  scalingFactor: number,
+  effectiveYield: number,
+): YieldPysNullReason | null {
+  if (!Number.isFinite(apy30d)) return "missing-inputs";
+  if (apy30d <= 0) return "apy-non-positive";
+  if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return "scaling-invalid";
+  if (effectiveYield <= 0) return "effective-yield-non-positive";
+  return null;
+}
+
 export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReason | null {
   if (!Number.isFinite(input.apy30d)) return "missing-inputs";
   if (input.apy30d <= 0) return "apy-non-positive";
@@ -38,8 +52,7 @@ export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReas
     benchmarkRate: input.benchmarkRate,
     sourceRiskPenalty: input.sourceRiskPenalty,
   });
-  if (effectiveYield <= 0) return "effective-yield-non-positive";
-  return null;
+  return derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, effectiveYield);
 }
 
 function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {

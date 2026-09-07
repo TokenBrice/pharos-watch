@@ -117,6 +117,30 @@ namespace_id = "2026071003"
   limit = 9600
   period = 60
 
+[[ratelimits]]
+name = "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT"
+namespace_id = "2026090601"
+
+  [ratelimits.simple]
+  limit = 1200
+  period = 60
+
+[[ratelimits]]
+name = "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT"
+namespace_id = "2026090602"
+
+  [ratelimits.simple]
+  limit = 800
+  period = 60
+
+[[ratelimits]]
+name = "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT"
+namespace_id = "2026090603"
+
+  [ratelimits.simple]
+  limit = 4800
+  period = 60
+
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

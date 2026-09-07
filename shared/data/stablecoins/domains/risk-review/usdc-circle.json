@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Circle's contract registry identifies the reviewed native USDC deployments below, while Circle documents CCTP as native USDC burn/mint infrastructure. Hyperliquid's official bridge documentation identifies its HyperCore USDC as an Arbitrum lock-and-mint representation controlled by the stake-weighted validator set. Deployments not supported by these primary sources remain unresolved.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "SOL-FEEDER primary-source deployment review; Kimi USDC controller curation (2026-07-19); Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "Circle's contract registry identifies the reviewed native USDC deployments below, while Circle documents CCTP as native USDC burn/mint infrastructure. Hyperliquid's official bridge documentation identifies its HyperCore USDC as an Arbitrum lock-and-mint representation controlled by the stake-weighted validator set. The Corn Known-Assets mapping and current explorer source identity are now verified, but Corn's current proxy controller and bridge-liability controls remain unresolved.",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "SOL-FEEDER primary-source deployment review; Codex Corn route-controller refresh",
     "confidence": "verified",
     "protocols": [
       {
@@ -2472,6 +2472,8 @@
       },
       {
         "id": "corn:0xdf0b24095e15044538866576754f3c964e902ee6",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
         "destinationChain": "corn",
         "contractAddress": "0xdf0b24095e15044538866576754f3c964e902ee6",
         "protocol": "Corn canonical bridge (LayerZero-powered)",
@@ -2481,9 +2483,10 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Corn's own Known-Assets documentation maps USDC.e Ethereum 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 to Corn 0xDF0B24095e15044538866576754F3C964e902Ee6, and Corn states LayerZero powers its canonical bridge, but the mint controller contract on Corn is not published in those docs and cannot be read on-chain right now: all public Corn RPC endpoints are Conduit-key-gated (403) and cornscan.org is down (HTTP 526), so owner()/minter() verification failed on 2026-07-20. L2BEAT additionally marks Corn Maizenet archived (2026-06-30, sole BoLD staker unstaked). The route stays unresolved until a live RPC or explorer permits the controller read.",
+        "reviewNote": "Refreshed 2026-09-04. Corn's official Known-Assets documentation maps Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 to Corn USDC.e 0xdf0b24095e15044538866576754f3c964e902ee6, and the official Bridges documentation identifies LayerZero as the canonical bridge. The current Cornscan/Routescan source record identifies this address as Universal Bridge: USDC.e, a transparent proxy whose implementation is 0x5019c5fd911a820614b2a07f308062dcaba72c5 and verified implementation contract is Circle FiatTokenV2_2. Routescan token metadata reports decimals 6 and totalSupply 6,353.003033 USDC.e; its indexed Corn head is block 1711897 dated 2026-07-15. The official Corn node guide still lists https://maizenet-rpc.usecorn.com for chain 21000000, but that endpoint currently returns HTTP 404 and the explorer's proxy call methods did not provide current owner/admin/masterMinter/pauser state. The proxy source/implementation identity does not prove storage-held controller values, so controller, bridge-liability boundary, and pause/mint authority remain unresolved; L2BEAT's archived-project status is retained as adverse context.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
+        "observedAt": "2026-09-04",
+        "observedBlock": 1711897,
         "sources": [
           {
             "label": "Corn docs: Known Assets (USDC.e mapping)",
@@ -2492,6 +2495,22 @@
           {
             "label": "Corn docs: Bridges (LayerZero canonical)",
             "url": "https://docs.usecorn.com/docs/developers/Network/Infrastructure/Bridges"
+          },
+          {
+            "label": "Corn docs: Maizenet node and RPC details",
+            "url": "https://docs.usecorn.com/docs/developers/Network/Run_a_Node"
+          },
+          {
+            "label": "Cornscan USDC.e proxy/source page",
+            "url": "https://cornscan.io/address/0xdf0b24095e15044538866576754f3c964e902ee6"
+          },
+          {
+            "label": "Routescan verified source API (Corn USDC.e)",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/21000000/etherscan/api?module=contract&action=getsourcecode&address=0xdf0b24095e15044538866576754f3c964e902ee6"
+          },
+          {
+            "label": "Routescan token metadata API (Corn USDC.e)",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/21000000/etherscan/api?module=token&action=tokeninfo&contractaddress=0xdf0b24095e15044538866576754f3c964e902ee6"
           },
           {
             "label": "L2BEAT Corn",

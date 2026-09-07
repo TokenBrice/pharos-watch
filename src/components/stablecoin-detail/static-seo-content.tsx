@@ -49,6 +49,13 @@ const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
 
+// Historical context from the existing USDC/SVB case study, not a live peg verdict.
+const USDC_DEPEG_HISTORY_FAQ: FaqItem = {
+  question: "Has USDC depegged?",
+  answer:
+    "Yes. USDC traded below its $1 target in March 2023 after Silicon Valley Bank failed and Circle disclosed reserve exposure to the bank. It recovered after authorities announced protection for SVB depositors. This historical recovery is not a guarantee of future peg stability.",
+};
+
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
   if (normalized.length <= maxLength) return normalized;
@@ -260,7 +267,7 @@ function buildAlertCommand(coin: StablecoinMeta): string {
 
 /**
  * Data-derived Q&A for AI-search citation on the coin long tail. Every answer
- * is assembled from checked-in data — StablecoinMeta fields plus the
+ * is assembled from checked-in data — StablecoinMeta fields, reviewed historical context, plus the
  * scores-latest dataset mirror (refreshed from the live API at each Pages
  * release) for the safety-grade tier. No editorial claims beyond those sources.
  */
@@ -314,6 +321,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
     { question: `Is ${coin.symbol} safe?`, answer: buildSafetyAnswer(coin) },
     { question: `What backs ${coin.symbol}?`, answer: backingAnswer },
     { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
+    ...(coin.id === "usdc-circle" ? [USDC_DEPEG_HISTORY_FAQ] : []),
   ];
 }
 
@@ -389,6 +397,20 @@ export function StablecoinDetailSeoContent({
           <h2 className="text-lg font-semibold tracking-tight text-foreground">{safetyAnswer.question}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{safetyAnswer.answer}</p>
         </div>
+        {coin.id === "usdc-circle" ? (
+          <div className="mt-4 border-t border-border/50 pt-4">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">USDC depeg history</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{USDC_DEPEG_HISTORY_FAQ.answer}</p>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              <Link href="/depeg/usdc-2023-03-11/" className={INLINE_LINK_CLASS}>
+                March 2023 USDC depeg timeline
+              </Link>
+              <Link href="/learn/case-studies/usdc-svb-2023/" className={INLINE_LINK_CLASS}>
+                Why USDC depegged during the SVB crisis
+              </Link>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section

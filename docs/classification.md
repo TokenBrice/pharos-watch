@@ -94,6 +94,8 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 
 Cross-domain reviewed incidents are not a `StablecoinMeta` classification field. `shared/data/safety-score-v9/incident-reviews-v1.json` owns events that need explicit control, wrapper-local, operational, or peg routing plus root-claim, deployment, integration-only, or holder-exit scope. Each event changes the existing component that owns its risk; it does not create another Safety Score pillar. Domain-native evidence such as `mintAuthority.mintIncidents` remains in its existing sidecar and must not be duplicated into the cross-domain registry.
 
+Bridge, custody, mint-authority, and reserve-quality summaries share `RESEARCH_REVIEW_CONFIDENCE_LABELS` from `shared/lib/classification.ts`. Each summary retains its own missing/unknown-value fallback; oracle confidence keeps its separate vocabulary, including `limited`.
+
 ### Implementation Age Policy
 
 `launchDate` remains the product or project launch. Author `implementationLaunchDate` only when a later deployed mechanism, relaunch, or critical implementation boundary makes the product date misleading. The field requires a sourced `mechanismArchetypeReview` and cannot unambiguously predate `launchDate` or its own review.

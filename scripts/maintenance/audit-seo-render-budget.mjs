@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
+
 const DEFAULT_BASE_URL = process.env.SEO_RENDER_BUDGET_URL ?? "https://pharos.watch";
 const DEFAULT_ROUTES = [
   "/",
@@ -79,6 +81,7 @@ function emptyCounters() {
   return {
     requests: 0,
     accountingErrors: 0,
+    blockedAnalyticsRequests: 0,
     scriptRequests: 0,
     styleRequests: 0,
     fontRequests: 0,
@@ -93,6 +96,20 @@ function emptyCounters() {
     fontKnownBytes: 0,
     fontObservedBytes: 0,
   };
+}
+
+/** Keep analytics script cost in the budget without recording synthetic visits. */
+export async function blockAnalyticsCollection(page, counters) {
+  await page.route(
+    (url) =>
+      ["google-analytics.com", "analytics.google.com", "google.com"].some(
+        (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
+      ) && ["/collect", "/g/collect", "/j/collect", "/mp/collect", "/debug/mp/collect", "/batch"].includes(url.pathname),
+    async (route) => {
+      counters.blockedAnalyticsRequests += 1;
+      await route.abort();
+    },
+  );
 }
 
 function addResponse(counters, response) {
@@ -180,6 +197,7 @@ async function auditRoute(browser, baseUrl, route, waitMs) {
   const counters = emptyCounters();
   const html = await fetchHtml(url);
   const page = await browser.newPage();
+  await blockAnalyticsCollection(page, counters);
   page.on("response", (response) => {
     try {
       addResponse(counters, response);
@@ -245,6 +263,7 @@ function formatTable(rows) {
     "mainChars",
     "req",
     "acctErr",
+    "gaBlocked",
     "jsReq",
     "cssReq",
     "fontReq",
@@ -262,6 +281,7 @@ function formatTable(rows) {
         row.mainTextChars,
         row.requests,
         row.accountingErrors,
+        row.blockedAnalyticsRequests,
         row.scriptRequests,
         row.styleRequests,
         row.fontRequests,
@@ -296,7 +316,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

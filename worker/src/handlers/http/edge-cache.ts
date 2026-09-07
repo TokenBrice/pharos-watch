@@ -1,13 +1,13 @@
+import { isCacheKeyQueryFreePath } from "@shared/lib/api-endpoints";
 import { isCacheableGetRequest } from "./cache-eligibility";
 import { logWorkerEvent } from "../../lib/structured-log";
-
 interface EdgeCacheContext {
   cacheKey: Request;
   skipCache: boolean;
 }
 
 function createCacheKeyRequest(request: Request, url: URL): Request {
-  if (url.pathname.startsWith("/api/og/")) {
+  if (url.pathname.startsWith("/api/og/") || isCacheKeyQueryFreePath(url.pathname)) {
     const canonicalUrl = new URL(request.url);
     canonicalUrl.search = "";
     return new Request(canonicalUrl.toString(), { method: "GET" });

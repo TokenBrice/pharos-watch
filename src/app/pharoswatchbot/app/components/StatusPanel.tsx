@@ -2,7 +2,8 @@
 
 import { Check, Clock3, Home, Send, ShieldAlert } from "lucide-react";
 import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
-import { formatQuietHoursRange, formatSnoozePill, formatTime, isPausedSentinel } from "../format";
+import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import { formatQuietHoursRange, formatSnoozePill, formatTime } from "../format";
 import type {
   TelegramMiniAppOperation,
   TelegramMiniAppState,

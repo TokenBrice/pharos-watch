@@ -4,15 +4,15 @@
   "detailProvider": "coingecko",
   "name": "Mento South African Rand",
   "symbol": "ZARm",
-  "oneLiner": "ZARm is Mento's South African rand stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
+  "oneLiner": "Mento's reserve-backed South African rand stablecoin on Celo: oracle-priced USDm/ZARm Broker pool issues and retires under legacy V2; governance winding down.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "ZAR",
     "governance": "centralized-dependent"
   },
-  "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-  "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing ZARm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the ZARm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
-  "mechanismArchetype": "cdp",
+  "collateral": "Shared Mento Reserve: ZARm is reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH and smaller positions via the Mento reserve dashboard), not USDm locked in a ZARm-specific trove.",
+  "pegMechanism": "ZARm is issued and retired through Mento V2's oracle-priced USDm/ZARm Broker/BiPoolManager constant-sum pool: a USDm-to-ZARm swap burns incoming USDm and mints outgoing ZARm, and the reverse burns ZARm, priced off the ZAR/USD oracle with spread, trading-limit, freshness and BreakerBox checks; Mento governance (MGP-18) is winding down V2 with per-token trading limits capped at outstanding supply plus 10%.",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "celo-south-african-rand",
   "proofOfReserves": {
     "type": "real-time",
@@ -81,8 +81,5 @@
       }
     }
   },
-  "infrastructures": [
-    "liquity-v2"
-  ],
-  "launchDate": "2025-03-22"
+  "launchDate": "2025-04-13"
 }

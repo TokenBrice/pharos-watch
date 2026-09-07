@@ -5,7 +5,7 @@ import {
   applySubscribeIntent,
   applyUnsubscribeIntent,
 } from "../presets";
-import { unsubscribeAll } from "../forget";
+import { unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 import { upsertGlobalAlertTypes } from "../subscribers";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";

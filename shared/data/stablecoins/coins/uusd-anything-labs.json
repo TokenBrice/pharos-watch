@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "Undisclosed; Anything Labs markets UUSD as reserve-backed but publishes no collateral composition, reserve assets, or attestation in the whitepaper, site, or repo",
-  "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",
+  "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4-of-7 Safe) mint and burn",
   "detailProvider": "defillama",
   "geckoId": "unity-usd",
   "llamaId": "407",
@@ -33,6 +33,7 @@
       "decimals": 18
     }
   ],
+  "collateralQuality": "exotic",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "curated-validated",

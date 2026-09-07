@@ -1,4 +1,5 @@
-import { logWorkerEventArgs } from "./structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
+import { MAX_OPEN_DEPEG_EVENTS } from "./constants";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
   type DepegEvent,
@@ -48,6 +49,23 @@ export interface DepegRow {
 /** Column list for the detector's depeg_events SELECT shape. */
 export const DEPEG_EVENTS_DEPEGROW_COLUMNS =
   "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at";
+
+const OPEN_DEPEG_LIMIT_MESSAGES = {
+  detection: "Skipped depeg detection because the open-event query reached its limit",
+  confirmation: "Skipped pending depeg confirmation because the open-event query reached its limit",
+  "orphan-cleanup": "Skipped depeg orphan cleanup because the open-event query reached its limit",
+} as const;
+
+export function logOpenDepegEventLimitReached(pass: keyof typeof OPEN_DEPEG_LIMIT_MESSAGES): void {
+  logWorkerEvent({
+    scope: "handler",
+    level: "warn",
+    event: "depeg_open_event_limit_reached",
+    message: OPEN_DEPEG_LIMIT_MESSAGES[pass],
+    status: "degraded",
+    metadata: { pass, maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
+  });
+}
 
 export interface DexPriceRow {
   stablecoin_id: string;

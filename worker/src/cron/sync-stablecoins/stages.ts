@@ -186,8 +186,8 @@ export async function runStablecoinsPricingStage(
     options.syncStartSec,
     replayPriceCache,
   );
-  // The inline GeckoTerminal probe is disabled at the Worker memory boundary; the block is
-  // published purely as an explicit disabled marker for `/api/status`.
+  // The inline GeckoTerminal probe is disabled at the Worker memory boundary. Keep this
+  // explicit marker in the sync-stablecoins cron metadata for operational provenance.
   const gtProbe = {
     stats: {
       ...createEmptyGtProbeStats(),

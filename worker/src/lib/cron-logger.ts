@@ -253,13 +253,15 @@ const NON_PRODUCTIVE_REASONS = new Set([
   "not-due-today",
 ]);
 
-function inferCronProductivity(result: CronResult | null | void): CronProductivity {
+function inferCronProductivity(
+  result: CronResult | null | void,
+  metadata: Record<string, unknown> | null,
+): CronProductivity {
   if (result?.productivity) return result.productivity;
   const status = result?.status ?? "ok";
   if (status === "error" || status === "skipped_locked" || status === "skipped_neutral") {
     return { productive: false, reason: status };
   }
-  const metadata = parseJsonObject(result?.metadata);
   const reason = typeof metadata?.reason === "string" ? metadata.reason : null;
   if (reason && NON_PRODUCTIVE_REASONS.has(reason)) {
     return { productive: false, reason };
@@ -499,9 +501,10 @@ export async function logCronRun(
     resolvedResult = race.outcome.value;
     const resultStatus = resolvedResult?.status ?? "ok";
     const completedAt = Math.floor(Date.now() / 1000);
-    const productivity = inferCronProductivity(resolvedResult);
+    const parsedMetadata = parseJsonObject(resolvedResult?.metadata);
+    const productivity = inferCronProductivity(resolvedResult, parsedMetadata);
     const publicationCount = productivity.publications?.length ?? 0;
-    const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata).metadata;
+    const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata, parsedMetadata).metadata;
     const producer = options?.producer;
     persistingCompletedTelemetry = true;
     if (producer) {

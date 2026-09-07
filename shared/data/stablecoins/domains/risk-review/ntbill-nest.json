@@ -102,7 +102,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 87675658,
-        "canonicalChain": "ethereum",
+        "canonicalChain": "plume",
         "sources": [
           {
             "label": "nTBILL Plume token",

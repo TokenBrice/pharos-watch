@@ -56,7 +56,7 @@ describe("stablecoin client projection generator", () => {
       activeVariantStablecoinCount: 1,
       activeStableValueInvestmentCount: 0,
       preLaunchStablecoinCount: 1,
-      deadStablecoinCount: 2,
+      deadStablecoinCount: 3,
       activePegCurrencyCounts: { USD: 1, EUR: 1 },
       activePegCurrencies: ["EUR", "USD"],
       activeStablecoinIds: ["usd-core", "eur-core"],

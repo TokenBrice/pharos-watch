@@ -11,6 +11,7 @@ import {
   validateMintBurnBridgeDetection,
 } from "../mint-burn-contracts";
 import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
+import { MINT_BURN_COVERED_COIN_IDS } from "../../cron/depeg-resolver/mint-burn-coverage";
 
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -111,9 +112,8 @@ describe("mint-burn-contracts Base Dollar config", () => {
 
 describe("mint-burn-contracts removals", () => {
   it("does not track explicitly removed no-signal tokens", () => {
-    const trackedIds = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
     for (const removedId of REMOVED_STABLECOIN_IDS) {
-      expect(trackedIds.has(removedId)).toBe(false);
+      expect(MINT_BURN_COVERED_COIN_IDS.has(removedId)).toBe(false);
     }
   });
 });
@@ -324,7 +324,7 @@ describe("mint-burn-contracts top-100 Ethereum additions", () => {
     { stablecoinId: "usn-noon", symbol: "USN", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
     { stablecoinId: "eusd-electronic-usd", symbol: "EUSD", address: "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f", decimals: 18 },
     { stablecoinId: "meusd-mezo", symbol: "MUSD", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
-    { stablecoinId: "msusd-metronome", symbol: "MSUSD", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
+    { stablecoinId: "msusd-metronome", symbol: "msUSD", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
     { stablecoinId: "nusd-neutrl", symbol: "NUSD", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
     { stablecoinId: "alusd-alchemix", symbol: "alUSD", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
     { stablecoinId: "fidd-fidelity", symbol: "FIDD", address: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d", decimals: 18 },

@@ -13,13 +13,13 @@ function compactDiagnostic(value: unknown, originalBytes: number): Record<string
   };
 }
 
-function stringifyWithAdapterLatencyReserved(metadata: Record<string, unknown>): string {
+function reserveAdapterLatencyByteBudget(metadata: Record<string, unknown>): void {
   let serialized = JSON.stringify(metadata);
   if (
     metadata.adapterLatency == null
     || utf8Bytes(serialized) <= MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES
   ) {
-    return serialized;
+    return;
   }
 
   const candidates = Object.entries(metadata)
@@ -37,25 +37,18 @@ function stringifyWithAdapterLatencyReserved(metadata: Record<string, unknown>):
     };
     serialized = JSON.stringify(metadata);
   }
-  return serialized;
 }
 
-export function mergeCronMetadataWithLease(
-  cronMetadata: string | null | undefined,
-  leaseMeta: Record<string, unknown>,
-): string {
-  if (!cronMetadata) return JSON.stringify(leaseMeta);
-  try {
-    const parsed = JSON.parse(cronMetadata) as Record<string, unknown>;
-    return JSON.stringify({ ...parsed, ...leaseMeta });
-  } catch {
-    return `${cronMetadata} | lease=${JSON.stringify(leaseMeta)}`;
-  }
-}
-
-export function normalizeCronMetadata(
+/**
+ * Normalizes a job's metadata and merges the bounded scheduler/lease identity
+ * in one pass: the producer metadata string is decoded once, defaults are
+ * applied, the adapter-latency byte reservation compacts oversized diagnostics
+ * BEFORE lease enrichment (so lease keys can never be compaction candidates),
+ * and the enriched object is serialized once for the persisted result.
+ */
+export function normalizeCronMetadataWithLease(
   result: CronResult | null | void,
-  extras: Record<string, unknown> = {},
+  leaseMeta: Record<string, unknown>,
 ): string {
   const parsed: Record<string, unknown> = {};
   if (result?.metadata) {
@@ -68,7 +61,7 @@ export function normalizeCronMetadata(
 
   const rowsWrittenDefault = typeof result?.itemCount === "number" ? result.itemCount : null;
 
-  return stringifyWithAdapterLatencyReserved({
+  const metadata = {
     rowsRead: parsed.rowsRead ?? null,
     rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
     rowsDropped: parsed.rowsDropped ?? 0,
@@ -76,6 +69,7 @@ export function normalizeCronMetadata(
     fallbackMode: parsed.fallbackMode ?? null,
     validationFailures: parsed.validationFailures ?? 0,
     ...parsed,
-    ...extras,
-  });
+  };
+  reserveAdapterLatencyByteBudget(metadata);
+  return JSON.stringify({ ...metadata, ...leaseMeta });
 }

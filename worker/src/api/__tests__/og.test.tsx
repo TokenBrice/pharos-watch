@@ -13,6 +13,9 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../../lib/stress-signals-current-rows";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
@@ -567,8 +570,48 @@ describe("depeg OG handler aggregation", () => {
     })();
   }
 
+  it("renders the owner's completed generation instead of superseded or unpublished signals", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const completedAt = now - 60;
+    const current = { stablecoin_id: "usdt-tether", score: 30, band: "WARNING", signals_json: "{}", computed_at: completedAt };
+    const superseded = { ...current, band: "CALM", computed_at: completedAt - 900 };
+    const unpublished = { ...current, band: "DANGER", computed_at: now };
+    const pointer = {
+      key: "dews:published-generation",
+      updated_at: completedAt,
+      value: JSON.stringify({
+        updatedAt: completedAt, source: "compute-dews", publishStatus: "published", coverageVersion: 2,
+        expectedRowCount: 1, stablecoinIdsDigest: buildDewsStablecoinIdsDigest([current.stablecoin_id]),
+      }),
+    };
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [pointer], first: pointer },
+      { match: "pharos:stress-signals:latest-all", rows: [superseded] },
+      { match: "pharos:stress-signals:latest-one", rows: [superseded], first: superseded },
+      { match: "FROM stress_signal_publication_rows", rows: [current], first: current },
+      { match: "FROM stress_signals", rows: [unpublished], first: unpublished },
+      { match: "cache", rows: [{
+        key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }), updated_at: now,
+      }] },
+      { match: "dex_liquidity", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "mint_burn_hourly", rows: [] },
+      { match: "stability_index_samples", rows: [] },
+    ]);
+    const options = { staleAfterSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8 };
+    expect((await loadStressSignalCurrentRows(db, now, options)).results).toEqual([current]);
+    expect((await loadStressSignalCurrentRowForCoin(db, current.stablecoin_id, now, options))?.band).toBe("WARNING");
+    const aggregate = await captureDepegData(db);
+    expect(aggregate.dewsDistribution).toEqual({ danger: 0, alert: 0, warning: 1, normal: 0 });
+    await handleOg(db, "/api/og/stablecoin/usdt-tether");
+    const element = vi.mocked(satoriStandalone).mock.calls[vi.mocked(satoriStandalone).mock.calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+    expect(element.props.data.dewsBand).toBe("WARNING");
+  });
+
   it("maps stress bands to the DEWS distribution and counts daily flux", async () => {
     const db = mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
       // active-depeg COUNT(*) (ended_at IS NULL)
       { match: "COUNT(*) as count FROM depeg_events WHERE ended_at IS NULL", rows: [], first: { count: 1 } },
       { match: "stability_index_samples", rows: [], first: { score: 88.2, band: "BEDROCK" } },
@@ -606,6 +649,7 @@ describe("depeg OG handler aggregation", () => {
 
   it("clamps coinsAtPeg to zero when active depegs exceed tracked coins", async () => {
     const db = mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
       { match: "COUNT(*) as count FROM depeg_events WHERE ended_at IS NULL", rows: [], first: { count: 5 } },
       { match: "stability_index_samples", rows: [], first: null }, // psi fallbacks
       { match: "stress_signals", rows: [{ band: "DANGER" }, { band: "ALERT" }] },
@@ -699,7 +743,6 @@ describe("stability-index OG handler aggregation", () => {
 
 describe("og cards render through satori", () => {
   const font = (file: string) =>
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture reads repo-local font assets
     readFileSync(fileURLToPath(new URL(`../../../assets/fonts/${file}`, import.meta.url).href));
   const fonts = [
     { name: "Geist Sans", data: font("Geist-Regular.ttf"), weight: 400 as const, style: "normal" as const },

@@ -40,11 +40,8 @@ interface StatusSupplements {
   providerCircuitHealth: ProviderCircuitHealth | null;
   canaries: CanaryStatus | null;
   priceSourceHealth: PriceSourceHealth | null;
-  priceProviderDiagnostics: Array<Record<string, unknown>> | null;
-  gtProbe: Record<string, unknown> | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   d1Usage: D1UsageSummaryWithTableGrowth | null;
-  cacheBlobSizes?: Record<string, number>;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
   classificationWarnings?: ClassificationWarning[];

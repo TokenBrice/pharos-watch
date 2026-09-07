@@ -22,6 +22,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - renders one server-side `sr-only` `h1` for active pages before the client detail island mounts; the visible identity remains inside the client hero, while descriptions live in metadata and Dataset JSON-LD
 - keeps a visible dossier-style `Suspense` fallback with coin identity, classification, section rail placeholders, and score-card scaffolding while the full client boots
 - passes `ExploreNextSection` (and the FAQ) into `StablecoinDetailClient`, which renders them inside and immediately after the Explore zone
+- adds a USDC-specific March 2023 depeg answer to that FAQ and its matching JSON-LD; the static Answer First fallback also links to the existing event timeline and SVB case study, without changing the hydrated hero's case-study link or creating a new route
 - emits N-level `BreadcrumbJsonLd` plus a Dataset JSON-LD payload for active assets
 
 Active stablecoin Dataset JSON-LD is intentionally static and crawlable: `variableMeasured` advertises price, market cap, circulating supply, Peg Score, DEWS, Safety Grade, and Redemption Backstop coverage. Dataset nodes inline the Pharos `Organization` for `creator` / `publisher`, expose the CC BY 4.0 license URL, carry the stable Pharos coin URN in `identifier`, and set `sameAs` to the canonical Pharos detail URL. Provider/profile URLs belong to the nested `about` Thing's `sameAs`. Frozen assets use archive-specific historical variables, quarantined and delisted records use inactive-listing variables without live claims, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD.
@@ -38,6 +39,10 @@ The `/stablecoin/[id]/yield/` subroute is statically generated only for active c
 
 `PreLaunchDetail` is the server-rendered variant for tracked assets whose metadata status is still `pre-launch`.
 
+The identity header precedes the status banner. The banner keeps its lifecycle explanation visible and places the full `launchPhaseDetail` narrative in a collapsed native disclosure labelled "Full launch status and history". The full text remains in the server-rendered HTML; this layout does not change lifecycle status, launch dates, or alert behavior.
+
+The exact launch-alert command is keyboard-focusable so narrow-screen readers can scroll its overflow without a pointer. Launch narratives and milestone descriptions wrap unbroken addresses so the page reflows at 320 CSS pixels, including with the narrative disclosure expanded.
+
 In addition to the pre-launch dossier sections (banner, timeline, milestones, featured content, and metadata), it now includes a launch-alert CTA that:
 
 - owns the page's visible `h1` for pre-launch assets; active assets use an `sr-only` server-rendered `h1` and keep the visible identity in the client hero
@@ -52,12 +57,14 @@ In addition to the pre-launch dossier sections (banner, timeline, milestones, fe
 
 `useStablecoinDetailViewModel()` gathers the detail page's shared query state, then delegates all derived formatting and fallback logic to `buildStablecoinDetailViewModel(...)`.
 
+The health banner distinguishes an old producer snapshot, a failed refresh using saved data, and a source/quality advisory on otherwise fresh data. Liquidity advisories use the selected coin's nullable `warning` field; an unrelated coin's TVL cliff does not degrade this page. Global source failures and legacy responses without coin-scoped metadata remain visible, and suppressing an unrelated advisory never resets the producer clock.
+
 ### Query inputs
 
 The hook currently wires these sources:
 
 - `useSupplyHistory(id)` for the chart series
-- `useStablecoins()` for the canonical cached stablecoin snapshot
+- the registered `stablecoinLiveSummary(id)` query for the compact coin-detail price/supply projection (never a partial write to the global stablecoins cache)
 - `usePegSummary()` for peg score and depeg metadata
 - `useDexLiquidity()` for liquidity score and DEX context
 - `useReportCardsV9()` for the main Safety Score card
@@ -86,6 +93,8 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 ---
 
 ## Section Order
+
+Cold-load nested hashes such as `#depeg-history` reveal enclosing disclosures and re-align after hydration on the existing bounded 160/480/960/1800 ms cadence. These initial-position corrections are instant: animating through intermediate lazy sections delays their mounting and can overshoot as their heights change. Top-level section hashes remain owned by the scrollspy; changing the hash or user wheel/touch/pointer/key input stops further alignment, unmount clears pending work, and browser back/forward restoration remains native.
 
 `src/app/stablecoin/[id]/detail-content.tsx` composes sections in this order for live/non-pre-launch assets (`client.tsx` delegates to this compositor):
 
@@ -119,6 +128,7 @@ Detail experiments remain source-gated: hero verdict, depeg resolver, and the DD
 - Section ids are stable; do not rename them. In particular, the top-level Explore pill targets `#explore`; the reusable `ExploreNextSection` keeps its inner `#explore-next` anchor for existing deep links. Below `lg`, its static-comparison grid shows only the first 4 briefs — the rest stay in the DOM behind `hidden lg:flex` (links remain crawlable) with a `+N more comparison briefs` link to the peg-family page.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the context zone (inside `ContagionSnapshot`) and are not top-level scrollspy entries.
+- Only `ContagionSnapshot`'s graph is viewport-gated with the existing `LazySection` default margin. Its existing 22rem placeholder reserves space until the graph approaches the viewport, deferring offscreen SVG logo requests; the heading, variant links, and collateral context remain rendered independently.
 - `ControlPostureCard` renders after `CustodyCard` in the `xl+` summary rail and, as an `xl:hidden` in-flow copy folded inside `RailCopyFold`, immediately before the `FreezeSeizureCard` copy that closes the Context zone's folded review stack. It appears only when the legacy `governanceQuality` field is authored, labels the concept as **Control posture**, and explicitly presents the classification as descriptive rather than scored. Its six-cell category map has no numeric marker or safer direction; dense taxonomy, scoring, and variant distinctions stay folded behind `Classification details`. The footer links to methodology but does not claim sources or a reviewed date because the field has no dedicated sourced review object.
 - `ContagionSnapshot` uses the shared dependency graph in `minimalChrome` mode, and takes the wider column (`3fr`) of the split against the variant and collateral-usage rail (`2fr`). On detail pages, crowded maps keep the compact node treatment with a 1.33x internal logo zoom; maps with 10 or fewer visible stablecoins render ticker labels and 1.5x node/text scale, and maps with 5 or fewer visible stablecoins use 2x scale. Raster token logos are capped at `MAX_RASTER_LOGO_RADIUS` so a scaled-up sparse map never upscales a 50px source into pixelation; vector logos are exempt.
 - `DistributionSection` renders after the chart in the Market zone, outside the top-level rail.
@@ -193,10 +203,13 @@ Below the identity block, the classification line uses `buildGovernanceTaxonomyU
 
 - **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
+
 - **Deep-link ID:** `price`; the nested card still carries the legacy `price-transparency` id
 - **Mount point:** liquidity zone below `#dex-liquidity`, stacked under the redemption backstop when both render
 - **Hidden when:** there is no `coinData`, or both `coinData.price == null` and no `dexPriceCheck`
 - Shows current price, source label, confidence badge, source-depth target (`0/3`, `1/3`, `2/3`, or `3+/3`), update recency, and a table of all known price sources with their status (Used/Available/No feed). When protocol-redeem overrides are active, the individual market source rows are hidden and a single "Protocol Redemption" (Used) chip is shown instead. DEX Price Check section renders when `dexPriceCheck` data exists.
+
+The hero's peg-deviation label and severity styling use the published `peg-summary.currentDeviationBps` as their single authority. The independently refreshed raw price remains the price display and transparency evidence; it is not recomputed into a second deviation label. Missing or unavailable published bps remains `N/A`, while NAV tokens retain their explicit no-fixed-peg presentation.
 
 ### Reserves anchor
 
@@ -205,6 +218,8 @@ When reserves render, `ReservePanel` wraps the treemap block in `<section id="re
 ### Explore Next anchor
 
 The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `ExploreNextSection` wraps itself in `<section id="explore-next">` for existing deep links. The browse grid is `sm:grid-cols-2 xl:grid-cols-3` with columns Taxonomy | Trackers | Actions. A separate Peers block above it shows up to 6 related pills (`related.slice(0, 6)`) with a `See all peers ->` header link to the peg landing page when a peg slug exists, plus a `vs {symbol}` compact-link list that opens the crawlable static comparison brief for each pair.
+
+The shared primary-comparison helper sends USDe's hero, detail action and static fallback to the USDe/sUSDe brief so readers can distinguish the base token from its staking wrapper. Other profiles retain their existing first registered pair (including USDG/USDC and PAXG/XAUT); unknown pairs fall back to the live tool. The Explore action pointing at `/compare/` is labelled as browsing comparisons, not as a watchlist preset it does not activate.
 
 ---
 
@@ -225,9 +240,13 @@ The compile-input generator `scripts/build-data/build-stablecoin-detail-snapshot
 
 Credentialed local runs read the authoritative API (`PHAROS_API_KEY`, or `SITE_API_SHARED_SECRET` via the site-API origin). CI bootstraps and Pages release builds carry no API secret, so without a configured generator base or key the generator reads the same public GET-only `/_site-data` lane the release refresh uses (`https://stablecoin-dashboard.pages.dev/_site-data`); both the coin-detail and supply-history paths are on that lane's allowlist. A 404 for an inactive catalog record omits the lane exactly as on the authenticated path.
 
-During static export, the server page reads only the current coin's file and passes it through the client boundary. The client seeds React Query only under the registered `stablecoin-live-summary` and per-coin supply-history keys with `dataUpdatedAt = snapshot.generatedAt`. The full `stablecoin-detail` key is not seeded. Producer-derived `staleTime` and `refetchInterval` remain unchanged, so fresh build lanes avoid their initial requests while an aged snapshot refetches normally. Peg summary remains an unseeded global query. Existing market and page-level freshness affordances use the preserved query timestamp; the snapshot is not labelled live.
+During static export, the server page reads only the current coin's file and passes it through the client boundary. The client seeds React Query only under the registered `stablecoin-live-summary` and per-coin supply-history keys, using independent millisecond clocks from `snapshot.updatedAt.liveSummary` and `.supplyHistory`. `generatedAt` records artifact creation only. The generator preserves response `_meta.updatedAt` / `updatedAt` seconds when present, otherwise derives the source clock from `Date` and `X-Data-Age` (subtracting edge `Age` from local acquisition time when `Date` is absent). Detail cache hits expose `X-Data-Age` even while fresh. A response with no clock uses its own acquisition time, never the end-of-batch clock. An older source cannot replace newer live query data; legacy artifacts lacking clocks seed as immediately stale. The full `stablecoin-detail` key is not seeded, and producer-derived `staleTime` / `refetchInterval` remain unchanged. Peg summary remains an unseeded global query; the snapshot is not labelled live.
 
-Report cards, liquidity, redemption, yield, stress, flows, blacklist, and reserves remain interaction/viewport-gated. The page-wide retry action includes only failed eager or currently enabled supplemental lanes.
+Report cards, liquidity, yield and stress load eagerly because they supply the visible hero. Redemption, flows, blacklist and reserves remain section-viewport-gated; approaching a section is sufficient, without requiring a scroll, pointer or keyboard event first. Offscreen child modules retain their own lazy-render gates. The shared `useQuerySlice` / `useQuerySlices` projection preserves explicit `enabled` flags, so intentionally deferred lanes are omitted from the page health banner rather than reported as missing initial data. The page-wide retry action includes only failed eager or currently enabled supplemental lanes.
+
+The detail API can enrich a missing provider price from the current published canonical stablecoins row without altering provider supply/history or storing the quote in the history cache. Display enrichment does not apply the depeg detector's 30-minute observation cutoff or discard a publication merely because its nominal 600-second freshness budget elapsed. It preserves the original price timestamps, exposes the older of history/publication ages, bounds cache reuse by publication freshness, and retains stale-publication warnings/no-store behavior. Existing confidence, provenance, inactive/frozen-asset and invalid-price guards remain authoritative; unavailable canonical prices remain unavailable rather than being inferred from historical supply ratios. The compact summary preserves price source/confidence, observation/update/sync timestamps, observation mode and consensus/agreement source lists; older snapshots may omit the added provenance fields.
+
+`shared/types/market.ts` owns the public `StablecoinDetailResponseSchema`, consumed by both client parsing and the generated OpenAPI response contract. The public price can be `null` and its source/confidence/update/observation provenance is typed; provider-specific fields still pass through. The Worker retains its separate stricter upstream DefiLlama intake validator.
 
 ### Reserve presentation
 
@@ -258,6 +277,8 @@ The page-level stale banner starts with the five page-defining shared presets:
 - `redemptionBackstops`
 
 It also tracks supply history, yield rankings, stress signals, and the enabled mint/burn flow, blacklist, and live-reserve sources. Optional section components use the same source status to show unavailable or stale-with-data notices with retry actions; supported zero-result and unsupported states remain distinct. Depeg history continues to manage its own local loading and error state.
+
+Static-export freshness notices render deterministically: initial age classification uses the saved query receipt time and timestamps use `en-US`/UTC. After hydration, the existing hydration hook switches to the browser clock/local timezone. Saved-data errors, source advisories and producer lag already present at receipt remain visible in server HTML; only subsequent wall-clock aging waits for hydration.
 
 ### Retry behavior
 

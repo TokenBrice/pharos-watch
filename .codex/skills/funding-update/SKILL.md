@@ -30,11 +30,17 @@ Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at
 
 Show each proposed row with chain, transaction, asset/amount, receipt-time USD value/source, donor display/kind, plus rejected self-activity and incomplete coverage. After explicit approval, append rows in ascending timestamp order and update `last_updated_at`. If no approved rows remain, make no edits.
 
-Validate with:
+Validate the actual edited file through the same schema used by the funding page, then run the focused calculations:
 
 ```bash
+node --import tsx --input-type=module <<'NODE'
+import { readFileSync } from "node:fs";
+import { DonationsFileSchema } from "./shared/lib/funding/schema.ts";
+DonationsFileSchema.parse(JSON.parse(readFileSync("shared/data/funding/donations.json", "utf8")));
+NODE
 npx vitest run shared/lib/funding/__tests__/helpers.test.ts
-npm run build
 ```
+
+Run `npm run build` when page rendering changes or an explicit production-build rehearsal is requested. Schema validation does not replace transaction reconciliation or approval of each proposed row.
 
 Report approved additions, rejected/self/spam rows, pricing/ENS uncertainty, coverage gaps, and check results. Publishing is a separate `pharos-release-runner` task.

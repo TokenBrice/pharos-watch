@@ -1,7 +1,7 @@
 {
   "id": "xtusd-xt",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": false,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
     "evidence": "Inferred review retained: XTUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
     "reviewer": "Codex inferred-status backfill",
@@ -46,7 +46,7 @@
       },
       {
         "label": "xscscan token API (XTUSD 0x1a6131ea… supply/holders, accessed 2026-08-08)",
-        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
       },
       {
         "label": "XT.COM TAI to XTUSD announcement",

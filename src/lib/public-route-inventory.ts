@@ -2,7 +2,7 @@ import { getActiveChainIds } from "@shared/lib/chains";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
@@ -42,7 +42,7 @@ export const PUBLIC_PRIMARY_ROUTE_PATHS = [
 ] as const;
 
 export const PUBLIC_REFERENCE_ROUTE_PATHS = [
-  "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/learn/",
+  "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/depeg/archive/", "/learn/",
   "/learn/glossary/", "/sitemap-tree/", "/api/", "/stablecoins/", "/stablecoins/backing/",
   "/stablecoins/governance/", "/stablecoins/infrastructure/", "/privacy/", "/docs/",
 ] as const;
@@ -55,7 +55,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("primary", PUBLIC_PRIMARY_ROUTE_PATHS),
   ...entries("reference", PUBLIC_REFERENCE_ROUTE_PATHS),
   ...entries("methodology", METHODOLOGY_CHANGELOG_SITEMAP_PATHS),
-  ...entries("stablecoin", TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
+  ...entries("stablecoin", CLIENT_TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
   ...entries("chain", getActiveChainIds().map((chainId) => `/chains/${chainId}/`)),
   ...entries("chain", ["/chains/"]),
   ...entries("taxonomy", ACTIVE_PEGS.map((peg) => `/stablecoins/${PEG_SLUGS[peg]}/`)),

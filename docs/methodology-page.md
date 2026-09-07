@@ -103,12 +103,9 @@ Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Bac
 
 Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. `BLACKLIST_STABLECOINS` in `shared/types/market.ts` owns the response/UI/archive identity union. Live on-chain scan admission is a separate reviewed contract roster, `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts`; do not infer that every UI identity is actively scanned or that an omitted identity lacks an administrative freeze surface. The source registries and their coverage tests own the volatile roster rather than this page.
 
-The detail page renders the existing per-coin blacklist module unchanged. `RecentBlacklistBanner` (`src/components/stablecoin-detail/recent-blacklist-banner.tsx`) implements a "Recent activity" badge (linking to the `#blacklist` anchor) for when one of two thresholds is hit over a trailing 7-day window, but it currently has no production render site — the hero tertiary-metrics wiring that mounted it was dropped in a later presentation refactor — so the badge does not appear on the detail page today. Its thresholds are:
+The detail page retains its per-coin blacklist module. The unmounted recent-activity banner and its hook have been removed; the retained `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` configuration flag has no render site (see [process/feature-flags.md](process/feature-flags.md)). The summary API still exposes its trailing seven-day per-coin event counts.
 
-- `freezes >= 5` (when `destroys === 0`), or
-- any `destroys > 0`.
-
-The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [process/feature-flags.md](process/feature-flags.md)) and suppressed when the coin is already in `frozen` status so it does not double up with the existing frozen badge. Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/blacklist-tracker.ts` for the versioned methodology snapshot.
+Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/blacklist-tracker.ts` for the versioned methodology snapshot.
 
 ### Bluechip rating {#bluechip}
 

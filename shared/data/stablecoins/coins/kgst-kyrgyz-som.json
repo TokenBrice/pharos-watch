@@ -45,26 +45,5 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "kgst-kyrgyz-som",
-    "display": {
-      "url": "https://www.kgstoken.kg/",
-      "label": "KGST"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "bsc",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Kyrgyz som fiat reserves and cash equivalents",
-      "risk": "medium"
-    }
-  },
   "launchDate": "2025-10-24"
 }

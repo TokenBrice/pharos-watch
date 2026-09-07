@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
-  "pegMechanism": "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5 to 7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
+  "pegMechanism": "Daily rebase on New York banking days aligns supply with portfolio NAV; 1:1 USDC redemption uses Cygnus's Request + Claim withdrawal flow, normally taking 5–7 days. Remove the unsupported Transmuter and Elixir AMO clauses.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

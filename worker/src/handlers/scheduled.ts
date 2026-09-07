@@ -56,55 +56,22 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
   monthlyYieldAudit: () => import("./scheduled/monthly-yield-audit").then((mod) => mod.runMonthlyYieldAuditSlot),
 } satisfies Record<ScheduledRunnerKey, SlotRunnerLoader>;
 
-export const SLOT_RUNNER_BY_KEY = Object.fromEntries(
-  Object.entries(SLOT_RUNNER_LOADER_BY_KEY).map(([key, loadRunner]) => [
-    key,
-    async (runtime: ScheduledRuntimeContext) => {
-      const runner = await loadRunner();
-      return runner(runtime);
-    },
-  ]),
-) as Record<ScheduledRunnerKey, SlotRunner>;
-
-type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "heartbeatSec" | "staleAfterSec" | "preSweepLimit">;
+type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "staleAfterSec">;
 
 // staleAfterSec measures consecutive missed slot heartbeats, not job length:
 // the fence heartbeat timer runs for the whole slot regardless of how long a
 // child job takes, so even the longest lanes tolerate a tight window. Five to
 // six minutes of heartbeat silence means the isolate was killed (OOM kills
 // write no terminal row), and every extra minute here extends the outage of
-// each lane that gates on the dead slot.
-const SHORT_SLOT_FENCE_POLICY = {
-  heartbeatSec: 60,
-  staleAfterSec: 5 * 60,
-  preSweepLimit: 5,
-} satisfies SlotFencePolicy;
-
-const MEDIUM_SLOT_FENCE_POLICY = {
-  heartbeatSec: 60,
-  staleAfterSec: 5 * 60,
-  preSweepLimit: 5,
-} satisfies SlotFencePolicy;
-
+// each lane that gates on the dead slot. Only lanes that need the sixth
+// minute of takeover slack are listed below; every other slot runs on the
+// fence defaults (heartbeatSec 60, staleAfterSec 5*60, preSweepLimit 5).
 const LONG_SLOT_FENCE_POLICY = {
-  heartbeatSec: 60,
   staleAfterSec: 6 * 60,
-  preSweepLimit: 5,
 } satisfies SlotFencePolicy;
 
 const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFencePolicy>> = {
-  statusSelfCheckOffset: SHORT_SLOT_FENCE_POLICY,
-  digestTriggerPoll: SHORT_SLOT_FENCE_POLICY,
-  fiveMinuteTelegramAlerts: MEDIUM_SLOT_FENCE_POLICY,
   fiveMinuteReserveRecovery: LONG_SLOT_FENCE_POLICY,
-  quarterHourly: MEDIUM_SLOT_FENCE_POLICY,
-  v9SupplyAttributionOffset: MEDIUM_SLOT_FENCE_POLICY,
-  depegResolverOffset: MEDIUM_SLOT_FENCE_POLICY,
-  v9PublicationOffset: SHORT_SLOT_FENCE_POLICY,
-  halfHourlyMeasuredExecution: MEDIUM_SLOT_FENCE_POLICY,
-  halfHourlyOffset: MEDIUM_SLOT_FENCE_POLICY,
-  halfHourlyChartsOffset: MEDIUM_SLOT_FENCE_POLICY,
-  dewsPsiOffset: MEDIUM_SLOT_FENCE_POLICY,
   sixHourlyBlacklist: LONG_SLOT_FENCE_POLICY,
   halfHourlyMintBurnCritical: LONG_SLOT_FENCE_POLICY,
   twoHourlyDexDiscovery: LONG_SLOT_FENCE_POLICY,
@@ -145,8 +112,8 @@ export async function handleScheduledEvent(
 ): Promise<void> {
   const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
-  const runner = slotPlan ? SLOT_RUNNER_BY_KEY[slotPlan.runnerKey] : undefined;
-  if (!runner || !slotPlan) {
+  const loadRunner = slotPlan ? SLOT_RUNNER_LOADER_BY_KEY[slotPlan.runnerKey] : undefined;
+  if (!loadRunner || !slotPlan) {
     const error = buildUnknownScheduleError(event.cron);
     logWorkerEventArgs("handler", "error", error.message);
     throw error;
@@ -185,6 +152,7 @@ export async function handleScheduledEvent(
         ) {
           await waitForV9MemoryLaneRelease(env.DB, slotSignal);
         }
+        const runner = await loadRunner();
         const summary = await runner(runtime);
         if (!summary) return;
         return {

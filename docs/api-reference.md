@@ -93,6 +93,8 @@ Endpoints backed by the cron cache include these additional headers:
 
 Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
 
+DEX liquidity keeps its dataset-wide advisory in `Warning` and also emits a nullable `warning` on each coin row. Coin-specific TVL cliffs or pool-count drops from an otherwise successful run apply only to affected coins; provider failures and unscoped findings remain global. The advisory comes from the latest liquidity producer outcome, excluding neutral/locked skips and hourly price-only runs that reuse the current liquidity generation. Coin detail consumers use the row advisory while retaining the producer timestamp for independent freshness checks; older responses without the field retain their global warning.
+
 ---
 
 ## Response Body Freshness (`_meta`)
@@ -278,7 +280,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/stablecoin/{stablecoinId}` | Stablecoin detail | Stablecoins | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-summary/{stablecoinId}` | Stablecoin summary | Stablecoins | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/non-usd-share` | Non-USD share | Market Structure, History | `X-API-Key` required | `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
-| GET | `/api/chains` | Chains | Chains | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
+| GET | `/api/chains` | Chains | Chains | `X-API-Key` required | `chain` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-reserves/{stablecoinId}` | Stablecoin reserves | Stablecoins, Reserves | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-charts` | Stablecoin charts | Stablecoins, History | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist` | Blacklist events | Blacklist | `X-API-Key` required | `stablecoin` (query, optional, string); `chain` (query, optional, string); `chainId` (query, optional, string); `eventType` (query, optional, string); `q` (query, optional, string); `sortBy` (query, optional, string); `sortDirection` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
@@ -375,7 +377,7 @@ Returns stablecoin distribution and health aggregates grouped by chain.
 
 - **Operation ID:** `chains`
 - **Path:** `/api/chains`
-- **Parameters:** None.
+- **Parameters:** `chain` (query, optional, string)
 - **Success response schema:** [`ChainsResponse`](https://pharos.watch/openapi.json#/components/schemas/ChainsResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
@@ -450,7 +452,7 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.21"
+  "currentVersion": "6.22"
 }
 ```
 
@@ -488,7 +490,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.21"
+  "currentVersion": "6.22"
 }
 ```
 
@@ -723,8 +725,8 @@ Returns the currently published Safety Score V9 report-card set.
 
 ```json
 {
-  "version": "9.46",
-  "methodologyVersion": "9.46"
+  "version": "9.461",
+  "methodologyVersion": "9.461"
 }
 ```
 
@@ -806,7 +808,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.42",
-  "methodologyVersion": "9.46"
+  "methodologyVersion": "9.461"
 }
 ```
 
@@ -883,8 +885,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.21",
-  "methodologyVersion": "6.21"
+  "currentVersion": "6.22",
+  "methodologyVersion": "6.22"
 }
 ```
 

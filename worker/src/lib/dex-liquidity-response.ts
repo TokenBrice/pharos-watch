@@ -319,7 +319,7 @@ export function getDexLiquidityTrendTolerances() {
   };
 }
 
-export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): string | null {
+export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null, stablecoinId?: string): string | null {
   if (!latestCron) return null;
 
   let failedSources: string[] = [];
@@ -344,6 +344,13 @@ export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null)
   }
 
   if (latestCron.status !== "degraded" && latestCron.status !== "error" && qualityDriftSeverity === "none") return null;
+
+  // Only a successful, exclusively coin-scoped quality finding can be hidden
+  // on unrelated detail pages. Source failures and unknown flags remain global.
+  if (stablecoinId && latestCron.status === "ok" && failedSources.length === 0
+    && !nearCoverageGuard && !nearValueGuard && !nearMajorCoverageGuard && qualityDriftFlags.length > 0
+    && qualityDriftFlags.every((flag) => /^(major-tvl-cliff|watchlist-pool-drop):.+$/.test(flag))
+    && !qualityDriftFlags.some((flag) => flag.endsWith(`:${stablecoinId}`))) return null;
 
   const details: string[] = [];
   if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);

@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test-only adapter source walker rooted in this checked-in directory. */
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";

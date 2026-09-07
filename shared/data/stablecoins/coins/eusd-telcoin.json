@@ -29,8 +29,7 @@
   "detailProvider": "defillama",
   "geckoId": "eusd-2",
   "llamaId": "416",
-  "cmcSlug": "eusd-telcoindab",
-  "protocolSlug": "telcoin-bank",
+  "cmcSlug": "eusd-bank",
   "links": [
     {
       "label": "Website",

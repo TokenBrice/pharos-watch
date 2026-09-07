@@ -1,6 +1,5 @@
 import type { TelegramCreds } from "../lib/telegram";
-import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
-import { runIdempotentAdminAction } from "../lib/idempotency";
+import { makeAdminRoute, makeIdempotentAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { setCache } from "../lib/db-cache";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { readRequestTextBounded } from "../lib/api-json-body";
@@ -26,114 +25,114 @@ interface TriggerDigestRouteContext extends AdminRouteContext {
  */
 export const DIGEST_FORCE_RUN_CACHE_KEY = "digest:force-run-request";
 
-export const handleTriggerDigest = makeAdminRoute(
+export const handleTriggerDigest = makeIdempotentAdminRoute(
   "route-trigger-digest",
-  async ({ db, request }: TriggerDigestRouteContext) =>
-    runIdempotentAdminAction(db, "trigger-digest", request, async () => {
-      const requestText = await readRequestTextBounded(request, 1_024);
-      if (requestText instanceof Response) return requestText;
-      let requestedStyleGateMode: { kind: DigestStyleGateKind; mode: "shadow" | "enforce" } | null = null;
-      if (requestText.trim()) {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(requestText);
-        } catch {
-          return errorResponse(400, "Request body must be valid JSON");
-        }
-        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-          return errorResponse(400, "Request body must be a JSON object");
-        }
-        const body = parsed as Record<string, unknown>;
-        if (Object.keys(body).some((key) => key !== "styleGateMode")) {
-          return errorResponse(400, "Request body contains an unknown field");
-        }
-        if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
-          const candidate = body.styleGateMode;
-          if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
-            return errorResponse(400, "styleGateMode must target exactly one of daily or weekly");
-          }
-          const entries = Object.entries(candidate);
-          if (entries.length !== 1 || (entries[0]?.[0] !== "daily" && entries[0]?.[0] !== "weekly")) {
-            return errorResponse(400, "styleGateMode must target exactly one of daily or weekly");
-          }
-          const [kind, value] = entries[0] as [DigestStyleGateKind, unknown];
-          const mode = parseDigestStyleGateMode(value);
-          if (!mode) return errorResponse(400, 'styleGateMode value must be "shadow" or "enforce"');
-          requestedStyleGateMode = { kind, mode };
-        }
+  "trigger-digest",
+  async ({ db, request }: TriggerDigestRouteContext) => {
+    const requestText = await readRequestTextBounded(request, 1_024);
+    if (requestText instanceof Response) return requestText;
+    let requestedStyleGateMode: { kind: DigestStyleGateKind; mode: "shadow" | "enforce" } | null = null;
+    if (requestText.trim()) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(requestText);
+      } catch {
+        return errorResponse(400, "Request body must be valid JSON");
       }
-      if (requestedStyleGateMode) {
-        await setCache(
-          db,
-          DIGEST_STYLE_GATE_MODE_CACHE_KEYS[requestedStyleGateMode.kind],
-          requestedStyleGateMode.mode,
-        );
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        return errorResponse(400, "Request body must be a JSON object");
       }
-      const effectiveStyleGateMode = await resolveDigestStyleGateModes(db);
-      if (requestedStyleGateMode) {
-        effectiveStyleGateMode[requestedStyleGateMode.kind] = requestedStyleGateMode.mode;
+      const body = parsed as Record<string, unknown>;
+      if (Object.keys(body).some((key) => key !== "styleGateMode")) {
+        return errorResponse(400, "Request body contains an unknown field");
       }
-      const requestId = `manual-digest-${crypto.randomUUID()}`;
-      const requestedAt = Math.floor(Date.now() / 1000);
+      if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
+        const candidate = body.styleGateMode;
+        if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+          return errorResponse(400, "styleGateMode must target exactly one of daily or weekly");
+        }
+        const entries = Object.entries(candidate);
+        if (entries.length !== 1 || (entries[0]?.[0] !== "daily" && entries[0]?.[0] !== "weekly")) {
+          return errorResponse(400, "styleGateMode must target exactly one of daily or weekly");
+        }
+        const [kind, value] = entries[0] as [DigestStyleGateKind, unknown];
+        const mode = parseDigestStyleGateMode(value);
+        if (!mode) return errorResponse(400, 'styleGateMode value must be "shadow" or "enforce"');
+        requestedStyleGateMode = { kind, mode };
+      }
+    }
+    if (requestedStyleGateMode) {
       await setCache(
         db,
-        DIGEST_FORCE_RUN_CACHE_KEY,
-        JSON.stringify({
-          requestedAt,
-          requestId,
-          attempts: 0,
-          nextAttemptAt: requestedAt,
-          state: "pending",
-          lastError: null,
-        }),
+        DIGEST_STYLE_GATE_MODE_CACHE_KEYS[requestedStyleGateMode.kind],
+        requestedStyleGateMode.mode,
       );
-      return jsonResponse(
-        {
-          ok: true,
-          accepted: true,
-          requestId,
-          styleGateMode: effectiveStyleGateMode,
-          message: "Digest trigger queued; will execute on the next polling tick (≤5 min).",
-        },
-        { status: 202, noStore: true },
-      );
-    }),
+    }
+    const effectiveStyleGateMode = await resolveDigestStyleGateModes(db);
+    if (requestedStyleGateMode) {
+      effectiveStyleGateMode[requestedStyleGateMode.kind] = requestedStyleGateMode.mode;
+    }
+    const requestId = `manual-digest-${crypto.randomUUID()}`;
+    const requestedAt = Math.floor(Date.now() / 1000);
+    await setCache(
+      db,
+      DIGEST_FORCE_RUN_CACHE_KEY,
+      JSON.stringify({
+        requestedAt,
+        requestId,
+        attempts: 0,
+        nextAttemptAt: requestedAt,
+        state: "pending",
+        lastError: null,
+      }),
+    );
+    return jsonResponse(
+      {
+        ok: true,
+        accepted: true,
+        requestId,
+        styleGateMode: effectiveStyleGateMode,
+        message: "Digest trigger queued; will execute on the next polling tick (≤5 min).",
+      },
+      { status: 202, noStore: true },
+    );
+  },
 );
 
-export const handleResetBlacklistSync = makeAdminRoute(
+export const handleResetBlacklistSync = makeIdempotentAdminRoute(
   "route-reset-blacklist-sync",
-  async ({ db, request }: AdminRouteContext) =>
-    runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
-      const result = await db.batch([
-        db.prepare(
-          `UPDATE blacklist_sync_state
-           SET
-             last_block = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 50000, 0),
-             cursor_value = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 50000, 0),
-             attempt_generation = attempt_generation + 1,
-             last_succeeded_at = NULL,
-             consecutive_skips = 0,
-             consecutive_failures = 0,
-             last_outcome = 'admin_rewind'
-           WHERE config_key NOT LIKE 'tron-%'`,
-        ),
-        db.prepare(
-          `UPDATE blacklist_sync_state
-           SET
-             last_block = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 604800000, 0),
-             cursor_value = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 604800000, 0),
-             attempt_generation = attempt_generation + 1,
-             last_succeeded_at = NULL,
-             consecutive_skips = 0,
-             consecutive_failures = 0,
-             last_outcome = 'admin_rewind'
-           WHERE config_key LIKE 'tron-%'`,
-        ),
-      ]);
-      const evmChanged = result[0]?.meta?.changes ?? 0;
-      const tronChanged = result[1]?.meta?.changes ?? 0;
-      return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
-    }),
+  "reset-blacklist-sync",
+  async ({ db }: AdminRouteContext) => {
+    const result = await db.batch([
+      db.prepare(
+        `UPDATE blacklist_sync_state
+         SET
+           last_block = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 50000, 0),
+           cursor_value = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 50000, 0),
+           attempt_generation = attempt_generation + 1,
+           last_succeeded_at = NULL,
+           consecutive_skips = 0,
+           consecutive_failures = 0,
+           last_outcome = 'admin_rewind'
+         WHERE config_key NOT LIKE 'tron-%'`,
+      ),
+      db.prepare(
+        `UPDATE blacklist_sync_state
+         SET
+           last_block = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 604800000, 0),
+           cursor_value = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 604800000, 0),
+           attempt_generation = attempt_generation + 1,
+           last_succeeded_at = NULL,
+           consecutive_skips = 0,
+           consecutive_failures = 0,
+           last_outcome = 'admin_rewind'
+         WHERE config_key LIKE 'tron-%'`,
+      ),
+    ]);
+    const evmChanged = result[0]?.meta?.changes ?? 0;
+    const tronChanged = result[1]?.meta?.changes ?? 0;
+    return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
+  },
 );
 
 export const handleDebugSyncState = makeAdminRoute(

@@ -75,7 +75,7 @@ Claim-safety rules for every product surface (profiles, OG cards, SEO metadata, 
 
 ## Banned constructions
 
-Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edition or fail CI. **Advisory** rules are review triggers and prompt guidance; they never block on their own, because they cannot be detected without judgment.
+Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edition. **Advisory** rules are review triggers and prompt guidance; they never block on their own, because they cannot be detected without judgment.
 
 ### Hard (exact patterns)
 
@@ -108,12 +108,12 @@ Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edi
 - Signed values and arithmetic keep their correct glyphs. A style rule never rewrites a number.
 - Ranges in running prose: "0 to 100". Compact UI ranges, compounds, identifiers: hyphen (`0-100`).
 - Structured labels migrate off the " — " delimiter deterministically: source references become `Publisher: external title`; field/value controls become `Label: value`; annotation titles drop the delimiter, taking a comma for a simple apposition ("AUSD native launch on Sui, the first institutional USD stablecoin there") and a colon only when the gloss is a finite clause. Do not convert every dash to a colon: a uniform colon habit is the same tic wearing different punctuation. Right-hand sides that already contain a colon go to human review. Quoted external titles keep their original punctuation, always; a label that is a verbatim external headline is skipped and recorded, never rewritten.
-- Label provenance is recorded in the data, not in a reviewer's memory. A label that is a verbatim external title carries `quoted: true` (`StablecoinLinkSchema`, `GeniusReferenceSchema`, `ChartAnnotation`), which the corpus gate reads as `ownership: "quoted"` and skips, and which every punctuation migration must leave untouched. Setting the flag is the prerequisite for migrating a label corpus: a skipped label with no flag is an undocumented decision, and the next migration would not know to skip it again.
+- Label provenance is recorded in the data, not in a reviewer's memory. A label that is a verbatim external title carries `quoted: true` (`StablecoinLinkSchema`, `GeniusReferenceSchema`, `ChartAnnotation`), which style enforcement reads as `ownership: "quoted"` and skips, and which every punctuation migration must leave untouched. Setting the flag is the prerequisite for migrating a label corpus: a skipped label with no flag is an undocumented decision, and the next migration would not know to skip it again.
 - A label that is used as an identity reference is a key, not prose, and is permanently out of scope. Mint-authority control labels are the known case: `controlRef` may name a control by id, label, or `chain:address`, so rewriting such a label silently orphans the pointer and fails sidecar validation. Before migrating any label corpus, check whether the field is referenced elsewhere; if it is, leave it byte-identical and record it with reason `identity-reference`.
 
 ## Registers by surface
 
-The voice stays fixed. Length, temperature, and job change. The enforcement registry maps each inventoried surface family to exactly one register.
+The voice stays fixed. Length, temperature, and job change. Each inventoried surface family maps to exactly one register.
 
 | Register | Surfaces | Prescription |
 | --- | --- | --- |
@@ -157,11 +157,11 @@ The closing line is legal because it is arithmetic against the issuer's own clai
 
 ## Scope and enforcement
 
-- Only rules marked `hard` can block publication or fail CI; advisory findings feed prompts and review queues and never block on their own.
+- Only rules marked `hard` can block publication; advisory findings feed prompts and review queues and never block on their own.
 - Severity is declared per rule and register in the policy block; a word banned in editorial registers can be unrestricted in technical ones.
 - The corrective cleft stays advisory, with a measured promotion path: cleft emission is read from the per-edition `editorialStyleGate` telemetry, and if clefts keep appearing in editorial registers across a full shadow window (more than one edition in 30), the rule is promoted to hard in daily, weekly, and coin-summary, where the one-retry contract bounds a false positive to a single regeneration rather than a blocked document.
 - The advisory lexeme set is reviewed at each minor version against a sample of recent generated editions. Banned-phrase lists are a snapshot of model idiom and fossilize without re-examination.
-- Applies to Pharos-owned prose on surfaces registered for corpus or runtime scanning. The registry is the operational scope; unregistered documentation and source families are not implicitly covered. Out of scope: quoted source text and external titles, user-submitted content, donor messages, issuer-provided text, code, identifiers, formulas, JSON keys, URLs, version strings.
+- Applies to Pharos-owned prose on surfaces that run runtime style scanning. Unregistered documentation and source families are not implicitly covered. Out of scope: quoted source text and external titles, user-submitted content, donor messages, issuer-provided text, code, identifiers, formulas, JSON keys, URLs, version strings.
 - Runtime LLM surfaces: hard findings on model-owned fields get one corrective retry naming rule, field, and excerpt; unresolved hard findings block the edition. No silent punctuation repair. Wrapper-owned failures are channel-local: skip and alert that channel, never respend the model.
 - Published editions carry the style version and policy hash that produced them. Editions authored before this policy carry no version and are surfaced as `pre-policy` at read time; archives are never edited or retroactively tagged.
 

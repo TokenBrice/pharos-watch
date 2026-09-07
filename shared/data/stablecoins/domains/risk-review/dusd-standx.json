@@ -411,7 +411,7 @@
         ],
         "authorityType": "safe",
         "threshold": 2,
-        "signerCount": 4,
+        "signerCount": 3,
         "safe": {
           "threshold": 2,
           "observedBlock": 116363031,

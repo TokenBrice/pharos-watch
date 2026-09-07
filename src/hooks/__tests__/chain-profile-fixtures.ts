@@ -1,6 +1,5 @@
-import type { ChainSummary } from "@shared/types/chains";
+import type { ChainDetailCoin, ChainSummary } from "@shared/types/chains";
 import { RatioSchema } from "@shared/types/ratio";
-import type { ChainStablecoin } from "../use-chains";
 
 export function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
   return {
@@ -44,22 +43,21 @@ export function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
   };
 }
 
-export function makeCoin(overrides: Partial<ChainStablecoin> = {}): ChainStablecoin {
+export function makeCoin(overrides: Partial<ChainDetailCoin> = {}): ChainDetailCoin {
   return {
     id: "usdc-circle",
     name: "USD Coin",
     symbol: "USDC",
     price: 1,
     pegType: "peggedUSD",
-    supplyOnChain: 500_000_000,
-    chainShare: 0.5,
+    supplyUsd: 500_000_000,
+    chainShare: RatioSchema.parse(0.5),
     change24h: 1_000_000,
-    change24hPct: 0.01,
+    change24hPct: RatioSchema.parse(0.01),
     change7d: 2_000_000,
-    change7dPct: 0.02,
+    change7dPct: RatioSchema.parse(0.02),
     change30d: 3_000_000,
-    change30dPct: 0.03,
-    backing: "rwa-backed",
+    change30dPct: RatioSchema.parse(0.03),
     ...overrides,
   };
 }

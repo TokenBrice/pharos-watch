@@ -2,7 +2,7 @@ import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/type
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
-import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
+import { buildYieldPublicationViews, buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
 
 export const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
 
@@ -25,6 +25,19 @@ const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
   { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
   { match: "UPDATE yield_publication_generations", rows: [] },
 ];
+
+export function makePublicationViews(
+  evaluatedSources: EvaluatedYieldSource[],
+  bestSourceKeyByCoin: Map<string, string>,
+  startSec: number,
+) {
+  return buildYieldPublicationViews({
+    evaluatedSources,
+    bestSourceKeyByCoin,
+    startSec,
+    dlPoolsMeta: makeYieldSourceMeta(),
+  }).viewsByCoinId;
+}
 
 export function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...DEFAULT_YIELD_PUBLICATION_D1_TABLES]);
@@ -165,7 +178,7 @@ export function buildPayloadWithObservedAt(
 
   return buildYieldRankingsPayloadFromEvaluatedSources({
     evaluatedSources: [source],
-    bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+    publicationViews: makePublicationViews([source], new Map([[source.id, source.sourceKey]]), startSec),
     rankingProvenanceByKey: new Map([
       [
         buildHistoryKey(source.id, source.sourceKey),

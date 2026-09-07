@@ -2,23 +2,8 @@
   "id": "buck-bucket-protocol",
   "reserves": [
     {
-      "name": "BUCK V2 CDP vault collateral (20 on-chain collateral types)",
-      "pct": 59.07,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Bucket Protocol V2 CDP vaults and their crypto, LST, and stablecoin collateral",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "BUCK V1 CDP bucket collateral (36 non-zero buckets)",
-      "pct": 2.49,
+      "pct": 6.13,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Bucket Protocol V1 CDP buckets and their crypto, LST, LP, and stablecoin collateral",
@@ -32,53 +17,11 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "BUCK V1 Reservoir USDC and USDT balances",
-      "pct": 0.74,
+      "name": "BUCK V1 Reservoir stablecoin balances",
+      "pct": 2.08,
       "risk": "low",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle, Tether, and Sui stablecoin issuers via Bucket V1 Reservoir contracts",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "BUCK V1 Reservoir AUSD and FDUSD balances",
-      "pct": 0.09,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Agora, First Digital, and Sui stablecoin issuers via Bucket V1 Reservoir contracts",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "BUCK V1 Reservoir unidentified stablecoin balances",
-      "pct": 0.01,
-      "risk": "high",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Unidentified Sui stablecoin issuers via Bucket V1 Reservoir contracts",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "BUCK V2 PSM USDC and USDSUI balances",
-      "pct": 0.31,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle and Sui stablecoin issuers via Bucket V2 Peg Stability Module",
+      "issuerOrObligor": "Circle, Tether, Agora, First Digital, and other Sui stablecoin issuers via Bucket V1 Reservoir contracts",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -89,7 +32,7 @@
     },
     {
       "name": "BUCK V1 stable-swap LP reservoir positions",
-      "pct": 37.29,
+      "pct": 91.79,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Bucket V1 Reservoir LP wrappers across Cetus, Scallop, and Bluefin on Sui",
@@ -104,73 +47,66 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Codex Bucket pinned on-chain reserve review",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Pharos closeout BUCK-only recomputation of the Codex pinned inventory",
     "confidence": "verified",
     "sources": [
       {
+        "label": "Bucket upgrade and migration documentation (BUCK to USDB 1:1, legacy exit-only phases)",
+        "url": "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration"
+      },
+      {
+        "label": "Bucket USDB identity (V2 stablecoin is USDB)",
+        "url": "https://docs.bucketprotocol.io/introduction/what-is-usdb"
+      },
+      {
         "label": "Bucket CDP documentation",
         "url": "https://docs.bucketprotocol.io/mechanism/how-cdp-work"
-      },
-      {
-        "label": "Bucket liquidation documentation",
-        "url": "https://docs.bucketprotocol.io/mechanism/liquidation"
-      },
-      {
-        "label": "Bucket Peg Stability Module documentation",
-        "url": "https://docs.bucketprotocol.io/mechanism/usdb-peg"
-      },
-      {
-        "label": "Bucket upgrade and migration documentation",
-        "url": "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration"
       },
       {
         "label": "Bucket V2 SDK mainnet package and vault registry",
         "url": "https://github.com/Bucket-Protocol/bucket-protocol-sdk/blob/v2/sdk/src/consts/config.ts"
       },
       {
-        "label": "Pinned Sui checkpoint 303739938",
+        "label": "Bucket V1 legacy SDK object registry (protocol, Reservoir, and LP object IDs)",
+        "url": "https://github.com/Bucket-Protocol/bucket-protocol-sdk/blob/legacy/sdk/src/constants/object.ts"
+      },
+      {
+        "label": "Pinned Sui checkpoint 303739938 (2026-07-27T22:52:41.565Z)",
         "url": "https://suiscan.xyz/mainnet/checkpoint/303739938"
       },
       {
-        "label": "Sui GraphQL endpoint used for object reads",
+        "label": "Sui GraphQL endpoint used for checkpoint-pinned object reads",
         "url": "https://graphql.mainnet.sui.io/graphql"
       }
     ],
-    "rationale": "Re-opened the Bucket V1 and V2 registries at Sui checkpoint 303739938 (2026-07-27T22:52:41.565Z) using the published SDK object registry and on-chain collateral/PSM balances. The measured value basis is V2 CDP collateral $4,870,747.37, V1 CDP collateral $205,174.97, V1 Reservoir USDC/USDT/AUSD/FDUSD/misc stable balances $69,775.39, V2 PSM USDC/USDSUI balances $25,223.77, and V1 stable-swap LP face balances $3,074,810.29. The resulting reserve envelope is represented as 59.07%, 2.49%, 0.74%, 0.09%, 0.01%, 0.31%, and 37.29%. BUCK held in the V2 migration PSM and BUCK savings-flask reserves are circular/internal positions and are excluded. This is a dated on-chain inventory, not an independent solvency attestation; stale oracle readings and heterogeneous CDP collateral remain explicitly unresolved below.",
-    "compositionBasis": "Pinned Sui checkpoint 303739938 object reads: Bucket V1/V2 collateral vault balances, Reservoir stable balances, V2 PSM balances, and V1 LP face balances, valued with the measurement's Pyth or lower-bound oracle basis",
+    "rationale": "Removed the V2 USDB CDP and PSM groups from BUCK's direct composition and recomputed the envelope over the V1-only basis of the pinned Sui checkpoint 303739938 inventory (2026-07-27T22:52:41.565Z, recorded by the applied 2026-08-29 Codex review). Bucket's migration guide assigns the V2 CDP and PSM to the USDB liability, disables BUCK minting in phase 2, and converts BUCK to USDB 1:1 with no protocol fee; V2 collateral therefore backs USDB rather than BUCK and is recorded here as a conversion dependency instead of BUCK-owned reserve rows. The retained V1 groups are the recorded CDP bucket collateral $205,174.97, Reservoir USDC/USDT/AUSD/FDUSD/misc stable balances $69,775.39, and stable-swap LP face balances $3,074,810.29, totaling $3,349,760.65 and normalizing to 6.13%, 2.08%, and 91.79%. Verification reads taken 2026-09-05: checkpoint-pinned Reservoir object reads return $61,409.62 of direct stable balances led by USDC $59,526.08, and the V1 Well objects hold about $12,600 of further stablecoin reserves, so the recorded $69,775.39 aggregate sits between the two readings and its per-issuer split is not decomposable from the record; the group therefore stays as one aggregate row. The live census the same day shows 29 non-zero buckets against 36 at the pinned checkpoint and a Reservoir USDC balance of $54,547.71, so the legacy system remains live while it winds down. The conversion dependency is load-bearing for holders: BUCK total supply is 25,970,456.35 (BUCK TreasuryCap read 2026-09-05 and corroborated by DefiLlama), the V2 migration PSM already holds 2,218,904.46 BUCK against 2,218,904.42 USDB issued, and the BUCK savings flask holds 507,920.04 BUCK, while direct V1 collateral covers only a fraction of outstanding BUCK. BUCK held in the migration PSM, the savings flask, and the LP positions is circular or internal and excluded. This is a dated on-chain inventory, not an independent solvency attestation; stale oracle readings, heterogeneous CDP collateral, and the LP composition remain unresolved below.",
+    "compositionBasis": "Pinned Sui checkpoint 303739938 object reads from the applied 2026-08-29 Codex inventory, restricted to the V1 contracts after removing the V2 USDB CDP and PSM groups, and renormalized over the $3,349,760.65 V1-only basis; verified 2026-09-05 with checkpoint-pinned Reservoir and Well reads plus a live protocol census",
     "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "V1 and V2 CDP rows aggregate heterogeneous on-chain collateral types that need constituent-level valuation and dependency joins; V1 stable-swap LP positions are observed by face value but their underlying BUCK/stablecoin composition is not established; the small V1 misc-stable bucket is not identified. Several V1 token prices were stale at the pinned checkpoint, so the percentages are a dated inventory rather than a current solvency claim.",
-    "knownUnknownExposurePct": 98.86,
+    "knownUnknownExposure": "All three rows are group-level aggregates of the dated inventory: the V1 CDP row aggregates heterogeneous on-chain collateral types (36 non-zero buckets at the pinned checkpoint) that need constituent-level valuation and dependency joins; the Reservoir stable row cannot be split by issuer from the record; and the V1 stable-swap LP positions are observed by face value with their underlying BUCK/stablecoin composition not established, so a large share of LP face may itself be circular BUCK. Several V1 token prices were stale at the pinned checkpoint, so the percentages are a dated inventory rather than a current solvency claim.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "BUCK V2 CDP vault collateral (20 on-chain collateral types)",
-        "pct": 59.07,
+        "reserveName": "BUCK V1 CDP bucket collateral (36 non-zero buckets)",
+        "pct": 6.13,
         "disposition": "basket-needs-split",
-        "rationale": "The V2 vault registry and oracle reads identify 20 collateral types and their aggregate value, but the heterogeneous crypto, LST, and stablecoin constituents cannot be compressed into one dependency without losing the on-chain itemization."
+        "rationale": "The pinned V1 measurement observes 36 non-zero buckets, including stale-oracle and LP-like assets; no reconciled constituent table supports a safe dependency split."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "BUCK V1 CDP bucket collateral (36 non-zero buckets)",
-        "pct": 2.49,
+        "reserveName": "BUCK V1 Reservoir stablecoin balances",
+        "pct": 2.08,
         "disposition": "basket-needs-split",
-        "rationale": "The V1 measurement observes 36 non-zero buckets, including stale-oracle and LP-like assets; no single reconciled constituent table supports a safe dependency split."
+        "rationale": "The recorded $69,775.39 aggregate covers USDC, USDT, AUSD, FDUSD, and minor stables across Reservoir and related V1 objects, but the record does not decompose the per-issuer amounts, and checkpoint-pinned reads confirm the split is not recoverable without mixing measurements."
       },
       {
-        "reserveIndex": 4,
-        "reserveName": "BUCK V1 Reservoir unidentified stablecoin balances",
-        "pct": 0.01,
-        "disposition": "insufficient-evidence",
-        "rationale": "The V1 Reservoir snapshot reports a misc stable-coin balance but does not expose its token identity or issuer."
-      },
-      {
-        "reserveIndex": 6,
+        "reserveIndex": 2,
         "reserveName": "BUCK V1 stable-swap LP reservoir positions",
-        "pct": 37.29,
+        "pct": 91.79,
         "disposition": "insufficient-evidence",
-        "rationale": "Cetus, Scallop, and Bluefin LP face balances are observable, but the measurement does not establish their underlying stablecoin/BUCK split or a redeemable value at the checkpoint."
+        "rationale": "Cetus, Scallop, and Bluefin LP face balances are observable, but the measurement does not establish their underlying stablecoin/BUCK split or a redeemable value at the checkpoint; the BUCKETUS pool is itself a Cetus USDC/BUCK LP position, so a material share of the face value may be circular BUCK."
       }
     ]
   },

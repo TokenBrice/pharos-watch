@@ -2,20 +2,11 @@
   "id": "usdcv-societe-generale-forge",
   "reserves": [
     {
-      "name": "U.S. dollar cash deposits at BNY",
-      "pct": 89.63,
+      "name": "U.S. dollar cash deposits at BNY and Societe Generale",
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "The Bank of New York Mellon SA/NV",
-      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "U.S. dollar cash deposits at Societe Generale",
-      "pct": 10.37,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Societe Generale",
+      "issuerOrObligor": "The Bank of New York Mellon SA/NV and Societe Generale",
       "riskFactors": ["counterparty", "custody", "legal", "concentration"],
       "liquidityHorizon": "immediate"
     }
@@ -34,7 +25,7 @@
         "url": "https://www.sgforge.com/wp-content/uploads/2025/09/USDCV-White-Paper_iXBRL_202508.html"
       }
     ],
-    "rationale": "Re-opened 2026-08-23. SG-FORGE's product page states \"Your assets are 100% backed by cash, ensuring immediate liquidity\" and shows \"Last update 23/08/2026\" with \"BNY : 89.63% | Societe Generale : 10.37%\" for USD CoinVertible. The page also shows USD 11,000,000.00 and USD 1,272,441.00 against USD 12,272,441.00 in circulation; the percentages sum to 100.00%. The current white paper identifies BNY as The Bank of New York Mellon SA/NV and says the issuer may use additional segregated accounts, so the disclosed allocation is recorded as two bank-deposit slices. No maturity maximum is authored because neither source states one.",
+    "rationale": "Re-opened 2026-08-23. SG-FORGE's product page states \"Your assets are 100% backed by cash, ensuring immediate liquidity\" and shows \"Last update 23/08/2026\" with \"BNY : 89.63% | Societe Generale : 10.37%\" for USD CoinVertible. The page also shows USD 11,000,000.00 and USD 1,272,441.00 against USD 12,272,441.00 in circulation; the percentages sum to 100.00%. The current white paper identifies BNY as The Bank of New York Mellon SA/NV and says the issuer may use additional segregated accounts, so the disclosed allocation is recorded as one combined bank-deposit slice because the issuer presents it as one USD CoinVertible cash line. No maturity maximum is authored because neither source states one.",
     "compositionBasis": "SG-FORGE's current daily USD CoinVertible reserve-composition disclosure, re-opened 2026-08-23",
     "compositionAsOf": "2026-08-23",
     "scope": "full-composition",
@@ -43,17 +34,10 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "U.S. dollar cash deposits at BNY",
-        "pct": 89.63,
+        "reserveName": "U.S. dollar cash deposits at BNY and Societe Generale",
+        "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "USD cash at BNY is external reserve backing rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "U.S. dollar cash deposits at Societe Generale",
-        "pct": 10.37,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "USD cash at Societe Generale is external reserve backing rather than a tracked stablecoin dependency."
+        "rationale": "The issuer's one cash line names BNY and Societe Generale as the external bank-reserve obligors rather than tracked stablecoin dependencies."
       }
     ]
   },

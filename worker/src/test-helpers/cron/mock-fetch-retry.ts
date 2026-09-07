@@ -1,5 +1,10 @@
 import { vi, type Mock } from "vitest";
 
+/**
+ * Four options is the agreed ceiling: at a fifth behaviour knob, split the
+ * helper into two named factories (`mockFetchRetryPassthrough` /
+ * `mockFetchRetryOverBase`) instead of adding another flag.
+ */
 export interface MockFetchRetryOptions {
   /**
    * Base mock the JSON/text wrappers delegate to. Supply the suite's own

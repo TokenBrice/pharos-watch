@@ -1,6 +1,6 @@
 # Pharos Documentation Audit Reviewers
 
-Use these prompts with bounded reviewer/writer capabilities when the user authorizes delegation. Harness mappings live in `docs/process/agent-artifacts.md#harness-configuration`.
+Use these prompts with bounded reviewer/writer capabilities when the user authorizes delegation. If delegation is unavailable, run discovery and skeptical source reopening sequentially and label the result as a single-agent review. Existing explicit remediation authorization persists for its stated scope. Harness mappings live in `docs/process/agent-artifacts.md#harness-configuration`.
 
 ## Documentation Truth Auditor
 
@@ -43,7 +43,7 @@ Verify claims against source, edit only assigned docs, avoid product/generated f
 
 ### Inventory and partition
 
-Read `docs/doc-ownership.json`. Enumerate unique documentation paths from `mappings[].docs`; for an object use its `path`, and carry the mapping label, source globs, rules, and any `alsoRead` context as metadata. Verify every selected path exists. Keep only the requested corpus (normally `docs/` and `README.md`); treat agent-guidance paths as a separate assigned family when they are explicitly in scope. Partition the rows into N disjoint sets so no document has two writers. Each row should include `path`, `category`, line count, source hints, and depth.
+Enumerate the whole corpus with `getVerifiedDocFiles(repoRoot)` from `scripts/lib/doc-files.mts`. Attach ownership hints from `docs/doc-ownership.json` afterward: resolve object references through `path` and carry mapping labels, source globs, rules, and `alsoRead` context as metadata. Keep unmapped documents in scope; report every skipped document and reason. A targeted request still selects only its requested subset. Verify every selected path exists. Keep only the requested corpus (normally `docs/` and `README.md`); treat agent-guidance paths as a separate assigned family when they are explicitly in scope. Partition the rows into N disjoint sets so no document has two writers. Each row should include `path`, `category`, line count, source hints, and depth.
 
 Depth is `light` for timeline archives (check only current/latest behavior and current claims), `targeted` for `docs/api-reference.md` (use its navigation block and offsets; skip generated markers), and `deep` for ordinary docs. A reviewer may receive one set or one document at a time, but must return findings for its assigned paths only.
 

@@ -44,7 +44,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "launchDate": "2024-10-16"
 }

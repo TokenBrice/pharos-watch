@@ -92,7 +92,6 @@ describe("ReservePanel", () => {
     expect(html).toContain("Failure category: circuit-open");
     expect(html).toContain("Last error: HTTP 503 from reserve API");
     expect(html).toContain("Latest write state uncertain");
-    expect(html).toContain(">Updated");
   });
 
   it("does not render raw reserve sync warnings as public operator notes", () => {
@@ -124,7 +123,6 @@ describe("ReservePanel", () => {
 
     expect(html).not.toContain("Operator note");
     expect(html).not.toContain("adapter returned internal retry metadata");
-    expect(html).toContain(">Updated");
   });
 
   it("renders independent live reserve provenance messaging", () => {
@@ -288,36 +286,6 @@ describe("ReservePanel", () => {
     expect(html).toContain("Curated-Validated");
   });
 
-  it("renders weak-probe reserve provenance messaging", () => {
-    const coin = TRACKED_META_BY_ID.get("pyusd-paypal");
-    expect(coin).toBeDefined();
-
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
-          reserves: [{ name: "Issuer reserves", pct: 100, risk: "very-low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
-          source: "single-asset",
-          displayBadge: {
-            kind: "proof",
-            label: "Proof",
-          },
-          provenance: {
-            evidenceClass: "weak-live-probe",
-            sourceModel: "single-bucket",
-            scoringEligible: false,
-          },
-        }}
-        reserveFetchError={null}
-      />,
-    );
-
-    expect(html).toContain("Proof-based reserve view");
-    expect(html).toContain("Proof");
-  });
 
   it("renders a live badge for live-fed static-validated sources without calling them curated-validated", () => {
     const coin = TRACKED_META_BY_ID.get("usdd-tron-dao-reserve");

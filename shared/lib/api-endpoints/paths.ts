@@ -98,6 +98,7 @@ export const API_PATHS = {
   stressSignals: (stablecoinId?: string, days?: number) =>
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
   chains: () => "/api/chains",
+  chainsDetail: (chainId: string) => buildQueryPath("/api/chains", { chain: chainId }),
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
   ogStablecoin: (stablecoinId: string) => `/api/og/stablecoin/${encodeURIComponent(stablecoinId)}`,

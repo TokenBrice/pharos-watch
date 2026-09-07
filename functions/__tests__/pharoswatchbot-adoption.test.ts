@@ -122,6 +122,35 @@ describe("PharosWatchBot adoption Pages forwarder", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it.each(["declared", "chunked", "understated"])("rejects %s oversized bodies at Pages with Worker status 400", async (mode) => {
+    const fetchMock = installFetch(new Response(null, { status: 204 }));
+    const input = request("x".repeat(513));
+    if (mode !== "chunked") input.headers.set("Content-Length", mode === "declared" ? "515" : "2");
+    const result = await onRequest({ request: input, env: ENV });
+    expect(result.status).toBe(400);
+    expect(await result.text()).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("cancels a stalled body after the ingress deadline without forwarding", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    try {
+      const fetchMock = installFetch(new Response(null, { status: 204 }));
+      const input = new Request(request({}), {
+        body: new ReadableStream({ cancel }),
+        duplex: "half",
+      } as RequestInit);
+      const pending = onRequest({ request: input, env: ENV });
+      await vi.advanceTimersByTimeAsync(5_001);
+      expect((await pending).status).toBe(400);
+      expect(cancel).toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("fails closed for missing proxy configuration or client-IP secret", async () => {
     const fetchMock = installFetch(new Response(null, { status: 204 }));
 
