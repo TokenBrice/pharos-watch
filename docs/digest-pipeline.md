@@ -435,7 +435,7 @@ The wire table shows each digest as a compact row: **date** (monospace, e.g. "27
 
 The archive also renders a trigger record from `forwardLookOutcomes`. Hit, missed, expired, and pending outcomes remain separate; the headline hit share is `hit / (hit + missed + expired)`, with pending excluded from that denominator. Rows are grouped by the archived trigger metric when it is available, and outcomes without a metric stay in an explicit unclassified bucket. No single-edition claim is promoted to a site-wide accuracy statement.
 
-The archive route emits server-rendered digest links for crawlability plus `CollectionPage` / `ItemList` JSON-LD over the checked-in `data/digests.json` entries. The visible archive, daily lead story, and latest weekly recap render in the client archive component after `/api/digest-archive` loads; detail pages remain the canonical `Article` surfaces for individual digests.
+The archive route exposes every checked-in edition through a visible monthly index below the interactive archive, using native disclosure controls and ordinary server-rendered links. This index works without JavaScript or the archive API; link prefetching is disabled to avoid fetching every historical edition. `CollectionPage` / `ItemList` JSON-LD covers the same checked-in `data/digests.json` entries. The interactive archive, daily lead story, and latest weekly recap render in the client archive component after `/api/digest-archive` loads; detail pages remain the canonical `Article` surfaces for individual digests.
 
 ### Detail pages
 

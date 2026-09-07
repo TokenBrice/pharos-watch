@@ -21,6 +21,14 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function DigestArchivePage() {
+  const months = new Map<string, (typeof DIGEST_ENTRIES)[number][]>();
+  for (const entry of DIGEST_ENTRIES) {
+    const month = entry.date.slice(0, 7);
+    const entries = months.get(month) ?? [];
+    entries.push(entry);
+    months.set(month, entries);
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <BreadcrumbJsonLd
@@ -64,12 +72,25 @@ export default function DigestArchivePage() {
 
       <DigestArchiveClient />
 
-      {/* Server-rendered digest links for SEO crawlability (client component loads the interactive list) */}
-      <nav aria-label="Digest archive index" className="sr-only">
-        {DIGEST_ENTRIES.map((d) => (
-          <Link key={`${d.date}-${d.digestType ?? "daily"}-${d.generatedAt}`} href={`/digest/${d.date}/`}>
-            {d.title} — {d.date}
-          </Link>
+      <nav aria-labelledby="digest-month-index" className="space-y-3 border-t border-border pt-6">
+        <h2 id="digest-month-index" className="text-lg font-semibold">Browse every edition by month</h2>
+        {Array.from(months, ([month, entries]) => (
+          <details key={month} className="rounded-lg border border-border px-4">
+            <summary className="pharos-focus-ring cursor-pointer py-3 text-sm font-medium">
+              {new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}
+              <span className="ml-2 text-muted-foreground">({entries.length} editions)</span>
+            </summary>
+            <ul className="space-y-3 pb-4 text-sm">
+              {entries.map((entry) => (
+                <li key={entry.date}>
+                  <Link href={`/digest/${entry.date}/`} prefetch={false} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground/80">
+                    {entry.title}
+                  </Link>
+                  <span className="ml-2 text-xs text-muted-foreground">{entry.date.slice(0, 10)}{entry.digestType === "weekly" ? " · Weekly recap" : ""}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         ))}
       </nav>
 
