@@ -1,7 +1,6 @@
-import legacyLlamaRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
+import legacyRouteRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
 import canonicalOrder from "@shared/data/stablecoins/canonical-order.json";
 import { isCanonicalStablecoinId } from "@shared/lib/stablecoin-id";
-import { buildStablecoinUrl } from "@shared/lib/urls";
 import { setYieldWorkbenchFallbackParam } from "@shared/lib/yield-workbench-fallback";
 
 interface StablecoinRouteEnv {
@@ -10,43 +9,26 @@ interface StablecoinRouteEnv {
   };
 }
 
-function isLegacyLlamaId(value: string): boolean {
-  return value.length > 0 && Array.from(value).every((char) => char >= "0" && char <= "9");
-}
-
-function buildLegacyLlamaRedirects(raw: unknown): Readonly<Record<string, string>> {
-  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
-    console.warn("[stablecoin-redirect] Legacy redirect map is not an object");
-    return {};
-  }
-
-  const entries: Array<[string, string]> = [];
-  for (const [legacyId, coinId] of Object.entries(raw)) {
-    if (!isLegacyLlamaId(legacyId) || typeof coinId !== "string" || !isCanonicalStablecoinId(coinId)) {
-      console.warn(`[stablecoin-redirect] Ignoring invalid legacy redirect entry for ${legacyId}`);
-      continue;
-    }
-    entries.push([legacyId, coinId]);
-  }
-
-  return Object.freeze(Object.fromEntries(entries));
-}
-
-const LEGACY_LLAMA_REDIRECTS = buildLegacyLlamaRedirects(legacyLlamaRedirects);
 const KNOWN_STABLECOIN_IDS = new Set<string>(canonicalOrder);
+
+function isRedirectDestination(value: string): boolean {
+  const targetId = value.match(/^\/stablecoin\/([^/]+)\/$/)?.[1];
+  return targetId != null
+    ? KNOWN_STABLECOIN_IDS.has(targetId)
+    : value === "/coverage/" || value === "/cemetery/";
+}
 
 export function resolveLegacyStablecoinRedirect(
   url: URL,
-  redirects: Readonly<Record<string, string>> = LEGACY_LLAMA_REDIRECTS,
+  redirects: Readonly<Record<string, string>> = legacyRouteRedirects,
 ): string | null {
   const parts = url.pathname.split("/").filter(Boolean);
-  if (parts.length !== 2 || parts[0] !== "stablecoin" || !isLegacyLlamaId(parts[1])) return null;
+  if (parts.length !== 2 || parts[0] !== "stablecoin" || !isCanonicalStablecoinId(parts[1])) return null;
 
-  const coinId = redirects[parts[1]];
-  if (!coinId) return null;
-  if (!isCanonicalStablecoinId(coinId)) return null;
+  const destination = Object.hasOwn(redirects, parts[1]) ? redirects[parts[1]] : null;
+  if (!destination || !isRedirectDestination(destination)) return null;
 
-  const target = new URL(buildStablecoinUrl(coinId), url);
+  const target = new URL(destination, url);
   target.search = url.search;
   return target.toString();
 }
