@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1788681300,
+  "last_updated_at": 1788798832,
   "donations": [
     {
       "chain": "ethereum",
@@ -743,6 +743,18 @@
       "asset_symbol": "USDC",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0xa4cc5b5d137afa130a92624e8a1073e03167c9445283b64a5580a870526ab033",
+      "block_timestamp": 1788798569,
+      "from_address": "0xaa7a9d80971e58641442774c373c94aafee87d66",
+      "display": "tokenbrice.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 50,
+      "usd_at_receipt": 50,
       "price_note": "stablecoin-1-to-1"
     }
   ]

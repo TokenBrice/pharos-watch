@@ -47,6 +47,8 @@ The page advertises the perk in two places: a `Supporter API key` note inside th
 
 ## Ownership & cadence
 
+Donation-ledger changes select both Worker and Pages deployment through `scripts/lib/automation-registry.mjs`: the Worker embeds the eligibility ledger, while Pages publishes the funding view. Cost-only edits remain Pages-only.
+
 - `costs.json` — target review date is the 1st of each month; if it is missed, leave the stale `last_reviewed_at` visible and complete the review before describing costs as current. Bump the timestamp every time you edit.
 - `donations.json` — `funding-update` skill invoked ~weekly, or ad-hoc on alert. `last_updated_at` is bumped automatically by the skill.
 

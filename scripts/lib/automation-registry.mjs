@@ -47,7 +47,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     workflowOnlyExactPaths: [".github/workflows/pages-release.yml", ".github/workflows/rebuild-pages.yml"],
   },
   worker: {
-    exactPaths: [],
+    exactPaths: ["shared/data/funding/donations.json"],
     prefixes: ["worker/"],
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
@@ -62,6 +62,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     exactPaths: [
       "package-lock.json",
       "package.json",
+      "shared/data/funding/donations.json",
       "worker/package.json",
       "worker/tsconfig.json",
       "worker/wrangler.toml",
