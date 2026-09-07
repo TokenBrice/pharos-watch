@@ -83,36 +83,26 @@ describe("doc-ownership registry integrity", () => {
       .every((mapping) => mapping.checks === undefined)).toBe(true);
   });
 
-  it("keeps every document, scoped context file, and anchor present", () => {
-    const references: Array<{ path: string; anchor?: string }> = [
-      ...(ownership.baseDocs ?? []).map((path) => ({ path })),
-      ...mappings.flatMap((mapping) => [
-        ...mapping.docs.map(normalizeDoc),
-        ...(mapping.background ?? []).map(normalizeDoc),
-        ...(mapping.alsoRead ?? []).map((path) => ({ path })),
-      ]),
-    ];
+  const references: Array<{ path: string; anchor?: string }> = [
+    ...(ownership.baseDocs ?? []).map((path) => ({ path })),
+    ...mappings.flatMap((mapping) => [
+      ...mapping.docs.map(normalizeDoc),
+      ...(mapping.background ?? []).map(normalizeDoc),
+      ...(mapping.alsoRead ?? []).map((path) => ({ path })),
+    ]),
+  ];
 
-    const contents = new Map<string, string>();
-    const anchors = new Map<string, Set<string>>();
-    for (const reference of references) {
-      expect(reference.path).not.toMatch(/\s/);
-      expect(existsSync(resolve(REPO_ROOT, reference.path)), reference.path).toBe(true);
-      if (!contents.has(reference.path)) contents.set(reference.path, readFileSync(resolve(REPO_ROOT, reference.path), "utf8"));
-      const content = contents.get(reference.path)!;
-      if (reference.anchor) {
-        if (!anchors.has(reference.path)) anchors.set(reference.path, collectMarkdownReferences(content).anchors);
-        expect(
-          anchors.get(reference.path)!.has(reference.anchor),
-          `${reference.path}#${reference.anchor}`,
-        ).toBe(true);
-      }
-
-      if (reference.path.endsWith(".md")) {
-        if (requiresDocNavigation(content)) {
-          expect(reference.anchor, `${reference.path} requires a bounded anchor`).toBeTruthy();
-        }
-      }
+  it.each([...new Set(references.map((reference) => reference.path))])("keeps document, scoped context, and anchors present: %s", (path) => {
+    expect(path).not.toMatch(/\s/);
+    expect(existsSync(resolve(REPO_ROOT, path)), path).toBe(true);
+    const content = readFileSync(resolve(REPO_ROOT, path), "utf8");
+    const fileReferences = references.filter((reference) => reference.path === path);
+    const anchors = fileReferences.some((reference) => reference.anchor)
+      ? collectMarkdownReferences(content).anchors : new Set<string>();
+    const bounded = path.endsWith(".md") && requiresDocNavigation(content);
+    for (const reference of fileReferences) {
+      if (reference.anchor) expect(anchors.has(reference.anchor), `${path}#${reference.anchor}`).toBe(true);
+      if (bounded) expect(reference.anchor, `${path} requires a bounded anchor`).toBeTruthy();
     }
   });
   it("keeps npm run checks wired to package scripts", () => {
