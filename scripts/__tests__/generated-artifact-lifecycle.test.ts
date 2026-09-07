@@ -75,7 +75,6 @@ describe("generated artifact lifecycle", () => {
     expect(selectedIds({ buildLifecycles: ["compile-input"] })).toEqual([
       "stablecoin-catalog",
       "sitemap-dates",
-      "case-study-client-index",
       "docs-metadata",
       "postman",
       "openapi",
@@ -85,6 +84,7 @@ describe("generated artifact lifecycle", () => {
       "stablecoin-client-registry",
       "stablecoin-client-projections",
       "stablecoin-detail-snapshots",
+      "case-study-client-index",
       "editorial-style",
     ]);
   });
