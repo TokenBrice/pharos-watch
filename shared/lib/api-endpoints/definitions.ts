@@ -530,6 +530,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     strictContract: true,
     probeGroup: "public",
   }),
+  // Free lane: grade-only projection of the V9 publication, no X-API-Key.
+  publicGet({
+    key: "safety-grades",
+    path: API_PATHS.safetyGrades(),
+    cacheKeyIgnoresQuery: true,
+    publicApiAccess: "exempt",
+    probeGroup: "public",
+  }),
   publicGet({
     key: "depeg-resolver",
     path: API_PATHS.depegResolver(),

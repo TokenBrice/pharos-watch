@@ -40,7 +40,7 @@ const PUBLIC_OPERATION_ORDER = [
   "depegResolver", "depegResolverReview", "pegSummary", "usdsStatus", "bluechipRatings", "dexLiquidity",
   "dexLiquidityHistory", "supplyHistory", "dailyDigest", "digestArchive", "digestSnapshot", "snapshotsIndex",
   "snapshotsDateJson", "snapshotDateStablecoinStablecoinId", "health", "publicStatusHistory", "telegramPulse",
-  "stabilityIndex", "reportCardsV9", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
+  "stabilityIndex", "reportCardsV9", "safetyGrades", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
   "yieldRankings", "yieldAdapterManifest", "yieldHistory", "mintBurnFlows", "mintBurnEvents", "stressSignals",
 ] as const;
 const SUPPLEMENTAL_ENDPOINT_ORDER = [
@@ -80,6 +80,7 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   telegramPulse: "Returns public Telegram adoption and delivery health aggregates.",
   stabilityIndex: "Returns the current Pharos Stability Index and optional component detail.",
   reportCardsV9: "Returns the currently published Safety Score V9 report-card set.",
+  safetyGrades: "Returns one Safety Score and grade per tracked stablecoin from the same V9 publication, without an API key.",
   redemptionBackstops: "Returns reviewed redemption paths and backstop evidence.",
   safetyScoreHistory: "Returns legacy bounded Safety Score history for one stablecoin.",
   safetyScoreHistoryV2: "Returns identity-aware bounded Safety Score history for one stablecoin.",

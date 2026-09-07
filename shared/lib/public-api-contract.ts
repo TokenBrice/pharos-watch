@@ -10,6 +10,15 @@ export const PUBLIC_API_KEY_HEADER = "X-API-Key";
 export const PUBLIC_API_RETRY_GUIDANCE =
   "Respect Retry-After on 429 responses and add jitter to polling intervals.";
 
+/**
+ * Public self-serve key issuance switch. `false` closes `POST /api/api-key-requests`
+ * and replaces the `/api/` request form with a closed notice; verification of
+ * already-sent links keeps working so in-flight claims can finish. Existing
+ * self-serve keys drain through their 60-day expiry. Keys are operator-issued
+ * until the paid tier ships.
+ */
+export const SELF_SERVE_ISSUANCE_OPEN: boolean = false;
+
 export const SELF_SERVE_API_KEY_RATE_LIMIT_RPM = SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE;
 export const SELF_SERVE_API_KEY_EXPIRY_DAYS = Math.round(SELF_SERVE_API_KEY_EXPIRY_SEC / DAY_SECONDS);
 

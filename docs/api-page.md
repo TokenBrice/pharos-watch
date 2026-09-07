@@ -22,7 +22,7 @@ Both routes are static build-time pages. `/api/` renders the self-serve key requ
 
 ## Purpose
 
-The access page exists to let external integrators request an email-verified default API key without exposing requester details outside private operator tooling. The reference page exists to give external integrators one public URL that explains:
+The access page exists to advertise the free no-key Safety Score grades feed (`GET /api/safety-grades`) and, when self-serve issuance is open, to let external integrators request an email-verified default API key without exposing requester details outside private operator tooling. The reference page exists to give external integrators one public URL that explains:
 
 1. which Pharos host they should call
 2. when an API key is required
@@ -31,7 +31,9 @@ The access page exists to let external integrators request an email-verified def
 
 The `/api/` form posts to `POST /api/api-key-requests` and verifies email links through `POST /api/api-key-requests/verify`. Verification links use raw `/api/#akv_...` URL fragments only — the token never appears in the query string, so it is not sent to the server in the page request, logged by intermediaries, or leaked via Referer. The fragment deliberately avoids a `verify=` parameter shape so the route bundle does not resemble a phishing-kit URL parser. Successful verification reveals the plaintext API token once, removes the fragment from the browser URL before calling the API, and warns on navigation until the token is copied or acknowledged. It does not persist tokens in local storage. Verification links expire after 30 minutes.
 
-The default self-serve key policy is:
+Self-serve issuance is switched by `SELF_SERVE_ISSUANCE_OPEN` in `shared/lib/public-api-contract.ts`, currently `false`. Closed means: the Worker answers `POST /api/api-key-requests` with `403` before parsing the body, `/api/` renders a "Self-serve key issuance is closed" notice (pointing at the free grades feed and the feedback form for by-hand requests) instead of the request form, and `/about/api/` copy and FAQ switch to the closed wording. Verification of already-sent links still works. Flip the constant to reopen; both sides read the same value.
+
+The default self-serve key policy when open is:
 
 - email-verified before issuance
 - `30` requests per minute
@@ -53,7 +55,7 @@ The route renders:
 2. Top-fold copy that makes the auth model explicit (hero paragraph plus the lane and `Quick Facts` cards):
    - external integrations use `https://api.pharos.watch`
    - protected public routes require `X-API-Key`
-   - only a narrow no-key set remains on the public host (`health`, OG images, `feedback`, self-serve key request/verify, and `telegram-webhook` with Telegram secret auth); the Telegram Mini App session/mutation no-key exception (signed `initData`) is called out in the access FAQ
+   - only a narrow no-key set remains on the public host (`safety-grades`, `health`, OG images, `feedback`, self-serve key request/verify, and `telegram-webhook` with Telegram secret auth); the Telegram Mini App session/mutation no-key exception (signed `initData`) is called out in the access FAQ
    - the website itself uses the internal `/_site-data/*` lane instead
    - operators use Cloudflare Access on the ops hosts, not public API keys
 3. Four top-fold cards in one grid:
@@ -61,7 +63,7 @@ The route renders:
    - `Website lane`
    - `Ops lane`
    - `Quick Facts` (public auth header, no-key public routes, admin auth on the ops hosts)
-4. A `Need A Key?` notice that links to `/api/` and summarizes the email-verified 30 rpm / 60 day default key
+4. A `Need A Key?` notice that names the free `GET /api/safety-grades` feed, then either summarizes the email-verified 30 rpm / 60 day default key and links to `/api/` (open) or states that issuance is closed and links to `/api/` for current options (closed)
 5. Direct links to the static machine-readable integration artifacts:
    - `/openapi.json`
    - `/postman/pharos-api.postman_collection.json`

@@ -26,6 +26,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("snapshots-index", () => import("../api/snapshot").then(({ handleSnapshotsIndex }) => handleSnapshotsIndex)),
   defineLazyDbUrlRoute("stability-index", () => import("../api/stability-index").then(({ handleStabilityIndex }) => handleStabilityIndex)),
   defineLazyDbRoute("report-cards-v9", () => import("../api/report-cards-v9").then(({ handleReportCardsV9 }) => handleReportCardsV9)),
+  defineLazyDbRoute("safety-grades", () => import("../api/safety-grades").then(({ handleSafetyGrades }) => handleSafetyGrades)),
   defineLazyDbRoute("depeg-resolver", () => import("../api/depeg-resolver").then(({ handleDepegResolver }) => handleDepegResolver)),
   defineLazyDbRoute("depeg-resolver-review", () => import("../api/depeg-resolver-review").then(({ handleDepegResolverReview }) => handleDepegResolverReview)),
   defineLazyDbRoute("redemption-backstops", () => import("../api/redemption-backstops").then(({ handleRedemptionBackstops }) => handleRedemptionBackstops)),

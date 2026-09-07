@@ -51,6 +51,7 @@ import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import {
   ReportCardsV9DependencyGraphSchema,
   ReportCardsV9ResponseSchema,
+  SafetyGradesResponseSchema,
   V9PublicationHealthSchema,
 } from "@shared/types/report-cards-v9";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
@@ -253,6 +254,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   UsdsStatusResponse: UsdsStatusResponseArtifactSchema,
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
+  SafetyGradesResponse: SafetyGradesResponseSchema,
   DdrResponse: DdrResponseSchema,
   DdrrResponse: DdrrResponseOpenApiSchema,
   RedemptionBackstopsResponse: RedemptionBackstopsResponseSchema,

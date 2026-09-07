@@ -97,7 +97,7 @@ function publicApiUnavailableResponse(): Response {
 function unauthorizedResponse(): Response {
   return errorResponse(
     401,
-    "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
+    "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for keyed access.",
   );
 }
 
