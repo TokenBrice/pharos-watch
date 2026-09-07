@@ -5,8 +5,12 @@ import { ApiKeyRequestReveal } from "@/components/api-key-request-reveal";
 import { useApiKeyRequestFormState } from "@/hooks/use-api-key-request-form-state";
 import { cn } from "@/lib/utils";
 
-export function ApiKeyRequestForm() {
+export function ApiKeyRequestForm({ issuanceOpen = true }: { issuanceOpen?: boolean }) {
   const model = useApiKeyRequestFormState();
+
+  if (!issuanceOpen) {
+    return model.verificationStatus === "idle" ? null : <ApiKeyRequestReveal model={model} />;
+  }
 
   return (
     <div

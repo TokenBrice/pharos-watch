@@ -17,7 +17,7 @@ import {
   renderGeneratedBlock,
 } from "../generate-api-reference";
 
-const PRE_SPLIT_PUBLIC_ANCHORS = [
+const PUBLIC_ANCHORS = [
   "pharos-api-reference", "surface-split", "public-api-auth", "stablecoin-ids", "response-headers",
   "response-body-freshness-_meta", "cache-control-profiles", "polling-guidance", "rate-limits", "per-key-limit",
   "retry-guidance", "error-response-conventions", "method-gating-policy", "public-endpoints",
@@ -28,11 +28,11 @@ const PRE_SPLIT_PUBLIC_ANCHORS = [
   "get-apibluechip-ratings", "get-apidex-liquidity", "get-apidex-liquidity-history", "get-apisupply-history",
   "get-apidaily-digest", "get-apidigest-archive", "get-apidigest-snapshot", "get-apisnapshotsindex",
   "get-apisnapshotsdatejson", "get-apisnapshotdatestablecoinid", "get-apihealth", "get-apipublic-status-history",
-  "get-apitelegram-pulse", "get-apistability-index", "get-apiog", "get-apireport-cardsv9",
+  "get-apitelegram-pulse", "get-apistability-index", "get-apiog", "get-apireport-cardsv9", "get-apisafety-grades",
   "get-apiredemption-backstops", "get-apisafety-score-history", "get-apisafety-score-history-v2",
   "get-apiyield-rankings", "get-apiyield-adapter-manifest", "get-apiyield-history", "get-apimint-burn-flows",
   "get-apimint-burn-events", "get-apistress-signals", "post-apiapi-key-requests",
-  "post-apiapi-key-requestsverify", "post-apifeedback", "post-apitelegram-mini-appsession",
+  "post-apiapi-key-requestsverify", "post-apidonor-key-claims", "post-apifeedback", "post-apitelegram-mini-appsession",
   "post-apitelegram-mini-appmutate", "post-apitelegram-webhook", "pages-function-endpoints",
   "get-selector-snapshotsid", "post-pharoswatchbot-adoption", "post-selector-snapshot",
 ] as const;
@@ -43,9 +43,9 @@ function headingIds(markdown: string): string[] {
 }
 
 describe("generate-api-reference", () => {
-  it("preserves every pre-split public heading anchor", () => {
+  it("preserves public heading anchors including the free-grade and donor-claim routes", () => {
     const markdown = readFileSync(join(process.cwd(), "docs/api-reference.md"), "utf8");
-    expect(headingIds(markdown)).toEqual(PRE_SPLIT_PUBLIC_ANCHORS);
+    expect(headingIds(markdown)).toEqual(PUBLIC_ANCHORS);
   });
 
   it("generates route sections from OpenAPI and shared endpoint policy", () => {
@@ -53,10 +53,11 @@ describe("generate-api-reference", () => {
     const routes = collectOpenApiRoutes(spec);
     const block = renderGeneratedBlock(spec);
 
-    expect(routes).toHaveLength(39);
+    expect(routes).toHaveLength(40);
     expect(block.startsWith(START_MARKER)).toBe(true);
     expect(block.endsWith(END_MARKER)).toBe(true);
     expect(block).toContain("### `GET /api/stablecoins`");
+    expect(block).toContain("### `GET /api/safety-grades`");
     expect(block).toContain("[`StablecoinListResponse`](https://pharos.watch/openapi.json#/components/schemas/StablecoinListResponse)");
     expect(block).toContain("`cacheBypass: false`");
     expect(block.indexOf("### `GET /api/stablecoins`")).toBeLessThan(block.indexOf(END_MARKER));

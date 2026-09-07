@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -118,6 +119,7 @@ export default function RootLayout({
           </a>
         </RouteChrome>
         <Providers>
+          <PendingApiKeyRecovery />
           <RouteChrome>
             <RegimeBarChrome>
               <RegimeBar />

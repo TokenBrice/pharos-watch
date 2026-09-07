@@ -40,11 +40,11 @@ const PUBLIC_OPERATION_ORDER = [
   "depegResolver", "depegResolverReview", "pegSummary", "usdsStatus", "bluechipRatings", "dexLiquidity",
   "dexLiquidityHistory", "supplyHistory", "dailyDigest", "digestArchive", "digestSnapshot", "snapshotsIndex",
   "snapshotsDateJson", "snapshotDateStablecoinStablecoinId", "health", "publicStatusHistory", "telegramPulse",
-  "stabilityIndex", "reportCardsV9", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
+  "stabilityIndex", "reportCardsV9", "safetyGrades", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
   "yieldRankings", "yieldAdapterManifest", "yieldHistory", "mintBurnFlows", "mintBurnEvents", "stressSignals",
 ] as const;
 const SUPPLEMENTAL_ENDPOINT_ORDER = [
-  "api-key-requests", "api-key-request-verify", "feedback", "telegram-mini-app-session",
+  "api-key-requests", "api-key-request-verify", "donor-key-claim", "feedback", "telegram-mini-app-session",
   "telegram-mini-app-mutation", "telegram-webhook",
 ] as const;
 
@@ -80,6 +80,7 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   telegramPulse: "Returns public Telegram adoption and delivery health aggregates.",
   stabilityIndex: "Returns the current Pharos Stability Index and optional component detail.",
   reportCardsV9: "Returns the currently published Safety Score V9 report-card set.",
+  safetyGrades: "Returns one Safety Score and grade per tracked stablecoin from the same V9 publication, without an API key.",
   redemptionBackstops: "Returns reviewed redemption paths and backstop evidence.",
   safetyScoreHistory: "Returns legacy bounded Safety Score history for one stablecoin.",
   safetyScoreHistoryV2: "Returns identity-aware bounded Safety Score history for one stablecoin.",
@@ -93,6 +94,7 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
 const SUPPLEMENTAL_NOTES: Readonly<Record<(typeof SUPPLEMENTAL_ENDPOINT_ORDER)[number], string>> = {
   "api-key-requests": "Starts the email-verified public API access flow.",
   "api-key-request-verify": "Completes a public API key request with the emailed verification token.",
+  "donor-key-claim": "Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
   feedback: "Accepts the bounded feedback form payload used by the website.",
   "telegram-mini-app-session": "Creates or refreshes a Telegram Mini App session after Telegram init-data validation.",
   "telegram-mini-app-mutation": "Applies an authenticated Telegram Mini App preference mutation.",

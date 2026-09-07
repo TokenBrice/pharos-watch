@@ -33,10 +33,11 @@ export default function PrivacyPage() {
         <div className="pharos-card-shell px-5 py-4">
           <p className="pharos-kicker">Policy Summary</p>
           <p className="mt-2 text-sm text-foreground">
-            Pharos does not ask for accounts or wallet connections. Portfolio data and homepage shortcut preferences
-            are stored locally by default, share links encode holdings in the URL, analytics are anonymized when
-            enabled, and support or API-access requests route through the feedback/contact channels listed below.
-            Stablecoin Picker functional browser storage and share snapshots are described below.
+            Pharos does not ask for accounts. The only wallet interaction is the optional supporter API key claim on
+            the API page, which stores a wallet address, key prefix, and claim time. Portfolio data and homepage
+            shortcut preferences are stored locally by default, share links encode holdings in the URL, analytics are
+            anonymized when enabled, and support or API-access requests route through the feedback/contact channels
+            listed below. Stablecoin Picker functional browser storage and share snapshots are described below.
           </p>
         </div>
 
@@ -187,10 +188,30 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="pharos-section-title">No Accounts or Wallet Connections</h2>
+          <h2 className="pharos-section-title">No Accounts</h2>
           <p>
-            Pharos does not require user accounts, logins, or wallet connections for the website. Optional feedback
-            contact details and self-serve API request emails are self-declared and are not used as site accounts.
+            Pharos does not require user accounts or logins for the website. Optional feedback contact details and
+            self-serve API request emails are self-declared and are not used as site accounts.
+          </p>
+          <p>
+            The one exception is optional: the supporter API key claim on{" "}
+            <Link href="/api/" className="pharos-prose-link">
+              the API page
+            </Link>{" "}
+            asks a wallet to sign a short text message so the key can be tied to a donating wallet. Pharos stores the
+            wallet address, the issued key prefix, and the claim time, plus the key record itself, which is named after
+            the address and carries the last-used timestamp and route that every API key records. Those records are
+            retained without an automatic expiry. Deactivation stops access but does not delete these records. You
+            can request removal of the key record and its usage metadata through the{" "}
+            <Link href="/feedback/" className="pharos-prose-link">
+              feedback form
+            </Link>
+            . We retain the wallet address, key prefix, and claim time to prevent a second claim, unless an operator
+            explicitly approves removing that restriction. The public donation ledger is a separate record.
+            Signatures and plaintext API tokens are never persistently stored or logged; only a keyed hash verifies
+            the token. An unsaved token remains in browser memory across internal navigation so you can recover it,
+            until you copy or acknowledge it or leave or reload the site. It is never written to localStorage or
+            sessionStorage.
           </p>
         </section>
 

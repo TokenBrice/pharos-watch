@@ -7,6 +7,7 @@ import { makeRequestAttributionTables } from "../test-helpers/api-key-test-suppo
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
+import { DONOR_KEY_CLAIMS_OPEN, SELF_SERVE_ISSUANCE_OPEN } from "@shared/lib/public-api-contract";
 import {
   matchesHttpResponseObservation,
   observeHttpResponse,
@@ -188,7 +189,7 @@ describe("worker.fetch", () => {
         headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: {
-          error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
+          error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for keyed access.",
         },
       },
     },
@@ -207,7 +208,7 @@ describe("worker.fetch", () => {
         headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: {
-          error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
+          error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for keyed access.",
         },
       },
     },
@@ -1007,8 +1008,40 @@ describe("worker.fetch", () => {
     );
     await Promise.all(waits);
 
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    // The public-API key gate never runs (no 401). While issuance is closed the
+    // handler answers 403 before the body is parsed.
+    if (SELF_SERVE_ISSUANCE_OPEN) {
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    } else {
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toMatchObject({ error: expect.stringContaining("issuance is closed") });
+    }
+  });
+
+  it("does not require a key on supporter key claims", async () => {
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/donor-key-claims", {
+        method: "POST",
+        body: "not-json",
+      }),
+      env,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    // The public-API key gate never runs (no 401). While claims are paused the
+    // handler answers 403 before the limiter and the body.
+    expect(res.status).not.toBe(401);
+    if (DONOR_KEY_CLAIMS_OPEN) {
+      expect(res.status).toBe(400);
+    } else {
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toMatchObject({ error: expect.stringContaining("claims are paused") });
+    }
   });
 
   it("does not require a key on self-serve API key verification", async () => {

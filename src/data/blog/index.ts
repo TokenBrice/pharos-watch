@@ -28,6 +28,16 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "api-access-free-grades-supporter-keys",
+    title: "API Access: Free Grades, Supporter Keys",
+    description:
+      "Free Safety Score grades, restricted API access, and supporter keys for wallets donating more than $10 in stablecoins graded A or B at claim time.",
+    datePublished: "2026-09-07",
+    coverImage: "/blog/api-access-free-grades-supporter-keys-cover.png",
+    coverAlt:
+      "The current circular Pharos mark beside the headline “Free grades. Supporter keys.” beneath the label “API Access”, with a key icon on a dark navy background.",
+  },
+  {
     slug: "safety-score-v9",
     title: "Safety Score V9: Backing, Control, Exit",
     description:

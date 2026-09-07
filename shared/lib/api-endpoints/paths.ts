@@ -87,6 +87,8 @@ export const API_PATHS = {
     buildQueryPath("/api/safety-score-history-v2", { stablecoin: stablecoinId, days }),
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCardsV9: () => "/api/report-cards/v9",
+  safetyGrades: () => "/api/safety-grades",
+  donorKeyClaims: () => "/api/donor-key-claims",
   depegResolver: () => "/api/depeg-resolver",
   depegResolverReview: () => "/api/depeg-resolver-review",
   redemptionBackstops: () => "/api/redemption-backstops",

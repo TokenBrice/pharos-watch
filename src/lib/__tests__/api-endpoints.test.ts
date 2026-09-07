@@ -65,6 +65,7 @@ describe("api endpoint registry", () => {
       "/api/dex-liquidity-history?stablecoin=usdt-tether",
       "/api/digest-archive",
       "/api/digest-snapshot",
+      "/api/donor-key-claims",
       "/api/events",
       "/api/feedback",
       "/api/health",
@@ -81,6 +82,7 @@ describe("api endpoint registry", () => {
       "/api/report-cards/v9",
       "/api/request-source-stats",
       "/api/reset-blacklist-sync",
+      "/api/safety-grades",
       "/api/safety-score-history",
       "/api/safety-score-history-v2",
       "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
@@ -157,6 +159,7 @@ describe("api endpoint registry", () => {
       "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
       "/api/stability-index",
       "/api/report-cards/v9",
+      "/api/safety-grades",
       "/api/depeg-resolver",
       "/api/depeg-resolver-review",
       "/api/redemption-backstops",
@@ -454,8 +457,11 @@ describe("api endpoint registry", () => {
   it("keeps public-auth and site-data policies aligned", () => {
     expect(getPublicApiAccess("/api/stablecoins")).toBe("protected");
     expect(getPublicApiAccess("/api/health")).toBe("exempt");
+    expect(getPublicApiAccess("/api/safety-grades")).toBe("exempt");
+    expect(getPublicApiAccess("/api/report-cards/v9")).toBe("protected");
     expect(getPublicApiAccess("/api/api-key-requests")).toBe("exempt");
     expect(getPublicApiAccess("/api/api-key-requests/verify")).toBe("exempt");
+    expect(getPublicApiAccess("/api/donor-key-claims")).toBe("exempt");
     expect(getPublicApiAccess("/api/telegram-mini-app/session")).toBe("exempt");
     expect(getPublicApiAccess("/api/telegram-mini-app/mutate")).toBe("exempt");
     expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");

@@ -17,11 +17,12 @@ const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS.filter(
   .map((endpoint) => endpoint.key)
   .sort();
 
-const noKeyPublicArtifactKeys = ["health"];
+const noKeyPublicArtifactKeys = ["health", "safety-grades"];
 const FORBIDDEN_ARTIFACT_PATHS = [
   "/api/api-key-requests",
   "/api/api-key-requests/verify",
   "/api/api-key-requests-admin",
+  "/api/donor-key-claims",
 ];
 
 function isPostmanRequestConfig(

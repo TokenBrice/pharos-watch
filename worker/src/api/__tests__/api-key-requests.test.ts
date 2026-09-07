@@ -1,5 +1,12 @@
 import { makeJsonRequest, readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Issuance is closed in production; this suite covers the open flow so it stays
+// shippable. The closed gate has its own test in api-key-requests-closed.test.ts.
+vi.mock("@shared/lib/public-api-contract", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/lib/public-api-contract")>()),
+  SELF_SERVE_ISSUANCE_OPEN: true,
+}));
 import { DatabaseSync } from "node:sqlite";
 import {
   handleApiKeyRequest,

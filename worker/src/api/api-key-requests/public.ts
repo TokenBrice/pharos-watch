@@ -7,9 +7,10 @@ import {
   SELF_SERVE_VERIFICATION_ATTEMPT_LIMIT_PER_TOKEN_10M,
   SELF_SERVE_VERIFICATION_TOKEN_TTL_SEC,
 } from "@shared/lib/ops-limits";
+import { SELF_SERVE_ISSUANCE_OPEN } from "@shared/lib/public-api-contract";
 import { activateTrustedApiKey, createTrustedApiKey } from "../../lib/api-key-admin";
 import { getNowSec, recordApiKeyAudit } from "../../lib/api-key-core";
-import { jsonResponse } from "../../lib/api-response";
+import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { sendVerificationEmail } from "./email";
 import { checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits } from "./rate-limit";
@@ -61,6 +62,13 @@ export async function handleApiKeyRequest(
   env: ApiKeySelfServeEnv,
   execCtx?: ExecutionContext,
 ): Promise<Response> {
+  if (!SELF_SERVE_ISSUANCE_OPEN) {
+    return errorResponse(
+      403,
+      "Self-serve API key issuance is closed. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for keyed access.",
+      { noStore: true },
+    );
+  }
   try {
     const parsed = await parseSelfServeRequest(request);
     if (parsed instanceof Response) return parsed;

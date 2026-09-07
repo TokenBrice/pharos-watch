@@ -14,6 +14,7 @@ export type EndpointDependency =
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
   | "apiKeySelfServeEnv"
+  | "donorKeyClaimRateLimit"
   | "workerStatusConfig"
   | "workerVersion"
   | "telegram"
@@ -530,6 +531,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     strictContract: true,
     probeGroup: "public",
   }),
+  // Free lane: grade-only projection of the V9 publication, no X-API-Key.
+  publicGet({
+    key: "safety-grades",
+    path: API_PATHS.safetyGrades(),
+    cacheKeyIgnoresQuery: true,
+    publicApiAccess: "exempt",
+    probeGroup: "public",
+  }),
   publicGet({
     key: "depeg-resolver",
     path: API_PATHS.depegResolver(),
@@ -610,6 +619,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
     key: "api-key-request-verify",
     path: API_PATHS.apiKeyRequestVerify(),
     routeDependencies: ["apiKeyHashPepper", "apiKeySelfServeEnv"],
+  }),
+  // Wallet-signed supporter key claim (SIWE). Exempt from X-API-Key; the
+  // Cloudflare ratelimit binding runs before the body is read.
+  publicPostExempt({
+    key: "donor-key-claim",
+    path: API_PATHS.donorKeyClaims(),
+    routeDependencies: ["apiKeyHashPepper", "donorKeyClaimRateLimit"],
   }),
   publicPostExempt({
     key: "telegram-webhook",

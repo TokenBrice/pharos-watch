@@ -22,3 +22,10 @@ export const SELF_SERVE_VERIFICATION_ATTEMPT_LIMIT_PER_TOKEN_10M = 5;
 export const SELF_SERVE_DEPENDENCY_RETRY_AFTER_SEC = 60;
 export const SELF_SERVE_USE_CASE_MIN_LENGTH = 10;
 export const SELF_SERVE_USE_CASE_MAX_LENGTH = 1200;
+
+/** Donor (supporter) API keys: one per eligible wallet, no expiry. */
+export const DONOR_API_KEY_MIN_USD = 10;
+export const DONOR_API_KEY_RATE_LIMIT_PER_MINUTE = 10;
+/** Signed claim messages older or newer than this are rejected. */
+export const DONOR_KEY_CLAIM_MAX_AGE_SEC = 5 * 60;
+export const DONOR_KEY_CLAIM_RATE_LIMIT_PER_IP_PER_MINUTE = 10;

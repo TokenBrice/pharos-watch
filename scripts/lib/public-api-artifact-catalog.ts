@@ -423,6 +423,17 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     responseSchema: "ReportCardsV9Response",
   },
   {
+    key: "safety-grades",
+    summary: "Safety Score grades (no key)",
+    description:
+      "Free, no-key projection of the accepted V9 publication: one score and grade per tracked stablecoin, plus methodology version and publication status.",
+    tags: ["Risk"],
+    responseSchema: "SafetyGradesResponse",
+    postman: {
+      noAuth: true,
+    },
+  },
+  {
     key: "depeg-resolver",
     summary: "Depeg Duration Resolver",
     description:
