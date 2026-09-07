@@ -43,7 +43,7 @@ Authoritative sources:
 
 ### Browser-local preferences
 
-Pharos has no website account or wallet connection. Browser-local functional state includes:
+Pharos has no website account. The only wallet interaction is the optional supporter API key claim on `/api/`, described below; nothing else on the site connects a wallet. Browser-local functional state includes:
 
 - homepage shortcut hrefs in `localStorage` under `pharos-shortcuts`
 - portfolio holdings in `localStorage` under `pharos:portfolio`
@@ -58,11 +58,14 @@ Portfolio and shortcut state is not sent to the API. Picker snapshot sharing is 
 
 Feedback contact handles may be included in the public GitHub issue created from a submission. Self-serve API access requests use private operator storage for verified email and optional request metadata; verification mail is delivered through Resend. Request-abuse controls use salted or keyed pseudonymous values rather than storing raw IP addresses in the application tables.
 
+Supporter API key: claiming a key on `/api/` stores the wallet address that signed the claim, the issued key's prefix, and the claim time in `api_key_donor_claims`, plus the `api_keys` row itself, whose `name` is `donor <address>` and which carries the `last_used_at` / `last_used_route` fields every key records. The `api_key_audit_log` row for the issuance holds only the tier, never the address. A wallet address linked to a credential is personal data, and it is processed to deliver the perk the donor asked for. The claim signature and the plaintext token are never stored and never written to logs, and wallet addresses are excluded from request telemetry and structured Worker logs, which record outcome codes only. The record is retained while the key exists: deactivating the key and deleting the claim row ends it. A donor can request deletion through the feedback form, after which an operator deactivates the key and removes the claim row; the public donation ledger on `/funding/` is a separate published record and is unaffected.
+
 Authoritative sources:
 
 - `worker/src/api/feedback.ts`
 - `worker/src/api/api-key-requests.ts`
 - `worker/src/api/api-key-requests/`
+- `worker/src/api/donor-key-claims.ts`
 - relevant migrations in `worker/migrations/`
 
 ### Stablecoin Picker snapshots

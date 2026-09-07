@@ -8,7 +8,7 @@ Read `docs/editorial-style.md` before writing; its `technical-evidence` register
 
 # Funding Donations Update
 
-Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at `0x5d698362edb8aea1c2b2483096bdee3265d860db` on Ethereum, Base, Optimism, Arbitrum, Polygon, and Gnosis. Never edit `shared/data/funding/costs.json` or historical donation rows without explicit approval.
+Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at `0x5d698362edb8aea1c2b2483096bdee3265d860db` on Ethereum, Base, Optimism, Arbitrum, Polygon, and Gnosis. Never edit `shared/data/funding/costs.json` or historical donation rows without explicit approval. When approved removal of a historical row drops an address below `$10`, or removes it entirely, the operator must also deactivate the `donor` API key issued to that address (`docs/api-reference-admin.md`); eligibility is checked only at claim time, so the ledger edit revokes nothing by itself.
 
 ## Safety And Inputs
 
@@ -29,6 +29,8 @@ Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at
 ## Approval And Write
 
 Show each proposed row with chain, transaction, asset/amount, receipt-time USD value/source, donor display/kind, plus rejected self-activity and incomplete coverage. After explicit approval, append rows in ascending timestamp order and update `last_updated_at`. If no approved rows remain, make no edits.
+
+Also list the addresses whose approved rows push their lifetime total across `$10` in `usd_at_receipt`, summed per lowercase address over every kind except `pool`. Those wallets become eligible for a supporter API key, but only once a release ships the updated ledger; the Worker reads the committed file, never live data. Report that release requirement with the list.
 
 Validate the actual edited file through the same schema used by the funding page, then run the focused calculations:
 

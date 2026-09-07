@@ -41,6 +41,10 @@ Row shape for donations is defined and validated by `shared/lib/funding/schema.t
 
 Automation is intentionally deferred while the review volume remains small. Any future runtime pipeline would require its own API, operations, and privacy contracts rather than being implied by this page doc.
 
+## Supporter key
+
+The page advertises the perk in two places: a `Supporter API key` note inside the `How to support` card (`SupporterKeyNote` in `src/components/funding/funding-page-sections.tsx`, wording switches on `DONOR_KEY_CLAIMS_OPEN`) and the `What do supporters get?` FAQ answer. Donations recorded here also drive supporter API key eligibility. A wallet qualifies once its rows sum to at least $10 in `usd_at_receipt` across every kind except `pool`; founder rows count. The Worker reads the committed ledger, so a new donation becomes claimable only after the weekly `funding-update` reconciliation appends the row and a release ships. When a row is later removed as spam or a correction, the operator must also deactivate the `donor` key issued to that address, because the runtime never rechecks the ledger after issuance. `docs/api-reference.md` owns the claim contract.
+
 ## Ownership & cadence
 
 - `costs.json` — target review date is the 1st of each month; if it is missed, leave the stale `last_reviewed_at` visible and complete the review before describing costs as current. Bump the timestamp every time you edit.
