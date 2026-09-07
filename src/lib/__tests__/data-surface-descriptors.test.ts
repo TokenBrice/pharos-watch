@@ -123,7 +123,7 @@ describe("data surface descriptors", () => {
     }).toEqual({
       path: "/api/dex-liquidity",
       queryKey: ["dex-liquidity"],
-      producerIntervalSec: 7200,
+      producerIntervalSec: 3600,
       endpointMaxAgeSec: 14_400,
       availabilityMaxAgeSec: 43_200,
       producerJob: "sync-dex-liquidity",
@@ -290,7 +290,7 @@ describe("data surface descriptors", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.dexLiquidity).toMatchObject({
       cacheKey: "dex-liquidity",
       producerJob: "sync-dex-liquidity",
-      producerIntervalSec: 7200,
+      producerIntervalSec: 3600,
       endpointMaxAgeSec: 14_400,
       availabilityMaxAgeSec: 43_200,
       freshnessSentinelKey: "freshness:dex-liquidity",

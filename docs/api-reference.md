@@ -647,7 +647,7 @@ Provides the unauthenticated availability canary; it is not the operator status 
     "dex-liquidity": {
       "maxAge": 43200,
       "endpointMaxAge": 14400,
-      "producerIntervalSec": 7200
+      "producerIntervalSec": 3600
     },
     "yield-data": {
       "maxAge": 3600,
