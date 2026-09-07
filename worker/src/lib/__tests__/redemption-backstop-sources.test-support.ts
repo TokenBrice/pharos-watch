@@ -1,8 +1,8 @@
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { RedemptionRouteAvailability } from "../redemption-backstop-availability";
-import type { RedemptionBackstopBuildOptions } from "../redemption-backstop-capacity";
-import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+import type { RedemptionRouteAvailability } from "../redemption-backstop/availability";
+import type { RedemptionBackstopBuildOptions } from "../redemption-backstop/capacity";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 
 const BASE_REDEMPTION_ROUTE: RedemptionBackstopConfig = {
   routeFamily: "stablecoin-redeem",
@@ -43,6 +43,26 @@ export function snapshot(
   overrides: Partial<ReserveSnapshotMetadataRecord> = {},
 ): ReserveSnapshotMetadataRecord {
   return liveSnapshot(stablecoinId, metadata, overrides);
+}
+
+export function dusdOpenQueueMetadata(nowSec: number): Record<string, unknown> {
+  return {
+    freshnessMode: "verified",
+    sourceTimestamp: nowSec - 120,
+    redemption: {
+      capacityUsd: 0,
+      settlementBoundUnproven: true,
+      capacityKind: "live-queue",
+      freshnessKind: "same-run-onchain",
+      queueDepthUsd: 3_104.889979,
+      holderEligibility: "any-holder",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    },
+    redemptionQueue: {
+      minimumFinalizationDelaySec: 43_200,
+    },
+  };
 }
 
 export function severeMarketEvidence(

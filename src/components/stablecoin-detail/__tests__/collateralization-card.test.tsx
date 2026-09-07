@@ -115,3 +115,12 @@ describe("CollateralizationCard", () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+
+it("dates an attestation ratio by its report rather than its collection time", () => {
+  render(<CollateralizationCard reviewed={null} liveRatio={1.00057}
+    liveAtSec={1788610472} liveFreshnessLabel="Report as of 2026-06-30 · Stale · Checked Sep 5" />);
+  expect(screen.getByText("100.1%")).toBeTruthy();
+  expect(screen.getByText("Report as of 2026-06-30 · Stale · Checked Sep 5")).toBeTruthy();
+  expect(screen.queryByText(/^Live/)).toBeNull();
+});

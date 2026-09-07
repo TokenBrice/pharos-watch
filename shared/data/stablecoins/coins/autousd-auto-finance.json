@@ -12,9 +12,9 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
+  "detailProvider": "coingecko",
   "collateral": "USDC deposited into Auto Finance's autoUSD autopool, with protocol-managed allocation across DeFi liquidity and yield destinations",
   "pegMechanism": "Autopool receipt-token share price appreciates as earnings auto-compound; withdrawals redeem shares for USDC subject to autopool liquidity and destination unwinds",
-  "detailProvider": "coingecko",
   "links": [
     {
       "label": "Website",
@@ -65,7 +65,7 @@
     },
     "params": {
       "slice": {
-        "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
+        "name": "USDC deployed through the autoUSD Autopool and destination vaults",
         "risk": "high",
         "coinId": "usdc-circle",
         "depType": "wrapper",

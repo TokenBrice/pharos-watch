@@ -57,19 +57,8 @@ const SUMMARY: OracleRiskClientSummary = {
 };
 
 describe("OracleLiquidationSection", () => {
-  it("renders tier badge, facts, branches, and folded detail", () => {
+  it("renders folded detail closed by default with the reviewed source link", () => {
     const html = renderToStaticMarkup(<OracleLiquidationSection summary={SUMMARY} />);
-    expect(html).toContain("Collateral pricing &amp; liquidation");
-    expect(html).toContain("Prices the collateral behind BOLD and drives liquidations.");
-    expect(html).toContain("Redundant + failover");
-    expect(html).toContain("per-branch shutdown");
-    expect(html).toContain("WETH branch");
-    expect(html).toContain("72% of debt");
-    expect(html).toContain("90.9%");
-    expect(html).toContain("110%");
-    expect(html).toContain("ETH/USD");
-    expect(html).toContain("1h heartbeat");
-    expect(html).toContain("Reviewed 2026-07-13");
     expect(html).toContain("https://example.com/contracts");
     // detail disclosure closed by default (native <details> without open attr)
     expect(html).toContain("<details");

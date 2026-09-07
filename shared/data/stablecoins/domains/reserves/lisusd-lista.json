@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "slisBNB (Lista BNB LST) GemJoin",
-      "pct": 99,
+      "pct": 97.994239,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lista DAO slisBNB staking protocol",
@@ -18,7 +18,7 @@
     },
     {
       "name": "BTCB GemJoin",
-      "pct": 0.7,
+      "pct": 1.347291,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Binance BTCB",
@@ -33,7 +33,7 @@
     },
     {
       "name": "wBETH (Binance ETH LST) GemJoin",
-      "pct": 0.3,
+      "pct": 0.551576,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Binance wBETH staking protocol",
@@ -45,13 +45,176 @@
         "smart-contract"
       ],
       "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sUSDX (Stables Labs staked USDX) GemJoin",
+      "pct": 0.039299,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Stables Labs (usdx.money) sUSDX staking vault",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "credit",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "cewBETH (Ceros CeETHVault receipt) GemJoin",
+      "pct": 0.030235,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ceros CeETHVault (wBETH held for cewBETH holders)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "ezETH (Renzo ETH LRT) GemJoin",
+      "pct": 0.016529,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Renzo Protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "wstETH (Lido wrapped stETH) GemJoin",
+      "pct": 0.011624,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "solvBTC GemJoin",
+      "pct": 0.005324,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Solv Protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "mCAKE (Cakepie staked CAKE) GemJoin",
+      "pct": 0.002211,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Cakepie (Magpie)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "STONE (StakeStone ETH LST) GemJoin",
+      "pct": 0.001126,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "StakeStone",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "FDUSD GemJoin",
+      "pct": 0.000449,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "First Digital Labs",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "coinId": "fdusd-first-digital",
+      "depType": "collateral"
+    },
+    {
+      "name": "weETH (Ether.fi ETH LRT) GemJoin",
+      "pct": 0.000078,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ether.fi",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "USDT GemJoin",
+      "pct": 0.000019,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "coinId": "usdt-tether",
+      "depType": "collateral"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "Kimi U6 Lista GemJoin census closeout review (live feed withdrawn pending exact valuation coverage)",
+    "confidence": "probable",
     "sources": [
+      {
+        "label": "Lista CDP smart-contract registry (GemJoin census)",
+        "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/smart-contract"
+      },
+      {
+        "label": "Lista multi-oracle standard collaterals",
+        "url": "https://docs.bsc.lista.org/for-developer/multi-oracle/multi-oracle-standard"
+      },
       {
         "label": "Lista lisUSD collateral documentation",
         "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd"
@@ -61,44 +224,113 @@
         "url": "https://lista.org/borrow-lisusd"
       },
       {
+        "label": "DefiLlama current-price feed (valuation source for quoted branches)",
+        "url": "https://coins.llama.fi/prices/current"
+      },
+      {
         "label": "slisBNB BSC contract",
         "url": "https://bscscan.com/token/0xb0b84d294e0c75a6abe60171b70edeb2efd14a1b"
       },
       {
         "label": "BTCB BSC contract",
-        "url": "https://bscscan.com/token/0x7130d2a12b9bcBFAe4f2634d864A1Ee1Ce3Ead9c"
+        "url": "https://bscscan.com/token/0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c"
       },
       {
         "label": "wBETH BSC contract",
-        "url": "https://bscscan.com/token/0xa2E3356610840701BDf5611a53974510Ae27E2e1"
+        "url": "https://bscscan.com/token/0xa2e3356610840701bdf5611a53974510ae27e2e1"
+      },
+      {
+        "label": "sUSDX BSC contract (ERC-4626 vault over USDX)",
+        "url": "https://bscscan.com/token/0x7788a3538c5fc7f9c7c8a74eac4c898fc8d87d92"
+      },
+      {
+        "label": "cewBETH BSC contract (Ceros CeToken)",
+        "url": "https://bscscan.com/token/0x6c813d1d114d0cabf3f82f9e910bc29fe7f96451"
       }
     ],
-    "rationale": "The configured Lista on-chain GemJoin balance feed reports a concentrated slisBNB position with small BTCB and wBETH collateral positions. All three are cryptoasset or liquid-staking-token exposures; the review does not infer a cash-like value or the underlying validator, custodian, or redemption allocation behind the LSTs.",
-    "compositionBasis": "Lista configured BSC GemJoin balances and current branch prices",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The on-chain feed identifies collateral token balances but does not provide validator, custodian, or underlying staking-allocation detail for the LST positions; those limitations are retained in the structured risk factors rather than treated as unclassified exposure.",
+    "rationale": "The 2026-09-05 census resolves gem(), decimals(), and symbol() for all 21 issuer-listed GemJoins. At BSC block 120072693 (2026-09-05T07:44:06Z), priced positions total $140,660,590.14 using DefiLlama quotes fetched 22 seconds later. The table normalizes that selected subset, not all collateral or liabilities. slisBNB contributes $137,839,274.93, BTCB $1,895,107.07, and wBETH $775,850.18. The cewBETH position uses the same-block CeETHVault's 15.694329 wBETH balance: its GemJoin holds the entire 17.360440 receipt-token supply; additional strategy claims are not included. sUSDX uses a cross-chain market valuation assumption: the Ethereum deployment's quote combined with the measured BSC vault rate, not Lista's materially higher USDT-based collateral oracle. The two vault rates are close but not identical. Positive cemBTC (0.09363448) and BBTC (0.00325254) lack supported market quotes and remain outside the denominator; BTC parity would imply roughly $7.8k combined, but that scenario is not a proven valuation bound. The liveReservesConfig was removed because the existing adapter cannot value every positive branch exactly. Omitting those branches or assigning wBETH's unit price to cewBETH would defeat its fail-closed valuation contract. The full census and reactivation prerequisites are retained in agents/u6-lista-closeout/capture-evidence.json. No full-composition assurance, complete liability coverage, or live feed is claimed.",
+    "compositionBasis": "Selected priced-position composition, not complete backing: percentages normalize only the measured $140,660,590.14 subset. Same-checkpoint BSC block 120072693 (2026-09-05T07:44:06Z) balances, cewBETH backing, and sUSDX rate; DefiLlama prices fetched 22 seconds later. Unpriced cemBTC/BBTC and unverified strategy claims are outside this denominator. Not a live adapter feed.",
+    "compositionAsOf": "2026-09-05",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The zero structured unresolved-disposition percentage describes only the selected priced slices, whose asset identities are classified. It does not mean the complete collateral inventory has zero unknown exposure. Unpriced cemBTC and BBTC, unverified cewBETH strategy claims, and the sUSDX cross-chain quote assumption prevent a complete backing valuation. The roughly $7.8k BTC-parity scenario for the two unpriced tokens is an assumption, not a measured value or proven upper bound.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "slisBNB (Lista BNB LST) GemJoin",
-        "pct": 99,
+        "pct": 97.994239,
         "disposition": "untracked-exogenous-asset",
         "rationale": "slisBNB is a Lista liquid-staking token, not a tracked stablecoin or wrapper with a canonical dependency ID."
       },
       {
         "reserveIndex": 1,
         "reserveName": "BTCB GemJoin",
-        "pct": 0.7,
+        "pct": 1.347291,
         "disposition": "untracked-exogenous-asset",
         "rationale": "BTCB is collateral exposure rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "wBETH (Binance ETH LST) GemJoin",
-        "pct": 0.3,
+        "pct": 0.551576,
         "disposition": "untracked-exogenous-asset",
         "rationale": "wBETH is a liquid-staking collateral exposure rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "sUSDX (Stables Labs staked USDX) GemJoin",
+        "pct": 0.039299,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "sUSDX is a Stables Labs yield-bearing vault share over the USDX synthetic dollar; USDX is not a Pharos-tracked coin, so no dependency edge exists."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "cewBETH (Ceros CeETHVault receipt) GemJoin",
+        "pct": 0.030235,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cewBETH is a Ceros vault receipt token over Binance wBETH, not a tracked stablecoin or wrapper."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "ezETH (Renzo ETH LRT) GemJoin",
+        "pct": 0.016529,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ezETH is a Renzo liquid-restaking token held as collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "wstETH (Lido wrapped stETH) GemJoin",
+        "pct": 0.011624,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wstETH is a Lido liquid-staking collateral exposure rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "solvBTC GemJoin",
+        "pct": 0.005324,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "solvBTC is a Solv BTC wrapper held as collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "mCAKE (Cakepie staked CAKE) GemJoin",
+        "pct": 0.002211,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "mCAKE is a Cakepie staked-CAKE wrapper held as collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "STONE (StakeStone ETH LST) GemJoin",
+        "pct": 0.001126,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "STONE is a StakeStone liquid-staking collateral exposure rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "weETH (Ether.fi ETH LRT) GemJoin",
+        "pct": 0.000078,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "weETH is an Ether.fi liquid-restaking collateral exposure rather than a tracked stablecoin dependency."
       }
     ]
   }

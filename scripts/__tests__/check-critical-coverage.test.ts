@@ -133,7 +133,7 @@ describe("critical coverage changed-file detection", () => {
         "worker/src/cron/depeg-detection/new-decision-helper.ts",
         "worker/src/cron/sync-live-reserves-new-helper.ts",
         "worker/src/lib/mint-burn-scoring.ts",
-        "worker/src/lib/live-reserves-store-extra.ts",
+        "worker/src/lib/live-reserves/store-extra.ts",
         "worker/src/lib/depeg-resolver-store-validators.ts",
         "worker/src/lib/price-consensus.ts",
         "worker/src/lib/publication-contract.ts",
@@ -152,7 +152,7 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
       "worker/src/lib/depeg-resolver-store-validators.ts",
-      "worker/src/lib/live-reserves-store-extra.ts",
+      "worker/src/lib/live-reserves/store-extra.ts",
       "worker/src/lib/mint-burn-scoring.ts",
       "worker/src/lib/price-consensus.ts",
       "worker/src/lib/publication-contract.ts",
@@ -174,6 +174,27 @@ describe("critical coverage changed-file detection", () => {
     ).toEqual(["worker/src/cron/sync-stablecoins/missing.ts"]);
   });
 
+  it("fails completeness when an enrolled source has no importing owner", () => {
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    expect(runCriticalCoverageCompletenessGuard({
+      candidateFiles: ["worker/src/lib/new-critical-source.ts"],
+      criticalFiles: ["worker/src/lib/new-critical-source.ts"],
+      ownership: new Map(),
+      ownershipWaivers: {},
+      waivers: {},
+      consoleImpl: mockConsole({
+        error: (message: string) => errors.push(message),
+      }),
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    })).toBe(false);
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] Enrolled critical sources missing importing owner tests:");
+  });
   it("validates waiver metadata and rejects waivers for enrolled files", () => {
     expect(
       validateCriticalCoverageWaiverMetadata(
@@ -334,6 +355,47 @@ describe("critical coverage changed-file detection", () => {
     expect(exits).toEqual([]);
     expect(logs).toContain("[coverage] Ratchet targets: all critical files (CRITICAL_COVERAGE_RATCHET_ALL=1)");
     expect(logs.filter((line) => line.includes("RATCHET PASS"))).toHaveLength(CRITICAL_FILES.length);
+  });
+
+  it("limits per-file floor and missing checks to touched critical sources", () => {
+    const file = "worker/src/lib/auth.ts";
+    const lcov = [
+      `SF:${file}`,
+      "DA:1,1",
+      "LF:1",
+      "LH:1",
+      "BRF:2",
+      "BRH:2",
+      "end_of_record",
+    ].join("\n");
+    const files = new Map<string, string>([["coverage/lcov.info", lcov]]);
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    runCriticalCoverageCheck({
+      env: testEnv({
+        CI: "1",
+        CRITICAL_COVERAGE_CHANGED_FILES: file,
+      }),
+      fsImpl: mockFsImpl({
+        existsSync: (path: string) => files.has(path),
+        readFileSync: (path: string) => files.get(path) ?? "",
+      }),
+      consoleImpl: mockConsole({
+        log: (message: string) => logs.push(message),
+        error: (message: string) => errors.push(message),
+      }),
+      completenessOptions: { candidateFiles: [], waivers: {} },
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    });
+
+    expect(exits).toEqual([]);
+    expect(errors).toEqual([]);
+    expect(logs).toContain("[coverage] PASS worker/src/lib/auth.ts: 100.0% (1/1) (threshold 70.0%)");
+    expect(logs.some((line) => line.includes("MISSING:"))).toBe(false);
   });
 
   it("fails a touched critical file when its line coverage regresses from the baseline", () => {

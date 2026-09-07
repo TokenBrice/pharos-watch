@@ -21,6 +21,7 @@ import {
 } from "../fdusd-transparency";
 import { fetchPrimaryHtmlInput } from "../helpers";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const INDEX_HTML = readFileSync(join(FIXTURES_DIR, "fdusd-transparency.html"), "utf8");
@@ -36,7 +37,6 @@ const JULY_INDEX_HTML = `
 `;
 const REPORT_TEXT = readFileSync(join(FIXTURES_DIR, "fdusd-reserve-report.txt"), "utf8");
 const JULY_REPORT_TEXT = readFileSync(join(FIXTURES_DIR, "fdusd-isae3000-july-glyph-fragmented.txt"), "utf8");
-const signal = AbortSignal.timeout(5_000);
 const config = {
   adapter: "fdusd-transparency",
   version: 1,

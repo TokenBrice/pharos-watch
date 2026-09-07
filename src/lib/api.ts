@@ -10,13 +10,65 @@ import {
   type ApiMetaEnvelope,
 } from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
+import type { SupplyHistoryPoint } from "@shared/types/market";
+import type { QueryClient } from "@tanstack/react-query";
 import { buildRequestUrl } from "@/lib/api-url";
+import {
+  FRONTEND_API_QUERY_DESCRIPTORS,
+  STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
+  type StablecoinLiveSummary,
+} from "@/lib/api-query-descriptors";
 import { formatSchemaLikeIssues, type SchemaLike } from "@shared/lib/schema-like";
 import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-lifecycle";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
 export type ApiMeta = ApiMetaEnvelope;
+
+export interface StablecoinDetailSnapshot {
+  version: 1;
+  stablecoinId: string;
+  generatedAt: number;
+  /** Per-lane producer timestamps in milliseconds; generatedAt is artifact provenance only. */
+  updatedAt: { liveSummary?: number; supplyHistory?: number };
+  lanes: {
+    liveSummary?: StablecoinLiveSummary;
+    supplyHistory?: SupplyHistoryPoint[];
+  };
+}
+
+/** Seed only coin-scoped detail queries without resetting their producer clocks. */
+export function seedStablecoinDetailQueryCache(
+  queryClient: QueryClient,
+  snapshot: StablecoinDetailSnapshot,
+): void {
+  const seedIfCurrent = <T>(queryKey: readonly unknown[], data: T, sourceUpdatedAt: number | undefined): void => {
+    // Old artifacts without source clocks may render, but must immediately refetch.
+    const updatedAt = sourceUpdatedAt ?? 0;
+    const existingState = queryClient.getQueryState<T>(queryKey);
+    if ((existingState?.dataUpdatedAt ?? 0) > updatedAt) return;
+    queryClient.setQueryData(queryKey, data, { updatedAt });
+  };
+
+  if (snapshot.lanes.liveSummary) {
+    seedIfCurrent(
+      FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(snapshot.stablecoinId).queryKey,
+      snapshot.lanes.liveSummary,
+      snapshot.updatedAt?.liveSummary,
+    );
+  }
+
+  if (snapshot.lanes.supplyHistory) {
+    seedIfCurrent(
+      FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(
+        snapshot.stablecoinId,
+        STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
+      ).queryKey,
+      snapshot.lanes.supplyHistory,
+      snapshot.updatedAt?.supplyHistory,
+    );
+  }
+}
 
 export type ApiContractMode = "strict" | "warn";
 

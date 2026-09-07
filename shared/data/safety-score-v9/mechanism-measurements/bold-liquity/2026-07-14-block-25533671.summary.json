@@ -1,0 +1,25 @@
+{
+  "mechanism": "bold-liquity",
+  "date": "2026-07-14-block-25533671",
+  "sha256": "a2b47cc7a1ba5ef3e734dccd11d6b65e5178f93000b3c0120e2cd0277b95730f",
+  "bytes": 16969,
+  "r2Key": "captures/bold-liquity/2026-07-14-block-25533671.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "bold-liquity",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-07-14-block-25533671.json",
+    "chain": {
+      "key": "ethereum",
+      "evmChainId": 1
+    },
+    "block": {
+      "number": 25533671,
+      "hash": "0xf583ebf01673c9602977093a760fedfd7d0b11a2c4ef0d193120578a44786355",
+      "timestampUnix": 1784065751,
+      "timestampIso": "2026-07-14T21:49:11.000Z",
+      "selection": "finalized"
+    }
+  }
+}

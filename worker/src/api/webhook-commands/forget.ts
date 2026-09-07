@@ -1,5 +1,5 @@
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { buildTelegramMiniAppUrl } from "../../lib/telegram-webhook-registration";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { buildTelegramMiniAppUrl } from "../../lib/telegram/webhook-registration";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,

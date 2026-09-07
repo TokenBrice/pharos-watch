@@ -1,4 +1,0 @@
-interface:
-  display_name: "Contract Enrich"
-  short_description: "Discover missing stablecoin chain deployments"
-  default_prompt: "Use $contract-enrich to find missing stablecoin deployments from DefiLlama and populate verified contract addresses."

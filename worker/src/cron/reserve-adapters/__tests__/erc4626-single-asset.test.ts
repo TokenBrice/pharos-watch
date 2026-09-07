@@ -100,64 +100,44 @@ const catalogCases = [
 
 // Yearn V3 vault: 5M idle plus two queued strategies (60M debt fully redeemable,
 // 35M debt with 20M redeemable) => 85M withdrawable, with isShutdown() pinned.
-function yearnV3RpcMock(isShutdownRaw: bigint | number) {
+function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
   const strategyA = "0x1111111111111111111111111111111111111111";
   const strategyB = "0x2222222222222222222222222222222222222222";
-  return async (_url: string, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-    const call = body.params[0];
-    const to = call.to?.toLowerCase();
-    if (call.data === "0x38d52e0f") {
-      return jsonResponse({
-        result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      });
-    }
-    if (call.data === "0x01e1d114") {
-      return jsonResponse({ result: uint256Result(100_000_000n) });
-    }
-    if (call.data === "0x18160ddd") {
-      return jsonResponse({ result: uint256Result(100_000_000n) });
-    }
-    if (call.data.startsWith("0x07a2d13a") && to === "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b") {
-      return jsonResponse({ result: uint256Result(100_000_000n) });
-    }
-    if (call.data.startsWith("0x70a08231")) {
-      return jsonResponse({ result: uint256Result(5_000_000n) });
-    }
-    if (call.data === "0x313ce567") {
-      return jsonResponse({ result: uint256Result(6) });
-    }
-    if (call.data === "0x9aa7df94") {
-      return jsonResponse({ result: uint256Result(5_000_000n) });
-    }
-    if (call.data === "0xa9bbf1cc") {
-      return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
-    }
-    if (call.data === "0xbf86d690") {
-      return jsonResponse({ result: uint256Result(isShutdownRaw) });
-    }
-    if (call.data.startsWith("0x39ebf823")) {
-      if (call.data.toLowerCase().includes(strategyA.slice(2).toLowerCase())) {
-        return jsonResponse({ result: strategyParamsResult(60_000_000n) });
+  mockErc4626Rpc({
+    idleBalance: 5_000_000n,
+    shutdown: isShutdownRaw,
+    extraHandlers: [({ call }) => {
+      if (!call) return undefined;
+      const to = call.to?.toLowerCase();
+      if (call.data === "0x9aa7df94") {
+        return jsonResponse({ result: uint256Result(5_000_000n) });
       }
-      if (call.data.toLowerCase().includes(strategyB.slice(2).toLowerCase())) {
-        return jsonResponse({ result: strategyParamsResult(35_000_000n) });
+      if (call.data === "0xa9bbf1cc") {
+        return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
       }
-    }
-    if (call.data.startsWith("0xd905777e") && to === strategyA) {
-      return jsonResponse({ result: uint256Result(60_000_000n) });
-    }
-    if (call.data.startsWith("0xd905777e") && to === strategyB) {
-      return jsonResponse({ result: uint256Result(20_000_000n) });
-    }
-    if (call.data.startsWith("0x07a2d13a") && to === strategyA) {
-      return jsonResponse({ result: uint256Result(60_000_000n) });
-    }
-    if (call.data.startsWith("0x07a2d13a") && to === strategyB) {
-      return jsonResponse({ result: uint256Result(20_000_000n) });
-    }
-    return null;
-  };
+      if (call.data.startsWith("0x39ebf823")) {
+        if (call.data.toLowerCase().includes(strategyA.slice(2).toLowerCase())) {
+          return jsonResponse({ result: strategyParamsResult(60_000_000n) });
+        }
+        if (call.data.toLowerCase().includes(strategyB.slice(2).toLowerCase())) {
+          return jsonResponse({ result: strategyParamsResult(35_000_000n) });
+        }
+      }
+      if (call.data.startsWith("0xd905777e") && to === strategyA) {
+        return jsonResponse({ result: uint256Result(60_000_000n) });
+      }
+      if (call.data.startsWith("0xd905777e") && to === strategyB) {
+        return jsonResponse({ result: uint256Result(20_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a") && to === strategyA) {
+        return jsonResponse({ result: uint256Result(60_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a") && to === strategyB) {
+        return jsonResponse({ result: uint256Result(20_000_000n) });
+      }
+      return undefined;
+    }],
+  });
 }
 
 describe("fetchErc4626SingleAssetReserves", () => {
@@ -211,12 +191,9 @@ describe("fetchErc4626SingleAssetReserves", () => {
         routeStatusReason: expect.stringContaining("Idle underlying redemption liquidity"),
       },
     });
-    expect(balanceOfCalls).toEqual([
-      expect.objectContaining({
-        to: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        data: expect.stringContaining("80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"),
-      }),
-    ]);
+    expect(balanceOfCalls).toHaveLength(1);
+    expect(balanceOfCalls[0]?.to?.toLowerCase()).toBe("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+    expect(balanceOfCalls[0]?.data).toContain("80ac24aa929eaf5013f6436cda2a7ba190f5cc0b");
   });
 
   it("preserves BigInt precision when the NAV divergence is just above 1%", async () => {
@@ -367,60 +344,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("uses Yearn V3 default-queue withdrawable capacity when configured", async () => {
-    const strategyA = "0x1111111111111111111111111111111111111111";
-    const strategyB = "0x2222222222222222222222222222222222222222";
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a") && to === "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(5_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      if (call.data === "0x9aa7df94") {
-        return jsonResponse({ result: uint256Result(5_000_000n) });
-      }
-      if (call.data === "0xa9bbf1cc") {
-        return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
-      }
-      if (call.data.startsWith("0x39ebf823")) {
-        if (call.data.toLowerCase().includes(strategyA.slice(2).toLowerCase())) {
-          return jsonResponse({ result: strategyParamsResult(60_000_000n) });
-        }
-        if (call.data.toLowerCase().includes(strategyB.slice(2).toLowerCase())) {
-          return jsonResponse({ result: strategyParamsResult(35_000_000n) });
-        }
-      }
-      if (call.data.startsWith("0xd905777e") && to === strategyA) {
-        return jsonResponse({ result: uint256Result(60_000_000n) });
-      }
-      if (call.data.startsWith("0xd905777e") && to === strategyB) {
-        return jsonResponse({ result: uint256Result(20_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a") && to === strategyA) {
-        return jsonResponse({ result: uint256Result(60_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a") && to === strategyB) {
-        return jsonResponse({ result: uint256Result(20_000_000n) });
-      }
-      return null;
-    });
+    mockYearnV3Rpc();
 
     const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
@@ -453,7 +377,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("opens the Yearn V3 route when withdrawable capacity is positive and isShutdown() is false", async () => {
-    fetchWithRetryMock.mockImplementation(yearnV3RpcMock(0));
+    mockYearnV3Rpc(0);
 
     const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
@@ -480,7 +404,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("reports a paused Yearn V3 route when isShutdown() returns true", async () => {
-    fetchWithRetryMock.mockImplementation(yearnV3RpcMock(1));
+    mockYearnV3Rpc(1);
 
     const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
@@ -818,23 +742,15 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("uses explicit RPC URLs for ERC-4626 vaults on chains without registry RPCs", async () => {
     const scenario = catalogCases[0];
-    const calledUrls: string[] = [];
-    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18, extraHandlers: [({ url }) => {
-      calledUrls.push(url);
-      return undefined;
-    }] });
+    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18 });
 
     const coin = TRACKED_META_BY_ID.get(scenario.id);
     expect(coin?.liveReservesConfig).toBeDefined();
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(calledUrls).toEqual([
-      "https://rpc.plasma.to",
-      "https://rpc.plasma.to",
-      "https://rpc.plasma.to",
-      "https://rpc.plasma.to",
-      "https://rpc.plasma.to",
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(fetchWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
       "https://rpc.plasma.to",
       "https://rpc.plasma.to",
     ]);

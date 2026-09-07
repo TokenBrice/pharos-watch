@@ -1,0 +1,15 @@
+{
+  "mechanism": "nopal-nest",
+  "date": "2026-07-27-block-25627239",
+  "sha256": "80ac94bcf54ff8ad9befb16b146c64b2d6ec773f7b749cd2517bd812d5481c00",
+  "bytes": 6010,
+  "r2Key": "captures/nopal-nest/2026-07-27-block-25627239.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "nopal-nest",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/nopal-nest/2026-07-27-block-25627239.json",
+    "capturedAt": "ethereum block 25627239 timestamp 2026-07-27T22:48:59Z via ethereum.publicnode.com; nOPAL AccountantWithRateProviders 0x2Ed2f77a961fc92F73D1087786099c39C894Ed1D accountantState: exchangeRate=1081191 (1.081191), lastUpdateTimestamp=1785187871 (2026-07-27T21:31:11Z), minimumUpdateDelayInSeconds=3600, isPaused=0, totalSharesLastUpdate=7748839432586 (7,748,839.432586 ETH-chain shares); getRate()=1081191 matches Nest price API 1.081191 (NAV $47,199,880.63, totalSupply 43,655,450.92 all-chains)"
+  }
+}

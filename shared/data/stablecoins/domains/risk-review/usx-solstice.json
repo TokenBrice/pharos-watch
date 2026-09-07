@@ -28,11 +28,11 @@
       "rationale": "The Solstice Oracle validates collateral value at the permissioned USX mint and redemption step by checking its aggregate price against Pyth, stablecoin peg bounds, and staleness limits. This is a price-sensitive top-level authority; the entity-managed hedge book does not create borrower-specific collateral positions or liquidation branches.",
       "sources": [
         {
-          "label": "Solstice smart contracts — USX Program oracle integration and guardrails (page updated 2026-06-12)",
+          "label": "Solstice smart contracts: USX Program oracle integration and guardrails (page updated 2026-06-12)",
           "url": "https://docs.solstice.finance/solstice-for-builders/smart-contracts"
         },
         {
-          "label": "Solstice USX documentation — minting and redemption (page updated 2026-07-15)",
+          "label": "Solstice USX documentation: minting and redemption (page updated 2026-07-15)",
           "url": "https://docs.solstice.finance/solstice-for-users/usx"
         },
         {

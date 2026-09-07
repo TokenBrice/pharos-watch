@@ -19,7 +19,7 @@
       "summary": "OUSG is a Reg D Rule 506(c) / Section 3(c)(7) tokenized fund share restricted to U.S. Qualified Purchasers; it is a security (fund interest in Ondo I LP) not a payment stablecoin.",
       "references": [
         {
-          "label": "Ondo OUSG docs — qualified-access product",
+          "label": "Ondo OUSG docs: qualified-access product",
           "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-06-07"
@@ -46,13 +46,13 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Ondo OUSG docs — qualified-access product",
+        "label": "Ondo OUSG docs: qualified-access product",
         "url": "https://docs.ondo.finance/qualified-access-products/ousg",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "SEC drops Ondo Finance investigation — no charges (Nov 2025)",
+        "label": "SEC drops Ondo Finance investigation: no charges (Nov 2025)",
         "url": "https://unchainedcrypto.com/sec-drops-biden-era-investigation-into-ondo-finance/",
         "sourceKind": "news",
         "sourceDate": "2025-12-09",

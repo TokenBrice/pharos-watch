@@ -5,7 +5,7 @@ import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import { SafetyGradeDistributionBar } from "@/components/safety-grade-distribution-bar";
-import { useImageUnavailable } from "./use-image-unavailable";
+import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import type { GradeFilter, PegFilter } from "./v9-view-model";
 
 const SAFETY_MAP_PATH = "/safety-scores/map/";

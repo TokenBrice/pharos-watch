@@ -1,5 +1,5 @@
 import { D1_BATCH_SIZE } from "../../lib/constants";
-import type { ResolvedCoin } from "../../lib/telegram-alerts";
+import type { ResolvedCoin } from "../../lib/telegram/alerts";
 import type {
   ConfirmBulkPayload,
   PendingActionType,
@@ -7,16 +7,16 @@ import type {
 } from "../telegram-webhook-shared";
 import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
 import { throwIfAborted } from "../../lib/abort";
-import { dedupeCoins } from "../../lib/telegram-coin-dedupe";
+import { dedupeCoins } from "../../lib/telegram/coin-dedupe";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
-import { d1ChangeCount } from "../../lib/telegram-operation-batch";
+import { d1ChangeCount } from "../../lib/telegram/operation-batch";
 import { unixNow } from "./subscribers";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "../../lib/telegram-operation-batch";
+} from "../../lib/telegram/operation-batch";
 import { executeAtomicBatch } from "../../lib/db";
 
 interface PendingDisambiguationPersistenceInput {

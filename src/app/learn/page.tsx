@@ -78,7 +78,7 @@ const LEDGER_OUTCOMES = [
   figure: string;
 }>;
 
-// The verdict band: the page's focal point. Leads with the body count, then the
+// The outcome ledger: the page's focal point. Leads with the totals, then the
 // full breakdown as big figures over a proportional bar. Every number is derived
 // from CASE_STUDY_LIST, so the copy can never drift from the archive.
 function OutcomeLedger({
@@ -94,14 +94,14 @@ function OutcomeLedger({
       className="pharos-card-shell space-y-7 p-6 sm:p-7"
     >
       <div className="space-y-3">
-        <p className="pharos-kicker">The verdict so far</p>
+        <p className="pharos-kicker">The record so far</p>
         <p
           id="learn-verdict"
           className="pharos-display max-w-[34rem] text-balance text-[1.6rem] font-extrabold leading-[1.1] tracking-[-0.02em] text-foreground sm:text-[2.4rem]"
         >
           {total} depegs, reconstructed in full.{" "}
           <span className="text-rose-600 dark:text-rose-400">
-            {counts.died} of these coins never came back.
+            {counts.died} of the coins were delisted and never recovered.
           </span>
         </p>
       </div>
@@ -296,7 +296,7 @@ export default function LearnIndexPage() {
           headingId="learn-mechanisms"
           title="Mechanisms"
           href="/learn/mechanisms/"
-          blurb={`How a peg is produced. Every active stablecoin runs one of ${MECHANISM_ARCHETYPE_VALUES.length} designs — ${mechanismTotal} coins in total, each defending the dollar differently and failing differently under stress.`}
+          blurb={`How a peg is produced. Every active stablecoin runs one of ${MECHANISM_ARCHETYPE_VALUES.length} designs. There are ${mechanismTotal} coins in total, each defending the dollar differently and failing differently under stress.`}
           cta="Explore every mechanism"
         />
         <ul className="grid gap-x-10 sm:grid-cols-2">

@@ -42,7 +42,7 @@
     ],
     "sources": [
       {
-        "label": "cNGN FAQ — Bantu native issuance and supported networks",
+        "label": "cNGN FAQ: Bantu native issuance and supported networks",
         "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
       },
       {
@@ -76,7 +76,7 @@
         "observedBlock": 25770803,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -106,7 +106,7 @@
         "observedBlock": 50066095,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -136,7 +136,7 @@
         "observedBlock": 116357377,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -166,7 +166,7 @@
         "observedBlock": 92151009,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -196,7 +196,7 @@
         "observedBlock": 75053963,
         "sources": [
           {
-            "label": "cNGN FAQ — Bantu native issuance",
+            "label": "cNGN FAQ: Bantu native issuance",
             "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
@@ -234,7 +234,67 @@
           },
           {
             "label": "cNGN Solana mint",
-            "url": "https://solscan.io/token/3jiqwBQVRC5zHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+            "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+          }
+        ]
+      },
+      {
+        "id": "lisk:0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+        "destinationChain": "lisk",
+        "contractAddress": "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+        "protocol": "Bantu AMTP / cNGN issuer bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Conservative representation classification matching the reviewed destination architecture: the cNGN FAQ and Bantu Foundation case study establish Bantu as the native source of truth with destination deployments minted through the issuer's lock-and-mint bridge, and the issuer's contract registry lists this Lisk deployment as a supported mainnet network. At Lisk block 36,929,627 on 2026-09-05, name() and symbol() returned cNGN with 6 decimals and live supply, and owner() returned 0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6. The Lisk-specific AMTP adapter, peers, and burn/lock reconciliation remain undisclosed, so this route is scoreable as a representation while its exact bridge implementation remains an evidence gap.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-09-05",
+        "observedBlock": 36929627,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/guides/contract-addresses"
+          },
+          {
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          },
+          {
+            "label": "cNGN Lisk explorer",
+            "url": "https://blockscout.lisk.com/token/0xC7aB2C35Ea37236e644C24A4E4a1911c082887c0"
+          }
+        ]
+      },
+      {
+        "id": "assetchain:0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
+        "destinationChain": "assetchain",
+        "contractAddress": "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
+        "protocol": "Bantu AMTP / cNGN issuer bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Conservative representation classification matching the reviewed destination architecture: the cNGN FAQ and Bantu Foundation case study establish Bantu as the native source of truth with destination deployments minted through the issuer's lock-and-mint bridge, and the issuer's contract registry lists this Asset Chain deployment as a supported mainnet network. At Asset Chain block 1,854,354 on 2026-09-05, name() and symbol() returned cNGN with 6 decimals and live supply, and owner() returned 0xe0c474bc3442024bb161ce819d19f2254a14661d. The Asset Chain-specific AMTP adapter, peers, and burn/lock reconciliation remain undisclosed, so this route is scoreable as a representation while its exact bridge implementation remains an evidence gap.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-09-05",
+        "observedBlock": 1854354,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/guides/contract-addresses"
+          },
+          {
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          },
+          {
+            "label": "cNGN Asset Chain explorer",
+            "url": "https://scan.assetchain.org/token/0x7923C0f6FA3d1BA6EAFCAedAaD93e737Fd22FC4F"
           }
         ]
       }
@@ -557,14 +617,14 @@
         "sources": [
           {
             "label": "cNGN Solana mint",
-            "url": "https://solscan.io/token/3jiqwBQVRC5zHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+            "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
           },
           {
             "label": "cNGN Solana issuance program",
             "url": "https://solscan.io/account/9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
           }
         ],
-        "evidence": "Relocated from Mint Authority: at Solana mainnet slot approximately 434,019,689 on 2026-07-20, Token-2022 mint 3jiqwBQVRC5zHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 had mintAuthority GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM, a config account owned by issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28. The config named operational authority EOA 88ifu36RXwpEUtz4qRWhm4eVz2jGtR7W1iuBuotum5DN, so the program-gated mint capability remains scoreable under Bridge Risk while the AMTP-versus-independent-native relationship remains unresolved. The same read found freezeAuthority and permanentDelegate 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL, an SPL 2-of-2 multisig; those access-control facts are preserved here as context and are not widened into bridge capabilities."
+        "evidence": "Relocated from Mint Authority: at Solana mainnet slot approximately 434,019,689 on 2026-07-20, Token-2022 mint 3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 had mintAuthority GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM, a config account owned by issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28. The config named operational authority EOA 88ifu36RXwpEUtz4qRWhm4eVz2jGtR7W1iuBuotum5DN, so the program-gated mint capability remains scoreable under Bridge Risk while the AMTP-versus-independent-native relationship remains unresolved. The same read found freezeAuthority and permanentDelegate 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL, an SPL 2-of-2 multisig; those access-control facts are preserved here as context and are not widened into bridge capabilities."
       },
       {
         "id": "cngn-solana-program-upgrade-authority",
@@ -610,7 +670,7 @@
           "protocol:bantu-amtp",
           "protocol:bantu-amtp-validation"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "routeChecks": {
           "attestorQuorum": "The Bantu AMTP message-validation layer is a separate route failure domain. The reviewed sources do not disclose current validator or attestor membership, quorum, or emergency override configuration; no threshold or custody claim is made.",
           "trustedPeerOrRemote": "The reviewed route rows identify the cNGN destination delivery contracts and the Bantu source-of-truth lock-and-mint architecture, but the current AMTP peer/remote bindings and adapter identities were not disclosed.",
@@ -627,7 +687,7 @@
             "url": "https://docs.cngn.co/api-reference/bridge.md"
           }
         ],
-        "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown."
+        "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Bantu AMTP validator/attestor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
       }
     ]
   }

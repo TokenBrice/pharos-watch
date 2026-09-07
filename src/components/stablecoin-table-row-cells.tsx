@@ -19,7 +19,7 @@ import {
   GOVERNANCE_BADGE_STYLES,
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
-import { formatCurrency, formatPegDeviation, formatPercentChange, getNetColor } from "@shared/lib/format";
+import { formatBps, formatCurrency, formatPercentChange, getNetColor } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 
 interface RowCellsProps {
@@ -188,7 +188,7 @@ function MarketCells({ row, model }: RowCellsProps) {
           ) : (
             <span className={`inline-flex items-center gap-0.5 ${model.pegDeviationColorClass}`}>
               {model.absPegDeviationBps !== null ? <DeviationIcon absBps={model.absPegDeviationBps} /> : null}
-              {formatPegDeviation(row.coin.price, model.pegRef)}
+              {model.pegDeviationBps == null ? "N/A" : formatBps(model.pegDeviationBps)}
             </span>
           )}
         </TableCell>

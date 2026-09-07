@@ -16,6 +16,7 @@ import {
 } from "../../lib/evm-rpc";
 import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
+import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
 
 const GET_PAIR_SELECTOR = "0xe6a43905";
@@ -270,11 +271,6 @@ function gateReference(reference: CandidateReference, reason: V2GateReason): voi
   reference.pool.extra = extra;
 }
 
-function clearCandidate(reference: CandidateReference): void {
-  if (!reference.pool.extra) return;
-  delete reference.pool.extra.evmV2ExecutionCandidate;
-}
-
 function decodeAddressResult(result: EvmMulticall3Result | undefined): `0x${string}` | null {
   if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) return null;
   const address = `0x${result.returnData.slice(-40).toLowerCase()}` as `0x${string}`;
@@ -299,7 +295,9 @@ function decodeUint256Result(result: EvmMulticall3Result | undefined): bigint | 
 }
 
 function decodeReservesResult(result: EvmMulticall3Result | undefined): [bigint, bigint] | null {
-  if (!result?.success) return null;
+  // Both reviewed V2 pair families return exactly (reserve0, reserve1,
+  // blockTimestampLast). Extra or truncated words are not a reserve proof.
+  if (!result?.success || !/^0x[0-9a-fA-F]{192}$/.test(result.returnData)) return null;
   try {
     const [reserve0, reserve1] = decodeAbiParameters(
       [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }],
@@ -334,19 +332,22 @@ function parseVerifiedPairState(
   if (!expectedTokens.has(token0) || !expectedTokens.has(token1)) {
     return { state: null, reason: "ambiguous-token-identity" };
   }
-
-  const decimalsByAddress = new Map<`0x${string}`, number>();
   const decimals0 = decodeDecimalsResult(results.get(`${prefix}-decimals0`));
   const decimals1 = decodeDecimalsResult(results.get(`${prefix}-decimals1`));
   if (decimals0 == null || decimals1 == null) {
     return { state: null, reason: "incomplete-exact-capture" };
   }
-  decimalsByAddress.set(probe.candidate.tokenAddresses[0], decimals0);
-  decimalsByAddress.set(probe.candidate.tokenAddresses[1], decimals1);
+  const decimalsByAddress = new Map<string, number>([
+    [probe.candidate.tokenAddresses[0]!.toLowerCase(), decimals0],
+    [probe.candidate.tokenAddresses[1]!.toLowerCase(), decimals1],
+  ]);
+  const token0Decimals = decimalsByAddress.get(token0.toLowerCase());
+  const token1Decimals = decimalsByAddress.get(token1.toLowerCase());
+  if (token0Decimals == null || token1Decimals == null) {
+    return { state: null, reason: "incomplete-exact-capture" };
+  }
   const reserves = decodeReservesResult(results.get(`${prefix}-reserves`));
-  const token0Decimals = decimalsByAddress.get(token0);
-  const token1Decimals = decimalsByAddress.get(token1);
-  if (!reserves || token0Decimals == null || token1Decimals == null) {
+  if (!reserves) {
     return { state: null, reason: "incomplete-exact-capture" };
   }
   const balance0 = Number(reserves[0]) / 10 ** token0Decimals;
@@ -377,16 +378,9 @@ function buildExecutionModel(input: {
   const assetIds = state.tokenAddresses.map((address) =>
     input.chainAddressToId.get(canonicalExitRouteAssetKey(input.deployment.chain, address)),
   );
-  const trackedIndexes = assetIds
-    .map((assetId, index) => (assetId === reference.stablecoinId ? index : -1))
-    .filter((index) => index >= 0);
-  if (trackedIndexes.length !== 1) {
-    return {
-      model: null,
-      reason: trackedIndexes.length === 0 ? "tracked-input-unresolved" : "ambiguous-token-identity",
-    };
-  }
-  const trackedTokenIndex = trackedIndexes[0]!;
+  const trackedResolution = resolveUniqueTrackedTokenIndex(assetIds, reference.stablecoinId);
+  if (trackedResolution.trackedTokenIndex === null) return { model: null, reason: trackedResolution.reason };
+  const { trackedTokenIndex } = trackedResolution;
   const trustedPriceByIndex = assetIds.map((assetId) => {
     if (!assetId) return null;
     const price = input.stablecoinPriceById.get(assetId);
@@ -677,7 +671,7 @@ export async function enrichEvmV2ExecutionModels(input: {
   }
   if (references.length === 0) return;
   if (!input.chainRpcs) {
-    for (const reference of references) clearCandidate(reference);
+    for (const reference of references) gateReference(reference, "incomplete-exact-capture");
     return;
   }
 

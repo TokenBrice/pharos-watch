@@ -5,7 +5,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 const mockLoadPublication = vi.fn();
 const mockLoadPublicationHealth = vi.fn();
 
-vi.mock("../safety-score-v9-publication-store", () => ({
+vi.mock("../safety-score-v9/publication-store", () => ({
   loadSafetyScoreV9Publication: mockLoadPublication,
   loadSafetyScoreV9PublicationHealth: mockLoadPublicationHealth,
 }));

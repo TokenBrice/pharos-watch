@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { CurvePoolEntry, LlamaPool } from "../dex-liquidity/types";
+import { mergeStagedPools } from "../dex-liquidity/staging-merge";
+import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
+import { makeStagedPoolRow } from "../dex-liquidity/__tests__/staging-merge.test-support";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
 import { buildEvmV2ExecutionCandidate } from "../dex-liquidity/constant-product-v2";
@@ -53,6 +57,42 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
 describe("processPoolMetrics", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("keeps exact native Curve identity and excludes inflated two-token discovery duplicates", async () => {
+    const now = 1_710_000_000;
+    const address = "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14";
+    const tokens = [
+      "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "0xd533a949740bb3306d119cc777fa900ba034cd52",
+    ];
+    const native = makeCurveEntry({ poolAddress: address, tvl: 2_800_000,
+      metapoolAdjustedTvl: 2_800_000, registryId: "factory-tricrypto" });
+    const pool = makePool({ pool: "llama-pool-uuid", symbol: "CRVUSD-WETH-CRV",
+      underlyingTokens: tokens, tvlUsd: 2_900_000 });
+    const { metrics } = processPoolMetrics({
+      // Aliases of the same proven physical pool must not count twice either.
+      pools: [pool, { ...pool, pool: "another-llama-uuid" }],
+      dexProjects: new Set(["curve"]),
+      symbolToChainScopedIds: new Map(),
+      chainAddressToId: new Map([[`ethereum:${tokens[0]}`, "crvusd-curve"]]),
+      curvePoolMap: new Map([[buildPoolFingerprint("ethereum", "curve", tokens)!, native]]),
+      uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), aerodromeIsStable: new Map(),
+    });
+    const staged = makeStagedPoolRow({
+      pool_id: `ethereum:${address}`, stablecoin_id: "crvusd-curve", chain: "ethereum",
+      protocol: "curve", dex_id: "curve", tvl_usd: 878_858_169,
+      base_token: tokens[0], quote_token: tokens[1], price_usd: 1, refreshed_at: now,
+    });
+    const db = makeNoopD1({ prepare: () => ({ bind: () => ({ all: async () => ({ results: [staged] }) }) }) });
+    const result = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), now);
+    const metric = metrics.get("crvusd-curve")!;
+    expect(metric.topPools).toHaveLength(1);
+    expect(metric.topPools[0]).toMatchObject({ poolId: `ethereum:${address}`, tvlUsd: 2_800_000 });
+    expect(metric.totalTvlUsd).toBe(2_800_000);
+    expect(result.skippedByExactIdentityCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
   });
 
   it("reports a malformed upstream pool and keeps processing later pools", () => {

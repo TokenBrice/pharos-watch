@@ -18,7 +18,12 @@ import { formatProseList } from "@shared/lib/format";
  * render an empty inventory row. Completeness for live codes is enforced below.
  */
 const REASON_CODE_LABELS = {
-  "bounded-mechanism-review": "Mechanism review incomplete",
+  // Neutral on cause, because the code carries two shapes: a component the
+  // reviewer has not covered yet, and one the reviewer covered and found the
+  // issuer does not publish (methodology 9.451). "Review incomplete" was false
+  // for the second, which is most of them; the gap's own message now says which
+  // shape it is, including the source checked and the date.
+  "bounded-mechanism-review": "A mechanism detail is unresolved",
   "bounded-unknown-reserve-exposure": "Part of the reserve is unidentified",
   "correlated-exit-routes": "Exit routes share the same failure point",
   "critical-unresolved": "A rating-critical input is unresolved",
@@ -70,7 +75,10 @@ const REASON_CODE_LABELS = {
   "nonmaterial-dependency-unavailable": "A minor dependency could not be scored",
   "no-viable-exit-path": "No viable exit path found",
   "parent-cycle": "Circular dependency between assets",
-  "partial-reserve-review": "Reserve review only partly complete",
+  // Neutral on cause: most carriers are wrappers whose inherited parent
+  // exposure has no live verification, not reviews someone left unfinished;
+  // the same code also covers a genuinely partial standalone review.
+  "partial-reserve-review": "Reserve backing only partly verified",
   "runtime-bridge-materiality-unavailable": "Live bridge exposure unavailable",
   "scoped-control-question": "Reviewer-scoped control question open",
   "selected-bridge-route-missing": "Selected bridge route not found",
@@ -123,9 +131,9 @@ const GAP_OWNERS = [
   },
   {
     responsibility: "published-evidence-expired",
-    label: "Pharos copy is out of date",
+    label: "Issuer's newest report predates our window",
     detail:
-      "The issuer or its parent published this evidence, but our copy is outside its freshness window.",
+      "The issuer or its parent published this evidence, but nothing newer exists: the reporting cadence is slower than the freshness window.",
   },
 ] as const satisfies ReadonlyArray<{
   responsibility: V9EvidenceResponsibility;

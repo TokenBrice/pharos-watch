@@ -2,22 +2,30 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { createPharosQueryClient, Providers, SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
+import {
+  PHAROS_QUERY_DEFAULT_OPTIONS,
+  Providers,
+  SORT_COLUMN_EVENT,
+  type SortColumnEventDetail,
+} from "@/components/providers";
 import { setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
-vi.mock("next/dynamic", () => ({
-  default: (loader: () => unknown) => {
-    const source = String(loader);
-    if (source.includes("keyboard-shortcuts")) {
-      function MockKeyboardShortcuts({ open }: { open: boolean }) {
-        return open ? <div data-testid="keyboard-shortcuts-dialog" /> : null;
-      }
-      return MockKeyboardShortcuts;
-    }
-    return function MockDynamic() {
-      return null;
-    };
-  },
+let pathname = "/";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  QueryClient: class QueryClient {},
+  QueryClientProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="query-client-provider">{children}</div>
+  ),
+}));
+
+vi.mock("@/components/keyboard-shortcuts", () => ({
+  KeyboardShortcuts: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="keyboard-shortcuts-dialog" /> : null,
 }));
 
 vi.mock("next-themes", () => ({
@@ -26,7 +34,7 @@ vi.mock("next-themes", () => ({
 }));
 
 vi.mock("@/components/route-progress-bar", () => ({
-  RouteProgressBar: () => null,
+  RouteProgressBar: () => <div data-testid="route-progress-bar" />,
 }));
 
 function pressKey(key: string) {
@@ -36,25 +44,62 @@ function pressKey(key: string) {
 }
 
 afterEach(() => {
+  pathname = "/";
   window.localStorage.clear();
 });
 
 describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
   it("does not refetch cached queries on window focus by default", () => {
-    const client = createPharosQueryClient();
-
-    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
+    expect(PHAROS_QUERY_DEFAULT_OPTIONS.queries.refetchOnWindowFocus).toBe(false);
   });
 
-  it("broadcasts numeric column sort when single-key shortcuts are enabled", () => {
+  it.each([
+    "/about/",
+    "/learn/mechanisms/",
+    "/docs/api-reference/",
+    "/changelog/",
+    "/blog/client-runtime/",
+    "/methodology/scoring-changelog/",
+  ])("keeps the query client but omits the interactive layer on the static content route %s", async (staticPath) => {
+    pathname = staticPath;
+    render(
+      <Providers>
+        <div data-testid="static-child" />
+      </Providers>,
+    );
+
+    expect(screen.getByTestId("static-child")).toBeTruthy();
+    // Global chrome (TopNav health menu, RegimeBar PSI) queries on every route.
+    expect(screen.getByTestId("query-client-provider")).toBeTruthy();
+    // Give the lazy interactive layer a tick so an incorrect mount would surface.
+    const tick = Promise.withResolvers<void>();
+    setTimeout(tick.resolve, 0);
+    await tick.promise;
+    expect(screen.queryByTestId("route-progress-bar")).toBeNull();
+  });
+
+  it("mounts the interactive layer on data routes", async () => {
+    pathname = "/stablecoin/usdt-tether/";
+    render(
+      <Providers>
+        <div data-testid="interactive-child" />
+      </Providers>,
+    );
+    expect(await screen.findByTestId("route-progress-bar")).toBeTruthy();
+    expect(screen.getByTestId("query-client-provider")).toBeTruthy();
+  });
+
+  it("broadcasts numeric column sort when single-key shortcuts are enabled", async () => {
     const onSort = vi.fn();
     window.addEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
     try {
       render(
         <Providers>
-          <div />
+          <div data-testid="interactive-child" />
         </Providers>,
       );
+
+      await screen.findByTestId("query-client-provider");
 
       const event = pressKey("3");
 
@@ -67,7 +112,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     }
   });
 
-  it("ignores numeric column sort when single-key shortcuts are disabled", () => {
+  it("ignores numeric column sort when single-key shortcuts are disabled", async () => {
     setSidebarShortcutDisabled(true);
     const onSort = vi.fn();
     window.addEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
@@ -77,6 +122,8 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
           <div />
         </Providers>,
       );
+
+      await screen.findByTestId("query-client-provider");
 
       const event = pressKey("3");
 
@@ -94,19 +141,23 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
       </Providers>,
     );
 
+    await screen.findByTestId("query-client-provider");
+
     const event = pressKey("?");
 
     expect(await screen.findByTestId("keyboard-shortcuts-dialog")).toBeTruthy();
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("ignores ? when single-key shortcuts are disabled", () => {
+  it("ignores ? when single-key shortcuts are disabled", async () => {
     setSidebarShortcutDisabled(true);
     render(
       <Providers>
         <div />
       </Providers>,
     );
+
+    await screen.findByTestId("query-client-provider");
 
     const event = pressKey("?");
 

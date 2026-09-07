@@ -21,7 +21,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.191`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.191`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -32,7 +32,7 @@ Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-f
 ## Cron Schedule
 
 - **Critical lane pattern:** `4,34 * * * *` (every 30 minutes, offset at :04/:34)
-- **Extended lane pattern:** `18,48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain)
+- **Extended lane pattern:** logical `18,48 * * * *`, deployed as hourly physical aliases `18 * * * *` and `48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain). The aliases preserve cadence and slot identity while qualifying each invocation for Cloudflare's hourly Cron CPU class; the combined expression was retired after same-version production runs repeatedly exhausted the sub-hourly 30-second class and were reconciled as `platform-abandoned`.
 - **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 6-hourly trigger (`3 */6 * * *`); `sync-dex-discovery` runs on a dedicated 2-hourly trigger (`6 */2 * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC
@@ -76,7 +76,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
-Token identity now resolves from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
+Token identity resolves from the canonical checked-in per-coin metadata under `shared/data/stablecoins/coins/*.json`. The validated full aggregate generates `coins.worker-runtime.generated.json`, a narrow identity/lifecycle/contract projection used by mint/burn so the extended scheduled lane does not initialize the evidence-rich full registry inside its 128 MB isolate. `npm run check:runtime-reachability` bundles the extended scheduled entrypoint (and, since 2026-09-02, the five-minute Telegram entrypoint, which shares the projection) and rejects any runtime path back to the full registry. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
 
 ### Registry ownership
 
@@ -312,6 +312,7 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 - **Activation:** `riskyNet24h < -$100M` AND `safeNet24h > +$100M`
 - **Intensity:** `min(100, |riskyNet24h| / $1B * 100)`
 - Safe/risky cohorts come from the report-card cache: `B-` or better is safe, `C+` through `C-` is neutral, and grades below `C-` are risky. If the complete identified report-card cache is unavailable, flight-to-quality classification is unavailable rather than falling back to hardcoded safe havens.
+- On aggregate API reads, a changed publication identity triggers FTQ recomputation from the validated cached per-coin `netFlow24hUsd` values and current cohorts. This updates only the response's FTQ fields, classification identity, and classification warning; the cached flow data, producer timestamps, freshness headers, and database row are preserved. Missing, held, stale, or malformed Safety Score sources and invalid cached coin inputs still fail closed.
 
 ---
 
@@ -374,19 +375,19 @@ Filters, cursor/offset pagination, ordering, response fields, cache/freshness be
 
 The recent cron path auto-heals bounded NULL-price debt; this operator path handles older history. It accepts only exact UTC event-day evidence from stored history or bounded historical providers, never current spot, peg par, or another day's price. Definitive no-source results become irreducible, transient provider failures remain retryable, and recovered rows stay `pending_aggregate` until every affected hourly bucket is rebuilt and verified. An interrupted run resumes aggregate verification before selecting new valuation work.
 
-Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference.md#post-apibackfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence.
+Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference-admin.md#post-apibackfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence.
 
 ### POST /api/backfill-mint-burn (admin)
 
 This controlled ingestion path uses the same parsing, classification, transaction-context, persistence, and hourly-aggregation helpers as cron ingestion. It can select the most urgent lagging configuration automatically, processes bounded chunks, and advances shared sync state monotonically so a partial backfill cannot regress the live cursor.
 
-Auth/idempotency, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn`](./api-reference.md#post-apibackfill-mint-burn).
+Auth/idempotency, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn`](./api-reference-admin.md#post-apibackfill-mint-burn).
 
 ### POST /api/reclassify-atomic-roundtrips (admin)
 
 This bounded repair applies the shared 0.5% same-transaction amount-tolerance rule in both directions: newly recognized mint/burn pairs become atomic roundtrips, while old atomic tags that fail the tolerance return to standard flow. Every affected hourly bucket is recalculated before a batch reports completion.
 
-Auth/idempotency, scope parameters, batch progression, counters, and errors are canonical in [API Reference: `POST /api/reclassify-atomic-roundtrips`](./api-reference.md#post-apireclassify-atomic-roundtrips).
+Auth/idempotency, scope parameters, batch progression, counters, and errors are canonical in [API Reference: `POST /api/reclassify-atomic-roundtrips`](./api-reference-admin.md#post-apireclassify-atomic-roundtrips).
 
 ---
 

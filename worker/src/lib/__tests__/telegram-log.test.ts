@@ -3,7 +3,7 @@ import {
   classifyTelegramLogError,
   logTelegramEvent,
   normalizeTelegramLogErrorClass,
-} from "../telegram-log";
+} from "../telegram/log";
 
 describe("logTelegramEvent", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;

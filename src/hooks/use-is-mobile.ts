@@ -1,9 +1,12 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
 
-export function useIsMobile(breakpoint = 640, serverSnapshot = false): boolean {
-  const query = `(max-width: ${breakpoint - 1}px)`;
-
+/**
+ * Live media-query subscription. Renders `serverSnapshot` on the server and
+ * during hydration, then switches to the live `matchMedia` result. Environments
+ * without `matchMedia` never receive change notifications and read as `false`.
+ */
+export function useMediaQuery(query: string, serverSnapshot = false): boolean {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       if (typeof window.matchMedia !== "function") return () => {};
@@ -21,4 +24,9 @@ export function useIsMobile(breakpoint = 640, serverSnapshot = false): boolean {
   const getServerSnapshot = useCallback(() => serverSnapshot, [serverSnapshot]);
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+/** True when the viewport is narrower than `breakpoint` px. */
+export function useIsMobile(breakpoint = 640, serverSnapshot = false): boolean {
+  return useMediaQuery(`(max-width: ${breakpoint - 1}px)`, serverSnapshot);
 }

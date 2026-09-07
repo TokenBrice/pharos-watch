@@ -139,6 +139,21 @@ export function uniqueHeaders(headers: readonly unknown[]): string[] {
   });
 }
 
+export function recordFromCsvRow(headers: readonly string[], row: readonly unknown[]): Record<string, string> {
+  return Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? "").trim()]));
+}
+
+export function findHeader(headers: readonly string[], candidates: readonly string[]): string {
+  const lookup = new Map(headers.map((header) => [normalizeHeaderName(header), header]));
+  for (const candidate of candidates) {
+    const header = lookup.get(normalizeHeaderName(candidate));
+    if (header) return header;
+  }
+  return "";
+}
+
+export const hasHeader = (headers: readonly string[], candidates: readonly string[]): boolean => findHeader(headers, candidates) !== "";
+
 export function isDigit(char: string): boolean {
   return char >= "0" && char <= "9";
 }
@@ -167,6 +182,11 @@ export function firstNumberToken(value: unknown): string {
     return token === "-" || token === "." || token === "-." ? "" : token;
   }
   return "";
+}
+
+export function parseCsvNumber(value: unknown): number | null {
+  const token = firstNumberToken(value); const parsed = Number(token);
+  return token && Number.isFinite(parsed) ? parsed : null;
 }
 
 export function parsePositiveNumber(value: unknown, optionName: string, { integer = false } = {}): number {
@@ -317,13 +337,11 @@ function collectFromFile(filePath: string, collected: GscCollectedInputs, option
     const relativePath = options.relativePath ?? path.basename(filePath);
     const containerPath = options.containerPath ?? filePath;
     const containerName = options.containerName ?? cleanPathLabel(filePath);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     addCsvEntry(collected, inputPath, containerPath, containerName, relativePath, readFileSync(filePath), sourceLabel);
     return;
   }
 
   if (ext === ZIP_EXT) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     const zipBuffer = readFileSync(filePath);
     const zipPathLabel = sourceLabel;
     const zipContainerName = cleanPathLabel(filePath);
@@ -358,7 +376,6 @@ function cleanStandaloneCsvIssueLabel(value: unknown): string {
 }
 
 function walkDirectory(directoryPath: string, collected: GscCollectedInputs, inputPath: string, rootDirectory: string): void {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
   const entries = readdirSync(directoryPath, { withFileTypes: true }).sort((left, right) =>
     compareText(left.name, right.name),
   );
@@ -381,7 +398,6 @@ function walkDirectory(directoryPath: string, collected: GscCollectedInputs, inp
         isStandaloneCsv ? absolutePath : rootDirectory,
         isStandaloneCsv ? cleanStandaloneCsvIssueLabel(absolutePath) : cleanPathLabel(rootDirectory),
         isStandaloneCsv ? path.basename(absolutePath) : relativePath,
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
         readFileSync(absolutePath),
         displayPath(absolutePath),
       );
@@ -399,13 +415,11 @@ export function collectInputEntries(inputPaths: readonly string[]): GscCollected
 
   for (const inputPath of resolvedInputs) {
     collected.inputs.push(displayPath(inputPath));
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     if (!existsSync(inputPath)) {
       collected.notes.push(`${displayPath(inputPath)}: input path does not exist; skipped.`);
       continue;
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- report inputs are explicit CLI arguments
     const stats = statSync(inputPath);
     if (stats.isDirectory()) {
       walkDirectory(inputPath, collected, inputPath, inputPath);

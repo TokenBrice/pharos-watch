@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Yield gains a Yearn-style venue-risk rubric (61 venues), Telegram adds reserve-drift alerts, and case studies reach 24.",
   fieldNotes:
-    "The visible work this week was scoring and storytelling: a Yearn-style venue-risk rubric gave yield scores real venue granularity, the Telegram bot grew into a proper alerting surface, and the case-study archive more than doubled. Underneath, the larger effort was quieter — depeg and worker pipelines hardened against stale data and aborted writes, a security pass tightened logs and price freshness, and a broad refactor sweep paid down internal debt.",
+    "The visible work this week was scoring and storytelling: a Yearn-style venue-risk rubric gave yield scores real venue granularity, the Telegram bot grew into a proper alerting surface, and the case-study archive more than doubled. Underneath, the larger effort was quieter: depeg and worker pipelines hardened against stale data and aborted writes, a security pass tightened logs and price freshness, and a broad refactor sweep paid down internal debt.",
   summary: [
     {
       label: "Yield venue-risk rubric",

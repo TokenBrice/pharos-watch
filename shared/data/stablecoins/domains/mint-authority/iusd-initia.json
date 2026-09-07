@@ -58,11 +58,11 @@
         ],
         "sources": [
           {
-            "label": "Initia REST — 0xfd6a07 resources",
+            "label": "Initia REST: 0xfd6a07 resources",
             "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a/resources"
           },
           {
-            "label": "Initia scan — iusd-vault contract",
+            "label": "Initia scan: iusd-vault contract",
             "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
           },
           {
@@ -93,11 +93,11 @@
         ],
         "sources": [
           {
-            "label": "Initia REST — iusd-vault MultisigWallet resource",
+            "label": "Initia REST: iusd-vault MultisigWallet resource",
             "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
           },
           {
-            "label": "Initia REST — iusd-vault package modules",
+            "label": "Initia REST: iusd-vault package modules",
             "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
           }
         ]
@@ -116,15 +116,15 @@
           "url": "https://docs.initia.xyz"
         },
         {
-          "label": "Initia REST — iusd-vault contract resources",
+          "label": "Initia REST: iusd-vault contract resources",
           "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
         },
         {
-          "label": "Initia scan — iusd-vault contract",
+          "label": "Initia scan: iusd-vault contract",
           "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
         },
         {
-          "label": "Initia REST — iusd-vault package modules",
+          "label": "Initia REST: iusd-vault package modules",
           "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
         }
       ]

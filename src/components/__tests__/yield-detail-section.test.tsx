@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield-detail-section";
 import {
-  SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   buildSourceRiskGoldenFixture,
   mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
@@ -262,13 +261,7 @@ describe("YieldDetailSection", () => {
       data: makeResponse([
         makeRanking({
           sourceRisk: mergeSourceRiskGoldenFixtures(
-            [
-              "reward-heavy",
-              "low-source-depth",
-              "stale-source-age",
-              "bootstrap-observation-count",
-              "source-switch-churn",
-            ],
+            ["reward-heavy", "stale-source-age"],
             { sourceRiskPenalty: 1.8 },
           ),
           provenance: {
@@ -297,9 +290,8 @@ describe("YieldDetailSection", () => {
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
-    for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
-      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
-    }
+    expect(screen.getAllByText("reward-heavy").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("stale source").length).toBeGreaterThan(0);
     // WHY: driver descriptions are exposed on compact tag chips through the
     // accessible label and tooltip, not as visible text.
     const rewardChip = screen.getAllByText("reward-heavy")[0] as HTMLElement;

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { matchesGlob } from "node:path";
-import { GENERATED_ARTIFACT_REGISTRY, selectAutoStageArtifactIds } from "../lib/automation-registry.mjs";
+import { existsSync, globSync, lstatSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { matchesGlob, resolve } from "node:path";
+import { GENERATED_ARTIFACT_REGISTRY, selectAutoStageArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
 import { collectGitPaths, collectStagedFiles, normalizeRepoPaths, splitNullDelimited } from "../lib/changed-files.mts";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -11,6 +12,7 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 interface RegistryArtifact {
   id: string;
   command: string;
+  reproducibility: string;
   outputPaths: string[];
   sourcePaths: string[];
 }
@@ -29,6 +31,19 @@ interface SyncResult {
   regenerated: string[];
 }
 
+interface OutputState {
+  contents?: Buffer;
+  globMembers?: string[];
+  existed: boolean;
+  path: string;
+  tracked: boolean;
+  wasClean: boolean;
+}
+
+function globOutputFiles(pattern: string, cwd: string): string[] {
+  return globSync(pattern, { cwd }).filter((path) => !lstatSync(resolve(cwd, path)).isDirectory());
+}
+
 /**
  * A git hook is synchronous, so this cannot use the async `runShellCommand`
  * from command-runner.mts.
@@ -43,8 +58,25 @@ function runShellCommandSync(command: string, cwd: string): number {
   }
 }
 
-function collectUnstagedPaths(cwd: string, execFile: typeof execFileSync): string[] {
-  return collectGitPaths({ kind: "working", diffFilter: "ACMRTD" }, { cwd, execFile });
+function collectUnstagedPaths(
+  cwd: string,
+  execFile: typeof execFileSync,
+  stagedFiles: readonly string[],
+): string[] {
+  const unstagedTracked = collectGitPaths({ kind: "working", noRenames: true, diffFilter: "ACMRTD" }, { cwd, execFile });
+  const workingAndUntracked = collectGitPaths(
+    { kind: "working", noRenames: true, includeUntracked: true, diffFilter: "ACMRTD" },
+    { cwd, execFile },
+  );
+  const staged = new Set(normalizeRepoPaths(stagedFiles));
+
+  // The includeUntracked form compares tracked files with HEAD, so it also
+  // reports clean staged paths. Keep the ordinary diff to catch staged-plus-
+  // unstaged edits, and add only the broader result's genuinely new paths.
+  return [...new Set([
+    ...unstagedTracked,
+    ...workingAndUntracked.filter((path) => !staged.has(path)),
+  ])];
 }
 
 function matchesAny(path: string, patterns: readonly string[]): boolean {
@@ -76,6 +108,59 @@ function collectIgnoredPaths(
   }
 }
 
+function captureOutputStates(
+  outputPaths: readonly string[],
+  cwd: string,
+  execFile: typeof execFileSync,
+): OutputState[] {
+  return outputPaths.map((path) => {
+    const options = { cwd, encoding: "utf8" as const };
+    const status = String(execFile("git", ["status", "--porcelain", "--", path], options));
+    let tracked = false;
+    try {
+      execFile("git", ["ls-files", "--error-unmatch", "--", path], options);
+      tracked = true;
+    } catch {
+      // An untracked output has no index version to restore with git checkout.
+    }
+    // `git checkout -- <path>` restores the working tree from the index, so an
+    // output is restorable whenever its working tree matches the index: porcelain
+    // status empty, or index-only (`XY` with a blank worktree column).
+    const worktreeClean = status.split("\n").filter(Boolean).every((line) => tracked && line[1] === " ");
+    const absolutePath = resolve(cwd, path);
+    const existed = existsSync(absolutePath);
+    return {
+      ...(/[*?\[\]{}]/.test(path) ? { globMembers: globOutputFiles(path, cwd) } : {}),
+      ...(existed && !tracked && statSync(absolutePath).isFile() ? { contents: readFileSync(absolutePath) } : {}),
+      existed, path, tracked, wasClean: worktreeClean,
+    };
+  });
+}
+
+function restoreOutputStates(
+  outputStates: readonly OutputState[],
+  cwd: string,
+  execFile: typeof execFileSync,
+): void {
+  const options = { cwd, encoding: "utf8" as const };
+
+  for (const state of outputStates) {
+    if (state.globMembers) {
+      const originalMembers = new Set(state.globMembers);
+      for (const path of globOutputFiles(state.path, cwd)) {
+        if (!originalMembers.has(path)) rmSync(resolve(cwd, path), { force: true });
+      }
+    }
+    if (state.tracked) {
+      execFile("git", ["checkout", "--", state.path], options);
+    } else if (state.contents) {
+      writeFileSync(resolve(cwd, state.path), state.contents);
+    } else if (!state.existed) {
+      rmSync(resolve(cwd, state.path), { recursive: true, force: true });
+    }
+  }
+}
+
 export function syncStagedGeneratedArtifacts({
   cwd = process.cwd(),
   execFile = execFileSync,
@@ -84,7 +169,7 @@ export function syncStagedGeneratedArtifacts({
   stagedFiles,
 }: SyncOptions = {}): SyncResult {
   const run = runCommand ?? ((command: string) => runShellCommandSync(command, cwd));
-  const staged = stagedFiles ?? collectStagedFiles({ cwd });
+  const staged = stagedFiles ?? collectStagedFiles({ cwd, diffFilter: "ACMRD", execFile });
   if (staged.length === 0) return { blocked: [], manual: [], regenerated: [] };
 
   const { autoStage, manual: manualCandidates } = selectAutoStageArtifactIds(
@@ -97,18 +182,29 @@ export function syncStagedGeneratedArtifacts({
   );
   const outputPathsFor = (id: string): string[] => registryById.get(id)?.outputPaths ?? [];
 
+  // Execution includes prerequisites; staging authority remains autoStage only.
+  const artifacts: RegistryArtifact[] = autoStage.length === 0 ? [] : selectGeneratedArtifacts({ only: autoStage });
+  for (const artifact of artifacts) {
+    if (artifact.reproducibility === "network-derived") {
+      throw new Error(`[staged-artifacts] refusing network-derived prerequisite ${artifact.id}`);
+    }
+    if (!artifact.command || artifact.outputPaths.length === 0) {
+      throw new Error(`[staged-artifacts] generator ${artifact.id} is incomplete`);
+    }
+  }
+
   // Only warn about artifacts a human could actually commit. A gitignored
   // projection is rebuilt on demand, so naming it here is noise on every
   // coin or docs commit.
   const ignored = collectIgnoredPaths(manualCandidates.flatMap(outputPathsFor), cwd, execFile);
   const manual = manualCandidates.filter((id) => outputPathsFor(id).some((path) => !ignored.has(path)));
-  const unstaged = collectUnstagedPaths(cwd, execFile);
+  const unstaged = collectUnstagedPaths(cwd, execFile, staged);
 
   // The generators read the working tree, not the index. Staging output derived
   // from an unstaged source edit would pin content that is not in the commit.
-  const blocked = autoStage.filter((id) =>
-    unstaged.some((path) => matchesAny(path, registryById.get(id)?.sourcePaths ?? [])),
-  );
+  const blocked = artifacts.filter((artifact) =>
+    unstaged.some((path) => matchesAny(path, artifact.sourcePaths)),
+  ).map((artifact) => artifact.id);
 
   if (blocked.length > 0) {
     throw new Error(
@@ -118,21 +214,34 @@ export function syncStagedGeneratedArtifacts({
     );
   }
 
+  const outputPaths = [...new Set(artifacts.flatMap((artifact) => artifact.outputPaths))];
+  const outputStates = captureOutputStates(outputPaths, cwd, execFile);
+  const dirtyOutputs = outputStates.filter((state) => !state.wasClean).map((state) => state.path);
+  if (dirtyOutputs.length > 0) {
+    throw new Error(`[staged-artifacts] refusing to overwrite dirty outputs: ${dirtyOutputs.join(", ")}`);
+  }
   const regenerated: string[] = [];
-  for (const id of autoStage) {
-    const artifact = registryById.get(id);
-    if (!artifact) continue;
-    log(`[staged-artifacts] regenerating ${id}`);
-    const status = run(artifact.command);
-    if (status !== 0) {
-      throw new Error(`[staged-artifacts] ${id} generator failed with exit code ${status}: ${artifact.command}`);
+  try {
+    for (const artifact of artifacts) {
+      const { id } = artifact;
+      log(`[staged-artifacts] regenerating ${id}`);
+      const status = run(artifact.command);
+      if (status !== 0) {
+        throw new Error(`[staged-artifacts] ${id} generator failed with exit code ${status}: ${artifact.command}`);
+      }
+      regenerated.push(id);
     }
-    execFile("git", ["add", "--", ...artifact.outputPaths], { cwd, encoding: "utf8" });
-    regenerated.push(id);
+  } catch (error) {
+    restoreOutputStates(outputStates, cwd, execFile);
+    throw error;
   }
 
   if (regenerated.length > 0) {
-    log(`[staged-artifacts] staged: ${regenerated.join(", ")}`);
+    execFile("git", ["add", "--", ...new Set(autoStage.flatMap(outputPathsFor))], { cwd, encoding: "utf8" });
+  }
+
+  if (regenerated.length > 0) {
+    log(`[staged-artifacts] staged: ${autoStage.join(", ")}`);
   }
   if (manual.length > 0) {
     log(

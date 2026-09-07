@@ -3,9 +3,11 @@
 import {
   appendFileSync,
   copyFileSync,
+  cpSync,
   mkdirSync,
   readFileSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -130,17 +132,16 @@ export async function refreshPagesReleaseData({
   mkdirSync(resolvedRefreshDir, { recursive: true });
 
   const committedDigestPath = join(repoRoot, "data/digests.json");
-  const committedDepegPath = join(repoRoot, "data/depeg-events.json");
+  const committedDepegPath = join(repoRoot, "data/depeg-events");
   const refreshedDigestPath = join(resolvedRefreshDir, "digests.json");
-  const refreshedDepegPath = join(resolvedRefreshDir, "depeg-events.json");
+  const refreshedDepegPath = join(resolvedRefreshDir, "depeg-events", "index.json");
   copyFileSync(committedDigestPath, refreshedDigestPath);
-  copyFileSync(committedDepegPath, refreshedDepegPath);
+  cpSync(committedDepegPath, join(resolvedRefreshDir, "depeg-events"), { recursive: true });
   const committedCount = readJsonArrayCount(committedDigestPath);
 
-  const [digestRun, depegRun, datasetsRun] = await Promise.all([
+  const [digestRun, depegRun] = await Promise.all([
     settledProducer(dependencies.digests, { outputPath: refreshedDigestPath }),
     settledProducer(dependencies.depegEvents, { outputPath: refreshedDepegPath }),
-    settledProducer(dependencies.publicDatasets, {}),
   ]);
 
   const refreshedCount = readJsonArrayCount(refreshedDigestPath);
@@ -158,8 +159,21 @@ export async function refreshPagesReleaseData({
 
   const depegOk = depegRun.status === 0;
   let depegLog = depegRun.output ?? "";
-  if (depegOk) renameSync(refreshedDepegPath, committedDepegPath);
-  else depegLog = appendLog(depegLog, "::warning::depeg-event refresh failed; using committed depeg snapshot");
+  if (depegOk) {
+    const committedDepegBackup = join(resolvedRefreshDir, "depeg-events-committed");
+    renameSync(committedDepegPath, committedDepegBackup);
+    try {
+      renameSync(join(resolvedRefreshDir, "depeg-events"), committedDepegPath);
+      rmSync(committedDepegBackup, { recursive: true, force: true });
+    } catch (error) {
+      renameSync(committedDepegBackup, committedDepegPath);
+      throw error;
+    }
+  } else {
+    depegLog = appendLog(depegLog, "::warning::depeg-event refresh failed; using committed depeg snapshot");
+  }
+
+  const datasetsRun = await settledProducer(dependencies.publicDatasets, {});
 
   const datasetsOk = datasetsRun.status === 0;
   let datasetsLog = datasetsRun.output ?? "";

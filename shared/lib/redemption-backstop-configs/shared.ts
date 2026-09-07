@@ -214,6 +214,22 @@ export function sourceRef(label: string, url: string, supports?: RedemptionDocSo
   return supports && supports.length > 0 ? { label, url, supports } : { label, url };
 }
 
+export function sourceRefFull(label: string, url: string): RedemptionDocSource {
+  return sourceRef(label, url, ["route", "capacity", "fees", "access", "settlement"]);
+}
+
+export function sourceRefRouteCapacity(label: string, url: string): RedemptionDocSource {
+  return sourceRef(label, url, ["route", "capacity"]);
+}
+
+export function sourceRefRouteCapacityFees(label: string, url: string): RedemptionDocSource {
+  return sourceRef(label, url, ["route", "capacity", "fees"]);
+}
+
+export function sourceRefRouteCapacityAccess(label: string, url: string): RedemptionDocSource {
+  return sourceRef(label, url, ["route", "capacity", "access"]);
+}
+
 function trackedReviewedDocs(stablecoinId: string): RedemptionDocSource[] {
   return trackedRedemptionDocSources(stablecoinId, { includeLiveReserveDisplay: true });
 }

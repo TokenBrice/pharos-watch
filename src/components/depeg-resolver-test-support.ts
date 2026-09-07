@@ -1,10 +1,8 @@
 import {
   DdrRowSchema,
   DdrV2ResponseRowSchema,
-  type DdrResolutionTier,
   type DdrResponse,
   type DdrRow,
-  type DdrV2LiveOverlay,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
@@ -131,43 +129,5 @@ export function makeFrozenDdrV2Row(source = makeDdrSourceRow(), overrides: Recor
       degradedReason: null,
     },
     ...overrides,
-  });
-}
-
-export interface MakeDdrResponseRowOptions {
-  stablecoinId?: string;
-  symbol?: string;
-  name?: string;
-  tier?: DdrResolutionTier;
-  sourceOverrides?: Partial<DdrRow>;
-  liveOverrides?: Partial<DdrV2LiveOverlay>;
-}
-
-export function makeDdrResponseRow({
-  stablecoinId = "lusd-liquity",
-  symbol = "LUSD",
-  name = "Liquity USD",
-  tier = "at_risk",
-  sourceOverrides = {},
-  liveOverrides = {},
-}: MakeDdrResponseRowOptions = {}): DdrV2ResponseRow {
-  const source = makeDdrSourceRow({
-    ...sourceOverrides,
-    stablecoinId,
-    symbol,
-    name,
-    resolution: { tier, factors: [] },
-  });
-  const incidentKey = `ddr2:${source.stablecoinId}`;
-  const base = makeFrozenDdrV2Row(source);
-  return makeFrozenDdrV2Row(source, {
-    incidentKey,
-    prediction: {
-      ...base.prediction,
-      incidentKey,
-      publicPredictionId: source.eventId,
-      publicationSnapshotToken: `ddrpub:${source.stablecoinId}`,
-    },
-    live: { ...base.live, ...liveOverrides },
   });
 }

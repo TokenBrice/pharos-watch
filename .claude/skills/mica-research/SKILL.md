@@ -1,1 +1,0 @@
-../../../.codex/skills/mica-research/SKILL.md

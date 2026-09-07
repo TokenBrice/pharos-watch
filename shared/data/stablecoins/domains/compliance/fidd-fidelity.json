@@ -4,11 +4,11 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Fidelity FIDD page — retail purchase and redemption are limited to eligible U.S. states and territories",
+        "label": "Fidelity FIDD page: retail purchase and redemption are limited to eligible U.S. states and territories",
         "url": "https://www.fidelitydigitalassets.com/stablecoin"
       },
       {
-        "label": "FIDD Terms and Conditions — issuer, U.S.-dollar redemption, and account eligibility terms",
+        "label": "FIDD Terms and Conditions: issuer, U.S.-dollar redemption, and account eligibility terms",
         "url": "https://www.fidelitydigitalassets.com/fidd-terms"
       },
       {
@@ -36,10 +36,10 @@
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "latestReportDate": "2026-04-30",
-    "notes": "Fidelity Digital Assets received a conditional OCC national trust bank charter approval on December 12, 2025 (conversion from NY state trust company). This is a trust-charter conditional approval under existing OCC chartering authority — it is not a PPSI approval under the GENIUS Act, which remains in proposed-rules rulemaking. No PPSI application framework exists yet and no issuer has received PPSI status. FIDD launched publicly on February 4, 2026; Fidelity positions FIDD as aligning with GENIUS Act reserve standards but has not announced a formal PPSI application.",
+    "notes": "Fidelity Digital Assets received a conditional OCC national trust bank charter approval on December 12, 2025 (conversion from NY state trust company). This is a trust-charter conditional approval under existing OCC chartering authority: it is not a PPSI approval under the GENIUS Act, which remains in proposed-rules rulemaking. No PPSI application framework exists yet and no issuer has received PPSI status. FIDD launched publicly on February 4, 2026; Fidelity positions FIDD as aligning with GENIUS Act reserve standards but has not announced a formal PPSI application.",
     "references": [
       {
-        "label": "OCC Conditional Approval — Fidelity Digital Assets national trust bank charter (Dec 12, 2025)",
+        "label": "OCC Conditional Approval: Fidelity Digital Assets national trust bank charter (Dec 12, 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2025-12-12",
@@ -73,8 +73,8 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC news release nr-occ-2025-125 (Dec 12, 2025) — conditional trust charter approval, not PPSI status",
-        "OCC Bulletin 2026-3 GENIUS Act NPRM (Feb 25, 2026) — PPSI application framework still in proposed rules",
+        "OCC news release nr-occ-2025-125 (Dec 12, 2025): conditional trust charter approval, not PPSI status",
+        "OCC Bulletin 2026-3 GENIUS Act NPRM (Feb 25, 2026): PPSI application framework still in proposed rules",
         "OCC national trust bank materials and rulemaking tracker",
         "Fidelity Digital Assets stablecoin and FIDD terms pages",
         "Fidelity FIDD launch press release (Feb 4, 2026)",

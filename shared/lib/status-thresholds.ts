@@ -75,8 +75,8 @@ export const STATUS_ONCHAIN_THRESHOLDS = {
 } as const;
 /** Window for treating an on-chain monitoring source as actively reporting. Sources silent longer than this are excluded from health rollups. */
 export const STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC = 3 * 24 * 3600;
-/** Per-coin on-chain snapshot freshness ceiling. Snapshots older than this contribute to the stale-snapshot count. */
-export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 2 * 3600;
+/** Per-coin on-chain snapshot freshness ceiling. Two missed producer cycles contribute to the stale-snapshot count. */
+export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 8 * 3600;
 /** Per-coin divergence ceiling (fraction). Above this, on-chain supply is considered to disagree with DefiLlama materially. */
 export const STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD = 0.05;
 
@@ -198,7 +198,7 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
 // --- Telegram lifecycle snapshot cadence ---
 /**
  * Worker cadence (seconds) for refreshing the Telegram current-lifecycle snapshot.
- * Source of truth for the producer (worker/src/lib/telegram-usage-analytics.ts) and the
+ * Source of truth for the producer (worker/src/lib/telegram/usage-analytics.ts) and the
  * status UI's "snapshot stale" badge, so the threshold cannot drift between the two.
  */
 export const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;

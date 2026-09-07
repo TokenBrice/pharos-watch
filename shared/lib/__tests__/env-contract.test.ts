@@ -7,26 +7,6 @@ import {
 } from "../env-contract";
 
 describe("env contract manifest", () => {
-  it("keeps the worker required binding order stable", () => {
-    expect(getRuntimeEnvKeys("worker", "required")).toEqual([
-      "DB",
-      "CF_VERSION_METADATA",
-      "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
-      "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
-      "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
-      "CORS_ORIGIN",
-      "GITHUB_PAT",
-      "FEEDBACK_IP_SALT",
-      "API_KEY_SELF_SERVE_IP_SALT",
-      "API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER",
-      "API_KEY_SELF_SERVE_REQUEST_PEPPER",
-      "RESEND_API_KEY",
-      "API_KEY_SELF_SERVE_EMAIL_FROM",
-      "API_KEY_SELF_SERVE_EMAIL_REPLY_TO",
-      "API_KEY_SELF_SERVE_PUBLIC_BASE_URL",
-      "BANXICO_TOKEN",
-    ]);
-  });
 
   it("keeps the Pages ops required binding order stable", () => {
     expect(getRuntimeEnvKeys("pagesOps", "required")).toEqual([

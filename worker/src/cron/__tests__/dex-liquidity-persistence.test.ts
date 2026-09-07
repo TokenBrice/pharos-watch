@@ -12,6 +12,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   buildDexLiquidityPublicationGenerationId,
@@ -1007,9 +1008,9 @@ describe("dex liquidity generation prune", () => {
         return { oldest_remaining_at: 1_699_990_000 };
       },
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => statement(sql, []),
-    } as unknown as D1Database;
+    });
 
     const nowSec = 1_700_000_000;
     const retention = await pruneOldDexLiquidityGenerations(db, nowSec);

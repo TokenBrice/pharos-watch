@@ -41,9 +41,9 @@ const ASYNC_REDEEMER = "0x1303c26cfe06bac5bfee29907f37919643def75c";
 const DUSD = "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const BEACON = "0x1f20cdfa19b860f0dd78fefbb052be5aa5003dd9";
-const REVIEWED_IMPLEMENTATION = "0xd53dc14e0f268494c7540153126d78e4f54cc01c";
+const REVIEWED_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
 const REVIEWED_IMPLEMENTATION_CODE_HASH =
-  "0xeed090b1c06e966eebca301a1fed3f0c152044c04912d8b5d7e7c934fa3a192a";
+  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
 const BLOCK = 25_646_765;
 
 function uint256Result(value: bigint | number): `0x${string}` {
@@ -113,6 +113,8 @@ function mockSuccessfulRouteReads(): void {
         case "redeemer-reserved-usdc":
           return { label: call.label, success: true, returnData: uint256Result(3_679n) };
         case "redeemer-whitelist":
+          return { label: call.label, success: true, returnData: uint256Result(0) };
+        case "redeemer-sanctions-check":
           return { label: call.label, success: true, returnData: uint256Result(1) };
         case "redeemer-finalization-delay":
           return { label: call.label, success: true, returnData: uint256Result(43_200) };
@@ -146,10 +148,11 @@ describe("fetchMakinaStrategyReserves redemption telemetry", () => {
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
+      settlementBoundUnproven: true,
       capacityKind: "live-queue",
       freshnessKind: "same-run-onchain",
       blockNumber: BLOCK,
-      holderEligibility: "issuer-discretionary",
+      holderEligibility: "any-holder",
       queueDepthUsd: 3_104.889979,
       routeStatus: "open",
       routeStatusSource: "onchain",
@@ -162,6 +165,7 @@ describe("fetchMakinaStrategyReserves redemption telemetry", () => {
       grossIdleCapacityUsd: 120.722783,
       queueDepthUsd: 3_104.889979,
       reservedUnclaimedUsdc: 0.003679,
+      settlementBoundUnproven: true,
       capacityBasis: "live-proxy-buffer",
       implementationAddress: REVIEWED_IMPLEMENTATION,
       implementationRuntimeCodeHash: REVIEWED_IMPLEMENTATION_CODE_HASH,

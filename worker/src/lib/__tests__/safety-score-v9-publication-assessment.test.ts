@@ -5,7 +5,7 @@ import {
   assessV9Publication,
   buildSafetyScoreV9AcceptedPublicationBaseline,
   type V9PublicationInputHealth,
-} from "../safety-score-v9-publication-assessment";
+} from "../safety-score-v9/publication-assessment";
 
 const digest = (character: string) => character.repeat(64);
 

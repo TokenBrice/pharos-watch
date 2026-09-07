@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type {
   TelegramBotStats,
   TelegramDeliverySliRollup,
@@ -12,13 +12,13 @@ import {
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
   type TelegramCurrentLifecycleSnapshot,
-} from "../telegram-usage-analytics";
-import { loadTelegramDeliverySliRollup } from "../telegram-delivery-sli";
+} from "../telegram/usage-analytics";
+import { loadTelegramDeliverySliRollup } from "../telegram/delivery-sli";
 import { getCache } from "../db-cache";
 import {
   loadTelegramPendingCapacity,
   type TelegramPendingCapacitySnapshot,
-} from "../telegram-pending-capacity";
+} from "../telegram/pending-capacity";
 
 const TELEGRAM_DELIVERY_ACCEPTANCE_DEFINITION = "telegram_bot_api_accepted_not_user_receipt" as const;
 
@@ -495,7 +495,7 @@ export function mapTelegramBotStats(input: {
     },
     topStablecoins: topStablecoins.map((row) => ({
       stablecoinId: row.stablecoin_id,
-      symbol: TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id,
+      symbol: WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id,
       subscribers: coerceCount(row.subscribers),
       explicitSubscribers: coerceCount(row.explicit_subscribers ?? row.subscribers),
       presetImpliedSubscribers: coerceCount(row.preset_implied_subscribers),

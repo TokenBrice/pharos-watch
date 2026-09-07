@@ -1,4 +1,4 @@
-import { parseDisambiguationReply } from "../../lib/telegram-alerts";
+import { parseDisambiguationReply } from "../../lib/telegram/alerts";
 import {
   loadPendingDisambiguation,
   unixNow,

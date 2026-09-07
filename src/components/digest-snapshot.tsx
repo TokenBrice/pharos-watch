@@ -3,10 +3,13 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
+import { useImageUnavailable } from "@/hooks/use-image-unavailable";
+import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/types/digest-safety-map-contract";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
-import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
+import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
+import { formatDigestDateLabel } from "@/lib/digest";
 
 /* ---------- sub-section wrapper ---------- */
 
@@ -39,6 +42,98 @@ function SnapshotUnavailable() {
       <p className="pharos-kicker">The data behind this digest</p>
       <div className="rounded-lg border border-border/50 p-3 text-sm text-muted-foreground">
         Digest context is unavailable for this archive entry.
+      </div>
+    </section>
+  );
+}
+
+function SafetyMapUnavailable() {
+  return (
+    <div className="pharos-card-shell p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <ImageOff className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div className="space-y-1.5">
+          <p className="pharos-section-title">The map is not available right now</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This edition keeps its original map citation, but the poster bytes are currently unavailable.
+            Every grade the map draws is available as live, sortable data on the{" "}
+            <a href="/safety-scores/" className="pharos-prose-link">
+              Safety Scores page
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData }) {
+  const map = parseDigestSafetyMapCapture(inputData.safetyMap, "archive-compatible");
+  const { unavailable, checkAlreadyFailed, onError } = useImageUnavailable();
+  if (!map) return null;
+  if (unavailable) return <SafetyMapUnavailable />;
+
+  const summary = map.manifest.mapSummary;
+  const byTier = new Map(summary.tiers.map((tier) => [tier.tier, tier]));
+  const aTier = byTier.get("A");
+  const outerTiers = ["C", "D", "F"]
+    .map((tier) => byTier.get(tier as StoredSafetyMapTier["tier"]))
+    .filter((tier): tier is StoredSafetyMapTier => tier !== undefined);
+  if (!aTier || outerTiers.length !== 3) return null;
+  const outerCount = outerTiers.reduce((sum, tier) => sum + tier.count, 0);
+  const outerMcapUsd = outerTiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
+  const aSharePct = ((aTier.mcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
+  const outerSharePct = ((outerMcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
+  const mapDateLabel = formatDigestDateLabel(map.manifest.date, "long");
+  const freshnessLabel = map.freshness === "current"
+    ? `Dated ${mapDateLabel} map`
+    : `Carried from the ${mapDateLabel} map${map.ageDays != null ? ` (${map.ageDays}d old)` : ""}`;
+
+  return (
+    <section aria-labelledby="digest-safety-map" className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="pharos-kicker">Safety Map</p>
+          <h3 id="digest-safety-map" className="text-base font-semibold text-foreground">
+            The dated market census behind this edition
+          </h3>
+        </div>
+        <p className="pharos-meta">{freshnessLabel}</p>
+      </div>
+      <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/10 p-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)] sm:items-stretch">
+        <figure className="overflow-hidden rounded-md border border-border/50 bg-[#05070d]">
+          <img
+            ref={checkAlreadyFailed}
+            src={map.imageUrl}
+            alt={`Pharos Safety Score Map for ${mapDateLabel}; ${summary.gradedCount} graded coins across A, B, C, D, and F tiers.`}
+            width={3200}
+            height={1800}
+            className="aspect-[16/9] w-full object-contain"
+            onError={onError}
+          />
+          <figcaption className="border-t border-white/10 px-2.5 py-2 text-[0.68rem] leading-relaxed text-white/70">
+            V{summary.methodologyVersion.replace(/^v/i, "")} · {summary.notRatedCount} not rated · as of {mapDateLabel}
+          </figcaption>
+        </figure>
+        <div className="flex flex-col justify-center gap-2 rounded-md border border-border/50 bg-background/45 p-3">
+          <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            {freshnessLabel}
+          </p>
+          <div className="space-y-1.5 text-sm text-foreground/90">
+            <p>Mapped supply: <span className="font-medium">{formatCurrency(summary.totalMcapUsd, 1)}</span> across {summary.gradedCount} coins</p>
+            <p>A tier: <span className="font-medium">{aTier.count} coins</span> · {aSharePct}%</p>
+            <p>C/D/F tiers: <span className="font-medium">{outerCount} coins</span> · {outerSharePct}%</p>
+          </div>
+          <a
+            href={map.imageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring mt-1 inline-flex w-fit rounded-sm text-xs font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            Open the dated poster&nbsp;&rarr;
+          </a>
+        </div>
       </div>
     </section>
   );
@@ -159,6 +254,8 @@ export function DigestSnapshot({ date }: { date: string }) {
         standingConditions={inputData.standingConditions}
         riskTape={inputData.riskTape}
       />
+
+      <DigestSafetyMapCard inputData={inputData} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {/* 1. Market Snapshot — always shown */}

@@ -14,6 +14,7 @@ import {
   type StablecoinsCacheLoadOk,
   type StablecoinsCachePayload,
 } from "./stablecoins-cache";
+import type { CronResult } from "./cron-logger";
 
 export const SNAPSHOT_SUPPLY_LAST_WRITE_KEY = "snapshot-supply:last-write";
 export const SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY = "snapshot-chain-supply:last-write";
@@ -36,6 +37,41 @@ export interface SupplySnapshotCompletionMarkerInput {
 export interface SupplySnapshotCompletionOptions {
   cacheKey?: string;
   expectedCoverage?: SupplySnapshotCoverageExpectation;
+}
+
+export function buildStablecoinsCacheFreshnessGateResult(params: {
+  cacheUpdatedAt: number;
+  requiredUpdatedAt: number;
+  freshnessGateLabel?: string;
+  retry?: { attempts: number; firstCacheUpdatedAt: number };
+  alreadyWrittenSnapshotDate?: number;
+}): CronResult {
+  if (params.alreadyWrittenSnapshotDate != null) {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "already_written_today_before_freshness_gate",
+        snapshotDate: params.alreadyWrittenSnapshotDate,
+        cacheUpdatedAt: params.cacheUpdatedAt,
+        requiredUpdatedAt: params.requiredUpdatedAt,
+        freshnessGateLabel: params.freshnessGateLabel,
+      }),
+    };
+  }
+
+  return {
+    status: "degraded",
+    itemCount: 0,
+    metadata: JSON.stringify({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt: params.cacheUpdatedAt,
+      requiredUpdatedAt: params.requiredUpdatedAt,
+      freshnessGateLabel: params.freshnessGateLabel,
+      ...(params.retry && params.retry.attempts > 0
+        ? { retryAttempts: params.retry.attempts, firstCacheUpdatedAt: params.retry.firstCacheUpdatedAt }
+        : {}),
+    }),
+  };
 }
 
 export interface CompletedSupplySnapshot {

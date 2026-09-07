@@ -82,7 +82,7 @@ import {
 } from "./core";
 import { validateMintAuthorityProfile } from "./stablecoin-meta-mint-authority-refinements";
 import { HttpUrlSchema } from "./validators";
-import { isValidIsoDateOnly } from "./date-primitives";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
@@ -93,9 +93,6 @@ const BlacklistabilityReviewStatusSchema = z.union([
 ]);
 const PositiveIntegerSchema = z.number().finite().int().positive();
 
-const StrictIsoDateSchema = z.string().refine(isValidIsoDateOnly, {
-  message: "Expected YYYY-MM-DD",
-});
 const ReviewDateSchema = StrictIsoDateSchema;
 
 // Shape only. `shared/types` must not import `shared/lib`, so the canonical-form
@@ -120,7 +117,7 @@ export const FuzzyDateSchema = z.string().refine(
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
     if (/^\d{4}-Q[1-4]$/.test(value)) return true;
     if (/^\d{4}-H[1-2]$/.test(value)) return true;
-    return isValidIsoDateOnly(value);
+    return StrictIsoDateSchema.safeParse(value).success;
   },
   {
     message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",
@@ -159,8 +156,25 @@ export const StablecoinFlagsSchema = z
 
 export const StablecoinLinkSchema = z
   .object({
+    /**
+     * editorial-selector identity for links whose url is not unique within the
+     * coin; immutable after publication.
+     */
+    id: z
+      .string()
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored kebab-case id; finite groups, no backtracking ambiguity.
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Expected a kebab-case link id")
+      .optional(),
     label: z.string(),
     url: HttpUrlSchema,
+    /**
+     * Marks the label as a verbatim external title (an article headline, filing
+     * name, or document title) rather than Pharos-composed copy. Editorial style
+     * rules never apply to quoted text, so the corpus gate reads this as
+     * `ownership: "quoted"` and skips the record, and label punctuation
+     * migrations must leave it untouched. See docs/editorial-style.md.
+     */
+    quoted: z.boolean().optional(),
   })
   .strict();
 
@@ -647,6 +661,8 @@ const GeniusReferenceSchema = z
     sourceKind: z.enum(GENIUS_SOURCE_KIND_VALUES),
     sourceDate: ReviewDateSchema.optional(),
     accessedAt: ReviewDateSchema.optional(),
+    /** Verbatim external title; see `StablecoinLinkSchema.quoted`. */
+    quoted: z.boolean().optional(),
   })
   .strict();
 export type GeniusReference = z.output<typeof GeniusReferenceSchema>;

@@ -1,8 +1,8 @@
 import { fnv1a32 } from "@shared/lib/fnv1a";
-import { resolveTicker } from "../lib/telegram-alerts";
+import { resolveTicker } from "../lib/telegram/alerts";
 import { answerInlineQuery, type TelegramInlineQueryResultArticle } from "../lib/telegram";
-import { CHAT_COMMAND_FLOOD_LIMIT, CHAT_COMMAND_FLOOD_WINDOW_SEC } from "../lib/telegram-constants";
-import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import { CHAT_COMMAND_FLOOD_LIMIT, CHAT_COMMAND_FLOOD_WINDOW_SEC } from "../lib/telegram/constants";
+import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
 import { logTelegramWebhookWarning } from "./telegram-webhook-ingress-policy";
 import { buildStatusMessage } from "./telegram-webhook-messages";
 import type { TelegramWebhookEffectFence } from "./telegram-webhook-effect-fence";

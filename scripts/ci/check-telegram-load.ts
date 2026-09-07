@@ -43,6 +43,11 @@ import {
   type TelegramRecapLoadScenarioResult,
 } from "../lib/telegram-recap-load-scenarios";
 import { TELEGRAM_RECAP_TAPE_PAGE_LIMIT } from "@shared/lib/telegram-recap-policy";
+import {
+  ACTIVE_PRESET_FLAGS_SQL,
+  ACTIVE_SUBSCRIPTION_FLAGS_SQL,
+  ACTIVE_WATCHER_SQL_CONDITION,
+} from "@shared/lib/telegram-alert-families";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export {
@@ -317,38 +322,13 @@ export function loadProductionPendingClaimSql(): string {
 
 export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   const activeSubscriptionCountsSql = `SELECT chat_id,
-        SUM(
-          CASE
-            WHEN alert_dews = 1
-              OR alert_depeg = 1
-              OR alert_safety = 1
-              OR alert_launch = 1
-              OR alert_reserve = 1
-              OR alert_freeze = 1
-            THEN 1 ELSE 0
-          END
-        ) AS active_sub_count
+        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count
    FROM telegram_subscriptions
   GROUP BY chat_id`;
   const activePresetCountsSql = `SELECT chat_id,
-        SUM(
-          CASE
-            WHEN alert_dews = 1
-              OR alert_depeg = 1
-              OR alert_safety = 1
-            THEN 1 ELSE 0
-          END
-        ) AS active_preset_count
+        SUM(CASE WHEN ${ACTIVE_PRESET_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_preset_count
    FROM telegram_preset_subscriptions
   GROUP BY chat_id`;
-  const activeWatcherCondition = `s.global_alert_dews = 1
-  OR s.global_alert_depeg = 1
-  OR s.global_alert_safety = 1
-  OR s.global_alert_launch = 1
-  OR s.global_alert_reserve = 1
-  OR s.global_alert_freeze = 1
-  OR COALESCE(sub.active_sub_count, 0) > 0
-  OR COALESCE(preset.active_preset_count, 0) > 0`;
 
   return [
     {
@@ -631,7 +611,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
            LEFT JOIN (
              ${activePresetCountsSql}
            ) preset ON preset.chat_id = s.chat_id
-           WHERE ${activeWatcherCondition}
+           WHERE ${ACTIVE_WATCHER_SQL_CONDITION}
            GROUP BY day
            ORDER BY day ASC`,
       binds: [],

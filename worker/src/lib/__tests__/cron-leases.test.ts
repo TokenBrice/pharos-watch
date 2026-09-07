@@ -22,6 +22,7 @@ import {
   closeOpenLeaseDatabases,
   makeLeaseDb,
 } from "./cron-leases.test-support";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("cron lease primitives", () => {
   beforeEach(() => {
@@ -370,7 +371,7 @@ describe("runCronWithLease", () => {
 
   it("resets thrown renew failures after a successful heartbeat", async () => {
     const renewOutcomes: Array<"throw" | "success"> = ["throw", "success", "throw", "throw"];
-    const sequencedRenewDb = {
+    const sequencedRenewDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -394,7 +395,7 @@ describe("runCronWithLease", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const runPromise = runCronWithLease(
       sequencedRenewDb,
@@ -425,7 +426,7 @@ describe("runCronWithLease", () => {
 
   it("retries transient D1 overloads before counting a heartbeat failure", async () => {
     let renewCalls = 0;
-    const transientRenewDb = {
+    const transientRenewDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -449,7 +450,7 @@ describe("runCronWithLease", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
 
     try {
@@ -477,7 +478,7 @@ describe("runCronWithLease", () => {
 
   it("aborts immediately when renewal reports ownership loss", async () => {
     let renewCalls = 0;
-    const ownershipLostDb = {
+    const ownershipLostDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -498,7 +499,7 @@ describe("runCronWithLease", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const runPromise = runCronWithLease(
       ownershipLostDb,
@@ -518,7 +519,7 @@ describe("runCronWithLease", () => {
 
   it("stops heartbeats and leaves the lease until TTL when the outer abort signal fires", async () => {
     let renewCalls = 0;
-    const countingDb = {
+    const countingDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -539,7 +540,7 @@ describe("runCronWithLease", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const ac = new AbortController();
     const runPromise = runCronWithLease(countingDb, "sync-stablecoins", async () => new Promise(() => {}), {
@@ -621,7 +622,7 @@ describe("runCronWithLease", () => {
   it("releases the lease when a lease-loss abort settles during abandonment grace", async () => {
     const renewOutcomes = [0, 0];
     let deleteCalls = 0;
-    const renewLostDb = {
+    const renewLostDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -642,7 +643,7 @@ describe("runCronWithLease", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const runPromise = runCronWithLease(
       renewLostDb,
@@ -715,7 +716,7 @@ describe("runCronWithLease", () => {
 
   it("classifies an abandoned job with stopReason 'lease_lost' when renewals fail", async () => {
     const renewOutcomes = [0, 0];
-    const renewLostDb = {
+    const renewLostDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
           run: async () => {
@@ -735,7 +736,7 @@ describe("runCronWithLease", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const runPromise = runCronWithLease(renewLostDb, "sync-stablecoins", async () => new Promise(() => {}), {
       owner: "owner-z",

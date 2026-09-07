@@ -127,10 +127,30 @@
       "chain": "pharos",
       "address": "0x4809010926aec940b550d34a46a52739f996d75d",
       "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0x4809010926aec940b550d34a46a52739f996d75d",
+      "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0x4809010926aec940b550d34a46a52739f996d75d",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000aeed2ec36a54d0e5",
+      "decimals": 6
+    },
+    {
+      "chain": "xdc",
+      "address": "0x4809010926aec940b550d34a46a52739f996d75d",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "reservoir",

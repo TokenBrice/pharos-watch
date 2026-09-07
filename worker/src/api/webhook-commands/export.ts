@@ -1,13 +1,13 @@
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { escapeHtml } from "../../lib/telegram";
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram-constants";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram/constants";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { isSubscribableCoin } from "../../lib/telegram/subscription-eligibility";
 import {
   encodeWatchlistTokenV3,
   MAX_WATCHLIST_TOKEN_CHARS,
   WATCHLIST_TOKEN_REGISTRY_VERSION,
-} from "../../lib/telegram-watchlist-token";
+} from "../../lib/telegram/watchlist-token";
 import { loadWatchlistPortableState } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 

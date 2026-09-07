@@ -185,7 +185,7 @@ describe("data surface descriptors", () => {
       path: "/api/report-cards/v9",
       queryKey: ["report-cards", "v9"],
       producerIntervalSec: 1800,
-      endpointMaxAgeSec: 900,
+      endpointMaxAgeSec: 3_600,
       producerJob: "compute-safety-score-v9",
       criticality: "critical",
     });
@@ -193,11 +193,12 @@ describe("data surface descriptors", () => {
     expect({
       path: DATA_SURFACE_DESCRIPTORS.publicHealth.apiPath,
       queryKey: DATA_SURFACE_DESCRIPTORS.publicHealth.queryKey,
+      // Public health is produced by the 15-minute status self-check snapshot.
       producerIntervalSec: DATA_SURFACE_DESCRIPTORS.publicHealth.producerIntervalSec,
     }).toEqual({
       path: "/api/health",
       queryKey: ["health"],
-      producerIntervalSec: 60,
+      producerIntervalSec: 900,
     });
   });
 
@@ -438,7 +439,7 @@ describe("data surface descriptors", () => {
       dexLiquidity: { label: "Liquidity", staleTime: 14_400_000 },
       yieldRankings: { label: "Yield Rankings", staleTime: 3_600_000 },
       stressSignals: { label: "DEWS", staleTime: 1_800_000 },
-      reportCards: { label: "Report Cards", staleTime: 900_000 },
+      reportCards: { label: "Report Cards", staleTime: 3_600_000 },
     });
 
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {

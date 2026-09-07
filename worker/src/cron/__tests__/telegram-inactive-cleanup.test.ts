@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const { runTelegramInactiveCleanup } = await import("../telegram-inactive-cleanup");
 
@@ -37,15 +38,12 @@ function insertSubscriber(
   lastActiveAt: number,
   globalAlert?: GlobalAlertColumn,
 ): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
-       VALUES (?, ?, ?)`,
-    )
-    .run(chatId, lastActiveAt, lastActiveAt);
-  if (globalAlert) {
-    sqlite.prepare(`UPDATE telegram_subscribers SET ${globalAlert} = 1 WHERE chat_id = ?`).run(chatId);
-  }
+  insertTelegramSubscriber(sqlite, {
+    chatId,
+    createdAt: lastActiveAt,
+    lastActiveAt,
+    global: globalAlert ? { [globalAlert.replace("global_alert_", "")]: true } : undefined,
+  });
 }
 
 interface SubscriptionState {

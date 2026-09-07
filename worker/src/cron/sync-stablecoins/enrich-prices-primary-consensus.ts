@@ -13,15 +13,25 @@ import {
   type PrimaryDexCandidateTelemetry,
   type PrimaryCollectedQuotes,
 } from "../../lib/primary-price-collector";
-import type { DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
+import type { DexPriceRow, DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
 import type { ValidationContextResolver } from "./pricing";
 import type {
   PrimaryConsensusQuoteMaps,
   PrimaryDexPriceSources,
   PrimaryDexRows,
 } from "./enrich-prices-primary-provider-collection";
-import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
-import { isUsableGeckoId, type PriceValidationStats } from "./enrich-prices-primary-shared";
+import { isUsableGeckoId, type PeggedAsset, type PriceValidationStats, type PrimaryPriceResult } from "./enrich-prices-shared";
+
+const VUSD_PRIMARY_DEX_AGGREGATE_ID = "vusd-virtue";
+
+function isPrimaryPublicationDexAggregateEligible(
+  assetId: string,
+  row: DexPriceRow,
+  nowSec: number,
+): boolean {
+  const trustTier = assetId === VUSD_PRIMARY_DEX_AGGREGATE_ID ? "ui" : "depeg";
+  return isTrustedDexPriceRow(row, nowSec, trustTier);
+}
 
 export function buildPrimaryConsensusResults(params: {
   candidates: PeggedAsset[];
@@ -39,16 +49,18 @@ export function buildPrimaryConsensusResults(params: {
   logDexPriceSourceLoadTelemetry(params.dexPriceSourceTelemetry);
 
   for (const asset of params.candidates) {
+    // Resolved once per asset: the caller's resolver is a pure dlListPrices
+    // read, so the quote feeds both candidate building and the dlPrice field.
+    const dlListQuote = params.resolveDlListQuote(asset.id);
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
-    const cgPrice = geckoId ? (params.quoteMaps.cgPrices.get(geckoId) ?? null) : null;
-    const cgObservedAtForAsset =
-      geckoId && cgPrice != null
-        ? (params.quoteMaps.cgObservedAtByGeckoId.get(geckoId) ?? params.quoteMaps.cgObservedAt)
-        : null;
+    const cgQuote = geckoId ? (params.quoteMaps.cgQuotes.get(geckoId) ?? null) : null;
+    const cgPrice = cgQuote?.price ?? null;
+    // Entries without an upstream observation timestamp resolve to the shared
+    // batch local-fetch clock recorded at collection time ("local_fetch" mode).
+    const cgObservedAtForAsset = cgQuote != null ? (cgQuote.observedAt ?? params.quoteMaps.cgObservedAt) : null;
     const cgObservedAtModeForAsset =
-      geckoId && cgPrice != null
-        ? (params.quoteMaps.cgObservedAtModeByGeckoId.get(geckoId) ??
-          (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
+      cgQuote != null
+        ? (cgQuote.observedAtMode ?? (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
         : null;
 
     const collectedQuotes: PrimaryCollectedQuotes = {
@@ -57,7 +69,7 @@ export function buildPrimaryConsensusResults(params: {
       cgObservedAtMode: cgObservedAtModeForAsset,
       cgTickerPrice: params.quoteMaps.cgTickerPrices.get(asset.id) ?? null,
       cgTickerObservedAt: params.quoteMaps.cgTickerObservedAt,
-      dlListQuote: params.resolveDlListQuote(asset.id),
+      dlListQuote,
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
       krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
@@ -72,11 +84,12 @@ export function buildPrimaryConsensusResults(params: {
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       navQuote: params.quoteMaps.navPrices.get(asset.id),
-      addressProviderQuotes: params.quoteMaps.addressProviderQuotes.get(asset.id),
       protocolSources: params.dexPriceSources.get(asset.id),
       dexAggregateQuote: (() => {
         const dexRow = params.dexRows.get(asset.id);
-        return dexRow && isTrustedDexPriceRow(dexRow, params.nowSec, "depeg") ? dexRow : undefined;
+        return dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec)
+          ? dexRow
+          : undefined;
       })(),
     };
 
@@ -110,21 +123,10 @@ export function buildPrimaryConsensusResults(params: {
     if (!consensus) continue;
 
     params.results.set(asset.id, {
-      price: consensus.price,
-      source: consensus.source,
-      selectedSource: consensus.selectedSource,
-      priceEstimator: consensus.priceEstimator,
-      confidence: consensus.confidence,
-      dlPrice: params.resolveDlListQuote(asset.id)?.price ?? null,
+      ...consensus,
+      dlPrice: dlListQuote?.price ?? null,
       cgPrice,
       candidateSources: Object.keys(consensus.allPrices),
-      agreeSources: consensus.agreeSources,
-      disagreeSources: consensus.disagreeSources,
-      allPrices: consensus.allPrices,
-      observedAt: consensus.observedAt,
-      observedAtMode: consensus.observedAtMode,
-      observedAtBySource: consensus.observedAtBySource,
-      observedAtModeBySource: consensus.observedAtModeBySource,
       priceSourceConfidenceProfile,
     });
 

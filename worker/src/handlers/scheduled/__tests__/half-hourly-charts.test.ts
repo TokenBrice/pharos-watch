@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
   consumeDexLiquidityScoringStage: vi.fn(),
   reuseCurrentDexLiquidityScoringGeneration: vi.fn(),
-  runDexExitRouteTurnoverWatchdog: vi.fn(),
+  runCronSentinel: vi.fn(),
   prepareSafetyScoreV9Input: vi.fn(),
   syncStablecoinCharts: vi.fn(),
 }));
@@ -17,8 +18,8 @@ vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
 vi.mock("../../../cron/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: mocks.prepareSafetyScoreV9Input,
 }));
-vi.mock("../../../cron/dex-exit-route-turnover-watchdog", () => ({
-  runDexExitRouteTurnoverWatchdog: mocks.runDexExitRouteTurnoverWatchdog,
+vi.mock("../../../cron/cron-sentinel", () => ({
+  runCronSentinel: mocks.runCronSentinel,
 }));
 vi.mock("../../../cron/sync-stablecoin-charts", () => ({
   syncStablecoinCharts: mocks.syncStablecoinCharts,
@@ -29,11 +30,11 @@ import { runHalfHourlyChartsSlot } from "../half-hourly-charts";
 function runtime(): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
   return makeScheduledRuntime({
-    db: {
+    db: makeNoopD1({
       prepare: () => ({
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
-    } as unknown as D1Database,
+    }),
     cron: "16,46 * * * *",
     scheduleKey: "halfHourlyChartsOffset",
     scheduledTimeMs: 960_000,
@@ -57,7 +58,7 @@ describe("half-hourly charts scheduling", () => {
         },
       }),
     });
-    mocks.runDexExitRouteTurnoverWatchdog.mockResolvedValue({ status: "ok", itemCount: 1 });
+    mocks.runCronSentinel.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.prepareSafetyScoreV9Input.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.syncStablecoinCharts.mockResolvedValue({ status: "ok", itemCount: 1 });
   });
@@ -76,7 +77,7 @@ describe("half-hourly charts scheduling", () => {
     );
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "error", undefined],
-      ["dex-exit-route-turnover-watchdog", "skipped", "upstream-dex-publication-unavailable"],
+      ["cron-sentinel", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
@@ -104,7 +105,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "degraded", undefined],
-      ["dex-exit-route-turnover-watchdog", "skipped", "upstream-dex-publication-unavailable"],
+      ["cron-sentinel", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
@@ -160,7 +161,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "skipped", "lease-locked"],
-      ["dex-exit-route-turnover-watchdog", "skipped", "upstream-dex-publication-unavailable"],
+      ["cron-sentinel", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
@@ -237,10 +238,10 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.chainRpcs,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
-    expect(mocks.runDexExitRouteTurnoverWatchdog).toHaveBeenCalledWith(
-      scheduledRuntime.db,
-      expect.any(AbortSignal),
-    );
+    expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
+      mode: "turnover",
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it("refreshes prices without publishing liquidity on odd-hour :16", async () => {
@@ -265,7 +266,7 @@ describe("half-hourly charts scheduling", () => {
         stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
       },
     );
-    expect(mocks.runDexExitRouteTurnoverWatchdog).not.toHaveBeenCalled();
+    expect(mocks.runCronSentinel).not.toHaveBeenCalled();
   });
 
   it("reuses the exact current generation at :46 without consuming a source stage", async () => {
@@ -285,6 +286,6 @@ describe("half-hourly charts scheduling", () => {
       "dex-liquidity-current",
       scheduledRuntime.chainRpcs,
     );
-    expect(mocks.runDexExitRouteTurnoverWatchdog).not.toHaveBeenCalled();
+    expect(mocks.runCronSentinel).not.toHaveBeenCalled();
   });
 });

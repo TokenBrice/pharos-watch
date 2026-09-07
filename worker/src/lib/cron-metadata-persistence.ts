@@ -55,6 +55,7 @@ function safeParseMetadata(metadata: string): Record<string, unknown> | null {
 
 export function compactCronMetadataForPersistence(
   metadata: string | null | undefined,
+  preparsed?: Record<string, unknown> | null,
 ): CompactedCronMetadata {
   if (!metadata) {
     return { metadata: null, originalBytes: 0, persistedBytes: 0, compacted: false };
@@ -64,7 +65,7 @@ export function compactCronMetadataForPersistence(
     return { metadata, originalBytes, persistedBytes: originalBytes, compacted: false };
   }
 
-  const parsed = safeParseMetadata(metadata);
+  const parsed = preparsed !== undefined ? preparsed : safeParseMetadata(metadata);
   const diagnostics: Record<string, unknown> = {};
   const entries = parsed ? Object.entries(parsed) : [];
   // Measured-execution ledger chunks must survive compaction as TOP-LEVEL scalars:

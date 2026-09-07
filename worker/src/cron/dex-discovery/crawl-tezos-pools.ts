@@ -9,7 +9,7 @@ import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
 import { buildStageSignal, toStagedPool, type CrawlStageContext } from "./staged-pool";
-import type { DexDeploymentProviderCheck, StagedPool } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck, type StagedPool } from "./types";
 
 /** Mainnet TzKT endpoint. TzKT's free API requires attribution in product copy. */
 const TEZOS_TZKT_API = "https://api.tzkt.io";
@@ -354,22 +354,6 @@ function evaluatePool(
   return { pool, unpriced: priceUsd == null };
 }
 
-function providerCheck(
-  target: ContractDeployment,
-  status: DexDeploymentProviderCheck["status"],
-  observedPoolCount?: number,
-  retryable?: boolean,
-): DexDeploymentProviderCheck {
-  return {
-    chain: target.chain,
-    address: target.address,
-    provider: TEZOS_PROVIDER,
-    status,
-    ...(observedPoolCount != null ? { observedPoolCount } : {}),
-    ...(retryable === true ? { retryable: true } : {}),
-  };
-}
-
 function buildHolderUrl(target: ContractDeployment): string {
   const url = new URL("/v1/tokens/balances", TEZOS_TZKT_API);
   url.searchParams.set("token.contract", target.address);
@@ -436,13 +420,15 @@ export async function crawlTezosPoolsStage(input: {
   try {
     const holderBody = await fetchJson(buildHolderUrl(target), input.context, dependencies);
     if (!Array.isArray(holderBody)) {
-      providerChecks.push(providerCheck(target, "failure", undefined, holderBody == null));
+      providerChecks.push(makeDexDeploymentProviderCheck(target, TEZOS_PROVIDER, "failure", {
+        retryable: holderBody == null,
+      }));
       return { providerChecks };
     }
     holders = holderBody;
   } catch (error) {
     if (input.context.signal?.aborted) throw error;
-    providerChecks.push(providerCheck(target, "failure", undefined, true));
+    providerChecks.push(makeDexDeploymentProviderCheck(target, TEZOS_PROVIDER, "failure", { retryable: true }));
     return { providerChecks };
   }
 
@@ -452,7 +438,7 @@ export async function crawlTezosPoolsStage(input: {
   for (const row of holders) {
     const parsed = parseHolder(row);
     if (!parsed) {
-      providerChecks.push(providerCheck(target, "failure"));
+      providerChecks.push(makeDexDeploymentProviderCheck(target, TEZOS_PROVIDER, "failure"));
       return { providerChecks };
     }
     parsedHolders.push(parsed);
@@ -474,7 +460,12 @@ export async function crawlTezosPoolsStage(input: {
   const accountFilterTruncated = reserveAddresses.length < orderedAddresses.length;
 
   if (reserveAddresses.length === 0) {
-    providerChecks.push(providerCheck(target, holderPageTruncated ? "degraded" : "success", 0));
+    providerChecks.push(makeDexDeploymentProviderCheck(
+      target,
+      TEZOS_PROVIDER,
+      holderPageTruncated ? "degraded" : "success",
+      { observedPoolCount: 0 },
+    ));
     return { providerChecks };
   }
 
@@ -482,13 +473,15 @@ export async function crawlTezosPoolsStage(input: {
   try {
     const reserveBody = await fetchJson(buildReserveUrl(reserveAddresses), input.context, dependencies);
     if (!Array.isArray(reserveBody)) {
-      providerChecks.push(providerCheck(target, "failure", undefined, reserveBody == null));
+      providerChecks.push(makeDexDeploymentProviderCheck(target, TEZOS_PROVIDER, "failure", {
+        retryable: reserveBody == null,
+      }));
       return { providerChecks };
     }
     reserves = reserveBody;
   } catch (error) {
     if (input.context.signal?.aborted) throw error;
-    providerChecks.push(providerCheck(target, "failure", undefined, true));
+    providerChecks.push(makeDexDeploymentProviderCheck(target, TEZOS_PROVIDER, "failure", { retryable: true }));
     return { providerChecks };
   }
 
@@ -496,7 +489,7 @@ export async function crawlTezosPoolsStage(input: {
   for (const row of reserves) {
     const parsed = parseTokenBalance(row);
     if (!parsed || !uniqueContracts.has(parsed.account.address)) {
-      providerChecks.push(providerCheck(target, "failure"));
+      providerChecks.push(makeDexDeploymentProviderCheck(target, TEZOS_PROVIDER, "failure"));
       return { providerChecks };
     }
     const holderAccount = uniqueContracts.get(parsed.account.address)!;
@@ -549,6 +542,11 @@ export async function crawlTezosPoolsStage(input: {
     accountFilterTruncated ||
     unpricedPoolCount > 0 ||
     unclassifiedContractCount > 0;
-  providerChecks.push(providerCheck(target, degraded ? "degraded" : "success", observedPoolCount));
+  providerChecks.push(makeDexDeploymentProviderCheck(
+    target,
+    TEZOS_PROVIDER,
+    degraded ? "degraded" : "success",
+    { observedPoolCount },
+  ));
   return { providerChecks };
 }

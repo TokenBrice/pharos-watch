@@ -4,19 +4,19 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
-  MatrixTable,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/table";
 
-describe("MatrixTable", () => {
+describe("TableFrame matrix markup", () => {
 
   it("renders a caption and stable identity attributes", () => {
     render(
-      <MatrixTable
+      <TableFrame
         tableId="coverage-matrix"
         testId="coverage-matrix-table"
         caption="Per-coin feature coverage"
@@ -35,7 +35,7 @@ describe("MatrixTable", () => {
             <TableCell>Available</TableCell>
           </TableRow>
         </TableBody>
-      </MatrixTable>,
+      </TableFrame>,
     );
 
     const shell = screen.getByTestId("coverage-matrix-table");
@@ -51,7 +51,7 @@ describe("MatrixTable", () => {
 
   it("keeps semantic table data slots without the shadcn overflow wrapper", () => {
     render(
-      <MatrixTable>
+      <TableFrame>
         <TableHeader>
           <TableRow>
             <TableHead>Metric</TableHead>
@@ -62,7 +62,7 @@ describe("MatrixTable", () => {
             <TableCell>Safety</TableCell>
           </TableRow>
         </TableBody>
-      </MatrixTable>,
+      </TableFrame>,
     );
 
     const table = screen.getByRole("table");
@@ -79,7 +79,7 @@ describe("MatrixTable", () => {
 
   it("passes region props to the surface and viewport props to the scroll area", () => {
     render(
-      <MatrixTable
+      <TableFrame
         role="region"
         aria-label="Coverage matrix region"
         tabIndex={0}
@@ -95,7 +95,7 @@ describe("MatrixTable", () => {
             <TableCell>USDT</TableCell>
           </TableRow>
         </TableBody>
-      </MatrixTable>,
+      </TableFrame>,
     );
 
     const surface = screen.getByRole("region", {
@@ -112,7 +112,7 @@ describe("MatrixTable", () => {
 
   it("preserves sticky-header, sticky-column, and fixed-layout classes", () => {
     render(
-      <MatrixTable
+      <TableFrame
         stickyHeader
         tableClassName="min-w-[64rem] table-fixed"
       >
@@ -137,7 +137,7 @@ describe("MatrixTable", () => {
             <TableCell className="text-center">99</TableCell>
           </TableRow>
         </TableBody>
-      </MatrixTable>,
+      </TableFrame>,
     );
 
     const table = screen.getByRole("table");

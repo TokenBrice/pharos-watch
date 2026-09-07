@@ -1,0 +1,15 @@
+{
+  "mechanism": "sbold-k3-capital",
+  "date": "2026-07-27-block-25627256",
+  "sha256": "c97788cc77475f21dfb3686c47ca2453bdf9943eedf240371fb113288b260df2",
+  "bytes": 6330,
+  "r2Key": "captures/sbold-k3-capital/2026-07-27-block-25627256.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "sbold-k3-capital",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/sbold-k3-capital/2026-07-27-block-25627256.json",
+    "capturedAt": "2026-07-27T22:57:00Z"
+  }
+}

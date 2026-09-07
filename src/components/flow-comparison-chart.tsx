@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { ChartLegendChip } from "@/components/chart-primitives/axes";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import type { FlowSeriesEntry } from "@/lib/compare-derive";
 
 export type FlowSeries = FlowSeriesEntry;
@@ -15,9 +16,9 @@ interface FlowComparisonChartProps {
 }
 
 const HOUR_OPTIONS = [
-  { label: "24h", value: 24 },
-  { label: "7d", value: 168 },
-  { label: "30d", value: 720 },
+  { value: 24, label: "24h" },
+  { value: 168, label: "7d" },
+  { value: 720, label: "30d" },
 ] as const;
 
 export function FlowComparisonChart({
@@ -37,21 +38,13 @@ export function FlowComparisonChart({
           <CardTitle as="h3" className="pharos-kicker">
             Net Flow Over Time
           </CardTitle>
-          <div className="flex gap-1">
-            {HOUR_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                aria-pressed={hours === opt.value}
-                onClick={() => onHoursChange(opt.value)}
-                className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${
-                  hours === opt.value ? "pharos-control-pill-active" : ""
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <ControlPillToggle
+            className="flex gap-1"
+            buttonClassName="px-2.5 py-1 text-xs"
+            options={HOUR_OPTIONS}
+            value={hours}
+            onChange={onHoursChange}
+          />
         </div>
       </CardHeader>
       <CardContent>

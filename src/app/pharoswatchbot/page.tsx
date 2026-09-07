@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -45,10 +46,7 @@ export default function PharosWatchBotPage() {
       <ControlDeck />
       <DawnRecap />
       <FieldManual />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildTelegramPageJsonLd(SITE_URL)) }}
-      />
+      <JsonLdScript json={safeJsonLd(buildTelegramPageJsonLd(SITE_URL))} />
     </div>
   );
 }

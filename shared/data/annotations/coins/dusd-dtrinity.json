@@ -1,4 +1,4 @@
 [
-  {"date":"2024-12-18","kind":"governance","label":"dTRINITY dUSD launch on Fraxtal — subsidized stablecoin lending","severity":"low","href":"https://decrypt.co/297381/dtrinity-launches-subsidized-stablecoin-lending-protocol-on-fraxtal-l2"},
-  {"date":"2026-03-17","kind":"exploit","label":"dLEND exploit — ~$257K dUSD bad debt","severity":"high","href":"https://blocksec.com/blog/weekly-web3-security-incident-roundup-mar-16-mar-22-2026","note":"2026-03-17 — dTRINITY dLEND exploit created ~$257K dUSD bad debt."}
+  {"date":"2024-12-18","kind":"governance","label":"dTRINITY dUSD launch on Fraxtal, subsidized stablecoin lending","severity":"low","href":"https://decrypt.co/297381/dtrinity-launches-subsidized-stablecoin-lending-protocol-on-fraxtal-l2"},
+  {"date":"2026-03-17","kind":"exploit","label":"dLEND exploit, ~$257K dUSD bad debt","severity":"high","href":"https://blocksec.com/blog/weekly-web3-security-incident-roundup-mar-16-mar-22-2026","note":"2026-03-17: dTRINITY dLEND exploit created ~$257K dUSD bad debt."}
 ]

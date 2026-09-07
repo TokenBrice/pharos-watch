@@ -1,4 +1,13 @@
-import { DexMeasuredExecutionProfileSchema, DexMeasuredExecutionTargetSchema, type DexMeasuredExecutionProfile, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  DexExecutionProfileEnvelopeSchema,
+  DexExecutionTargetEnvelopeSchema,
+  DexMeasuredExecutionProfileSchema,
+  DexMeasuredExecutionTargetSchema,
+  projectDexExecutionProfileToV1,
+  projectDexExecutionTargetToV1,
+  type DexMeasuredExecutionProfile,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
 import { rethrowIfAborted } from "../../lib/abort";
 import { batchExecute, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -11,6 +20,20 @@ import {
 export { buildDexMeasuredQuoteGenerationId, buildDexShadowMeasuredQuoteGenerationId } from "./generation-store";
 export { isOperationalDexMeasuredFailure, loadLatestPublishedDexMeasuredQuoteEvidence, materializeDexMeasuredQuoteProfile } from "./evidence-reader";
 export type { LoadedDexMeasuredQuoteEvidence } from "./evidence-reader";
+
+function parsePersistedDexExecutionTargetV1(input: unknown): DexMeasuredExecutionTarget {
+  const envelope = DexExecutionTargetEnvelopeSchema.parse(input);
+  const projected = projectDexExecutionTargetToV1(envelope);
+  if (!projected) throw new Error("Native V2 execution target requires a V2-aware persistence consumer");
+  return DexMeasuredExecutionTargetSchema.parse(projected);
+}
+
+function parsePersistedDexExecutionProfileV1(input: unknown): DexMeasuredExecutionProfile {
+  const envelope = DexExecutionProfileEnvelopeSchema.parse(input);
+  const projected = projectDexExecutionProfileToV1(envelope);
+  if (!projected) throw new Error("Native V2 execution profile requires a V2-aware persistence consumer");
+  return DexMeasuredExecutionProfileSchema.parse(projected);
+}
 /**
  * Retain the complete scoring window plus one missed producer cycle. This must
  * stay strictly above `DEX_MEASURED_FRESHNESS_MAX_SEC` (three hours): a profile
@@ -146,8 +169,8 @@ const DEX_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMe
   quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-measured-targets",
   quoteGenerationPrefix: "dex-measured-quotes",
-  targetSchema: DexMeasuredExecutionTargetSchema,
-  profileSchema: DexMeasuredExecutionProfileSchema,
+  targetSchema: { parse: parsePersistedDexExecutionTargetV1 },
+  profileSchema: { parse: parsePersistedDexExecutionProfileV1 },
   profileBlockNumber: (profile) => profile.blockNumber,
   targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
   quoteProducer: { scheduleKey: "halfHourlyMeasuredExecution", job: "sync-cl-exit-depth", path: "halfHourlyMeasuredExecution" },
@@ -160,8 +183,8 @@ const DEX_SHADOW_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget
   quoteSurface: DEX_SHADOW_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-shadow-measured-targets",
   quoteGenerationPrefix: "dex-shadow-measured-quotes",
-  targetSchema: DexMeasuredExecutionTargetSchema,
-  profileSchema: DexMeasuredExecutionProfileSchema,
+  targetSchema: { parse: parsePersistedDexExecutionTargetV1 },
+  profileSchema: { parse: parsePersistedDexExecutionProfileV1 },
   profileBlockNumber: (profile) => profile.blockNumber,
   targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
   quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },

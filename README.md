@@ -62,7 +62,7 @@ docs/         Verified product, architecture, methodology, and runbook docs
 .github/      CI, security scanning, dependency policy, issue templates
 ```
 
-Detailed architecture and route ownership live in [docs/architecture.md](./docs/architecture.md) and [docs/agent-task-router.md](./docs/agent-task-router.md).
+Detailed architecture lives in [docs/architecture.md](./docs/architecture.md); route ownership and the agent workflow live in [docs/process/agent-start-here.md](./docs/process/agent-start-here.md).
 
 ## Local Development
 

@@ -9,18 +9,18 @@ import { FlowTable } from "@/components/flow-table";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { cn } from "@/lib/utils";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import type { FaqItem } from "@/lib/faq";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 
-const TIME_RANGES = [
-  { value: "24", label: "24h", hours: 24 },
-  { value: "168", label: "7d", hours: 168 },
-  { value: "720", label: "30d", hours: 720 },
-] as const;
+const TIME_RANGES: { value: number; label: string }[] = [
+  { value: 24, label: "24h" },
+  { value: 168, label: "7d" },
+  { value: 720, label: "30d" },
+];
 
 const FLOWS_SHELL_PROPS = {
   breadcrumbName: "Mint/Burn Flows",
@@ -162,25 +162,14 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             <h2 id="chart-heading" className="pharos-kicker">
               Aggregate Flows
             </h2>
-            <div className="flex gap-1" role="group" aria-label="Time range">
-              {TIME_RANGES.map((range) => {
-                const isActive = hours === range.hours;
-                return (
-                  <button
-                    type="button"
-                    key={range.value}
-                    onClick={() => setHours(range.hours)}
-                    aria-pressed={isActive}
-                    className={cn(
-                      "pharos-focus-ring pharos-control-pill min-h-11 px-3.5 md:min-h-9",
-                      isActive && "pharos-control-pill-active",
-                    )}
-                  >
-                    {range.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ControlPillToggle
+              className="flex gap-1"
+              ariaLabel="Time range"
+              options={TIME_RANGES}
+              value={hours}
+              onChange={setHours}
+              buttonClassName="min-h-11 px-3.5 md:min-h-9"
+            />
           </div>
           <div className="mt-3 pharos-chart-stage">
             <FlowChart hourly={hourly} isLoading={isChartLoading} />

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { ShareButton } from "@/components/share-button";
-import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
+import { DepegEventArchivePreview } from "@/app/depeg/depeg-event-archive";
 import { DepegContentLoadingState } from "@/app/depeg/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl } from "@/lib/page-metadata";
@@ -16,7 +17,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, heatmaps, severity, and history.`;
+const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, recovery forecasts, severity, and history.`;
 
 const FAQ_ITEMS = [
   {
@@ -77,10 +78,7 @@ const route = createClientFeaturePage({
     },
     headerActions: <TelegramAlertsHeaderAction />,
     preface: (
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history")) }}
-      />
+      <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history"))} />
     ),
     leadParagraphs: [
       "A live incident board for stablecoin depegs: confirmed deviations, pending confirmations, and early stress warnings, with forecasts for how each incident should resolve.",
@@ -88,7 +86,7 @@ const route = createClientFeaturePage({
   },
   afterClient: (
     <>
-      <DepegEventArchive />
+      <DepegEventArchivePreview />
       <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </>
   ),

@@ -126,7 +126,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals; owner() = 0x6a7efa964cf6d9ab3bc3c47ebddb853a8853c502 (Frax Safe per the mint-authority evidence) — native issuance on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals; owner() = 0x6a7efa964cf6d9ab3bc3c47ebddb853a8853c502 (Frax Safe per the mint-authority evidence), native issuance on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

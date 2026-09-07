@@ -3,28 +3,21 @@ name: yield-coverage-audit-drain
 description: Drain the Pharos Yield Intelligence coverage-audit queue into reviewed source coverage, documented intentional gaps, or watchlisted deferrals. Use monthly after `yield-coverage-audit` runs, after yield coverage drops, or when promoting queue candidates such as `native-exact-pool`, `lending-allowlist`, `source-family-adapter`, `stale-auto-lending-override`, or `quarantine-ready-to-restore`.
 ---
 
+Read `docs/editorial-style.md` before writing. Its universal rules and the named `technical-evidence` register govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
+
 # Yield Coverage Audit Drain
 
-Monthly operator workflow for turning the cached `yield-coverage-audit`
-queue into safe Yield Intelligence coverage changes. The audit queue is a
-starting point, not authority: every promotion must be verified against live
-source data, local stablecoin identity, safety/publication gates, and the
-current methodology docs.
+Turn the `yield-coverage-audit` queue into reviewed Yield Intelligence changes.
+The queue is a lead: verify live source data,
+local identity, safety/publication gates, and current methodology docs.
 
 ## Required Context
 
-1. Read root `AGENTS.md`, `docs/agent-task-router.md`, and the matched yield
-   docs before editing.
-2. Read scoped instructions before touching files under `worker/`, `shared/`,
-   `src/`, or `shared/data/stablecoins/`.
-3. Inspect these source entrypoints before changing behavior:
-   - `worker/src/cron/yield-coverage-audit.ts`
-   - `worker/src/cron/yield-config*.ts`
-   - `worker/src/cron/yield-sync/resolve-helpers.ts`
-   - `worker/src/cron/fetch-tbill-rate.ts` if benchmark sources change
-   - `shared/types/status.ts` when queue payload shape changes
-4. Treat `/docs/` and `README.md` as verified docs. Use `/agents/` only for
-   scratch notes or handoffs.
+Read routed yield docs and scoped instructions.
+Inspect `worker/src/cron/yield-coverage-audit.ts`, the relevant
+resolver/config source under `worker/src/cron/yield-sync/` or
+`worker/src/lib/yield-config/`, and `shared/types/status.ts` when the payload
+changes. Verified docs own durable policy; `/agents/` is scratch only.
 
 ## Queue Snapshot
 
@@ -32,19 +25,18 @@ Prefer a read-only production/cache snapshot. The cache key is
 `yield-coverage-audit`; status also exposes a bounded view through
 `yieldHealth.coverageAudit`.
 
-Use whichever access path is already authenticated in the workspace:
+Use an already authenticated read-only path, for example:
 
 ```bash
 npx wrangler d1 execute stablecoin-db --remote --command "select key, value, updated_at from cache where key = 'yield-coverage-audit';"
 ```
 
-If remote D1 is unavailable, fall back to the most recent cached payload
-already present in test fixtures or prior run output — the audit itself runs
-only as a Worker cron (`worker/src/handlers/scheduled/monthly-yield-audit.ts`);
-there is no local npm entrypoint. Do not mutate production D1 from this skill.
+If remote D1 is unavailable, use the latest fixture or prior run output. The
+audit runs only from `worker/src/handlers/scheduled/monthly-yield-audit.ts`;
+do not mutate production D1.
 
-Record the snapshot date, `reportedAt`, queue counts, and whether the payload
-was production, local, or fixture-derived.
+Record date, `reportedAt`, counts, and whether evidence is production, local,
+or fixture-derived.
 
 ## Decision Workflow
 
@@ -69,7 +61,7 @@ Handle queue items by `kind`:
   quarantined before restoring hourly coverage.
 - `unmatched-high-tvl-pool` / `missing-protocol`: a high-TVL stablecoin pool or
   protocol has no local coverage mapping. Decide venue map, allowlist, or
-  adapter candidacy — or record a documented intentional gap; do not leave the
+  adapter candidacy. Record a documented intentional gap; do not leave the
   row unaddressed just because it is watch-severity.
 - `venue-risk-config-missing`: an active source's venue protocol has no
   reviewed entry in `YIELD_RISK_CONFIG`
@@ -83,7 +75,7 @@ Handle queue items by `kind`:
   force coverage around a guard without written rationale.
 
 The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
-`shared/types/status/yield-liquidity.ts` — the source file wins; triage any
+`shared/types/status/yield-liquidity.ts`. The source file wins; triage any
 kind not listed here from its emitting code in
 `worker/src/cron/yield-coverage-audit.ts`.
 
@@ -132,27 +124,12 @@ Reject or defer when:
 
 ## Documentation and Versioning
 
-Update docs whenever source roster, benchmark registry, publication gates,
-queue payload shape, or methodology-visible behavior changes.
-
-Typical files:
-
-- `docs/yield-intelligence.md`
-- `shared/data/methodology-changelogs/yield-methodology/`
-- `docs/status-dashboard.md` and `docs/runbooks/yield-health.md` for status
-  surface changes
-- `docs/about-page.md` and `src/lib/about-content.ts` for new external source
-  providers
-- `src/app/methodology/sections/monitoring/yield-intelligence-section.tsx`
-  for methodology UI copy
-- `shared/lib/methodology-versions/yield-methodology.ts`
-- `shared/data/methodology-changelogs/yield-methodology/v*.ts`
-
-Yield methodology versions are numeric. Read the current version from
-`shared/lib/methodology-versions/yield-methodology.ts` and pick the next
-strictly greater numeric value (integer-segment comparison: `8.3` > `8.292`,
-so extend the same segment, e.g. `8.292` → `8.293`). Never trust a version
-number quoted in a doc or skill — the source file wins.
+Update routed docs when the source roster, benchmark registry, publication
+gates, queue shape, or methodology-visible behavior changes. New providers
+also update `docs/about-page.md`; methodology changes update the owning UI/doc,
+`shared/lib/methodology-versions/yield-methodology.ts`, and the structured
+`shared/data/methodology-changelogs/yield-methodology/` entry. Read the current
+numeric version from source and choose a strictly greater numeric value.
 
 ## Validation
 
@@ -172,16 +149,9 @@ and frontend status/methodology tests when public status or UI copy changes.
 
 ## Output
 
-If the queue is empty, report the snapshot source/date and zero counts, then
-stop — do not hunt for speculative coverage work outside the queue.
-
-End the drain with:
-
-- Snapshot source and date.
-- Promotions, grouped by config file.
-- Rejections/deferrals with one-line rationale and next review trigger.
-- Tests run and their result.
-- Any remaining queue health risk.
+If the queue is empty, report source/date and zero counts, then stop; do not
+hunt outside the queue. Otherwise report promotions by config, rejections and
+deferrals with next trigger, checks, and remaining queue-health risk.
 
 ## Hard Stops
 

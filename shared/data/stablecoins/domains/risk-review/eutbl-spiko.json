@@ -53,7 +53,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Arbitrum (proxy whose EIP-1967 implementation matches the uniform Spiko deployment address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals, issuer-native Spiko deployment on Arbitrum (proxy whose EIP-1967 implementation matches the uniform Spiko deployment address).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -78,7 +78,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals, issuer-native Spiko deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -103,7 +103,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Polygon (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals, issuer-native Spiko deployment on Polygon (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -128,7 +128,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL — issuer-native Spiko deployment on Base (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, issuer-native Spiko deployment on Base (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -153,7 +153,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Etherlink (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals, issuer-native Spiko deployment on Etherlink (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

@@ -17,14 +17,14 @@ const compareHubFaqItems = [
       "The live compare tool puts two to five tracked stablecoins in one view across peg behavior, market cap history, liquidity depth, mint/burn flow, Safety Scores, backing, governance, and chain deployment context.",
   },
   {
-    question: "Why does this page list only selected comparison pairs?",
+    question: "Can I compare a pair that is not listed here?",
     answer:
-      "The pair directory is intentionally capped to high-intent stablecoin comparisons so readers and crawlers get useful static briefs without generating every possible pair from the tracked registry.",
+      "Yes. The briefs below cover selected pairs, but the live compare tool lets you choose any two to five tracked stablecoins.",
   },
   {
-    question: "Do the static comparison pages replace the live compare tool?",
+    question: "How should I use the comparison briefs and live tool together?",
     answer:
-      "No. Static pair pages explain structural differences and link into the matching live comparison. Use the live tool before making decisions because peg, liquidity, flow, reserve, and Safety Score data can change after the static brief is generated.",
+      "Start with a brief to understand the structural differences, then open the matching live comparison for current peg, liquidity, flow, reserve, and Safety Score data.",
   },
 ] as const;
 
@@ -77,13 +77,13 @@ function ComparePairDirectory() {
     <section aria-labelledby="compare-pair-directory-title" className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1.5">
-          <p className="pharos-kicker">Static Pair Directory</p>
+          <p className="pharos-kicker">Comparison guides</p>
           <h2 id="compare-pair-directory-title" className="text-lg font-semibold tracking-tight text-foreground">
             Popular stablecoin comparisons
           </h2>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Crawlable static briefs for high-intent stablecoin pairs. Each page frames structural differences, then
-            links back into the live Pharos compare tool for current market, peg, liquidity, flow, and safety data.
+            Understand the structural differences between each pair, then open the matching live comparison for current
+            market, peg, liquidity, flow, and safety data.
           </p>
         </div>
         <Link
@@ -98,12 +98,12 @@ function ComparePairDirectory() {
       {priorityComparisonPages.length > 0 ? (
         <section aria-labelledby="priority-comparison-title" className="space-y-3 border-y border-border/60 py-4">
           <div className="space-y-1.5">
-            <p className="pharos-kicker">Priority Paths</p>
+            <p className="pharos-kicker">Start here</p>
             <h3 id="priority-comparison-title" className="text-base font-semibold text-foreground">
-              High-intent comparison briefs
+              Featured comparisons
             </h3>
             <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              These selected pair pages cover high-intent wrapper, gold-token, Liquity, and issuer-substitute searches.
+              Explore yield-bearing wrappers, gold tokens, Liquity designs, and alternatives from different issuers.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -146,7 +146,7 @@ function ComparePairDirectory() {
                   href={page.href}
                   className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
                 >
-                  Static brief
+                  Read comparison
                 </Link>
                 <Link
                   href={buildLiveCompareUrl([page.left.id, page.right.id])}

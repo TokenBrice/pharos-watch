@@ -147,7 +147,7 @@
             "url": "https://celoscan.io/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
           }
         ],
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento Brazilian Real', symbol BRLm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance) — native issuance on Celo (the asset's home chain)."
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento Brazilian Real', symbol BRLm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance), native issuance on Celo (the asset's home chain)."
       }
     ]
   }

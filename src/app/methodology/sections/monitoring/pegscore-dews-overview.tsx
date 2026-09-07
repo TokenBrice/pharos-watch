@@ -2,6 +2,7 @@ import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
+  MethodologyPreconditions,
   WorkedExample,
 } from "../../methodology-shared";
 
@@ -63,7 +64,8 @@ export function PegScoreDewsOverview() {
             DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
             confidence, blacklist, flow, and yield signals, with optional PSI-based amplification during systemic stress.
             Blacklist activity is attributed through the tracker config&apos;s canonical stablecoin ID, so same-symbol
-            siblings do not inherit one issuer&apos;s freeze events. Hourly DEX prices remain eligible for 75 minutes, and
+            siblings do not inherit one issuer&apos;s freeze events. Both blacklist windows exclude suppressed mirror-zero
+            tracker artifacts while retaining unsuppressed events. Hourly DEX prices remain eligible for 75 minutes, and
             its divergence input reuses the live depeg DEX trust floor, so fresh-but-thin rows stay visible for analytics but do not affect the score unless they
             pass the same `$1M` aggregate-TVL gate. The Mint/Burn Flow signal separates 30-day baseline coverage from
             source freshness: a fresh zero-volume 24-hour row is calm, while a mature baseline with no fresh 24-hour row
@@ -90,10 +92,8 @@ export function PegScoreDewsOverview() {
           { label: "Refresh", value: "Peg 15m / DEWS 30m" },
         ]}
       />
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-        <MethodologyFacts
-          facts={[
+      <MethodologyPreconditions
+        facts={[
             {
               label: "Minimum data",
               value:
@@ -108,9 +108,8 @@ export function PegScoreDewsOverview() {
               label: "Failure behavior",
               value: "PegScore can be null; DEWS returns null when signal coverage is below threshold; stablecoins-cache failure aborts writes, while other source failures or stale DEX liquidity/mint-burn freshness publish partial rows and mark the cron degraded",
             },
-          ]}
-        />
-      </div>
+        ]}
+      />
       <WorkedExample summary="Worked examples (verified against computePegScore and computeDEWS)">
         <p className="pharos-numeric">PegScore input: 100-day tracking window, 1 event (2 days, 220 bps, inactive)</p>
         <p className="pharos-numeric">pegPct=98.0, severityScore=99.86, spread=0, activePenalty=0 &rarr; pegScore=99</p>

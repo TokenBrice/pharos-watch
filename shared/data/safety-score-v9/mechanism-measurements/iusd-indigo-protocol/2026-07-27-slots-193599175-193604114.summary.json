@@ -1,0 +1,15 @@
+{
+  "mechanism": "iusd-indigo-protocol",
+  "date": "2026-07-27-slots-193599175-193604114",
+  "sha256": "ea5fd7325c5c62f5f7ca630ccc173c06278c8a320f00654d27fb03107a5561ac",
+  "bytes": 1147,
+  "r2Key": "captures/iusd-indigo-protocol/2026-07-27-slots-193599175-193604114.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "protocol-api-mechanism-measurement",
+    "assetId": "iusd-indigo-protocol",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/iusd-indigo-protocol/2026-07-27-slots-193599175-193604114.json",
+    "capturedAt": "2026-07-27T16:42:00Z"
+  }
+}

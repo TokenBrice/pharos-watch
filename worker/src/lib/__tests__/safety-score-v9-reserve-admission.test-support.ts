@@ -9,7 +9,7 @@
  */
 
 import type { ReserveSlice } from "@shared/types/reserves";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 
 export const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
   adapter: "curated-validated",

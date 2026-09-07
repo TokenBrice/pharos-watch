@@ -10,6 +10,7 @@ import {
   splitCompositePriceSource,
 } from "@shared/lib/pricing-sources";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
 import type {
   PricingAssetAttemptRecord,
   PricingProviderAttemptDiagnostic,
@@ -221,10 +222,9 @@ function hasIndependentHardSource(asset: PeggedAsset): boolean {
     : asset.priceSource
       ? normalizePricingSourceKeys(asset.priceSource)
       : [];
-  return normalizePricingSourceKeys(sources).some((source) => {
-    const trustTier = getPricingSourceRegistryEntry(source)?.trustTier;
-    return trustTier === "hard_market" || trustTier === "hard_oracle" || trustTier === "hard_protocol";
-  });
+  return normalizePricingSourceKeys(sources).some((source) =>
+    isHardPricingTrustTier(getPricingSourceRegistryEntry(source)?.trustTier),
+  );
 }
 
 export function buildPricingSourceAuditReport(

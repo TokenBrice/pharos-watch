@@ -121,7 +121,7 @@ describe("hasPagesUiImpact", () => {
     expect(hasPagesUiImpact(["public/logo.svg"])).toBe(true);
     expect(hasPagesUiImpact(["shared/lib/classification.ts"])).toBe(true);
     expect(hasPagesUiImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
-    expect(hasPagesUiImpact(["data/depeg-events.json"])).toBe(true);
+    expect(hasPagesUiImpact(["data/depeg-events/index.json"])).toBe(true);
   });
 });
 
@@ -217,6 +217,21 @@ describe("hasDeployImpact", () => {
 });
 
 describe("classifyDeployChanges", () => {
+  it("distinguishes docs-only, mixed, and code-only changes for CI lanes", () => {
+    const cases = [
+      { changedFiles: ["README.md", "docs/testing.md"], docsChanged: true, docsOnly: true },
+      { changedFiles: ["docs/testing.md", "src/app/page.tsx"], docsChanged: true, docsOnly: false },
+      { changedFiles: ["src/app/page.tsx"], docsChanged: false, docsOnly: false },
+    ];
+
+    for (const testCase of cases) {
+      const result = classifyChangedFiles(testCase.changedFiles);
+
+      expect(result.docsChanged, testCase.changedFiles.join(", ")).toBe(testCase.docsChanged);
+      expect(result.docsOnly, testCase.changedFiles.join(", ")).toBe(testCase.docsOnly);
+    }
+  });
+
   it("marks enrolled critical source changes for the targeted coverage ratchet", () => {
     expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).criticalCoverageChanged).toBe(true);
     expect(classifyChangedFiles(["worker/src/lib/auth.test.ts"]).criticalCoverageChanged).toBe(false);
@@ -365,6 +380,13 @@ describe("classifyDeployChanges", () => {
     expect(result.pagesChanged).toBe(false);
     expect(result.pagesDeployRequired).toBe(false);
     expect(result.changedFiles).toEqual(["docs/process/notes.md", "docs/testing.md"]);
+  });
+
+  it("routes the editorial-style generator source through full PR checks", () => {
+    const result = classifyChangedFiles(["docs/editorial-style.md"]);
+
+    expect(result.deployRequired).toBe(false);
+    expect(result.docsOnly).toBe(false);
   });
 
   it("validates test-only Pages changes without publishing them", () => {

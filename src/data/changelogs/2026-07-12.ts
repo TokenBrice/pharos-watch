@@ -25,7 +25,7 @@ export const entry: ChangelogEntry = {
       tag: "feature",
       href: "/pharoswatchbot/",
       description:
-        "PharosWatchBot gains opt-in personalized daily recaps — planned, delivered, and cleaned up durably per chat — with settings controls, a rollout kill switch, operator telemetry, and a privacy disclosure.",
+        "PharosWatchBot gains opt-in personalized daily recaps: planned, delivered, and cleaned up durably per chat, with settings controls, a rollout kill switch, operator telemetry, and a privacy disclosure.",
     },
     {
       label: "Truthful bot delivery",
@@ -44,13 +44,13 @@ export const entry: ChangelogEntry = {
       label: "Routed operator workspaces",
       tag: "infra",
       description:
-        "The single-page admin dashboard splits into eight routed workspaces — Triage, Pipeline, Reliability, Crons, Actions, Comms, History, and API Management — with guarded replay-safe actions and durable audit history.",
+        "The single-page admin dashboard splits into eight routed workspaces: Triage, Pipeline, Reliability, Crons, Actions, Comms, History, and API Management, with guarded replay-safe actions and durable audit history.",
     },
     {
       label: "Coin page & bot hero",
       tag: "design",
       description:
-        "The stablecoin detail page completes its Figma template — pill-tab nav, hero KPI band, xl right rail, Sources modal — and the PharosWatchBot page gets a benefits-led signal-board hero with a lighthouse watch beam.",
+        "The stablecoin detail page completes its Figma template, pill-tab nav, hero KPI band, xl right rail, and Sources modal. The PharosWatchBot page gets a benefits-led signal-board hero with a lighthouse watch beam.",
     },
     {
       label: "Pipeline correctness",

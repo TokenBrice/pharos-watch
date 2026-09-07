@@ -1,0 +1,14 @@
+{
+  "mechanism": "usn-noon",
+  "date": "2026-07-27-accountable-live-feed",
+  "sha256": "deb904e647e04e7f5ba8eadea3faa7d679dcc710cc477ebbd8207e7f477c12fe",
+  "bytes": 4392,
+  "r2Key": "captures/usn-noon/2026-07-27-accountable-live-feed.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "usn-noon",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usn-noon/2026-07-27-accountable-live-feed.json",
+    "capturedAt": "2026-07-27T22:54:31.000Z"
+  }
+}

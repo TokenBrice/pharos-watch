@@ -1,6 +1,10 @@
+import {
+  REDEMPTION_EXIT_CURVE_REQUESTS_USD as COST_REQUESTS_USD,
+} from "@shared/lib/exit-route-capacity-point";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import {
   SfrxusdCrosschainV9RouteStateSchema,
+  raw18ToNumber,
   type SfrxusdCrosschainRouteRejectionCode,
   type SfrxusdCrosschainV9RouteAttempt,
   type SfrxusdRouteBlock,
@@ -47,7 +51,6 @@ const FRAXTAL_LAYERZERO_EID = 30_255;
 const E18 = 10n ** 18n;
 const BPS = 10_000;
 const OFT_DECIMAL_CONVERSION_RATE = 10n ** 12n;
-const COST_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 25_000_000] as const;
 
 const ROUTE_ABI = parseAbi([
   "function paused() view returns (bool)",
@@ -302,10 +305,6 @@ function isBlockCurrent(
     block.blockTimestamp >= attemptedAtSec - maxAgeSec &&
     block.blockTimestamp <= attemptedAtSec + BLOCK_FUTURE_SKEW_SEC
   );
-}
-
-function raw18ToNumber(value: bigint): number {
-  return Number(value / E18) + Number(value % E18) / 1e18;
 }
 
 function divCeil(numerator: bigint, denominator: bigint): bigint {

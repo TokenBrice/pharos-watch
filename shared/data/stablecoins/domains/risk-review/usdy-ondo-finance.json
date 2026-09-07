@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDY has six issuer-native liability surfaces on Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Arbitrum, Mantle, and Sei are LayerZero burn/mint representations sourced from Ethereum; Solana is also a LayerZero bridge representation, with a 1-of-2 SPL mint multisig whose plain system-owned co-signer retains a token-level mint bypass that remains scoreable here. Osmosis, Mantra, and Injective are Noble-sourced IBC vouchers with reviewed escrow matches. DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",
+    "summary": "USDY has six issuer-native liability surfaces on Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Arbitrum, Mantle, Sei, BNB Chain, and Tempo are LayerZero burn/mint representations sourced from Ethereum; Solana is also a LayerZero bridge representation, with a 1-of-2 SPL mint multisig whose plain system-owned co-signer retains a token-level mint bypass that remains scoreable here. Osmosis, Mantra, and Injective are Noble-sourced IBC vouchers with reviewed escrow matches. DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",
     "reviewedAt": "2026-08-16",
     "reviewer": "OpenAI Codex C01 bridge-boundary review",
     "confidence": "verified",
@@ -459,6 +459,85 @@
             "url": "https://www.mintscan.io/noble/address/noble1vn26uz7pxhz5aqd4s4q8kuar84ev9emhhgxuc2"
           }
         ]
+      },
+      {
+        "id": "bsc:0x608593d17a2decbbc4399e4185be4922f97ed32e",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x608593d17a2decbbc4399e4185be4922f97ed32e",
+        "protocol": "Ondo USDY via LayerZero (issuer-operated OApp)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At BNB latest block 119968874, the USDY OFT adapter 0xae6a049cdda7536af3875b3daaf34f24be5cf00c returned token() = USDY 0x608593d17a2decbbc4399e4185be4922f97ed32e and endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner() returned Safe 0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d, whose Safe reads returned threshold 4 and seven owners. Ondo's address inventory and bridge docs identify the BNB USDY deployment and OFT burn/mint path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bsc:0xae6a049cdda7536af3875b3daaf34f24be5cf00c",
+          "safe:bsc:0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d"
+        ],
+        "observedAt": "2026-09-04",
+        "observedBlock": 119968874,
+        "sources": [
+          {
+            "label": "Ondo USDY address and OFT adapter inventory",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "BNB USDY and OFT adapter RPC reads (2026-09-04)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000d479b9f6ec0ceff9",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000d479b9f6ec0ceff9",
+        "protocol": "Ondo USDY via LayerZero (issuer-operated OApp)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Tempo latest block 37998104, the USDY OFT adapter 0xd45c2377241f1da765570e0d57920f1cf4855bcb returned token() = TIP-20 USDY 0x20c000000000000000000000d479b9f6ec0ceff9 and endpoint() = LayerZero EndpointV2 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c; the TIP-20 decimals() read returned 6. Its EIP-1967 admin slot resolved to ProxyAdmin 0x340c691280b477a6316cb35d8fd4b628d1cccfc3, whose owner() returned 0x3952dec8f7c3e844c27d173f5eb18068e685eb3b. Ondo's address inventory and bridge docs identify the Tempo USDY deployment and OFT burn/mint path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x3952dec8f7c3e844c27d173f5eb18068e685eb3b",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:tempo:0xd45c2377241f1da765570e0d57920f1cf4855bcb",
+          "proxy-admin:tempo:0x340c691280b477a6316cb35d8fd4b628d1cccfc3",
+          "contract:tempo:0x3952dec8f7c3e844c27d173f5eb18068e685eb3b"
+        ],
+        "observedAt": "2026-09-04",
+        "observedBlock": 37998104,
+        "sources": [
+          {
+            "label": "Ondo USDY address and OFT adapter inventory",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "Tempo USDY and OFT adapter RPC reads (2026-09-04)",
+            "url": "https://rpc.tempo.xyz"
+          }
+        ]
       }
     ],
     "controls": [
@@ -470,7 +549,9 @@
           "arbitrum:0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d",
           "mantle:0x5be26527e817998a7206475496fde1e68957c5a6",
           "sei:0x54cd901491aef397084453f4372b93c33260e2a6",
-          "solana:A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6"
+          "solana:A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
+          "bsc:0x608593d17a2decbbc4399e4185be4922f97ed32e",
+          "tempo:0x20c000000000000000000000d479b9f6ec0ceff9"
         ],
         "capabilities": [
           "bridge-mint",
@@ -513,7 +594,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "LayerZero OFT burn/mint route; no independent lockbox was identified. Ethereum native mint is distinct from bridge return mint.",
-          "trustedPeerOrRemote": "The non-proxy adapter 0xa6275720b3fb1efe3e6ef2b5bf2293148852307d had six owner-configured peers at EIDs 30102, 30110, 30168, 30181, 30280, and 30370; this owner can replace them. Authored routeRefs cover the Ethereum, Arbitrum, Mantle, Sei, and Solana paths.",
+          "trustedPeerOrRemote": "The non-proxy adapter 0xa6275720b3fb1efe3e6ef2b5bf2293148852307d had six owner-configured peers at EIDs 30102, 30110, 30168, 30181, 30280, and 30370; this owner can replace them. Authored routeRefs cover the Ethereum, Arbitrum, Mantle, Sei, Solana, BNB Chain, and Tempo paths.",
           "attestorQuorum": "Ondo bridge documentation names Canary DVN, LayerZero Labs DVN, and Ondo DVN; EndpointV2 and DVN verification are route machinery.",
           "rateLimits": "At the 2026-08-08 observation, inbound limits were 500,000 USDY for EIDs 30110, 30181, and 30280; 300,000 for EID 30168; and disabled for EIDs 30102 and 30370. The owner can replace these limits.",
           "pausersAdminsUpgraders": "The adapter was non-proxy and paused=false; its owner was the 4-of-7 Safe, which can pause/unpause, replace peers, and replace rate-limit configuration. Endpoint was 0x1a44076050125825900e736c501f859c50fe728c and token was Ethereum USDY."

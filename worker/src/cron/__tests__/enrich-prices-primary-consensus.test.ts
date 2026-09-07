@@ -180,6 +180,64 @@ describe("fetchPrimaryPrices", () => {
     });
   });
 
+  it("admits only fresh retained VUSD aggregate liquidity at the UI floor", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const cases = [
+      {
+        asset: makePeggedAsset({ id: "vusd-virtue", name: "Virtue USD", symbol: "VUSD" }),
+        tvl: 725_586,
+        updatedAt: nowSec - 60,
+        accepted: true,
+      },
+      {
+        asset: makePeggedAsset({ id: "dusd-test", name: "Test USD", symbol: "DUSD" }),
+        tvl: 725_586,
+        updatedAt: nowSec - 60,
+        accepted: false,
+      },
+      {
+        asset: makePeggedAsset({ id: "vusd-virtue", name: "Virtue USD", symbol: "VUSD" }),
+        tvl: 249_999,
+        updatedAt: nowSec - 60,
+        accepted: false,
+      },
+      {
+        asset: makePeggedAsset({ id: "vusd-virtue", name: "Virtue USD", symbol: "VUSD" }),
+        tvl: 725_586,
+        updatedAt: nowSec - 3_601,
+        accepted: false,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const db = makeDexBridgeDb({
+        dexRows: [
+          {
+            stablecoin_id: testCase.asset.id,
+            dex_price_usd: 0.99093,
+            deviation_from_primary_bps: null,
+            source_pool_count: 3,
+            source_total_tvl: testCase.tvl,
+            updated_at: testCase.updatedAt,
+          },
+        ],
+      });
+
+      const { results } = await fixtureFetchPrimaryPrices([testCase.asset], db);
+      const result = results.get(testCase.asset.id);
+      if (testCase.accepted) {
+        expect(result).toMatchObject({
+          price: 0.99093,
+          source: "dex-promoted",
+          confidence: "single-source",
+          agreeSources: ["dex-promoted"],
+        });
+      } else {
+        expect(result).toBeUndefined();
+      }
+    }
+  });
+
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 

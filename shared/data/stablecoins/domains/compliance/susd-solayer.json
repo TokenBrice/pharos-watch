@@ -8,11 +8,11 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Solayer official product page — U.S. Treasury-backed yield-bearing sUSD",
+        "label": "Solayer official product page: U.S. Treasury-backed yield-bearing sUSD",
         "url": "https://solayer.org/product/susd"
       },
       {
-        "label": "Solayer sUSD docs — yield-bearing stablecoin for the Solana ecosystem",
+        "label": "Solayer sUSD docs: yield-bearing stablecoin for the Solana ecosystem",
         "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
       }
     ]
@@ -33,7 +33,7 @@
     "reserveDisclosureUrl": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Solayer Labs, Inc. is a US-incorporated company headquartered in San Francisco (CA corp, doc #6557004). sUSD is a yield-bearing stablecoin backed by US Treasury bills via a partnership with OpenEden (Moody's-rated RWA platform). The yield is passed to holders through Solana Token-2022 interest extension mechanics — a design that sits in regulatory tension with the GENIUS Act's yield prohibition on payment stablecoin issuers. No GENIUS authorization, application, or registration found. No enforcement action found. The applicability question (payment stablecoin vs. excluded yield instrument) will only be resolved once final GENIUS implementing regulations are issued.",
+    "notes": "Solayer Labs, Inc. is a US-incorporated company headquartered in San Francisco (CA corp, doc #6557004). sUSD is a yield-bearing stablecoin backed by US Treasury bills via a partnership with OpenEden (Moody's-rated RWA platform). The yield is passed to holders through Solana Token-2022 interest extension mechanics: a design that sits in regulatory tension with the GENIUS Act's yield prohibition on payment stablecoin issuers. No GENIUS authorization, application, or registration found. No enforcement action found. The applicability question (payment stablecoin vs. excluded yield instrument) will only be resolved once final GENIUS implementing regulations are issued.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

@@ -29,7 +29,7 @@ import {
   type V9RoleDependencyPillarProjection,
 } from "./dependencies";
 import {
-  evaluateV9ExitAssetFacts,
+  evaluateV9Exit,
   projectV9ExitEvaluationRoute,
   type V9ExitEvaluationResult,
 } from "./exit";
@@ -46,6 +46,7 @@ import {
 import {
   decimalSnap,
   hasV9PreExitDangerSignal,
+  v9CMinusFloor,
   type V9PillarAdverseAttribution,
 } from "./formula";
 import { evaluateV9OperationalResilience, type V9OperationalResilienceResult } from "./operational-resilience";
@@ -1210,11 +1211,7 @@ function parentInput(
       "strategy-vault": fallback.vault,
     },
   });
-  const cMinusFloor =
-    envelope.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore;
-  if (cMinusFloor === undefined) {
-    throw new Error("Safety Score v9 policy has no C- grade threshold");
-  }
+  const cMinusFloor = v9CMinusFloor(envelope);
   const parentItselfExplainsLowGrade = rawScore < cMinusFloor;
   return {
     required,
@@ -1348,7 +1345,26 @@ export function evaluateV9Asset({
     },
     envelope,
   );
-  const exit = evaluateV9ExitAssetFacts(asset, envelope, preExitDangerHeld);
+  // One projection of the exit routes (and the circulating supply / portfolio
+  // status derived beside them) serves both the exit evaluation and the
+  // retained stress state; evaluateV9Exit copies before sorting, so the shared
+  // array is never mutated downstream.
+  const exitCirculatingUsd =
+    asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null;
+  const exitPortfolioStatus =
+    asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
+      ? "reviewed-complete"
+      : "incomplete";
+  const projectedExitRoutes = asset.exitRoutes.map(projectV9ExitEvaluationRoute);
+  const exit = evaluateV9Exit(
+    {
+      circulatingUsd: exitCirculatingUsd,
+      portfolioStatus: exitPortfolioStatus,
+      routes: projectedExitRoutes,
+      preExitDangerHeld,
+    },
+    envelope,
+  );
   const basePillars = {
     backing: backingPillarEvaluation,
     exit: exitPillar(
@@ -1436,12 +1452,9 @@ export function evaluateV9Asset({
     unavailabilityRootsById,
   );
   const stressState = buildV9RetainedStressState(scoreInput, {
-    circulatingUsd: asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null,
-    portfolioStatus:
-      asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
-        ? "reviewed-complete"
-        : "incomplete",
-    routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+    circulatingUsd: exitCirculatingUsd,
+    portfolioStatus: exitPortfolioStatus,
+    routes: projectedExitRoutes,
   });
   return {
     evaluatedAsset: {

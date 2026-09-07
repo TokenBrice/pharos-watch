@@ -14,7 +14,7 @@ vi.mock("../helpers", async (importOriginal) => {
 import { adaptListaReserves, fetchListaReserves } from "../lista";
 import { fetchDefiLlamaPrices, fetchErc20Balance } from "../helpers";
 
-const signal = AbortSignal.timeout(5000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const coin = { id: "lisusd-lista" } as unknown as StablecoinMeta;
 
 beforeEach(() => {

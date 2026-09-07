@@ -6,9 +6,10 @@ import {
   upsertDexDeploymentOutcomes,
 } from "../deployment-outcomes";
 import type { DexDeploymentProviderCheck, StagedPool } from "../types";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
-const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
-const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap"] as const satisfies readonly StagedPool["source"][];
+const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
+const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly StagedPool["source"][];
 
 const DEPLOYMENT = {
   chain: "ethereum",
@@ -60,7 +61,7 @@ function poolFor(address: string): StagedPool {
 
 function createRecordingDb(): { db: D1Database; statements: Array<{ sql: string; values: unknown[] }> } {
   const statements: Array<{ sql: string; values: unknown[] }> = [];
-  const db = {
+  const db = makeNoopD1({
     prepare: vi.fn((sql: string) => ({
       bind: vi.fn((...values: unknown[]) => {
         statements.push({ sql, values });
@@ -68,7 +69,7 @@ function createRecordingDb(): { db: D1Database; statements: Array<{ sql: string;
       }),
     })),
     batch: vi.fn(async (batched: unknown[]) => batched.map(() => ({ meta: { changes: 1 } }))),
-  } as unknown as D1Database;
+  });
   return { db, statements };
 }
 
@@ -245,16 +246,41 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(40);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(29);
     expect(outcomes).toContainEqual(
       expect.objectContaining({
-        stablecoinId: "usdn-noble",
-        chain: "noble",
-        address: "uusdn",
+        stablecoinId: "usdc-circle",
+        chain: "polkadot",
+        address: "1337",
         providers: [],
       }),
     );
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "cngn-compliant-naira",
+        chain: "lisk",
+        address: "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+        providers: [],
+      }),
+    );
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "cngn-compliant-naira",
+        chain: "assetchain",
+        address: "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
+        providers: [],
+      }),
+    );
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "brz-transfero",
+        chain: "chiliz",
+        address: "0xE9185Ee218cae427aF7B9764A011bb89FeA761B4",
+        providers: [],
+      }),
+    );
+    // Noble and Osmosis now resolve a registered provider, so the static
+    // unsupported sweep must no longer claim them.
+    expect(outcomes.some((row) => row.chain === "noble" || row.chain === "osmosis")).toBe(false);
   });
 
   it("materializes an inaccessible outcome when a bounded crawl fails", () => {

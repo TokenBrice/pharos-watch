@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT register reviewed; no USX match found on 2026-08-14",
+        "label": "ESMA MiCA register landing page: ART/EMT register reviewed; no USX match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA/EBA/EIOPA crypto-assets factsheet — MiCA scope and authorization framework",
+        "label": "ESMA/EBA/EIOPA crypto-assets factsheet: MiCA scope and authorization framework",
         "url": "https://www.esma.europa.eu/sites/default/files/2025-10/Updated_Joint_ESAs_Factsheet_on_crypto-assets_MT_EN.pdf"
       },
       {
-        "label": "Solstice — USX overcollateralized settlement layer and MiCA-ready framework claim",
+        "label": "Solstice: USX overcollateralized settlement layer and MiCA-ready framework claim",
         "url": "https://website.prod.solsticelabs.io/"
       },
       {
-        "label": "Solstice whitepaper — Solstice Foundation token issuance and Swiss development entity",
+        "label": "Solstice whitepaper: Solstice Foundation token issuance and Swiss development entity",
         "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
       }
     ]
@@ -27,20 +27,20 @@
       "summary": "Solstice markets USX as an overcollateralized dollar settlement asset, permits permissionless minting with USDC and USDT, and describes it as a payment rail. The public materials do not resolve the legal issuer, U.S. qualification pathway, or whether an applicable foreign-issuer exception exists, so the token is treated as an apparent payment stablecoin without assuming authorization.",
       "references": [
         {
-          "label": "GENIUS Act enacted text — payment stablecoin definition",
+          "label": "GENIUS Act enacted text: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Solstice — USX settlement asset, minting, and payment-rail disclosures",
+          "label": "Solstice: USX settlement asset, minting, and payment-rail disclosures",
           "url": "https://website.prod.solsticelabs.io/",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Solstice whitepaper — token issuance and entity disclosures",
+          "label": "Solstice whitepaper: token issuance and entity disclosures",
           "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
@@ -54,33 +54,33 @@
     "notes": "No public GENIUS approval, state-qualified status, official application, or OCC foreign registration naming Solstice Foundation or USX was located in the reviewed materials. The classification is not an authorization finding. Solstice's homepage claims a MiCA-ready framework, while its linked EU/EEA MiCA disclosure currently resolves to a page-not-found; a verifier should re-check the EU offering and any later regulator filing.",
     "references": [
       {
-        "label": "GENIUS Act enacted text — payment stablecoin definition",
+        "label": "GENIUS Act enacted text: payment stablecoin definition",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC digital assets licensing applications — public pending-application table",
+        "label": "OCC digital assets licensing applications: public pending-application table",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Solstice — USX settlement asset, minting, and payment-rail disclosures",
+        "label": "Solstice: USX settlement asset, minting, and payment-rail disclosures",
         "url": "https://website.prod.solsticelabs.io/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Solstice whitepaper — token issuance and entity disclosures",
+        "label": "Solstice whitepaper: token issuance and entity disclosures",
         "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
-  collectShockCoverageJournalPaths,
+  collectShockCoverageCaptureSources,
   SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH,
 } from "./generate-safety-score-v9-shock-coverage-registry";
 
@@ -87,28 +87,41 @@ export async function runShockCoverageReplayAttestationsCli(argv = process.argv.
   const runDate = new Date().toISOString().slice(0, 10);
   let replayed = 0;
 
-  for (const absolutePath of collectShockCoverageJournalPaths(REPO_ROOT)) {
-    const journalPath = relative(REPO_ROOT, absolutePath).split(sep).join("/");
-    const rawBytes = readFileSync(absolutePath);
-    const journalSha256 = createHash("sha256").update(rawBytes).digest("hex");
-
-    const reusable = cached.get(`${journalPath}@${journalSha256}`);
-    if (reusable) {
-      attestations.push(reusable);
+  for (const source of collectShockCoverageCaptureSources(REPO_ROOT)) {
+    const journalPath = String(source.summary.summary.journalPath ?? "");
+    const journalSha256 = source.summary.sha256;
+    if (!journalPath) throw new Error(`Missing journalPath in ${relative(REPO_ROOT, source.summaryPath)}`);
+    const captureExists = existsSync(source.capturePath);
+    if (captureExists) {
+      const rawBytes = readFileSync(source.capturePath);
+      const actualSha256 = createHash("sha256").update(rawBytes).digest("hex");
+      if (actualSha256 !== journalSha256) {
+        throw new Error(`Capture summary hash mismatch for ${journalPath}: ${actualSha256} !== ${journalSha256}`);
+      }
+      const reusable = cached.get(`${journalPath}@${journalSha256}`);
+      if (reusable) {
+        attestations.push(reusable);
+        continue;
+      }
+      replayJournal(journalPath);
+      replayed += 1;
+      const journal = JSON.parse(rawBytes.toString("utf8")) as { calls?: unknown[]; codePins?: unknown[] };
+      attestations.push({
+        journalPath,
+        journalSha256,
+        attestedAt: runDate,
+        exactReplayPassed: true,
+        callsConsumed: journal.calls?.length ?? 0,
+        codePinsConsumed: journal.codePins?.length ?? 0,
+      });
       continue;
     }
 
-    replayJournal(journalPath);
-    replayed += 1;
-    const journal = JSON.parse(rawBytes.toString("utf8")) as { calls: unknown[]; codePins: unknown[] };
-    attestations.push({
-      journalPath,
-      journalSha256,
-      attestedAt: runDate,
-      exactReplayPassed: true,
-      callsConsumed: journal.calls.length,
-      codePinsConsumed: journal.codePins.length,
-    });
+    const reusable = cached.get(`${journalPath}@${journalSha256}`);
+    if (!reusable) {
+      throw new Error(`Capture ${journalSha256} expired: non-replayable`);
+    }
+    attestations.push(reusable);
   }
 
   attestations.sort((left, right) => (left.journalPath < right.journalPath ? -1 : 1));

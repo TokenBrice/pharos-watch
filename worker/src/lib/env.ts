@@ -9,6 +9,9 @@ export interface Env {
   TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
+  TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: RateLimit;
   CF_VERSION_METADATA: WorkerVersionMetadata;
   CORS_ORIGIN: string;
   SELF_URL?: string;
@@ -32,8 +35,6 @@ export interface Env {
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;
   ALCHEMY_API_KEY?: string;
-  MORALIS_API_KEY?: string;
-  BIRDEYE_API_KEY?: string;
   ADDRESS_PRICE_PROVIDERS_ENABLED?: string;
   GRAPH_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
@@ -56,6 +57,7 @@ export interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_BOT_TOKEN_PREVIOUS?: string;
   TELEGRAM_CHAT_ID?: string;
+  TELEGRAM_OPERATOR_CHAT_ID?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_WEBHOOK_SECRET_PREVIOUS?: string;
   TELEGRAM_RECAP_ROLLOUT_MODE?: string;
@@ -77,6 +79,7 @@ export interface Env {
   DDR_REPAIR_TASK_RUNNER_ENABLED?: string;
   WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_CANARY_MODE?: string;
+  WORKER_V9_WORKFLOW_MODE?: string;
 }
 
 export interface WorkerEnvIssue {

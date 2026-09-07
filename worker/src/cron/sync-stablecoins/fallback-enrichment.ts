@@ -2,10 +2,15 @@ import {
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeLivePriceOverrides,
 } from "../../lib/authoritative-price-sources";
-import { hasMissingPrice } from "./enrich-prices";
+import type { CronProgressReporter } from "../../lib/cron-logger";
+import type { PriceCacheEntry } from "../../lib/db-cache";
+import type { PriceValidationReferences } from "../../lib/price-validation";
+import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import {
   applyProtocolPriceOverrides,
   prevalidatePrices,
+  type PreviousTrustedPrice,
+  type ValidationContextResolver,
 } from "./pricing";
 import {
   isAbortResult,
@@ -14,14 +19,29 @@ import {
 } from "./post-enrichment";
 import { reportStablecoinsStage } from "./runtime";
 import type { CronResult } from "./shared";
-import type {
-  FallbackPriceEnrichmentInput,
-  FallbackPriceEnrichmentOutput,
-} from "./fallback-types";
+
+interface FallbackPriceEnrichmentInput {
+  db: D1Database;
+  assets: PeggedAsset[];
+  syncStartSec: number;
+  signal?: AbortSignal;
+  reportProgress?: CronProgressReporter;
+  cmcApiKey?: string;
+  jupiterApiKey?: string | null;
+  coingeckoApiKey?: string | null;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
+  fxFallbackRates?: Record<string, number>;
+  validationReferences?: PriceValidationReferences;
+  validationContexts: ValidationContextResolver;
+  previousTrustedPrices: Map<string, PreviousTrustedPrice>;
+  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
+  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
+  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
+}
 
 export async function runFallbackPriceEnrichmentPhase(
   input: FallbackPriceEnrichmentInput,
-): Promise<FallbackPriceEnrichmentOutput | CronResult> {
+) {
   for (const asset of input.assets) {
     if (!asset.supplySource) {
       asset.supplySource = "coingecko-fallback";

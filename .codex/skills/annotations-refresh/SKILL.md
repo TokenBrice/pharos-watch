@@ -1,174 +1,71 @@
 ---
 name: annotations-refresh
-description: Drain the annotation-candidates queue (from `npm run candidates:annotations`) into the per-coin JSON assets under shared/data/annotations/coins/. Use weekly during active event periods, monthly otherwise.
+description: Drain the chart-annotation candidate queue into reviewed per-coin annotations. Use weekly during active event periods, monthly otherwise, or when queue-health checks warn.
 user_invocable: true
 ---
 
-# Annotations Refresh
+Read `docs/editorial-style.md`; its `technical-evidence` register governs prose.
 
-Editorial sweep of chart-annotation candidates. The producer
-(`scripts/maintenance/build-annotation-candidates.ts`) writes machine-found
-events to `agents/annotation-candidates.md`. This skill reads that queue and
-turns each row into a promote / drop / defer decision, updating the
-per-coin JSON file under `shared/data/annotations/coins/` for promoted rows.
+# Annotation Refresh
 
-Promotion is always editorial. Do not auto-write annotations from the queue.
+`npm run candidates:annotations` writes machine-found events to ignored `agents/annotation-candidates.{md,json}`. Editorially classify each row as promote, drop, or defer; never auto-publish a producer signal.
 
-## When to run
+## Recover The Backlog
 
-- Weekly during high-event periods (post-depeg, post-regulatory action,
-  post-launch burst).
-- Monthly otherwise.
-- Whenever `npm run digest:curation` flags `WARN:` on annotation queue
-  health (queue > 30 rows or oldest candidate > 60 days old).
+Scheduled runs retain full immutable `agent-maintenance-candidates-<run-id>-<attempt>` artifacts for 90 days, covering monthly review plus a missed monthly review. The issue contains excerpts and a download link, not the complete backlog. Before a sweep, download all retained runs since the last handoff (include failed runs with partial artifacts). From the repository root, with GitHub read access:
 
-## Inputs
+```bash
+set -o pipefail
+history_dir=agents/annotation-history
+mkdir -p "$history_dir"
+since_date=$(node -e 'process.stdout.write(new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10))')
+gh api --paginate -X GET 'repos/{owner}/{repo}/actions/workflows/agent-maintenance-candidates.yml/runs' \
+  -f created=">=$since_date" -f status=completed -f per_page=100 --jq '.workflow_runs[].id' |
+  while read -r run_id; do
+    gh run download "$run_id" --pattern 'agent-maintenance-candidates-*' --dir "$history_dir/$run_id" || exit 1
+  done
+npm run candidates:annotations -- --replay "$history_dir"
+```
 
-- `agents/annotation-candidates.md` — append-only queue. Each row already
-  carries a date, coin id, kind hint, severity hint, and a source pointer.
-  The file footer `<!-- last_swept_at: YYYY-MM-DD -->` records the previous
-  sweep date.
-- `shared/data/annotations/coins/<coin-id>.json` — current curated set,
-  one file per coin. `shared/data/annotations/curated-annotations.ts` is
-  the typed loader (validation rules + severity vocabulary in its header).
-- `shared/types/chart-annotation.ts` — `CHART_ANNOTATION_KINDS` and the
-  `ChartAnnotation` shape (ts, kind, label ≤80 chars, severity?, href?).
+Use a shell with `pipefail` enabled so a failed run listing does not look like an empty history. Download failures, expired runs, or runs without artifacts are coverage gaps to resolve/report; do not silently skip them. Existing local download directories can be reused for replay without redownloading. `--replay` is offline: it merges every `annotation-candidates.json` under that directory with the local queue, preserving legacy rows and deferrals. It never writes decisions or product annotations. Keep `agents/annotation-review.json`, the queue, and needed snapshots together in the review handoff; do not delete them merely because the scheduled issue changed.
 
-## Process
+On the first migration of a legacy Markdown queue, the producer preserves its exact original bytes as `agents/annotation-candidates.legacy.md` and links it from the new queue. Read that backup for indented deferral evidence, source gaps, and free-form review notes the row parser cannot interpret. Keep it in the handoff too; it is never overwritten automatically.
 
-### Step 1 — Read the queue and the current annotations file
+Live collection overlaps 14 days of tape history and follows cursors serially with page/deadline bounds. JSON `coverage` and queue source notes distinguish complete from incomplete collection windows. Missing pages/sources remain pending evidence even when the command succeeds. Review dispositions identify individual events; a complete collection window is not a completed editorial review. The legacy date-only `last_swept_at` comment is preserved for compatibility and no longer suppresses arrivals or advances automatically.
 
-If the queue has no candidate rows at all (fresh or deferred), report "queue
-empty" with the `last_swept_at` date and stop — no edits anywhere.
+## Review
 
-1. Read `agents/annotation-candidates.md` from top to bottom. Group rows by
-   date header so the older candidates surface first.
-2. Read `shared/data/annotations/coins/<coin-id>.json` for each coin
-   referenced in the queue, note the existing annotations so duplicates
-   can be detected.
-3. Read `shared/types/chart-annotation.ts` to confirm the current
-   `CHART_ANNOTATION_KINDS` enum — do not rely on this document's list,
-   the source file wins.
+1. Read the recovered queue oldest-first, its source coverage and existing `annotation-review.json`, `shared/types/chart-annotation.ts`, `shared/data/annotations/curated-annotations.ts`, and each referenced `shared/data/annotations/coins/<id>.json`. Source files own shape, enum, severity, and validation. Match distinct same-day events by their printed `id`, not just date/coin/kind.
+2. Promote only a discrete event supported by a primary source (issuer post-mortem, regulator filing, methodology changelog, transaction/on-chain proof) and not already represented within the same incident window. Secondary reporting may corroborate, not replace missing primary evidence.
+3. Drop duplicates, low-signal/promotional items, unsupported chatter, and announcements without a live transition. Defer real events whose decisive source is not yet available; include the reason.
+4. A producer `launch` hint is not an annotation enum. Use the established governance precedent only after runtime chart coverage exists.
 
-### Step 2 — Per-row decision
+## Apply
 
-For each candidate, choose one of three actions:
+For promoted rows, add `{ date, kind, label, severity?, href?, note? }` to the per-coin JSON in ascending date order. Keep labels within the source limit and put rationale in `note`. Create/register a new coin file only when needed, following the loader’s existing pattern.
 
-#### Promote
-
-Add an entry to `shared/data/annotations/coins/<coin-id>.json` (create
-the file and register its import in `curated-annotations.ts` if the coin
-has no annotations yet). Required when:
-
-- The event is a discrete, named occurrence (regulatory action, depeg
-  pivot, launch, governance vote, methodology pivot, blacklist spike).
-- A primary source exists (issuer post-mortem, regulator filing,
-  methodology changelog, on-chain transaction). Secondary press is OK as
-  fallback but prefer primary.
-- The event is not already represented (check existing entries for the
-  same coin within ±2 days of the candidate `ts`).
-
-Entry shape (mirror existing file rules):
+Record each decision by the exact printed row `id` in reviewer-owned `agents/annotation-review.json` (create it on the first review). The schema is exported as `AnnotationReviewSchema` by `scripts/maintenance/build-annotation-candidates.ts`:
 
 ```json
 {
-  "date": "YYYY-MM-DD",
-  "kind": "depeg",
-  "label": "Short factual label",
-  "severity": "med",
-  "href": "https://example.com/primary-source",
-  "note": "Optional editorial rationale"
+  "version": 1,
+  "decisions": {
+    "tape:example-event-id": {
+      "disposition": "defer",
+      "reviewedAt": "2026-09-07T12:00:00.000Z",
+      "reason": "Await issuer post-mortem; revisit when published"
+    }
+  }
 }
 ```
-Author `date` as a string (omit optional `severity`, `href`, or `note` when not needed); the loader in `shared/data/annotations/curated-annotations.ts:340-375` converts it to runtime `ts`.
 
-Place each new entry inside the per-coin array in `date` ascending order.
+Use `promote`, `drop`, or `defer`; promoted rows must have their annotation edit applied before recording promotion. Keep promoted/dropped IDs to prevent replay from requeuing them, and retain a reason/trigger for deferrals. Preserve legacy row IDs on migration. Rerun the offline replay command after decisions: it removes promoted/dropped rows from the Markdown view, retains deferrals, and admits new same-day IDs. Do not advance `last_swept_at` or manufacture a reviewed interval from incomplete collection. Record promote/drop/defer counts in the closeout.
 
-Queue rows with kind hint `launch` have no matching enum kind — existing
-launch annotations curate under `governance` (e.g. the USDe/USDS mainnet
-launch entries); follow that precedent.
-
-#### Drop
-
-Add a `dropped: <one-line reason>` annotation next to the row in the
-queue (a same-line suffix is safe — the producer only parses the leading
-`date | coin | kind` fields). Do not delete the row in place — instead,
-when finishing the sweep, strip dropped rows wholesale as part of the
-queue rewrite (Step 4).
-
-Common drop reasons:
-
-- Below severity bar (depeg low ≥ $0.98 with no grade impact).
-- Already curated under a different `ts` within the same incident.
-- Press cycle without a discrete event (e.g. opinion piece, recap).
-- Insufficient source — only social-media chatter.
-- Promotional / launch announcement without a confirmed live transition.
-
-#### Defer
-
-Mark the row with `defer: <reason>` and leave it in the queue. Use when
-the event is real but the source set is incomplete (e.g. a regulator
-filing is rumored but not yet public). Re-evaluate next sweep.
-
-### Step 3 — Apply the edits
-
-1. Edit `shared/data/annotations/coins/<coin-id>.json` with the promoted
-   rows. Entries use `{date: "YYYY-MM-DD", kind, label, severity?, href?,
-   note?}`; put the editorial rationale in `note`.
-2. Sort each coin's array by `date` ascending if the new entry breaks the
-   order.
-3. Keep the labels ≤80 chars. If a long label is required, prefer a
-   shorter `label` and put the long phrasing in the source-page title at
-   the `href` end.
-
-### Step 4 — Update the queue
-
-After all per-row decisions, rewrite `agents/annotation-candidates.md`:
-
-1. Remove promoted rows (they are now in the curated file).
-2. Remove dropped rows.
-3. Keep deferred rows, with the `defer:` annotation visible.
-4. Update the footer to today: `<!-- last_swept_at: YYYY-MM-DD -->`. The
-   producer uses this date as an inclusive cutoff, preventing promoted and
-   dropped events from reappearing on the next run.
-5. Prepend a short header noting the sweep (e.g. `<!-- swept 2026-05-23:
-   12 promoted, 8 dropped, 3 deferred -->`).
-
-### Step 5 — Validate
-
-Run the local gates before declaring done:
+Validate:
 
 ```bash
 npm run check:stablecoin-data
 npm test -- curated-annotations
 ```
 
-The annotations test enforces: kind enum, ≤80 char labels, plausible
-timestamps, and the top-4 coverage gate. If the test fails, fix the entry
-(usually a label that crept over 80 chars or a `kind` typo) and re-run.
-
-## Output
-
-Report at the end of the sweep:
-
-- Promoted count, grouped by coin (e.g. `usdc-circle: +1`,
-  `usdt-tether: +2`).
-- Dropped count with a one-line digest of common reasons.
-- Deferred count and what each is waiting on.
-- Queue health after sweep: rows remaining, oldest deferred row date.
-
-## What NOT to do
-
-- Do not invent dates. If the queue row's `ts` is fuzzy, defer rather
-  than guess.
-- Do not promote a row whose only source is the producer script's own
-  signal (the producer surfaces the candidate, but a primary source —
-  issuer post-mortem, regulator filing, methodology changelog, on-chain
-  proof — must exist before the event becomes a curated annotation).
-- Do not collapse multi-day depegs into a single entry; one annotation
-  per discrete event, per the file header rules.
-- Do not edit the producer script's queue layout. The producer rewrites
-  the file each run; structural edits will be lost.
-- Do not promote launch candidates appended by the orchestrator unless
-  the coin already has live runtime coverage (the launch annotation is
-  only meaningful once the chart actually renders data for that date).
+Report promoted counts by coin, drop reasons, each deferral trigger, remaining rows/oldest date, and checks. Never invent dates, collapse distinct multi-day events, or treat a producer signal as its own evidence.

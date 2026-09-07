@@ -55,7 +55,8 @@ npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bd-basedollar
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts
-node --import tsx scripts/ci/check-shock-coverage-freshness.ts
+node --import tsx scripts/lib/mechanism-measurement/upload.ts
+npx tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts
 ```
 
 Measuring the same head block twice is idempotent: the measure script keeps the existing journal and verifies the new measurement matches it, rather than overwriting.
@@ -65,6 +66,11 @@ To byte-replay a single journal on demand:
 ```bash
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --replay <journal-path>
 ```
+
+
+## Capture storage and expiry
+
+Capture storage, retention, and fail-closed replay are owned by [Safety Score V9 Readiness](./safety-score-v9-readiness.md): see [Mechanism capture storage](./safety-score-v9-readiness.md#mechanism-capture-storage) and [Replay and expiry](./safety-score-v9-readiness.md#replay-and-expiry).
 
 ## Related
 

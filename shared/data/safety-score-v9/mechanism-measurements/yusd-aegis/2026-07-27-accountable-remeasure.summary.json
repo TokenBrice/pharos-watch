@@ -1,0 +1,15 @@
+{
+  "mechanism": "yusd-aegis",
+  "date": "2026-07-27-accountable-remeasure",
+  "sha256": "0453b455168d80b68aa3250e1e3734b50d81158faede82d283a22b1f3c7b00cb",
+  "bytes": 5659,
+  "r2Key": "captures/yusd-aegis/2026-07-27-accountable-remeasure.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "yusd-aegis",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/yusd-aegis/2026-07-27-accountable-remeasure.json",
+    "capturedAt": "Aegis Accountable dashboard https://aegis.accountable.capital:10443/dashboard/YUSD snapshot ts 1785170794268 (data.ts); ZKP params liabilities USD 35982081.75 collateral USD 36706909.76; homepage aegis.im custody/strategy claims re-opened 2026-07-27T23:01Z"
+  }
+}

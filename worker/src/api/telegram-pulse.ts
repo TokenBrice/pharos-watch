@@ -1,6 +1,6 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-response";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   TelegramPulseSchema,
   type TelegramPulse,
@@ -16,7 +16,12 @@ import {
   loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
-} from "../lib/telegram-usage-analytics";
+} from "../lib/telegram/usage-analytics";
+import {
+  ACTIVE_PRESET_FLAGS_SQL,
+  ACTIVE_SUBSCRIPTION_FLAGS_SQL,
+  ACTIVE_WATCHER_SQL_CONDITION,
+} from "@shared/lib/telegram-alert-families";
 import {
   loadTelegramMiniAppDailyAggregate,
   utcDayFromUnixSeconds,
@@ -24,7 +29,7 @@ import {
 import {
   loadTelegramFirstMutationP50,
   refreshTelegramAdoptionRetention,
-} from "../lib/telegram-adoption-analytics";
+} from "../lib/telegram/adoption-analytics";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
@@ -57,39 +62,13 @@ interface CachedTelegramPulse {
   updatedAt: number;
 }
 
-const ACTIVE_WATCHER_SQL_CONDITION = `s.global_alert_dews = 1
-  OR s.global_alert_depeg = 1
-  OR s.global_alert_safety = 1
-  OR s.global_alert_launch = 1
-  OR s.global_alert_reserve = 1
-  OR s.global_alert_freeze = 1
-  OR COALESCE(sub.active_sub_count, 0) > 0
-  OR COALESCE(preset.active_preset_count, 0) > 0`;
-
 const ACTIVE_SUBSCRIPTION_COUNTS_SQL = `SELECT chat_id,
-        SUM(
-          CASE
-            WHEN alert_dews = 1
-              OR alert_depeg = 1
-              OR alert_safety = 1
-              OR alert_launch = 1
-              OR alert_reserve = 1
-              OR alert_freeze = 1
-            THEN 1 ELSE 0
-          END
-        ) AS active_sub_count
+        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count
    FROM telegram_subscriptions
   GROUP BY chat_id`;
 
 const ACTIVE_PRESET_COUNTS_SQL = `SELECT chat_id,
-        SUM(
-          CASE
-            WHEN alert_dews = 1
-              OR alert_depeg = 1
-              OR alert_safety = 1
-            THEN 1 ELSE 0
-          END
-        ) AS active_preset_count
+        SUM(CASE WHEN ${ACTIVE_PRESET_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_preset_count
    FROM telegram_preset_subscriptions
   GROUP BY chat_id`;
 
@@ -364,7 +343,7 @@ async function buildTelegramPulseSnapshot(
         }
         return {
           topCoins: topRows.map(
-            (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
+            (row) => WORKER_TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
           ),
           historySource: lifecycleHistory.source,
           watcherHistory: sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields),

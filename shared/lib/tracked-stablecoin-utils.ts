@@ -16,12 +16,6 @@ export const ACTIVE_YIELD_BEARING_STABLECOINS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.yieldBearing,
 );
 
-export function getTrackedStablecoin(
-  stablecoinId: string,
-): StablecoinMeta | undefined {
-  return TRACKED_META_BY_ID.get(stablecoinId);
-}
-
 interface FindTrackedContractOptions {
   source?: "primary" | "traded" | "any";
 }

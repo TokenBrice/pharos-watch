@@ -1,0 +1,15 @@
+{
+  "mechanism": "fxd-fathom",
+  "date": "2026-07-27-block-105423347",
+  "sha256": "31237cca34a0831f59aa251fd96d56bceb1c032d79bc6a510ef5939fa2fc6e8c",
+  "bytes": 1176,
+  "r2Key": "captures/fxd-fathom/2026-07-27-block-105423347.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "fxd-fathom",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json",
+    "capturedAt": "2026-07-27T16:57:00Z"
+  }
+}

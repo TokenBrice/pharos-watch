@@ -51,24 +51,24 @@
         "bridgeTypes": [
           "off-chain-settlement"
         ],
-        "note": "Marketing-described hybrid bank–OTC–exchange settlement layer; no on-chain burn/mint or lock/mint token bridge documented"
+        "note": "Marketing-described hybrid bank, OTC, and exchange settlement layer; no on-chain burn/mint or lock/mint token bridge documented"
       }
     ],
     "sources": [
       {
-        "label": "RUSD Ethereum contract (Etherscan) — RoyalDollar FiatToken, no bridge functions",
+        "label": "RUSD Ethereum contract (Etherscan): RoyalDollar FiatToken, no bridge functions",
         "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
       },
       {
-        "label": "RUSD BSC contract (BscScan) — same FiatToken, no bridge functions",
+        "label": "RUSD BSC contract (BscScan): same FiatToken, no bridge functions",
         "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
       },
       {
-        "label": "RUSD Tron contract (Tronscan) — separate MASTERMINTER EOA",
+        "label": "RUSD Tron contract (Tronscan): separate MASTERMINTER EOA",
         "url": "https://tronscan.org/#/contract/TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
       },
       {
-        "label": "Issuer RUSD page — describes only per-chain deployment, no bridge protocol",
+        "label": "Issuer RUSD page: describes only per-chain deployment, no bridge protocol",
         "url": "https://www.rcoins.digital/RUSD.html"
       },
       {

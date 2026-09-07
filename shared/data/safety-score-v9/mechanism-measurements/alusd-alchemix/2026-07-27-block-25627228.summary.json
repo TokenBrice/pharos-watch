@@ -1,0 +1,15 @@
+{
+  "mechanism": "alusd-alchemix",
+  "date": "2026-07-27-block-25627228",
+  "sha256": "4d2925545a87cddc21f1bb7e9e565edec43a053e3112cacdf8967a52761859e5",
+  "bytes": 4690,
+  "r2Key": "captures/alusd-alchemix/2026-07-27-block-25627228.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "alusd-alchemix",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/alusd-alchemix/2026-07-27-block-25627228.json",
+    "capturedAt": "ethereum finalized block 25627228 hash 0xe5c7dd15a7c6c8261957493e6f1dcbb72ec18688afccf6ac981748edb2f824e2 timestamp 2026-07-27T22:46:47Z; AlchemistV2 0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd minimumCollateralization/transmuter/debtToken eth_call; alUSD totalSupply eth_call"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "mechanism": "srusd-reservoir",
+  "date": "2026-07-27-reserves-api-srusd",
+  "sha256": "88f4b03f2691d0b8af3e11ed3c754a9996d7203886faccd95b531a333bfa5ebd",
+  "bytes": 117,
+  "r2Key": "captures/srusd-reservoir/2026-07-27-reserves-api-srusd.json.gz",
+  "summary": {
+    "assetId": "srusd-reservoir",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/srusd-reservoir/2026-07-27-reserves-api-srusd.json"
+  }
+}

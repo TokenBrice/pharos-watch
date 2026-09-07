@@ -1,4 +1,0 @@
-interface:
-  display_name: "Contract Populate"
-  short_description: "Populate stablecoin contracts from CoinGecko"
-  default_prompt: "Use $contract-populate to add verified contract addresses for this stablecoin from CoinGecko detail_platforms data."

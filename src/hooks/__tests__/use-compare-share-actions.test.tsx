@@ -3,6 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCompareShareActions } from "../use-compare-share-actions";
+import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 
 const shareImageMocks = vi.hoisted(() => ({
@@ -16,7 +17,7 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
-function makeCoin(id: string, symbol: string) {
+function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
   return {
     id,
     symbol,
@@ -37,10 +38,21 @@ function makeCoin(id: string, symbol: string) {
         pegCurrency: "USD",
       },
     } as unknown as StablecoinMeta,
-    pegScore: 99,
-    liquidityScore: 88,
-    safetyGrade: "A",
-  };
+    pegDetails: { pegScore: 99 },
+    liquidity: { liquidityScore: 88 },
+    safetyCard: { grade: "A" },
+  } as unknown as ComparisonCoinEntry;
+}
+
+function renderShareActions() {
+  return renderHook(() => useCompareShareActions({
+    comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
+    logos: {},
+    pegRates: {},
+    radarCards: [],
+    axisOrder: [],
+    axisLabels: {},
+  }));
 }
 
 describe("useCompareShareActions", () => {
@@ -70,24 +82,21 @@ describe("useCompareShareActions", () => {
     vi.restoreAllMocks();
   });
 
-  it("clears pending toast timers on unmount", async () => {
+  it("revokes downloads synchronously and clears pending toast timers on unmount", async () => {
     const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
-    const { result, unmount } = renderHook(() =>
-      useCompareShareActions({
-        comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
-        logos: {},
-        pegRates: {},
-        radarCards: [],
-        axisOrder: [],
-        axisLabels: {},
-      }),
-    );
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const { result, unmount } = renderShareActions();
 
     await act(async () => {
       await result.current.handleTwitterShare();
     });
 
     expect(result.current.toast).toBe("Image copied! Paste it in your tweet (Ctrl+V)");
+
+    await act(async () => result.current.handleDownload());
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-compare");
 
     unmount();
 
@@ -101,16 +110,7 @@ describe("useCompareShareActions", () => {
     });
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
-    const { result } = renderHook(() =>
-      useCompareShareActions({
-        comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
-        logos: {},
-        pegRates: {},
-        radarCards: [],
-        axisOrder: [],
-        axisLabels: {},
-      }),
-    );
+    const { result } = renderShareActions();
 
     await act(async () => {
       await result.current.handleTwitterShare();
@@ -121,4 +121,5 @@ describe("useCompareShareActions", () => {
     // The Twitter intent still opens so the user can tweet without the image.
     expect(openSpy).toHaveBeenCalled();
   });
+
 });

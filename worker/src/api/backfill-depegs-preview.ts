@@ -39,12 +39,7 @@ export interface BackfillReplayPreview {
   removedBackfillEventCount: number;
   removedBackfillEventIdsSample: number[];
   addedBackfillEventCount: number;
-  addedBackfillEventsSample: Array<{
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }>;
+  addedBackfillEventsSample: Array<Pick<BackfillEvent, "direction" | "peakDeviationBps" | "startedAt" | "endedAt">>;
 }
 
 export interface ExistingReplayRows {
@@ -96,12 +91,7 @@ export function summarizeBackfillReplayDiff(
   removedBackfillEventCount: number;
   removedBackfillEventIdsSample: number[];
   addedBackfillEventCount: number;
-  addedBackfillEventsSample: Array<{
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }>;
+  addedBackfillEventsSample: Array<Pick<BackfillEvent, "direction" | "peakDeviationBps" | "startedAt" | "endedAt">>;
 } {
   const expectedCounts = new Map<string, number>();
   for (const event of recomputedEvents) {
@@ -128,12 +118,9 @@ export function summarizeBackfillReplayDiff(
     incrementCount(existingCounts, buildExistingBackfillFingerprint(row));
   }
 
-  const addedBackfillEventsSample: Array<{
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }> = [];
+  const addedBackfillEventsSample: Array<
+    Pick<BackfillEvent, "direction" | "peakDeviationBps" | "startedAt" | "endedAt">
+  > = [];
   let addedBackfillEventCount = 0;
   for (const event of recomputedEvents) {
     const key = buildBackfillEventFingerprint(event);

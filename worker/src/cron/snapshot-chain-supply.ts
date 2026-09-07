@@ -3,8 +3,10 @@ import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { prepareCacheUpsert } from "../lib/db-cache";
 import { CHAIN_META } from "@shared/lib/chains";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatIsoDate } from "@shared/lib/format";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
@@ -16,7 +18,10 @@ import {
   SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
 } from "../lib/supply-snapshot-completion";
 
-const CACHE_MAX_AGE_SEC = 1200;
+// Skip once the stablecoins cache has missed two producer intervals
+// (`sync-stablecoins` cadence via the shared lane descriptor), matching the
+// snapshot-supply admission gate.
+const CACHE_MAX_AGE_SEC = 2 * CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
 
 interface SnapshotChainSupplyOptions {
   nowSec?: number;
@@ -25,7 +30,7 @@ interface SnapshotChainSupplyOptions {
 }
 
 function abortedCronResult(): CronResult {
-  return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "aborted" }) };
+  return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: "aborted" } });
 }
 
 function isAbortError(error: unknown): boolean {
@@ -54,15 +59,15 @@ export async function snapshotChainSupply(
   });
   if (preflight.kind === "cache-unavailable") {
     logWorkerEventArgs("handler", "error", "[snapshot-chain-supply] No stablecoins cache found");
-    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: preflight.reason }) };
+    return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: preflight.reason } });
   }
   if (preflight.kind === "cache-stale") {
     logWorkerEventArgs("handler", "warn", `[snapshot-chain-supply] Cache is ${preflight.cacheAgeSec}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec }),
-    };
+      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec },
+    });
   }
 
   const {
@@ -75,21 +80,21 @@ export async function snapshotChainSupply(
     snapshotDate,
   } = preflight;
   if (publicationCoverage.complete && lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified) {
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
+    return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
   }
   if (!publicationCoverage.complete) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         reason: "partial_snapshot_blocked",
         presentActiveCount: publicationCoverage.presentActiveCount,
         expectedActiveCount: publicationCoverage.expectedActiveCount,
         missingActiveIds: publicationCoverage.missingActiveIds,
         waivedActiveIds: publicationCoverage.waivedActiveIds,
         expiredWaiverIds: publicationCoverage.expiredWaiverIds,
-      }),
-    };
+      },
+    });
   }
 
   // Accumulate per-chain totals
@@ -119,11 +124,11 @@ export async function snapshotChainSupply(
 
   if (chainRows.length === 0) {
     logWorkerEventArgs("handler", "warn", "[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "no-valid-chain-rows", assetCount: cache.payload.peggedAssets.length }),
-    };
+      metadata: { reason: "no-valid-chain-rows", assetCount: cache.payload.peggedAssets.length },
+    });
   }
 
   try {
@@ -149,11 +154,11 @@ export async function snapshotChainSupply(
   } catch (err) {
     if (signal?.aborted || isAbortError(err)) return abortedCronResult();
     recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "atomicDateReplacement" } });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }),
-    };
+      metadata: { reason: "db_write_failed", error: String(err).slice(0, 200) },
+    });
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);

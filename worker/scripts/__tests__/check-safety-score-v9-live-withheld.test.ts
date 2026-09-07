@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
-import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9-extension";
-import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9-candidate";
+import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
+import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import { makeV9TwoAssetFixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { buildLiveWithheldCounterfactualReport } from "../check-safety-score-v9-live-withheld";
@@ -63,12 +63,16 @@ function healthyReplay() {
 describe("buildLiveWithheldCounterfactualReport", () => {
   it("reports a live-backed grade drop with fallback details and omits a held grade", () => {
     const { replay, metaById } = healthyReplay();
+    const alpha = replay.pipeline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha");
+    if (!alpha?.stressState?.exitPortfolio) throw new Error("Fixture has no alpha exit portfolio");
+    alpha.stressState.exitPortfolio.circulatingUsd = null;
 
     const rows = buildLiveWithheldCounterfactualReport(replay, metaById);
 
     expect(rows).toEqual([
       expect.objectContaining({
         assetId: "alpha",
+        supplyUsd: 0,
         liveGrade: "C",
         fallbackScore: null,
         fallbackGrade: "NR",

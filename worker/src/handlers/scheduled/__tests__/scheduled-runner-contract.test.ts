@@ -15,7 +15,7 @@ import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
 } from "../../../lib/public-dataset-snapshot-budget";
-import { SLOT_RUNNER_BY_KEY } from "../../scheduled";
+import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -24,11 +24,11 @@ function sorted(values: Iterable<string>): string[] {
 describe("scheduled runner contract", () => {
   it("keeps scheduled plans, slot runners, and cron definitions in sync", () => {
     const planKeys = Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[];
-    const runnerKeys = Object.keys(SLOT_RUNNER_BY_KEY) as CronScheduleKey[];
+    const runnerKeys = Object.keys(SLOT_RUNNER_LOADER_BY_KEY) as CronScheduleKey[];
 
     expect(sorted(runnerKeys)).toEqual(sorted(planKeys));
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
-      expect(SLOT_RUNNER_BY_KEY[plan.runnerKey]).toEqual(expect.any(Function));
+      expect(SLOT_RUNNER_LOADER_BY_KEY[plan.runnerKey]).toEqual(expect.any(Function));
     }
 
     const plannedStatusJobs = new Set(
@@ -73,7 +73,10 @@ describe("scheduled runner contract", () => {
     expect(daily?.scheduleKey).toBe("daily0805Utc");
     expect(weekly?.scheduleKey).toBe("daily0810Utc");
     expect(CRON_TIMEOUT_MS["daily-digest"]).toBe(14 * 60_000);
-    expect(CRON_TIMEOUT_MS["weekly-recap"]).toBe(12 * 60_000);
+    // Weekly matches daily at 14 min: its own 12-min Anthropic cap previously
+    // consumed the entire job budget, leaving no headroom for persistence and
+    // the two channel deliveries that follow the LLM call.
+    expect(CRON_TIMEOUT_MS["weekly-recap"]).toBe(14 * 60_000);
   });
 
   it("keeps shared cron job identities explicit", () => {

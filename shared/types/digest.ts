@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  DIGEST_SAFETY_MAP_TIERS,
+  getDigestSafetyMapCaptureIssues,
+  getDigestSafetyMapSummaryIssues,
+  isDigestSafetyMapUtcDate,
+  type DigestSafetyMapCapture,
+} from "./digest-safety-map-contract";
 import type { DepegDirection } from "./market";
 import {
   SafetyScorePublicationIdentitySchema,
@@ -8,6 +15,7 @@ import {
   type SafetyScoreV8PublicationIdentity,
   type SafetyScoreV9PublicationIdentity,
 } from "./safety-score-publication";
+export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "./digest-safety-map-contract";
 
 export const DigestSafetyContextSchema = z
   .discriminatedUnion("status", [
@@ -41,6 +49,43 @@ export const DigestSafetyContextSchema = z
   });
 export type DigestSafetyContext = z.output<typeof DigestSafetyContextSchema>;
 
+const DigestV9SafetyPillarSchema = z
+  .object({
+    score: z.number().nullable(),
+    evidenceLevel: z.string(),
+    freshness: z.string(),
+    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
+  })
+  .passthrough();
+
+const DigestV9SafetyCapSchema = z
+  .object({
+    kind: z.string(),
+    limit: z.number(),
+    reason: z.string(),
+    binding: z.boolean(),
+  })
+  .passthrough();
+
+export const DigestV9SafetyCoinSchema = z
+  .object({
+    symbol: z.string(),
+    grade: z.string(),
+    score: z.number().nullable(),
+    pillars: z
+      .object({
+        backing: DigestV9SafetyPillarSchema,
+        exit: DigestV9SafetyPillarSchema,
+        control: DigestV9SafetyPillarSchema,
+      })
+      .passthrough(),
+    reasonCodes: z.array(z.string()),
+    caps: z.array(DigestV9SafetyCapSchema),
+    bindingCap: DigestV9SafetyCapSchema.nullable(),
+  })
+  .passthrough();
+
+/** Normalized V8 digest coin after legacy snapshot defaults are applied. */
 export interface DigestV8SafetyCoin {
   symbol: string;
   grade: string;
@@ -49,33 +94,9 @@ export interface DigestV8SafetyCoin {
   liq: number | null;
 }
 
-export interface DigestV9SafetyPillar {
-  score: number | null;
-  evidenceLevel: string;
-  freshness: string;
-  reasons: { code: string; message: string }[];
-}
-
-export interface DigestV9SafetyCap {
-  kind: string;
-  limit: number;
-  reason: string;
-  binding: boolean;
-}
-
-export interface DigestV9SafetyCoin {
-  symbol: string;
-  grade: string;
-  score: number | null;
-  pillars: {
-    backing: DigestV9SafetyPillar;
-    exit: DigestV9SafetyPillar;
-    control: DigestV9SafetyPillar;
-  };
-  reasonCodes: string[];
-  caps: DigestV9SafetyCap[];
-  bindingCap: DigestV9SafetyCap | null;
-}
+export type DigestV9SafetyCoin = z.output<typeof DigestV9SafetyCoinSchema>;
+export type DigestV9SafetyPillar = DigestV9SafetyCoin["pillars"]["backing"];
+export type DigestV9SafetyCap = DigestV9SafetyCoin["caps"][number];
 
 export type DigestSafetyScores =
   | {
@@ -205,6 +226,74 @@ export interface DigestEditorialAudit {
   qualityIssueCodes?: string[];
 }
 
+const DigestSafetyMapTierSchema = z
+  .object({
+    tier: z.enum(DIGEST_SAFETY_MAP_TIERS),
+    range: z.string().trim().min(1),
+    count: z.number().int().nonnegative(),
+    mcapUsd: z.number().nonnegative(),
+    sharePct: z.number().min(0).max(100),
+    leaders: z
+      .array(
+        z
+          .object({
+            symbol: z.string().trim().min(1),
+            score: z.number().min(0).max(100),
+            mcapUsd: z.number().nonnegative(),
+          })
+          .strict(),
+      )
+      .max(3),
+  })
+  .strict();
+
+const DigestSafetyMapUtcDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(isDigestSafetyMapUtcDate, "Safety Map date must be a real UTC calendar day");
+
+export const DigestSafetyMapSummarySchema = z
+  .object({
+    date: DigestSafetyMapUtcDateSchema,
+    asOfSec: z.number().int().nonnegative(),
+    methodologyVersion: z.string().trim().min(1),
+    gradedCount: z.number().int().nonnegative(),
+    notRatedCount: z.number().int().nonnegative(),
+    totalMcapUsd: z.number().nonnegative(),
+    floorMcapByTier: z
+      .object({
+        a: z.number().nonnegative(),
+        other: z.number().nonnegative(),
+      })
+      .strict(),
+    tiers: z.array(DigestSafetyMapTierSchema).length(5),
+  })
+  .strict()
+  .superRefine((summary, ctx) => {
+    for (const issue of getDigestSafetyMapSummaryIssues(summary)) ctx.addIssue({ code: "custom", ...issue });
+  });
+
+export const DigestSafetyMapCaptureSchema = z
+  .object({
+    imageUrl: z.string().trim().min(1),
+    freshness: z.enum(["current", "carried-forward"]),
+    ageDays: z.number().int().nonnegative(),
+    manifest: z
+      .object({
+        date: DigestSafetyMapUtcDateSchema,
+        asOfSec: z.number().int().nonnegative(),
+        renderedAtSec: z.number().int().nonnegative(),
+        edition: z.literal("daily"),
+        bytes: z.object({ png: z.number().positive() }).strict(),
+        mapSummary: DigestSafetyMapSummarySchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((capture, ctx) => {
+    for (const issue of getDigestSafetyMapCaptureIssues(capture)) ctx.addIssue({ code: "custom", ...issue });
+  });
+
 export interface DigestInputData {
   digestVersion?: number;
   aggregateUniverse?: "core-stablecoins-v1";
@@ -225,6 +314,8 @@ export interface DigestInputData {
   editorialAudit?: DigestEditorialAudit;
   degradedSources?: string[];
   safetyContext?: DigestSafetyContext;
+  /** Dated, capture-matched Safety Score map used by this exact edition. */
+  safetyMap?: DigestSafetyMapCapture;
   /** Curated cause annotations for coins in the depeg set (why it broke). */
   causeContext?: {
     stablecoinId: string;
@@ -544,6 +635,14 @@ export const DigestArchiveEntrySchema = z.object({
   riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
   digestType: z.enum(["daily", "weekly"]).optional(),
   editionNumber: z.number().optional(),
+  /**
+   * Editorial style policy that produced the edition. Absent on editions
+   * authored before the policy existed; those read back as `pre-policy` rather
+   * than being back-filled, so an archive edition is never claimed to have
+   * followed rules that did not exist. See docs/editorial-style.md.
+   */
+  editorialStyleVersion: z.string().optional(),
+  editorialStyleHash: z.string().optional(),
 });
 export type DigestArchiveEntry = z.infer<typeof DigestArchiveEntrySchema>;
 
@@ -566,6 +665,13 @@ export const DigestStoredSnapshotSchema = z.array(
     generatedAt: DigestArchiveEntrySchema.shape.generatedAt,
     digestType: DigestArchiveEntrySchema.shape.digestType.default("daily"),
     editionNumber: DigestArchiveEntrySchema.shape.editionNumber.default(0),
+    /**
+     * Absent on editions authored before the policy. Storage stays optional and
+     * archives are never back-filled; the `pre-policy` sentinel is computed at
+     * the API and UI read boundary, never written into the snapshot.
+     */
+    editorialStyleVersion: DigestArchiveEntrySchema.shape.editorialStyleVersion,
+    editorialStyleHash: DigestArchiveEntrySchema.shape.editorialStyleHash,
   }),
 );
 export type DigestContentEntry = z.infer<typeof DigestStoredSnapshotSchema>[number];
@@ -577,24 +683,6 @@ const DigestV8SafetyProvenanceSchema = SafetyScoreV8PublicationIdentitySchema.ex
 const DigestV9SafetyProvenanceSchema = SafetyScoreV9PublicationIdentitySchema.extend({
   publishedAt: z.number().int().nonnegative(),
 });
-
-const DigestV9SafetyPillarSchema = z
-  .object({
-    score: z.number().nullable(),
-    evidenceLevel: z.string(),
-    freshness: z.string(),
-    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
-  })
-  .passthrough();
-
-const DigestV9SafetyCapSchema = z
-  .object({
-    kind: z.string(),
-    limit: z.number(),
-    reason: z.string(),
-    binding: z.boolean(),
-  })
-  .passthrough();
 
 const DigestV8SafetyScoresSnapshotSchema = z
   .object({
@@ -620,25 +708,7 @@ const DigestV8SafetyScoresSnapshotSchema = z
 const DigestV9SafetyScoresSnapshotSchema = z
   .object({
     model: z.literal("v9"),
-    mentionedCoins: z.array(
-      z
-        .object({
-          symbol: z.string(),
-          grade: z.string(),
-          score: z.number().nullable(),
-          pillars: z
-            .object({
-              backing: DigestV9SafetyPillarSchema,
-              exit: DigestV9SafetyPillarSchema,
-              control: DigestV9SafetyPillarSchema,
-            })
-            .passthrough(),
-          reasonCodes: z.array(z.string()),
-          caps: z.array(DigestV9SafetyCapSchema),
-          bindingCap: DigestV9SafetyCapSchema.nullable(),
-        })
-        .passthrough(),
-    ),
+    mentionedCoins: z.array(DigestV9SafetyCoinSchema),
     gradeDistribution: z.record(z.string(), z.number()),
     provenance: DigestV9SafetyProvenanceSchema,
   })
@@ -660,6 +730,9 @@ const DigestSnapshotInputDataSchema = z
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).optional(),
     riskTape: z.array(DigestRiskTapeItemSchema).optional(),
     safetyContext: DigestSafetyContextSchema.optional(),
+    // The frontend accepts pre-cutover aliases and performs its own complete,
+    // capture-matched parse before rendering; preserve that raw compatibility here.
+    safetyMap: z.unknown().optional(),
     topDepegs: z
       .array(
         z

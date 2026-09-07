@@ -3,11 +3,13 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 import {
+  OPENAPI_JSON_VALUE_ENDPOINT_KEYS,
   PUBLIC_API_ARTIFACT_ENDPOINTS,
   PUBLIC_API_ARTIFACT_TAGS,
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 import {
+  PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS,
   PUBLIC_API_RESPONSE_SCHEMAS,
   type PublicApiResponseSchemaName,
 } from "../lib/public-api-response-schemas";
@@ -88,20 +90,130 @@ function buildOperation(endpoint: PublicApiArtifactEndpoint) {
   };
 }
 
-export function buildOpenApiResponseSchemas() {
+const OPENAPI_SCHEMA_PREFIX = "#/components/schemas/";
+const OPENAPI_SCHEMA_SHAPE_KEYS = ["type", "properties", "oneOf", "anyOf", "$ref"] as const;
+const OPENAPI_INTENTIONALLY_GENERIC_SCHEMA_NAMES: Record<string, true> = Object.fromEntries(
+  [...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].map((name) => [name, true]),
+);
+
+function assertResponseSchemaIsDocumented(
+  name: string,
+  schema: Record<string, unknown>,
+) {
+  if (OPENAPI_INTENTIONALLY_GENERIC_SCHEMA_NAMES[name]) {
+    return;
+  }
+  if (!OPENAPI_SCHEMA_SHAPE_KEYS.some((key) => key in schema)) {
+    throw new Error(`Public API response schema "${name}" converted to an empty JSON Schema`);
+  }
+}
+
+const SHARED_COMPONENT_NAME = "SharedComponents";
+
+function normalizeComponentRefs(
+  value: unknown,
+  sharedSchemaNames: Record<string, string>,
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((child) => normalizeComponentRefs(child, sharedSchemaNames));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, normalizeComponentRefs(child, sharedSchemaNames)]),
+    );
+  }
+  if (typeof value === "string") {
+    const prefix = `${OPENAPI_SCHEMA_PREFIX}__shared#/$defs/`;
+    if (value.startsWith(prefix)) {
+      const schemaName = value.slice(prefix.length);
+      return `${OPENAPI_SCHEMA_PREFIX}${SHARED_COMPONENT_NAME}/$defs/${sharedSchemaNames[schemaName] ?? "SharedComponent_Unknown"}`;
+    }
+  }
+  return value;
+}
+
+function registerResponseSchemas(
+  responseSchemas: Record<string, z.ZodType>,
+) {
+  const registry = z.registry<{ id?: string }>();
+  const allSchemas = { ...PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS, ...responseSchemas };
+  const sortedEntries = Object.entries(allSchemas).sort(([left], [right]) => left.localeCompare(right));
+  for (const [name, schema] of sortedEntries) {
+    registry.add(schema, { id: name });
+  }
+  return registry;
+}
+
+function buildSharedSchemaNames(
+  sharedDefinitions: Record<string, unknown>,
+): Record<string, string> {
+  const usedNames = new Set([SHARED_COMPONENT_NAME]);
   return Object.fromEntries(
-    Object.entries(PUBLIC_API_RESPONSE_SCHEMAS).map(([name, schema]) => {
-      const { $schema: _dialect, ...openApiSchema } = z.toJSONSchema(schema, {
-        target: "draft-2020-12",
-        io: "output",
-        unrepresentable: "any",
-        reused: "inline",
-      });
-      return [name, openApiSchema];
-    }),
-    // `Object.fromEntries` widens to an index signature, which does not overlap
-    // the literal-key Record; keys are exhaustive by construction.
-  ) as unknown as Record<PublicApiResponseSchemaName, Record<string, unknown>>;
+    Object.entries(sharedDefinitions)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([definitionName, definition]) => {
+        const schema = definition as Record<string, unknown>;
+        const properties = schema.properties;
+        const propertyNames =
+          typeof properties === "object" && properties !== null && !Array.isArray(properties)
+            ? Object.keys(properties).slice(0, 3)
+            : [];
+        const shapeName = propertyNames.length > 0
+          ? propertyNames.join("_")
+          : typeof schema.type === "string"
+            ? schema.type
+            : "Union";
+        const baseName = `Shared_${shapeName.replace(/[^a-zA-Z0-9]+/g, "_")}`;
+        let componentName = baseName;
+        let suffix = 2;
+        while (usedNames.has(componentName)) {
+          componentName = `${baseName}_${suffix}`;
+          suffix += 1;
+        }
+        usedNames.add(componentName);
+        return [definitionName, componentName];
+      }),
+  );
+}
+
+export function buildOpenApiResponseSchemas(
+  responseSchemas: Record<string, z.ZodType> = PUBLIC_API_RESPONSE_SCHEMAS,
+) {
+  const registry = registerResponseSchemas(responseSchemas);
+
+  const { schemas } = z.toJSONSchema(registry, {
+    target: "draft-2020-12",
+    io: "output",
+    unrepresentable: "any",
+    reused: "ref",
+    metadata: registry,
+    uri: (id) => `${OPENAPI_SCHEMA_PREFIX}${id}`,
+  });
+
+  const sharedDefinitions = (schemas.__shared as { $defs?: Record<string, unknown> } | undefined)?.$defs ?? {};
+  const sharedSchemaNames = buildSharedSchemaNames(sharedDefinitions);
+
+  return Object.fromEntries(
+    Object.entries(schemas)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, schema]) => {
+        const { $schema: _dialect, $id: _id, ...schemaWithoutDialect } = schema;
+        const openApiSchema = normalizeComponentRefs(schemaWithoutDialect, sharedSchemaNames) as Record<string, unknown>;
+        if (name === "__shared") {
+          openApiSchema.$defs = Object.fromEntries(
+            Object.entries(sharedDefinitions)
+              .sort(([left], [right]) => left.localeCompare(right))
+              .map(([definitionName, definition]) => [
+                sharedSchemaNames[definitionName],
+                normalizeComponentRefs(definition, sharedSchemaNames),
+              ]),
+          );
+        } else {
+          assertResponseSchemaIsDocumented(name, openApiSchema);
+        }
+        return [name === "__shared" ? SHARED_COMPONENT_NAME : name, openApiSchema];
+      }),
+  ) as Record<string, Record<string, unknown>>;
 }
 
 export function buildOpenApiDocument() {

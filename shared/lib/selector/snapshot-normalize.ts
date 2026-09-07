@@ -4,7 +4,16 @@ import {
 } from "../stablecoins/client-registry";
 import { round1 } from "../math";
 import { buildRelaxableConstraints } from "./output-helpers";
-import { normalizeSelectorComponentValue } from "./scoring";
+import {
+  COVERAGE_SPARSE_FRACTION,
+  COVERAGE_UNEVEN_FRACTION,
+  LOW_CONFIDENCE_THRESHOLD,
+} from "./coverage-policy";
+import {
+  CRITICAL_SIGNAL_SET_BY_PROFILE,
+  missingSlotRedistributes,
+  normalizeSelectorComponentValue,
+} from "./scoring";
 import {
   SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS,
   SELECTOR_VERSION,
@@ -75,19 +84,9 @@ const KNOWN_MISSING_SIGNALS = new Set([
  * introduced (trading swapped `effectiveExit` for `safetyOverall`; treasury
  * dropped `resilience` and `dependencyRisk`), which is why the read path has to
  * gate them the same way it already gates the component projection.
+ * Current-generation snapshots reuse the engine's exported critical sets;
+ * only the pre-`selector-v2.0` sets stay local to this read path.
  */
-const CRITICAL_COMPONENTS_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
-  treasury: new Set(["safetyOverall", "pegStabilityHistory", "dewsInverted"]),
-  yield: new Set([
-    "pharosYieldScore",
-    "yieldVariance",
-    "safetyOverall",
-    "sourceRiskInverted",
-    "pegStabilityLive",
-    "liquidity",
-  ]),
-  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "safetyOverall"]),
-};
 /** The single pre-`selector-v2.0` set, shared by every `v1.0`-`v1.92` snapshot. */
 const LEGACY_CRITICAL_COMPONENTS_BY_PROFILE: Readonly<
   Record<SelectorProfile, ReadonlySet<WeightKey>>
@@ -115,7 +114,7 @@ function criticalComponentsFor(
   profile: SelectorProfile,
 ): ReadonlySet<WeightKey> {
   return isCurrentGenerationEngine(engineVersion)
-    ? CRITICAL_COMPONENTS_BY_PROFILE[profile]
+    ? CRITICAL_SIGNAL_SET_BY_PROFILE[profile]
     : LEGACY_CRITICAL_COMPONENTS_BY_PROFILE[profile];
 }
 
@@ -144,10 +143,6 @@ export function normalizeSelectorInput(input: SelectorInput): SelectorInput {
     decentralization: input.decentralization,
     custodyOk: input.custodyOk,
   } as SelectorInput;
-}
-
-function missingComponentRedistributes(profile: SelectorProfile, key: WeightKey): boolean {
-  return !(key === "bluechip" && profile !== "treasury");
 }
 
 function projectCurrentComponents(
@@ -183,7 +178,7 @@ function projectCurrentComponents(
         rawValue: component.rawValue,
         normalizedValue: component.normalizedValue,
         contribution: 0,
-        redistributed: missingComponentRedistributes(input.profile, component.key),
+        redistributed: missingSlotRedistributes(input.profile, component.key),
       };
     }
     const weight = (component.baseWeight / totalPresentWeight) * 100;
@@ -536,8 +531,8 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
   )).sort();
   const usedRelaxedFallback = relaxedReasons.length > 0;
   const skippedFraction = active > 0 ? skippedForCoverage.length / active : 0;
-  const sparse = skippedFraction > 0.25;
-  const uneven = !sparse && skippedFraction > 0.15;
+  const sparse = skippedFraction > COVERAGE_SPARSE_FRACTION;
+  const uneven = !sparse && skippedFraction > COVERAGE_UNEVEN_FRACTION;
   const minimumRedistributionCount = recommended.reduce(
     (total, entry) => total + entry.components.filter((component) => component.redistributed).length,
     0,
@@ -568,7 +563,7 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
       usedRelaxedFallback
       || sparse
       || recommended.length === 0
-      || (recommended[0]?.confidence ?? 100) < 70,
+      || (recommended[0]?.confidence ?? 100) < LOW_CONFIDENCE_THRESHOLD,
     usedRelaxedFallback,
     relaxedReasons,
     exclusionSummary,

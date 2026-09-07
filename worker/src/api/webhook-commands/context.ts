@@ -1,5 +1,7 @@
-import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
-import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import {
+  createTelegramWebhookIntent,
+  type TelegramCommandMutationContext,
+} from "../telegram-webhook-effect-fence";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /**
@@ -8,7 +10,7 @@ import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-roll
  * every handler uses every field. Reply helpers are bound to the active chat
  * to keep call sites short.
  */
-export interface WebhookCommandContext {
+export interface WebhookCommandContext extends TelegramCommandMutationContext {
   db: D1Database;
   chatId: string;
   chatType: string;
@@ -18,21 +20,6 @@ export interface WebhookCommandContext {
   recapRollout?: TelegramRecapRolloutPolicy;
   /** Stable timestamp captured when the operation was normalized. */
   operationNowSec?: number;
-  /** Crosses the at-most-once boundary immediately before a Bot API effect. */
-  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  prepareMutationOperationStatements?: () => D1PreparedStatement[];
-  preparePendingMutationAppliedStatement?: (input: {
-    chatId: string;
-    actionType: string;
-    actionPayload: string;
-    expiresAt: number;
-  }) => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
-  markMutationApplied?: () => Promise<void>;
-  storedIntent?: TelegramWebhookOperationIntent | null;
-  wasMutationApplied?: boolean;
   /** Fold replacement of an active pending flow into this command's mutation batch. */
   clearPendingOnMutation?: boolean;
   /** Sends a plain text message to the originating chat. */

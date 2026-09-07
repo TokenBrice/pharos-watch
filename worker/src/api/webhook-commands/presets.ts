@@ -1,4 +1,4 @@
-import { listTelegramPresets } from "../../lib/telegram-presets";
+import { listTelegramPresets } from "../../lib/telegram/presets";
 import { buildMiniAppOnlyKeyboard, buildPresetCatalogMessage } from "../telegram-webhook-messages";
 import type { WebhookCommandHandler } from "./context";
 

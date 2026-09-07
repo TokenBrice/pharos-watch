@@ -1,0 +1,15 @@
+{
+  "mechanism": "syusd-aegis",
+  "date": "2026-07-27-accountable-remeasure",
+  "sha256": "74fec0d8e6ae9b2f5a3fe522eb27a376fcd19f2e6d463a0c7b03e7fa14e12ba8",
+  "bytes": 3725,
+  "r2Key": "captures/syusd-aegis/2026-07-27-accountable-remeasure.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "syusd-aegis",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/syusd-aegis/2026-07-27-accountable-remeasure.json",
+    "capturedAt": "Aegis Accountable YUSD dashboard ts 1785170794268; operating reserves $36,095,505.74 supply $35,982,081.75 insurance $611,404.02; sYUSD is ERC-4626 staked YUSD wrapper (eth 0xfe0c…); homepage aegis.im re-opened"
+  }
+}

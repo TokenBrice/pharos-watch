@@ -14,7 +14,7 @@ export const MINT_AUTHORITY_V1: readonly MethodologyChangelogEntry[] = [
       "Route-family pricing was excluded by design: the V9 cap and claim semantics already price it, and pricing it twice would double-count",
       "`mintAuthority.authorityPosture` is a validated annotation that never affects the Safety Score; the depeg resolver still consumes it as a curated structural input, so re-curating a posture can move a published depeg verdict",
       "Curated-versus-derived posture disagreements are reported by `npm run safety-score-v9:mint-posture-queue`",
-      "Curated `mintAuthority` review data, control rows, custody labels, and incident callouts are unchanged — they describe the review and now feed only the V9 fact set",
+      "Curated `mintAuthority` review data, control rows, custody labels, and incident callouts are unchanged; they describe the review and now feed only the V9 fact set",
       "Further changes to mint risk are published in the Safety Score changelog, starting at 9.1",
     ],
     commits: [],

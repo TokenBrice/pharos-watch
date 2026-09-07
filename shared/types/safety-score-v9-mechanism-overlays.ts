@@ -4,6 +4,7 @@ import {
   V9MechanismProfileReviewSchema,
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
+import { StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum([
   "cdp",
@@ -60,7 +61,7 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
   .object({
     assetId: z.string().min(1),
     archetype: SafetyScoreV9MechanismArchetypeSchema,
-    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    reviewedAt: StrictIsoDateSchema,
     sources: z.array(SafetyScoreV9MechanismOverlaySourceSchema).min(1),
     notes: z.string().min(1),
     metrics: z.record(z.string(), z.number().finite().nullable()),
@@ -124,19 +125,12 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
     }
   });
 
-export const SafetyScoreV9MechanismReviewOverlayFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    note: z.string(),
-    overlays: z.array(SafetyScoreV9MechanismReviewOverlaySchema),
-  })
-  .strict()
-  .superRefine((file, ctx) => {
-    const ids = file.overlays.map((overlay) => overlay.assetId);
-    if (new Set(ids).size !== ids.length) {
-      ctx.addIssue({ code: "custom", path: ["overlays"], message: "Duplicate overlay assetId" });
-    }
-  });
+export const SafetyScoreV9MechanismReviewOverlayFileSchema = uniqueKeyedCollectionSchema({
+  itemSchema: SafetyScoreV9MechanismReviewOverlaySchema,
+  collectionKey: "overlays",
+  duplicateMessage: "Duplicate overlay assetId",
+  noteSchema: z.string(),
+});
 
 export type SafetyScoreV9MechanismReviewOverlay = z.infer<
   typeof SafetyScoreV9MechanismReviewOverlaySchema

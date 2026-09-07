@@ -133,30 +133,52 @@ export function adaptSgForgeCoinvertible(
 ): AdapterResult {
   const disclosureBlock = extractDisclosureBlock(html, coinType);
   const numberAndLastUpdate = extractNumberAndLastUpdate(disclosureBlock);
-  const bankMatch = disclosureBlock.match(/class="bank">\s*([^:]+?)\s*:\s*([\d.]+)%/i);
-  const cashMatch = disclosureBlock.match(
-    /class="coinvertible_cash"[\s\S]*?<div class="number">\s*([^<€$]+?)\s*[€$]/i,
-  );
+  const bankBlocks = [...disclosureBlock.matchAll(/class="bank">\s*([\s\S]*?)<\/div>/gi)];
+  const bankRows = bankBlocks.flatMap((bankBlock) => {
+    const bankText = stripTags(bankBlock[1] ?? "").replace(/\s+/g, " ").trim();
+    return [...bankText.matchAll(/(?:^|\|)\s*([^:|]+?)\s*:\s*([\d.,]+)%/g)].map((match) => ({
+      bankName: match[1]?.replace(/\s+/g, " ").trim() ?? "",
+      bankPct: Number.parseFloat((match[2] ?? "").replace(",", ".")),
+    }));
+  });
+  const cashBlockStart = disclosureBlock.search(/class="coinvertible_cash"/i);
+  const cashRows = cashBlockStart === -1
+    ? []
+    : [...disclosureBlock.slice(cashBlockStart).matchAll(
+      /class="number">\s*([^<€$]+?)\s*[€$]/gi,
+    )];
 
-  if (!numberAndLastUpdate || !numberAndLastUpdate.lastUpdate || !bankMatch || !cashMatch) {
+  if (
+    !numberAndLastUpdate
+    || !numberAndLastUpdate.lastUpdate
+    || bankRows.length === 0
+    || bankRows.length !== cashRows.length
+  ) {
     throw htmlLayoutChangedError("sgforge-coinvertible", "incomplete reserve-bank metadata");
   }
 
   const circulationAmount = normalizeLocalizedNumber(numberAndLastUpdate.amount);
   const lastUpdate = numberAndLastUpdate.lastUpdate;
-  const bankName = bankMatch[1]?.replace(/\s+/g, " ").trim();
-  const bankPct = Number.parseFloat(bankMatch[2] ?? "");
-  const cashAmount = normalizeLocalizedNumber(cashMatch[1]);
+  const bankBreakdown = bankRows.map((bank, index) => ({
+    ...bank,
+    cashAmount: normalizeLocalizedNumber(cashRows[index]?.[1] ?? ""),
+  }));
+  const bankPctTotal = bankBreakdown.reduce((sum, bank) => sum + bank.bankPct, 0);
+  const cashAmount = bankBreakdown.reduce((sum, bank) => sum + bank.cashAmount, 0);
   const sourceTimestamp = parseSgForgeLastUpdate(
     lastUpdate,
     options.nowSec ?? Math.floor(Date.now() / 1000),
   );
   const collateralizationRatio = cashAmount / circulationAmount;
 
-  if (!bankName || !Number.isFinite(bankPct) || bankPct <= 0) {
+  if (bankBreakdown.some((bank) => !bank.bankName || !Number.isFinite(bank.bankPct) || bank.bankPct <= 0)) {
     throw htmlLayoutChangedError("sgforge-coinvertible", "incomplete reserve-bank metadata");
   }
-  if (bankPct > 100) {
+  if (
+    bankBreakdown.some((bank) => bank.bankPct > 100)
+    || !Number.isFinite(bankPctTotal)
+    || Math.abs(bankPctTotal - 100) > 0.1
+  ) {
     throw htmlLayoutChangedError("sgforge-coinvertible", "reserve-bank percentage is outside expected range");
   }
   if (!Number.isFinite(collateralizationRatio) || collateralizationRatio <= 0) {
@@ -172,7 +194,7 @@ export function adaptSgForgeCoinvertible(
   return {
     slices: [
       {
-        name: `${coinType === "eur" ? "Euro" : "U.S. dollar"} cash deposits at ${bankName}`,
+        name: `${coinType === "eur" ? "Euro" : "U.S. dollar"} cash deposits at ${bankBreakdown.map((bank) => bank.bankName).join(" and ")}`,
         pct: 100,
         risk: "very-low",
       },
@@ -184,8 +206,9 @@ export function adaptSgForgeCoinvertible(
       cashAmount,
       collateralizationRatio,
       cashCoveragePct: collateralizationRatio * 100,
-      bankName,
-      bankPct,
+      details: {
+        bankBreakdown,
+      },
       ...(lastUpdate ? { lastUpdate } : {}),
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,

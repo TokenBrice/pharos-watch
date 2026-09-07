@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadVersionedSnapshotCache, type VersionedSnapshotCacheOptions } from "../versioned-snapshot-cache";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 type Reason = "missing" | "parse" | "payload" | "envelope" | "generation" | "methodology";
 interface Payload { computedAt: number }
@@ -36,13 +37,13 @@ const options: VersionedSnapshotCacheOptions<Payload, Reason> = {
 };
 
 function cacheDb(value: unknown, updatedAt = 1): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         first: async () => ({ value: JSON.stringify(value), updated_at: updatedAt }),
       }),
     }),
-  } as unknown as D1Database;
+  });
 }
 
 describe("versioned snapshot cache policy", () => {

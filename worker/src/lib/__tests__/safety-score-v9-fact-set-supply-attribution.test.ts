@@ -20,15 +20,15 @@ import {
 } from "@shared/lib/safety-score-v9/policy";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
-} from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
+} from "../safety-score-v9/extension";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
-} from "../safety-score-v9-xaut-supply-attribution-contract";
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,

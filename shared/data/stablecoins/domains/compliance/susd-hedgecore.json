@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — ART/EMT issuer CSVs reviewed; no HedgeCore/sUSD match found on 2026-08-14",
+        "label": "ESMA Interim MiCA Register: ART/EMT issuer CSVs reviewed; no HedgeCore/sUSD match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "HedgeCore — sUSD is a decentralized soul-bound stable asset generated through a USDC deposit",
+        "label": "HedgeCore: sUSD is a decentralized soul-bound stable asset generated through a USDC deposit",
         "url": "https://docs.hedgecore.io/docs/about/what-is-hedgecore"
       },
       {
-        "label": "HedgeCore protocol architecture — sUSD is a yield-accruing Venus Protocol position",
+        "label": "HedgeCore protocol architecture: sUSD is a yield-accruing Venus Protocol position",
         "url": "https://docs.hedgecore.io/docs/whitepaper/protocol-architecture"
       }
     ]

@@ -21,7 +21,7 @@ import {
   probeOptionalRedemptionRateBps,
 } from "../helpers";
 
-const signal = AbortSignal.timeout(5000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 function makeSingleAssetConfig(
   overrides: {
@@ -156,6 +156,7 @@ describe("fetchSingleAssetReserves", () => {
         redemptionRateProbe: {
           contract: "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
           selector: "0xc52861f2",
+          decimals: 18,
         },
       },
     });

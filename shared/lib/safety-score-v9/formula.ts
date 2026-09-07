@@ -382,6 +382,18 @@ function unresolvedFactAffectedScore(
   );
 }
 
+/** The C- floor is the lowest still-rated grade boundary; bounded-uncertainty
+ * attribution and the wrapper parent gate both compare against it. */
+export function v9CMinusFloor(policy: V9ValidatedPolicyEnvelope): number {
+  const floor =
+    policy.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")
+      ?.minScore;
+  if (floor === undefined) {
+    throw new Error("Safety Score v9 policy has no C- grade threshold");
+  }
+  return floor;
+}
+
 function boundedUncertaintyForFact(
   fact: V9UnresolvedFact,
   pillars: V9ScoringInput["pillars"],
@@ -410,11 +422,7 @@ function boundedUncertaintyForFact(
   ) {
     return null;
   }
-  const cMinusFloor =
-    policy.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore;
-  if (cMinusFloor === undefined) {
-    throw new Error("Safety Score v9 policy has no C- grade threshold");
-  }
+  const cMinusFloor = v9CMinusFloor(policy);
   const pillarReasonAffectedScore = pillarReasonProvenance.some(
     (candidate) =>
       candidate.fact.code === fact.code &&
@@ -1133,12 +1141,15 @@ function scoreV9InputWithCaps(
   // score whenever the rounded uncapped score would exceed the floored cap
   // limit, even if the raw score sits below the fractional limit (VER-001).
   const quantizedUncapped = preCapScoreRaw === null ? null : roundTo(preCapScoreRaw, formula.scoreDecimals);
+  // canonicalUniqueBy already returns candidates ordered by compareCapCandidates
+  // with this policy, so the first candidate under the quantized score is the
+  // binding one without re-sorting the filtered view.
   const bindingCandidate =
     preCapScoreRaw === null || quantizedUncapped === null
       ? null
-      : ([...dedupedCandidates]
-          .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-          .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null);
+      : (dedupedCandidates.find(
+          (cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped,
+        ) ?? null);
   const caps = dedupedCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
   const rateable = nrReasons.length === 0 && preCapScoreRaw !== null;
   const rawFinal = rateable ? Math.min(preCapScoreRaw!, bindingCandidate?.limit ?? SCORE_MAX) : null;
@@ -1192,10 +1203,16 @@ function scoreV9InputWithCaps(
     finalScore = null;
   }
 
+  // The public card suppresses every binding assertion on an NR outcome
+  // (`projectSafetyScoreV9Card` publishes `bindingCap: null`), and the card
+  // schema requires cap-causal attribution to reconcile to that published
+  // binding cap. Attribute against the cap the card will actually publish, so
+  // an NR trace never claims an active-depeg, parent, or evidence-ceiling cause.
+  const publishedBindingCap = finalScore === null ? null : bindingCandidate;
   const adverseAttribution = canonicalAdverseAttribution([
     ...measuredPillarAdverseAttribution,
     ...unresolvedFacts.flatMap<V9AdverseAttribution>((fact) =>
-      unresolvedFactAffectedScore(fact, bindingCandidate, policy)
+      unresolvedFactAffectedScore(fact, publishedBindingCap, policy)
         ? [{
             source: "reason",
             path: fact.path ?? `reason:${fact.code}`,
@@ -1207,7 +1224,7 @@ function scoreV9InputWithCaps(
     ...input.structuralSignals.flatMap<V9AdverseAttribution>((signal) =>
       signal.severity === "low" ||
       signalLimit(signal, policy) === null ||
-      !structuralSignalAffectedScore(signal, input.structuralSignals, scopedRisk, bindingCandidate, policy)
+      !structuralSignalAffectedScore(signal, input.structuralSignals, scopedRisk, publishedBindingCap, policy)
         ? []
         : [{
             source: "structural-signal",
@@ -1218,9 +1235,9 @@ function scoreV9InputWithCaps(
     ),
     ...scenarioCaps.flatMap<V9AdverseAttribution>((cap) =>
       (cap.pricedInPillar !== undefined ||
-        (bindingCandidate?.source === "structural" &&
-          bindingCandidate.kind === cap.kind &&
-          bindingCandidate.limit === cap.limit))
+        (publishedBindingCap?.source === "structural" &&
+          publishedBindingCap.kind === cap.kind &&
+          publishedBindingCap.limit === cap.limit))
         ? [{
             source: "structural-signal",
             path:
@@ -1232,13 +1249,13 @@ function scoreV9InputWithCaps(
           }]
         : [],
     ),
-    ...(bindingCandidate?.source === "parent"
+    ...(publishedBindingCap?.source === "parent"
       ? propagatedParentAdverseAttribution
       : []),
-    ...(bindingCandidate?.source === "parent"
+    ...(publishedBindingCap?.source === "parent"
       ? wrapperLocalAdverseAttribution
       : []),
-    ...(bindingCandidate?.source === "active-depeg"
+    ...(publishedBindingCap?.source === "active-depeg"
       ? [{
           source: "active-depeg" as const,
           path: "peg:active-depeg",
@@ -1261,16 +1278,16 @@ function scoreV9InputWithCaps(
       const attribution = boundedUncertaintyForFact(
         fact,
         input.pillars,
-        bindingCandidate,
+        publishedBindingCap,
         policy,
         pillarReasonProvenance,
       );
       return attribution === null ? [] : [attribution];
     }),
-    ...(bindingCandidate?.source === "parent"
+    ...(publishedBindingCap?.source === "parent"
       ? propagatedParentBoundedUncertaintyAttribution
       : []),
-    ...(bindingCandidate?.source === "parent"
+    ...(publishedBindingCap?.source === "parent"
       ? wrapperLocalBoundedUncertaintyAttribution
       : []),
   ]);

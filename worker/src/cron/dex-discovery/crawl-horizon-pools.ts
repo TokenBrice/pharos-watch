@@ -3,7 +3,7 @@ import {
   isHorizonDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal } from "../../lib/abort";
 import { CIRCUIT_SOURCE, STELLAR_HORIZON_API, USER_AGENT } from "../../lib/constants";
@@ -21,7 +21,7 @@ import {
   toStagedPool,
   type CrawlStageContext,
 } from "./staged-pool";
-import type { DexDeploymentProviderCheck } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
 
 const HORIZON_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const HORIZON_PAGE_LIMIT = 200;
@@ -51,7 +51,7 @@ export interface HorizonPoolsStageResult {
 const horizonRequestState = new IsolateLocalState(() => ({ lastStartedAtMs: 0 }));
 
 const trackedClassicAssets = new Map<string, { stablecoinId: string; address: string }>();
-for (const coin of ACTIVE_STABLECOINS) {
+for (const coin of WORKER_ACTIVE_STABLECOINS) {
   for (const deployment of [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])]) {
     if (deployment.chain !== "stellar") continue;
     const horizonAsset = getHorizonDiscoveryAsset(deployment.address, coin.symbol);
@@ -153,16 +153,11 @@ export async function crawlHorizonPoolsStage(input: {
 
   for (const target of targets) {
     if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
-    const stablecoinSymbol = ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
+    const stablecoinSymbol = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
     const horizonAsset = getHorizonDiscoveryAsset(target.address, stablecoinSymbol);
     if (!horizonAsset) {
       // A bare issuer needs the tracked asset code to form Horizon's filter.
-      providerChecks.push({
-        chain: target.chain,
-        address: target.address,
-        provider: "horizon",
-        status: "failure",
-      });
+      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
       continue;
     }
 
@@ -198,22 +193,12 @@ export async function crawlHorizonPoolsStage(input: {
           ? ((body as { _embedded: Record<string, unknown> })._embedded.records)
           : null;
       if (!Array.isArray(records)) {
-        providerChecks.push({
-          chain: target.chain,
-          address: target.address,
-          provider: "horizon",
-          status: "failure",
-        });
+        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
         continue;
       }
       const pools = records.map((record) => parseHorizonPool(record, horizonAsset));
       if (pools.some((pool) => pool == null)) {
-        providerChecks.push({
-          chain: target.chain,
-          address: target.address,
-          provider: "horizon",
-          status: "failure",
-        });
+        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
         continue;
       }
 
@@ -252,21 +237,12 @@ export async function crawlHorizonPoolsStage(input: {
           }),
         );
       }
-      providerChecks.push({
-        chain: target.chain,
-        address: target.address,
-        provider: "horizon",
-        status: "success",
+      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "success", {
         observedPoolCount: pools.length,
-      });
+      }));
     } catch (err) {
       if (input.context.signal?.aborted) throw err;
-      providerChecks.push({
-        chain: target.chain,
-        address: target.address,
-        provider: "horizon",
-        status: "failure",
-      });
+      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
     }
   }
 

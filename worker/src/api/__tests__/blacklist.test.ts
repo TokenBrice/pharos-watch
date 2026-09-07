@@ -139,7 +139,7 @@ describe("handleBlacklist", () => {
   });
 
   it("normalizes stablecoin filters before binding", async () => {
-    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
     const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
@@ -155,7 +155,7 @@ describe("handleBlacklist", () => {
   });
 
   it("accepts chainId filters and normalizes them before binding", async () => {
-    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=Ethereum"));
     const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
@@ -189,7 +189,7 @@ describe("handleBlacklist", () => {
   });
 
   it("accepts valid eventType filters before pagination", async () => {
-    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=destroy"));
     const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
@@ -210,7 +210,7 @@ describe("handleBlacklist", () => {
   });
 
   it("binds address search filters case-insensitively", async () => {
-    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?q=0xAbC"));
     const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
@@ -264,7 +264,7 @@ describe("handleBlacklist", () => {
   });
 
   it("maps limit=0 to default limit 1000", async () => {
-    const db = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
+    const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=0"));
     const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
@@ -277,7 +277,7 @@ describe("handleBlacklist", () => {
     const rejected = await handleBlacklist(mockD1([], { requireMatch: true }), new URL("https://x/api/blacklist?offset=25001"));
     expect(rejected.status).toBe(400);
 
-    const acceptedDb = mockD1([{ match: "blacklist_events", rows: [] }], { allowUnmatched: true });
+    const acceptedDb = mockD1([{ match: "blacklist_events", rows: [] }]);
     const accepted = await handleBlacklist(
       acceptedDb,
       new URL("https://x/api/blacklist?offset=25000"),

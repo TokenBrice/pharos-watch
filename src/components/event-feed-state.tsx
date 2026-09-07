@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
-import { ArrowDownUp, ShieldOff } from "lucide-react";
+import { ArrowDownUp, ExternalLink, ShieldOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableCell } from "@/components/table";
+import { formatAddress } from "@shared/lib/format";
 
 type EventFeedVariant = "flow" | "blacklist";
 
@@ -72,5 +74,22 @@ export function EventFeedEmpty({ variant }: { variant: EventFeedVariant }) {
       <Icon className="h-10 w-10 opacity-40" />
       <p className="text-sm">{empty.message}</p>
     </div>
+  );
+}
+
+export function EventTransactionCell({ txHash, href }: { txHash: string; href: string }) {
+  return (
+    <TableCell className="text-center">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
+        aria-label="View transaction on block explorer"
+      >
+        <span className="hidden md:inline">{formatAddress(txHash)}</span>
+        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+      </a>
+    </TableCell>
   );
 }

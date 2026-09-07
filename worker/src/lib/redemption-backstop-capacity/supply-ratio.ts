@@ -23,6 +23,17 @@ export async function resolveSupplyRatioCapacity(
       capacitySemantics,
     );
   }
+  if (supplyUsd <= 0) {
+    return {
+      ...buildMissingSupplyResolution(
+        REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
+        capacityConfidence,
+        capacitySemantics,
+      ),
+      resolutionState: "missing-capacity",
+      notes: ["Current supply is non-positive; route retained as configured but unrated"],
+    };
+  }
   const immediateUsd = supplyUsd * model.ratio;
   const dailyLimitCapsCapacity = model.dailyLimitUsd != null && model.dailyLimitUsd < immediateUsd;
   const scoringUsd = model.dailyLimitUsd != null ? Math.min(immediateUsd, model.dailyLimitUsd) : immediateUsd;

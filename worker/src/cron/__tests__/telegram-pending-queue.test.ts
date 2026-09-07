@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   serializePendingMarkupPolicy,
-} from "../../lib/telegram-pending-provenance";
+} from "../../lib/telegram/pending-provenance";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
@@ -43,8 +43,8 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/telegram")>();
   return { ...actual, sendToChat: mockSendToChat };
 });
-vi.mock("../../lib/telegram-transport-control", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/telegram-transport-control")>();
+vi.mock("../../lib/telegram/transport-control", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/telegram/transport-control")>();
   return {
     ...actual,
     claimTelegramTransportPermit: transportMocks.claim,
@@ -52,7 +52,7 @@ vi.mock("../../lib/telegram-transport-control", async (importOriginal) => {
     recordTelegramTransportOutcomes: transportMocks.record,
   };
 });
-vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({
+vi.mock("../../lib/telegram/subscriber-lifecycle", () => ({
   migrateTelegramChatId: mockMigrateTelegramChatId,
 }));
 
@@ -72,12 +72,12 @@ const {
   SEND_BATCH_SIZE,
   EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
 } = await import("../telegram-pending");
-const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram-pending-queue");
+const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram/pending-queue");
 const {
   readTelegramPendingCapacitySnapshot,
   estimateTelegramDrainTimeSec,
-} = await import("../../lib/telegram-pending-capacity");
-const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
+} = await import("../../lib/telegram/pending-capacity");
+const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram/alerts");
 
 beforeEach(() => {
   resetTelegramPendingMocks({

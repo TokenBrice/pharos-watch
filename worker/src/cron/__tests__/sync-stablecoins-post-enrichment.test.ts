@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
+import {
+  loadPriceCorroborationObservations,
+  writePriceCorroborationObservations,
+} from "../sync-stablecoins/price-corroboration-observations";
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
@@ -63,6 +70,69 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
 describe("runPostEnrichmentPricePipeline", () => {
   beforeEach(() => {
     fetchCurrentNativePegImpliedUsdQuotesMock.mockReset().mockResolvedValue(new Map());
+  });
+
+  it.each([
+    ["tryb-bilira", "peggedTRY", 0.022, "coingecko-low-volume", 40 * 3600, 900, true],
+    ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 40 * 3600, 900, true],
+    ["cadm-mento", "peggedCAD", 0.73, "coingecko-low-volume", 40 * 3600, 900, true],
+    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 1200, 900, true],
+    ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 8 * 86400, 900, false],
+    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 3601, 900, false],
+    ["usdt-tether", "peggedUSD", 1, "coingecko-onchain-address", 901, 900, false],
+    ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 41 * 3600, 3601, true],
+    ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 40 * 3600, 4501, false],
+    ["usdt-tether", "peggedUSD", 1, "cached", 60, 30, false],
+    ["usdt-tether", "peggedUSD", 0.45, "coinmarketcap", 60, 30, false],
+    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", -60, 30, false],
+  ] as const)("revalidates staged %s %s %s %s evidence aged %s with stage age %s", async (
+    id, pegType, price, source, observationAge, stageAge, accepted,
+  ) => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    const asset = makeAsset({ id, pegType, price: null, priceSource: undefined, priceConfidence: null });
+    try {
+      await writePriceCorroborationObservations(db, [{
+        id, source, price, observedAt: now - observationAge, observedAtMode: "upstream",
+      }], now - stageAge);
+      const result = await runPostEnrichmentPricePipeline({
+        assets: [asset], missingBefore: new Set([id]), db, syncStartSec: now,
+        priceCache: new Map(), validationContexts: { get: makeValidationContext },
+        validationReferences: { rates: { [pegType]: pegType === "peggedUSD" ? 1 : price }, type: "fresh", updatedAt: now },
+        previousTrustedPrices: new Map(), returnIfAborted: () => null,
+        abortResult: () => ({ status: "error", metadata: "{}" }),
+      }, "");
+      expect(isAbortResult(result)).toBe(false);
+      const normalized = normalizeStablecoinsPayload({ peggedAssets: [asset] }).peggedAssets[0]!;
+      expect(normalized.price).toBe(accepted ? price : null);
+      if (accepted) {
+        expect(normalized.priceSource).toBe(source);
+        expect(normalized.priceConfidence).toBe("fallback");
+        expect(normalized.priceObservedAt).toBe(now - observationAge);
+      }
+    } finally {
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
+
+  it("clears an empty hourly collection and rejects an older stage writer", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    const rows = [{ id: "usdt-tether", source: "coinmarketcap", price: 1, observedAt: 1000, observedAtMode: "upstream" as const }];
+    try {
+      await writePriceCorroborationObservations(db, rows, 1000);
+      expect((await loadPriceCorroborationObservations(db, 1001)).size).toBe(1);
+      await writePriceCorroborationObservations(db, [], 1002);
+      await writePriceCorroborationObservations(db, rows, 1001);
+      expect((await loadPriceCorroborationObservations(db, 1003)).size).toBe(0);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("replaces weak non-USD fiat prices with fresh native-implied USD prices", async () => {

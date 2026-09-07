@@ -8,10 +8,15 @@ import {
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildDdrMethodologyEnvelope } from "./depeg-resolver-methodology";
 
-/** Published as `_meta.assessmentRowLimit`; retained for response-shape compatibility. */
+/**
+ * Published as `_meta.assessmentRowLimit`; retained for response-shape
+ * compatibility. `assessmentRowsTruncated` below is likewise a retained
+ * public field that is always false since the v2 review rewrite.
+ */
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;
 const DDRR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolverReview;
-const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
+/** Single source for the incident read cap; imported by the cron. */
+export const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
 const DDRR_PUBLIC_ROW_CAP = 400;
 
 export function buildEmptyDdrrSummary(): DdrrSummary {
@@ -23,7 +28,6 @@ export function buildDdrrResponseEnvelope(input: {
   summary: DdrrSummary;
   rows: DdrrResponse["rows"];
   assessedEventCount: number;
-  assessmentRowsTruncated: boolean;
   incidentRowLimit?: number;
   incidentRowsTruncated?: boolean;
   methodologyVersions: string[];
@@ -50,7 +54,7 @@ export function buildDdrrResponseEnvelope(input: {
       durationScoredCount: input.summary.headline.durationScoredCount,
       verdictScoredCount: input.summary.headline.recoveryLikelihoodScoredCount,
       assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
-      assessmentRowsTruncated: input.assessmentRowsTruncated,
+      assessmentRowsTruncated: false,
       incidentRowLimit: input.incidentRowLimit ?? DDRR_V2_INCIDENT_ROW_CAP,
       incidentRowsTruncated: input.incidentRowsTruncated ?? false,
       publicRowLimit: DDRR_PUBLIC_ROW_CAP,

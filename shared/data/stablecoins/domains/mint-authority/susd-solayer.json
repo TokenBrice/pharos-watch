@@ -42,7 +42,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana finalized slot 425792161, getAccountInfo on 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru returned owner=11111111111111111111111111111111 (System Program), executable=false, data=empty — confirming a plain keypair (EOA-equivalent), not a multisig or program. This keypair is the BPFUpgradeable upgrade authority for the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
+        "evidence": "At Solana finalized slot 425792161, getAccountInfo on 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru returned owner=11111111111111111111111111111111 (System Program), executable=false, data=empty, confirming a plain keypair (EOA-equivalent), not a multisig or program. This keypair is the BPFUpgradeable upgrade authority for the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
       }
     ],
     "economicCapSemantics": "unbounded",

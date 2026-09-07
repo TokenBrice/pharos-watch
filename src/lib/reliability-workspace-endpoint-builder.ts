@@ -1,18 +1,11 @@
 import type { EndpointProbeResult } from "@shared/types";
 import { getProbeDisplayStatus } from "@/lib/status-dashboard-model";
-import type {
-  ReliabilityEndpointModel,
-  ReliabilityIssueKind,
-  ReliabilityWorkspaceInput,
+import {
+  RELIABILITY_ISSUE_KIND_RANK,
+  type ReliabilityEndpointModel,
+  type ReliabilityIssueKind,
+  type ReliabilityWorkspaceInput,
 } from "@/lib/reliability-workspace-model";
-
-const ISSUE_KIND_RANK: Record<ReliabilityIssueKind, number> = {
-  informational: 0,
-  maintenance: 1,
-  warning: 2,
-  unknown: 3,
-  critical: 4,
-};
 
 export function probeKind(probe: EndpointProbeResult): ReliabilityIssueKind | null {
   const status = getProbeDisplayStatus(probe);
@@ -34,8 +27,8 @@ export function buildEndpointModel(input: ReliabilityWorkspaceInput): Reliabilit
   const unhealthyProbes = probes
     .filter((probe) => probeKind(probe) != null)
     .sort((left, right) => {
-      const leftRank = ISSUE_KIND_RANK[probeKind(left) ?? "informational"];
-      const rightRank = ISSUE_KIND_RANK[probeKind(right) ?? "informational"];
+      const leftRank = RELIABILITY_ISSUE_KIND_RANK[probeKind(left) ?? "informational"];
+      const rightRank = RELIABILITY_ISSUE_KIND_RANK[probeKind(right) ?? "informational"];
       return rightRank - leftRank || left.path.localeCompare(right.path);
     });
   const healthyProbes = probes.filter((probe) => probeKind(probe) == null).sort((a, b) => a.path.localeCompare(b.path));

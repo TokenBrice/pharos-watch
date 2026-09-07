@@ -3,6 +3,7 @@ import { HomeAltClient } from "@/components/home-alt-client";
 import { HomeBlogBanner } from "@/components/home-blog-banner";
 import { HomeAltHero } from "@/components/home-alt-hero";
 import { HomeMediaStrip } from "@/components/home-media-strip";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -42,10 +43,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
+      <JsonLdScript
+        json={safeJsonLd(
             buildCollectionItemListJsonLd({
               url: SITE_URL,
               collectionId: `${SITE_URL}/#collection`,
@@ -56,8 +55,7 @@ export default function HomePage() {
               itemListDescription: `Top 20 of ${total} core stablecoins and cash equivalents tracked by Pharos.`,
               entries: itemListEntries,
             }),
-          ),
-        }}
+          )}
       />
       <HomeBlogBanner />
       <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />

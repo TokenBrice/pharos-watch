@@ -12,7 +12,10 @@ import {
   runCli,
   validateReviewedRedemptionDispositions,
 } from "../maintenance/generate-redemption-coverage-audit";
-import type { ReviewedRedemptionCoverageDisposition } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
+import {
+  REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
+  type ReviewedRedemptionCoverageDisposition,
+} from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import { makeCoverageCoin } from "./helpers/coverage-coin";
 
 const coin = (input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">) =>
@@ -144,6 +147,21 @@ describe("generate-redemption-coverage-audit", () => {
     expect(() =>
       validateReviewedRedemptionDispositions({ ...validationInput, reviewedDispositions: [review("frozen")] }),
     ).toThrow("stablecoin is not active");
+  });
+
+  it("does not retain a reviewed disposition once the eMXN route is configured", () => {
+    const emxn = coin({ id: "emxn-telcoin" });
+    const emxnDispositions = REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.filter((row) => row.id === emxn.id);
+
+    expect(emxnDispositions).toEqual([]);
+    expect(() =>
+      validateReviewedRedemptionDispositions({
+        reviewedDispositions: emxnDispositions,
+        trackedCoins: [emxn],
+        activeCoins: [emxn],
+        configuredIds: new Set([emxn.id]),
+      }),
+    ).not.toThrow();
   });
 
   it("separates non-active unconfigured coins from active gaps", () => {
@@ -278,6 +296,29 @@ describe("generate-redemption-coverage-audit", () => {
       summary: { activeDefaultClassified: number };
     };
     expect(report.summary.activeDefaultClassified).toBe(0);
+  });
+
+  it("writes the full report and exits non-zero when multiple reviewed rows are invalid", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-invalid-"));
+    const invalidAudit = () =>
+      generateRedemptionCoverageAudit({
+        trackedCoins: [coin({ id: "stale-alpha" }), coin({ id: "stale-beta" }), coin({ id: "reviewed-gap" })],
+        activeCoins: [coin({ id: "stale-alpha" }), coin({ id: "stale-beta" }), coin({ id: "reviewed-gap" })],
+        configs: { "stale-alpha": configuredRoute, "stale-beta": configuredRoute },
+        reviewedDispositions: [review("stale-alpha"), review("stale-beta"), review("reviewed-gap")],
+        generatedAt: "2026-05-12T00:00:00.000Z",
+      });
+
+    expect(runCli(["--json", "--report", "invalid.json"], cwd, invalidAudit)).toBe(1);
+    const report = JSON.parse(readFileSync(join(cwd, "invalid.json"), "utf8")) as {
+      validationErrors: string[];
+      activeUnconfigured: Array<{ id: string }>;
+    };
+    expect(report.validationErrors).toEqual([
+      "Reviewed redemption disposition is stale because a route is now configured: stale-alpha",
+      "Reviewed redemption disposition is stale because a route is now configured: stale-beta",
+    ]);
+    expect(report.activeUnconfigured).toEqual([expect.objectContaining({ id: "reviewed-gap" })]);
   });
 
   it("keeps the default-classified count at strict zero", () => {

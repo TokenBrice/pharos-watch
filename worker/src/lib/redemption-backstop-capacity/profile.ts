@@ -3,9 +3,9 @@ import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { RedemptionBackstopProviderId } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
-import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
-import type { RedemptionRouteAvailability } from "../redemption-backstop-availability";
-import type { RedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
+import type { RedemptionRouteAvailability } from "../redemption-backstop/availability";
+import type { RedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 
 export interface CapacityResolution {
   immediateCapacityUsd: number | null;

@@ -3,8 +3,7 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { mergeDexPriceObservationMap } from "./orchestrator-phases/price-obs";
-import type { SubgraphPriceObservation } from "./subgraph-helpers";
+import { mergeDexPriceObservationMap, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type {
   AerodromeLookups,
   DexPriceObs,
@@ -374,6 +373,10 @@ export async function fetchUniswapV4Data(
     missingApiKeyMessage:
       "[dex-liquidity] No GRAPH_API_KEY, skipping Uniswap V4 execution enrichment",
     familyLabel: "Uniswap V4 subgraph",
+    // Keep the expanded shadow source family inside the existing five-header
+    // source-lane cohort. RPC quoting remains in measured execution's isolated
+    // trigger and is never opened from this source pass.
+    maxConcurrency: 5,
     createLookups: () => ({
       uniswapV4ExecutionCandidates: new Map(),
     }),

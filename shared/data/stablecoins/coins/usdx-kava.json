@@ -29,7 +29,6 @@
     ]
   },
   "implementationLaunchDate": "2020-06-10",
-  "geckoId": "usdx",
   "cmcSlug": "usdx-kava",
   "protocolSlug": "kava-mint",
   "links": [
@@ -53,6 +52,7 @@
       "decimals": 6
     }
   ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",
   "notices": [
     {

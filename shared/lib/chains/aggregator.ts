@@ -4,7 +4,7 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRawOrNull } from "../supply";
 import { relativeChangeRatio } from "../stats";
-import { ZERO_RATIO } from "../../types/ratio";
+import { ZERO_RATIO, type Ratio } from "../../types/ratio";
 import {
   ACTIVE_BACKING_DIVERSITY_TYPES,
   computeConcentrationScore,
@@ -34,13 +34,19 @@ export interface ChainAggregatorAsset {
   circulatingPrevDay?: Record<string, number>;
   circulatingPrevWeek?: Record<string, number>;
   circulatingPrevMonth?: Record<string, number> | null;
-  chainCirculating?: Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>;
+  chainCirculating?: Record<string, { chainId?: string; current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>;
 }
 
 export interface ChainAggregatorInput {
   peggedAssets: ChainAggregatorAsset[];
   safetyScores: Record<string, number>;
   pegRates: Record<string, number>;
+  /**
+   * When set, the response also carries `chainDetail` with the full coin rows
+   * for that chain (names, per-coin deltas, chain-local shares). Absent input
+   * keeps the leaderboard payload byte-identical.
+   */
+  detailChainId?: string;
 }
 
 interface ChainAccumulator {
@@ -51,12 +57,16 @@ interface ChainAccumulator {
   pairedPrevMonth: number;
   coins: Array<{
     id: string;
+    name: string;
     symbol: string;
     supplyUsd: number;
     price: number | null;
     pegType: string | undefined;
     safetyScore: number | null;
     backing: BackingType | undefined;
+    prevDay: number;
+    prevWeek: number;
+    prevMonth: number;
   }>;
 }
 
@@ -89,7 +99,8 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     const pairedChainCirculating = new Map<string, { current: number; prevMonth: number }>();
     for (const [rawChainId, data] of Object.entries(asset.chainCirculating ?? {})) {
       if (!data || typeof data !== "object") continue;
-      const chainId = resolveChainId(rawChainId);
+      const chainId = (typeof data.chainId === "string" ? resolveChainId(data.chainId) : null)
+        ?? resolveChainId(rawChainId);
       const prevMonth = data.circulatingPrevMonth;
       if (!chainId || typeof prevMonth !== "number" || !Number.isFinite(prevMonth) || prevMonth < 0) continue;
       const current = typeof data.current === "number" && Number.isFinite(data.current) && data.current >= 0
@@ -113,7 +124,6 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         acc = { totalUsd: 0, prevDay: 0, prevWeek: 0, pairedCurrent30d: 0, pairedPrevMonth: 0, coins: [] };
         accumulators.set(chainId, acc);
       }
-
       acc.totalUsd += current;
       acc.prevDay += data.circulatingPrevDay;
       acc.prevWeek += data.circulatingPrevWeek;
@@ -126,12 +136,16 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       const meta = TRACKED_META_BY_ID.get(asset.id);
       acc.coins.push({
         id: asset.id,
+        name: asset.name ?? asset.symbol,
         symbol: asset.symbol,
         supplyUsd: current,
         price: typeof asset.price === "number" ? asset.price : null,
         pegType: asset.pegType,
         safetyScore: safetyScores[asset.id] ?? null,
         backing: meta?.flags?.backing,
+        prevDay: data.circulatingPrevDay,
+        prevWeek: data.circulatingPrevWeek,
+        prevMonth: data.circulatingPrevMonth,
       });
     }
   }
@@ -255,6 +269,33 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
 
   chains.sort((a, b) => b.totalUsd - a.totalUsd);
 
+  const detailAcc = input.detailChainId != null ? accumulators.get(input.detailChainId) : undefined;
+  const chainDetail = detailAcc && detailAcc.totalUsd > 0 && CHAIN_META[input.detailChainId!]
+    ? {
+      chainId: input.detailChainId!,
+      totalUsd: detailAcc.totalUsd,
+      coins: [...detailAcc.coins]
+        .sort((a, b) => b.supplyUsd - a.supplyUsd)
+        .map((coin) => ({
+          id: coin.id,
+          name: coin.name,
+          symbol: coin.symbol,
+          price: coin.price,
+          pegType: coin.pegType,
+          supplyUsd: coin.supplyUsd,
+          // Chain-local denominator: the chain's own total, never the global aggregate.
+          chainShare: (coin.supplyUsd / detailAcc.totalUsd) as Ratio,
+          change24h: coin.supplyUsd - coin.prevDay,
+          change24hPct: relativeChangeRatio(coin.supplyUsd, coin.prevDay) ?? ZERO_RATIO,
+          change7d: coin.supplyUsd - coin.prevWeek,
+          change7dPct: relativeChangeRatio(coin.supplyUsd, coin.prevWeek) ?? ZERO_RATIO,
+          change30d: coin.supplyUsd - coin.prevMonth,
+          change30dPct: relativeChangeRatio(coin.supplyUsd, coin.prevMonth) ?? ZERO_RATIO,
+          backing: coin.backing,
+        })),
+    }
+    : undefined;
+
   return {
     chains,
     globalTotalUsd,
@@ -265,6 +306,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     globalChange30dPct: globalPrevMonthUsd > 0
       ? (relativeChangeRatio(globalPairedCurrent30dUsd, globalPrevMonthUsd) ?? ZERO_RATIO)
       : ZERO_RATIO,
+    ...(chainDetail ? { chainDetail } : {}),
     updatedAt: Math.floor(Date.now() / 1000),
     healthMethodologyVersion: HEALTH_METHODOLOGY_VERSION,
   };

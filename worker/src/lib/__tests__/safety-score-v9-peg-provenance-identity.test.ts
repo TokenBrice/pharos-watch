@@ -7,14 +7,14 @@ import {
   createReportCardsFixedInput,
   normalizeFixedInput,
 } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   buildSafetyScoreV9PegProvenanceSeedCacheEntry,
   buildSafetyScoreV9PegProvenanceSummary,
   parseSafetyScoreV9PegProvenanceSeed,
   projectSafetyScoreV9PegScoreResult,
-} from "../safety-score-v9-peg-provenance";
+} from "../safety-score-v9/peg-provenance";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
 const ASSET_ID = "usdg-paxos";

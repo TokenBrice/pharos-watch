@@ -1,4 +1,4 @@
-import type { CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
@@ -9,7 +9,10 @@ import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import { computeRawStatus } from "../lib/status-evaluation";
+import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
+import { loadStatusSupplements } from "../lib/status/supplements";
+import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { route } from "../router";
 import {
   buildDiscrepancy,
@@ -19,8 +22,8 @@ import {
   type StatusLevel,
 } from "../lib/status-reliability";
 import { hasDivergence } from "../lib/status-discrepancy-view";
-import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import type { CloudflareD1StatusConfig } from "../lib/env";
+import type { CloudflareD1StatusBindings, CloudflareD1StatusConfig } from "../lib/env";
+import type { WorkerCanaryMode } from "../lib/canary-checks";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
 import { refreshD1TableGrowthSnapshot } from "../lib/status/d1-usage";
 
@@ -77,10 +80,14 @@ interface ExternalProductionProbeTarget {
 export interface StatusSelfCheckOptions {
   selfUrl?: string;
   signal?: AbortSignal;
+  reportProgress?: CronProgressReporter;
   ctx?: ExecutionContext;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   siteApiSharedSecret?: string | null;
   d1StatusConfig?: CloudflareD1StatusConfig;
+  coingeckoApiKey?: string | null;
+  cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
+  workerCanaryMode?: WorkerCanaryMode;
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -600,7 +607,7 @@ async function collectStatusSelfCheckProbes(
   now: number,
   options: Pick<
     StatusSelfCheckOptions,
-    "selfUrl" | "signal" | "ctx" | "mintBurnFreshnessConfig" | "siteApiSharedSecret"
+    "selfUrl" | "signal" | "ctx" | "mintBurnFreshnessConfig" | "siteApiSharedSecret" | "reportProgress"
   >,
 ): Promise<CollectedStatusSelfCheckProbes> {
   const { selfUrl, signal, ctx, mintBurnFreshnessConfig, siteApiSharedSecret } = options;
@@ -611,6 +618,14 @@ async function collectStatusSelfCheckProbes(
 
   for (const path of probeSelection.paths) {
     if (signal?.aborted) break;
+    await options.reportProgress?.({
+      // A distinct bounded stage prevents progress coalescing from retaining
+      // the preceding route when the isolate terminates during this probe.
+      stage: `route-probe:${path}`,
+      itemsDone: internalProbes.length,
+      itemsTotal: probeSelection.paths.length,
+      metadata: { path },
+    });
     internalProbes.push(
       ctx
         ? await probePathInternally(db, path, probeBaseUrl, ctx, mintBurnFreshnessConfig)
@@ -626,6 +641,7 @@ async function collectStatusSelfCheckProbes(
     );
   }
 
+  await options.reportProgress?.({ stage: "external-probes" });
   const externalProbes = await runExternalProductionProbes(siteApiSharedSecret, signal);
   const probes: ProbeResult[] = [...internalProbes, ...externalProbes];
   const internalSummary = summarizeProbePlane(internalProbes);
@@ -645,10 +661,12 @@ async function collectStatusSelfCheckProbes(
 
 export async function runStatusSelfCheck(db: D1Database, options: StatusSelfCheckOptions = {}): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);
+  await options.reportProgress?.({ stage: "d1-capacity" });
   const d1CapacityMonitoring = options.d1StatusConfig
     ? await refreshD1CapacityMonitoring(db, options.d1StatusConfig, now)
     : null;
   let d1TableGrowthMonitoring: Record<string, unknown> | null = null;
+  await options.reportProgress?.({ stage: "d1-table-growth" });
   try {
     const snapshot = await refreshD1TableGrowthSnapshot(db, now);
     d1TableGrowthMonitoring = snapshot
@@ -701,6 +719,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     p95LatencyMs,
   } satisfies StatusProbeSummary;
 
+  await options.reportProgress?.({ stage: "probe-persistence" });
   const probePersistenceSucceeded = await writeStatusProbeRun(db, now, {
     status: probeSummary.status,
     sampleCount: probeSummary.sampleCount,
@@ -727,10 +746,35 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     },
   });
 
+  await options.reportProgress?.({ stage: "raw-status" });
   const raw = await computeRawStatus(db, now);
   const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
-  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
+  const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
+    ?? (options.d1StatusConfig
+      ? {
+          CLOUDFLARE_ACCOUNT_ID: options.d1StatusConfig.accountId,
+          CLOUDFLARE_D1_STATUS_API_TOKEN: options.d1StatusConfig.apiToken,
+          CLOUDFLARE_D1_DATABASE_ID: options.d1StatusConfig.databaseId,
+        }
+      : undefined);
+  await options.reportProgress?.({ stage: "status-supplements" });
+  const [publicHealthAssessment, supplements] = await Promise.all([
+    assessPublicHealth(db, now, { logPrefix: "status-self-check" }),
+    loadStatusSupplements(
+      db,
+      now,
+      raw.crons,
+      options.coingeckoApiKey,
+      cloudflareD1StatusBindings,
+      options.workerCanaryMode ?? "off",
+    ),
+  ]);
+  await options.reportProgress?.({ stage: "snapshot-publication" });
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, {
+    publicHealth: buildPublicHealthResponse(publicHealthAssessment, now),
+    supplements,
+  });
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);

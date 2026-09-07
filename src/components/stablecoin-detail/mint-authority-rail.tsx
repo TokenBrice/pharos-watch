@@ -5,6 +5,7 @@ import {
   FileCode2,
   KeyRound,
   Landmark,
+  Network,
   Server,
   ShieldQuestion,
   Users,
@@ -27,6 +28,7 @@ const AUTHORITY_GLYPHS: Record<string, { icon: LucideIcon; caution?: boolean }> 
   "dao-governor": { icon: Landmark },
   contract: { icon: FileCode2 },
   "issuer-backend": { icon: Server },
+  "validator-quorum": { icon: Network },
   bridge: { icon: ArrowLeftRight },
   custodian: { icon: Vault },
 };

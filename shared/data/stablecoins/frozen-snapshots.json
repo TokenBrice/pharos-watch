@@ -1358,5 +1358,61 @@
         }
       ]
     }
+  },
+  {
+    "id": "dusd-fluid",
+    "capturedAt": "2026-09-01T14:45:57Z",
+    "peggedAssetRow": {
+      "id": "dusd-fluid",
+      "name": "DigitalDollar",
+      "symbol": "DUSD",
+      "geckoId": null,
+      "pegType": "peggedUSD",
+      "pegMechanism": "fiat-backed",
+      "price": 0.9998962371805777,
+      "priceSource": "defillama",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1788273957,
+      "priceObservedAt": 1788273957,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": 1788273957,
+      "consensusSources": [
+        "defillama"
+      ],
+      "agreeSources": [
+        "defillama"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 2952017.550969075
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 2952017.550969075
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 2952017.550969075
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 2952017.550969075
+      },
+      "chainCirculating": {
+        "Arbitrum": {
+          "current": 2952017.550969075,
+          "circulatingPrevDay": 2952017.550969075,
+          "circulatingPrevWeek": 2952017.550969075,
+          "circulatingPrevMonth": 2952017.550969075
+        }
+      },
+      "chains": [
+        "Arbitrum"
+      ],
+      "contracts": [
+        {
+          "chain": "arbitrum",
+          "address": "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+          "decimals": 6
+        }
+      ]
+    }
   }
 ]

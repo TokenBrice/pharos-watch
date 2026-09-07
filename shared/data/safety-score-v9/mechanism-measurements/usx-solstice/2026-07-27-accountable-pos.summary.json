@@ -1,0 +1,15 @@
+{
+  "mechanism": "usx-solstice",
+  "date": "2026-07-27-accountable-pos",
+  "sha256": "aae6525a14e41917f5a95ea355c26cf2b65e3fb0c1d9318599f32e44cf221ef0",
+  "bytes": 1001,
+  "r2Key": "captures/usx-solstice/2026-07-27-accountable-pos.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "protocol-api-mechanism-measurement",
+    "assetId": "usx-solstice",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usx-solstice/2026-07-27-accountable-pos.json",
+    "capturedAt": "2026-07-27T16:41:33Z"
+  }
+}

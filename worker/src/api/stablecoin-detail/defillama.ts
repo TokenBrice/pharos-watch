@@ -1,5 +1,6 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
+import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import { z } from "zod";
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -154,9 +155,7 @@ export function normalizeDefiLlamaDetailBody(
 
   const schemaResult = DlDetailResponseSchema.safeParse(parsed);
   if (!schemaResult.success) {
-    const issues = schemaResult.error.issues
-      .map((i) => `${i.path.map(String).join(".")}: ${i.message}`)
-      .join(", ");
+    const issues = formatSchemaLikeIssues(schemaResult.error.issues);
     logWorkerEventArgs("api", "warn", `[defillama-detail] Response schema mismatch: ${issues}`);
   }
 

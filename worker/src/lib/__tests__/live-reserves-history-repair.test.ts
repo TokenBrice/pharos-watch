@@ -4,7 +4,7 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 import {
   didReserveSyncAttemptBecomeAuthoritative,
   repairAuthoritativeReserveSyncHistory,
-} from "../live-reserves-store";
+} from "../live-reserves/store";
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();

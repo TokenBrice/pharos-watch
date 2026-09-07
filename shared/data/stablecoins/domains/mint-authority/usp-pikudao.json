@@ -71,7 +71,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
           }
         ],
-        "evidence": "At Ethereum block 25294782: allowedMinters(0x7e0305B212dF3FB56366251C054c07748Bf9a797) = true. Checked owner EOA and ProxyAdmin Safe — neither is in allowedMinters. Zero token logs found (no additional SetMinter events). Only active direct minter confirmed."
+        "evidence": "At Ethereum block 25294782: allowedMinters(0x7e0305B212dF3FB56366251C054c07748Bf9a797) = true. Checked owner EOA and ProxyAdmin Safe, neither is in allowedMinters. Zero token logs found (no additional SetMinter events). Only active direct minter confirmed."
       },
       {
         "chain": "ethereum",

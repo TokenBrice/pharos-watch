@@ -8,6 +8,7 @@
  */
 
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
@@ -969,14 +970,11 @@ export async function runYieldCoverageAudit(
       reason: "no-dl-pools",
       poolMeta,
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "no-dl-pools",
-        poolMeta,
-      }),
-    };
+      metadata: { reason: "no-dl-pools", poolMeta },
+    });
   }
 
   // Track the exact DL pool IDs already covered by static native mappings,
@@ -1019,17 +1017,17 @@ export async function runYieldCoverageAudit(
       safetySnapshotSource: safetySnapshot.source,
       safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
     });
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         reason: `safety-snapshot-unavailable:${reason}`,
         safetySnapshotSource: safetySnapshot.source,
         safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
         safetyScoresComputed: safetySnapshot.coveredCount,
         safetyScoresExpected: safetySnapshot.trackedCount,
-      }),
-    };
+      },
+    });
   }
   const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
     stablecoinSupplyById,
@@ -1226,10 +1224,10 @@ export async function runYieldCoverageAudit(
   const protocolCategoryStatus = protocolCategoryLookup.meta.status;
   const degradedReason = protocolCategoryStatus === "ok" ? null : `protocol-category-cache-${protocolCategoryStatus}`;
 
-  return {
+  return createCronResult({
     status: protocolCategoryStatus === "ok" ? "ok" : "degraded",
     itemCount,
-    metadata: JSON.stringify({
+    metadata: {
       ...(degradedReason ? { reason: degradedReason } : {}),
       ...auditCounts,
       manifestMissingCount: manifestMissingIds.length,
@@ -1241,6 +1239,6 @@ export async function runYieldCoverageAudit(
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,
       quarantineProbeAttemptedCount: quarantineProbe.summary.attemptedCount,
       safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
-    }),
-  };
+    },
+  });
 }

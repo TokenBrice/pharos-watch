@@ -1,9 +1,12 @@
-import type {
-  V9AssetPremiumPolicy,
-  V9EvidenceLevel,
-  V9StructuralSignal,
-  V9UnresolvedFact,
-  V9ValidatedPolicyEnvelope,
+import {
+  V9ScoringInputSchema,
+  type V9AssetPremiumPolicy,
+  type V9EvidenceLevel,
+  type V9QualityPillar,
+  type V9ScoringInput,
+  type V9StructuralSignal,
+  type V9UnresolvedFact,
+  type V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import {
   applyV9AssetPremium,
@@ -214,14 +217,46 @@ export function resolveV9SerialParentBoundedUncertaintyAttribution(
   );
 }
 
+type V9ScoringInputSource = {
+  readonly assetId: string;
+  readonly pillars: Readonly<Record<V9QualityPillar, Pick<V9PillarEvaluation, "score" | "evidenceLevel">>>;
+  readonly peg: Pick<V9ProductionScoreInput["peg"], "score" | "applicable" | "activeDepegBps">;
+  readonly trackRecordMonths: number;
+};
+
 function worstEvidenceLevel(
-  input: V9ProductionScoreInput["pillars"],
+  input: V9ScoringInputSource["pillars"],
   envelope: V9ValidatedPolicyEnvelope,
 ): V9EvidenceLevel {
   const rank = envelope.policy.semantic.evidence.rank;
   return [...PILLAR_KEYS]
     .map((pillar) => input[pillar].evidenceLevel)
     .sort((left, right) => rank[right] - rank[left])[0]!;
+}
+
+/** Project the complete formula input while keeping production-only trace arguments outside it. */
+export function projectV9ScoringInput(
+  input: V9ScoringInputSource,
+  envelope: V9ValidatedPolicyEnvelope,
+  projection: Pick<
+    V9ScoringInput,
+    "parentRequired" | "parentScore" | "structuralSignals" | "unresolved"
+  >,
+): V9ScoringInput {
+  return V9ScoringInputSchema.parse({
+    assetId: input.assetId,
+    pillars: {
+      backing: input.pillars.backing.score,
+      exit: input.pillars.exit.score,
+      control: input.pillars.control.score,
+    },
+    pegScore: input.peg.score,
+    pegApplicable: input.peg.applicable,
+    evidenceLevel: worstEvidenceLevel(input.pillars, envelope),
+    trackRecordMonths: input.trackRecordMonths,
+    activeDepegBps: input.peg.activeDepegBps,
+    ...projection,
+  });
 }
 
 function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9ValidatedPolicyEnvelope) {
@@ -468,10 +503,8 @@ export function scoreV9EvaluatedAsset(
   // a strong-backing asset is assessable (we know it is backed) even if exit
   // and control are limited, so it must be scored, never withheld to NR.
   const backingLimited = input.pillars.backing.evidenceLevel === "limited";
-  const normalizedScoreBearingReasons = normalizeReasonList(
-    scoreBearingReasons(input, envelope),
-    envelope,
-  );
+  const baseScoreBearingReasons = scoreBearingReasons(input, envelope);
+  const normalizedScoreBearingReasons = normalizeReasonList(baseScoreBearingReasons, envelope);
   const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap(
     (pillar) =>
       normalizeReasonList(input.pillars[pillar].reasons, envelope).map((fact) => ({
@@ -483,24 +516,18 @@ export function scoreV9EvaluatedAsset(
     (pillar) => input.pillars[pillar].adverseAttribution ?? [],
   );
   const wrapperAttribution = wrapperLocalAttribution(input.parent.wrapperParentLimit);
-  const ordinaryTrace = scoreV9Input(
+  const scoringInput = projectV9ScoringInput(
+    input,
+    envelope,
     {
-      assetId: input.assetId,
-      pillars: {
-        backing: input.pillars.backing.score,
-        exit: input.pillars.exit.score,
-        control: input.pillars.control.score,
-      },
-      pegScore: input.peg.score,
-      pegApplicable: input.peg.applicable,
-      evidenceLevel: worstEvidenceLevel(input.pillars, envelope),
-      trackRecordMonths: input.trackRecordMonths,
-      activeDepegBps: input.peg.activeDepegBps,
       parentRequired: input.parent.required,
       parentScore: input.parent.score,
       structuralSignals,
       unresolved: normalizedScoreBearingReasons,
     },
+  );
+  const ordinaryTrace = scoreV9Input(
+    scoringInput,
     envelope,
     input.parent.propagatedReasons,
     limitedPillarCount,
@@ -524,10 +551,7 @@ export function scoreV9EvaluatedAsset(
     wrapperParentLimit: input.parent.wrapperParentLimit ?? null,
     unresolvedFacts: reconcileBoundedAttributionFacts(
       normalizeReasonList(
-        [
-          ...scoreBearingReasons(input, envelope),
-          ...(input.unresolvedEvidence ?? []),
-        ],
+        [...baseScoreBearingReasons, ...(input.unresolvedEvidence ?? [])],
         envelope,
       ),
       normalizedScoreBearingReasons,

@@ -7,7 +7,7 @@ describe("staged file collection", () => {
     expect(collectStagedFiles({ execFile: execFile as never, cwd: "/repo" })).toEqual(["a.ts", "b.ts"]);
     expect(execFile).toHaveBeenCalledWith(
       "git",
-      ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+      ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD", "-z"],
       { cwd: "/repo", encoding: "utf8" },
     );
   });

@@ -1,17 +1,21 @@
-import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { DepegEventCloseReason } from "@shared/types/market";
+import {
+  WORKER_ACTIVE_IDS,
+  WORKER_PRE_LAUNCH_STABLECOINS,
+  WORKER_TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/worker-runtime-registry";
+import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache } from "../lib/db-cache";
 import { buildInClause, chunkArray } from "../lib/db";
-import { DEPEG_STEP_VALUES } from "../lib/telegram-constants";
+import { DEPEG_STEP_VALUES } from "../lib/telegram/constants";
 import {
   isDewsAlertable,
   type DepegAlertPayload,
   type DepegResolved,
   type DepegWorsening,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
 import { buildAlertContextLines } from "./telegram-alert-context";
 import {
@@ -42,12 +46,6 @@ type ClosedDepegResolutionRow = {
   close_reason: string | null;
 };
 
-const RECOVERY_CLOSE_REASONS = new Set<DepegEventCloseReason>([
-  "recovered-primary",
-  "recovered-dex",
-  "recovered-native",
-]);
-
 export interface TelegramDispatchEvents {
   dewsChanges: ReturnType<typeof buildDewsChanges>;
   depegTriggered: DepegAlertPayload[];
@@ -65,6 +63,74 @@ export interface TelegramDispatchEvents {
   reserveIds: string[];
 }
 
+export type TelegramFanoutPlanEvents = Pick<
+  TelegramDispatchEvents,
+  | "dewsChanges"
+  | "depegTriggered"
+  | "depegResolved"
+  | "depegWorsening"
+  | "safetyChanges"
+  | "safetyScoreIdentity"
+  | "launchPromoted"
+  | "reservePromoted"
+>;
+
+export function summarizeTelegramDispatchEvents(events: TelegramDispatchEvents) {
+  const transitionCounts = {
+    dews: events.dewsChanges.length,
+    depegTriggered: events.depegTriggered.length,
+    depegResolved: events.depegResolved.length,
+    depegWorsening: events.depegWorsening.length,
+    safety: events.safetyChanges.length,
+    launch: events.launchPromoted.length,
+    reserve: events.reservePromoted.length,
+  };
+  return {
+    total: Object.values(transitionCounts).reduce((total, count) => total + count, 0),
+    transitionCounts,
+    eventsDetected: {
+      dews: transitionCounts.dews,
+      depeg:
+        transitionCounts.depegTriggered +
+        transitionCounts.depegResolved +
+        transitionCounts.depegWorsening,
+      depegTriggered: transitionCounts.depegTriggered,
+      depegResolved: transitionCounts.depegResolved,
+      depegWorsening: transitionCounts.depegWorsening,
+      safety: transitionCounts.safety,
+      launch: transitionCounts.launch,
+      reserve: transitionCounts.reserve,
+      suppressedMethodologyChanges: events.suppressedMethodologyChanges,
+    },
+  };
+}
+
+export function activeTelegramEventFamilies(events: TelegramDispatchEvents): string[] {
+  const { eventsDetected } = summarizeTelegramDispatchEvents(events);
+  return [
+    eventsDetected.dews > 0 ? "dews" : null,
+    eventsDetected.depeg > 0 ? "depeg" : null,
+    eventsDetected.safety > 0 ? "safety" : null,
+    eventsDetected.launch > 0 ? "launch" : null,
+    eventsDetected.reserve > 0 ? "reserve" : null,
+  ].filter((family): family is string => family != null);
+}
+
+export function toTelegramFanoutPlanEvents(
+  events: TelegramDispatchEvents,
+): TelegramFanoutPlanEvents {
+  return {
+    dewsChanges: events.dewsChanges,
+    depegTriggered: events.depegTriggered,
+    depegResolved: events.depegResolved,
+    depegWorsening: events.depegWorsening,
+    safetyChanges: events.safetyChanges,
+    safetyScoreIdentity: events.safetyScoreIdentity ?? null,
+    launchPromoted: events.launchPromoted,
+    reservePromoted: events.reservePromoted,
+  };
+}
+
 export function countSuppressedSafetyChangesAtSeed(
   snapshotState: DispatchSnapshotState,
   getSymbol: (stablecoinId: string, fallback?: string) => string,
@@ -78,16 +144,18 @@ export function countSuppressedSafetyChangesAtSeed(
     : 0;
 }
 
-function isRecoveryClosure(row: Pick<ClosedDepegResolutionRow, "close_reason" | "recovery_price">): boolean {
-  if (row.close_reason != null) {
-    return RECOVERY_CLOSE_REASONS.has(row.close_reason as DepegEventCloseReason);
-  }
-  return row.recovery_price != null;
+function isRecoveryClosure(row: ClosedDepegResolutionRow): boolean {
+  const closure = classifyDepegClosure({
+    endedAt: row.ended_at,
+    closeReason: row.close_reason,
+    recoveryPrice: row.recovery_price,
+  });
+  return closure === "recovered" || closure === "legacy_recovered";
 }
 
 function eventPriceCurrency(stablecoinId: string, pegReference: number): string {
   if (pegReference !== 1) return "USD";
-  return TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency ?? "USD";
+  return WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.pegCurrency ?? "USD";
 }
 
 function activeDepegDisplayPrice(row: { start_price: number; peak_price?: number | null }): number {
@@ -226,9 +294,9 @@ export async function buildTelegramDispatchEvents(
   const prevLaunchIds = previousLaunchSnapshot.status === "ok" && Array.isArray(previousLaunchSnapshot.data)
     ? new Set<string>(previousLaunchSnapshot.data)
     : new Set<string>();
-  const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
+  const currentLaunchIds = new Set(WORKER_PRE_LAUNCH_STABLECOINS.map((c) => c.id));
 
-  const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, ACTIVE_IDS, TRACKED_META_BY_ID);
+  const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID);
 
   // Reserve-drift (C123): diff the producer's current drift set against the
   // dispatch baseline; both come from snapshotState (the dispatch cron never
@@ -236,7 +304,7 @@ export async function buildTelegramDispatchEvents(
   const reservePromoted = buildReserveTransitions(
     new Set(snapshotState.previousReserveDriftIds),
     new Set(snapshotState.currentReserveDriftIds),
-    TRACKED_META_BY_ID,
+    WORKER_TRACKED_META_BY_ID,
   );
 
   const dewsIds = dewsChanges.map((c) => c.stablecoinId);

@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — no yvUSDC EMT/ART authorization located in the reviewed register",
+        "label": "ESMA MiCA register landing page: no yvUSDC EMT/ART authorization located in the reviewed register",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "EUR-Lex MiCA Regulation — financial-instrument/deposit/fund exclusions and Union offer scope",
+        "label": "EUR-Lex MiCA Regulation: financial-instrument/deposit/fund exclusions and Union offer scope",
         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
       },
       {
-        "label": "Yearn USDC-1 vault — ERC-4626-style multi-strategy vault share with yield-bearing strategy allocations",
+        "label": "Yearn USDC-1 vault: ERC-4626-style multi-strategy vault share with yield-bearing strategy allocations",
         "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
       }
     ]
@@ -30,7 +30,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "OCC GENIUS Act proposed rule — rulemaking remains non-final",
+          "label": "OCC GENIUS Act proposed rule: rulemaking remains non-final",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",

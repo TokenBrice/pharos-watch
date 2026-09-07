@@ -1,0 +1,1 @@
+../../../.codex/skills/stablecoin-identity-contracts/SKILL.md

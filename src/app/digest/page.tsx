@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Send } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { DigestNameplate } from "@/components/digest-nameplate";
 import { DigestColophon } from "@/components/digest-colophon";
@@ -28,10 +29,8 @@ export default function DigestArchivePage() {
           { name: "Daily Digest Archive", url: "/digest/" },
         ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
+      <JsonLdScript
+        json={safeJsonLd(
             buildCollectionItemListJsonLd({
               url: `${SITE_URL}/digest/`,
               name: "Daily Digest Archive",
@@ -47,8 +46,7 @@ export default function DigestArchivePage() {
                 },
               })),
             }),
-          ),
-        }}
+          )}
       />
 
       <DigestNameplate issueNumber={LATEST_DAILY_DIGEST?.editionNumber} date={LATEST_DAILY_DIGEST?.date} />

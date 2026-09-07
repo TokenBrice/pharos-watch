@@ -1,6 +1,7 @@
 import { getStatusPageActions, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import type { CronStatus, StatusCause, StatusResponse } from "@shared/types";
+import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 
 const ACTION_BY_PATH = new Map<string, StatusPageAction>(
   getStatusPageActions().map((action) => [action.path, action]),
@@ -37,12 +38,6 @@ const CRON_ACTION_PATHS: Partial<Record<string, readonly string[]>> = {
   "daily-digest": ["/api/trigger-digest"],
 } as const;
 
-const SEVERITY_SCORE: Record<StatusCause["severity"], number> = {
-  critical: 0,
-  warning: 1,
-  info: 2,
-};
-
 export interface StatusActionRecommendation {
   action: StatusPageAction;
   reason: string;
@@ -75,7 +70,7 @@ function pushRecommendation(
   next: StatusActionRecommendation,
 ): void {
   const existing = recommendations.get(next.action.path);
-  if (!existing || SEVERITY_SCORE[next.severity] < SEVERITY_SCORE[existing.severity]) {
+  if (!existing || STATUS_CAUSE_SEVERITY_RANK[next.severity] < STATUS_CAUSE_SEVERITY_RANK[existing.severity]) {
     recommendations.set(next.action.path, next);
   }
 }
@@ -127,8 +122,8 @@ export function deriveStatusActionRecommendations(
 
   return [...recommendations.values()]
     .sort((a, b) => {
-      if (SEVERITY_SCORE[a.severity] !== SEVERITY_SCORE[b.severity]) {
-        return SEVERITY_SCORE[a.severity] - SEVERITY_SCORE[b.severity];
+      if (STATUS_CAUSE_SEVERITY_RANK[a.severity] !== STATUS_CAUSE_SEVERITY_RANK[b.severity]) {
+        return STATUS_CAUSE_SEVERITY_RANK[a.severity] - STATUS_CAUSE_SEVERITY_RANK[b.severity];
       }
       return a.action.label.localeCompare(b.action.label);
     })

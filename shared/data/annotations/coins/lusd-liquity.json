@@ -1,4 +1,4 @@
 [
-  {"date":"2021-04-05","kind":"governance","label":"Liquity LUSD launch — immutable 110% MCR decentralized USD CDP","severity":"med","href":"https://www.liquity.org/blog/announcing-liquity"},
-  {"date":"2023-03-11","kind":"depeg","label":"Flight to safety: LUSD trades to a premium as SVB breaks USDC/Dai/FRAX","severity":"med","href":"https://www.liquity.org/blog/liquity-q1-report","note":"2023-03-11 — flight-to-safety premium during the SVB weekend; LUSD's ETH-only, fiat-free design inverted the contagion that broke USDC/Dai/FRAX."}
+  {"date":"2021-04-05","kind":"governance","label":"Liquity LUSD launch, immutable 110% MCR decentralized USD CDP","severity":"med","href":"https://www.liquity.org/blog/announcing-liquity"},
+  {"date":"2023-03-11","kind":"depeg","label":"Flight to safety: LUSD trades to a premium as SVB breaks USDC/Dai/FRAX","severity":"med","href":"https://www.liquity.org/blog/liquity-q1-report","note":"2023-03-11: flight-to-safety premium during the SVB weekend; LUSD's ETH-only, fiat-free design inverted the contagion that broke USDC/Dai/FRAX."}
 ]

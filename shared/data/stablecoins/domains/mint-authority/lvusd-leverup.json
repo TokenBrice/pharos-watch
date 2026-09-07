@@ -72,7 +72,7 @@
             "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
           }
         ],
-        "evidence": "Monad block 80607552: lvUSD owner() = 0x135951... (EIP-1967 proxy), impl = 0x1d4bcd..., whose owner chain leads to 0xf9bd99... — a GnosisSafe proxy (masterCopy slot 0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, Solidity 0.7.6 singleton). getOwners() returned 5 addresses; getThreshold = 3; getModulesPaginated returned 0 modules."
+        "evidence": "Monad block 80607552: lvUSD owner() = 0x135951... (EIP-1967 proxy), impl = 0x1d4bcd..., whose owner chain leads to 0xf9bd99..., a GnosisSafe proxy (masterCopy slot 0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, Solidity 0.7.6 singleton). getOwners() returned 5 addresses; getThreshold = 3; getModulesPaginated returned 0 modules."
       }
     ],
     "economicCapSemantics": "unbounded",

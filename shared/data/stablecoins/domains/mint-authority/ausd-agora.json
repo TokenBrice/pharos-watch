@@ -72,7 +72,7 @@
         "observedBlock": 25712131,
         "sources": [
           {
-            "label": "Etherscan — AUSD proxy",
+            "label": "Etherscan: AUSD proxy",
             "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           }
         ],
@@ -136,7 +136,7 @@
         "observedBlock": 25712131,
         "sources": [
           {
-            "label": "Etherscan — AUSD proxy",
+            "label": "Etherscan: AUSD proxy",
             "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           }
         ],
@@ -183,7 +183,7 @@
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
         },
         {
-          "label": "Etherscan — AUSD proxy",
+          "label": "Etherscan: AUSD proxy",
           "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
         },
         {
@@ -199,11 +199,11 @@
           "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
         },
         {
-          "label": "Bermuda Monetary Authority — Digital Asset Business Single Currency Pegged Stablecoins (SCPS) Guidance (issued for consultation 2024-05-10)",
+          "label": "Bermuda Monetary Authority: Digital Asset Business Single Currency Pegged Stablecoins (SCPS) Guidance (issued for consultation 2024-05-10)",
           "url": "https://cdn.bma.bm/documents/2024-12-06-16-16-15-DAB-Single-Currency-Pegged-Stablecoins-Consultation-Guidance.pdf"
         },
         {
-          "label": "Mondaq — Bermuda Monetary Authority Consultation Guidance on Digital Asset Business Single Currency Pegged Stablecoins (SCPS)",
+          "label": "Mondaq: Bermuda Monetary Authority Consultation Guidance on Digital Asset Business Single Currency Pegged Stablecoins (SCPS)",
           "url": "https://www.mondaq.com/fin-tech/1498718/bermuda-monetary-authority-consultation-guidance-on-digital-asset-business-single-currency-pegged-stablecoins-scps"
         }
       ],

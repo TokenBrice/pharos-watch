@@ -6,14 +6,14 @@ Public ledger of Pharos's running costs, donations, and sustainability path. The
 
 - `src/app/funding/page.tsx` renders through `FeaturePageShell` and uses `buildPageMetadata(...)`.
 - `src/app/sitemap.ts` includes `/funding/`; `lastModified` uses the latest of the route edit date, `costs.last_reviewed_at`, and `donations.last_updated_at`.
-- `src/lib/nav-config.ts` places Funding in the `Reference` group.
+- `src/lib/nav-config.ts` no longer lists Funding: it is reachable from the global footer meta row, the about page, and the homepage donate card.
 - `src/components/footer.tsx` includes Funding in the footer route list.
 - `scripts/maintenance/generate-llms-txt.ts` includes Funding in the public LLM-facing index.
 - `public/_headers` must not emit `X-Robots-Tag: noindex` for `/funding/*`.
 
 ## Layout
 
-The page keeps an honest, prose-forward register:
+The page uses a prose-forward layout:
 
 - The KPI card opens on a full-width hero strip whose frost-blue "One Beam" lights the monthly running cost (`costs.json` total). Coverage % stays **neutral** — it is a directional funding-progress figure and is never recolored frost.
 - Cards use the shared flat `pharos-card-shell` treatment.
@@ -29,7 +29,7 @@ Two hand-maintained JSON files:
 
 The Monthly costs card separately discloses $5,800 in exceptional, one-time design expenses for the full website redesign and logo. TokenBrice paid and sponsored those expenses, so they are not included in the recurring monthly total.
 
-Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`) and validated by `shared/lib/funding/schema.ts`. Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
+Row shape for donations is defined and validated by `shared/lib/funding/schema.ts` (`DonationSchema`, with the `Donation` type inferred from it). Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
 
 ## Intentional simplifications
 
@@ -46,9 +46,9 @@ Automation is intentionally deferred while the review volume remains small. Any 
 - `costs.json` — target review date is the 1st of each month; if it is missed, leave the stale `last_reviewed_at` visible and complete the review before describing costs as current. Bump the timestamp every time you edit.
 - `donations.json` — `funding-update` skill invoked ~weekly, or ad-hoc on alert. `last_updated_at` is bumped automatically by the skill.
 
-## Voice
+## Editorial and presentation contract
 
-Match `/about`: honest, plain, concrete. No urgency, no banners, no modals. Keep card titles noun-led and avoid fundraising pressure copy.
+Page prose follows the `brand` register in `docs/editorial-style.md`; this document does not define a second voice. Funding-specific presentation constraints: the page has no urgency banners or modals, and card titles are noun-led.
 
 ## Related files
 

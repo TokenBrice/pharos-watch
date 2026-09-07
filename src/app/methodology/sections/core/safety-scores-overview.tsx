@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyFacts,
+  MethodologyPreconditions,
 } from "../../methodology-shared";
 
 export function SafetyScoresOverview() {
@@ -66,7 +67,16 @@ export function SafetyScoresOverview() {
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even
         when it is the only root, so adding another root cannot rename an existing public fact; only unattributed
         fallbacks retain aggregate base paths, and ownership never becomes part of fact identity.
-        Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. A
+        Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. Since
+        methodology v9.451, one a reviewer has covered and found unpublished says so: the published gap carries the
+        review date, the reason, and the source that was checked, instead of the sentence used for a component nobody
+        has reviewed yet. The input stays bounded-unknown and the owner stays issuer-undisclosed, so no score, grade,
+        or open-data-point count moves. Since methodology v9.46, a bridge control whose controlling party is an
+        external message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN, a Bantu AMTP validator
+        group — is graded as the known, weak authority it is instead of compiling as unknown and publishing an
+        issuer-owned unresolved-control gap for a fact the issuer had published. The rung grades at or below a named
+        issuer backend and never above a named multisig: naming a validation domain cannot lift a control, and a
+        route co-controlled by an unattested single key still reports that key as its weakest link. A
         reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
@@ -85,6 +95,48 @@ export function SafetyScoresOverview() {
         record is already adverse is measured adverse, while a clean record with no usable price stays a quiet
         observation and its deviation is never coerced to zero. These are provenance and
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
+      </p>
+      <p>
+        Since methodology v9.461, two evaluator mapping defects are corrected without adding evidence. First,
+        reviewed-native selected supply rows no longer enter the bridge-exposure completeness join:
+        <code className="text-xs">evaluateV9SubthresholdUnresolvedBridgeJoins</code> excludes them from
+        <code className="text-xs">bridgeControlsByDeployment</code>, while the route predicate and native-liability
+        boundary keep native controls as umbrella facts and exclude native route ids from
+        <code className="text-xs">bridgeClaimControls</code>. On replay of
+        <code className="text-xs">capture-20260904-1100.json</code> at clock
+        <code className="text-xs">1788509806</code>, this corrected a wrong join and closed 9 facts
+        (<code className="text-xs">nonmaterial-bridge-supply-unmatched</code> on
+        <code className="text-xs">ausd-agora</code>, <code className="text-xs">pyusd-paypal</code>,
+        <code className="text-xs">reusd-re-protocol</code>, <code className="text-xs">usbd-bima</code>,
+        <code className="text-xs">fusd-finchain</code>, <code className="text-xs">cusd-celo</code>,
+        <code className="text-xs">frxusd-frax</code>, <code className="text-xs">usdy-ondo-finance</code>, plus
+        <code className="text-xs">missing-bridge-route-rows</code> on
+        <code className="text-xs">fusd-finchain</code>), with 0 replacements and exactly 1 mover:
+        <code className="text-xs">fusd-finchain</code> NR -&gt; 46/D. Floors, the completeness predicate, and
+        <code className="text-xs">unknownBridgeShare</code> are unchanged; Pharos learned nothing new.
+      </p>
+      <p>
+        Second, offchain-issuer commodity routes whose
+        <code className="text-xs">outputAssetType</code> is
+        <code className="text-xs">bluechip-collateral</code> (physical GOLD/SILVER delivery) now resolve as
+        <code className="text-xs">unresolved-asset</code> rather than fiat. The old mapping let
+        <code className="text-xs">buildOutputReview</code> imply a synthetic $1 value for a physical bar; removing
+        that false valuation ADDED 5 facts
+        (<code className="text-xs">unresolved-exit-output</code> and
+        <code className="text-xs">missing-runtime-route-evidence</code> on
+        <code className="text-xs">gldt-gold-dao</code>, <code className="text-xs">paxg-paxos</code>, and
+        <code className="text-xs">xnk-kinka</code>) and moved 2 grades:
+        <code className="text-xs">gldt-gold-dao</code> 47/D -&gt; NR and
+        <code className="text-xs">xnk-kinka</code> 41/D -&gt; 39/F. This is an honest loss of false coverage, not a
+        newly learned adverse fact. The affected asset set is
+        <code className="text-xs">cgo-comtech</code>, <code className="text-xs">dgld-gold-token-sa</code>,
+        <code className="text-xs">ggbr-goldfish-gold</code>, <code className="text-xs">gldt-gold-dao</code>,
+        <code className="text-xs">gldy-streamex</code>, <code className="text-xs">kag-kinesis</code>,
+        <code className="text-xs">kau-kinesis</code>, <code className="text-xs">paxg-paxos</code>,
+        <code className="text-xs">pgold-pleasing</code>, <code className="text-xs">xagm-matrixdock</code>,
+        <code className="text-xs">xaum-matrixdock</code>, <code className="text-xs">xaut-tether</code>, and
+        <code className="text-xs">xnk-kinka</code>. Both effects are measured on that fixed capture; producer-side
+        repairs in these waves cannot manifest until a real producer cycle runs.
       </p>
       <p>
         Since methodology v9.4, stale issuer- or parent-published evidence is attributed as
@@ -154,19 +206,16 @@ export function SafetyScoresOverview() {
           { label: "Publication state", value: "Current or held; never V8 fallback" },
         ]}
       />
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-        <MethodologyFacts
-          facts={[
-            { label: "Minimum data", value: "Mechanism-appropriate required facts for all material pillars" },
-            { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
-            {
-              label: "Failure behavior",
-              value: "Unbounded evidence gaps return NR; transient producer failures hold the last accepted publication",
-            },
-          ]}
-        />
-      </div>
+      <MethodologyPreconditions
+        facts={[
+          { label: "Minimum data", value: "Mechanism-appropriate required facts for all material pillars" },
+          { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
+          {
+            label: "Failure behavior",
+            value: "Unbounded evidence gaps return NR; transient producer failures hold the last accepted publication",
+          },
+        ]}
+      />
     </>
   );
 }

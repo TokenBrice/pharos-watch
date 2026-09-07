@@ -2,7 +2,7 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 // Versioning convention (see compareMethodologyVersions in
 // @shared/lib/methodology-versions/base): each dotted segment is compared as an
-// INTEGER, not a decimal fraction — so the minor segment is an open-ended integer
+// INTEGER, not a decimal fraction, so the minor segment is an open-ended integer
 // counter within the v5 bucket, e.g. `5.0` ([5, 0]) < `5.09` ([5, 9]) < `5.91`
 // ([5, 91]) < `5.99` ([5, 99]). Routine pricing-pipeline changes bump the minor
 // counter (and may extend to `5.991`, `5.992`, … without ever needing v6) and
@@ -190,7 +190,7 @@ export const PRICING_PIPELINE_V5: readonly MethodologyChangelogEntry[] = [
         "Added an Idle Perpetual Yield Tranches authoritative price provider that reads `virtualPrice(address tranche)` on the CDO contract and multiplies the resulting underlying-denominated NAV by the tracked parent asset's live price.",
       impact: [
         "`aa-falconx-mev-capital` now publishes a `protocol-redeem` high-confidence NAV from the CDO `virtualPrice` reading and the tracked `usdc-circle` parent price, instead of staying at `priceSource: missing`",
-        "The provider reuses the shared parent-trust gating, parent provenance metadata, and 0.5–10.0 NAV bound from the ERC-4626 NAV lane so untrusted, stale, or degenerate quotes cannot upgrade into a high-confidence child price",
+        "The provider reuses the shared parent-trust gating, parent provenance metadata, and 0.5-10.0 NAV bound from the ERC-4626 NAV lane so untrusted, stale, or degenerate quotes cannot upgrade into a high-confidence child price",
       ],
       commits: [],
       reconstructed: false,
@@ -205,7 +205,7 @@ export const PRICING_PIPELINE_V5: readonly MethodologyChangelogEntry[] = [
       impact: [
         "`susdt-spark`, `gtusdc-gauntlet`, `yvusdc-yearn`, `stkgho-umbrella-aave`, and `sbold-k3-capital` now publish a `protocol-redeem` high-confidence price derived from the standard ERC-4626 `convertToAssets(uint256)` selector and the tracked parent asset price",
         "Each vault override carries the parent provenance metadata (source, confidence, observed-at, replay-safety) the same way the inherited tracked-base lane already does",
-        "The provider rejects on-chain quotes outside a 0.5–10.0 share-to-asset bound to prevent silent regressions if the vault contract migrates or returns degenerate data",
+        "The provider rejects on-chain quotes outside a 0.5-10.0 share-to-asset bound to prevent silent regressions if the vault contract migrates or returns degenerate data",
         "Parent-trust gating is shared with the existing inherited-base lane, so low-confidence, stale, cached, or fallback parents cannot upgrade into a high-confidence child vault price",
       ],
       commits: [],

@@ -1,0 +1,14 @@
+{
+  "mechanism": "apyusd-apyx",
+  "date": "2026-07-27-wrapper-and-dashboard",
+  "sha256": "e2c61d09b86aa5de2a9ccd7392b1cd5e1c0399b19910f2e86123faa647ad14f3",
+  "bytes": 4521,
+  "r2Key": "captures/apyusd-apyx/2026-07-27-wrapper-and-dashboard.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "apyusd-apyx",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/apyusd-apyx/2026-07-27-wrapper-and-dashboard.json",
+    "capturedAt": "2026-07-27T22:52:00Z"
+  }
+}

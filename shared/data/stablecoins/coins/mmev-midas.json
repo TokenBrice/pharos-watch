@@ -2,14 +2,14 @@
   "id": "mmev-midas",
   "name": "Midas mMEV",
   "symbol": "mMEV",
-  "oneLiner": "mMEV is a Midas NAV-accreting liquid-yield token wrapping MEV Capital's DeFi lending, liquidity, arbitrage, and liquidation strategies; not a fixed $1 peg.",
+  "oneLiner": "Midas's NAV-accreting liquid-yield token wraps market-neutral DeFi; RockawayX manages it since February 2026 (formerly MEV Capital); it tracks NAV, not $1 peg.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "navToken": true
   },
-  "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
+  "collateral": "Market-neutral DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails; strategy manager is RockawayX (appointed February 2026, replacing MEV Capital after Midas terminated that partnership).",
   "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice, pegCurrencySymbol } from "@shared/lib/format";
 import type { DdrFactor } from "@shared/types/depeg-resolver";
@@ -32,7 +33,7 @@ function SeverityPips({ kind, weight }: { kind: "kill" | "anchor"; weight: numbe
   const filled = kind === "kill" ? "bg-red-500" : "bg-emerald-500";
   const empty = kind === "kill" ? "bg-red-500/25" : "bg-emerald-500/25";
   return (
-    <span className="mt-[3px] inline-flex shrink-0 gap-0.5" aria-hidden="true">
+    <span className="mt-1 inline-flex shrink-0 gap-0.5" aria-hidden="true">
       <span className={cn("h-1.5 w-1.5 rounded-full", weight >= 1 ? filled : empty)} />
       <span className={cn("h-1.5 w-1.5 rounded-full", weight >= 2 ? filled : empty)} />
     </span>
@@ -45,16 +46,16 @@ function FactorList({ kind, factors }: { kind: "kill" | "anchor"; factors: DdrFa
 
   return (
     <div className="min-w-0 space-y-1.5">
-      <p className={cn("text-[10px] font-semibold uppercase tracking-[0.12em]", headTone)}>{heading}</p>
+      <p className={cn("pharos-kicker", headTone)}>{heading}</p>
       {factors.length === 0 ? (
-        <p className="text-xs italic text-muted-foreground/70">none fired</p>
+        <p className="text-xs italic text-muted-foreground">none fired</p>
       ) : (
         <ul className="space-y-1.5">
           {factors.map((factor) => (
             <li key={factor.code} className="flex items-start gap-2 text-xs">
               <SeverityPips kind={kind} weight={SEVERITY_WEIGHT[factor.severity]} />
               <span className="min-w-0 break-words leading-snug text-foreground/90">{factor.label}</span>
-              <span className="ml-auto shrink-0 pl-1 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+              <span className="pharos-meta ml-auto shrink-0 pl-1 font-mono uppercase tracking-wide">
                 {SEVERITY_LABEL[factor.severity]}
               </span>
             </li>
@@ -149,14 +150,15 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
               <MethodologyHint topic="ddrPredictionFrozen" asChild>
                 <button
                   type="button"
-                  className="pharos-focus-ring inline-flex min-h-6 items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 underline decoration-dotted decoration-emerald-700/50 underline-offset-2 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400 dark:decoration-emerald-400/50"
+                  className="pharos-focus-ring inline-flex min-h-6 items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground underline decoration-dotted decoration-muted-foreground/60 underline-offset-2 transition-colors hover:bg-muted/70 hover:text-foreground"
                 >
+                  <LockKeyhole className="h-3 w-3 shrink-0" aria-hidden="true" />
                   Prediction frozen
                 </button>
               </MethodologyHint>
             ) : null}
           </span>
-          <span className="ml-auto shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+          <span className="ml-auto shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">
             {dirGlyph} {row.direction} {row.pegCurrency}
           </span>
         </div>
@@ -166,7 +168,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
 
         {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
         {showBand ? (
-          <p className="pharos-numeric flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+          <p className="pharos-meta pharos-numeric flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {duration.iqrSec ? (
               <span>
                 band{" "}
@@ -232,10 +234,10 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         {showTension ? (
           <details className="group border-t border-border/50 pt-3">
             <summary className={DISCLOSURE_SUMMARY}>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground group-hover:text-foreground">
+              <span className="pharos-kicker group-hover:text-foreground">
                 Will it recover?
               </span>
-              <span className="pharos-numeric text-[10px] text-muted-foreground/80">
+              <span className="pharos-meta pharos-numeric">
                 {kills.length} kill · {anchors.length} anchor
               </span>
               <span className="ml-auto hidden w-24 shrink-0 sm:block">

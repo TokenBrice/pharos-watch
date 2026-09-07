@@ -18,6 +18,8 @@ import { backfillCoin } from "../backfill-depegs-replay";
 import type { PreparedBackfillCoin } from "./planning";
 import {
   type BackfillEventProvenanceInput,
+  type BackfillRunInput,
+  type PersistedBackfillEvent,
   buildBackfillEventsFingerprint,
   buildReplayRunId,
   inferBackfillConfidence,
@@ -31,28 +33,9 @@ const BACKFILL_REPLAY_VERSION = "depeg-backfill-v6.0";
  */
 export type ApplyBackfillEventsFn = (
   meta: { id: string; symbol: string },
-  events: Array<{
-    pegType: string;
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-    startPrice: number;
-    peakPrice: number;
-    recoveryPrice: number | null;
-    pegRef: number;
-    provenance?: BackfillEventProvenanceInput;
-  }>,
+  events: PersistedBackfillEvent[],
   replayWindow: BackfillReplayWindow | null,
-  run: {
-    runId: string;
-    sourceType: "market" | "authoritative";
-    expectedFingerprint: string;
-    expectedEventCount: number;
-    removedCount: number;
-    addedCount: number;
-    replayWindow: BackfillReplayWindow | null;
-  },
+  run: BackfillRunInput,
 ) => Promise<void>;
 
 export interface CoinExecutionOutcome {
@@ -251,4 +234,3 @@ export async function executeBackfillForCoin(opts: {
     return { status: "error", eventCount: 0, errorMessage: `${meta.symbol}: ${err}` };
   }
 }
-

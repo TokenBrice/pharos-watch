@@ -45,11 +45,8 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       launchDate: "2018-01-01",
       reserves: [{ name: "Treasury bills", pct: 80, risk: "very-low" }],
     },
-    pegScore: 95,
-    liquidityScore: 80,
-    safetyGrade: "A",
-    netFlow30d: 1_240_000_000,
     pegDetails: {
+      pegScore: 95,
       currentDeviationBps: 2,
       activeDepeg: false,
       recent90d: { pegPct: 99.8, incidentCount: 1 },
@@ -60,6 +57,7 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       consensusSources: ["source-a", "source-b"],
     },
     liquidity: {
+      liquidityScore: 80,
       effectiveTvlUsd: 1_000_000_000,
       totalVolume24hUsd: 250_000_000,
       poolCount: 12,
@@ -93,6 +91,20 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       sourceTvlUsd: 900_000_000,
     },
     stress: { band: "LOW", score: 12 },
+    safetyCard: {
+      score: 84,
+      grade: "A-",
+      pillars: {
+        backing: { score: 90 },
+        exit: { score: 88 },
+        control: { score: 42 },
+      },
+      weakestPillar: { pillar: "control", score: 42 },
+      bindingCap: null,
+      evidence: { level: "adequate", freshness: "stale" },
+      accessPosture: { primaryExit: "permissionless", freezeExposure: "none-known" },
+      dependencies: { serial: [], basket: [] },
+    },
   } as unknown as ComparisonCoinEntry;
 }
 
@@ -118,6 +130,8 @@ describe("ComparisonTable", () => {
     expect(html).toContain("Issuer yield");
     expect(html).toContain("Treasury bills 80%");
     expect(html).toContain("Direct freeze power");
+    expect(html).toContain("Open Safety Score waterfall for USDT");
+    expect(html).toContain("Evidence age stale");
   });
 
   it("uses the shared horizontally scrollable table foundation", () => {

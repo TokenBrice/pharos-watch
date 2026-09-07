@@ -113,7 +113,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(dusd).toMatchObject({
       routeFamily: "queue-redeem",
       outputAssets: ["usdc-circle"],
-      accessModel: "whitelisted-onchain",
+      accessModel: "permissionless-onchain",
       holderEligibility: "issuer-discretionary",
       settlementModel: "queued",
       executionModel: "opaque",
@@ -125,10 +125,10 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
       routeStatus: "open",
       routeExitCorrelation: "same-protocol-liquidity",
-      reviewedAt: "2026-07-30",
+      reviewedAt: "2026-09-03",
     });
     expect(dusd?.capacityModel).not.toMatchObject({ fallbackRatio: expect.any(Number) });
-    expect(dusd?.docs?.find((source) => source.label === "DUSD AsyncRedeemer verified source")).toMatchObject({
+    expect(dusd?.docs?.find((source) => source.label === "DUSD AsyncRedeemer sanctions-check implementation")).toMatchObject({
       supports: expect.arrayContaining(["fees"]),
     });
     expect(dusd?.docs?.find((source) => source.label === "DUSD Machine Terms")?.supports).not.toContain("fees");
@@ -361,6 +361,7 @@ describe("getRedemptionBackstopConfig", () => {
     });
 
     expect(getRedemptionBackstopConfig("aznd-mu-digital")).toMatchObject({
+      outputAssets: ["usdc-circle"],
       routeFamily: "queue-redeem",
       accessModel: "whitelisted-onchain",
       settlementModel: "days",
@@ -846,9 +847,9 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
       outputAssets: ["usdc-circle"],
-      // Upgraded from the reviewed supply-full model to live redeemer-float
-      // telemetry in v4.34.
-      capacityModel: { kind: "reserve-sync-metadata" },
+      // Reverted to the reviewed eventual-supply model after the invalid
+      // live reserve-composition adapter was removed.
+      capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
       costModel: { kind: "fee-bps", feeBps: 10 },
       reviewedAt: "2026-08-12",
     });
@@ -883,7 +884,7 @@ describe("getRedemptionBackstopConfig", () => {
     }
   });
 
-  it("upgrades the moderate-effort reviewed queue out of heuristic redemption semantics", () => {
+  it("applies the moderate-effort reviewed queue configurations", () => {
     expect(getRedemptionBackstopConfig("dola-inverse-finance")).toMatchObject({
       routeFamily: "psm-swap",
       capacityModel: { kind: "reserve-sync-metadata" },
@@ -902,10 +903,26 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("mtbill-midas")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "heuristic", basis: "hot-buffer" },
       costModel: { kind: "fee-bps", feeBps: 7 },
       reviewedAt: "2026-05-17",
     });
+
+    expect(getRedemptionBackstopConfig("usdy-ondo-finance")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "hot-buffer" },
+    });
+
+    for (const id of ["jpyc-jpyc-v1", "kgst-kyrgyz-som"] as const) {
+      expect(getRedemptionBackstopConfig(id)).toMatchObject({
+        routeFamily: "offchain-issuer",
+        holderEligibility: "unknown",
+        routeStatus: "unknown",
+        capacityModel: { kind: "supply-full", confidence: "heuristic" },
+      });
+    }
+
+    expect(getRedemptionBackstopConfig("mai-qidao")).toBeNull();
 
     expect(getRedemptionBackstopConfig("musd-metamask")).toMatchObject({
       routeFamily: "offchain-issuer",
@@ -1173,7 +1190,6 @@ describe("getRedemptionBackstopConfig", () => {
     // unresolved: no documented payout asset, untracked output, or no fixed
     // documented output set.
     for (const id of [
-      "aznd-mu-digital",
       "witry-brix",
       "dllr-sovryn",
       "deuro-deuro",
@@ -1203,10 +1219,8 @@ describe("getRedemptionBackstopConfig", () => {
       "asset:itry",
     ]);
     expect(getRedemptionBackstopConfig("witry-brix")?.unresolvedOutputDisposition).toBe("reviewed-external");
-    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputAssetKeys).toBeUndefined();
-    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputDisposition).toBe(
-      "issuer-undisclosed",
-    );
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.outputAssets).toEqual(["usdc-circle"]);
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputDisposition).toBeUndefined();
 
     expect(getRedemptionBackstopConfig("eearn-ember")).toMatchObject({
       outputAssets: ["usdc-circle"],

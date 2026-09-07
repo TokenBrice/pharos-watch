@@ -31,9 +31,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
-    "summary": "NUSD has one canonical native issuance route on Ethereum: its fixed LPToken is minted by the Nexus SwapFlashLoan pool against deposited pool assets. The twelve non-Ethereum SynapseERC20 deployments are bridge representations with route-scoped MINTER_ROLE controls; those controls and their DEFAULT_ADMIN_ROLE relationship belong to Bridge Risk rather than global Mint Authority. Harmony remains an unresolved documented route because its current bytecode and role state could not be read.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration RELOC-03",
+    "summary": "NUSD has one canonical native issuance route on Ethereum: its fixed LPToken is minted by the Nexus SwapFlashLoan pool against deposited pool assets. The twelve non-Ethereum SynapseERC20 deployments are bridge representations with route-scoped MINTER_ROLE controls; those controls and their DEFAULT_ADMIN_ROLE relationship belong to Bridge Risk rather than global Mint Authority. The Harmony route is now reviewed against the official Synapse deployment and a current Harmony role read.",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "Codex Harmony route-controller refresh",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -501,29 +501,37 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xed2a7edd7413021d440b09d654f3b87712abab66",
         "protocol": "Synapse Bridge",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-09-04",
+        "observedBlock": 93360067,
+        "sourceChain": "ethereum",
+        "controllerChain": "harmony",
+        "controllerAddress": "0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+        "failureDomainKeys": [
+          "contract:harmony:0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+          "synapse:nusd-liquidity"
+        ],
         "sources": [
           {
-            "label": "Synapse live token list",
-            "url": "https://api.synapseprotocol.com/tokenlist"
+            "label": "Synapse nUSD Harmony deployment",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/deployments/harmony/nUSD.json"
           },
           {
-            "label": "Synapse nUSD intermediate-token documentation",
-            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
           },
           {
-            "label": "Synapse synapse-contracts SynapseBridge deployments",
-            "url": "https://github.com/synapsecns/synapse-contracts/tree/master/deployments"
+            "label": "Harmony JSON-RPC fixed role read",
+            "url": "https://api.harmony.one"
           }
         ],
-        "reviewNote": "The official Synapse token list documents the Harmony deployment, but available public RPC endpoints did not return usable current bytecode, MINTER_ROLE, or role-admin reads; the current route classification and controller remain unresolved."
+        "reviewNote": "At Harmony block 93360067 on 2026-09-04, the official Synapse nUSD deployment is an EIP-1167 representation at 0xed2a7edd7413021d440b09d654f3b87712abab66; name()='nUSD', symbol()='nUSD', decimals()=18, and totalSupply()=11,267.815860007464282776. Its MINTER_ROLE read returned true for the official Harmony SynapseBridge 0xaf41a65f786339e7911f4acdad6bd49426f2dc6b, while getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE. The current default-role holder is not enumerable in this read, so no stronger administrative attribution is made."
       }
     ],
     "controls": [
@@ -922,6 +930,46 @@
           }
         ],
         "evidence": "At Aurora block 211644407 on 2026-08-16, fixed EIP-1167 representation 0x07379565cd8b0cae7c60dc78e7f601b34af2a21c reported MINTER_ROLE for controller 0xaed5b25be1c3163c907a471082640450f928ddfe. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the RPC response did not return a block timestamp, and the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-harmony-minter-role",
+        "label": "NUSD Harmony SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "harmony:0xed2a7edd7413021d440b09d654f3b87712abab66"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "harmony",
+        "controllerAddress": "0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+        "failureDomainKeys": [
+          "contract:harmony:0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Harmony representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation is a separate unresolved question.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Harmony block 93360067 on 2026-09-04, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-09-04",
+        "observedBlock": 93360067,
+        "sources": [
+          {
+            "label": "Synapse nUSD Harmony deployment",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/deployments/harmony/nUSD.json"
+          },
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Harmony JSON-RPC fixed role read",
+            "url": "https://api.harmony.one"
+          }
+        ],
+        "evidence": "At Harmony block 93360067 on 2026-09-04, fixed EIP-1167 representation 0xed2a7edd7413021d440b09d654f3b87712abab66 reported MINTER_ROLE for controller 0xaf41a65f786339e7911f4acdad6bd49426f2dc6b. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
       }
     ]
   }

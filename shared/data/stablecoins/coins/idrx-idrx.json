@@ -98,28 +98,28 @@
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://home.idrx.co/en/docs/",
-    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; June 2026 agreed-upon-procedures report, not an audit opinion)",
+    "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20July%202026.pdf",
+    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; July 2026 agreed-upon-procedures report, not an audit opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Indonesia",
     "attestorLicense": "Registered Public Accountant licence 0444/KM.1/2013",
     "latestReport": {
-      "periodEnd": "2026-06-19",
-      "publishedAt": "2026-07-07",
+      "periodEnd": "2026-07-28",
+      "publishedAt": "2026-08-10",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Pharos reserve curation review 2026-08-29 (AUP; no audit opinion)",
+      "reviewer": "Pharos reserve curation review 2026-09-01 (AUP; no audit opinion)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "IDRX Reserve Transparency Report (agreed-upon procedures; as of 2026-06-19; uploaded 2026-07-07)",
-          "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20June%202026.pdf"
+          "label": "IDRX Reserve Transparency Report July 2026 (agreed-upon procedures; as of 2026-07-28; listed 2026-08-10)",
+          "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20July%202026.pdf"
         },
         {
-          "label": "IDRX transparency and audit documents index (observed 2026-08-29)",
-          "url": "https://home.idrx.co/en/docs/"
+          "label": "IDRX public document API index (record 16, observed 2026-09-01)",
+          "url": "https://idrx.co/api/documents?page=1&take=100"
         }
       ]
     }

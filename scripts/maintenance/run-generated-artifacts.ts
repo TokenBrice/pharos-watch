@@ -338,6 +338,13 @@ export async function runGeneratedArtifacts({
 async function runDirect(): Promise<void> {
   try {
     const result = await runGeneratedArtifacts();
+    if (result.status !== 0 && result.failedCmd?.match(/generate-(?:sitemap-dates|docs-metadata)\.ts(?:\s|$)/)) {
+      console.error(
+        `[generated-artifacts] ${result.failedCmd} targets a build-time, Git-history-derived artifact marked checkable: false. ` +
+          "This is expected when the checkout is shallow or required history is missing. " +
+          "Fetch full Git history, then run `npm run bootstrap:generated:history`; do not retry the same history-derived check until history is available.",
+      );
+    }
     process.exitCode = result.status;
   } catch (error) {
     console.error(`[generated-artifacts] FAILED: ${error instanceof Error ? error.message : String(error)}`);

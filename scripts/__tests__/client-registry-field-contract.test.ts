@@ -2,28 +2,71 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildClientRegistryOutput,
+  buildWorkerRuntimeRegistryOutput,
   projectCoin,
+  projectDetailCoin,
   projectBlacklistStatus,
   projectGeniusProfile,
   projectMintAuthoritySummary,
   readCanonicalClientFields,
+  readCanonicalClientDetailFields,
   readGeniusComplianceFields,
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { expectedWorkerRuntimeCoin } from "@shared/lib/__tests__/worker-runtime-registry.test-support";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   STABLECOIN_CLIENT_META_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
+import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
+  it("projects the exact narrow Worker identity and lifecycle contract", () => {
+    const { runtimeCoins } = buildWorkerRuntimeRegistryOutput();
+    const expected = TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin);
+
+    expect(runtimeCoins).toEqual(expected);
+    expect(
+      runtimeCoins.every((coin) =>
+        Object.keys(coin).every((key) => [
+          "id",
+          "symbol",
+          "name",
+          "geckoId",
+          "pegCurrency",
+          "governance",
+          "navToken",
+          "commodityOunces",
+          "status",
+          "contracts",
+          "tradedContracts",
+          "liveReserveCircuitSource",
+        ].includes(key)),
+      ),
+    ).toBe(true);
+  });
+
   it("projects only the compact listing class from the decision ledger", () => {
-    const { slimCoins } = buildClientRegistryOutput();
+    const { slimCoins } = buildClientRegistryOutput() as { slimCoins: StablecoinClientListMeta[] };
     expect(slimCoins).toHaveLength(TRACKED_STABLECOINS.length);
     expect(slimCoins.every((coin) => typeof coin.listingClass === "string")).toBe(true);
     expect(slimCoins.find((coin) => coin.id === "susds-sky")?.listingClass).toBe("stablecoin-variant");
     expect(slimCoins.every((coin) => !("priceBasis" in coin) && !("exitMechanism" in coin))).toBe(true);
+  });
+
+  it("keeps evidence-heavy fields out of the list projection", () => {
+    const { listCoins, detailCoins } = buildClientRegistryOutput() as {
+      listCoins: StablecoinClientListMeta[];
+      detailCoins: StablecoinClientDetailMeta[];
+    };
+    const heavyFields = ["reserves", "mica", "genius", "mechanismArchetypeReview", "yieldConfig"];
+
+    expect(listCoins.every((coin) => heavyFields.every((field) => !(field in coin)))).toBe(true);
+    expect(detailCoins).toHaveLength(listCoins.length);
+    expect(detailCoins.every((coin) => "id" in coin)).toBe(true);
+    expect(detailCoins.some((coin) => heavyFields.some((field) => field in coin))).toBe(true);
   });
 
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
@@ -200,7 +243,7 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("2026-05-24");
   });
 
-  it("keeps only GENIUS status in the global client projection and projects full compliance evidence separately", () => {
+  it("projects compact GENIUS status in detail data and full compliance evidence separately", () => {
     const coin = {
       id: "genius-usd",
       name: "GENIUS USD",
@@ -253,15 +296,11 @@ describe("client registry field contract", () => {
       },
     };
 
-    const projected = projectCoin(coin, readCanonicalClientFields());
+    const projected = projectDetailCoin(coin, readCanonicalClientDetailFields());
     const complianceProfile = projectGeniusProfile(coin.genius, readGeniusComplianceFields());
 
     expect(projectGeniusProfile(null)).toBeNull();
-    expect(projected.genius).toEqual({
-      authorizationStatus: "no-public-authorization-found",
-    });
-    expect(JSON.stringify(projected)).not.toContain("Long applicability basis stays server-side");
-    expect(JSON.stringify(projected)).not.toContain("Long negative evidence review stays server-side");
+    expect(projected.genius).toEqual(complianceProfile);
     expect(complianceProfile).toEqual({
       applicability: "apparent-payment-stablecoin",
       applicabilityBasis: {

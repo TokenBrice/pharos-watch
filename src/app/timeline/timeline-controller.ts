@@ -14,7 +14,7 @@ export const WINDOW_LABEL: Record<TapeWindowKey, string> = {
 };
 
 // Compact uppercase form used in the status-line footer.
-export const WINDOW_SHORT: Record<TapeWindowKey, string> = {
+const WINDOW_SHORT: Record<TapeWindowKey, string> = {
   "24h": "24H",
   "7d": "7D",
   "30d": "30D",

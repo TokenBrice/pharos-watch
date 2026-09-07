@@ -3,8 +3,6 @@ import { dirname, extname, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-/* eslint-disable security/detect-non-literal-fs-filename -- test-only traversal of repo-local imports. */
-
 const ROOT = resolve(process.cwd().endsWith("/worker") ? process.cwd() : resolve(process.cwd(), "worker"), "..");
 const ENTRY = resolve(ROOT, "worker/src/cron/telegram-recap-planner.ts");
 const FORBIDDEN_PATH = /(?:^|\/)(?:daily-digest|weekly-recap|anthropic|openai|ai-request)(?:\.|\/)|\/cron\/digest\//i;

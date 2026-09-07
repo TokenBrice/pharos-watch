@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { packWatchlistDirectState } from "../../../lib/telegram-watchlist-token";
+import { packWatchlistDirectState } from "../../../lib/telegram/watchlist-token";
 import type { ConfirmBulkPayload } from "../../telegram-webhook-shared";
 import type { TelegramWebhookOperationIntent } from "../../telegram-webhook-store";
 import { handleBulkActionCallback } from "../confirm";

@@ -78,6 +78,11 @@
       "chain": "tempo",
       "address": "0x20c00000000000000000000042109aef2f8b28e1",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "3GJfXJvPcjuAu6VQZmcs9pAXQau8nz3z88CCpBztgQSv",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

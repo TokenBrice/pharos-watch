@@ -1,6 +1,6 @@
 [
-  {"date":"2022-05-05","kind":"governance","label":"USDD launch — algorithmic design post-UST collapse","severity":"med","note":"2022-05-05 — USDD launches three weeks after Terra/UST collapse; 40% staking APY"},
-  {"date":"2022-11-09","kind":"depeg","label":"FTX/Alameda contagion — USDD depeg low ~$0.96","severity":"high","note":"2022-11-09 — Alameda-linked sell pressure pushes USDD to ~$0.96 during FTX collapse"},
-  {"date":"2024-08-01","kind":"governance","label":"TDR removes ~$750M BTC backing — TRX-heavy mix","severity":"high","note":"2024-08 — Tron DAO Reserve removes ~$750M BTC backing; reserves shift to TRX-heavy"},
-  {"date":"2025-01-16","kind":"governance","label":"USDD 2.0 — pivots from algorithmic to CDP backing","severity":"high","note":"2025-01-16 — USDD 2.0 announced: overcollateralized CDP model, 20% staking yield"}
+  {"date":"2022-05-05","kind":"governance","label":"USDD launch, algorithmic design post-UST collapse","severity":"med","note":"2022-05-05: USDD launches three weeks after Terra/UST collapse; 40% staking APY"},
+  {"date":"2022-11-09","kind":"depeg","label":"FTX/Alameda contagion, USDD depeg low ~$0.96","severity":"high","note":"2022-11-09: Alameda-linked sell pressure pushes USDD to ~$0.96 during FTX collapse"},
+  {"date":"2024-08-01","kind":"governance","label":"TDR removes ~$750M BTC backing, TRX-heavy mix","severity":"high","note":"2024-08: Tron DAO Reserve removes ~$750M BTC backing; reserves shift to TRX-heavy"},
+  {"date":"2025-01-16","kind":"governance","label":"USDD 2.0: pivots from algorithmic to CDP backing","severity":"high","note":"2025-01-16: USDD 2.0 announced: overcollateralized CDP model, 20% staking yield"}
 ]

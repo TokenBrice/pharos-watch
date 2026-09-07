@@ -8,11 +8,11 @@ import {
   buildSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionSource,
-} from "../../lib/safety-score-v9-supply-attribution-source";
+} from "../../lib/safety-score-v9/supply-attribution-source";
 import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
-} from "../../lib/safety-score-v9-supply-attribution-generation";
+} from "../../lib/safety-score-v9/supply-attribution-generation";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 
 const mocks = vi.hoisted(() => ({
@@ -20,11 +20,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock(
-  "../../lib/safety-score-v9-supply-attribution",
+  "../../lib/safety-score-v9/supply-attribution",
   async (importOriginal) => {
     const original =
       await importOriginal<
-        typeof import("../../lib/safety-score-v9-supply-attribution")
+        typeof import("../../lib/safety-score-v9/supply-attribution")
       >();
     return {
       ...original,

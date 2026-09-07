@@ -49,7 +49,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "XNK on Ethereum (owner() = 0x2691FBB371456eaC5C5AA0082a0f53C91249c044, mintingFinished() = false per the mint-authority review, re-confirmed 2026-07-20): Kinka's legacy owner-controlled mintable token. The owner contract chain (0x2691 → 0x50ea) remains unresolvable (see mint-authority review), but no third-party bridge mints this deployment — minting is owner-only on Ethereum.",
+        "reviewNote": "XNK on Ethereum (owner() = 0x2691FBB371456eaC5C5AA0082a0f53C91249c044, mintingFinished() = false per the mint-authority review, re-confirmed 2026-07-20): Kinka's legacy owner-controlled mintable token. The owner contract chain (0x2691 → 0x50ea) remains unresolvable (see mint-authority review), but . No third-party bridge mints this deployment.  minting is owner-only on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "canonicalChain": "ethereum",

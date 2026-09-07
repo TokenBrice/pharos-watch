@@ -34,6 +34,7 @@
       "decimals": 18
     }
   ],
+  "collateralQuality": "exotic",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",

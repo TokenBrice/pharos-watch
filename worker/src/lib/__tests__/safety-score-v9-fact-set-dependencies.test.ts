@@ -15,18 +15,18 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
-import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   computeSafetyScoreV9ReserveExposureKey,
   materializeSafetyScoreV9FactSetExtension,
-} from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/fact-set";
 import {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
+} from "../safety-score-v9/extension";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_FIXTURE_OBSERVED_AT_SEC as OBSERVED_AT_SEC,

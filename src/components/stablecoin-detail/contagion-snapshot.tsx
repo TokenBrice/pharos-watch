@@ -17,6 +17,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { LazySection } from "@/components/lazy-section";
 
 interface ContagionSnapshotProps {
   stablecoinId: string;
@@ -29,13 +30,17 @@ interface ContagionSnapshotProps {
 const DETAIL_NODE_LIMIT = 500;
 const EMPTY_MCAP_MAP = new Map<string, number>();
 
-const ContagionGraph = dynamic(() => import("@/components/contagion-graph-root").then((mod) => mod.ContagionGraph), {
-  ssr: false,
-  loading: () => (
+function DependencyGraphPlaceholder() {
+  return (
     <div className="flex min-h-[22rem] items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground">
       Loading dependency graph...
     </div>
-  ),
+  );
+}
+
+const ContagionGraph = dynamic(() => import("@/components/contagion-graph-root").then((mod) => mod.ContagionGraph), {
+  ssr: false,
+  loading: DependencyGraphPlaceholder,
 });
 
 export function ContagionSnapshot({
@@ -125,15 +130,17 @@ export function ContagionSnapshot({
         ) : null}
         <div className={layoutClass}>
           {hasContagion ? (
-            <ContagionGraph
-              cards={cards}
-              dependencyEdges={edges}
-              mcapMap={mcapMap}
-              logos={logos}
-              focusCoinId={stablecoinId}
-              minimalChrome
-              maxNodes={DETAIL_NODE_LIMIT}
-            />
+            <LazySection placeholder={<DependencyGraphPlaceholder />}>
+              <ContagionGraph
+                cards={cards}
+                dependencyEdges={edges}
+                mcapMap={mcapMap}
+                logos={logos}
+                focusCoinId={stablecoinId}
+                minimalChrome
+                maxNodes={DETAIL_NODE_LIMIT}
+              />
+            </LazySection>
           ) : null}
           {hasRightColumn ? rightColumn : null}
         </div>

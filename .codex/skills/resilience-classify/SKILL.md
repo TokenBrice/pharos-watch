@@ -7,7 +7,7 @@ description: Add explicit resilience overrides (`collateralQuality`, `custodyMod
 
 Use this skill to identify coins whose resilience defaults are wrong and to add only the override fields that differ from inference.
 
-**What these fields drive today:** the Selector's ranking and "what to watch" explanations (`shared/lib/selector/`) and the DDR depeg-duration resolver's verdict strata (`shared/lib/depeg-resolver/`). They do **not** feed the current Safety Score methodology — published safety grades will not move from these overrides, so do not promise or expect grade changes.
+**What these fields drive today:** the Selector's ranking and "what to watch" explanations (`shared/lib/selector/`) and the DDR depeg-duration resolver's verdict strata (`shared/lib/depeg-resolver/`). They do **not** feed the current Safety Score methodology. Published safety grades will not move from these overrides, so do not promise or expect grade changes.
 
 ## Read First
 
@@ -35,7 +35,7 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 
 ## Tiers
 
-The valid values are `COLLATERAL_QUALITY_VALUES` / `CUSTODY_MODEL_VALUES` in `shared/types/core.ts` — read the source file; do not rely on any list quoted elsewhere.
+The valid values are `COLLATERAL_QUALITY_VALUES` / `CUSTODY_MODEL_VALUES` in `shared/types/core.ts`; read the source file; do not rely on any list quoted elsewhere.
 
 ## Decision Rules
 

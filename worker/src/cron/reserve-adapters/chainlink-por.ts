@@ -13,14 +13,15 @@ import {
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
   fetchJsonPostWithRetry,
+  fetchOnchainMulticall3,
   fetchTronErc20TotalSupply,
-  makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { decodeUint256Word } from "./abi-decode";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 const CHAINLINK_POR_RESERVE_UNITS = ["USD", "XAU", "XAG", "SHARES"] as const;
 
@@ -440,22 +441,30 @@ export async function fetchChainlinkPorReserves(
     reserveUnit: inferReserveUnit(coin, parsedParams),
   };
 
-  const onchain = makeOnchainCallers(input, {
+  // Fetch the input-independent feed pair in one same-chain aggregate. Supply
+  // reads stay separate below because they span the coin's deployment chains.
+  const feedReads = await fetchOnchainMulticall3({
+    calls: [
+      { label: "feed-decimals", contract: params.porFeedAddress, data: DECIMALS_SELECTOR },
+      { label: "feed-latest-round-data", contract: params.porFeedAddress, data: LATEST_ROUND_DATA_SELECTOR },
+    ],
+    chain: input.chain,
     signal,
     ctx,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
-
-  // 1. Fetch feed decimals (single uint8)
-  const rawDecimals = await onchain.uint256(params.porFeedAddress, DECIMALS_SELECTOR);
+  const resultData = (label: string) => {
+    const result = feedReads?.find((entry) => entry.label === label);
+    return result?.success ? result.returnData : null;
+  };
+  const rawDecimals = decodeUint256Word(resultData("feed-decimals"));
   if (rawDecimals == null) {
     throw new Error("chainlink-por: decimals() call failed");
   }
   const decimals = Number(rawDecimals);
 
-  // 2. Fetch latestRoundData() (5 words)
-  const rawRoundData = await onchain.raw(params.porFeedAddress, LATEST_ROUND_DATA_SELECTOR);
+  const rawRoundData = resultData("feed-latest-round-data");
   if (rawRoundData == null) {
     throw new Error("chainlink-por: latestRoundData() call failed");
   }

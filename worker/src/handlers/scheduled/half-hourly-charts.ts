@@ -1,6 +1,6 @@
 /**
  * Half-hourly charts trigger (16,46 * * * *):
- *   sync-dex-liquidity (0) → dex-exit-route-turnover-watchdog (0)
+ *   sync-dex-liquidity (0) → cron-sentinel turnover source (0)
  *   → prepare-safety-score-v9-input (3)
  *   sync-stablecoin-charts (1), failure-independent and serial
  *
@@ -19,7 +19,7 @@ import {
   isHourlyDexPriceSlot,
 } from "@shared/lib/cron-cadences";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
-import { runDexExitRouteTurnoverWatchdog } from "../../cron/dex-exit-route-turnover-watchdog";
+import { runCronSentinel } from "../../cron/cron-sentinel";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { CronResult } from "../../lib/cron-logger";
 import { tryParseJson } from "../../lib/json-parse";
@@ -115,7 +115,7 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
           },
         },
         {
-          job: "dex-exit-route-turnover-watchdog",
+          job: "cron-sentinel",
           run: (signal) => {
             if (!isDexLiquidityPublicationSlot(runtime.slotStartedAt)) {
               return Promise.resolve({
@@ -144,7 +144,7 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
                 }),
               });
             }
-            return runDexExitRouteTurnoverWatchdog(runtime.db, signal);
+            return runCronSentinel(runtime.db, { mode: "turnover", signal });
           },
         },
         {

@@ -2,6 +2,39 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.215",
+    title: "Scoped M0 inheritance and VUSD retained-DEX recovery",
+    date: "2026-09-03",
+    effectiveAt: 1788393600,
+    summary:
+      "M and its USDN child can reuse a genuinely single-source replay-safe wM mark, while VUSD can publish its reviewed liquid retained-DEX aggregate without weakening global depeg trust.",
+    impact: [
+      "`m-m0` may inherit a fresh replay-safe `wm-m0` parent only when the parent itself reports single-source confidence; the result preserves the parent source and single-source provenance, and the existing same-run chain can then repair `usdn-noble`",
+      "A high-confidence wM composite padded by a non-replay-safe address source remains ineligible for M inheritance, and cached, stale, fallback, low-confidence, or provenance-less parent marks remain rejected",
+      "`vusd-virtue` alone may admit a fresh retained DEX aggregate with at least $250K TVL as the existing soft `dex-promoted` primary-publication voice; unreviewed assets retain the $1M aggregate floor",
+      "The global $1M depeg-trust floor, exact-address provider liquidity floor, DEX freshness checks, and severe-downside corroboration gate are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.214",
+    title: "Canonical sUSDS and sUSDe vault NAV coverage",
+    date: "2026-09-01",
+    effectiveAt: 1788220800,
+    summary:
+      "Sky sUSDS and Ethena sUSDe can publish authoritative NAV prices from their canonical Ethereum ERC-4626 vaults and tracked parent assets.",
+    impact: [
+      "`susds-sky` resolves `convertToAssets(1 share)` from the canonical Ethereum vault and multiplies the USDS-denominated rate by the fresh trusted `usds-sky` price",
+      "`susde-ethena` resolves `convertToAssets(1 share)` from the canonical Ethereum staking vault and multiplies the USDe-denominated rate by the fresh trusted `usde-ethena` price",
+      "The existing parent-provenance gate, 0.5-10 assets-per-share bounds, 24-hour last-good rate cache, publication priority, and circuit semantics are unchanged",
+      "Neither wrapper receives a synthetic par price: a missing or untrusted parent, invalid vault rate, or unavailable live/cache quote fails closed and leaves the asset unpriced",
+      "`steakusdc-steakhouse` remains on its healthy pre-existing ERC-4626 registration; this revision does not add or alter its source route",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.213",
     title: "NAV supply valuation from the protocol-redeem route",
     date: "2026-08-30",
@@ -11,7 +44,7 @@ export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     impact: [
       "`sbold-k3-capital` and `eearn-ember` re-enter active publication after CoinGecko and DefiLlama dropped their market rows: intake now resolves `convertToAssets(1 share)` x the trusted tracked parent price (BOLD and USDC respectively) for supply valuation only",
       "The pre-intake resolver reuses the unchanged parent-trust gate against the previous published payload's parent row, the live on-chain rate read, and the bounded 24-hour cached-rate degradation lane; no freshness policy is relaxed",
-      "The resolved NAV never publishes as the asset's price - the row enters with a missing price and the live protocol-redeem override stage re-prices it in the same run",
+      "The resolved NAV never publishes as the asset's price: the row enters with a missing price and the live protocol-redeem override stage re-prices it in the same run",
       "NAV/yield-bearing assets remain never par-valued: without a trusted NAV the asset stays out of the payload and continues to report as dropped tracked coverage",
     ],
     commits: [],

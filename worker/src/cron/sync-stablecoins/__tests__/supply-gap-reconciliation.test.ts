@@ -99,6 +99,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset.circulatingPrevWeek).toEqual({ peggedEUR: 80 });
     expect(asset.circulatingPrevMonth).toEqual({ peggedEUR: 70 });
     expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({
+      chainId: "xrpl",
       current: 30,
       circulatingPrevDay: 0,
       circulatingPrevWeek: 30,
@@ -186,27 +187,30 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     const onchainById: Record<string, {
       mcap: number;
       supplySource: "onchain-total-supply";
-      chainCirculating?: Record<string, number>;
+      chainCirculating?: Record<string, { current: number; chainId?: string }>;
     }> = {
       "cadd-cad-digital": {
         mcap: 387_447.5,
         supplySource: "onchain-total-supply",
-        chainCirculating: { Ethereum: 197_574.5, Base: 189_873 },
+        chainCirculating: {
+          Ethereum: { current: 197_574.5, chainId: "ethereum" },
+          Base: { current: 189_873, chainId: "base" },
+        },
       },
       "jpym-mento": {
         mcap: 103_627.12712522845,
         supplySource: "onchain-total-supply",
-        chainCirculating: { Celo: 103_627.12712522845 },
+        chainCirculating: { Celo: { current: 103_627.12712522845, chainId: "celo" } },
       },
       "zarm-mento": {
         mcap: 8_598.7022994136,
         supplySource: "onchain-total-supply",
-        chainCirculating: { Celo: 8_598.7022994136 },
+        chainCirculating: { Celo: { current: 8_598.7022994136, chainId: "celo" } },
       },
       "xofm-mento": {
         mcap: 33_000.819008033395,
         supplySource: "onchain-total-supply",
-        chainCirculating: { Celo: 33_000.819008033395 },
+        chainCirculating: { Celo: { current: 33_000.819008033395, chainId: "celo" } },
       },
     };
     vi.mocked(fetchCuratedAggregateOnChainMcap).mockImplementation(async (meta) =>
@@ -253,8 +257,8 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       supplySource: "onchain-total-supply",
       circulating: { peggedCAD: 387_447.5 },
       chainCirculating: {
-        Ethereum: { current: 197_574.5 },
-        Base: { current: 189_873 },
+        Ethereum: { current: 197_574.5, chainId: "ethereum" },
+        Base: { current: 189_873, chainId: "base" },
       },
     });
     expect(byId.get("jpym-mento")).toMatchObject({
@@ -270,7 +274,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(byId.get("xofm-mento")).toMatchObject({
       supplySource: "onchain-total-supply",
       circulating: { peggedXOF: 33_000.819008033395 },
-      chainCirculating: { Celo: { current: 33_000.819008033395 } },
+      chainCirculating: { Celo: { current: 33_000.819008033395, chainId: "celo" } },
     });
   });
 

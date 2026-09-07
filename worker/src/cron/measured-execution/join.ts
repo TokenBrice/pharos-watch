@@ -28,6 +28,8 @@ import {
   validateCurveStableSwapNgProfileProof,
 } from "./curve-stableswap-ng";
 import {
+  CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+  CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
   getCurveCompositePolicy,
   isCurveCompositeAdapterProfileId,
   validateCurveCompositeProfileProof,
@@ -102,78 +104,80 @@ export async function loadDexMeasuredExecutionJoinEvidence(
   }
 }
 
+function quoteFailureGateReason(
+  failureReasons: readonly (string | null | undefined)[],
+): Extract<DexExecutionCapabilityGate["reason"], "budget-deferred" | "quote-failed"> {
+  return failureReasons.length > 0 && failureReasons.every((reason) => reason === "budget-deferred")
+    ? "budget-deferred"
+    : "quote-failed";
+}
+
+/** Curve pool policies name the same fields poolAddress/expectedPoolCodeHash; an absent hash joins as a mismatch. */
+type ResolvedDeploymentEndpoint =
+  | { endpointAddress: string; expectedCodeHash: string }
+  | { poolAddress: string; expectedPoolCodeHash?: string };
+
+interface DeploymentEndpointBinding {
+  resolve(profile: DexMeasuredExecutionProfile): ResolvedDeploymentEndpoint | null;
+  validate(profile: DexMeasuredExecutionProfile): string[];
+}
+
+const quoterV2DeploymentBinding: DeploymentEndpointBinding = {
+  resolve: (profile) => getDexMeasuredExecutionDeployment(profile.adapterProfileId, profile.chain),
+  validate: validateQuoterV2ProfileProof,
+};
+
+const curveCompositeDeploymentBinding: DeploymentEndpointBinding = {
+  resolve: (profile) => getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address),
+  validate: validateCurveCompositeProfileProof,
+};
+
+/**
+ * Deployment resolution per adapter profile. Curve pool policies key on the
+ * execution endpoint address itself, so an unreviewed endpoint resolves to
+ * null and joins as "deployment-missing".
+ */
+const DEPLOYMENT_ENDPOINT_BINDINGS: ReadonlyMap<string, DeploymentEndpointBinding> = new Map([
+  ["uniswap-v3-quoter-v2", quoterV2DeploymentBinding],
+  ["pancakeswap-v3-quoter-v2", quoterV2DeploymentBinding],
+  ["aerodrome-slipstream-quoter-v2", quoterV2DeploymentBinding],
+  [UNISWAP_V4_ADAPTER_PROFILE_ID, {
+    resolve: (profile) => getUniswapV4Deployment(profile.chain),
+    validate: validateUniswapV4ProfileProof,
+  }],
+  [CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID, {
+    resolve: (profile) => getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address),
+    validate: validateCurveCryptoSwapProfileProof,
+  }],
+  [CURVE_STABLESWAP_ADAPTER_PROFILE_ID, {
+    resolve: (profile) => getCurveStableSwapPolicy(profile.chain, profile.executionEndpoint.address),
+    validate: validateCurveStableSwapProfileProof,
+  }],
+  [CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID, {
+    resolve: (profile) => getCurveStableSwapNgPolicy(profile.chain, profile.executionEndpoint.address),
+    validate: validateCurveStableSwapNgProfileProof,
+  }],
+  [CURVE_RATE_BEARING_ADAPTER_PROFILE_ID, curveCompositeDeploymentBinding],
+  [CURVE_METAPOOL_ADAPTER_PROFILE_ID, curveCompositeDeploymentBinding],
+]);
+
 function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
-  if (
-    profile.adapterProfileId === "uniswap-v3-quoter-v2" ||
-    profile.adapterProfileId === "pancakeswap-v3-quoter-v2" ||
-    profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
-  ) {
-    const deployment = getDexMeasuredExecutionDeployment(profile.adapterProfileId, profile.chain);
-    if (!deployment) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== deployment.endpointAddress) issues.push("endpoint-address-mismatch");
-    if (profile.executionEndpoint.codeHash !== deployment.expectedCodeHash) issues.push("endpoint-code-hash-mismatch");
-    issues.push(...validateQuoterV2ProfileProof(profile));
-    return issues;
+  const binding = DEPLOYMENT_ENDPOINT_BINDINGS.get(profile.adapterProfileId);
+  if (!binding) return ["adapter-profile-unsupported"];
+  const deployment = binding.resolve(profile);
+  if (!deployment) return ["deployment-missing"];
+  const issues: string[] = [];
+  const poolPolicy = "poolAddress" in deployment;
+  const endpointAddress = poolPolicy ? deployment.poolAddress : deployment.endpointAddress;
+  const expectedCodeHash = poolPolicy ? deployment.expectedPoolCodeHash : deployment.expectedCodeHash;
+  if (profile.executionEndpoint.address !== endpointAddress) {
+    issues.push("endpoint-address-mismatch");
   }
-  if (profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
-    const deployment = getUniswapV4Deployment(profile.chain);
-    if (!deployment) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== deployment.endpointAddress) {
-      issues.push("endpoint-address-mismatch");
-    }
-    if (profile.executionEndpoint.codeHash !== deployment.expectedCodeHash) {
-      issues.push("endpoint-code-hash-mismatch");
-    }
-    issues.push(...validateUniswapV4ProfileProof(profile));
-    return issues;
+  if (profile.executionEndpoint.codeHash !== expectedCodeHash) {
+    issues.push("endpoint-code-hash-mismatch");
   }
-  if (profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
-    const policy = getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address);
-    if (!policy) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== policy.poolAddress) issues.push("endpoint-address-mismatch");
-    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) issues.push("endpoint-code-hash-mismatch");
-    issues.push(...validateCurveCryptoSwapProfileProof(profile));
-    return issues;
-  }
-  if (profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
-    const policy = getCurveStableSwapPolicy(profile.chain, profile.executionEndpoint.address);
-    if (!policy) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== policy.poolAddress) issues.push("endpoint-address-mismatch");
-    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) {
-      issues.push("endpoint-code-hash-mismatch");
-    }
-    issues.push(...validateCurveStableSwapProfileProof(profile));
-    return issues;
-  }
-  if (profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
-    const policy = getCurveStableSwapNgPolicy(profile.chain, profile.executionEndpoint.address);
-    if (!policy) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== policy.poolAddress) issues.push("endpoint-address-mismatch");
-    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) {
-      issues.push("endpoint-code-hash-mismatch");
-    }
-    issues.push(...validateCurveStableSwapNgProfileProof(profile));
-    return issues;
-  }
-  if (isCurveCompositeAdapterProfileId(profile.adapterProfileId)) {
-    const policy = getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address);
-    if (!policy) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== policy.poolAddress) {
-      issues.push("endpoint-address-mismatch");
-    }
-    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) {
-      issues.push("endpoint-code-hash-mismatch");
-    }
-    issues.push(...validateCurveCompositeProfileProof(profile));
-    return issues;
-  }
-  return ["adapter-profile-unsupported"];
+  issues.push(...binding.validate(profile));
+  return issues;
 }
 
 function mapValidationGate(issues: readonly string[]): DexExecutionCapabilityGate["reason"] {
@@ -217,41 +221,24 @@ function currentPhysicalPoolKeys(poolsByStablecoin: ReadonlyMap<string, readonly
   );
 }
 
-function isMatureFreshCurveStableSwapQuote(
+function isMatureFreshCurveQuote(
   quote: LoadedDexMeasuredQuote,
   nowSec: number,
+  adapterProfileId: string,
+  minCompleteCycles: number,
+  minSuccessfulObservations: number,
 ): boolean {
   const history = quote.observationHistory;
   if (
-    quote.quotedTarget.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
+    quote.quotedTarget.adapterProfileId !== adapterProfileId ||
     history == null
   ) return false;
   const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
     quote.quotedTarget.adapterProfileId,
   );
   return (
-    history.completeProducerCycleCount >= CURVE_STABLESWAP_MIN_COMPLETE_CYCLES &&
-    history.successfulObservationCount >= CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS &&
-    nowSec - history.observationWindowEndedAt <= freshnessMaxSec &&
-    history.observationWindowEndedAt <= nowSec + 60
-  );
-}
-
-function isMatureFreshCurveStableSwapNgQuote(
-  quote: LoadedDexMeasuredQuote,
-  nowSec: number,
-): boolean {
-  const history = quote.observationHistory;
-  if (
-    quote.quotedTarget.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
-    history == null
-  ) return false;
-  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
-    quote.quotedTarget.adapterProfileId,
-  );
-  return (
-    history.completeProducerCycleCount >= CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES &&
-    history.successfulObservationCount >= CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS &&
+    history.completeProducerCycleCount >= minCompleteCycles &&
+    history.successfulObservationCount >= minSuccessfulObservations &&
     nowSec - history.observationWindowEndedAt <= freshnessMaxSec &&
     history.observationWindowEndedAt <= nowSec + 60
   );
@@ -293,7 +280,13 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
       quote.status !== "measured" ||
-      !isMatureFreshCurveStableSwapQuote(quote, input.nowSec) ||
+      !isMatureFreshCurveQuote(
+        quote,
+        input.nowSec,
+        CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+        CURVE_STABLESWAP_MIN_COMPLETE_CYCLES,
+        CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS,
+      ) ||
       !input.poolsByStablecoin.has(target.stablecoinId)
     ) {
       continue;
@@ -400,7 +393,13 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     }
     const historyMature =
       target.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
-        ? isMatureFreshCurveStableSwapNgQuote(quote, input.nowSec)
+        ? isMatureFreshCurveQuote(
+            quote,
+            input.nowSec,
+            CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+            CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES,
+            CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS,
+          )
         : isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory);
     if (!historyMature) continue;
     const profile = materializeDexMeasuredQuoteProfile(quote);
@@ -533,9 +532,14 @@ export function joinDexMeasuredExecutionEvidence(input: {
           entry.profile = entry.quote ? materializeDexMeasuredQuoteProfile(entry.quote) : null;
         }
         if (packet.some(({ quote, profile }) => quote!.status !== "measured" || !profile)) {
+          const failureReasons = packet.map(
+            ({ quote }) => quote!.failureReason?.trim() || "profile-missing",
+          );
           failPacket(
-            "quote-failed",
-            packet.map(({ target, quote }) => `${target.targetId}:${quote!.failureReason ?? "profile-missing"}`).join(","),
+            quoteFailureGateReason(failureReasons),
+            packet
+              .map(({ target }, index) => `${target.targetId}:${failureReasons[index]}`)
+              .join(","),
           );
           continue;
         }
@@ -616,8 +620,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
       const profile = materializeDexMeasuredQuoteProfile(quote);
       if (quote.status !== "measured" || !profile) {
         fail(
-          quote.failureReason === "budget-deferred" ? "budget-deferred" : "quote-failed",
-          quote.failureReason ?? undefined,
+          quoteFailureGateReason([quote.failureReason]),
+          quote.failureReason?.trim() || undefined,
         );
         continue;
       }

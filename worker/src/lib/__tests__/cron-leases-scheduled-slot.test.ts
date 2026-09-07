@@ -1165,7 +1165,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toEqual(summary);
   });
 
-  it("uses a three-minute default scheduled-slot heartbeat cadence", async () => {
+  it("uses a 60-second default scheduled-slot heartbeat cadence", async () => {
     const slotStartedAt = Math.floor(Date.now() / 1000);
     const db = makeLeaseDb();
     let finish: ((value: { jobsErrored: number; jobsDegraded: number; jobsSkipped: number }) => void) | undefined;
@@ -1184,11 +1184,11 @@ describe("runScheduledSlotWithFence", () => {
     await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
     expect(db.getSlot("daily0800Utc", slotStartedAt)?.updated_at).toBe(slotStartedAt);
 
-    await vi.advanceTimersByTimeAsync(179_000);
+    await vi.advanceTimersByTimeAsync(59_000);
     expect(db.getSlot("daily0800Utc", slotStartedAt)?.updated_at).toBe(slotStartedAt);
 
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(db.getSlot("daily0800Utc", slotStartedAt)?.updated_at).toBe(slotStartedAt + 180);
+    expect(db.getSlot("daily0800Utc", slotStartedAt)?.updated_at).toBe(slotStartedAt + 60);
 
     finish?.({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
     await runPromise;

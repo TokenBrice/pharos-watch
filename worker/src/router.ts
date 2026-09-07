@@ -4,16 +4,16 @@ import {
   type EndpointDefinition,
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
+import { cloneResponse } from "@shared/lib/http-response";
 
 import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-response";
 import {
   getRouteMatch,
   ROUTER_STATIC_PATHS,
-  getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
 import { logWorkerEvent } from "./lib/structured-log";
 import { auditCatalogActionResponseSafely } from "./lib/catalog-action-audit";
-import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
+import type { FullRouteContext, RouteMatch } from "./routes/shared";
 
 export interface ResolvedRoute {
   routeMatch: RouteMatch;
@@ -32,11 +32,7 @@ function addAdminGetNoStoreHeader(
 
 function stripHeadBody(request: Request | undefined, response: Response): Response {
   if (request?.method !== "HEAD") return response;
-  return new Response(null, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
+  return cloneResponse(response, { method: request.method });
 }
 
 function auditPersistenceFailureResponse(response: Response): Response {
@@ -55,10 +51,6 @@ function auditPersistenceFailureResponse(response: Response): Response {
     },
     { status: 503, noStore: true, headers },
   );
-}
-
-export function getRouteDependencies(url: URL): readonly RouteDependency[] | null {
-  return getRegisteredRouteDependencies(url.pathname);
 }
 
 function validateRouteMatchMethod(

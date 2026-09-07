@@ -1,6 +1,7 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -14,7 +15,7 @@ import {
   buildKnownPoolAddresses,
   type PrimaryPoolCompactionResult,
 } from "./fetch-primary";
-import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
+import { publishDexPriceChallengerSnapshots } from "./challenger-publish";
 import {
   POOL_REJECTION_MATERIAL_TVL_USD,
   hasMaterialPoolRejections,
@@ -23,6 +24,7 @@ import {
 import { mergeStagedPools } from "./staging-merge";
 import {
   computeStablecoinScores,
+  publishStablecoinScoreTargets,
   computeDepthStability,
   computeDexPrices,
   loadCurrentDexScoringGenerationId,
@@ -35,17 +37,22 @@ import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
   buildAuthoritativeStagedPoolConfirmationIndex,
+} from "./orchestrator-phases/authoritative";
+import {
   buildDexDirectApiFetchers,
-  fetchSubgraphEnrichmentPhase,
-  fetchDirectCexOrderbookDepthTelemetry,
   integrateDirectApiLiquidityPhase,
-  loadTrackedStablecoinMaps,
-  mergeDexPriceObservationMap,
   runDirectApiFetchPhase,
-  runFallbackCrawlerPhase,
   type DirectApiIntegrationResult,
-} from "./orchestrator-phases";
-import { compactDirectApiFetchPhasePools, type DirectApiPoolCompactionCounts } from "./orchestrator-phases/direct-api";
+  compactDirectApiFetchPhasePools,
+  type DirectApiPoolCompactionCounts,
+} from "./orchestrator-phases/direct-api";
+import { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
+import {
+  fetchDirectCexOrderbookDepthTelemetry,
+  runFallbackCrawlerPhase,
+} from "./orchestrator-phases/fallback";
+import { loadTrackedStablecoinMaps } from "./orchestrator-phases/lookups";
+import { mergeDexPriceObservationMap } from "./subgraph-helpers";
 import {
   buildPoolIdentity,
   clearKnownPoolIdentityIndex,
@@ -65,6 +72,7 @@ import {
   buildUniV3DirectMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import {
   loadDexLiquidityScoringStage,
@@ -348,25 +356,19 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
 ): Promise<CronResult> {
   const generationId = await loadCurrentDexScoringGenerationId(db, signal);
   if (!generationId) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "current-dex-liquidity-generation-missing",
-        persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" },
-      }),
+      metadata: { reason: "current-dex-liquidity-generation-missing", persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" } },
       productivity: { productive: false, reason: "current-dex-liquidity-generation-missing" },
-    };
+    });
   }
-  return {
+  return createCronResult({
     status: "skipped_neutral",
     itemCount: 0,
-    metadata: JSON.stringify({
-      cadenceReuse: true,
-      persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" },
-    }),
+    metadata: { cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
     productivity: { productive: false, reason: "liquidity-cadence-reuse" },
-  };
+  });
 }
 
 export interface DexLiquidityRunContext {
@@ -422,6 +424,7 @@ interface DexLiquidityScoreState {
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   tvlStabilityMap: Map<string, number>;
   diagnostics: Awaited<ReturnType<typeof computeStablecoinScores>>["diagnostics"];
+  measuredTargetInventory: Awaited<ReturnType<typeof computeStablecoinScores>>["measuredTargetInventory"];
   analysis: DexLiquidityAnalysis;
 }
 
@@ -755,8 +758,9 @@ async function buildDexLiquidityPoolState(
     fallbackCounters: ctx.fallbackCounters,
   });
 
-  // Primary pools and enrichment maps have been projected into metrics and the
-  // identity index. Drop their source graphs before D1 materializes staged rows.
+  // Primary pools and display-only enrichment maps have been projected into
+  // metrics and the identity index. Keep only the exact target candidates
+  // through direct-pool integration, then release them below.
   preferredPrimaryPools = [];
   primaryPreference.filteredPools = [];
   sourceState.dataSources.pools = [];
@@ -767,10 +771,7 @@ async function buildDexLiquidityPoolState(
   sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
-  sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
-  sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
   sourceState.subgraphEnrichment.aerodromePriceObs = new Map();
-  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates = new Map();
 
   const directApiIntegration = await integrateDirectApiLiquidityPhase({
@@ -785,6 +786,16 @@ async function buildDexLiquidityPoolState(
     symbolToIds: sourceState.lookups.symbolToIds,
     validationReferences: sourceState.validationReferences,
     stablecoinPriceById: sourceState.stablecoinPriceById,
+    executionTargetContext: {
+      uniV3ExecutionCandidates:
+        sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
+      uniswapV4ExecutionCandidates:
+        sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
+      aerodromeIsStable: sourceState.subgraphEnrichment.aerodromeIsStable,
+      measuredTargetCapturedAt: ctx.syncStartSec,
+      contractMetaByChainAddress:
+        sourceState.lookups.contractMetaByChainAddress,
+    },
     preprocessedPoolCounts: sourceState.directApiPoolCounts,
     fallbackCounters: ctx.fallbackCounters,
   });
@@ -792,6 +803,9 @@ async function buildDexLiquidityPoolState(
 
   // The compact direct pool list is no longer needed after integration.
   sourceState.directApiPools = [];
+  sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
+  sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
+  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.lookups.symbolToIds = new Map();
   sourceState.lookups.symbolToChainScopedIds = new Map();
   sourceState.lookups.addressToId = new Map();
@@ -825,6 +839,16 @@ async function buildDexLiquidityPoolState(
   await enrichCurveStableswapRateInputExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
+    chainRpcs: ctx.chainRpcs,
+    signal: ctx.signal,
+  });
+  // Last of the three on-chain capture stages: it only touches Curve rows the
+  // source-only join could not resolve at all, so it never competes with the
+  // rate-bearing capture above for the same pool.
+  await enrichCurveStableswapFactoryExecutionModels({
+    metrics,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
   });
@@ -895,6 +919,7 @@ async function scoreDexLiquidityPoolState(
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,
+    measuredTargetInventory,
     diagnostics,
   } = await computeStablecoinScores(
     ctx.db,
@@ -968,6 +993,7 @@ async function scoreDexLiquidityPoolState(
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,
+    measuredTargetInventory,
     diagnostics,
     analysis,
   };
@@ -982,6 +1008,8 @@ async function persistDexLiquidityScoreState(
 ): Promise<DexLiquidityPersistenceState> {
   const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
   if (skippedReason) {
+    scoreState.measuredTargetInventory.active.length = 0;
+    scoreState.measuredTargetInventory.shadow.length = 0;
     await ctx.reportDexProgress("persistence-skipped", {
       message: `Skipping DEX liquidity publication: ${skippedReason}`, providerFamily: "d1", total: scoreState.scoreResults.size,
       metadata: { skippedReason, failedSources: sourceState.failedSources }, counts: { candidateRows: scoreState.scoreResults.size },
@@ -1055,6 +1083,15 @@ async function persistDexLiquidityScoreState(
     throw new Error("DEX liquidity persistence completed without a publication generation id");
   }
   poolState.metrics.clear();
+  if (options.publishLiquidity) {
+    await publishStablecoinScoreTargets(
+      ctx.db,
+      scoreState.measuredTargetInventory,
+      scoreState.diagnostics,
+      ctx.syncStartSec,
+      ctx.signal,
+    );
+  }
   await ctx.reportDexProgress(
     options.publishLiquidity ? "persistence-generation-complete" : "persistence-generation-reused",
     {
@@ -1214,7 +1251,6 @@ function buildDexLiquidityCronResult(
         failedSources: sourceState.failedSources,
         fallbackSignals: sourceState.fallbackSignals,
         fallbackCounters: scoreState.diagnostics.fallbackCounters,
-        shadowAdmission: scoreState.diagnostics.measuredExecution?.shadowAdmission ?? null,
         persistence: persistenceState.persistence,
         historicalSnapshot: persistenceState.historicalSnapshot,
       }),

@@ -3,8 +3,8 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import type {
   DirectApiFetchPhaseResult,
   DirectApiIntegrationResult,
-  FallbackCrawlerPhaseResult,
-} from "./orchestrator-phases";
+} from "./orchestrator-phases/direct-api";
+import type { FallbackCrawlerPhaseResult } from "./orchestrator-phases/fallback";
 import type { StagedPoolSkipDimension } from "./staging-merge";
 import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";

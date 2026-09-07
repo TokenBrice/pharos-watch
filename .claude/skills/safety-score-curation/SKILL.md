@@ -1,0 +1,1 @@
+../../../.codex/skills/safety-score-curation/SKILL.md

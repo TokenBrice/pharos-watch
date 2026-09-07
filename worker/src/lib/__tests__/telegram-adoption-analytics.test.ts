@@ -8,7 +8,7 @@ import {
   recordTelegramMiniAppAdoptionSession,
   recordTelegramMiniAppFirstMutation,
   refreshTelegramAdoptionRetention,
-} from "../telegram-adoption-analytics";
+} from "../telegram/adoption-analytics";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const NOW = Math.floor(Date.parse("2026-08-20T12:00:00Z") / 1_000);

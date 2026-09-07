@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { API_BASE } from "@/lib/api";
 import { copyText } from "@/lib/clipboard";
+import { triggerBlobDownload } from "@/lib/exports/download";
 import { RequestSequence, isRequestCancellation, requestBlob } from "@/lib/request";
 
 type Status = "idle" | "loading" | "copied" | "error";
@@ -80,12 +81,7 @@ export function ShareButton({ ogPath, label = "Share", iconOnly = false }: Share
     setStatus("loading");
     try {
       const blob = await requestSequence.current.run((signal) => fetchOgBlob(ogPath, signal));
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `pharos-${ogPath.split("/").pop() ?? "card"}.png`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      triggerBlobDownload(blob, `pharos-${ogPath.split("/").pop() ?? "card"}.png`);
       setStatus("idle");
     } catch (err) {
       if (isRequestCancellation(err)) return;

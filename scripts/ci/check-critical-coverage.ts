@@ -13,7 +13,13 @@ import {
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
-import { collectGitPaths } from "../lib/changed-files.mts";
+import {
+  CRITICAL_OWNERSHIP_WAIVERS,
+  deriveCriticalOwnership,
+  findCriticalOwnershipGaps,
+  type CriticalOwnership,
+} from "../lib/critical-ownership.mts";
+import { collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
@@ -36,6 +42,8 @@ interface CompletenessOptions {
   candidateFiles?: string[];
   criticalFiles?: string[];
   waivers?: CoverageWaivers;
+  ownership?: CriticalOwnership;
+  ownershipWaivers?: Readonly<Record<string, string>>;
   reviewToday?: Date;
   consoleImpl?: CoverageConsole;
   exit?: ExitFunction;
@@ -155,6 +163,8 @@ export function runCriticalCoverageCompletenessGuard({
   candidateFiles = collectCriticalCoverageCandidates(),
   criticalFiles = CRITICAL_FILES,
   waivers = CRITICAL_COVERAGE_WAIVERS,
+  ownership = deriveCriticalOwnership({ sourceFiles: criticalFiles }),
+  ownershipWaivers = CRITICAL_OWNERSHIP_WAIVERS,
   reviewToday = new Date(),
   consoleImpl = console,
   exit = process.exit,
@@ -167,7 +177,9 @@ export function runCriticalCoverageCompletenessGuard({
   const missingEnrollment = findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
     criticalFiles,
     waivers,
+    ownershipWaivers,
   });
+  const missingOwnership = findCriticalOwnershipGaps(criticalFiles, ownership, ownershipWaivers);
   // Waiver review dates are advisory. A calendar date passing is a prompt to
   // re-review coverage, not evidence that the merge being gated is unsafe, so
   // the queue is reported and the weekly maintenance lane picks it up.
@@ -187,7 +199,12 @@ export function runCriticalCoverageCompletenessGuard({
     }
   }
 
-  if (waiverErrors.length === 0 && staleWaivers.length === 0 && missingEnrollment.length === 0) {
+  if (
+    waiverErrors.length === 0
+    && staleWaivers.length === 0
+    && missingEnrollment.length === 0
+    && missingOwnership.length === 0
+  ) {
     return true;
   }
 
@@ -210,8 +227,14 @@ export function runCriticalCoverageCompletenessGuard({
       consoleImpl.error(`  ${file}`);
     }
   }
+  if (missingOwnership.length > 0) {
+    consoleImpl.error("[coverage] Enrolled critical sources missing importing owner tests:");
+    for (const file of missingOwnership) {
+      consoleImpl.error(`  ${file}`);
+    }
+  }
   consoleImpl.error(
-    "[coverage] Add the source file to CRITICAL_FILES with a baseline, or add a reviewed waiver in scripts/lib/critical-coverage.mjs.",
+    "[coverage] Add an importing contract test for the source, or add a reviewed cutover waiver in scripts/lib/critical-ownership.mts.",
   );
   exit(1);
   return false;
@@ -247,18 +270,27 @@ export function runCriticalCoverageCheck({
   const parsed = parseLcov(lcov);
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
   const changedFromEnv = parseChangedFilesFromEnv(env);
-  let changedFromRef: string[] = [];
-  if (changedFromEnv.length === 0) {
-    try {
-      changedFromRef = getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
-    } catch {
-      exit(1);
-      return;
+  let changedFiles = changedFromEnv;
+  if (changedFiles.length === 0) {
+    if (env.CI) {
+      const { base, head } = parseChangedFileArgs([], env);
+      changedFiles = collectGitPaths(
+        { kind: "range", base, head, diffFilter: "ACMR" },
+        { execFile, failure: "empty" },
+      );
+    } else {
+      try {
+        changedFiles = getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
+      } catch {
+        exit(1);
+        return;
+      }
     }
   }
-  const changedFiles = changedFromEnv.length > 0 ? changedFromEnv : changedFromRef;
   const touchedCritical = CRITICAL_FILES.filter((file) => changedFiles.includes(file));
-
+  // A plumbing-only diff has no touched source to scope, matching the shard's
+  // fallback to a full include set. Local/manual runs also keep full coverage.
+  const coverageScope = ratchetAll || touchedCritical.length === 0 ? CRITICAL_FILES : touchedCritical;
   let failed = false;
   consoleImpl.log(`[coverage] Critical file line coverage threshold: ${threshold.toFixed(1)}%`);
   if (baseline) {
@@ -278,7 +310,7 @@ export function runCriticalCoverageCheck({
     return Number.isFinite(override) ? override : threshold;
   }
 
-  for (const file of CRITICAL_FILES) {
+  for (const file of coverageScope) {
     const cov = findCoverageFor(file, parsed);
     if (!cov) {
       failed = true;

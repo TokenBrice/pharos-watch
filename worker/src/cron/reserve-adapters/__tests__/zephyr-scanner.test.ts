@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
 import { adaptZephyrScanner } from "../zephyr-scanner";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 describe("adaptZephyrScanner", () => {
   it("maps latest reserve snapshot into a ZEPH protocol reserve slice with verified metadata", () => {
@@ -129,9 +128,7 @@ describe("adaptZephyrScanner", () => {
         },
       ],
     });
-    const adapter = getReserveAdapter("zephyr-scanner") ?? undefined;
-    const report = validateAdapterOutput(result, { adapter });
-    expect(report.valid).toBe(true);
+    expectValidAdapterOutput("zephyr-scanner", result);
   });
 
   it("maps the ZYS yield reserve to the exact tracked ZSD dependency", () => {
@@ -191,9 +188,7 @@ describe("adaptZephyrScanner", () => {
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
     expect(result.metadata).not.toHaveProperty("supplyUsd");
 
-    const adapter = getReserveAdapter("zephyr-scanner") ?? undefined;
-    const report = validateAdapterOutput(result, {
-      adapter,
+    expectValidAdapterOutput("zephyr-scanner", result, {
       subjectId: "zys-zephyr-protocol",
       knownStablecoinIds: new Set([
         "zsd-zephyr-protocol",
@@ -201,7 +196,6 @@ describe("adaptZephyrScanner", () => {
       ]),
       now: 1784505000,
     });
-    expect(report.valid).toBe(true);
   });
 
   it("rejects a ZYS snapshot whose published share rate does not reconcile", () => {

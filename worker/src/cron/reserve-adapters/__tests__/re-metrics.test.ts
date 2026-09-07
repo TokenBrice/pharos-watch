@@ -3,8 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptReMetrics } from "../re-metrics";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
@@ -47,7 +46,7 @@ describe("adaptReMetrics", () => {
         holderEligibility: "any-holder",
       },
     });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("re-metrics") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("re-metrics", result);
   });
 
   it("accepts the renamed initialTvlData payload used by the current site", () => {
@@ -122,7 +121,7 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
         ],
       },
     });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("re-metrics") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("re-metrics", result);
   });
 
   it("parses large wei-denominated token values without raw Number conversion", () => {

@@ -6,8 +6,8 @@ import {
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
   routeSafetyScoreV9WrapperIncidents,
-} from "../safety-score-v9-extension-incidents";
-import type { ControlOverlay } from "../safety-score-v9-extension-shared";
+} from "../safety-score-v9/extension-incidents";
+import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 

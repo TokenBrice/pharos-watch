@@ -4,12 +4,16 @@ import {
   hasValidStagedPoolTvl,
   incrementRunSeq,
   isValidStagedPoolId,
+  readDiscoveryCensusSummaries,
   readDiscoveryMeta,
+  readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
+  writeDiscoveryTargetCursors,
 } from "../persistence";
 import { STAGED_POOL_MAX_TVL_USD, type StagedPool } from "../types";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 describe("isValidStagedPoolId", () => {
   it("accepts EVM chain:address lowercased form", () => {
@@ -57,7 +61,7 @@ describe("upsertStagedPools", () => {
   it("deletes the same-coin legacy exchange-only orderbook row before upserting suffixed ids", async () => {
     const preparedSql: string[] = [];
     const boundValues: unknown[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         preparedSql.push(sql);
         return {
@@ -68,7 +72,7 @@ describe("upsertStagedPools", () => {
         };
       },
       batch: async (stmts: unknown[]) => stmts.map(() => ({ success: true, meta: { changes: 1 } })),
-    } as unknown as D1Database;
+    });
 
     const nowSec = 1710000000;
     const pool: StagedPool = {
@@ -110,7 +114,7 @@ describe("upsertStagedPools", () => {
 describe("discovery persistence D1 retry coverage", () => {
   it("retries discovery meta writes on transient D1 overload", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -120,7 +124,7 @@ describe("discovery persistence D1 retry coverage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     await updateDiscoveryMeta(db, "usdc-circle", 2, 1_710_000_000);
 
@@ -129,7 +133,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("does not retry miss-counter arithmetic after an ambiguous D1 overload", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -138,7 +142,7 @@ describe("discovery persistence D1 retry coverage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     await expect(updateDiscoveryMeta(db, "usdc-circle", 0, 1_710_000_000)).rejects.toThrow(
       "D1 DB storage operation exceeded timeout",
@@ -150,7 +154,7 @@ describe("discovery persistence D1 retry coverage", () => {
   it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {
     let attempts = 0;
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
           run: async () => {
@@ -165,7 +169,7 @@ describe("discovery persistence D1 retry coverage", () => {
           oldest_raw_json_remaining_at: 1_709_990_000,
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const cleanup = await cleanupStaging(db, 1_710_000_000);
 
@@ -184,7 +188,7 @@ describe("discovery persistence D1 retry coverage", () => {
   });
 
   it("reports staging cleanup errors without throwing", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -192,7 +196,7 @@ describe("discovery persistence D1 retry coverage", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const cleanup = await cleanupStaging(db, 1_710_000_000);
 
@@ -203,7 +207,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("retries discovery meta reads and maps rows", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         all: async () => {
           attempts++;
@@ -218,7 +222,7 @@ describe("discovery persistence D1 retry coverage", () => {
           };
         },
       }),
-    } as unknown as D1Database;
+    });
 
     const rows = await readDiscoveryMeta(db);
 
@@ -231,42 +235,139 @@ describe("discovery persistence D1 retry coverage", () => {
     });
   });
 
+  it("aggregates the deployment census per coin and excludes unsupported chains", async () => {
+    let sql = "";
+    const db = makeNoopD1({
+      prepare: (statement: string) => {
+        sql = statement;
+        return {
+          all: async () => ({
+            results: [
+              {
+                stablecoin_id: "buidl-blackrock",
+                verified_no_pools: 8,
+                observed_pools: 0,
+                provider_supported_inaccessible: 0,
+              },
+              {
+                stablecoin_id: "m-m0",
+                verified_no_pools: 9,
+                observed_pools: 0,
+                provider_supported_inaccessible: 7,
+              },
+              {
+                stablecoin_id: "sparse",
+                verified_no_pools: null,
+                observed_pools: null,
+                provider_supported_inaccessible: null,
+              },
+            ],
+          }),
+        };
+      },
+    });
+
+    const summaries = await readDiscoveryCensusSummaries(db);
+
+    // Unsupported-chain rows must not count as unanswered deployments (R1-D).
+    expect(sql).toContain("provider_set_json <> '[]'");
+    expect(sql).toContain("GROUP BY stablecoin_id");
+    expect(summaries.get("buidl-blackrock")).toEqual({
+      verifiedNoPoolsCount: 8,
+      observedPoolsCount: 0,
+      providerSupportedInaccessibleCount: 0,
+    });
+    expect(summaries.get("m-m0")?.providerSupportedInaccessibleCount).toBe(7);
+    expect(summaries.get("sparse")).toEqual({
+      verifiedNoPoolsCount: 0,
+      observedPoolsCount: 0,
+      providerSupportedInaccessibleCount: 0,
+    });
+  });
+
+  it("round-trips the per-coin target cursor as one durable map", async () => {
+    let storedValue: string | undefined;
+    const db = makeNoopD1({
+      prepare: (sql: string) => {
+        if (sql.startsWith("SELECT")) {
+          return {
+            bind: () => ({ first: async () => ({ value: storedValue }) }),
+          };
+        }
+        return {
+          bind: (...values: unknown[]) => ({
+            run: async () => {
+              storedValue = values[1] as string;
+              return { success: true, meta: { changes: 1 } };
+            },
+          }),
+        };
+      },
+    });
+    const cursors = new Map([
+      ["coin-a", "ethereum:0xaaa"],
+      ["coin-b", "osmosis:ibc/BBB"],
+    ]);
+
+    await writeDiscoveryTargetCursors(db, cursors);
+
+    expect(storedValue).toBe(JSON.stringify(Object.fromEntries(cursors)));
+    expect(await readDiscoveryTargetCursors(db)).toEqual(cursors);
+  });
+
   it("records an attempt fence without changing existing backoff counters", async () => {
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
-          run: async () => {
-            prepared.push({ sql, binds });
-            return { success: true, meta: { changes: 1 } };
-          },
+          sql,
+          binds,
         }),
       }),
-    } as unknown as D1Database;
+      batch: async (statements: Array<{ sql: string; binds: unknown[] }>) => {
+        prepared.push(...statements);
+        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
+    });
 
-    await recordDiscoveryAttemptFence(db, "coin-a", 1_710_000_000);
-
-    expect(prepared).toHaveLength(1);
-    expect(prepared[0]?.sql).toContain(
-      "ON CONFLICT(stablecoin_id) DO UPDATE SET",
+    await recordDiscoveryAttemptFence(
+      db,
+      "coin-a",
+      [{ chain: "ethereum", address: "0xABC", decimals: 18 }],
+      1_710_000_000,
     );
+
+    expect(prepared).toHaveLength(3);
     expect(prepared[0]?.sql).toContain(
+      "deployment_fence_attribution_at <> last_crawl_at",
+    );
+    expect(prepared[0]?.binds).toEqual(["coin-a", "coin-a", "coin-a"]);
+    expect(prepared[1]?.sql).toContain("FROM json_each(?) AS target");
+    expect(prepared[1]?.binds).toEqual([
+      1_710_000_000,
+      "coin-a",
+      JSON.stringify([{ chain: "ethereum", address: "0xabc" }]),
+    ]);
+    expect(prepared[2]?.sql).toContain(
       "last_crawl_at = excluded.last_crawl_at",
     );
-    expect(prepared[0]?.sql).not.toContain(
+    expect(prepared[2]?.sql).toContain(
+      "deployment_fence_attribution_at = excluded.deployment_fence_attribution_at",
+    );
+    expect(prepared[2]?.sql).not.toContain(
       "DO UPDATE SET\n             consecutive_misses",
     );
-    expect(prepared[0]?.binds).toEqual(["coin-a", 1_710_000_000]);
+    expect(prepared[2]?.binds).toEqual(["coin-a", 1_710_000_000, 1_710_000_000]);
   });
 
   it("honors abort signals before incrementing the run sequence", async () => {
     const controller = new AbortController();
     controller.abort(new Error("stop-discovery"));
     const prepare = vi.fn();
-    const db = {
+    const db = makeNoopD1({
       prepare,
       batch: async () => [],
-    } as unknown as D1Database;
+    });
 
     await expect(incrementRunSeq(db, controller.signal)).rejects.toThrow("stop-discovery");
     expect(prepare).not.toHaveBeenCalled();
@@ -274,7 +375,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("does not retry the discovery run sequence increment after an ambiguous D1 overload", async () => {
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({}),
       }),
@@ -282,7 +383,7 @@ describe("discovery persistence D1 retry coverage", () => {
         attempts++;
         throw new Error("Requests queued for too long");
       },
-    } as unknown as D1Database;
+    });
 
     await expect(incrementRunSeq(db)).rejects.toThrow("Requests queued for too long");
     expect(attempts).toBe(1);

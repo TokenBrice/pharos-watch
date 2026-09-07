@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 337 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 334 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 109 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 110 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -39,12 +39,12 @@
 ## Learn
 
 - [Stablecoin Glossary](https://pharos.watch/learn/glossary/): 16 citation-ready definitions for Pharos stablecoin analytics terminology.
-- [Glossary: PSI](https://pharos.watch/learn/glossary/#psi): Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0–100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.
-- [Glossary: DEWS](https://pharos.watch/learn/glossary/#dews): Depeg Early Warning System. A forward-looking per-coin stress score, 0–100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.
-- [Glossary: PegScore](https://pharos.watch/learn/glossary/#pegscore): Composite peg-stability score, 0–100. PegScore combines time-at-peg (50%) and event severity (50%) over a window capped by the coin's actual age, then enters the safety grade through a power-curve multiplier at exponent 0.40. The multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. One word, capital P, capital S.
-- [Glossary: Safety Score](https://pharos.watch/learn/glossary/#safety-score): Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0–39), with NR for insufficient required evidence.
-- [Glossary: LiquidityScore](https://pharos.watch/learn/glossary/#liquidity-score): DEX liquidity score, 0–100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.
-- [Glossary: FreezeWatch](https://pharos.watch/learn/glossary/#freezewatch): The live ledger of issuer-intervention events — freeze, unfreeze, pause, block, wipe — across supported centralized stablecoin contracts. Events are normalized by chain, action type, native amount, and USD amount, with provenance attached. FreezeWatch is the surface Pharos publishes for issuer power; the underlying methodology is the Blacklist Tracker. One word, capital F, capital W.
+- [Glossary: PSI](https://pharos.watch/learn/glossary/#psi): Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0 to 100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.
+- [Glossary: DEWS](https://pharos.watch/learn/glossary/#dews): Depeg Early Warning System. A forward-looking per-coin stress score, 0 to 100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.
+- [Glossary: PegScore](https://pharos.watch/learn/glossary/#pegscore): Composite peg-stability score, 0 to 100. PegScore combines time-at-peg (50%) and event severity (50%) over a window capped by the coin's actual age, then enters the safety grade through a power-curve multiplier at exponent 0.40. The multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. One word, capital P, capital S.
+- [Glossary: Safety Score](https://pharos.watch/learn/glossary/#safety-score): Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0 to 39), with NR for insufficient required evidence.
+- [Glossary: LiquidityScore](https://pharos.watch/learn/glossary/#liquidity-score): DEX liquidity score, 0 to 100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.
+- [Glossary: FreezeWatch](https://pharos.watch/learn/glossary/#freezewatch): The live ledger of issuer-intervention events (freeze, unfreeze, pause, block, wipe) across supported centralized stablecoin contracts. Events are normalized by chain, action type, native amount, and USD amount, with provenance attached. FreezeWatch is the surface Pharos publishes for issuer power; the underlying methodology is the Blacklist Tracker. One word, capital F, capital W.
 - [Stablecoin Mechanisms](https://pharos.watch/learn/mechanisms/): 7 plain-English explainers for the stablecoin mechanism archetypes Pharos tracks.
 - [Mechanism: Cash and Treasuries, tokenized 1:1](https://pharos.watch/learn/mechanisms/fiat-cash/): Centralized issuers custody dollars in bank accounts and short-term Treasuries; tokens are minted and redeemed on demand.
 - [Mechanism: Hold short-duration Treasuries, accrue NAV daily](https://pharos.watch/learn/mechanisms/tbill/): Regulated money-market and government-securities funds; the token is a fund share that accretes NAV instead of trading exactly at $1.
@@ -54,33 +54,33 @@
 - [Mechanism: Tokenize a private credit fund share](https://pharos.watch/learn/mechanisms/rwa-credit-fund/): Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.
 - [Mechanism: A title claim on specific vaulted metal](https://pharos.watch/learn/mechanisms/commodity-claim/): The token is not a dollar claim. It is legal title to identified bars of gold or silver sitting in a named vault, usually redeemable for physical delivery in whole-bar lots.
 - [Stablecoin Case Studies](https://pharos.watch/learn/case-studies/): 27 long-form retrospectives on stablecoin depegs, failures, and recoveries.
-- [Case study: USDC and the Silicon Valley Bank weekend](https://pharos.watch/learn/case-studies/usdc-svb-2023/): A fully-reserved dollar stablecoin lost its peg for two days in March 2023 — not because its backing failed, but because one of the banks holding that backing did.
-- [Case study: LUSD: the peg that held during the SVB weekend](https://pharos.watch/learn/case-studies/lusd-flight-to-safety-2023/): While USDC, Dai, and FRAX broke below $0.90 in March 2023, LUSD — backed only by on-chain ETH and an arbitrage-enforced redemption floor — traded at a premium and repegged in under 15 hours.
+- [Case study: USDC and the Silicon Valley Bank weekend](https://pharos.watch/learn/case-studies/usdc-svb-2023/): A fully-reserved dollar stablecoin lost its peg for two days in March 2023, not because its backing failed, but because one of the banks holding that backing did.
+- [Case study: LUSD: the peg that held during the SVB weekend](https://pharos.watch/learn/case-studies/lusd-flight-to-safety-2023/): While USDC, Dai, and FRAX broke below $0.90 in March 2023, LUSD, backed only by on-chain ETH and an arbitrage-enforced redemption floor, traded at a premium and repegged in under 15 hours.
 - [Case study: TerraUSD: the death spiral that erased $18 billion](https://pharos.watch/learn/case-studies/terra-ust-2022/): An uncollateralized mint-burn stablecoin propped up by a 20% yield unwound in six days, hyperinflating LUNA and dragging UST to a dime.
-- [Case study: Dai: Black Thursday and the PSM dependency](https://pharos.watch/learn/case-studies/dai-black-thursday/): A crypto-collateralized stablecoin that survived two very different shocks — broken liquidations in 2020 and inherited reserve risk in 2023 — and was reshaped by each.
-- [Case study: USDe and the October 2025 Binance oracle print](https://pharos.watch/learn/case-studies/usde-oracle-2025/): During the 10 October 2025 crypto-wide deleveraging, USDe printed as low as ~$0.65 on Binance while its backing and primary-market redemption stayed intact — a venue artifact, not a peg break.
+- [Case study: Dai: Black Thursday and the PSM dependency](https://pharos.watch/learn/case-studies/dai-black-thursday/): A crypto-collateralized stablecoin that survived two very different shocks (broken liquidations in 2020 and inherited reserve risk in 2023) and was reshaped by each.
+- [Case study: USDe and the October 2025 Binance oracle print](https://pharos.watch/learn/case-studies/usde-oracle-2025/): During the 10 October 2025 crypto-wide deleveraging, USDe printed as low as ~$0.65 on Binance while its backing and primary-market redemption stayed intact: a venue artifact, not a peg break.
 - [Case study: BUIDL: the tokenized T-bill that held](https://pharos.watch/learn/case-studies/buidl-tokenized-tbill-2025/): BlackRock's BUIDL did the unglamorous thing a tokenized money-market fund is supposed to do: hold NAV, constrain access, disclose its structure, and become safer precisely because it was not pretending to be an ungated retail dollar.
 - [Case study: USYC: when a T-bill fund became DeFi collateral](https://pharos.watch/learn/case-studies/usyc-nav-pricing-2025/): USYC's Treasury portfolio did not fail. The wound was downstream: protocols treated a permissioned NAV fund share like instantly liquid stablecoin collateral, then learned that NAV, market price, and redemption access are different things.
 - [Case study: USD0++ depeg: when Usual changed the redemption floor](https://pharos.watch/learn/case-studies/usd0pp-usual-2025/): A governance decision, not a backing failure, repriced Usual's locked USD0++ to roughly 89 cents and set off a deleveraging cascade across Morpho.
-- [Case study: crvUSD's exploit trilogy: three shocks, no collapse](https://pharos.watch/learn/case-studies/crvusd-exploit-trilogy/): Three exploit-driven stress events across two years each pushed crvUSD off peg by single-digit percentages — and each time it recovered within hours.
-- [Case study: sUSD and SIP-420: the depeg a governance vote chose](https://pharos.watch/learn/case-studies/susd-sip420-2025/): Synthetix did not get hacked and did not go insolvent. It voted to pool its debt and drop the collateral ratio — removing the very incentive that had kept sUSD at a dollar — then, a year later, voted to freeze and retire the token outright.
-- [Case study: IRON Finance & TITAN: the algorithmic prequel to Terra](https://pharos.watch/learn/case-studies/iron-titan-2021/): A partially collateralized stablecoin whose redemption loop minted its own share token into oblivion — crypto's first large-scale bank run, eleven months before UST.
+- [Case study: crvUSD's exploit trilogy: three shocks, no collapse](https://pharos.watch/learn/case-studies/crvusd-exploit-trilogy/): Three exploit-driven stress events across two years each pushed crvUSD off peg by single-digit percentages, and each time it recovered within hours.
+- [Case study: sUSD and SIP-420: the depeg a governance vote chose](https://pharos.watch/learn/case-studies/susd-sip420-2025/): Synthetix did not get hacked and did not go insolvent. It voted to pool its debt and drop the collateral ratio (removing the very incentive that had kept sUSD at a dollar), then, a year later, voted to freeze and retire the token outright.
+- [Case study: IRON Finance & TITAN: the algorithmic prequel to Terra](https://pharos.watch/learn/case-studies/iron-titan-2021/): A partially collateralized stablecoin whose redemption loop minted its own share token into oblivion: crypto's first large-scale bank run, eleven months before UST.
 - [Case study: Neutrino USD: the stablecoin collapse before Terra](https://pharos.watch/learn/case-studies/usdn-neutrino-2022/): A WAVES-collateralized algorithmic stablecoin that broke peg in April 2022 on circular-leverage allegations, never durably recovered, and was quietly retired as the floating index token XTN.
 - [Case study: Fei Protocol: the peg that broke at birth](https://pharos.watch/learn/case-studies/fei-protocol/): A $1.3B genesis raise and a reflexive incentive engine could not hold the dollar; after an $80M lending hack, Tribe DAO voted to wind the whole thing down.
 - [Case study: Resolv USD: when one key minted eighty million](https://pharos.watch/learn/case-studies/usr-resolv-2026/): USR was a delta-neutral synthetic dollar with an insurance tranche and real-time reserve attestations. None of it mattered once a single privileged key could mint unbacked supply with no cap.
 - [Case study: Stream Finance: loss broke three stablecoins](https://pharos.watch/learn/case-studies/stream-elixir-contagion-2025/): A ~$93M off-chain trading loss at Stream Finance detonated a ~$285M cross-protocol cascade, because xUSD had been re-hypothecated as leveraged collateral across lending markets that priced it at a hardcoded $1.
-- [Case study: USDf and the opacity discount](https://pharos.watch/learn/case-studies/usdf-falcon-2025/): In July 2025 Falcon's USDf became the first delta-neutral synthetic dollar to be wounded by what holders could not see — opaque off-chain collateral and a seven-day redemption lag — rather than by anything its mechanism actually did wrong.
-- [Case study: FDUSD and the insolvency tweet](https://pharos.watch/learn/case-studies/fdusd-sun-fdt-2025/): A fully-reserved dollar stablecoin lost its peg for hours in April 2025 — not because its backing failed, but because a high-profile competitor publicly called its custodian insolvent and the market ran first and checked later.
-- [Case study: BUSD: the regulator's off-switch](https://pharos.watch/learn/case-studies/busd-paxos-2023/): The third-largest stablecoin did not depeg — it was lawfully wound down. A fully-reserved, solvent coin can still die by order.
-- [Case study: Multichain USDC: the bridge died, not the dollar](https://pharos.watch/learn/case-studies/multichain-usdc-2023/): Bridge-wrapped USDC on Fantom fell to roughly $0.22 in July 2023 while real USDC never moved a basis point — the backing lived on a bridge that one arrested founder controlled outright.
-- [Case study: The FTX weekend: which pegs broke](https://pharos.watch/learn/case-studies/ftx-contagion-2022/): When the second-largest crypto exchange collapsed in November 2022, the stablecoins that wobbled weren't the weakest by design — they were the ones standing closest to Alameda's order flow.
+- [Case study: USDf and the opacity discount](https://pharos.watch/learn/case-studies/usdf-falcon-2025/): In July 2025 Falcon's USDf became the first delta-neutral synthetic dollar to be wounded by what holders could not see (opaque off-chain collateral and a seven-day redemption lag) rather than by anything its mechanism actually did wrong.
+- [Case study: FDUSD and the insolvency tweet](https://pharos.watch/learn/case-studies/fdusd-sun-fdt-2025/): A fully-reserved dollar stablecoin lost its peg for hours in April 2025, not because its backing failed, but because a high-profile competitor publicly called its custodian insolvent and the market ran first and checked later.
+- [Case study: BUSD: the regulator's off-switch](https://pharos.watch/learn/case-studies/busd-paxos-2023/): The third-largest stablecoin did not depeg; it was lawfully wound down. A fully-reserved, solvent coin can still die by order.
+- [Case study: Multichain USDC: the bridge died, not the dollar](https://pharos.watch/learn/case-studies/multichain-usdc-2023/): Bridge-wrapped USDC on Fantom fell to roughly $0.22 in July 2023 while real USDC never moved a basis point: the backing lived on a bridge that one arrested founder controlled outright.
+- [Case study: The FTX weekend: which pegs broke](https://pharos.watch/learn/case-studies/ftx-contagion-2022/): When the second-largest crypto exchange collapsed in November 2022, the stablecoins that wobbled were not the weakest by design but the ones standing closest to Alameda's order flow.
 - [Case study: USDR: tokenized houses cannot sell at 3 AM](https://pharos.watch/learn/case-studies/usdr-real-usd-2023/): Tangible's Real USD was backed by real assets, but not liquid ones. When the DAI cushion drained, holders discovered that on-chain redemptions move in seconds and real estate does not.
-- [Case study: Euro Tether: the stablecoin that died by jurisdiction](https://pharos.watch/learn/case-studies/eurt-mica-exit-2024/): EURT never broke its euro peg. In November 2024 Tether simply withdrew it rather than pursue MiCA authorization — the first wave of EU rules retired a non-dollar stablecoin instead of cracking it.
-- [Case study: USDD: when the issuer pulled the Bitcoin](https://pharos.watch/learn/case-studies/usdd-tron-reserve-2024/): No dramatic depeg — the shock was structural: the TRON DAO Reserve quietly withdrew ~12,000 BTC, leaving USDD backed almost entirely by TRX, before a 2025 redesign into an overcollateralized CDP.
-- [Case study: Kava USDX: one toxic collateral leg](https://pharos.watch/learn/case-studies/usdx-kava-2022/): An overcollateralized CDP dollar broke its peg in May 2022 because a single whitelisted collateral asset — TerraUSD — collapsed, and it never durably recovered.
-- [Case study: MAI: the bridge that broke the peg](https://pharos.watch/learn/case-studies/mai-qidao-bridge-2023/): QiDao's overcollateralized stablecoin lost its dollar in 2023 — not because its collateral fell, but because the Multichain bridge collapse stranded the assets backing the MAI minted on Fantom and seeded bad debt that the multichain footprint propagated.
-- [Case study: pmUSD and the in-situ gold collateral chain](https://pharos.watch/learn/case-studies/pmusd-precious-metals/): RAAC's gold-RWA dollar token has never settled at par — hundreds of recorded sub-peg events, then an ~88% crater to its May 4, 2026 all-time low — yet it is still live. The story is structural, not a single blowup.
-- [Case study: apxUSD and the Bitcoin-treasury collateral chain](https://pharos.watch/learn/case-studies/apxusd-dat-collateral/): Apyx markets apxUSD as an RWA-backed dollar, but roughly 62% of its reserve is Strategy preferred equity — a Bitcoin-correlated asset that fell with crypto in early June 2026, opening a downside depeg that is still unresolved.
+- [Case study: Euro Tether: the stablecoin that died by jurisdiction](https://pharos.watch/learn/case-studies/eurt-mica-exit-2024/): EURT never broke its euro peg. In November 2024 Tether simply withdrew it rather than pursue MiCA authorization: the first wave of EU rules retired a non-dollar stablecoin instead of cracking it.
+- [Case study: USDD: when the issuer pulled the Bitcoin](https://pharos.watch/learn/case-studies/usdd-tron-reserve-2024/): No dramatic depeg. The shock was structural: the TRON DAO Reserve quietly withdrew ~12,000 BTC, leaving USDD backed almost entirely by TRX, before a 2025 redesign into an overcollateralized CDP.
+- [Case study: Kava USDX: one toxic collateral leg](https://pharos.watch/learn/case-studies/usdx-kava-2022/): An overcollateralized CDP dollar broke its peg in May 2022 because a single whitelisted collateral asset, TerraUSD, collapsed, and it never durably recovered.
+- [Case study: MAI: the bridge that broke the peg](https://pharos.watch/learn/case-studies/mai-qidao-bridge-2023/): QiDao's overcollateralized stablecoin lost its dollar in 2023, not because its collateral fell, but because the Multichain bridge collapse stranded the assets backing the MAI minted on Fantom and seeded bad debt that the multichain footprint propagated.
+- [Case study: pmUSD and the in-situ gold collateral chain](https://pharos.watch/learn/case-studies/pmusd-precious-metals/): RAAC's gold-RWA dollar token has never settled at par (hundreds of recorded sub-peg events, then an ~88% crater to its May 4, 2026 all-time low), yet it is still live. The story is structural, not a single blowup.
+- [Case study: apxUSD and the Bitcoin-treasury collateral chain](https://pharos.watch/learn/case-studies/apxusd-dat-collateral/): Apyx markets apxUSD as an RWA-backed dollar, but roughly 62% of its reserve is Strategy preferred equity, a Bitcoin-correlated asset that fell with crypto in early June 2026, opening a downside depeg that is still unresolved.
 
 ## API
 
@@ -110,7 +110,6 @@
 - [API Reference](https://pharos.watch/docs/api-reference/): Public Pharos API contracts for stablecoin data: endpoints, authentication, response schemas, pagination, freshness headers, and dataset exports.
 - [Architecture](https://pharos.watch/docs/architecture/): How Pharos is built: static Next.js export, Cloudflare Pages Functions, Worker API lanes, D1 storage, route ownership, and SEO metadata rules.
 - [Data Flow Map](https://pharos.watch/docs/data-flow-map/): Source-to-UI map for Pharos stablecoin data, covering market prices, peg monitoring, liquidity, report cards, alerts, and generated public artifacts.
-- [Data Pipeline](https://pharos.watch/docs/data-pipeline/): Stablecoin data pipeline guide for price enrichment, source priority, freshness checks, integrity guardrails, fallback behavior, and sync cadence.
 - [Worker and API Limits](https://pharos.watch/docs/worker-and-api-limits/): Operational limits for the Pharos Worker and API: cron budgets, fetch connection caps, polling intervals, cache behavior, and guardrail checks.
 - [Classification](https://pharos.watch/docs/classification/): Stablecoin classification methodology for peg currencies, backing models, governance labels, commodity pegs, lifecycle status, and taxonomy pages.
 - [Stablecoin Listing Policy](https://pharos.watch/docs/listing-policy/): How Pharos admits, classifies, quarantines, delists, and preserves stablecoin records while separating catalog policy from runtime pricing failures.
@@ -125,7 +124,6 @@
 - [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.
 - [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.
 - [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.
-- [Design Context](https://pharos.watch/docs/design-context/): Pharos design context for product direction, user needs, brand posture, information density, and how the dashboard should feel in daily use.
 - [Design Language](https://pharos.watch/docs/design-language/): Pharos design language reference for live UI patterns, typography, spacing, responsive behavior, visual hierarchy, and route-specific conventions.
 - [Design Tokens](https://pharos.watch/docs/design-tokens/): Design token reference for Pharos CSS variables, semantic layers, colors, spacing, component styling, and token ownership rules.
 
@@ -133,6 +131,11 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 
 ## Digest
 
+- [USDC's Week Lands In One Day](https://pharos.watch/digest/2026-09-04/): USDC added $775.15M in a session, more than its $562.28M seven-day net, which puts the prior six days at roughly $213M negative. Supply $74.46B, 7% under April's peak.
+- [MSUSD Slips Below Fifty Cents](https://pharos.watch/digest/2026-09-03/): MSUSD widened 927 bps in a day to 5,070 bps off peg, $0.493 on $23.7M of supply, Safety score 0. RLUSD added $271M in a week and lost eight points of DEX liquidity score while its pool TVL rose.
+- [USTB Adds Its Entire Market Cap](https://pharos.watch/digest/2026-09-02/): USTB's 7d supply change is +$637.75M, matching its entire current market cap and doubling its prior weekly record. The whole market added $477.16M over the same week.
+- [DAI Adds Depth, Loses Confidence](https://pharos.watch/digest/2026-09-01/): One day brought $17.15M of DAI against $11.71M for the whole trailing week, and its DEX pools gained 11.4% TVL while the liquidity score slid 73 to 62. A $25M single-day print turns drift into rotation.
+- [USDS Yield Reading Arrives Without Receipts](https://pharos.watch/digest/2026-08-31-weekly/): USDS tops the risk board at 5.68% APY with no evidence to back it, and five yield flags outshouted a shrinking depeg field. USDC added billions, mcap moved +0.15%, and 13 of last week's calls missed.
 - [Small Flows, Maxed Signals](https://pharos.watch/digest/2026-08-30/): USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.
 - [Cash Grows, Yield Empties](https://pharos.watch/digest/2026-08-29/): USDC booked $319.98M of its $518M weekly gain in a single day, nearly the $400M rotation line; USYC shed $101.90M in the same session, dumping most of its weekly bleed at once. Cash in, yield out.
 - [apxUSD Recovers As The Gauge Flips](https://pharos.watch/digest/2026-08-28/): apxUSD tightened to 294 bps from 337 as the Bank Run Gauge flipped +21.2 to -19.3; PYUSD bled $42M, FDUSD $11.9M, 21 depegs still open. One coin healing, the flows turning.
@@ -148,11 +151,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [USDC Sheds, USDe Absorbs](https://pharos.watch/digest/2026-08-19/): USDC lost $359.6M on the week while USDe pulled in $107M, $56M of it yesterday alone; a thinning 10% reward is loosening the incumbent's grip on its float.
 - [USDT Grows Without Paying Up](https://pharos.watch/digest/2026-08-18/): USDT pulled in $964M this week at a flat 4.12% yield; USDC, paying 9.26%, lost $376M. The name offering double the reward is the one bleeding float.
 - [USDT's Yield Reading Won't Hold Still](https://pharos.watch/digest/2026-08-17-weekly/): USDT's top risk flag this week was a data gap, not a depeg: yield printed 0.51%, then 8.29%, then 4.12% on $183B unmoved. Nine names hit DEWS ALERT while PSI shrugged at 92.2.
-- [Nine Names In ALERT](https://pharos.watch/digest/2026-08-17/): DEWS ALERTs climbed from six to nine as RLUSD, XAUT, TUSD and USX all shed liquidity in one session. PSI's 92.2 registers none of it; the Bank Run Gauge, sinking to -12.6, does.
-- [USDf's Score Outruns Its Cash](https://pharos.watch/digest/2026-08-16/): USDf's liquidity score jumped 11 to 58 while $1.9M left its pools; satUSD's fell with its TVL, down 72% to $732K. The grade rewards how depth sits, not how much shows up.
-- [apxUSD Widens, Fifty-Nine Days In](https://pharos.watch/digest/2026-08-15/): apxUSD slid another 206bps to 713 below peg, now $0.928; on a $300M float it edges even pmUSD for the board's largest depeg impact. The STRC drawdown that opened it in June still hasn't closed.
-- [USDC's Reward Wears Thin](https://pharos.watch/digest/2026-08-14/): USDC's best yield fell to 9.48% from 13.8% a day earlier, while USDT held 4.12% and lost $350M of float this week; the dollar-yield complex is deflating, not panicking.
-- [XAUT's Overnight Market Cap](https://pharos.watch/digest/2026-08-13/): XAUT's +$2.67B weekly supply move equals its entire market cap, and its yield spiked to 5.22% from a 2.14% base while every dollar token cooled. Real bid or reclassification? Tomorrow's yield print decides.
 
 ## Stablecoins Index
 
@@ -237,7 +235,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Frax Price Index (FPI)](https://pharos.watch/stablecoin/fpi-frax/): CeFi-dependent stablecoin collateralized by crypto assets pegged to CPI.
 - [Unitas (USDU)](https://pharos.watch/stablecoin/usdu-unitas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [xDAI (xDAI)](https://pharos.watch/stablecoin/xdai-gnosis/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Lista USD (LISUSD)](https://pharos.watch/stablecoin/lisusd-lista/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Lista USD (lisUSD)](https://pharos.watch/stablecoin/lisusd-lista/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ondo U.S. Dollar Token (USDon)](https://pharos.watch/stablecoin/usdon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [OpenEden OpenDollar (USDO)](https://pharos.watch/stablecoin/usdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Compounding OpenDollar (cUSDO)](https://pharos.watch/stablecoin/cusdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -261,7 +259,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Liquity BOLD (BOLD)](https://pharos.watch/stablecoin/bold-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [sBOLD by K3 Capital (sBOLD)](https://pharos.watch/stablecoin/sbold-k3-capital/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Yearn BOLD (yBOLD)](https://pharos.watch/stablecoin/ybold-yearn/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Hylo HYUSD (HYUSD)](https://pharos.watch/stablecoin/hyusd-hylo/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Hylo HYUSD (hyUSD)](https://pharos.watch/stablecoin/hyusd-hylo/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Liquity USD (LUSD)](https://pharos.watch/stablecoin/lusd-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [fxUSD (fxUSD)](https://pharos.watch/stablecoin/fxusd-f-x-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [f(x) USD Saving (fxSAVE)](https://pharos.watch/stablecoin/fxsave-f-x-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -276,13 +274,13 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Noon USN (USN)](https://pharos.watch/stablecoin/usn-noon/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Staked USN (sUSN)](https://pharos.watch/stablecoin/susn-noon/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Nectar (NECT)](https://pharos.watch/stablecoin/nect-beraborrow/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Electronic USD (EUSD)](https://pharos.watch/stablecoin/eusd-electronic-usd/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Electronic Dollar (EUSD)](https://pharos.watch/stablecoin/eusd-electronic-usd/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [MAI (MAI)](https://pharos.watch/stablecoin/mai-qidao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Bucket Protocol BUCK (BUCK)](https://pharos.watch/stablecoin/buck-bucket-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Mezo USD (MUSD)](https://pharos.watch/stablecoin/meusd-mezo/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Unity (UTY)](https://pharos.watch/stablecoin/uty-xsy/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Stasis Euro (EURS)](https://pharos.watch/stablecoin/eurs-stasis/): centralized stablecoin backed by real-world assets pegged to Euro.
-- [Metronome Synth USD (MSUSD)](https://pharos.watch/stablecoin/msusd-metronome/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Metronome Synth USD (msUSD)](https://pharos.watch/stablecoin/msusd-metronome/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ring USD (USDR)](https://pharos.watch/stablecoin/usdr-ring/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Asymmetry USDaf (USDaf)](https://pharos.watch/stablecoin/usdaf-asymmetry/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Quill USD (USDQ)](https://pharos.watch/stablecoin/usdq-quill/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -361,7 +359,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Forte AUD (AUDF)](https://pharos.watch/stablecoin/audf-forte/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
 - [BiLira (TRYB)](https://pharos.watch/stablecoin/tryb-bilira/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Tether Gold (XAUT)](https://pharos.watch/stablecoin/xaut-tether/): centralized stablecoin backed by real-world assets pegged to Gold.
-- [Kinka (XNK)](https://pharos.watch/stablecoin/xnk-kinka/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [PAX Gold (PAXG)](https://pharos.watch/stablecoin/paxg-paxos/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Streamex Gold Yield (GLDY)](https://pharos.watch/stablecoin/gldy-streamex/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Kinesis Gold (KAU)](https://pharos.watch/stablecoin/kau-kinesis/): centralized stablecoin backed by real-world assets pegged to Gold.
@@ -411,7 +408,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Nest BlackOpal LiquidStone II Vault (nOPAL)](https://pharos.watch/stablecoin/nopal-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Nest Wisdom Vault (nWISDOM)](https://pharos.watch/stablecoin/nwisdom-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [eUSD (eUSD)](https://pharos.watch/stablecoin/eusd-telcoin/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Freedom Dollar (FUSD)](https://pharos.watch/stablecoin/fusd-freedom-dollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Freedom Dollar (fUSD)](https://pharos.watch/stablecoin/fusd-freedom-dollar/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [FinChain Dollar (FUSD)](https://pharos.watch/stablecoin/fusd-finchain/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Zephyr Stable Dollar (ZSD)](https://pharos.watch/stablecoin/zsd-zephyr-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Zephyr Yield Share (ZYS)](https://pharos.watch/stablecoin/zys-zephyr-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -421,7 +418,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [YieldFi yUSD (YUSD)](https://pharos.watch/stablecoin/yusd-yieldfi/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [SoulPeg USD (spUSD)](https://pharos.watch/stablecoin/spusd-soulpeg/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Unity USD (UUSD)](https://pharos.watch/stablecoin/uusd-anything-labs/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Juice Dollar (JUSD)](https://pharos.watch/stablecoin/jusd-juicedollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Alpha Partner USDA (USDA)](https://pharos.watch/stablecoin/usda-alpha-partner/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [GAIB AID (AID)](https://pharos.watch/stablecoin/aid-gaib/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [GAIB sAID (sAID)](https://pharos.watch/stablecoin/said-gaib/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -431,7 +427,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Nexus USD (NUSD)](https://pharos.watch/stablecoin/nusd-nexus/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StoneYield USD (stUSD)](https://pharos.watch/stablecoin/stusd-stoneyield/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Virtue USD (VUSD)](https://pharos.watch/stablecoin/vusd-virtue/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [LeverUp USD (lvUSD)](https://pharos.watch/stablecoin/lvusd-leverup/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [LeverUp USD (LVUSD)](https://pharos.watch/stablecoin/lvusd-leverup/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Metal Dollar (XMD)](https://pharos.watch/stablecoin/xmd-metal-dollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [HeLa USD (HLUSD)](https://pharos.watch/stablecoin/hlusd-hela/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Solayer USD (sUSD)](https://pharos.watch/stablecoin/susd-solayer/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -441,7 +437,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [defi.money (MONEY)](https://pharos.watch/stablecoin/money-defi-money/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Cod3x USD (cdxUSD)](https://pharos.watch/stablecoin/cdxusd-cod3x/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Enosys Loans CDP (CDP)](https://pharos.watch/stablecoin/cdp-enosys/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [vCred (vCRED)](https://pharos.watch/stablecoin/vcred-vcred/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [VCRED (VCRED)](https://pharos.watch/stablecoin/vcred-vcred/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Staked USD Coin (sUSD)](https://pharos.watch/stablecoin/susd-hedgecore/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Indigo iUSD (iUSD)](https://pharos.watch/stablecoin/iusd-indigo-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Lumi Finance LUAUSD (LUAUSD)](https://pharos.watch/stablecoin/luausd-lumi-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -461,10 +457,10 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Compliant Naira (cNGN)](https://pharos.watch/stablecoin/cngn-compliant-naira/): centralized stablecoin backed by real-world assets pegged to Nigerian Naira.
 - [MXNB (MXNB)](https://pharos.watch/stablecoin/mxnb-juno/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
 - [BRL1 (BRL1)](https://pharos.watch/stablecoin/brl1-brl1/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
-- [Argentine Peso (WARS)](https://pharos.watch/stablecoin/wars-argentine-peso/): centralized stablecoin backed by real-world assets pegged to Argentine Peso.
+- [Argentine Peso (wARS)](https://pharos.watch/stablecoin/wars-argentine-peso/): centralized stablecoin backed by real-world assets pegged to Argentine Peso.
 - [Ripio wBRL (WBRL)](https://pharos.watch/stablecoin/wbrl-ripio/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [Ripio wCLP (WCLP)](https://pharos.watch/stablecoin/wclp-ripio/): centralized stablecoin backed by real-world assets pegged to Chilean Peso.
-- [Ripio wCOP (WCOP)](https://pharos.watch/stablecoin/wcop-ripio/): centralized stablecoin backed by real-world assets pegged to Colombian Peso.
+- [Ripio wCOP (wCOP)](https://pharos.watch/stablecoin/wcop-ripio/): centralized stablecoin backed by real-world assets pegged to Colombian Peso.
 - [Ripio wPEN (WPEN)](https://pharos.watch/stablecoin/wpen-ripio/): centralized stablecoin backed by real-world assets pegged to Peruvian Sol.
 - [Convertible JPY Token (CJPY)](https://pharos.watch/stablecoin/cjpy-yamato/): decentralized stablecoin collateralized by crypto assets pegged to Japanese Yen.
 - [Tori trUSD (trUSD)](https://pharos.watch/stablecoin/trusd-tori/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -477,7 +473,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Euro Token (EUROT)](https://pharos.watch/stablecoin/eurot-token-teknoloji/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Real MXN (MXNe)](https://pharos.watch/stablecoin/mxne-real-mxn/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
 - [Dephaser JPY (JPYT)](https://pharos.watch/stablecoin/jpyt-dephaser/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Japanese Yen.
-- [Ripio wMXN (WMXN)](https://pharos.watch/stablecoin/wmxn-ripio/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
+- [Ripio wMXN (wMXN)](https://pharos.watch/stablecoin/wmxn-ripio/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
 - [Mento West African CFA Franc (XOFm)](https://pharos.watch/stablecoin/xofm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to West African CFA Franc.
 - [EURO3 (EURO3)](https://pharos.watch/stablecoin/euro3-3a-dao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Euro.
 - [Onchain Yield Coin (ONyc)](https://pharos.watch/stablecoin/onyc-onre/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -488,8 +484,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [WEUSD (WEUSD)](https://pharos.watch/stablecoin/weusd-picwe/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Initia iUSD (iUSD)](https://pharos.watch/stablecoin/iusd-initia/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Last USD (USDXL)](https://pharos.watch/stablecoin/usdxl-last/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Fluid DigitalDollar (DUSD)](https://pharos.watch/stablecoin/dusd-fluid/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Balanced Dollar (BNUSD)](https://pharos.watch/stablecoin/bnusd-balanced/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Balanced Dollar (bnUSD)](https://pharos.watch/stablecoin/bnusd-balanced/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Movement USDCx (USDCx)](https://pharos.watch/stablecoin/usdcx-movement/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Hubble USDH (USDH)](https://pharos.watch/stablecoin/usdh-hubble/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [zkUSD Dollar (zkUSD)](https://pharos.watch/stablecoin/zkusd-goal3/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.

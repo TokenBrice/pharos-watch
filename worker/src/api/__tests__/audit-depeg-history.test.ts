@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 
@@ -140,7 +141,7 @@ describe("handleAuditDepegHistory method safety", () => {
   });
 
   it("rejects direct delete requests larger than the atomic batch cap", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = makeNoopD1();
     const deleteParam = Array.from({ length: D1_BATCH_SIZE + 1 }, (_value, index) => index + 1).join(",");
     const req = makeApiRequest(`/api/audit-depeg-history?delete=${deleteParam}`, {
       adminKey: "secret",

@@ -24,11 +24,11 @@
     "sources": [
       {
         "label": "River satUSD FAQ",
-        "url": "https://docs.river.inc/intro/faq"
+        "url": "https://docs.riverai.inc/intro/faq.md"
       },
       {
         "label": "River satUSD product overview",
-        "url": "https://river.inc/"
+        "url": "https://riverai.inc/"
       }
     ],
     "rationale": "Re-opened 2026-08-29: River's FAQ and product material state that satUSD is over-collateralized by BTC, ETH, BNB, and liquid staking tokens, with collateral remaining on source chains. River publishes no current satUSD-specific category weights, vault-level inventory, or reserve attestation. Aggregate protocol TVL pages are not used to infer satUSD composition because they can include non-satUSD positions. The reserve is therefore retained as one explicit cryptoasset basket with a full unresolved composition disposition.",

@@ -12,7 +12,7 @@ import {
   fetchReviewedDeploymentSolanaObservation,
   fetchSafetyScoreV9SolanaRpc,
   safetyScoreV9EvmObservationOptions,
-} from "../safety-score-v9-supply-observation-primitives";
+} from "../safety-score-v9/supply-observation-primitives";
 
 const EVM_CHARACTERIZATION_VECTORS = [
   {

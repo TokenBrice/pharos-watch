@@ -145,6 +145,17 @@ describe("Mini App versioned API client", () => {
       .rejects.toBeInstanceOf(SchemaValidationError);
   });
 
+  it("caps an oversized retry delay reported by the Mini App API", async () => {
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      status: 429,
+      body: { code: "rate-limited", retryAfterSec: 7_200.5 },
+    }], { requireMatch: true });
+
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: 3_600 });
+  });
+
   it("keeps the state-only compatibility wrapper for callers that do not need revision metadata", async () => {
     mockFetch([{ match: "/api/telegram-mini-app/session", body: legacyState }], { requireMatch: true });
 
@@ -265,6 +276,19 @@ describe("Mini App versioned API client", () => {
         { storage: throwingStorage, refresh },
       ),
     ).toBe(false);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-refresh when the browser denies session storage access", () => {
+    const refresh = vi.fn();
+    vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+
+    expect(refreshMiniAppBundleOnce(
+      { contractVersion: "3", catalogVersion: "catalog-v2-next" },
+      { refresh },
+    )).toBe(false);
     expect(refresh).not.toHaveBeenCalled();
   });
 });

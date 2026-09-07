@@ -73,7 +73,7 @@
       "fallbacks": [
         {
           "kind": "http-json",
-          "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum"
+          "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth"
         }
       ]
     }

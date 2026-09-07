@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "USDT locked on Optimism DepositManager and supplied to Aave V3 (aOptUSDT)",
-      "pct": 86.660031,
+      "pct": 87.715906,
       "risk": "medium",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     },
     {
       "name": "USDC locked on Base DepositManager and supplied to Aave V3 (aBasUSDC)",
-      "pct": 13.339969,
+      "pct": 12.284094,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -39,7 +39,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Pharos reserve research agent (2026-08-20 current-source refresh)",
     "confidence": "verified",
     "sources": [
@@ -56,17 +56,17 @@
         "url": "https://github.com/0xDephaser/contracts/blob/main/src/UsdtDepositManager.sol"
       },
       {
-        "label": "Optimism RPC aOptUSDT balanceOf DepositManager @ latest block 155818084",
+        "label": "Optimism RPC aOptUSDT balanceOf DepositManager @ fixed block 156472176",
         "url": "https://mainnet.optimism.io"
       },
       {
-        "label": "Base RPC aBasUSDC balanceOf DepositManager @ latest block 50222799",
+        "label": "Base RPC aBasUSDC balanceOf DepositManager @ fixed block 50876890",
         "url": "https://mainnet.base.org"
       }
     ],
-    "rationale": "Current-source re-measurement at 2026-08-20T14:09:05Z. Issuer docs and UsdtDepositManager source confirm dual routes: users lock USDT on Optimism or USDC on Base; each DepositManager supplies the deposit token into Aave V3 and mints JPYT. Latest public RPC reads at Optimism block 155818084 returned aOptUSDT (0x6ab707aca953edaefbc4fd23ba73294241490620).balanceOf(0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) = 44,868.289538 USDT; Base block 50222799 returned aBasUSDC (0x4e65fe4dba92790696d040ac24aa414708f5c0ab).balanceOf(0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) = 6,906.778074 USDC. Combined aToken reserves = 51,775.067612 USD, giving 86.660031% USDT and 13.339969% USDC. Matching latest totalDepositToken reads (40,544.289114 USDT / 6,059.527039 USDC) confirm the two routes; operator-claimable Aave surplus (getCurrentAaveProfit) is included in aToken balances and is not a separate reserve class. Residual unknowns: Aave utilization-driven withdrawal latency and legal custody terms beyond on-chain smart-contract custody.",
+    "rationale": "Fixed-block remeasurement on 2026-09-04. Issuer docs and UsdtDepositManager source confirm dual routes: users lock USDT on Optimism or USDC on Base; each DepositManager supplies the deposit token into Aave V3 and mints JPYT. Public RPC reads at Optimism block 156472176 returned aOptUSDT (0x6ab707aca953edaefbc4fd23ba73294241490620).balanceOf(0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) = 44,616.509375 USDT; Base block 50876890 returned aBasUSDC (0x4e65fe4dba92790696d040ac24aa414708f5c0ab).balanceOf(0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) = 6,248.278544 USDC. Combined aToken reserves = 50,864.787919 USD, giving 87.715906% USDT and 12.284094% USDC. Residual unknowns: Aave utilization-driven withdrawal latency and legal custody terms beyond on-chain smart-contract custody.",
     "compositionBasis": "On-chain aToken balances of DePhaser DepositManager proxies plus issuer money-flow docs",
-    "compositionAsOf": "2026-08-20",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
     "knownUnknownExposure": "Legal segregation/bankruptcy-remoteness of Aave positions and instantaneous redeemable liquidity under high Aave utilization are not published as static legal terms; weights themselves are measured.",
     "knownUnknownExposurePct": 0
@@ -76,13 +76,13 @@
       {
         "name": "DePhaser UsdtDepositManager (Optimism UUPS proxy 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) holding aOptUSDT",
         "role": "other",
-        "sharePct": 86.660031,
+        "sharePct": 87.715906,
         "jurisdiction": "Onchain protocol"
       },
       {
         "name": "DePhaser UsdcDepositManager (Base UUPS proxy 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) holding aBasUSDC",
         "role": "other",
-        "sharePct": 13.339969,
+        "sharePct": 12.284094,
         "jurisdiction": "Onchain protocol"
       },
       {

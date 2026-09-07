@@ -5,9 +5,10 @@ import {
   applySubscribeIntent,
   applyUnsubscribeIntent,
 } from "../presets";
-import { unsubscribeAll } from "../forget";
+import { unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 import { upsertGlobalAlertTypes } from "../subscribers";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const CHAT_ID = "42";
 const NOW_MS = Date.UTC(2026, 6, 10, 12, 0, 0);
@@ -22,7 +23,7 @@ function createFaultInjectingD1(
   options: FaultOptions = {},
 ): D1Database {
   const base = createSqliteD1(sqlite);
-  return {
+  return makeNoopD1({
     prepare: base.prepare.bind(base),
     batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
       options.batchSizes?.push(statements.length);
@@ -45,7 +46,7 @@ function createFaultInjectingD1(
         throw error;
       }
     },
-  } as unknown as D1Database;
+  });
 }
 
 function openSqlite(): DatabaseSync {

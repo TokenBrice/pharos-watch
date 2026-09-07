@@ -24,15 +24,15 @@
         "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-30. Material supply is Celo (~87%) plus Monad (~12%). On Celo at block 73547284 the USDm proxy 0x765d…282a resolves via Celo Proxy _getImplementation() and EIP-1967 to StableTokenV3 0x8157…c318 (Sourcify exact-match), owner/_getOwner 0x5809…Ba458 (Mento Safe). StableTokenV3 exposes owner-gated setOperator/setBurner and onlyBurner burn(address,uint256) which destroys an arbitrary holder balance without allowance, plus onlyOperator sendToPool/returnFromPool which transfer arbitrary holder balances without allowance — direct individual freeze/seize reach on the canonical deployment. Ordinary transfer/transferFrom remain unmodified ERC-20; no pause/isBlacklisted selectors. On Monad at block 91740878 proxy 0xbc69…0115 uses StableTokenSpoke impl 0x6a8f…e62e with owner the same Safe, setBurner present, and live EIP-1967 admin 0x97b2…5ef5 (upgrade path under the same control domain). Peripheral bridge rows (Ethereum Moss, Solana/NEAR Allbridge, Klaytn Orbit dust) are separate failure domains and not required for the material freeze verdict. Reserve USDC/USDT exposure is additional upstream risk, not the token-level control path.",
+    "evidence": "Re-reviewed 2026-07-30. Material supply is Celo (~87%) plus Monad (~12%). On Celo at block 73547284 the USDm proxy 0x765d…282a resolves via Celo Proxy _getImplementation() and EIP-1967 to StableTokenV3 0x8157…c318 (Sourcify exact-match), owner/_getOwner 0x5809…Ba458 (Mento Safe). StableTokenV3 exposes owner-gated setOperator/setBurner and onlyBurner burn(address,uint256) which destroys an arbitrary holder balance without allowance, plus onlyOperator sendToPool/returnFromPool which transfer arbitrary holder balances without allowance, direct individual freeze/seize reach on the canonical deployment. Ordinary transfer/transferFrom remain unmodified ERC-20; no pause/isBlacklisted selectors. On Monad at block 91740878 proxy 0xbc69…0115 uses StableTokenSpoke impl 0x6a8f…e62e with owner the same Safe, setBurner present, and live EIP-1967 admin 0x97b2…5ef5 (upgrade path under the same control domain). Peripheral bridge rows (Ethereum Moss, Solana/NEAR Allbridge, Klaytn Orbit dust) are separate failure domains and not required for the material freeze verdict. Reserve USDC/USDT exposure is additional upstream risk, not the token-level control path.",
     "reviewer": "Grok T55 access review",
     "reviewedAt": "2026-07-30"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDm has one canonical native issuance route on Celo. The Celo–Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. Klaytn remains an opaque unresolved route and is not used to infer any controller for the verified routes.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex cusd-celo bridge-route boundary migration",
+    "summary": "USDm has one canonical native issuance route on Celo. The Celo-to-Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. The legacy Klaytn oCUSD route is now re-read through Kaia's replacement public RPC, but its Orbit controller and route-state authority remain unresolved.",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "Codex Kaia oCUSD route-controller refresh",
     "confidence": "verified",
     "protocols": [
       {
@@ -296,13 +296,21 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "At Klaytn block 224722493 on 2026-08-16, the Orbit Bridge oCUSD representation had supply 5.52022037288, but owner(), minter(), and isMinter(address) probes reverted. Orbit Bridge has been defunct since its December 2023 exploit; the exact residual controller and route state remain unresolved, so no controller is inferred by analogy.",
+        "reviewNote": "Re-read at Kaia block 226318240 on 2026-09-04 through the official replacement RPC for the discontinued Klaytn endpoint. The legacy Orbit representation 0x08745bee17026ed2e0e39a98f81189b9e14ab1b3 returned name()='Orbit Bridge Klaytn CUSD', symbol()='oCUSD', decimals()=18, and totalSupply()=5.52022037288. owner(), minter(), paused(), isMinter(address), admin(), and masterMinter() all reverted; Orbit Bridge has been defunct since its December 2023 exploit. The current token identity and residual supply are therefore evidenced, but no controller, route-liability boundary, or admissible delisting/zero-supply fact is established, so no controller is inferred by analogy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 224722493,
+        "observedAt": "2026-09-04",
+        "observedBlock": 226318240,
         "sources": [
           {
-            "label": "Klaytnscope oCUSD token",
+            "label": "Kaia public JSON-RPC endpoint documentation",
+            "url": "https://docs.kaia.io/references/public-en/"
+          },
+          {
+            "label": "Kaia Foundation JSON-RPC fixed route read",
+            "url": "https://public-en.node.kaia.io"
+          },
+          {
+            "label": "Klaytnscope oCUSD token (legacy explorer reference)",
             "url": "https://klaytnscope.com/token/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3"
           },
           {
@@ -418,7 +426,7 @@
       },
       {
         "id": "cusd-celo-ntt-owner-safe",
-        "label": "Mento Safe — Celo NTT bridge configuration owner",
+        "label": "Mento Safe: Celo NTT bridge configuration owner",
         "routeRefs": [
           "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
         ],
@@ -486,7 +494,7 @@
       },
       {
         "id": "cusd-monad-ntt-owner-safe",
-        "label": "Mento Safe — Monad NTT and representation owner",
+        "label": "Mento Safe: Monad NTT and representation owner",
         "routeRefs": [
           "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
         ],

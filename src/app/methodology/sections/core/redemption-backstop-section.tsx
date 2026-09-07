@@ -49,8 +49,12 @@ export function RedemptionBackstopMethodologySection() {
           both the 1% completion and $100,000 absolute breakpoints, receives a zero headline; missing capacity remains
           unrated; the same gate applies to the eventual-redeemability headline. Reviewed settlement terms are shared
           with V9, favorable corrections retain the 365-day evidence expiry, and reserve-sync full-supply eventual
-          capacity requires an explicit dated evidence opt-in. Route-family ceilings, holder eligibility, delay, queue,
-          minimum-redemption, severe-depeg, freshness, and evidence rules can only reduce or withhold the result.
+          capacity requires an explicit dated evidence opt-in. On-chain formula-rate probes pin their return-value decimal
+          scale before fresh fees can enter scoring. Route-family ceilings, holder eligibility, delay, queue,
+          minimum-redemption, severe-depeg, freshness, and evidence rules can only reduce or withhold the result. An open
+          downside incident is market-implied degraded only when a fresh authoritative current signed deviation remains
+          at or below -2500 bps; if current evidence cannot be established, the route is unknown and its score is
+          withheld rather than inferred from the incident&apos;s historical peak.
         </p>
         <MethodologyFacts
           facts={[

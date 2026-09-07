@@ -8,6 +8,7 @@ import {
   readDexSourcePaginationState,
   writeDexSourcePaginationState,
 } from "../source-pagination-state";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 describe("DEX source pagination state", () => {
   it("round-trips opaque cursors and bounds persisted diagnostics", async () => {
@@ -20,7 +21,7 @@ describe("DEX source pagination state", () => {
       pages_fetched: 4,
     }));
     const bind = vi.fn((..._values: unknown[]) => ({ first, run }));
-    const db = { prepare: vi.fn(() => ({ bind })) } as unknown as D1Database;
+    const db = makeNoopD1({ prepare: vi.fn(() => ({ bind })) });
 
     await expect(readDexSourcePaginationState(db, "orca:solana")).resolves.toEqual({
       cursor: "opaque-tail",
@@ -52,7 +53,7 @@ describe("DEX source pagination state", () => {
       .mockRejectedValueOnce(new Error("D1 write unavailable: raw provider detail"))
       .mockResolvedValueOnce({ success: true, meta: { changes: 1 } });
     const bind = vi.fn((..._values: unknown[]) => ({ run }));
-    const db = { prepare: vi.fn(() => ({ bind })) } as unknown as D1Database;
+    const db = makeNoopD1({ prepare: vi.fn(() => ({ bind })) });
     const write = () => writeDexSourcePaginationState({
       db,
       sourceKey: "orca:solana",
@@ -75,9 +76,9 @@ describe("DEX source pagination state", () => {
     const run = vi.fn(async () => {
       throw new Error("D1_ERROR: no such table: dex_source_pagination_state");
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: vi.fn(() => ({ run })) })),
-    } as unknown as D1Database;
+    });
 
     await expect(writeDexSourcePaginationState({
       db,
@@ -94,9 +95,9 @@ describe("DEX source pagination state", () => {
     const first = vi.fn(async () => {
       throw new Error("D1_ERROR: no such table: dex_source_pagination_state");
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: vi.fn(() => ({ first })) })),
-    } as unknown as D1Database;
+    });
 
     await expect(
       readDexSourcePaginationState(db, "orca:solana"),

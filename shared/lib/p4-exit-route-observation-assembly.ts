@@ -23,6 +23,8 @@ import {
   REFERENCE_NOTIONAL_USD,
   buildCapacityCurve,
   capabilityForPool,
+  getDexExecutionCapabilityRegistration,
+  isDexExecutionProfileAdmittedForScoring,
   measuredExecutionProfilesForPool,
   normalizedKey,
   observationHistoryForProfile,
@@ -149,7 +151,11 @@ export function buildP4DexExitRouteObservations(params: {
           (unsupportedReasons.conflictingExecutionCapabilityEvidence ?? 0) + 1;
         continue;
       }
-      if (!capability.scoreEligible) {
+      const profilesAreAdmitted = measuredProfiles.every((profile) => {
+        const registration = getDexExecutionCapabilityRegistration(profile.adapterProfileId);
+        return registration != null && isDexExecutionProfileAdmittedForScoring(profile, registration);
+      });
+      if (!capability.scoreEligible || !profilesAreAdmitted) {
         unsupportedPoolCount++;
         unsupportedReasons.shadowMeasuredProfileWithoutGate =
           (unsupportedReasons.shadowMeasuredProfileWithoutGate ?? 0) + 1;

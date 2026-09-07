@@ -137,29 +137,68 @@ export async function loadFrankfurterPayload(
   };
 }
 
-export async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Promise<SecondaryCurrencyCandidate | null> {
-  const [primaryCandidate, fallbackCandidate, datedPackageCandidate] = await Promise.all([
-    fetchSecondaryCurrencyCandidate("jsdelivr", SECONDARY_FX_PRIMARY_URL, signal),
-    fetchSecondaryCurrencyCandidate("pages.dev", SECONDARY_FX_FALLBACK_URL, signal),
-    fetchSecondaryCurrencyCandidate("jsdelivr-versioned", buildSecondaryFxDatedPackageUrl(), signal),
-  ]);
+export interface SecondaryCurrencyLoadOptions {
+  /**
+   * Limit requests to mirrors whose source TTL has expired. The default keeps
+   * the existing all-mirror behavior for Frankfurter failure recovery.
+   */
+  endpoints?: readonly SecondaryCurrencyEndpoint[];
+}
 
+const ALL_SECONDARY_ENDPOINTS: readonly SecondaryCurrencyEndpoint[] = [
+  "jsdelivr",
+  "pages.dev",
+  "jsdelivr-versioned",
+];
+
+export type SecondaryCurrencyLoadResult = SecondaryCurrencyCandidate & {
+  successfulEndpoints?: readonly SecondaryCurrencyEndpoint[];
+};
+
+export async function loadSecondaryCurrencyCandidate(
+  signal?: AbortSignal,
+  options: SecondaryCurrencyLoadOptions = {},
+): Promise<SecondaryCurrencyLoadResult | null> {
+  const endpoints = options.endpoints ?? ALL_SECONDARY_ENDPOINTS;
+  const candidates = await Promise.all(
+    endpoints.map((endpoint) => {
+      const url = endpoint === "jsdelivr"
+        ? SECONDARY_FX_PRIMARY_URL
+        : endpoint === "pages.dev"
+          ? SECONDARY_FX_FALLBACK_URL
+          : buildSecondaryFxDatedPackageUrl();
+      return fetchSecondaryCurrencyCandidate(endpoint, url, signal);
+    }),
+  );
+  const successfulEndpoints = candidates
+    .filter((candidate): candidate is SecondaryCurrencyCandidate => candidate !== null)
+    .map((candidate) => candidate.endpoint);
+  const candidateByEndpoint: Partial<Record<SecondaryCurrencyEndpoint, SecondaryCurrencyCandidate>> = {};
+  for (const candidate of candidates) {
+    if (candidate) candidateByEndpoint[candidate.endpoint] = candidate;
+  }
   const secondaryCandidate = chooseSecondaryCurrencyCandidate(
-    chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate),
-    datedPackageCandidate,
+    candidateByEndpoint.jsdelivr ?? null,
+    candidateByEndpoint["pages.dev"] ?? null,
+  );
+  const selected = chooseSecondaryCurrencyCandidate(
+    secondaryCandidate,
+    candidateByEndpoint["jsdelivr-versioned"] ?? null,
   );
   if (
-    primaryCandidate &&
-    secondaryCandidate &&
-    secondaryCandidate.endpoint !== primaryCandidate.endpoint
+    selected &&
+    candidateByEndpoint.jsdelivr &&
+    selected.endpoint !== "jsdelivr"
   ) {
     logWorkerEventArgs("handler", "info",
-      `[sync-fx-rates] Using fresher secondary FX mirror (${secondaryCandidate.endpoint} date=${secondaryCandidate.payload.date ?? "unknown"}, ` +
-      `jsdelivr=${primaryCandidate.payload.date ?? "unknown"})`,
+      `[sync-fx-rates] Using fresher secondary FX mirror (${selected.endpoint} date=${selected.payload.date ?? "unknown"}, ` +
+      `jsdelivr=${candidateByEndpoint.jsdelivr.payload.date ?? "unknown"})`,
     );
   }
 
-  return secondaryCandidate;
+  return selected
+    ? { ...selected, successfulEndpoints }
+    : null;
 }
 
 export async function loadExchangeRateApiPayload(signal?: AbortSignal): Promise<ExchangeRateApiPayload | null> {

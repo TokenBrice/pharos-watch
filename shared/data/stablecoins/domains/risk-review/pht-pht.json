@@ -689,13 +689,14 @@
           "eoa:tron:TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4"
         ],
         "authorityType": "eoa",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Tronscan exposes owner-controlled setPeer and setDelegate selectors, but the unverified runtime does not establish whether lzReceive can mint, send burns, an endpoint or current peer exists, or an owner-controlled direct-mint/upgrade path is present.",
+        "capDescription": "The Tron PhtOFT is a native LayerZero OFT: token() returns the contract itself, approvalRequired() returns false, and endpoint() returns LayerZero Endpoint V2 0x0af59750d5db5460e5d89e268c474d5f7407c061, while the deployed bytecode carries no mint, burn, upgrade, or proxiable selector. Bridge mint and burn therefore run only through the authenticated LayerZero path under no supply cap; the current peer table was not enumerated.",
         "routeChecks": {
           "lockboxOrEscrow": "APACX identifies Ethereum↔Tron movement through LayerZero OFT, but the unverified Tron runtime does not prove a supply-conserving burn/mint invariant or a lockbox.",
-          "trustedPeerOrRemote": "At Tron block 85415139, the owner was verified, but the current peer, endpoint, delegate, and authenticated remote configuration were not resolved; the method map alone is not evidence of a usable route.",
-          "pausersAdminsUpgraders": "Tronscan reports a non-proxy, unverified PhtOFT with owner-only setPeer and setDelegate selectors. Hidden upgrade, pause, fallback, or direct-mint paths cannot be ruled out from selector metadata."
+          "trustedPeerOrRemote": "At Tron block 85862190 on 2026-09-01, owner() returned 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee (TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4) and endpoint() returned LayerZero Endpoint V2 0x0af59750d5db5460e5d89e268c474d5f7407c061, so the route's messaging endpoint is resolved. The current peer table and delegate were still not enumerated, so an authenticated remote is not claimed.",
+          "caps": "At Tron block 85862190 on 2026-09-01, cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() all returned empty on TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs, token() returned the contract itself, and approvalRequired() returned false, so it is a native LayerZero OFT with no supply ceiling. Its deployed bytecode contains no mint(address,uint256), burn(address,uint256), upgradeTo(address), upgradeToAndCall(address,bytes), or proxiableUUID() selector, so there is no owner-controlled direct-mint or upgrade path and no cap bounds an authenticated lzReceive mint.",
+          "pausersAdminsUpgraders": "At Tron block 85862190 on 2026-09-01, the TronGrid contract record for the non-proxy PhtOFT exposed the standard LayerZero OFT ABI, and its deployed bytecode contains setPeer, setDelegate, setEnforcedOptions, setMsgInspector, setPreCrime, transferOwnership, and renounceOwnership but no mint, burn, upgradeTo, upgradeToAndCall, or proxiableUUID selector. The owner therefore controls peer, delegate, enforced-option, and ownership configuration with no upgrade or direct-mint path."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 85415139,

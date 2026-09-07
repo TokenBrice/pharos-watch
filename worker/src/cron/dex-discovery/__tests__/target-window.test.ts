@@ -247,8 +247,8 @@ describe("estimateDiscoverySweepWindowCount", () => {
 
 describe("estimateDiscoverySweepPeriodSec", () => {
   it("spends one t3 cohort cadence per window", () => {
-    // Ten two-hour discovery runs between crawls of the same t3 cohort coin.
-    expect(DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC).toBe(20 * 3600);
+    // Eighty-four two-hour discovery runs between crawls of the same t3 cohort coin.
+    expect(DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC).toBe(84 * 2 * 3600);
     expect(estimateDiscoverySweepPeriodSec(megaFootprint)).toBe(
       estimateDiscoverySweepWindowCount(megaFootprint) * DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC,
     );

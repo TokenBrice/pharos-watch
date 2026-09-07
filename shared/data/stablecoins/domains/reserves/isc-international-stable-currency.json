@@ -108,15 +108,15 @@
         "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/oversight.md"
       },
       {
-        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings by asset class, fetched 2026-08-08)",
+        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings by asset class, fetched 2026-09-04; response has no timestamp or report period)",
         "url": "https://isc.money/api/reserve-balances"
       },
       {
-        "label": "ISC dashboard isc-history API (daily target-price series through 2026-08-08)",
+        "label": "ISC dashboard isc-history API (daily target-price series through 2026-09-04 fetch; not a reserve-composition report)",
         "url": "https://isc.money/api/isc-history"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-08: the ISC dashboard reserve-balances API returns current USD-denominated holdings for Reserve A and Reserve B across cash, IB01 (iShares short-term Treasury ETF), SGLD (iShares physical gold ETC), VWRA (Vanguard global equity ETF), AGGU (iShares global aggregate bond ETF) and ISC. The two reserves are summed and converted to percentage slices against total reserve value. The single largest line is reserve-held ISC itself; it is treated as a self-reserve rather than external backing. The remaining slices track the whitepaper's five target asset families, but the API is undated, mutable, single-source and unaudited, and no independent reserve attestation has been selected. Custody providers and exact fund terms remain undisclosed.",
+    "rationale": "Negative search 2026-09-04: the ISC dashboard reserve-balances API returns current USD-denominated holdings for Reserve A and Reserve B across cash, IB01 (iShares short-term Treasury ETF), SGLD (iShares physical gold ETC), VWRA (Vanguard global equity ETF), AGGU (iShares global aggregate bond ETF) and ISC, but the response has no timestamp or report period and its values differ from the 2026-08-08 observation. The two reserves can be summed into itemized percentage slices, but the API is mutable, single-source and unaudited, so no source-backed replacement composition date can be assigned. The whitepaper and basic-mechanics page describe the basket and the oversight page says the audit scheme remains under consideration; no dated independent reserve attestation was found. The 2026-08-08 compositionAsOf and manual-review confidence are retained without a retrieval-date bump.",
     "compositionBasis": "ISC dashboard reserve-balances API as fetched 2026-08-08; combined Reserve A + Reserve B holdings",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",

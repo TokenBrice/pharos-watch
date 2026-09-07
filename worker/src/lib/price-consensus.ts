@@ -17,6 +17,7 @@
  */
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
 import { median } from "@shared/lib/stats";
 import {
   buildObservedAtModeRecord,
@@ -333,7 +334,7 @@ function clusterSpreadBps(cluster: SourcePrice[]): number {
  */
 function clusterTierRank(cluster: SourcePrice[]): number {
   const tiers = cluster.map((m) => getPricingSourceRegistryEntry(m.source)?.trustTier ?? "soft_aggregator");
-  const anyHard = tiers.some((t) => t === "hard_market" || t === "hard_oracle" || t === "hard_protocol");
+  const anyHard = tiers.some(isHardPricingTrustTier);
   const allSoft = tiers.every((t) => t === "soft_aggregator" || t === "soft_dex");
   return anyHard ? 2 : allSoft ? 0 : 1;
 }

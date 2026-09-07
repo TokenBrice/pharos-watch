@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 
 import {
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -33,14 +32,8 @@ export interface ContentTableCellKeyIssue {
   extraCellKeys: string[];
 }
 
-export interface ContentTableFrameProps extends TableFrameProps {
-  caption?: React.ReactNode;
-  captionClassName?: string;
-  tableAriaLabel?: string;
-}
-
 export interface ContentTableProps
-  extends Omit<ContentTableFrameProps, "children"> {
+  extends Omit<TableFrameProps, "children"> {
   columns: readonly ContentTableColumn[];
   rows: readonly ContentTableRow[];
   headerRowClassName?: string;
@@ -109,42 +102,14 @@ export function assertContentTableRowsMatchColumns(
   );
 }
 
-export function ContentTableFrame({
-  children,
-  caption,
-  captionClassName,
-  tableAriaLabel,
-  viewportProps,
-  tableProps,
-  chrome = "content",
-  density = "compact",
-  ...frameProps
-}: ContentTableFrameProps) {
-  return (
-    <TableFrame
-      chrome={chrome}
-      density={density}
-      viewportProps={{ mobileScrollHint: false, ...viewportProps }}
-      tableProps={
-        tableAriaLabel
-          ? { ...tableProps, "aria-label": tableAriaLabel }
-          : tableProps
-      }
-      {...frameProps}
-    >
-      {caption != null ? (
-        <TableCaption className={captionClassName}>{caption}</TableCaption>
-      ) : null}
-      {children}
-    </TableFrame>
-  );
-}
-
 export function ContentTable({
   columns,
   rows,
   headerRowClassName,
   rowHeaderColumnId,
+  viewportProps,
+  chrome = "content",
+  density = "compact",
   ...frameProps
 }: ContentTableProps) {
   // Run unconditionally: this is a static export, so SSG executes under
@@ -154,7 +119,12 @@ export function ContentTable({
   assertContentTableRowsMatchColumns(columns, rows, rowHeaderColumnId);
 
   return (
-    <ContentTableFrame {...frameProps}>
+    <TableFrame
+      chrome={chrome}
+      density={density}
+      viewportProps={{ mobileScrollHint: false, ...viewportProps }}
+      {...frameProps}
+    >
       <TableHeader>
         <TableRow
           rowIntent="static"
@@ -206,6 +176,6 @@ export function ContentTable({
           </TableRow>
         ))}
       </TableBody>
-    </ContentTableFrame>
+    </TableFrame>
   );
 }

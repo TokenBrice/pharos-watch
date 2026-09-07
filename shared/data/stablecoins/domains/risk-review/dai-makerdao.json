@@ -273,7 +273,7 @@
           "contract:arbitrum:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Arbitrum block 486362140 on 2026-07-22 returned 18,565,525.134873 DAI, 0.40028% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
+        "reviewNote": "Pinned totalSupply() at Arbitrum block 486362140 on 2026-07-22 returned 18,565,525.134873 DAI, 0.40028% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI), immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 486362140,
@@ -303,7 +303,7 @@
           "contract:optimism:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Optimism block 154541426 on 2026-07-22 returned 13,715,643.334159 DAI, 0.29572% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
+        "reviewNote": "Pinned totalSupply() at Optimism block 154541426 on 2026-07-22 returned 13,715,643.334159 DAI, 0.29572% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI), immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 154541426,
@@ -419,7 +419,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller re-verified 2026-07-28 on independent Fantom RPCs (rpcapi.fantom.network and fantom.drpc.org): owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with empty bytecode. Same Multichain DepositAddress/DcrmAddress used as controller on the reviewed Multichain USDC Fantom and Multichain fUSDT rows. Multichain MPC bridge ceased operations in July 2023 — controller identified but effectively unmaintained/frozen-legacy.",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Fantom RPCs (rpcapi.fantom.network and fantom.drpc.org): owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with empty bytecode. Same Multichain DepositAddress/DcrmAddress used as controller on the reviewed Multichain USDC Fantom and Multichain fUSDT rows. Multichain MPC bridge ceased operations in July 2023, controller identified but effectively unmaintained/frozen-legacy.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-28",
         "sources": [
@@ -466,7 +466,7 @@
           "contract:base:0x4200000000000000000000000000000000000010"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Base block 48946141 on 2026-07-22 returned 2,070,150.298811 DAI, 0.04463% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
+        "reviewNote": "Pinned totalSupply() at Base block 48946141 on 2026-07-22 returned 2,070,150.298811 DAI, 0.04463% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI), immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 48946141,
@@ -500,7 +500,7 @@
           "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Gnosis block 47325121 on 2026-07-22 returned 63,561.271026 DAI, 0.00137% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor. (Distinct from native xDAI; this is the OmniBridge-bridged DAI representation.)",
+        "reviewNote": "Pinned totalSupply() at Gnosis block 47325121 on 2026-07-22 returned 63,561.271026 DAI, 0.00137% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI), immaterial, below the 5% floor. (Distinct from native xDAI; this is the OmniBridge-bridged DAI representation.)",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 47325121,
@@ -1133,7 +1133,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller re-verified 2026-07-28 on independent Moonriver RPCs (moonriver-rpc.publicnode.com and rpc.api.moonriver.moonbeam.network): owner() = 0x10c6b61dbf44a083aec3780acf769c77be747e23 with empty bytecode (Multichain MPC EOA). Same Multichain MPC custody pattern as the reviewed Moonriver Multichain USDC row. Multichain ceased 2023 — frozen-legacy representation.",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Moonriver RPCs (moonriver-rpc.publicnode.com and rpc.api.moonriver.moonbeam.network): owner() = 0x10c6b61dbf44a083aec3780acf769c77be747e23 with empty bytecode (Multichain MPC EOA). Same Multichain MPC custody pattern as the reviewed Moonriver Multichain USDC row. Multichain ceased 2023, frozen-legacy representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-28",
         "sources": [
@@ -1170,7 +1170,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller re-verified 2026-07-28 on independent Moonbeam RPCs (rpc.api.moonbeam.network and moonbeam-rpc.publicnode.com): owner() = 0xec4486a90371c9b66f499ff3936f29f0d5af8b7e with empty bytecode (Multichain MPC EOA). Multichain ceased 2023 — frozen-legacy representation. DefiLlama may also count Axelar DAI on Moonbeam; this row covers the Multichain multiDAI contract in the profile.",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Moonbeam RPCs (rpc.api.moonbeam.network and moonbeam-rpc.publicnode.com): owner() = 0xec4486a90371c9b66f499ff3936f29f0d5af8b7e with empty bytecode (Multichain MPC EOA). Multichain ceased 2023, frozen-legacy representation. DefiLlama may also count Axelar DAI on Moonbeam; this row covers the Multichain multiDAI contract in the profile.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-28",
         "sources": [

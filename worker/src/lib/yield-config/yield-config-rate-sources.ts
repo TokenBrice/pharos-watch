@@ -68,15 +68,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "bold-liquity",
-    chain: "ethereum",
-    contract: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
     stablecoinId: "usdf-falcon",
     chain: "ethereum",
     contract: "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
@@ -286,6 +277,8 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "scrvusd-curve": "Curve scrvUSD current-rate reader",
   "lusd-liquity": "B.Protocol LQTY-only",
   "bd-basedollar": "Base Dollar Stability Pools (interest-only)",
+  "bold-liquity": "Liquity V2 Stability Pools (interest-only)",
+  "ybold-yearn": "Yearn yBOLD Stability Pool vault",
   "usbd-bima": "BIMA savings",
   "cetes-etherfuse": "Etherfuse CETES current issuance",
   "usyc-hashnote": "Hashnote NAV feed",
@@ -299,6 +292,8 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
   "scrvusd-curve": "onchain:scrvusd-curve:scrvusd-current-rate",
   "lusd-liquity": buildOnChainSourceKey("lusd-liquity"),
   "bd-basedollar": buildOnChainSourceKey("bd-basedollar"),
+  "bold-liquity": buildOnChainSourceKey("bold-liquity"),
+  "ybold-yearn": "protocol-api:yearn:ybold",
   "usbd-bima": "protocol-api:bima-susbd",
   "cetes-etherfuse": "protocol-api:etherfuse-cetes-current-issuance",
   "usyc-hashnote": "protocol-api:hashnote-usyc",

@@ -16,6 +16,28 @@ afterEach(() => {
 });
 
 describe("operator route chrome", () => {
+  it.each([
+    "/", "/liquidity", "/screener", "/flows", "/timeline", "/safety-scores",
+    "/freezewatch", "/depeg", "/compliance", "/yield",
+  ])("retains the data shortcut for workspace %s with either slash form", (pathname) => {
+    usePathnameMock.mockReturnValue(pathname);
+    const { rerender } = render(<RouteChrome dataTableOnly><a href="#data">Skip to data table</a></RouteChrome>);
+    expect(screen.getByRole("link", { name: "Skip to data table" }).getAttribute("href")).toBe("#data");
+    usePathnameMock.mockReturnValue(pathname === "/" ? "/" : `${pathname}/`);
+    rerender(<RouteChrome dataTableOnly><a href="#data">Skip to data table</a></RouteChrome>);
+    expect(screen.getByRole("link", { name: "Skip to data table" })).toBeTruthy();
+  });
+
+  it.each([
+    "/blog/", "/digest/2026-09-06/", "/compare/", "/compare/usdc-circle-vs-usdt-tether/",
+    "/stablecoin/usdc-circle/", "/learn/", "/depeg/usdc-2023-03-11/", "/screener/picker/",
+    "/admin/", "/admin-api/", "/pharoswatchbot/app/", null,
+  ])("omits the data shortcut without a workspace target on %s", (pathname) => {
+    usePathnameMock.mockReturnValue(pathname);
+    render(<RouteChrome dataTableOnly><a href="#data">Skip to data table</a></RouteChrome>);
+    expect(screen.queryByRole("link", { name: "Skip to data table" })).toBeNull();
+  });
+
   it.each(["/admin/", "/admin/actions/", "/admin-api/"])("suppresses public chrome on %s", (pathname) => {
     usePathnameMock.mockReturnValue(pathname);
 

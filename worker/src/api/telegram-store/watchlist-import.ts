@@ -1,7 +1,7 @@
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
+import { isSubscribableCoin } from "../../lib/telegram/subscription-eligibility";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
@@ -14,7 +14,7 @@ import {
   type WatchlistTokenDirectState,
   type WatchlistTokenPresetState,
   type WatchlistTokenV2State,
-} from "../../lib/telegram-watchlist-token";
+} from "../../lib/telegram/watchlist-token";
 import type { PresetSubscriptionRow, SubscriptionRow } from "../telegram-webhook-shared";
 import { loadPresetSubscriptions } from "./presets";
 import { loadSubscriberByChat, unixNow } from "./subscribers";

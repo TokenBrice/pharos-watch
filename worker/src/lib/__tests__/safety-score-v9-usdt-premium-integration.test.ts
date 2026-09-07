@@ -9,8 +9,8 @@ import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
-import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 
 const EXPECTED_MARKET_ORDER = [
   "usdt-tether",

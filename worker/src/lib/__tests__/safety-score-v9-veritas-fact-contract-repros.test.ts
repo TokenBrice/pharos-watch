@@ -24,14 +24,14 @@ import {
   compileSafetyScoreV9FactSetFromNormalizedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
-} from "../safety-score-v9-fact-set";
-import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
+} from "../safety-score-v9/fact-set";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import {
   buildSafetyScoreV9BaselineExtension,
   buildSafetyScoreV9BaselineExtensionFromNormalizedInput,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
-import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9-extension-mechanism";
+} from "../safety-score-v9/extension";
+import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import {
   makeV9FixedInput,
   v9NotApplicableStatus,

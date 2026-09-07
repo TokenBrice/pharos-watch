@@ -1,7 +1,8 @@
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel } from "@shared/lib/classification";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 
@@ -86,6 +87,10 @@ export function buildStablecoinDatasetJsonLd(
   const detailUrl = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
   const image = absoluteSiteUrl(options.logoPath);
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const profilePegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   // Third-party identity links (CoinGecko, DefiLlama, CMC, issuer) describe the
@@ -126,20 +131,19 @@ export function buildStablecoinDatasetJsonLd(
             measurementTechnique: "Checked-in catalog metadata and reviewed listing-policy decisions.",
           }
       : {
-          name: `${coin.name} Stablecoin Analytics`,
-          description: `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, redemption backstop coverage, and depeg history.`,
-          keywords: ["analytics", "peg tracking"],
+          name: `${coin.name} Stablecoin Profile`,
+          description: coin.flags.navToken
+            ? `Build-time profile for ${coin.name} (${coin.symbol}). ${governanceLabel} ${backingLabel} yield-bearing token with ${profilePegLabel}. The markdown download contains catalog metadata and available editorial context, not live prices or scores.`
+            : `Build-time profile for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. The markdown download contains catalog metadata and available editorial context, not live prices or scores.`,
+          keywords: ["stablecoin profile", "catalog metadata"],
           variableMeasured: [
-            { "@type": "PropertyValue", name: "price", unitText: "USD" },
-            { "@type": "PropertyValue", name: "marketCap", unitText: "USD" },
-            { "@type": "PropertyValue", name: "circulatingSupply", unitText: coin.symbol },
-            { "@type": "PropertyValue", name: "pegScore", minValue: 0, maxValue: 100 },
-            { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
-            { "@type": "PropertyValue", name: "safetyGrade" },
-            { "@type": "PropertyValue", name: "redemptionBackstopCoverage" },
+            { "@type": "PropertyValue", name: "pegReference", value: pegLabel },
+            { "@type": "PropertyValue", name: "backing", value: backingLabel },
+            { "@type": "PropertyValue", name: "governance", value: governanceLabel },
+            { "@type": "PropertyValue", name: "listingStatus", value: coin.status ?? "active" },
           ],
           measurementTechnique:
-            "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
+            "Checked-in stablecoin catalog metadata and available editorial summaries exported at build time. dateModified, when present, is the editorial summary update date, not a live metric observation time.",
         };
   const stablecoinThing = buildStablecoinThingJsonLd({
     coin,

@@ -9,7 +9,7 @@
     "causeOfDeath": "counterparty-failure",
     "deathDate": "2026-04",
     "epitaph": "Immutable credit met mutable collateral",
-    "obituary": "Nerite built USND on immutable Liquity V2-style contracts, but one of its approved collateral branches depended on rsETH. After the rsETH hack impaired that collateral, Nerite could not simply patch the market away or rewrite the risk controls. Supply collapsed from a $2.7M peak to under $100K, leaving USND as an archived case study in how immutable CDP systems can still inherit external collateral failure when a supported asset breaks upstream.",
+    "obituary": "Nerite built USND on immutable Liquity V2-style contracts, but one of its approved collateral branches depended on rsETH. After the rsETH hack impaired that collateral, Nerite could not patch the market away or rewrite the risk controls. Supply collapsed from a $2.7M peak to under $100K, leaving USND as an archived case study in how immutable CDP systems can still inherit external collateral failure when a supported asset breaks upstream.",
     "peakMcap": 2712729,
     "sourceUrl": "https://x.com/NeriteOrg/status/2045635669775487192?s=20",
     "sourceLabel": "Nerite post-incident update"

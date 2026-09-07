@@ -1,12 +1,13 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { describe, expect, it } from "vitest";
 import { loadStablecoinCoverageHealth } from "../stablecoin-publication-health";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("stablecoin publication health", () => {
   it("queries only runs that carry exact publication evidence", async () => {
     const activeIds = [...ACTIVE_IDS];
     let queriedSql = "";
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => {
         queriedSql = sql;
         return {
@@ -35,7 +36,7 @@ describe("stablecoin publication health", () => {
           }),
         };
       },
-    } as unknown as D1Database;
+    });
 
     const result = await loadStablecoinCoverageHealth(db);
 

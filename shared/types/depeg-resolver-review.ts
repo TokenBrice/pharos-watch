@@ -23,7 +23,7 @@ import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 // Public Zod schemas keep exported companion aliases as the contract type surface.
 
 export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v4";
-export const DDRR_SNAPSHOT_CACHE_GENERATION = 3;
+export const DDRR_SNAPSHOT_CACHE_GENERATION = 4;
 export const DDRR_PUBLIC_WARNING =
   "Reviews compare frozen DDR predictions Pharos published with later Pharos event data. Coverage rows are not scored as predictions.";
 
@@ -64,6 +64,14 @@ export const DDRR_VERDICT_REVIEW_VALUES = [
   "data_issue",
 ] as const;
 export type DdrrVerdictReview = (typeof DDRR_VERDICT_REVIEW_VALUES)[number];
+
+export const DDRR_SCORED_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set([
+  "correct_recoverable",
+  "correct_terminal",
+  "false_terminal",
+  "false_recoverable",
+  "risk_noted_terminal",
+]);
 
 export const DDRR_DURATION_REVIEW_VALUES = [
   "inside_band",
@@ -294,6 +302,9 @@ export type DdrrFailedPublication = z.infer<typeof DdrrFailedPublicationSchema>;
 export const DdrrV2CoverageRowSchema = DdrrV2BaseRowSchema.extend({
   kind: z.literal("coverage"),
   predictionState: z.enum(DDRR_COVERAGE_PREDICTION_STATE_VALUES),
+  // Actual-outcome spelling of the base row's sourceEventState; carried
+  // alongside it so consumers need no state-to-outcome mapping.
+  actualOutcome: z.enum(DDRR_ACTUAL_OUTCOME_VALUES),
   actualEndedAt: z.number().int().nonnegative().nullable(),
   terminalEvidenceSourceDate: z.string().nullable(),
   coverageCause: z.enum(DDRR_COVERAGE_CAUSE_VALUES),
@@ -303,6 +314,16 @@ export const DdrrV2CoverageRowSchema = DdrrV2BaseRowSchema.extend({
   failedPublication: DdrrFailedPublicationSchema.nullable(),
 });
 export type DdrrV2CoverageRow = z.infer<typeof DdrrV2CoverageRowSchema>;
+
+/**
+ * Consumer-only compatibility for the generation-3 to generation-4 rollout.
+ * Generation-3 payloads before the 2026-09-06 cutover omit `actualOutcome`;
+ * the producer/write schema above remains strict for current generation-4 rows.
+ */
+export const DdrrV2CoverageResponseRowSchema = DdrrV2CoverageRowSchema.extend({
+  actualOutcome: z.enum(DDRR_ACTUAL_OUTCOME_VALUES).optional(),
+});
+export type DdrrV2CoverageResponseRow = z.infer<typeof DdrrV2CoverageResponseRowSchema>;
 
 export const DdrrV2InvalidatedPredictionRowSchema = DdrrV2BaseRowSchema.extend({
   kind: z.literal("invalidated_prediction"),
@@ -325,6 +346,14 @@ export const DdrrRowSchema = z.discriminatedUnion("kind", [
   DdrrV2InvalidatedPredictionRowSchema,
 ]);
 export type DdrrRow = z.infer<typeof DdrrRowSchema>;
+
+export const DdrrResponseRowSchema = z.discriminatedUnion("kind", [
+  DdrrV2PredictionReviewRowSchema,
+  DdrrV2NoCallReviewRowSchema,
+  DdrrV2CoverageResponseRowSchema,
+  DdrrV2InvalidatedPredictionRowSchema,
+]);
+export type DdrrResponseRow = z.infer<typeof DdrrResponseRowSchema>;
 
 export const DdrrHorizonHitRateSchema = z.object({
   horizon: z.enum(DDR_HORIZON_VALUES),
@@ -440,7 +469,12 @@ export const DdrrMetaSchema = z.object({
 export const DdrrResponseSchema = z.object({
   _meta: DdrrMetaSchema,
   summary: DdrrSummarySchema,
-  rows: z.array(DdrrRowSchema),
+  rows: z.array(DdrrResponseRowSchema),
   methodology: MethodologyEnvelopeSchema,
 });
 export type DdrrResponse = z.infer<typeof DdrrResponseSchema>;
+
+/** OpenAPI documents the current generation-4 producer payload, not its transition input. */
+export const DdrrResponseOpenApiSchema = DdrrResponseSchema.extend({
+  rows: z.array(DdrrRowSchema),
+});

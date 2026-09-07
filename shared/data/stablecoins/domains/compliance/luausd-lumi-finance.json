@@ -4,11 +4,11 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Lumi Finance documentation — LUAUSD staking, floor-price, and redemption mechanics",
+        "label": "Lumi Finance documentation: LUAUSD staking, floor-price, and redemption mechanics",
         "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin.md"
       },
       {
-        "label": "Lumi Finance documentation — LUAUSD Curve liquidity pool",
+        "label": "Lumi Finance documentation: LUAUSD Curve liquidity pool",
         "url": "https://lumi-finance.gitbook.io/docs/legacy/liquidity-mining/the-curve-pool-liquidity-mining.md"
       },
       {

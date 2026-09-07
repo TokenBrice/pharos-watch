@@ -292,7 +292,7 @@ describe("measured execution join activation", () => {
     expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
   });
 
-  it("makes all nine reviewed metapool quotes score eligible without an activation gate", () => {
+  it("makes all ten reviewed metapool quotes score eligible without an activation gate", () => {
     for (const policy of CURVE_R3_METAPOOL_POLICIES) {
       const { measuredTarget, profile } = curveCompositeRoute(policy);
       const pool: PoolEntry = {

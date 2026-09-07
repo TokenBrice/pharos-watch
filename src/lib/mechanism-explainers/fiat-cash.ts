@@ -11,14 +11,17 @@ export const content: ArchetypeContent = {
   ],
   howItWorks: [
     {
+      id: "user-wires-usd",
       title: "User wires USD",
       body: "A KYC-verified customer wires dollars to the issuer's bank account or its Mint partner. Retail users usually access the token through an exchange instead; that secondary access is why the asset feels 'always at $1' even though only the primary market actually redeems.",
     },
     {
+      id: "issuer-holds-reserves",
       title: "Issuer holds reserves",
-      body: "Cash sits in a Tier 1 mix — bank deposits, overnight Treasury repos, short-duration T-Bills — at named custodians (BNY Mellon for USDC, DBS and Standard Chartered for USDG), attested monthly or quarterly by an external auditor.",
+      body: "Cash sits in a Tier 1 mix (bank deposits, overnight Treasury repos, short-duration T-Bills) at named custodians (BNY Mellon for USDC, DBS and Standard Chartered for USDG), attested monthly or quarterly by an external auditor.",
     },
     {
+      id: "token-minted-on-chain",
       title: "Token minted on-chain",
       body: "The issuer mints token 1:1 onto a target chain (natively on multiple chains, or via canonical or third-party bridges). Primary-market holders redeem for cash through the issuer at T+0 or T+1; secondary-market traders rely on arbitrageurs to push price back to par.",
     },
@@ -26,7 +29,7 @@ export const content: ArchetypeContent = {
   riskProfile: [
     {
       headline: "Banking-rail freeze",
-      body: "On 10 March 2023, Silicon Valley Bank was placed into FDIC receivership with roughly $3.3B of USDC reserves stranded inside it. USDC traded as low as about $0.87 over the weekend of 11–12 March 2023 before federal regulators guaranteed all SVB deposits on 12 March and the peg closed back to $1.00 by 13 March. Reserve segregation does not help if the cash is stuck.",
+      body: "On 10 March 2023, Silicon Valley Bank was placed into FDIC receivership with roughly $3.3B of USDC reserves stranded inside it. USDC traded as low as about $0.87 over the weekend of 11-12 March 2023 before federal regulators guaranteed all SVB deposits on 12 March and the peg closed back to $1.00 by 13 March. Reserve segregation does not help if the cash is stuck.",
     },
     {
       headline: "Issuer or custodian failure",
@@ -65,25 +68,28 @@ export const content: ArchetypeContent = {
   ],
   variations: [
     {
+      id: "pure-cash-repo",
       title: "Pure cash and repo",
       body: "The Circle Reserve Fund model: majority short Treasuries, a smaller overnight-repo sleeve, and a thin bank-cash float, all in a regulated money-market wrapper. USDC, EURC, USDG, RLUSD, and FDUSD sit close to this template.",
     },
     {
+      id: "mixed-cash-bitcoin-gold-loans",
       title: "Mixed cash with Bitcoin, gold, and loans",
       body: "USDT's reserve mix includes Bitcoin, gold, and secured loans alongside Treasuries. The peg has held, but the Collateral Quality column on the Safety Score reflects heavier-tail exposure than the pure cash-and-repo profile.",
     },
     {
+      id: "mica-non-usd-yield-wrappers",
       title: "MiCA-regulated non-USD pegs and yield-passthrough wrappers",
-      body: "EURC, EURI, and EURCV are fiat-cash mechanisms wrapped in a different regulatory shell with ECB-rate dynamics. sUSDC, sUSDT, and equivalents are fiat-cash plus a savings vault — the redemption rail is still the issuer's primary market.",
+      body: "EURC, EURI, and EURCV are fiat-cash mechanisms wrapped in a different regulatory shell with ECB-rate dynamics. sUSDC, sUSDT, and equivalents are fiat-cash plus a savings vault; the redemption rail is still the issuer's primary market.",
     },
   ],
   whatToWatch: [
     "Proof-of-reserves attestor tier and cadence on /stablecoin/[id]/. Big 4 monthly is the gold standard; niche or quarterly is acceptable but slower to respond.",
     "Freezable status on the detail page and in /freezewatch Status Buckets. For fiat-cash this is almost always Yes; wrappers show Upstream.",
-    "Redemption Backstop route family — fiat-cash tokens show offchain-issuer with banking-rail redemption. Live-direct telemetry is rare; most rows are documented-bound or heuristic.",
+    "Redemption Backstop route family. Fiat-cash tokens show offchain-issuer with banking-rail redemption. Live-direct telemetry is rare; most rows are documented-bound or heuristic.",
     "V9 Backing reserve exposures on the Safety Score report card. Cash and short-duration government assets differ materially from secured loans, Bitcoin, precious metals, or other higher-tail-risk slices.",
     "Jurisdiction badge. NYDFS, MiCA, and MAS licensed coins behave very differently in a stress event than BVI-only or El Salvador issuers.",
-    "Mint and burn flow on /flows — sustained burn surge against zero mints is the on-chain footprint of a primary-market redemption queue.",
+    "Mint and burn flow on /flows. A sustained burn surge against zero mints is the on-chain footprint of a primary-market redemption queue.",
   ],
   crossLinks: [
     {
@@ -109,7 +115,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/cemetery/",
-      label: "Cemetery — historical fiat-cash failures",
+      label: "Cemetery: historical fiat-cash failures",
     },
   ],
   visuals: ARCHETYPE_VISUALS["fiat-cash"],
@@ -132,7 +138,7 @@ export const content: ArchetypeContent = {
       name: "USDK",
       date: "2023-06",
       obituary:
-        "Looked clean on paper: regulated U.S. trust company, ERC-20, audited. Its custodian Prime Trust was secretly gambling client funds and collapsed into receivership $82M short of customer fiat. The textbook fiat-cash custodian-failure mode — the on-chain token only ever represented the off-chain claim.",
+        "Looked clean on paper: regulated U.S. trust company, ERC-20, audited. Its custodian Prime Trust was secretly gambling client funds and collapsed into receivership $82M short of customer fiat. The textbook fiat-cash custodian-failure mode: the on-chain token only ever represented the off-chain claim.",
       coinId: "usdk-usdk-2023-06",
     },
     {
@@ -146,7 +152,7 @@ export const content: ArchetypeContent = {
       name: "EUROe",
       date: "2025-05",
       obituary:
-        "One of the first MiCA-compliant euro stablecoins from Membrane Finance — FIN-FSA regulated, KPMG-audited, ring-fenced euro reserves. Never broke $2M in circulation. Acquired by Paxos in January 2025 and wound down two months later to make room for USDG in Europe.",
+        "One of the first MiCA-compliant euro stablecoins from Membrane Finance: FIN-FSA regulated, KPMG-audited, ring-fenced euro reserves. Never broke $2M in circulation. Acquired by Paxos in January 2025 and wound down two months later to make room for USDG in Europe.",
       coinId: "euroe-euroe-2025-05",
     },
     {

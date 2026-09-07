@@ -1,6 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
-import { runCoingeckoLowVolumePass, runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
+import { runCoingeckoLowVolumePass } from "./enrich-prices-coingecko-low-volume-pass";
+import { runDlContractPasses } from "./enrich-prices-defillama-pass";
+import { runCmcPass } from "./enrich-prices-cmc-pass";
+import { runDexScreenerPass } from "./enrich-prices-dexscreener-pass";
+import { runJupiterPass } from "./enrich-prices-jupiter-pass";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 export interface EnrichmentPassCounts {

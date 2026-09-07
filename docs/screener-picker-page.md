@@ -35,6 +35,8 @@ Changes to ranking, exclusion, missing-data, tie-break, explanation, or determin
 
 Desktop uses a stepwise wizard; browser history walks completed steps. Mobile uses the compact form and a single result commit after required inputs are complete.
 
+The one-time repair of an over-advanced URL step waits for the shared URL snapshot to be ready; the query-free static hydration snapshot must not consume that repair.
+
 Step changes are announced politely and move focus to the active question. Loading states expose `aria-busy`; result generation and snapshot replay move focus to the result summary. Option cards, skipped rows, near misses, relax actions, and result links remain keyboard operable and usable at narrow widths and 200 percent zoom.
 
 Result actions include adjusting answers, verifying the projected filters in `/screener/`, creating a share link, and contextual compare, Telegram, Yield, or per-coin links when the output supports them. `src/lib/selector-handoff.ts` is the authority for the Screener URL and human-readable filter chips. The handoff emits only keys recognized by `SCREENER_URL_SCHEMA`, uses V9-native Backing and Exit names, and includes the recommendation IDs in `coins=`. Constraints the Screener cannot reproduce—yield/source warnings, Bluechip, inherited blacklist exposure, active-depeg, legal uncertainty, and one-hour effective TVL—remain explicit Picker-only divergence chips.
@@ -75,7 +77,7 @@ Do not duplicate their full validation matrix here.
 
 ## OG Images
 
-`public/og-selector-default.png` is the card the Picker route selects in its metadata. `og-selector-treasury.png`, `og-selector-yield.png`, and `og-selector-trading.png` are checked-in profile cards that no route serves today, because `/screener/picker/` is a single route that resolves profiles client-side. Snapshot-specific social cards are intentionally not served, so shared output and answers do not appear in social preview fetches. See [og-images.md](./og-images.md).
+`public/og-selector-default.png` is the only retained Picker social card, and the route selects it in its metadata. `/screener/picker/` resolves profiles client-side, so no profile-specific or snapshot-specific social cards are served; shared output and answers do not appear in social preview fetches. See [og-images.md](./og-images.md).
 
 ## Deferred Surface
 
@@ -87,6 +89,6 @@ There is no standalone public `/methodology/selector/` route today. Selector met
 - Engine semantics: update `shared/lib/selector/`, engine version, and engine/editorial-policy tests.
 - Snapshot payload or endpoint: update the shared snapshot modules, Pages Function tests, [api-reference.md](./api-reference.md), and [privacy-page.md](./privacy-page.md) when storage changes.
 - Screener handoff: update `shared/lib/selector/answers-to-screener.ts`, `src/lib/selector-handoff.ts`, and [screener-page.md](./screener-page.md).
-- OG behavior: update the profile cards and [og-images.md](./og-images.md).
+- OG behavior: update the retained default card and [og-images.md](./og-images.md).
 
 The focused test surfaces are `shared/lib/selector/`, `src/app/screener/picker/`, `src/components/selector/`, and `functions/__tests__/selector-snapshot.test.ts`.

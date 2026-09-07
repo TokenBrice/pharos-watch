@@ -40,8 +40,9 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "scrvusd-curve": "5fd328af-4203-471b-bd16-1705c726d926",
   // sfrxUSD - frax native staking, Ethereum, $26M TVL, ~4.3% APY
   "sfrxusd-frax": "42523cca-14b0-44f6-95fb-4781069520a5",
-  // BOLD -> yBOLD - yearn-finance vault, Ethereum, $4.5M TVL, ~9.8% APY
-  "bold-liquity": "4c29f645-12db-461f-a1d7-16900d624271",
+  // BOLD (269) - not yield-bearing by itself; its Stability Pool opportunity is
+  //              published by the deterministic Liquity V2 branch reader
+  //              (`onchain:bold-liquity`), not by a curated DeFiLlama pool.
   // ZCHF - frankencoin native savings (no wrapper), Ethereum, $7.1M TVL, ~3.8% APY
   "zchf-frankencoin": "8b427366-7bfb-4c61-88be-8dc004fdc3da",
   // fxUSD - fx-protocol Stability Pool, Ethereum, $33.9M TVL, ~4.0% APY
@@ -88,9 +89,9 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "susdt-spark": "a5d67f7e-5b51-4a9d-969d-caf051a7f5a4",
   // sGHO - aave-v3 Safety Module staked GHO, Ethereum, $264M TVL, ~5.49% APY
   "sgho-aave": "ff2a68af-030c-4697-b0a1-b62a738eaef0",
-  // yBOLD - yearn-finance Liquity wrapper, Ethereum, $5.5M TVL, ~10.36% APY
-  //         (variant-map entry on `bold-liquity` remains; skipped automatically
-  //          since the wrapper is tracked separately)
+  // yBOLD - yearn-finance Liquity wrapper, Ethereum, $5.5M TVL, ~7.0% APY.
+  //         Retained as the corroborating DeFiLlama row; the selected source is
+  //         the first-party Yearn reader (`protocol-api:yearn:ybold`).
   "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
   // yvUSDC - yearn-finance USDC vault, Ethereum, $29M TVL, ~3.43% APY
   "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",

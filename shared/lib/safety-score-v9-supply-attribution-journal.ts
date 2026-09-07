@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { Sha256Schema } from "../types/safety-schema-primitives";
-import { sha256Hex } from "./sha256";
-import { stableJsonStringifyV1 } from "./stable-json";
+import {
+  ContentAddressedJournalAssetIdSchema,
+  ContentAddressedJournalSafeIdentifierSchema,
+  createContentAddressedJournal,
+} from "./content-addressed-journal";
 
 const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
 const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 32 * 1_024;
@@ -9,24 +12,9 @@ export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 32;
 const WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC = 120;
 
-const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
-const SafeIdentifierSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(192)
-  .regex(/^[A-Za-z0-9][A-Za-z0-9._:@/-]*$/);
 export const SupplyAttributionJournalIdSchema = z
   .string()
   .regex(/^supply-attribution-evidence:v1:[a-f0-9]{64}$/);
-
-const SECRET_BEARING_TEXT_PATTERNS = [
-  /(?:https?|wss?):\/\//i,
-  /\bauthorization\s*:/i,
-  /\bbearer\s+[A-Za-z0-9._~+/-]+=*/i,
-  /\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|secret)\s*[:=]/i,
-  /[?&](?:api[_-]?key|access[_-]?token|auth[_-]?token|token|secret)=/i,
-] as const;
 
 const SupplyAttributionAdmissionCodeSchema = z.enum([
   "supply-attribution.admission.accepted",
@@ -158,12 +146,12 @@ const SupplyAttributionFallbackCodeSchema = z.enum([
   "supply-attribution.fallback.aggregate-only",
 ]);
 
-const SupplyAttributionJournalV1PayloadSchema = z
+const SupplyAttributionJournalV1PayloadDomainSchema = z
   .object({
     schemaVersion: z.literal(1),
     lane: z.literal("supply-attribution"),
-    assetId: AssetIdSchema,
-    attemptId: SafeIdentifierSchema,
+    assetId: ContentAddressedJournalAssetIdSchema,
+    attemptId: ContentAddressedJournalSafeIdentifierSchema,
     sourceId: z.enum([
       "wm.reviewed-deployment-unit-partition.v1",
       "centrifuge.reviewed-deployment-unit-partition.v1",
@@ -173,8 +161,8 @@ const SupplyAttributionJournalV1PayloadSchema = z
       "onchain-observation",
       "issuer-disclosure-plus-onchain",
     ]),
-    baseInputGenerationId: SafeIdentifierSchema,
-    sourceGeneration: SafeIdentifierSchema,
+    baseInputGenerationId: ContentAddressedJournalSafeIdentifierSchema,
+    sourceGeneration: ContentAddressedJournalSafeIdentifierSchema,
     registryFingerprint: Sha256Schema,
     routeInventoryDigest: Sha256Schema.nullable(),
     attemptCode: z.literal("supply-attribution.collector.attempted"),
@@ -187,7 +175,7 @@ const SupplyAttributionJournalV1PayloadSchema = z
     completedAtSec: z.number().int().nonnegative(),
     scoringClockSec: z.number().int().nonnegative(),
     sourceObservedAtSec: z.number().int().nonnegative().nullable(),
-    failedRouteId: SafeIdentifierSchema.nullable(),
+    failedRouteId: ContentAddressedJournalSafeIdentifierSchema.nullable(),
     contentSha256: Sha256Schema.nullable(),
   })
   .strict()
@@ -314,26 +302,40 @@ const SupplyAttributionJournalV1PayloadSchema = z
           "outside the bounded wM finality exception",
       });
     }
-
-    const serialized = stableJsonStringifyV1(record);
-    if (SECRET_BEARING_TEXT_PATTERNS.some((pattern) => pattern.test(serialized))) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Supply attribution journal identifiers cannot contain secret-bearing text",
-      });
-    }
-    if (
-      new TextEncoder().encode(serialized).byteLength >
-      SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          `Supply attribution journal entry exceeds ` +
-          `${SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES} bytes`,
-      });
-    }
   });
+
+const supplyAttributionJournal = createContentAddressedJournal({
+  payloadSchema: SupplyAttributionJournalV1PayloadDomainSchema,
+  journalIdSchema: SupplyAttributionJournalIdSchema,
+  idPrefix: "supply-attribution-evidence:v1:",
+  domain: "safety-score-v9.supply-attribution-evidence.v1",
+  entryMaxBytes: SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES,
+  aggregateMaxBytes: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES,
+  maxAssets: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS,
+  maxEntriesPerAsset: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET,
+  messages: {
+    secretBearingText: "Supply attribution journal identifiers cannot contain secret-bearing text",
+    entryTooLarge:
+      `Supply attribution journal entry exceeds ` +
+      `${SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES} bytes`,
+    tooManyAssets:
+      `Supply attribution journal covers more than ` +
+      `${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS} assets`,
+    invalidAssetId: "Invalid supply attribution journal asset ID",
+    tooManyEntriesPerAsset:
+      `Supply attribution journal retains at most ` +
+      `${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET} entries per asset`,
+    assetMismatch: "Supply attribution journal asset does not match its map key",
+    duplicateAttempt: "Supply attribution journal contains a duplicate attempt",
+    aggregateTooLarge:
+      `Fixed-input supply attribution journal exceeds ` +
+      `${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES} bytes`,
+    journalIdMismatch: "Supply attribution journal ID does not match its canonical payload",
+  },
+});
+
+const SupplyAttributionJournalV1PayloadSchema =
+  supplyAttributionJournal.payloadSchema;
 
 export type SupplyAttributionJournalV1Payload = z.infer<
   typeof SupplyAttributionJournalV1PayloadSchema
@@ -342,29 +344,11 @@ export type SupplyAttributionJournalV1Payload = z.infer<
 export function computeSupplyAttributionJournalIdV1(
   payload: SupplyAttributionJournalV1Payload,
 ): string {
-  return `supply-attribution-evidence:v1:${sha256Hex(
-    stableJsonStringifyV1({
-      domain: "safety-score-v9.supply-attribution-evidence.v1",
-      payload,
-    }),
-  )}`;
+  return supplyAttributionJournal.computeId(payload);
 }
 
 export const SupplyAttributionJournalV1Schema =
-  SupplyAttributionJournalV1PayloadSchema.extend({
-    journalId: SupplyAttributionJournalIdSchema,
-  })
-    .strict()
-    .superRefine((record, ctx) => {
-      const { journalId, ...payload } = record;
-      if (journalId !== computeSupplyAttributionJournalIdV1(payload)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["journalId"],
-          message: "Supply attribution journal ID does not match its canonical payload",
-        });
-      }
-    });
+  supplyAttributionJournal.recordSchema;
 
 export type SupplyAttributionJournalV1 = z.infer<
   typeof SupplyAttributionJournalV1Schema
@@ -382,91 +366,11 @@ export function createSupplyAttributionJournalV1(
       "New rejected supply attribution journal records require an exact leaf code",
     );
   }
-  return SupplyAttributionJournalV1Schema.parse({
-    ...payload,
-    journalId: computeSupplyAttributionJournalIdV1(payload),
-  });
+  return supplyAttributionJournal.create(payload);
 }
 
-function compareRecords(
-  left: SupplyAttributionJournalV1,
-  right: SupplyAttributionJournalV1,
-): number {
-  return (
-    left.attemptedAtSec - right.attemptedAtSec ||
-    left.completedAtSec - right.completedAtSec ||
-    left.attemptId.localeCompare(right.attemptId) ||
-    left.journalId.localeCompare(right.journalId)
-  );
-}
-
-export const SupplyAttributionJournalByIdV1Schema = z
-  .record(z.string(), z.array(SupplyAttributionJournalV1Schema))
-  .superRefine((journalById, ctx) => {
-    const entries = Object.entries(journalById);
-    if (entries.length > SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          `Supply attribution journal covers more than ` +
-          `${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS} assets`,
-      });
-    }
-    for (const [assetId, records] of entries) {
-      if (!AssetIdSchema.safeParse(assetId).success) {
-        ctx.addIssue({
-          code: "custom",
-          path: [assetId],
-          message: "Invalid supply attribution journal asset ID",
-        });
-      }
-      if (records.length > SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET) {
-        ctx.addIssue({
-          code: "custom",
-          path: [assetId],
-          message:
-            `Supply attribution journal retains at most ` +
-            `${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET} entries per asset`,
-        });
-      }
-      const attemptIds = new Set<string>();
-      for (const [index, record] of records.entries()) {
-        if (record.assetId !== assetId) {
-          ctx.addIssue({
-            code: "custom",
-            path: [assetId, index, "assetId"],
-            message: "Supply attribution journal asset does not match its map key",
-          });
-        }
-        if (attemptIds.has(record.attemptId)) {
-          ctx.addIssue({
-            code: "custom",
-            path: [assetId, index, "attemptId"],
-            message: "Supply attribution journal contains a duplicate attempt",
-          });
-        }
-        attemptIds.add(record.attemptId);
-      }
-    }
-    if (
-      new TextEncoder().encode(stableJsonStringifyV1(journalById)).byteLength >
-      SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          `Fixed-input supply attribution journal exceeds ` +
-          `${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES} bytes`,
-      });
-    }
-  })
-  .transform((journalById) =>
-    Object.fromEntries(
-      Object.entries(journalById)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([assetId, records]) => [assetId, [...records].sort(compareRecords)]),
-    ),
-  );
+export const SupplyAttributionJournalByIdV1Schema =
+  supplyAttributionJournal.journalByIdSchema;
 
 export type SupplyAttributionJournalByIdV1 = z.infer<
   typeof SupplyAttributionJournalByIdV1Schema

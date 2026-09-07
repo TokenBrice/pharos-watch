@@ -15,6 +15,7 @@ import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
   decimalNumberFromBigInt,
   decimalStringFromBigInt,
+  fetchOnchainMulticall3,
   freshnessMetadataFromTimestamp,
   makeOnchainCallers,
   requireOnchainInput,
@@ -24,7 +25,7 @@ import {
 import type { OnchainCallers } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
-import { decodeAddressWord, decodeStrictBoolWord } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { validateDecimals } from "./slice-math";
 
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
@@ -244,9 +245,17 @@ export async function fetchChainlinkNavCore(
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
 
-  // Fetch token decimals + totalSupply in parallel with oracle data
-  const tokenDecimalsP = onchain.uint256(params.tokenAddress, DECIMALS_SELECTOR);
-  const totalSupplyP = onchain.uint256(params.tokenAddress, TOTAL_SUPPLY_SELECTOR);
+  // Ondo variants keep their independent token reads in flight with the
+  // method-specific oracle path. Standard Chainlink reads are one same-chain
+  // aggregate because every target and calldata value is known up front.
+  const tokenDecimalsP = method === "latestRoundData"
+    ? null
+    : onchain.uint256(params.tokenAddress, DECIMALS_SELECTOR);
+  const totalSupplyP = method === "latestRoundData"
+    ? null
+    : onchain.uint256(params.tokenAddress, TOTAL_SUPPLY_SELECTOR);
+  let rawTokenDecimals: bigint | null = null;
+  let rawTotalSupply: bigint | null = null;
 
   let navPerToken: bigint;
   let navDecimals: number;
@@ -331,10 +340,29 @@ export async function fetchChainlinkNavCore(
     }
   } else {
     // Standard AggregatorV3Interface: decimals() + latestRoundData()
-    const rawOracleDecimals = await onchain.uint256(params.oracleAddress, DECIMALS_SELECTOR);
+    const feedReads = await fetchOnchainMulticall3({
+      calls: [
+        { label: "token-decimals", contract: params.tokenAddress, data: DECIMALS_SELECTOR },
+        { label: "token-total-supply", contract: params.tokenAddress, data: TOTAL_SUPPLY_SELECTOR },
+        { label: "oracle-decimals", contract: params.oracleAddress, data: DECIMALS_SELECTOR },
+        { label: "oracle-latest-round-data", contract: params.oracleAddress, data: LATEST_ROUND_DATA_SELECTOR },
+      ],
+      chain: input.chain,
+      signal,
+      ctx,
+      rpcUrl: params.rpcUrl,
+      fallbackRpcUrl: params.fallbackRpcUrl,
+    });
+    const resultData = (label: string) => {
+      const result = feedReads?.find((entry) => entry.label === label);
+      return result?.success ? result.returnData : null;
+    };
+    rawTokenDecimals = decodeUint256Word(resultData("token-decimals"));
+    rawTotalSupply = decodeUint256Word(resultData("token-total-supply"));
+    const rawOracleDecimals = decodeUint256Word(resultData("oracle-decimals"));
     navDecimals = decodeDecimalsResult(rawOracleDecimals, "oracle");
 
-    const rawRoundData = await onchain.raw(params.oracleAddress, LATEST_ROUND_DATA_SELECTOR);
+    const rawRoundData = resultData("oracle-latest-round-data");
     if (rawRoundData == null) {
       throw new Error("chainlink-nav: latestRoundData() call failed");
     }
@@ -358,7 +386,9 @@ export async function fetchChainlinkNavCore(
     }
   }
 
-  const [rawTokenDecimals, rawTotalSupply] = await Promise.all([tokenDecimalsP, totalSupplyP]);
+  if (tokenDecimalsP && totalSupplyP) {
+    [rawTokenDecimals, rawTotalSupply] = await Promise.all([tokenDecimalsP, totalSupplyP]);
+  }
   const tokenDecimals = decodeDecimalsResult(rawTokenDecimals, "token");
   if (rawTotalSupply == null) {
     throw new Error("chainlink-nav: token totalSupply() call failed");

@@ -9,6 +9,7 @@ import {
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { parseJson } from "../lib/json-parse";
 
 export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
@@ -205,11 +206,11 @@ export async function runDexExitRouteTurnoverWatchdog(
     .first<PublishedGenerationRow>();
   throwIfAborted(signal);
   if (generation === null) {
-    return {
+    return createCronResult({
       status: "skipped_neutral",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "no-published-dex-generation" }),
-    };
+      metadata: { reason: "no-published-dex-generation" },
+    });
   }
 
   const publishedRows = await db
@@ -230,9 +231,9 @@ export async function runDexExitRouteTurnoverWatchdog(
   throwIfAborted(signal);
 
   if (previousCache === null) {
-    return {
+    return createCronResult({
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         currentGenerationId: current.generationId,
         previousGenerationId: null,
         baselineCreated: true,
@@ -241,8 +242,8 @@ export async function runDexExitRouteTurnoverWatchdog(
         alertingCoinCount: 0,
         turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
         worstOffenders: [],
-      }),
-    };
+      },
+    });
   }
 
   const previous = parsePreviousRouteSnapshot(previousCache.value);

@@ -23,6 +23,7 @@ const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a"; // convertToAssets(uint
 const PREVIEW_REDEEM_SELECTOR = "0x4cdad506"; // previewRedeem(uint256)
 
 const USDT_TETHER_ID = "usdt-tether";
+const USDS_SKY_ID = "usds-sky";
 const USDE_ETHENA_ID = "usde-ethena";
 const AVUSD_AVANT_ID = "avusd-avant";
 const GHO_AAVE_ID = "gho-aave";
@@ -81,6 +82,16 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vaultDecimals: 18,
     assetDecimals: 6,
   },
+  defineRegistryErc4626NavVault({
+    id: "susds-sky",
+    parentId: USDS_SKY_ID,
+    chain: ETHEREUM_CHAIN,
+  }),
+  defineRegistryErc4626NavVault({
+    id: "susde-ethena",
+    parentId: USDE_ETHENA_ID,
+    chain: ETHEREUM_CHAIN,
+  }),
   {
     id: "srusde-strata",
     parentId: USDE_ETHENA_ID,

@@ -53,7 +53,7 @@
         "reserveName": "Hive protocol HIVE conversion mechanism (endogenous HIVE value)",
         "pct": 100,
         "disposition": "self-reserve",
-        "rationale": "Backing is the Hive protocol's own conversion capacity denominated in HIVE market value — a self-referential protocol reserve rather than an exogenous asset or tracked stablecoin."
+        "rationale": "Backing is the Hive protocol's own conversion capacity denominated in HIVE market value, a self-referential protocol reserve rather than an exogenous asset or tracked stablecoin."
       }
     ]
   },

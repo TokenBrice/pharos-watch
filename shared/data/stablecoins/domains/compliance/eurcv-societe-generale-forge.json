@@ -8,7 +8,7 @@
     "authorizedEntity": "Société Générale - Forge",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — Issuers of EMTs (EMTWP.csv, updated 2026-06-04)",
+        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv, updated 2026-06-04)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -38,14 +38,14 @@
     "notes": "EURCV has official MiCA authorization as an EMT, but that does not establish a U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception. No token-specific U.S. PPSI approval, state-qualified approval, official application, OCC registration, Treasury comparability determination, or foreign-issuer exception was located. SG-FORGE's public U.S. selling restriction supports a conservative posture. Applicability is marked apparent-payment-stablecoin because the statute covers payment or settlement tokens redeemable for a fixed monetary value; the euro denomination and offshore restriction remain verifier review points.",
     "references": [
       {
-        "label": "GENIUS Act Public Law 119-27 — payment-stablecoin definition and foreign-issuer exception",
+        "label": "GENIUS Act Public Law 119-27: payment-stablecoin definition and foreign-issuer exception",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC GENIUS Act proposed rule — Federal Register 2026-04089",
+        "label": "OCC GENIUS Act proposed rule: Federal Register 2026-04089",
         "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"
@@ -86,7 +86,7 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and Federal Register 2026-04089 — proposed GENIUS foreign-issuer and permitted-issuer framework",
+        "OCC Bulletin 2026-3 and Federal Register 2026-04089: proposed GENIUS foreign-issuer and permitted-issuer framework",
         "OCC Digital Assets Licensing Applications table checked on 2026-08-14",
         "GENIUS Act Public Law 119-27, including the foreign-issuer exception",
         "Treasury state-level GENIUS comparability rulemaking",

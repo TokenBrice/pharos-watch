@@ -8,7 +8,7 @@
     "upgradeability": {
       "model": "custom",
       "implementationAddresses": [
-        "0x341079b42e21bb7996a515d7dd1e6b11f845e71e03aa647fbb37f5188b864d42"
+        "0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc"
       ],
       "adminAddresses": [
         "0xe3dbc438a73460dba6442cbefeab033462fb8a97302a6cc28b8ad7ef08b2440d"
@@ -19,11 +19,11 @@
       "observedBlock": 298482440,
       "sources": [
         {
-          "label": "Sui fullnode RPC — suiUSDe package UpgradeCap",
+          "label": "Sui fullnode RPC: suiUSDe package UpgradeCap",
           "url": "https://fullnode.mainnet.sui.io:443"
         },
         {
-          "label": "Suiscan — suiUSDe UpgradeCap object",
+          "label": "Suiscan: suiUSDe UpgradeCap object",
           "url": "https://suiscan.xyz/mainnet/object/0x764653924d7bc3b889809de7ca077f5dd69ec378cb5d52be448c15613a5116c8"
         },
         {
@@ -45,7 +45,7 @@
         "capDescription": "TreasuryCap<SUI_USDE> is wrapped inside the shared Treasury object, so minting must route through Treasury module logic rather than an externally held TreasuryCap.",
         "sources": [
           {
-            "label": "Sui fullnode RPC – Treasury object",
+            "label": "Sui fullnode RPC: Treasury object",
             "url": "https://fullnode.mainnet.sui.io:443"
           }
         ],
@@ -61,7 +61,7 @@
         "canRaiseCap": true,
         "sources": [
           {
-            "label": "Sui fullnode RPC – RoleAuthorized events",
+            "label": "Sui fullnode RPC: RoleAuthorized events",
             "url": "https://fullnode.mainnet.sui.io:443"
           }
         ],

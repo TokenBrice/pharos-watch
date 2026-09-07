@@ -1,0 +1,15 @@
+{
+  "mechanism": "usdz-anzen",
+  "date": "2026-07-27-docs-capture",
+  "sha256": "a4dd00476d0328502061c8a1335730e48fbc3b854f781f4a60ea80dbebe26f15",
+  "bytes": 2873,
+  "r2Key": "captures/usdz-anzen/2026-07-27-docs-capture.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "usdz-anzen",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdz-anzen/2026-07-27-docs-capture.json",
+    "capturedAt": "2026-07-28 re-open docs.anzen.finance introduction + rwa-partner + faq; DefiLlama 202 ~$7.83M; eth 0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+  }
+}

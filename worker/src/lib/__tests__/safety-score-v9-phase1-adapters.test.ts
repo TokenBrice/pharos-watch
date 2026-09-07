@@ -18,12 +18,16 @@ import {
   buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
-import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
-import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9-extension";
+} from "../safety-score-v9/extension";
+import { deriveSafetyScoreV9PegScore } from "../safety-score-v9/fact-set";
+import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9/extension";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
-import { addReviewedStaticReserveEvidence } from "../safety-score-v9-extension-reserves";
-import { ReviewEvidenceBuilder } from "../safety-score-v9-extension-shared";
+import { addReviewedStaticReserveEvidence } from "../safety-score-v9/extension-reserves";
+import {
+  conservativeDateEndSec,
+  ReviewEvidenceBuilder,
+  reviewedObservationState,
+} from "../safety-score-v9/extension-shared";
 import {
   LIVE_RESERVES_CONFIG,
   eligibleReserveMeta,
@@ -33,6 +37,14 @@ import {
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
+
+describe("shared extension evidence helpers", () => {
+  it("keeps limited reviews bounded and resolves year-only evidence through year end", () => {
+    expect(reviewedObservationState("limited")).toBe("bounded-unknown");
+    expect(reviewedObservationState("unknown")).toBe("missing");
+    expect(conservativeDateEndSec("2025", CLOCK_SEC)).toBe(Date.UTC(2025, 11, 31, 23, 59, 59) / 1_000);
+  });
+});
 
 function usdgReserveRows(): ReserveSlice[] {
   return [
@@ -325,6 +337,32 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     // never reach the lower rung and quietly lose its ceiling.
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(eligibleReserveMeta(), CLOCK_SEC)).toBeNull();
   });
+
+  it.each(["independent-audit", "agreed-upon-procedures", "attestation"] as const)(
+    "admits %s as audited reserve evidence only when it carries an audit opinion",
+    (type) => {
+      const base = eligibleReserveMeta();
+      const supervised = eligibleReserveMeta({
+        proofOfReserves: { ...base.proofOfReserves!, type },
+      });
+      const unsupervised = eligibleReserveMeta({
+        mintAuthority: { ...base.mintAuthority!, supervision: "attestation-only" },
+        proofOfReserves: { ...base.proofOfReserves!, type },
+      });
+
+      const audited = type === "independent-audit";
+      const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(supervised, CLOCK_SEC);
+      const fallback = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC);
+      expect(admitted !== null).toBe(audited);
+      expect(fallback !== null).toBe(audited);
+
+      const evidence = new ReviewEvidenceBuilder(supervised.id, CLOCK_SEC);
+      addReviewedStaticReserveEvidence(supervised, admitted, evidence, CLOCK_SEC);
+      expect(evidence.finish().componentEvidence.some(
+        (entry) => entry.componentKey === "reviewed-static-reserves",
+      )).toBe(audited);
+    },
+  );
 
   it("keeps the issuer and report dates on audited fallback evidence", () => {
     // This is what makes an expired composition resolve to

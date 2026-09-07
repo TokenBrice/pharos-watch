@@ -62,7 +62,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Polygon. The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, issuer-native IDRX deployment on Polygon. The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -83,7 +83,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Base (uniform address; EIP-1967 impl 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, issuer-native IDRX deployment on Base (uniform address; EIP-1967 impl 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -104,7 +104,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on BSC. The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, issuer-native IDRX deployment on BSC. The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -125,7 +125,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Klaytn (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals, issuer-native IDRX deployment on Klaytn (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -146,7 +146,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Gnosis (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals, issuer-native IDRX deployment on Gnosis (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -167,7 +167,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Etherlink (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals, issuer-native IDRX deployment on Etherlink (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -188,7 +188,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Worldchain (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals, issuer-native IDRX deployment on Worldchain (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

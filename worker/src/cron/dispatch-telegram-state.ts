@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
@@ -13,8 +13,8 @@ import { getCache, setCache } from "../lib/db-cache";
 import {
   loadSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
-} from "../lib/safety-score-v9-publication-store";
-import { logTelegramEvent } from "../lib/telegram-log";
+} from "../lib/safety-score-v9/publication-store";
+import { logTelegramEvent } from "../lib/telegram/log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
@@ -344,7 +344,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     launch:
       mustSeedSnapshots && previousLaunchIds != null
         ? previousLaunchIds
-        : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
+        : WORKER_PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
     reserveDispatched,
   };
   const previousReserveDriftIds = reserveNeedsColdSeed

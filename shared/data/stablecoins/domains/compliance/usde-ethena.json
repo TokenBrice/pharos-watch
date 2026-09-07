@@ -5,11 +5,11 @@
     "tokenType": "ART",
     "references": [
       {
-        "label": "ESMA MiCA interim register — ART white papers",
+        "label": "ESMA MiCA interim register: ART white papers",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
       },
       {
-        "label": "Ethena USDe Terms and Conditions — EEA",
+        "label": "Ethena USDe Terms and Conditions: EEA",
         "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions-eea"
       },
       {
@@ -51,7 +51,7 @@
     "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDe is a synthetic dollar rather than a fiat reserve stablecoin; GENIUS payment-stablecoin applicability is unresolved pending final rulemaking and the mandated non-payment stablecoin study. Ethena is separately pursuing GENIUS-compliant issuance via USDtb (partnered with Anchorage Digital Bank) — that is a distinct product issued by a separate entity (Pallas BVI Ltd / Anchorage Digital Bank). No GENIUS Act enforcement actions exist and the Act is not yet effective (effective date: 2027-01-18 at latest).",
+    "notes": "USDe is a synthetic dollar rather than a fiat reserve stablecoin; GENIUS payment-stablecoin applicability is unresolved pending final rulemaking and the mandated non-payment stablecoin study. Ethena is separately pursuing GENIUS-compliant issuance via USDtb (partnered with Anchorage Digital Bank): that is a distinct product issued by a separate entity (Pallas BVI Ltd / Anchorage Digital Bank). No GENIUS Act enforcement actions exist and the Act is not yet effective (effective date: 2027-01-18 at latest).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

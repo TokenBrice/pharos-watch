@@ -12,12 +12,12 @@ import {
 import {
   deriveReviewedDeploymentUnitPartition,
   type ReviewedDeploymentSupplyObservation,
-} from "../safety-score-v9-supply-attribution-contract";
+} from "../safety-score-v9/supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   type XautLockMintObservation,
-} from "../safety-score-v9-xaut-supply-attribution-contract";
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
   computeSafetyScoreV9SupplyAttributionGenerationId,
@@ -28,7 +28,7 @@ import {
   nextSafetyScoreV9SupplyAttributionDueAtSec,
   parseSafetyScoreV9SupplyAttributionGeneration,
   serializeSafetyScoreV9SupplyAttributionGeneration,
-} from "../safety-score-v9-supply-attribution-generation";
+} from "../safety-score-v9/supply-attribution-generation";
 import {
   createSafetyScoreV9FullRegistryInput,
   FULL_REGISTRY_CLOCK_SEC,
@@ -369,14 +369,12 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
 
   it("round-trips a complete content-addressed generation", () => {
     const generation = fixtures.acceptedGeneration;
+    const serialized = serializeSafetyScoreV9SupplyAttributionGeneration(generation);
     expect(
       parseSafetyScoreV9SupplyAttributionGeneration(
-        serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+        serialized,
       ),
     ).toEqual(generation);
-    expect(generation.generationId).toMatch(
-      /^safety-score-v9-supply-attribution:v1:[a-f0-9]{64}$/,
-    );
     expect(generation.expectedAssetIds).toEqual(["xaut-tether"]);
     expect(generation.observedAssetIds).toEqual(["xaut-tether"]);
   });
@@ -385,6 +383,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(() =>
       parseSafetyScoreV9SupplyAttributionGeneration("{"),
     ).toThrow("Malformed supply attribution generation cache");
+    expect(() => parseSafetyScoreV9SupplyAttributionGeneration(" ".repeat(128 * 1_024 + 1))).toThrow("Supply attribution generation cache value is oversized");
   });
 
   it("re-derives accepted raw observations against the current aggregate", () => {

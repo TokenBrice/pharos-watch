@@ -1,4 +1,4 @@
 export {
   buildPendingAlertUpsertSql,
   pendingPrioritySql,
-} from "../../lib/telegram-pending-queue";
+} from "../../lib/telegram/pending-queue";

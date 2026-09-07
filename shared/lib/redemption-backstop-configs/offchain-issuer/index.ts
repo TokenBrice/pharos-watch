@@ -6,7 +6,6 @@ import { MAJOR_ISSUER_OFFCHAIN_CONFIGS } from "./major-issuers";
 import { NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS } from "./non-usd-and-tokenized";
 import { REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS } from "./remediation-and-late-audit";
 import { REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
-import type { RedemptionBackstopConfig } from "../shared";
 
 const OFFCHAIN_ISSUER_REGISTRY_ENTRIES = [
   ...BASE_OFFCHAIN_ISSUER_ENTRIES,
@@ -58,6 +57,4 @@ const FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   ],
 );
 
-export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
-  FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.configs;
 export const OFFCHAIN_ISSUER_BACKSTOP_ENTRIES = FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY.entries;

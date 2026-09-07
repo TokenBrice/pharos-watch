@@ -14,11 +14,11 @@ import {
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
-} from "../safety-score-v9-xaut-supply-attribution-contract";
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 import {
   observeXautRepresentationGroupSupplyAttributionAttempt,
   parseXautTransparencyDisclosure,
-} from "../safety-score-v9-xaut-supply-observer";
+} from "../safety-score-v9/xaut-supply-observer";
 
 const BLOCK_NUMBER = 25_601_844;
 const BLOCK_TIME_SEC = 1_784_887_019;

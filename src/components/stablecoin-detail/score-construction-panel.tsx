@@ -83,7 +83,9 @@ export function ScoreConstructionPanel({
               Measured and adverse
             </p>
             <ul className="mt-1 space-y-1 text-[11px] leading-snug text-muted-foreground">
-              {adverseMessages.map((message) => <li key={message}>{message}</li>)}
+              {adverseMessages.map((message) => (
+                <li key={message} className="min-w-0 [overflow-wrap:anywhere]">{message}</li>
+              ))}
             </ul>
           </div>
         ) : null}
@@ -91,7 +93,9 @@ export function ScoreConstructionPanel({
           <div key={group.key} className="mt-2.5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{group.label}</p>
             <ul className="mt-1 space-y-1 text-[11px] leading-snug text-muted-foreground">
-              {group.messages.map((message) => <li key={message}>{message}</li>)}
+              {group.messages.map((message) => (
+                <li key={message} className="min-w-0 [overflow-wrap:anywhere]">{message}</li>
+              ))}
             </ul>
           </div>
         ))}

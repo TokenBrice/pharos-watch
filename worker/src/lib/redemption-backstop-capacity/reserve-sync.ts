@@ -5,11 +5,11 @@ import {
 } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { getLatestSuccessfulReserveSnapshotMetadata } from "../live-reserves-store";
+import { getLatestSuccessfulReserveSnapshotMetadata } from "../live-reserves/store";
 import {
   readRedemptionBackstopLiveMetadata,
   type RedemptionBackstopLiveMetadata,
-} from "../redemption-backstop-live-metadata";
+} from "../redemption-backstop/live-metadata";
 import {
   resolveCapacityBasis,
   resolveReserveSyncCapacityConfidence,

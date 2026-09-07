@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "BD's five launch branches mint through collateral-gated BorrowerOperations and ActivePool contracts. The token owner is renounced, but the collateral registry's 2-of-6 Safe governor can authorize additional branch minters without a token-level cap or execution delay.",
+    "summary": "BD's five launch branches mint through collateral-gated BorrowerOperations and ActivePool contracts. The token owner is renounced, but the collateral registry's 4-of-6 Safe governor can authorize additional branch minters without a token-level cap or execution delay.",
     "upgradeability": {
       "model": "immutable",
       "deploymentRefs": [
@@ -64,7 +64,7 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "threshold": 2,
+        "threshold": 4,
         "signerCount": 6,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
@@ -77,18 +77,18 @@
             "0xf24C399622E8763573592EB1cd639b174098A768",
             "0xba75CEB18c7b895141e85bbca9f3bcc446654520"
           ],
-          "threshold": 2,
+          "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
           "version": "1.4.1+L2",
-          "observedBlock": 50258421,
-          "observedAt": "2026-08-21",
+          "observedBlock": 50800184,
+          "observedAt": "2026-09-02",
           "source": "safe-api"
         },
-        "observedAt": "2026-08-21",
-        "observedBlock": 50258421,
+        "observedAt": "2026-09-02",
+        "observedBlock": 50800184,
         "sources": [
           {
             "label": "Pinned Base Dollar collateral-registry source",
@@ -99,7 +99,7 @@
             "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x519CA17DAE2E2A23396eBEC12DA1f645AccEC196/"
           }
         ],
-        "evidence": "At Base block 50258421, CollateralRegistry collateralGovernor() and governor() both returned this Safe. The pinned registry source lets collateralGovernor call createNewBranch(), which registers that branch's BorrowerOperations and ActivePool as BD minters without a token-level numeric cap. The Safe service reported 2-of-6 ownership, no modules, a zero guard, and no execution timelock on this branch-registration path."
+        "evidence": "At Base block 50258421, CollateralRegistry collateralGovernor() and governor() both returned this Safe. The pinned registry source lets collateralGovernor call createNewBranch(), which registers that branch's BorrowerOperations and ActivePool as BD minters without a token-level numeric cap. The Safe service reported 4-of-6 ownership, no modules, a zero guard, and no execution timelock on this branch-registration path."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -124,7 +124,7 @@
           "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x519CA17DAE2E2A23396eBEC12DA1f645AccEC196/"
         }
       ],
-      "evidence": "At Base block 50258421, BD's token owner was renounced and its collateral registry was fixed to 0x7551ebfc8340b7f91874942be9c653733d4fb04f. Five launch branches provide collateral-gated issuance, but the registry's 2-of-6 Safe governor can immediately register additional branch contracts as minters. This keeps current issuance on-chain and collateralized while preserving a privileged, economically unbounded minter-authorization path.",
+      "evidence": "At Base block 50258421, BD's token owner was renounced and its collateral registry was fixed to 0x7551ebfc8340b7f91874942be9c653733d4fb04f. Five launch branches provide collateral-gated issuance, but the registry's 4-of-6 Safe governor can immediately register additional branch contracts as minters. This keeps current issuance on-chain and collateralized while preserving a privileged, economically unbounded minter-authorization path.",
       "reviewer": "Codex Base Dollar promotion review",
       "reviewedAt": "2026-08-21",
       "disposition": "scoreable"

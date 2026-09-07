@@ -52,11 +52,6 @@ const TOKEN_META = {
 const GET_TOTAL_RAW_COLLATERALS_SELECTOR = "0xee65a03c";
 const GET_TOTAL_RAW_DEBTS_SELECTOR = "0xf9d45fd2";
 
-interface FxParams {
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
-
 type FxBalance = { key: keyof typeof TOKEN_META; amountRaw: bigint; debtRaw: bigint };
 
 export function adaptFx(payload: FxPayload): {
@@ -189,7 +184,7 @@ async function fetchFxOnchainReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "fx");
-  const params = parseLiveReserveAdapterParams("fx", config.params) as FxParams;
+  const params = parseLiveReserveAdapterParams("fx", config.params);
   const balances = await Promise.all(
     (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>).map(async (key): Promise<FxBalance> => {
       const meta = TOKEN_META[key];

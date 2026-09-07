@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: July 2026"]}
+      leadParagraphs={["Last updated: September 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -43,10 +43,10 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">What We Collect</h2>
           <p>
-            When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, public Pharos
-            website routes collect anonymized usage analytics such as page views, session duration, approximate
+            When Google Analytics 4 (GA4) is enabled, public pages on pharos.watch
+            collect anonymized usage analytics such as page views, session duration, approximate
             geographic region, device or browser type, and a small set of product-interaction events. The embedded
-            PharosWatchBot Mini App is excluded from GA4 and Web Vitals collection. If you choose to share a Telegram
+            PharosWatchBot Mini App, operator pages, and preview deployments are excluded from GA4 and Web Vitals collection. If you choose to share a Telegram
             or X handle in the feedback form, that handle is included in the GitHub issue created for the submission.
             Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours,
             snooze state, and an optional private-chat daily recap schedule,
@@ -227,8 +227,8 @@ export default function PrivacyPage() {
           <h2 className="pharos-section-title">Third-Party Services</h2>
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
-            processed by Google (GA4) only when analytics is enabled for the current deployment and never from the
-            embedded PharosWatchBot Mini App route. Feedback submissions
+            processed by Google (GA4) only when analytics is enabled on the public website, excluding
+            operator pages, preview deployments, and the embedded PharosWatchBot Mini App. Feedback submissions
             are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are echoed publicly in
             those GitHub issues. API request verification emails are sent through Resend. API key issuance records stay
             in private operator storage and structured Worker logs; requester details and key material are not published

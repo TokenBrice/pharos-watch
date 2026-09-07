@@ -266,10 +266,12 @@ describe("computeDepegResolver", () => {
     ]);
 
     const { stores } = storesFor();
+    delete stores.closeRecoveredPreLockIncidents;
     const result = await computeDepegResolver({ db, storeContracts: stores });
     const payload = readDdrSnapshotPayload(db);
 
     expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}").v2PreLockIncidentsClosed).toBe(0);
     expect(payload.rows).toEqual([]);
   });
 

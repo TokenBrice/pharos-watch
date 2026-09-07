@@ -15,6 +15,11 @@ import {
 } from "./helpers";
 import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
+import {
+  parseReportDateCandidates,
+  type ParsedReportDateCandidate,
+  type ReportDateParserEntry,
+} from "./report-date";
 
 const ADAPTER_NAME = "attestation-pdf-index";
 const COMPOSITION_MODE = "configured-static-slices";
@@ -69,52 +74,6 @@ async function fetchAttestationIndexHtml(
   }
 }
 
-// Full-name month index for adapters that encounter full lowercase month names (e.g. "january").
-export const MONTH_INDEX: Record<string, number> = {
-  january: 0,
-  february: 1,
-  march: 2,
-  april: 3,
-  may: 4,
-  june: 5,
-  july: 6,
-  august: 7,
-  september: 8,
-  october: 9,
-  november: 10,
-  december: 11,
-};
-
-const MONTH_INDEX_BY_PREFIX: Record<string, number> = {
-  jan: 0,
-  feb: 1,
-  mar: 2,
-  apr: 3,
-  may: 4,
-  jun: 5,
-  jul: 6,
-  aug: 7,
-  sep: 8,
-  oct: 9,
-  nov: 10,
-  dec: 11,
-};
-
-export const MONTH_LABEL = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 export interface AttestationPdfIndexParams {
   slices: ReserveSlice[];
 }
@@ -123,15 +82,9 @@ interface AttestationPdfIndexAdaptOptions {
   indexUrl?: string;
 }
 
-type ReportDatePrecision = "day" | "month";
 type ReportDateSource = "href" | "text";
 
-interface ReportDateCandidate {
-  sourceTimestamp: number;
-  reportDate: string;
-  reportDateLabel: string;
-  reportDatePrecision: ReportDatePrecision;
-  reportPeriod?: string;
+interface ReportDateCandidate extends ParsedReportDateCandidate {
   dateSource: ReportDateSource;
 }
 
@@ -210,57 +163,6 @@ function readParams(config: LiveReservesConfig): AttestationPdfIndexParams {
   };
 }
 
-function monthIndexFromLabel(rawMonth: string): number | null {
-  const key = rawMonth
-    .toLowerCase()
-    .replace(/[^a-z]/g, "")
-    .slice(0, 3);
-  return MONTH_INDEX_BY_PREFIX[key] ?? null;
-}
-
-function formatIsoDate(year: number, monthIndex: number, day: number): string {
-  return [String(year).padStart(4, "0"), String(monthIndex + 1).padStart(2, "0"), String(day).padStart(2, "0")].join(
-    "-",
-  );
-}
-
-function buildDayDate(
-  year: number,
-  monthIndex: number,
-  day: number,
-  source: ReportDateSource,
-): ReportDateCandidate | null {
-  const timestampMs = Date.UTC(year, monthIndex, day);
-  const date = new Date(timestampMs);
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== monthIndex || date.getUTCDate() !== day) {
-    return null;
-  }
-
-  return {
-    sourceTimestamp: Math.floor(timestampMs / 1000),
-    reportDate: formatIsoDate(year, monthIndex, day),
-    reportDateLabel: `${MONTH_LABEL[monthIndex]} ${day}, ${year}`,
-    reportDatePrecision: "day",
-    dateSource: source,
-  };
-}
-
-function buildMonthDate(year: number, monthIndex: number, source: ReportDateSource): ReportDateCandidate | null {
-  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
-    return null;
-  }
-
-  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  return {
-    sourceTimestamp: Date.UTC(year, monthIndex, lastDay) / 1000,
-    reportDate: formatIsoDate(year, monthIndex, lastDay),
-    reportDateLabel: `${MONTH_LABEL[monthIndex]} ${lastDay}, ${year}`,
-    reportDatePrecision: "month",
-    reportPeriod: `${MONTH_LABEL[monthIndex]} ${year}`,
-    dateSource: source,
-  };
-}
-
 function betterDate(
   current: ReportDateCandidate | null,
   candidate: ReportDateCandidate | null,
@@ -281,11 +183,7 @@ function betterDate(
 const MONTH_NAME_PATTERN =
   "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
 
-type DateParserEntry =
-  | { kind: "day"; regex: RegExp; year: number; month: number; day: number; monthIsName?: boolean }
-  | { kind: "month"; regex: RegExp; year: number; month: number; monthIsName?: boolean };
-
-const DAY_DATE_PARSERS: readonly DateParserEntry[] = [
+const DAY_DATE_PARSERS: readonly ReportDateParserEntry[] = [
   // YYYY-MM-DD (and variants)
   {
     kind: "day",
@@ -330,7 +228,7 @@ const DAY_DATE_PARSERS: readonly DateParserEntry[] = [
   },
 ];
 
-const MONTH_DATE_PARSERS: readonly DateParserEntry[] = [
+const MONTH_DATE_PARSERS: readonly ReportDateParserEntry[] = [
   // YYYY Month
   {
     kind: "month",
@@ -361,22 +259,11 @@ const MONTH_DATE_PARSERS: readonly DateParserEntry[] = [
 function parseAllDates(
   value: string,
   source: ReportDateSource,
-  table: readonly DateParserEntry[],
+  table: readonly ReportDateParserEntry[],
 ): ReportDateCandidate | null {
   let latest: ReportDateCandidate | null = null;
-  for (const entry of table) {
-    for (const match of value.matchAll(entry.regex)) {
-      const monthRaw = match[entry.month] ?? "";
-      const monthIndex = entry.monthIsName ? monthIndexFromLabel(monthRaw) : Number(monthRaw) - 1;
-      if (monthIndex == null || Number.isNaN(monthIndex)) continue;
-      const yearRaw = match[entry.year] ?? "";
-      const year = yearRaw.length === 2 ? 2000 + Number(yearRaw) : Number(yearRaw);
-      const candidate =
-        entry.kind === "day"
-          ? buildDayDate(year, monthIndex, Number(match[entry.day]), source)
-          : buildMonthDate(year, monthIndex, source);
-      latest = betterDate(latest, candidate);
-    }
+  for (const candidate of parseReportDateCandidates(value, table)) {
+    latest = betterDate(latest, { ...candidate, dateSource: source });
   }
   return latest;
 }

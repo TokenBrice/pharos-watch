@@ -8,6 +8,7 @@ import {
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 
@@ -36,6 +37,30 @@ describe("handleMintBurnFlows contract tests", () => {
 
   const stablecoinsCache = JSON.stringify({
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
+  });
+
+  const makeValidCachedAggregateFixture = (updatedAt: number, safetyScoreIdentity: unknown) => ({
+    gauge: {
+      score: 10,
+      band: "BUYING",
+      intensitySemantics: "signed-v2",
+      flightToQuality: true,
+      flightIntensity: 20,
+      classificationSource: "safety-score-v9-publication",
+      safetyScoreIdentity,
+      trackedCoins: 1,
+      trackedMcapUsd: 1,
+    },
+    coins: [],
+    hourly: [],
+    updatedAt: updatedAt - 60,
+    sync: {
+      lastSuccessfulSyncAt: updatedAt - 120,
+      freshnessStatus: "fresh",
+      warning: null,
+      classificationWarning: null,
+      criticalLaneHealthy: true,
+    },
   });
 
   it("filters aggregate flow metrics to configured stablecoin-chain pairs", async () => {
@@ -484,8 +509,15 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(db.getHistory().some((entry) => entry.binds.includes("report_card_cache"))).toBe(false);
   });
 
-  it("removes cached FTQ output when its report-card identity is no longer active", async () => {
+  it.each([
+    { safeNet: 200_000_000, invalid: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 40 },
+    { safeNet: -200_000_000, invalid: false, sourceUnavailable: false, stale: true, hours: 168, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: true, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: 0 },
+  ])("reconciles a newer FTQ publication using cached flows: %j", async ({ safeNet, invalid, sourceUnavailable, stale, hours, expectedIntensity }) => {
     const now = Math.floor(Date.now() / 1000);
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
     const cachedGenerationId = `report-cards:v9:${now - 900}`;
     const activeGenerationId = `report-cards:v9:${now}`;
     const cachedIdentity = {
@@ -517,41 +549,47 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.spyOn(
       flightToQualityClassification,
       "buildFlightToQualityClassificationFromV9Snapshot",
-    ).mockReturnValueOnce({
+    ).mockReturnValueOnce(sourceUnavailable ? { kind: "unavailable", reason: "publication-held" } : {
       kind: "ok",
       classification: {
         safeIds: new Set(["usdc-circle"]),
-        riskyIds: new Set(),
+        riskyIds: new Set(["usdai-usd-ai"]),
         safetyScoreIdentity: activeSnapshot.safetyScoreIdentity,
       },
     });
     const cachedBody = {
-      gauge: {
-        score: 10,
-        band: "BUYING",
-        intensitySemantics: "signed-v2" as const,
-        flightToQuality: true,
-        flightIntensity: 20,
-        classificationSource: "safety-score-v9-publication" as const,
-        safetyScoreIdentity: cachedIdentity,
-        trackedCoins: 1,
-        trackedMcapUsd: 1,
-      },
-      coins: [],
-      hourly: [],
-      updatedAt: now - 60,
-      sync: {
-        lastSuccessfulSyncAt: now - 120,
-        freshnessStatus: "fresh" as const,
-        warning: null,
-        classificationWarning: null,
-        criticalLaneHealthy: true,
-      },
+      ...makeValidCachedAggregateFixture(stale ? now - 86400 : now, cachedIdentity),
+      windowHours: hours,
+      coins: [
+        ["usdc-circle", safeNet],
+        ["usdai-usd-ai", -400_000_000],
+        ["dai-makerdao", -1_000_000_000], // Neutral flows must not contribute to FTQ.
+      ].map(([stablecoinId, netFlow24hUsd]) => ({
+        stablecoinId,
+        symbol: "TEST",
+        netFlow24hUsd: invalid ? null : netFlow24hUsd,
+        flowIntensity: null,
+        pressureShiftScore: null,
+        pressureShiftState: "nr",
+        netFlowDirection24h: "flat",
+        has24hActivity: true,
+        baselineDailyNetUsd: null,
+        baselineDailyAbsUsd: null,
+        baselineDataDays: null,
+        mintVolume24hUsd: 0,
+        burnVolume24hUsd: 0,
+        mintCount24h: 0,
+        burnCount24h: 0,
+        netFlow7dUsd: 0,
+        netFlow30dUsd: 0,
+        netFlow90dUsd: 0,
+        largestEvent24h: null,
+      })),
     };
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v3:aggregate:24",
+        key: `mint-burn-flows:v3:aggregate:${hours}`,
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -562,17 +600,37 @@ describe("handleMintBurnFlows contract tests", () => {
       }],
     });
 
-    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const res = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?hours=${hours}`));
+    const body = await readJsonResponse<typeof cachedBody>(res, 200);
+    if (!invalid) MintBurnFlowsResponseSchema.parse(body);
 
+    const unavailable = invalid || sourceUnavailable;
     expect(body.gauge).toMatchObject({
-      flightToQuality: false,
-      flightIntensity: 0,
-      classificationSource: "unavailable",
-      safetyScoreIdentity: null,
+      score: cachedBody.gauge.score,
+      flightToQuality: expectedIntensity > 0,
+      flightIntensity: expectedIntensity,
+      classificationSource: unavailable ? "unavailable" : "safety-score-v9-publication",
+      safetyScoreIdentity: unavailable ? null : activeSnapshot.safetyScoreIdentity,
     });
-    expect(body.sync?.classificationWarning).toContain("identity-mismatch");
+    if (unavailable) {
+      const reason = sourceUnavailable ? "publication-held" : "identity-mismatch";
+      expect(body.sync?.classificationWarning).toContain(reason);
+      expect(res.headers.get("Warning")).toContain(reason);
+    } else {
+      expect(body.sync).toEqual(cachedBody.sync);
+      if (stale) {
+        expect(res.headers.get("Warning")).toContain('110 - "Response is stale');
+        expect(res.headers.get("Cache-Control")).toBe("no-store");
+      } else {
+        expect(res.headers.get("Warning")).toBeNull();
+      }
+    }
+    expect(body.coins).toEqual(cachedBody.coins);
+    expect(body.hourly).toEqual(cachedBody.hourly);
+    expect(body.updatedAt).toBe(cachedBody.updatedAt);
+    expect(res.headers.get("X-Data-Age")).toBe(String(now - cachedBody.sync.lastSuccessfulSyncAt));
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
+    expect(db.getHistory().some((entry) => /INSERT|UPDATE|DELETE/.test(entry.sql))).toBe(false);
   });
 
   it("keeps cached aggregate flow data while disabling FTQ when report-card validation throws", async () => {
@@ -651,7 +709,7 @@ describe("handleMintBurnFlows contract tests", () => {
     };
     let aggregateCacheLookups = 0;
 
-    const failingDb = {
+    const failingDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           all: async <T>() => {
@@ -685,7 +743,7 @@ describe("handleMintBurnFlows contract tests", () => {
         first: async () => null,
         run: async () => ({ success: true, meta: {} }),
       }),
-    } as unknown as D1Database;
+    });
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
     const body = await readJsonResponse(res, 200);
@@ -700,9 +758,100 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("Warning")).toContain("identity-missing");
   });
 
+  it("strips FTQ when a held publication becomes unavailable during fallback revalidation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const identity = {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest: "d".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      publicationGenerationId: `report-cards:v9:${now}`,
+    };
+    const heldSnapshot = makeWorkerReportCardsV9Response({
+      updatedAt: now,
+      safetyScoreIdentity: identity,
+      cards: [...ACTIVE_IDS].sort().map((id) => makeWorkerV9Card({ id, score: 80, grade: "A" })),
+    });
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce({
+        kind: "held",
+        reason: "v9-publication-held",
+        detail: "held for test",
+        snapshot: heldSnapshot,
+      })
+      .mockResolvedValueOnce({
+        kind: "error",
+        reason: "v9-snapshot-unavailable",
+        detail: "unavailable during fallback revalidation",
+        snapshot: null,
+      });
+    vi.spyOn(
+      flightToQualityClassification,
+      "buildFlightToQualityClassificationFromV9Snapshot",
+    ).mockReturnValue({
+      kind: "ok",
+      classification: {
+        safeIds: new Set(["usdc-circle"]),
+        riskyIds: new Set(),
+        safetyScoreIdentity: identity,
+      },
+    });
+    const validCachedBody = makeValidCachedAggregateFixture(now, identity);
+    const cachedBody = {
+      ...validCachedBody,
+      gauge: {
+        ...validCachedBody.gauge,
+        safetyScoreIdentity: identity,
+      },
+    };
+    let aggregateCacheLookups = 0;
+    const db = makeNoopD1({
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          all: async <T>() => {
+            if (sql.includes("FROM mint_burn_hourly")) throw new Error("simulated d1 failure");
+            return { results: [] as T[], success: true, meta: {} };
+          },
+          first: async <T>() => {
+            if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+              const key = String(args[0] ?? "");
+              if (key === "stablecoins") {
+                return { value: stablecoinsCache, updated_at: now } as T;
+              }
+              if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
+                aggregateCacheLookups += 1;
+                return aggregateCacheLookups === 1
+                  ? null
+                  : { value: JSON.stringify(cachedBody), updated_at: now } as T;
+              }
+            }
+            return null;
+          },
+          run: async () => ({ success: true, meta: {} }),
+        }),
+      }),
+    });
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
+
+    expect(aggregateCacheLookups).toBe(2);
+    expect(body.gauge).toMatchObject({
+      flightToQuality: false,
+      flightIntensity: 0,
+      classificationSource: "unavailable",
+      safetyScoreIdentity: null,
+    });
+    expect(body.sync?.classificationWarning).toContain("v9-snapshot-unavailable");
+    expect(res.headers.get("Warning")).toContain("v9-snapshot-unavailable");
+  });
+
   it("returns 503 when the aggregate fallback cache is malformed", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const failingDb = {
+    const failingDb = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...args: unknown[]) => ({
           all: async <T>() => {
@@ -734,7 +883,7 @@ describe("handleMintBurnFlows contract tests", () => {
         first: async () => null,
         run: async () => ({ success: true, meta: {} }),
       }),
-    } as unknown as D1Database;
+    });
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
 

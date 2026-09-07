@@ -23,10 +23,6 @@ import {
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 import {
-  buildPriceReasonablenessOptions,
-  isReasonablePrice,
-} from "../../lib/price-validation";
-import {
   applyResolvedPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
@@ -35,6 +31,7 @@ import {
   type EnrichPassResult,
   type FallbackPriceQuote,
   isFreshFallbackObservedAt,
+  isUsableFallbackPrice,
   parseUnixOrIsoTimestampSec,
   UNIQUE_ACTIVE_SYMBOLS,
 } from "./enrich-prices-pass-common";
@@ -193,12 +190,7 @@ function replayVerifiedCmcQuotes(params: {
       cached.active &&
       providerAddressMatches &&
       isFreshFallbackObservedAt(cached.observedAt, CMC_QUOTE_MAX_AGE_SEC) &&
-      isReasonablePrice(
-        cached.price,
-        candidate.asset.pegType as string | undefined,
-        params.fxRates,
-        buildPriceReasonablenessOptions(candidate.asset),
-      );
+      isUsableFallbackPrice(candidate.asset, cached.price, params.fxRates);
     attempts.push(createPricingAssetAttempt({
       assetId: candidate.asset.id,
       adapter: "coinmarketcap-verified-cache",
@@ -441,12 +433,7 @@ async function fetchTargetedCmcQuotes(params: {
     }
     if (
       price == null || price <= 0 || volume24h == null || !Number.isFinite(volume24h) || volume24h <= 0 ||
-      !isReasonablePrice(
-        price,
-        candidate.asset.pegType as string | undefined,
-        params.fxRates,
-        buildPriceReasonablenessOptions(candidate.asset),
-      )
+      !isUsableFallbackPrice(candidate.asset, price, params.fxRates)
     ) {
       reject("price-rejected");
       updateAttempt(candidate.asset.id, "rejected", "price-rejected", observedAt, providerIdentity);
@@ -663,12 +650,7 @@ export async function runCmcPass(
             : allowSymbolFallback
               ? cmcBySymbol.get(symbolKey)
               : undefined;
-          if (cmcQuote != null && isReasonablePrice(
-            cmcQuote.price,
-            entry.asset.pegType as string | undefined,
-            fxRates,
-            buildPriceReasonablenessOptions(entry.asset),
-          )) {
+          if (cmcQuote != null && isUsableFallbackPrice(entry.asset, cmcQuote.price, fxRates)) {
             applyResolvedPrice(
               assets[entry.index],
               cmcQuote.price,

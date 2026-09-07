@@ -9,9 +9,9 @@ import {
   listTelegramPresets,
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
-} from "../lib/telegram-presets";
-import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
-import { logTelegramEvent } from "../lib/telegram-log";
+} from "../lib/telegram/presets";
+import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram/constants";
+import { logTelegramEvent } from "../lib/telegram/log";
 import { parseJson } from "../lib/json-parse";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
 import type { TelegramDispatchEvents } from "./dispatch-telegram-events";
@@ -24,7 +24,6 @@ import {
   resolvePresetMemberships,
   type PresetAlertType,
   type PresetFollower,
-  type PresetMembership,
 } from "./telegram-preset-subscriber-store";
 import {
   buildTelegramSnapshotCacheEntries,
@@ -96,10 +95,6 @@ interface CurrentResolutionTargetRow extends PresetFollower {
   preference_generation: number;
 }
 
-interface ResolutionMembershipRow extends PresetMembership {
-  alert_type: PresetAlertType;
-}
-
 export interface TelegramAlertSourceResolution {
   presetResults: Record<PresetAlertType, PresetSubscriberLoadResult>;
   allComplete: boolean;
@@ -107,6 +102,25 @@ export interface TelegramAlertSourceResolution {
   pagesCompletedThisRun: number;
   queryFailures: number;
   resolutionFailures: number;
+  /** D1 statements issued while resolving this captured source event. */
+  planningStatements: number;
+  /** Wall-clock duration of source-event resolution in milliseconds. */
+  planningMs: number;
+  sourceEventsProcessed: number;
+}
+
+function createSourceResolutionDatabase(
+  db: D1Database,
+  counters: { statements: number },
+): D1Database {
+  return {
+    ...db,
+    prepare(sql: string) {
+      counters.statements += 1;
+      return db.prepare(sql);
+    },
+    batch: db.batch.bind(db),
+  } as D1Database;
 }
 
 function parseEvents(
@@ -641,25 +655,29 @@ async function resolveFollowerPage(
   }
 }
 
-async function loadResolutionMaps(
+async function loadSourcePresetRows(
   db: D1Database,
-  sourceEventId: string,
-  nowSec: number,
+  args: {
+    sourceEventId: string;
+    types: readonly PresetAlertType[];
+    chatIds?: readonly string[];
+    nowSec: number;
+  },
 ): Promise<Record<PresetAlertType, Map<string, SubscriberRow[]>>> {
-  const [membershipResult, ...targetResults] = await Promise.all([
-    db
-      .prepare(
-        `SELECT alert_type, preset_id, stablecoin_id
-           FROM telegram_alert_source_resolution_memberships
-          WHERE source_event_id = ?`,
-      )
-      .bind(sourceEventId)
-      .all<ResolutionMembershipRow>(),
-    ...PRESET_ALERT_TYPES.map((type) => {
+  const maps: Record<PresetAlertType, Map<string, SubscriberRow[]>> = {
+    dews: new Map(),
+    depeg: new Map(),
+    safety: new Map(),
+  };
+  const chatIds = args.chatIds == null ? null : [...new Set(args.chatIds)];
+  if (chatIds?.length === 0) return maps;
+  const chatClause = chatIds == null ? null : buildInClause(chatIds);
+  const targetResults = await Promise.all(
+    args.types.map((type) => {
       const alertColumn = PRESET_ALERT_COLUMN[type];
       return db
         .prepare(
-          `SELECT page.alert_type,
+          `SELECT membership.stablecoin_id,
                   target.preset_id,
                   target.chat_id,
                   subscriber.last_active_at,
@@ -675,6 +693,10 @@ async function loadResolutionMaps(
              JOIN telegram_alert_source_resolution_pages page
                ON page.source_event_id = target.source_event_id
               AND page.page_key = target.page_key
+             JOIN telegram_alert_source_resolution_memberships membership
+               ON membership.source_event_id = target.source_event_id
+              AND membership.alert_type = page.alert_type
+              AND membership.preset_id = target.preset_id
              JOIN telegram_preset_subscriptions preset
                ON preset.chat_id = target.chat_id
               AND preset.preset_id = target.preset_id
@@ -683,33 +705,17 @@ async function loadResolutionMaps(
             WHERE target.source_event_id = ?
               AND page.status = 'complete'
               AND page.alert_type = ?
+              ${chatClause ? `AND target.chat_id IN (${chatClause.sql})` : ""}
               AND preset.${alertColumn} = 1
               AND (subscriber.alert_snooze_until_ts IS NULL OR subscriber.alert_snooze_until_ts <= ?)`,
         )
-        .bind(sourceEventId, type, nowSec)
-        .all<CurrentResolutionTargetRow>();
+        .bind(args.sourceEventId, type, ...(chatClause?.binds ?? []), args.nowSec)
+        .all<CurrentResolutionTargetRow & { stablecoin_id: string }>();
     }),
-  ]);
-
-  const membershipsByType: Record<PresetAlertType, PresetMembership[]> = {
-    dews: [],
-    depeg: [],
-    safety: [],
-  };
-  for (const row of membershipResult.results ?? []) {
-    membershipsByType[row.alert_type].push(row);
-  }
-  const maps: Record<PresetAlertType, Map<string, SubscriberRow[]>> = {
-    dews: new Map(),
-    depeg: new Map(),
-    safety: new Map(),
-  };
-  for (let index = 0; index < PRESET_ALERT_TYPES.length; index += 1) {
-    const type = PRESET_ALERT_TYPES[index];
-    const projected = projectPresetFollowers(
-      membershipsByType[type],
-      targetResults[index]?.results ?? [],
-    );
+  );
+  for (let index = 0; index < args.types.length; index += 1) {
+    const type = args.types[index];
+    const projected = projectPresetFollowers([], targetResults[index]?.results ?? []);
     for (const [stablecoinId, rows] of projected) {
       for (const row of rows) addPresetSubscriber(maps[type], stablecoinId, row);
     }
@@ -725,52 +731,14 @@ export async function loadTelegramSourcePresetSubscribersForChats(
   chatIds: readonly string[],
   nowSec: number,
 ): Promise<PresetSubscriberLoadResult> {
-  const uniqueChatIds = [...new Set(chatIds)];
-  if (uniqueChatIds.length === 0) return { kind: "ok", rows: new Map() };
-  const chatClause = buildInClause(uniqueChatIds);
-  const alertColumn = PRESET_ALERT_COLUMN[type];
   try {
-    const rows = await db
-      .prepare(
-        `SELECT membership.stablecoin_id,
-                target.preset_id,
-                target.chat_id,
-                subscriber.last_active_at,
-                NULL AS dews_min_band,
-                NULL AS safety_mode,
-                preset.depeg_worsening_bps_step,
-                subscriber.quiet_hours_enabled,
-                subscriber.quiet_hours_start_utc,
-                subscriber.quiet_hours_end_utc,
-                subscriber.timezone,
-                subscriber.preference_generation
-           FROM telegram_alert_source_resolution_targets target
-           JOIN telegram_alert_source_resolution_pages page
-             ON page.source_event_id = target.source_event_id
-            AND page.page_key = target.page_key
-           JOIN telegram_alert_source_resolution_memberships membership
-             ON membership.source_event_id = target.source_event_id
-            AND membership.alert_type = page.alert_type
-            AND membership.preset_id = target.preset_id
-           JOIN telegram_preset_subscriptions preset
-             ON preset.chat_id = target.chat_id
-            AND preset.preset_id = target.preset_id
-           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
-          WHERE target.source_event_id = ?
-            AND page.status = 'complete'
-            AND page.alert_type = ?
-            AND target.chat_id IN (${chatClause.sql})
-            AND preset.${alertColumn} = 1
-            AND (subscriber.alert_snooze_until_ts IS NULL OR subscriber.alert_snooze_until_ts <= ?)`,
-      )
-      .bind(sourceEventId, type, ...chatClause.binds, nowSec)
-      .all<CurrentResolutionTargetRow & { stablecoin_id: string }>();
-    const projected = projectPresetFollowers([], rows.results ?? []);
-    const map = new Map<string, SubscriberRow[]>();
-    for (const [stablecoinId, subscribers] of projected) {
-      for (const subscriber of subscribers) addPresetSubscriber(map, stablecoinId, subscriber);
-    }
-    return { kind: "ok", rows: map };
+    const maps = await loadSourcePresetRows(db, {
+      sourceEventId,
+      types: [type],
+      chatIds,
+      nowSec,
+    });
+    return { kind: "ok", rows: maps[type] };
   } catch (error) {
     logTelegramEvent({
       level: "warn",
@@ -789,7 +757,10 @@ export async function resolveTelegramAlertSourcePresetPages(
   nowSec: number,
   options: TelegramPresetResolveOptions & { includeSubscriberMaps?: boolean } = {},
 ): Promise<TelegramAlertSourceResolution> {
-  const pendingResult = await db
+  const resolutionStartedAtMs = Date.now();
+  const resolutionCounters = { statements: 0 };
+  const resolutionDb = createSourceResolutionDatabase(db, resolutionCounters);
+  const pendingResult = await resolutionDb
     .prepare(
       `SELECT source_event_id, page_key, alert_type, page_index,
               cursor_chat_id, cursor_preset_id, memberships_resolved,
@@ -809,7 +780,7 @@ export async function resolveTelegramAlertSourcePresetPages(
   for (const page of pendingResult.results ?? []) {
     let membershipOutcome: "ok" | "query-failed" | "resolution-failed" = "ok";
     if (page.memberships_resolved !== 1) {
-      membershipOutcome = await resolveMemberships(db, source, page, nowSec, options);
+      membershipOutcome = await resolveMemberships(resolutionDb, source, page, nowSec, options);
     }
     if (membershipOutcome === "query-failed") {
       queryFailures += 1;
@@ -821,7 +792,7 @@ export async function resolveTelegramAlertSourcePresetPages(
       resolutionFailuresByType[page.alert_type] += 1;
       continue;
     }
-    const followerOutcome = await resolveFollowerPage(db, source, page, nowSec);
+    const followerOutcome = await resolveFollowerPage(resolutionDb, source, page, nowSec);
     if (followerOutcome === "query-failed") {
       queryFailures += 1;
       queryFailuresByType[page.alert_type] += 1;
@@ -830,7 +801,7 @@ export async function resolveTelegramAlertSourcePresetPages(
     }
   }
 
-  const pendingRow = await db
+  const pendingRow = await resolutionDb
     .prepare(
       `SELECT COUNT(*) AS count
          FROM telegram_alert_source_resolution_pages
@@ -842,10 +813,14 @@ export async function resolveTelegramAlertSourcePresetPages(
   const maps: Record<PresetAlertType, Map<string, SubscriberRow[]>> =
     options.includeSubscriberMaps === false
       ? { dews: new Map(), depeg: new Map(), safety: new Map() }
-      : await loadResolutionMaps(db, source.sourceEventId, nowSec);
+      : await loadSourcePresetRows(resolutionDb, {
+          sourceEventId: source.sourceEventId,
+          types: PRESET_ALERT_TYPES,
+          nowSec,
+        });
   const familyHasPending = new Set<PresetAlertType>();
   if (pendingPages > 0) {
-    const pendingFamilies = await db
+    const pendingFamilies = await resolutionDb
       .prepare(
         `SELECT DISTINCT alert_type
            FROM telegram_alert_source_resolution_pages
@@ -872,7 +847,7 @@ export async function resolveTelegramAlertSourcePresetPages(
       : pendingPages > 0
         ? "preset_pages_pending"
         : null;
-  await db
+  await resolutionDb
     .prepare(
       `UPDATE telegram_alert_source_events
           SET attempt_count = attempt_count + 1,
@@ -898,6 +873,9 @@ export async function resolveTelegramAlertSourcePresetPages(
     pagesCompletedThisRun,
     queryFailures,
     resolutionFailures,
+    planningStatements: resolutionCounters.statements,
+    planningMs: Math.max(0, Date.now() - resolutionStartedAtMs),
+    sourceEventsProcessed: 1,
   };
 }
 

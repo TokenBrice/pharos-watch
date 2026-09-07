@@ -1,0 +1,15 @@
+{
+  "mechanism": "zchf-frankencoin",
+  "date": "2026-07-27-block-25627132",
+  "sha256": "8e509ca87acc3978bb76b0f8bbc71737cf34684a3a5805c8637dd14cd21245b4",
+  "bytes": 4848,
+  "r2Key": "captures/zchf-frankencoin/2026-07-27-block-25627132.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "zchf-frankencoin",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/zchf-frankencoin/2026-07-27-block-25627132.json",
+    "capturedAt": "ethereum finalized block 25627132 hash 0x3d4ca4f5526f7245647454a5ce55d6e63935753f7da529d12c92c4bcc3000ce5 timestamp 2026-07-27T22:27:35Z; concurrent Frankencoin ecosystem API captures (info/positions/prices)"
+  }
+}

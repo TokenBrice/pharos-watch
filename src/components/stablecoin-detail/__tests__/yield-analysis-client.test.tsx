@@ -1,16 +1,17 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
-const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
+const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, loadClientStablecoinDetailMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
   useYieldHistoryMock: vi.fn(),
   replaceParamsMock: vi.fn(),
+  loadClientStablecoinDetailMock: vi.fn(),
 }));
 
 let sourcesParam = "";
@@ -43,6 +44,11 @@ vi.mock("next/dynamic", () => {
 vi.mock("@/hooks/api-hooks", () => ({
   useYieldRankings: useYieldRankingsMock,
   useYieldHistory: useYieldHistoryMock,
+}));
+
+vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/lib/stablecoins/client-registry")>()),
+  loadClientStablecoinDetail: loadClientStablecoinDetailMock,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -117,6 +123,17 @@ describe("YieldAnalysisClient", () => {
     replaceParamsMock.mockReset();
     useYieldRankingsMock.mockReset();
     useYieldHistoryMock.mockReset();
+    loadClientStablecoinDetailMock.mockReset();
+    loadClientStablecoinDetailMock.mockImplementation(async (id: string) =>
+      id === "benji-franklin-templeton"
+        ? {
+            id,
+            listingStatusReview: {
+              reason: "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap.",
+            },
+          }
+        : null,
+    );
     useYieldHistoryMock.mockReturnValue({
       data: { current: null, history: [], methodology: { version: "v8.14" } },
       error: null,
@@ -174,13 +191,13 @@ describe("YieldAnalysisClient", () => {
       expected:
         "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap.",
     },
-  ])("renders the $id lifecycle body inside the shared frame", ({ id, coin, expected }) => {
+  ])("renders the $id lifecycle body inside the shared frame", async ({ id, coin, expected }) => {
     setRankingsQuery();
 
     render(<YieldAnalysisClient id={id} staticCoin={coin} />);
 
     expect(screen.getByRole("link", { name: `Back to ${coin.symbol} detail` })).toBeTruthy();
-    expect(screen.getByText(expected)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
   });
 
   it("renders the query error in the shared frame", () => {

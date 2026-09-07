@@ -1,6 +1,6 @@
 # Product
 
-> Synthesized from `docs/design-context.md` (canonical), `docs/design-language.md`, and `CLAUDE.md`. If this file and `docs/design-context.md` disagree, `docs/design-context.md` wins.
+> Synthesized from `docs/design-language.md#context` (canonical), `docs/design-language.md`, and `CLAUDE.md`. If this file and `docs/design-language.md#context` disagree, `docs/design-language.md#context` wins.
 
 ## Register
 
@@ -29,7 +29,7 @@ Vigilant, precise, distinctive. Pharos is a lighthouse: it watches every peg so 
 ## Design Principles
 
 1. Data density over decoration; every pixel earns its place.
-2. Calibrate density to surface tier: Discovery breathes, Analytics holds default, Power-user compresses (see `docs/design-context.md` tier table).
+2. Calibrate density to surface tier: Discovery breathes, Analytics holds default, Power-user compresses (see `docs/design-language.md#context` tier table).
 3. Calm authority; risk signals shift tone without panic.
 4. Precision as personality: mono numbers, exact percentages, named bands.
 5. Semantic color only; color encodes state, never decoration.

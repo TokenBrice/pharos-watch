@@ -77,7 +77,7 @@
             "url": "https://polygon.blockscout.com/address/0x93070a847efEf7F70739046A929D47a521F5B8ee"
           }
         ],
-        "evidence": "At Polygon block 88325248: onramp owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (Timelock, 12h). EIP-1967 proxy slots both 0x0 — immutable. Onramp has pause admin (ABI includes pause/unpause) — modulesOrGuardsStatus=present for the pause surface. Cannot create base USDC. At block 90347258, token rolesOf(onramp) returned wrapper role 2. Verified source shows wrap() transfers supported collateral into the token before CollateralToken.wrap() moves it to the vault and mints 1:1."
+        "evidence": "At Polygon block 88325248: onramp owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (Timelock, 12h). EIP-1967 proxy slots both 0x0, immutable. Onramp has pause admin (ABI includes pause/unpause), modulesOrGuardsStatus=present for the pause surface. Cannot create base USDC. At block 90347258, token rolesOf(onramp) returned wrapper role 2. Verified source shows wrap() transfers supported collateral into the token before CollateralToken.wrap() moves it to the vault and mints 1:1."
       },
       {
         "label": "Polymarket CollateralOfframp",
@@ -276,7 +276,7 @@
             "url": "https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
           }
         ],
-        "evidence": "At Polygon block 88325248: EIP-1967 impl slot = 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f (UUPS proxy). Proxy admin slot = 0x0 (UUPS upgrade controlled by owner). owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (same Timelock, 12h). No separate proxy admin contract — upgrade gated by Timelock. At block 90347258, the Timelock's admin, proposer, executor, and canceller roleHolders() each returned only this Safe; minDelay() returned 43200. The Safe was 3-of-6 with no enabled modules, zero guard, and zero fallback handler. The Timelock can add token minters/wrappers and upgrade the token and all three minter modules."
+        "evidence": "At Polygon block 88325248: EIP-1967 impl slot = 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f (UUPS proxy). Proxy admin slot = 0x0 (UUPS upgrade controlled by owner). owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (same Timelock, 12h). No separate proxy admin contract, upgrade gated by Timelock. At block 90347258, the Timelock's admin, proposer, executor, and canceller roleHolders() each returned only this Safe; minDelay() returned 43200. The Safe was 3-of-6 with no enabled modules, zero guard, and zero fallback handler. The Timelock can add token minters/wrappers and upgrade the token and all three minter modules."
       }
     ],
     "economicCapSemantics": "raiseable",

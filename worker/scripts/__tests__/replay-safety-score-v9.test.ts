@@ -1,12 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9-extension";
-import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9-native-input";
+import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
+import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9/native-input";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import {
   buildReportCardsFixedInputCacheEntry,
@@ -18,21 +20,23 @@ import {
   buildSafetyScoreV9ReplayArtifact,
   parseSafetyScoreV9PublishedAtSec,
   parseSafetyScoreV9ReplayFixedInput,
+  resolveSafetyScoreV9ReplayInput,
   runSafetyScoreV9ReplayCli,
   serializeSafetyScoreV9ReplayArtifact,
 } from "../replay-safety-score-v9";
+import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements-client";
+import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
+import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 
-const CLOCK_SEC = 1_786_233_600;
+const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
 const PUBLISHED_AT_ISO = new Date(PUBLISHED_AT_SEC * 1_000).toISOString();
 
 function writeTestFile(path: string, value: string): void {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
   writeFileSync(path, value);
 }
 
 function readTestFile(path: string): string {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
   return readFileSync(path, "utf8");
 }
 
@@ -118,7 +122,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     await expect(parseSafetyScoreV9ReplayFixedInput(native)).resolves.toEqual(native);
     await expect(parseSafetyScoreV9ReplayFixedInput(JSON.parse(cacheEntry.value))).resolves.toEqual(native);
     await expect(parseSafetyScoreV9ReplayFixedInput(cacheEntry.value)).resolves.toEqual(native);
-  });
+  }, 30_000);
 
   it("keeps the two capture generations on their own parsers", async () => {
     const legacy = exactFixedInput();
@@ -220,6 +224,28 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("replays a capture-time NAV asset that is non-NAV live only with its verified registry snapshot", async () => {
+    const snapshot = structuredClone(localRegistrySnapshot());
+    snapshot.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = true;
+    snapshot.fingerprint = registrySnapshotFingerprint(snapshot);
+    const { baseInputGenerationId: _derived, ...capture } = exactFixedInput();
+    const historical = {
+      ...capture,
+      registryFingerprint: snapshot.fingerprint,
+      navPriceById: {
+        "usdc-circle": { priceUsd: 1.02, observedAtSec: CLOCK_SEC, sourceId: "coingecko", confidence: "high" },
+      },
+    };
+    await expect(parseSafetyScoreV9ReplayFixedInput(historical)).rejects.toThrow("NAV price rows target non-NAV assets: usdc-circle");
+    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(historical, snapshot);
+    const artifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot: snapshot, publishedAtSec: PUBLISHED_AT_SEC });
+    expect(artifact.pipeline.candidate.cards.map((card) => card.id)).toEqual(["usdc-circle"]);
+    expect(fixedInput.navPriceById?.["usdc-circle"]?.priceUsd).toBe(1.02);
+    const corrupt = structuredClone(snapshot);
+    corrupt.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = false;
+    await expect(parseSafetyScoreV9ReplayFixedInput(historical, corrupt)).rejects.toThrow("snapshot fingerprint does not match");
+  }, 60_000);
 
   it("replays a registry-fingerprint mismatch only behind --allow-registry-mismatch", async () => {
     // A capture frozen before a curation commit carries the registry
@@ -340,5 +366,54 @@ describe("future-dated curated review guard", () => {
     expect(message).toContain("2026-08-11T11:46:57.000Z");
     expect(message).toContain("not a regression");
     expect(message).toContain("--allow-future-reviews");
+  });
+});
+describe("mechanism capture replay resolution", () => {
+  it("resolves a local cache hit, then an R2 hit, and fails closed after expiry", async () => {
+    const dir = mkdtempSync(resolve(tmpdir(), "pharos-measurement-replay-"));
+    try {
+      const body = Buffer.from(JSON.stringify({ schemaVersion: 1, kind: "test-capture", value: 7 }));
+      const sha256 = createHash("sha256").update(body).digest("hex");
+      const summaryRoot = resolve(dir, "summaries");
+      const summaryDirectory = resolve(summaryRoot, "test-mechanism");
+      const summaryPath = resolve(summaryDirectory, "2026-09-03.summary.json");
+      const cacheDir = resolve(dir, "cache");
+      mkdirSync(summaryDirectory, { recursive: true });
+      mkdirSync(cacheDir, { recursive: true });
+      writeFileSync(
+        summaryPath,
+        JSON.stringify({
+          mechanism: "test-mechanism",
+          date: "2026-09-03",
+          sha256,
+          bytes: body.byteLength,
+          r2Key: "captures/test-mechanism/2026-09-03.json.gz",
+          summary: { kind: "test-capture", journalPath: "shared/data/safety-score-v9/mechanism-measurements/test-mechanism/2026-09-03.json" },
+        }),
+      );
+
+      writeFileSync(resolve(cacheDir, `${sha256}.json`), body);
+      await expect(resolveSafetyScoreV9ReplayInput(sha256, { cacheDir, summaryRoot })).resolves.toEqual(body);
+
+      rmSync(resolve(cacheDir, `${sha256}.json`));
+      const fetchMock = vi.fn<typeof fetch>(async () => new Response(gzipSync(body), { status: 200 }));
+      const r2Client = createR2MeasurementsClient({
+        accountId: "account-123",
+        accessKeyId: "access-key",
+        secretAccessKey: "secret-key",
+        fetch: fetchMock,
+        now: () => new Date("2026-09-03T12:34:56.000Z"),
+      });
+      await expect(resolveSafetyScoreV9ReplayInput(sha256, { cacheDir, summaryRoot, r2Client })).resolves.toEqual(body);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/pinned/test-mechanism/2026-09-03.json.gz");
+
+      rmSync(resolve(cacheDir, `${sha256}.json`));
+      await expect(
+        resolveSafetyScoreV9ReplayInput(sha256, { cacheDir, summaryRoot: resolve(dir, "expired"), r2Client }),
+      ).rejects.toThrow(`capture ${sha256} expired: non-replayable`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

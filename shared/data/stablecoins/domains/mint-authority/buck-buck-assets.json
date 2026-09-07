@@ -53,7 +53,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "LiquidityWindow contract address not independently confirmed on-chain; the minting mechanism runs through it but its address was not resolved from the token contract. Project wound down April 2026 — further verification has limited value."
+        "LiquidityWindow contract address not independently confirmed on-chain; the minting mechanism runs through it but its address was not resolved from the token contract. Project wound down April 2026. Further verification has limited value."
       ]
     }
   }

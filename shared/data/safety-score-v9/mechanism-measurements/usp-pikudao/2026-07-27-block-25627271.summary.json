@@ -1,0 +1,15 @@
+{
+  "mechanism": "usp-pikudao",
+  "date": "2026-07-27-block-25627271",
+  "sha256": "8894977fe5d9f9203dcc1435cc34100a9a5192d53409926f31e4757264075336",
+  "bytes": 4277,
+  "r2Key": "captures/usp-pikudao/2026-07-27-block-25627271.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "usp-pikudao",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usp-pikudao/2026-07-27-block-25627271.json",
+    "capturedAt": "2026-07-27T22:56:00Z"
+  }
+}

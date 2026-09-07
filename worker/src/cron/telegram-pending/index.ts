@@ -8,7 +8,7 @@ export {
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "../../lib/telegram-constants";
+} from "../../lib/telegram/constants";
 
 export * from "./types";
 export * from "./backoff";

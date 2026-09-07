@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode, Ref } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { Droplet, HeartPulse } from "lucide-react";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -8,6 +8,7 @@ import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-tran
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import {
   BlacklistSection,
   DexLiquidityCard,
@@ -18,6 +19,26 @@ import {
 } from "./detail-lazy-sections";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
+
+function ExpandableMcapChart({
+  stablecoinId,
+  supplyHistory,
+}: {
+  stablecoinId: string;
+  supplyHistory: ReadyDetailViewModel["supplyHistory"];
+}) {
+  const [range, setRange] = useState<TimeRangeOption>("90d");
+
+  return (
+    <McapChart
+      data={supplyHistory}
+      stablecoinId={stablecoinId}
+      controlledRange={range}
+      onControlledRangeChange={setRange}
+      expandHistoryOnWideRange
+    />
+  );
+}
 
 interface DetailLiquidityActivitySectionsProps {
   activeBannerId: string;
@@ -58,7 +79,7 @@ export function DetailLiquidityActivitySections({
           <section id="chart">
             {frozenNote}
             <LazySection minHeight={420}>
-              <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+              <ExpandableMcapChart stablecoinId={viewModel.id} supplyHistory={viewModel.supplyHistory} />
             </LazySection>
           </section>
         )}

@@ -53,6 +53,7 @@
       "decimals": 18
     }
   ],
+  "collateralQuality": "exotic",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "curated-validated",

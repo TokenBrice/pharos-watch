@@ -21,8 +21,11 @@ describe("adaptSgForgeCoinvertible", () => {
       cashAmount: 139700459.12,
       collateralizationRatio: 1,
       cashCoveragePct: 100,
-      bankName: "Societe Generale",
-      bankPct: 100,
+      details: {
+        bankBreakdown: [
+          { bankName: "Societe Generale", bankPct: 100, cashAmount: 139700459.12 },
+        ],
+      },
       lastUpdate: "9/08/2026",
       sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
       freshnessMode: "verified",
@@ -32,6 +35,29 @@ describe("adaptSgForgeCoinvertible", () => {
         sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
+      },
+    });
+  });
+
+  it("maps the two-bank USD CoinVertible block into one normalized cash slice without dropping either bucket", () => {
+    const result = adaptSgForgeCoinvertible(SAMPLE_HTML, "usd");
+
+    expect(result.slices).toEqual([
+      { name: "U.S. dollar cash deposits at BNY and Societe Generale", pct: 100, risk: "very-low" },
+    ]);
+    expect(result.slices).toHaveLength(1);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      coinType: "usd",
+      circulationAmount: 12422429.05,
+      cashAmount: 12422429.05,
+      collateralizationRatio: 1,
+      cashCoveragePct: 100,
+      details: {
+        bankBreakdown: [
+          { bankName: "BNY", bankPct: 88.55, cashAmount: 11000000 },
+          { bankName: "Societe Generale", bankPct: 11.45, cashAmount: 1422429.05 },
+        ],
       },
     });
   });
@@ -105,5 +131,14 @@ describe("adaptSgForgeCoinvertible", () => {
     const invalidPctHtml = SAMPLE_HTML.replace(/Societe Generale\s*:\s*100%/, "Societe Generale : 101%");
 
     expect(() => adaptSgForgeCoinvertible(invalidPctHtml, "eur")).toThrow("layout-changed");
+  });
+
+  it("throws when bank and cash bucket counts differ", () => {
+    const mismatchedBucketsHtml = SAMPLE_HTML.replace(
+      /<div class="number">\s*1 422 429,05/,
+      '<div class="not-a-number">1 422 429,05',
+    );
+
+    expect(() => adaptSgForgeCoinvertible(mismatchedBucketsHtml, "usd")).toThrow("layout-changed");
   });
 });

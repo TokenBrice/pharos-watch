@@ -5,11 +5,11 @@ import {
   isTelegramRecapAvailableToChat,
 } from "@shared/lib/telegram-recap-rollout";
 import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   getTelegramRecapPreference,
   setTelegramRecapPreference,
-} from "../../lib/telegram-recap-store";
+} from "../../lib/telegram/recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import {
   confirmCommandMutation,

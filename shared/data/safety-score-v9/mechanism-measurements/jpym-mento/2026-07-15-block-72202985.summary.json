@@ -1,0 +1,25 @@
+{
+  "mechanism": "jpym-mento",
+  "date": "2026-07-15-block-72202985",
+  "sha256": "7457b43178e2b3aa6c09f65e94c6c5ff5bd6e709bf376395d93406d8620abc81",
+  "bytes": 3091,
+  "r2Key": "captures/jpym-mento/2026-07-15-block-72202985.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "jpym-mento",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/jpym-mento/2026-07-15-block-72202985.json",
+    "chain": {
+      "key": "celo",
+      "evmChainId": 42220
+    },
+    "block": {
+      "number": 72202985,
+      "hash": "0x26a9f9589f4d014e03ff934eb197507e481cecc8bdb23d5c8e9f81a83270b120",
+      "timestampUnix": 1784103743,
+      "timestampIso": "2026-07-15T08:22:23.000Z",
+      "selection": "finalized"
+    }
+  }
+}

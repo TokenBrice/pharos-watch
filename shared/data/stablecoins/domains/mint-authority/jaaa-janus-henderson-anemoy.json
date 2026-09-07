@@ -38,7 +38,7 @@
             "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
           },
           {
-            "label": "Ethereum explorer — JAAA Tranche token",
+            "label": "Ethereum explorer: JAAA Tranche token",
             "url": "https://etherscan.io/token/0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
           }
         ],
@@ -80,7 +80,7 @@
         },
         "sources": [
           {
-            "label": "Safe API — Centrifuge protocol Safe",
+            "label": "Safe API: Centrifuge protocol Safe",
             "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
           }
         ],
@@ -125,15 +125,15 @@
           "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
         },
         {
-          "label": "Safe API — Centrifuge protocol Safe",
+          "label": "Safe API: Centrifuge protocol Safe",
           "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
         },
         {
-          "label": "BVI FSC — Anemoy Capital SPC Limited",
+          "label": "BVI FSC: Anemoy Capital SPC Limited",
           "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
         },
         {
-          "label": "BVI FSC — Anemoy Asset Management Limited",
+          "label": "BVI FSC: Anemoy Asset Management Limited",
           "url": "https://www.bvifsc.vg/regulated-entities/anemoy-asset-management-limited"
         }
       ]

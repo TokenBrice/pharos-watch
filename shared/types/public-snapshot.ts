@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 
 export const PUBLIC_SNAPSHOT_ENVELOPE_VERSION = 2 as const;
 
-const SnapshotDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const UnknownRecordSchema = z.record(z.string(), z.unknown());
 
 const PublicSnapshotStablecoinSchema = z
@@ -60,7 +60,7 @@ const PublicSnapshotLiquidityRowSchema = z
   .passthrough();
 
 const PublicSnapshotEnvelopeFields = {
-  snapshotDate: SnapshotDateSchema,
+  snapshotDate: StrictIsoDateSchema,
   generatedAt: z.number().int().nonnegative(),
   methodologyVersions: z.record(z.string(), z.string()),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema,

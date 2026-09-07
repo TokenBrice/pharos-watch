@@ -2,8 +2,9 @@
   "id": "dusd-dialectic",
   "reserves": [
     {
+      "sourceKey": "makina:protocol:morpho",
       "name": "Morpho lending positions",
-      "pct": 42.9,
+      "pct": 35.7,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Morpho vault borrowers and curators reached through Makina Caliber instructions",
@@ -16,37 +17,12 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "name": "Aave positions",
-      "pct": 28.2,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Aave markets reached through Makina Caliber instructions",
-      "riskFactors": [
-        "smart-contract",
-        "liquidity",
-        "market"
-      ],
-      "liquidityHorizon": "seven-days"
-    },
-    {
+      "sourceKey": "makina:protocol:pareto",
       "name": "Pareto / FalconX credit exposure",
-      "pct": 12.4,
+      "pct": 28.4,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Pareto / FalconX credit tranche obligors reached through the Dialectic strategy",
-      "riskFactors": [
-        "credit",
-        "counterparty",
-        "liquidity"
-      ],
-      "liquidityHorizon": "over-seven-days"
-    },
-    {
-      "name": "Re Protocol exposure",
-      "pct": 11.6,
-      "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Re Protocol deposit-token exposure reached through the Dialectic strategy",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -56,11 +32,56 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
-      "name": "Royco junior-tranche and incentive positions",
-      "pct": 4.9,
+      "sourceKey": "makina:protocol:pendle",
+      "name": "Pendle positions",
+      "pct": 13.8,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Royco incentive markets and junior-tranche counterparties reached through the Dialectic strategy",
+      "issuerOrObligor": "Agora AUSD principal token maturing 8 October 2026 through Pendle on Monad",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "sourceKey": "makina:protocol:makina",
+      "name": "Makina Machine exposure",
+      "pct": 11.8,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Makina DMW Machine reached through the Dialectic strategy",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "market"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "sourceKey": "makina:protocol:fluid-lite",
+      "name": "Fluid Lite positions",
+      "pct": 7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Fluid Lite USD lending strategy reached through Makina Caliber instructions",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "makina:protocol:royco",
+      "name": "Royco incentive positions",
+      "pct": 3.3,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Royco junior-tranche counterparties reached through the Dialectic strategy",
       "riskFactors": [
         "counterparty",
         "smart-contract",
@@ -71,17 +92,17 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Claude stablecoin addition (issue #705)",
+    "reviewedAt": "2026-09-03",
+    "reviewer": "OpenAI Codex DUSD listing correction",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Dialectic Meccanico Machine Terms v1.2 (official team-supplied PDF; expected publication URL)",
+        "label": "Dialectic Meccanico Machine Terms v1.2 (official published PDF; SHA-256 f53e8e9e65095956520b278415bbb4628ebf267eab8150eab4f9b4003d8638e9)",
         "url": "https://makina.finance/MeccanicoToS.pdf"
       },
       {
         "label": "Makina Machine share price and AUM",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/share-price"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
       },
       {
         "label": "Makina Risk Manager",
@@ -104,6 +125,10 @@
         "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"
       },
       {
+        "label": "Pendle external integration registry for PT-AUSD-8OCT2026 on Monad",
+        "url": "https://github.com/pendle-finance/external-integration/blob/main/config.json"
+      },
+      {
         "label": "DUSD Machine contract",
         "url": "https://eth.blockscout.com/address/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721?tab=contract"
       },
@@ -112,11 +137,11 @@
         "url": "https://eth.blockscout.com/address/0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC?tab=contract"
       }
     ],
-    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The numerical accounting is publicly verifiable from the Machine and Caliber contracts: position IDs, values, debt flags, accounting times, base-token balances, and oracle-denominated values can be independently read, while Makina's API supplies the human protocol and strategy labels used to group those positions. The static fallback uses the material buckets from the 2026-07-29 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API and preserves gross AUM, net AUM, and debt telemetry when present. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible both in the allocation feed and Caliber state, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms. Rootfile feeds are not used for this DUSD reserve review while their anomalies remain quarantined.",
+    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The numerical accounting is publicly verifiable from the Machine and Caliber contracts: position IDs, values, debt flags, accounting times, base-token balances, and oracle-denominated values can be independently read, while Makina's API supplies the human protocol and strategy labels used to group those positions. The static fallback uses the material buckets from the 2026-09-03 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API and preserves gross AUM, net AUM, and debt telemetry when present. The material base-token balance that Makina leaves unlabelled is PT-AUSD-8OCT2026 at 0x9fc74f8ed616b5baf52a170caa97d6d3898602d1 on Monad; Pendle's integration registry identifies that exact chain and address as the Pendle principal token for Agora AUSD maturing 8 October 2026, so the adapter maps only that reviewed identity to the Pendle bucket. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible both in the allocation feed and Caliber state, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms. Rootfile feeds are not used for this DUSD reserve review while their anomalies remain quarantined.",
     "compositionBasis": "Publicly verifiable Makina Machine and Caliber accounting, indexed and human-labelled by the Makina strategy and allocation APIs",
-    "compositionAsOf": "2026-07-29",
+    "compositionAsOf": "2026-09-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 2026-07-29 pinned allocation snapshot identifies the material protocol buckets; dust and unlabelled exposure were below static display materiality and are retained by the live adapter when present.",
+    "knownUnknownExposure": "The 2026-09-03 allocation snapshot identifies every material bucket. Sub-material non-USDC base-token balances without upstream protocol labels remain in the live adapter's unknown bucket and fail closed if they become material.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -131,12 +156,12 @@
     "segregation": "mixed",
     "bankruptcyRemoteness": "none",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "OpenAI Codex DUSD evidence closure",
+    "reviewedAt": "2026-09-03",
+    "reviewer": "OpenAI Codex DUSD listing correction",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Dialectic Meccanico Machine Terms v1.2 (official team-supplied PDF; expected publication URL)",
+        "label": "Dialectic Meccanico Machine Terms v1.2 (official published PDF; SHA-256 f53e8e9e65095956520b278415bbb4628ebf267eab8150eab4f9b4003d8638e9)",
         "url": "https://makina.finance/MeccanicoToS.pdf"
       },
       {
@@ -160,7 +185,7 @@
         "url": "https://api.makina.finance/v1/strategies/dusd"
       }
     ],
-    "uncertainty": "DUSD assets are held by the Machine and its chain-specific Calibers and are deliberately deployed into third-party lending, credit, insurance, and incentive positions. The official team-supplied Machine Terms v1.2 identified Dialectic Meccanico Ltd as Operator and established that settlement assets and Machine assets are the Operator's property, not assets held for Users. DUSD holders remain ordinary contractual counterparties with no legal, equitable, proprietary, custody, trust, priority, bankruptcy-remote, underlying-asset, yield, governance, or asset-return claim if the Operator becomes insolvent or the Machine ceases. Instruction allowlists, timelocks, recovery mode, and dedicated Machine/Caliber contracts are technical safeguards and do not create legal segregation, trustee custody, or bankruptcy remoteness. The expected publication URL for the official PDF was pending during the 2026-07-30 review.",
+    "uncertainty": "DUSD assets are held by the Machine and its chain-specific Calibers and are deliberately deployed into third-party lending, credit, and strategy positions. The published Machine Terms v1.2 identify Dialectic Meccanico Ltd as Operator and establish that settlement assets and Machine assets are the Operator's property, not assets held for Users. DUSD holders remain ordinary contractual counterparties with no legal, equitable, proprietary, custody, trust, priority, bankruptcy-remote, underlying-asset, yield, governance, or asset-return claim if the Operator becomes insolvent or the Machine ceases. Instruction allowlists, timelocks, recovery mode, and dedicated Machine/Caliber contracts are technical safeguards and do not create legal segregation, trustee custody, or bankruptcy remoteness.",
     "knownUnknownExposurePct": 0
   }
 }

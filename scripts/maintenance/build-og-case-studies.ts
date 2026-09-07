@@ -14,24 +14,13 @@
  *   tsx scripts/maintenance/build-og-case-studies.ts
  *   tsx scripts/maintenance/build-og-case-studies.ts --check
  */
-import { firefox } from "playwright";
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  writeFileSync,
-  readFileSync,
-} from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { escapeXml } from "../lib/og-svg.mts";
-import {
-  assertNoStaleOgOutputs,
-  formatOgWriteStatus,
-  runOgArtifactBuild,
-  writeFileIfChanged,
-} from "../lib/og-image-checks.mts";
+import { runOgStaticCli, runOgStaticMain } from "../lib/og-static-runner.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -39,13 +28,6 @@ const PUBLIC = resolve(REPO_ROOT, "public");
 const STAGING_ROOT = resolve(REPO_ROOT, "agents/og-case-study-staging");
 const STAGING = resolve(STAGING_ROOT, `run-${process.pid}`);
 const SIGNATURE_PATH = resolve(REPO_ROOT, "scripts/maintenance/state/og-case-study-signatures.json");
-const NEWSREADER_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2");
-const GEIST_MONO_FONT = resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2");
-const CHECK_MODE = process.argv.includes("--check");
-const FONT_SIGNATURES = {
-  newsreader: sha256(readFileSync(NEWSREADER_FONT)),
-  geistMono: sha256(readFileSync(GEIST_MONO_FONT)),
-};
 
 // Coin logo lookup: tracked coins via data/logos.json (id -> "/logos/<file>"),
 // cemetery-only coins (UST/IRON/FEI) via their cemetery logoUrl.
@@ -75,10 +57,6 @@ function resolveLogoPath(primaryCoinId: string | undefined, cemeteryId: string |
   return null;
 }
 
-mkdirSync(STAGING, { recursive: true });
-mkdirSync(PUBLIC, { recursive: true });
-mkdirSync(dirname(SIGNATURE_PATH), { recursive: true });
-
 const OUTCOME_LABEL: Record<string, string> = { survived: "Survived", wounded: "Wounded", died: "Died" };
 const OUTCOME_COLOR: Record<string, string> = { survived: "#15803d", wounded: "#a16207", died: "#dc2626" };
 
@@ -97,28 +75,6 @@ function sha256(input: string | Buffer) {
 
 function repoRelativePath(path: string) {
   return relative(REPO_ROOT, path).split("/").join("/");
-}
-
-function buildSignatureManifest(
-  cards: Array<{
-    file: string;
-    slug: string;
-    kicker: string;
-    title: string;
-    outcome: string;
-    logo: { path: string; sha256: string } | null;
-    svgSha256: string;
-  }>,
-) {
-  return `${JSON.stringify(
-    {
-      generatedBy: "scripts/maintenance/build-og-case-studies.ts",
-      fonts: FONT_SIGNATURES,
-      cards,
-    },
-    null,
-    2,
-  )}\n`;
 }
 
 /** Greedy word-wrap into at most `maxLines` lines of ~`maxChars` each. */
@@ -215,109 +171,46 @@ function buildSvg({
 `;
 }
 
-function buildHtml(svg: string) {
-  const newsreaderUrl = pathToFileURL(NEWSREADER_FONT).href;
-  const geistMonoUrl = pathToFileURL(GEIST_MONO_FONT).href;
-  return `<!doctype html><html><head><meta charset="utf-8"/><style>
-  @font-face { font-family: 'Newsreader'; font-style: normal; font-weight: 200 800; src: url('${newsreaderUrl}') format('woff2'); font-display: block; }
-  @font-face { font-family: 'GeistMono'; font-style: normal; font-weight: 400 700; src: url('${geistMonoUrl}') format('woff2'); font-display: block; }
-  html, body { margin: 0; padding: 0; background: #f8f8fa; } svg { display: block; }
-</style></head><body>${svg}</body></html>`;
-}
-
-async function main() {
-  const browser = await firefox.launch({ headless: true });
-  const staleFiles: string[] = [];
-  const signatures: Array<{
-    file: string;
-    slug: string;
-    kicker: string;
-    title: string;
-    outcome: string;
-    logo: { path: string; sha256: string } | null;
-    svgSha256: string;
-  }> = [];
-  try {
-    const artifactResult = await runOgArtifactBuild({
-      check: CHECK_MODE,
-      family: "Case-study",
-      publicDir: PUBLIC,
-      refreshCommand: "npm run build:og-case-studies",
-      roster: CARDS,
-      stagingDir: STAGING,
-      assertStale: false,
-      render: async (card, { stagedPath }) => {
-        const fileName = card.file;
-        const logoSignature = card.logoPath
-          ? {
-              path: repoRelativePath(card.logoPath),
-              sha256: sha256(readFileSync(card.logoPath)),
-            }
-          : null;
-        const signatureSvg = buildSvg({
-          ...card,
-          logoHref: logoSignature ? `repo://${logoSignature.path}` : null,
-        });
-        const svg = buildSvg({
-          ...card,
-          logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
-        });
-        signatures.push({
-          file: fileName,
-          slug: card.slug,
-          kicker: card.kicker,
-          title: card.title,
-          outcome: card.outcome,
-          logo: logoSignature,
-          svgSha256: sha256(signatureSvg),
-        });
-        const svgPath = resolve(STAGING, `${card.slug}.svg`);
-        const htmlPath = resolve(STAGING, `${card.slug}.html`);
-        writeFileSync(svgPath, svg);
-        writeFileSync(htmlPath, buildHtml(svg));
-
-        const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
-        try {
-          await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
-          await page.evaluate(() => document.fonts.ready);
-          await page.waitForTimeout(400);
-          await page.screenshot({
-            path: stagedPath,
-            omitBackground: false,
-            clip: { x: 0, y: 0, width: 1200, height: 628 },
-            timeout: 30000,
-          });
-        } finally {
-          await page.close();
-        }
-      },
-      onResult: (_card, { changed, publicPath }) => {
-        console.log(formatOgWriteStatus({ check: CHECK_MODE, changed, publicPath }));
-      },
-    });
-    staleFiles.push(...artifactResult.staleFiles);
-
-    const signatureManifest = buildSignatureManifest(signatures);
-    if (CHECK_MODE) {
-      const expectedManifest = existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
-      if (expectedManifest !== signatureManifest) {
-        staleFiles.push("scripts/maintenance/state/og-case-study-signatures.json");
+const renderInputs = CARDS.map((card) => {
+  const logo = card.logoPath
+    ? {
+        path: repoRelativePath(card.logoPath),
+        sha256: sha256(readFileSync(card.logoPath)),
       }
-    } else {
-      writeFileIfChanged(SIGNATURE_PATH, signatureManifest);
-    }
+    : null;
+  return {
+    file: card.file,
+    svg: buildSvg({
+      ...card,
+      logoHref: card.logoPath ? pathToFileURL(card.logoPath).href : null,
+    }),
+    signatureSvg: buildSvg({
+      ...card,
+      logoHref: logo ? `repo://${logo.path}` : null,
+    }),
+    signature: {
+      slug: card.slug,
+      kicker: card.kicker,
+      title: card.title,
+      outcome: card.outcome,
+      logo,
+    },
+  };
+});
 
-    assertNoStaleOgOutputs({
-      family: "Case-study",
-      staleFiles,
-      refreshCommand: "npm run build:og-case-studies",
-    });
-  } finally {
-    await browser.close();
-  }
+export async function main(): Promise<void> {
+  await runOgStaticCli({
+    repoRoot: REPO_ROOT,
+    family: "Case-study",
+    generatedBy: "scripts/maintenance/build-og-case-studies.ts",
+    includePngHashes: false,
+    publicDir: PUBLIC,
+    refreshCommand: "npm run build:og-case-studies",
+    roster: renderInputs,
+    signaturePath: SIGNATURE_PATH,
+    stagingDir: STAGING,
+    settleMs: 400,
+  });
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+runOgStaticMain(import.meta.url, main);

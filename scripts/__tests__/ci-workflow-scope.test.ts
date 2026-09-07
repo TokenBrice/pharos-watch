@@ -20,14 +20,17 @@ describe("CI workflow scope", () => {
     expect(run).toBe("node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
   });
 
-  it("preserves the Next compiler cache and consolidates Pages artifact checks", () => {
+  it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {
     const workflow = readRepoFile(".github/workflows/pages-release.yml");
+    const buildSizeCheck = readRepoFile("scripts/maintenance/report-build-size.mjs");
 
     expect(workflow).toContain('bootstrap-generated: "false"');
-    expect(workflow).toContain('next-cache: "true"');
-    expect(workflow).toContain('next-cache-save: "true"');
+    expect(workflow).not.toContain("next-cache:");
+    expect(workflow).not.toContain("next-cache-save:");
     expect(workflow).toContain('PHAROS_RELEASE_PR_TYPECHECKED: "1"');
     expect(workflow).toContain("npm run check:pages-release");
+    expect(buildSizeCheck).toContain('path.join(nextStaticDir, "css")');
+    expect(buildSizeCheck).toContain('.xl\\\\:w-\\\\[15rem\\\\]');
     const compileInputAt = workflow.indexOf("npm run prebuild -- --build-lifecycle=compile-input");
     const refreshAt = workflow.indexOf("refresh-pages-release-data.ts");
     const postRefreshAt = workflow.indexOf("npm run prebuild -- --build-lifecycle=post-refresh");
@@ -37,42 +40,40 @@ describe("CI workflow scope", () => {
     expect(workflow).not.toContain("rm -rf .next");
   });
 
-  it("uses a dependency-free PR preflight and merges both critical coverage shards", () => {
+  it("uses a dependency-free PR preflight and merges all critical coverage shards", () => {
     const workflow = readRepoFile(".github/workflows/pull-request-checks.yml");
     const parsed = parseYaml(workflow) as {
       jobs: Record<string, { steps?: Array<{ uses?: string; run?: string; with?: Record<string, unknown> }> }>;
     };
     const preflight = parsed.jobs.preflight.steps ?? [];
-    const staticSteps = parsed.jobs.static.steps ?? [];
-    const coverageShardSteps = parsed.jobs["critical-coverage-shards"].steps ?? [];
+    // Static, test, docs, and coverage shards are intentionally generated into one manifest-owned matrix job.
+    const validationSteps = parsed.jobs.validation.steps ?? [];
+    const prepareSteps = parsed.jobs.prepare.steps ?? [];
 
-    expect(preflight.some((step) => step.run?.includes("classify-deploy-changes.ts"))).toBe(true);
-    expect(preflight.some((step) => step.run?.includes("run-gitleaks.ts --range"))).toBe(true);
+    expect(preflight.some((step) => step.run?.includes("generate-pr-workflow-matrix.ts --preflight"))).toBe(true);
+    expect(preflight.some((step) => step.run?.includes("generate-pr-workflow-matrix.ts --matrix"))).toBe(true);
     expect(preflight.some((step) => step.uses === "./.github/actions/setup-workspace")).toBe(false);
     expect(
-      staticSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
+      preflight.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
     ).toBe(0);
     expect(
-      staticSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.filter,
+      validationSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
+    ).toBe(0);
+    expect(
+      validationSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.filter,
     ).toBe("blob:none");
-    expect(preflight.some((step) => step.run?.includes("git merge-base"))).toBe(true);
-    expect(workflow).toContain("fetch-depth: 50");
-    expect(workflow).toContain("git fetch --no-tags --unshallow origin");
-    expect(workflow).toContain("matrix:\n        shard: [1, 2, 3, 4]");
-    expect(workflow).toContain("npm run test:pr -- --shard=${{ matrix.shard }}/4");
-    expect(workflow).toContain("npm run coverage:critical:shard -- --shard=${{ matrix.shard }}/4");
+    expect(workflow).toContain("matrix: ${{ fromJSON(needs.preflight.outputs.matrix) }}");
+    expect(workflow).toContain("PR_LANE_SHARD: ${{ matrix.shard }}");
+    expect(workflow).toContain("matrix.lane == 'critical-coverage-shards'");
     expect(workflow).toContain("merge-multiple: true");
     expect(workflow).toContain("include-hidden-files: true");
     expect(
-      coverageShardSteps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
-    ).toBe(0);
-    expect(
-      coverageShardSteps.find((step) => step.uses === "./.github/actions/setup-workspace")?.with?.[
+      prepareSteps.find((step) => step.uses === "./.github/actions/setup-workspace")?.with?.[
         "bootstrap-history"
       ],
     ).toBe("true");
-    expect(workflow).toContain("npm run coverage:critical:merge");
-    expect(workflow).toContain("install-playwright-firefox: ${{ needs.preflight.outputs.playwright_firefox_required }}");
+    expect(workflow).toContain("PR_LANE_ID: critical-coverage");
+    expect(workflow).toContain("install-playwright-firefox: ${{ matrix.lane == 'static'");
   });
 
   it("packages the Worker before production D1 mutation", () => {

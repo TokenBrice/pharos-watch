@@ -1,0 +1,148 @@
+{
+  "mechanism": "lusd-liquity",
+  "date": "2026-08-07-block-25700878-shock-coverage",
+  "sha256": "1fdf711158621a61f2a9dc14fd8b12f7278856a04bb47d26112b9446d6025746",
+  "bytes": 657148,
+  "r2Key": "captures/lusd-liquity/2026-08-07-block-25700878-shock-coverage.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-shock-coverage-measurement",
+    "assetId": "lusd-liquity",
+    "archetype": "cdp",
+    "family": "liquity-v1-shock-v1",
+    "applicability": {
+      "state": "measured",
+      "failureReason": null
+    },
+    "completeness": {
+      "complete": true,
+      "blockers": []
+    },
+    "block": {
+      "number": 25700878,
+      "hash": "0x09379445191043859413fa7afbc58eb9b12aeec489e357658ebeae79ddc03d21",
+      "timestampUnix": 1786079063,
+      "timestampIso": "2026-08-07T05:04:23.000Z"
+    },
+    "sourcePin": {
+      "repository": "https://github.com/liquity/dev",
+      "commit": "5174ecd0da4842157aba989499200d690b7e374f",
+      "liquidationContractPath": "packages/contracts/contracts/TroveManager.sol"
+    },
+    "shockPolicy": {
+      "scoreShockFractionPpm": 500000,
+      "sensitivityShockFractionsPpm": [
+        400000,
+        500000,
+        600000,
+        750000
+      ],
+      "debtReconciliationTolerancePpm": 1000
+    },
+    "measuredFacts": {
+      "applicability": "measured",
+      "failureReason": null,
+      "stressShockFraction": 0.5,
+      "stressLiquidatableDebt": "0",
+      "stressPoolOffsetDebt": "0",
+      "stressLiquidationCoverageRatio": 1,
+      "branchContributions": [
+        {
+          "branchIndex": 0,
+          "stressLiquidatableDebt": "0",
+          "stressPoolOffsetDebt": "0",
+          "stressLiquidationCoverageRatio": 1
+        }
+      ]
+    },
+    "codePins": [
+      {
+        "name": "lusd-token",
+        "address": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+        "role": "token",
+        "codeHash": "0xa607f4c8379ffb91323184b39d374287ea702b699648610ba87b29fd4f9b00a1"
+      },
+      {
+        "name": "trove-manager",
+        "address": "0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2",
+        "role": "liquidation-state-machine",
+        "codeHash": "0x33404f55d90f42f5d4684d3eb52d4afc7ee41fd86f9a0ff9c0afcf0af0a410bb"
+      },
+      {
+        "name": "stability-pool",
+        "address": "0x66017d22b0f8556afdd19fc67041899eb65a21bb",
+        "role": "committed-pool",
+        "codeHash": "0x9c3b21a3a97ad953c529831bb02b0fcd0ff03fc43054bac66a528702025d5bfe"
+      },
+      {
+        "name": "price-feed",
+        "address": "0x4c517d4e2c851ca76d7ec94b805269df0f2201de",
+        "role": "protocol-oracle",
+        "codeHash": "0x8c867f65098a2714f2a6f57ea929da0a60a84813e837e31280f2ee3fa6cd92cd"
+      },
+      {
+        "name": "sorted-troves",
+        "address": "0x8fdd3fbfeb32b28fb73555518f8b361bcea741a6",
+        "role": "liquidation-order",
+        "codeHash": "0xde3f1240d86a227b42772efa8df3a6c96f7f1c6fce25106551d859fadf63d9b7"
+      },
+      {
+        "name": "active-pool",
+        "address": "0xdf9eb223bafbe5c5271415c75aecd68c21fe3d7f",
+        "role": "protocol-accounting",
+        "codeHash": "0x05861911a299411e528997f0d9078a5114bc29529befe386e53f639caab45705"
+      },
+      {
+        "name": "default-pool",
+        "address": "0x896a3f03176f05cfbb4f006bfcd8723f2b0d741c",
+        "role": "redistribution-accounting",
+        "codeHash": "0x8c5f0a005c7b308aff2fd2de3ee2f1f2e35c3f03c10d797391536668c4eea5b4"
+      },
+      {
+        "name": "borrower-operations",
+        "address": "0x24179cd81c9e782a4096035f7ec97fb8b783e007",
+        "role": "liquidation-state-cleanup",
+        "codeHash": "0xcbe65d5fc2c48608b31fc5c0b97f3b0c4853cdf3b20f681995eba3e44e51be77"
+      },
+      {
+        "name": "gas-pool",
+        "address": "0x9555b042f969e561855e5f28cb1230819149a8d9",
+        "role": "liquidation-gas-compensation",
+        "codeHash": "0x78721f13761f7378853c4a5bcc87ddbd38d95d06941d0fc0c54d73b12e00b746"
+      },
+      {
+        "name": "coll-surplus-pool",
+        "address": "0x3d32e8b97ed5881324241cf03b2da5e2ebce5521",
+        "role": "liquidation-collateral-surplus",
+        "codeHash": "0x7d5494b64358562eff75a949c075ce83e207406e7eca114e4cd187079e0aa01e"
+      },
+      {
+        "name": "chainlink-price-aggregator",
+        "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+        "role": "oracle-source",
+        "codeHash": "0x4b79b5c8aee6da0f7b393e8b53e6265ef7320a1d16184c65bd3841b5aa3d700d"
+      },
+      {
+        "name": "chainlink-price-aggregator-implementation",
+        "address": "0x7d4e742018fb52e48b08be73d041c18b21de6fb5",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x16f41184f797cb8f8918680df0ebf2a97cc3192aa6b104615f61096fc674f2aa"
+      },
+      {
+        "name": "tellor-caller",
+        "address": "0xad430500ecda11e38c9bcb08a702274b94641112",
+        "role": "oracle-fallback",
+        "codeHash": "0x5002b4c59dee316a2410f60a901d2d5077878ac18daa0be7e5bfd138511e845f"
+      },
+      {
+        "name": "tellor-oracle",
+        "address": "0x88df592f8eb5d7bd38bfef7deb0fbc02cf3778a0",
+        "role": "oracle-fallback-source",
+        "codeHash": "0x18df49952ae206a293436515440bff85ba7a87d1ddf9ab0aab4e1fba63c11fbb"
+      }
+    ],
+    "callsConsumed": 262,
+    "codePinsConsumed": 14,
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-07-block-25700878-shock-coverage.json"
+  }
+}

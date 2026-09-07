@@ -44,7 +44,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://brl1.io/en/como_funciona",
-    "provider": "BRL1 self-published proof of reserves (latestReport removed 2026-08: the May 2026 report file and the current brl1.io report link are Google Drive documents gated behind a Google sign-in, so the report cannot be publicly re-verified)",
+    "provider": "BRL1 CONSORTIUM S.A. internally prepared and board-approved proof-of-reserves report; explicitly not independently audited. August 1, 2026 report is publicly downloadable from the issuer-linked English-footer Google Drive file.",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Brazil"

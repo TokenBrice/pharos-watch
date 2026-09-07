@@ -7,8 +7,8 @@ import type { ChainRpcConfig } from "../chain-registry";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
-import { buildReviewedDeploymentRouteInventory } from "../safety-score-v9-supply-attribution-contract";
-import { buildXautRepresentationGroupInventory } from "../safety-score-v9-xaut-supply-attribution-contract";
+import { buildReviewedDeploymentRouteInventory } from "../safety-score-v9/supply-attribution-contract";
+import { buildXautRepresentationGroupInventory } from "../safety-score-v9/xaut-supply-attribution-contract";
 
 const rpcMocks = vi.hoisted(() => ({
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt: vi.fn(),
@@ -17,11 +17,11 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock(
-  "../safety-score-v9-centrifuge-supply-observer",
+  "../safety-score-v9/centrifuge-supply-observer",
   async (importOriginal) => {
     const original =
       await importOriginal<
-        typeof import("../safety-score-v9-centrifuge-supply-observer")
+        typeof import("../safety-score-v9/centrifuge-supply-observer")
       >();
     return {
       ...original,
@@ -31,9 +31,9 @@ vi.mock(
   },
 );
 
-vi.mock("../safety-score-v9-wm-supply-observer", async (importOriginal) => {
+vi.mock("../safety-score-v9/wm-supply-observer", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("../safety-score-v9-wm-supply-observer")>();
+    await importOriginal<typeof import("../safety-score-v9/wm-supply-observer")>();
   return {
     ...original,
     observeWmReviewedDeploymentUnitPartitionAttempt:
@@ -41,9 +41,9 @@ vi.mock("../safety-score-v9-wm-supply-observer", async (importOriginal) => {
   };
 });
 
-vi.mock("../safety-score-v9-xaut-supply-observer", async (importOriginal) => {
+vi.mock("../safety-score-v9/xaut-supply-observer", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("../safety-score-v9-xaut-supply-observer")>();
+    await importOriginal<typeof import("../safety-score-v9/xaut-supply-observer")>();
   return {
     ...original,
     observeXautRepresentationGroupSupplyAttributionAttempt:
@@ -56,8 +56,8 @@ import {
   deriveLockMintSupplyPartition,
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplyObservedAtSec,
-} from "../safety-score-v9-supply-attribution";
-import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9-extension-supply";
+} from "../safety-score-v9/supply-attribution";
+import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 
 const XAUT_TOTAL_SUPPLY_RAW = 707_747_089_000n;
 const XAUT_NOT_ISSUED_RAW = 94_923_429_468n;

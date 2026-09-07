@@ -1,4 +1,4 @@
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type {
@@ -51,20 +51,8 @@ interface ReserveProtocolDtfRow {
   basket?: ReserveProtocolDtfBasketEntry[];
 }
 
-interface ReserveProtocolDtfAssetDescriptor {
-  address: string;
-  name: string;
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  blacklistable?: boolean;
-}
-
-interface ReserveProtocolDtfParams {
-  assets?: ReserveProtocolDtfAssetDescriptor[];
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
+type ReserveProtocolDtfParams = LiveReserveAdapterParamsByKey["reserve-protocol-dtf"];
+type ReserveProtocolDtfAssetDescriptor = NonNullable<ReserveProtocolDtfParams["assets"]>[number];
 
 const MAIN_SELECTOR = "0xdffeadd0";
 const ASSET_REGISTRY_SELECTOR = "0x979d7e86";
@@ -279,13 +267,12 @@ async function buildRedemptionOutputValuation(args: {
   }
 
   try {
-    const legValues: Array<{ assetId: string; valueUsd: number | null }> = [];
-    for (const leg of args.legs) {
-      legValues.push({
+    const legValues = await Promise.all(
+      args.legs.map(async (leg) => ({
         assetId: leg.assetId,
         valueUsd: await readOutputLegValueUsd(leg, args.onchain),
-      });
-    }
+      })),
+    );
     if (legValues.some((leg) => leg.valueUsd == null)) return null;
 
     const valueByAssetId = new Map<string, number>();
@@ -427,7 +414,7 @@ export async function fetchReserveProtocolDtfReserves(
   }
 
   const input = requireJsonInputFromConfig(config, "reserve-protocol-dtf");
-  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params) as ReserveProtocolDtfParams;
+  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params);
   const payload = await fetchJsonWithRetry<unknown>(input.url, signal, 10_000, ctx);
   return adaptReserveProtocolDtfRows(payload, coin, params.assets, input.url);
 }
@@ -439,7 +426,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "reserve-protocol-dtf");
-  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params) as ReserveProtocolDtfParams;
+  const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params);
   const descriptorByAddress = buildDescriptorMap(params.assets);
   const rTokenContract = coin.contracts?.find((contract) => contract.chain === input.chain);
   if (!rTokenContract) {
@@ -498,19 +485,36 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const componentMetadata: Array<Record<string, unknown>> = [];
   const outputLegs: ReserveProtocolDtfOutputLeg[] = [];
 
-  for (const entry of quoteEntries) {
-    throwIfAborted(signal);
-    const [rawDecimals, rawAsset] = await Promise.all([
-      onchain.uint256(entry.address, DECIMALS_SELECTOR),
-      onchain.raw(assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)),
-    ]);
-    const tokenDecimals = decodeDecimals(rawDecimals, entry.address);
-    const assetAddress = parseAddressResult(rawAsset, `toAsset(${entry.address})`);
-    const [rawPrice, rawStatus] = await Promise.all([
-      onchain.raw(assetAddress, PRICE_SELECTOR),
-      onchain.uint256(assetAddress, COLLATERAL_STATUS_SELECTOR),
-    ]);
-    const price = decodePriceResult(rawPrice, entry.address);
+  const resolvedComponents = await Promise.all(
+    quoteEntries.map(async (entry) => {
+      throwIfAborted(signal);
+      const [rawDecimals, rawAsset] = await Promise.all([
+        onchain.uint256(entry.address, DECIMALS_SELECTOR),
+        onchain.raw(assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)),
+      ]);
+      return {
+        entry,
+        tokenDecimals: decodeDecimals(rawDecimals, entry.address),
+        assetAddress: parseAddressResult(rawAsset, `toAsset(${entry.address})`),
+      };
+    }),
+  );
+  const pricedComponents = await Promise.all(
+    resolvedComponents.map(async (component) => {
+      throwIfAborted(signal);
+      const [rawPrice, rawStatus] = await Promise.all([
+        onchain.raw(component.assetAddress, PRICE_SELECTOR),
+        onchain.uint256(component.assetAddress, COLLATERAL_STATUS_SELECTOR),
+      ]);
+      return {
+        ...component,
+        price: decodePriceResult(rawPrice, component.entry.address),
+        rawStatus,
+      };
+    }),
+  );
+
+  for (const { entry, tokenDecimals, assetAddress, price, rawStatus } of pricedComponents) {
     const value = decimalNumberFromBigInt(entry.quantity * price.mid, tokenDecimals + PRICE_DECIMALS);
     totalValue += value;
     const normalizedAddress = normalizeEvmAddress(entry.address);

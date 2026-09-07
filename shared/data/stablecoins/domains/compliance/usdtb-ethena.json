@@ -37,7 +37,7 @@
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "latestReportDate": "2026-05-31",
-    "notes": "Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank — not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective' — forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-18; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter.",
+    "notes": "Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank: not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective': forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-18; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter.",
     "references": [
       {
         "label": "OCC: Anchorage Digital Bank national trust bank charter approval (2021)",
@@ -45,12 +45,12 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Anchorage USDtb launch announcement — America's first federally regulated stablecoin",
+        "label": "Anchorage USDtb launch announcement: America's first federally regulated stablecoin",
         "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin",
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Anchorage comment letter on OCC GENIUS Act NPRM — confirms ADB expects to become a PPSI",
+        "label": "Anchorage comment letter on OCC GENIUS Act NPRM: confirms ADB expects to become a PPSI",
         "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act",
         "sourceKind": "issuer-filing",
         "accessedAt": "2026-06-07"

@@ -73,6 +73,17 @@ export interface BuildSafetyScoreV9ResponseArgs {
   results: readonly V9PublicCardProjectionInput[];
 }
 
+export interface SafetyScoreV9TopDriver {
+  kind: "cap-bound" | "pillar-bound" | "withheld";
+  /** Machine key for the cap, or the weakest pillar when score-bearing. */
+  label: string | null;
+  /** Binding cap limit or weakest pillar score. */
+  value: number | null;
+  /** Full public explanation when the driver is a cap or a withheld result. */
+  reason: string | null;
+  evidenceFreshness: SafetyScoreV9EvidenceFreshness;
+}
+
 const PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
 const EVIDENCE_RANK: Readonly<Record<V9EvidenceLevel, number>> = {
   strong: 0,
@@ -816,6 +827,43 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
 // through `buildSafetyScoreV9Response`.
 export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard {
   return SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9CardUnchecked(input));
+}
+
+/**
+ * Projects the existing public card into the one-line driver used by list
+ * surfaces. This is deliberately a read-only projection: it does not inspect
+ * score inputs or recompute a cap, pillar minimum, or evidence state.
+ */
+export function projectTopDriver(card: SafetyScoreV9CurrentCard): SafetyScoreV9TopDriver | null {
+  const evidenceFreshness = card.evidence.freshness;
+  if (card.score === null || card.grade === "NR") {
+    return {
+      kind: "withheld",
+      label: null,
+      value: null,
+      reason: card.nrReasons[0]?.message ?? "Required evidence is withheld.",
+      evidenceFreshness,
+    };
+  }
+  if (card.bindingCap !== null) {
+    return {
+      kind: "cap-bound",
+      label: card.bindingCap.kind,
+      value: card.bindingCap.limit,
+      reason: card.bindingCap.reason,
+      evidenceFreshness,
+    };
+  }
+  if (card.weakestPillar !== null) {
+    return {
+      kind: "pillar-bound",
+      label: card.weakestPillar.pillar,
+      value: card.weakestPillar.score,
+      reason: null,
+      evidenceFreshness,
+    };
+  }
+  return null;
 }
 
 function canonicalSourceGenerations(sourceGenerations: Readonly<Record<string, string>>): Record<string, string> {

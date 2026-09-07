@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT register reviewed; no USTB match found on 2026-08-14",
+        "label": "ESMA MiCA register landing page: ART/EMT register reviewed; no USTB match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA/EBA/EIOPA crypto-assets factsheet — MiCA does not apply to financial instruments and funds",
+        "label": "ESMA/EBA/EIOPA crypto-assets factsheet: MiCA does not apply to financial instruments and funds",
         "url": "https://www.esma.europa.eu/sites/default/files/2025-10/Updated_Joint_ESAs_Factsheet_on_crypto-assets_MT_EN.pdf"
       },
       {
-        "label": "Superstate USTB — tokenized private fund share",
+        "label": "Superstate USTB: tokenized private fund share",
         "url": "https://superstate.com/assets/ustb"
       }
     ]
@@ -26,17 +26,17 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "Superstate Trust (d/b/a Invesco Short-Duration U.S. Government Securities Fund after the completed Invesco takeover in Q2 2026)",
     "issuerDomicile": "United States",
-    "licensingRegulator": "SEC — private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
+    "licensingRegulator": "SEC: private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco completed the takeover in Q2 2026; the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
+    "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco completed the takeover in Q2 2026; the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization: this would not change the excluded-security classification.",
     "references": [
       {
-        "label": "GENIUS Act S.1582 text — payment stablecoin definition (excludes securities)",
+        "label": "GENIUS Act S.1582 text: payment stablecoin definition (excludes securities)",
         "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
         "sourceKind": "statute"
       },
@@ -46,12 +46,12 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Superstate USTB product page — fund share structure",
+        "label": "Superstate USTB product page: fund share structure",
         "url": "https://superstate.com/assets/ustb",
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Fortune — Invesco takes over Superstate USTB (March 2026)",
+        "label": "Fortune: Invesco takes over Superstate USTB (March 2026)",
         "url": "https://fortune.com/2026/03/24/invesco-superstate-ustb/",
         "sourceKind": "news"
       },

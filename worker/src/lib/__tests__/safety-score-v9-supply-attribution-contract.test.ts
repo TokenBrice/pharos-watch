@@ -14,14 +14,14 @@ import {
   reviewedDeploymentObservationTimingIssue,
   reviewedDeploymentIdentityValidationError,
   type ReviewedDeploymentSupplyObservation,
-} from "../safety-score-v9-supply-attribution-contract";
+} from "../safety-score-v9/supply-attribution-contract";
 import {
   buildXautRepresentationGroupInventory,
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   xautRepresentationGroupAttributionValidationError,
   type XautLockMintObservation,
-} from "../safety-score-v9-xaut-supply-attribution-contract";
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 
 const AGGREGATE_SUPPLY_USD = 87_020_618.58982982;
 const REGISTRY_FINGERPRINT = "a".repeat(64);

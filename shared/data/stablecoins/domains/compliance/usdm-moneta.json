@@ -24,7 +24,7 @@
         "url": "https://www.finanstilsynet.no/nyhetsarkiv/nyheter/2025/lov-om-kryptoeiendeler-kryptoeiendelsloven-og-lov-om-endringer-i-hvitvaskingsloven-tfr-ii-trer-i/"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register — NBX/USDM not listed; page latest update 2026-06-12, checked 2026-06-18",
+        "label": "ESMA interim MiCA EMT issuer register: NBX/USDM not listed; page latest update 2026-06-12, checked 2026-06-18",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
@@ -69,7 +69,7 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "Moneta Digital LLC issuer disclosures (moneta.global) - FinCEN MSB only, no PPSI claim",
+        "Moneta Digital LLC issuer disclosures (moneta.global): FinCEN MSB only, no PPSI claim",
         "ESMA EMTWP.csv (re-checked Jun 2026)",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
         "OCC Bulletin 2026-3 GENIUS proposed rule",

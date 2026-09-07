@@ -55,6 +55,7 @@
       "decimals": 6
     }
   ],
+  "collateralQuality": "exotic",
   "yieldConfig": {
     "yieldSource": "ISC purchasing-power basket appreciation",
     "yieldType": "nav-appreciation"

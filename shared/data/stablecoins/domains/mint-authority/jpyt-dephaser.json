@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20 with mint() gated on MINTER_ROLE and no supply cap. On each chain MINTER_ROLE is held by exactly one contract — the DePhaser DepositManager, itself an ERC-1967/UUPS proxy that mints JPYT against USDT (Optimism) or USDC (Base) deposits routed into Aave. DEFAULT_ADMIN_ROLE is the role admin of MINTER_ROLE and is held by a single EOA per chain, so that EOA can grant MINTER_ROLE to any address (including itself) in one transaction and then mint without bound. Each DepositManager proxy is separately upgradeable by its own DEFAULT_ADMIN EOA, which can self-grant UPGRADER_ROLE and replace the mint implementation.",
+    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20 with mint() gated on MINTER_ROLE and no supply cap. On each chain MINTER_ROLE is held by exactly one contract, the DePhaser DepositManager, itself an ERC-1967/UUPS proxy that mints JPYT against USDT (Optimism) or USDC (Base) deposits routed into Aave. DEFAULT_ADMIN_ROLE is the role admin of MINTER_ROLE and is held by a single EOA per chain, so that EOA can grant MINTER_ROLE to any address (including itself) in one transaction and then mint without bound. Each DepositManager proxy is separately upgradeable by its own DEFAULT_ADMIN EOA, which can self-grant UPGRADER_ROLE and replace the mint implementation.",
     "controls": [
       {
         "chain": "optimism",
@@ -35,7 +35,7 @@
             "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
           }
         ],
-        "evidence": "At Optimism block 154,216,813: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 135 bytes — an ERC-1967 proxy whose implementation slot holds 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5 (verified as UsdtDepositManager); EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", i.e. an OZ v5 UUPS proxy. Verified source: mint(address,uint256) is onlyRole(MINTER_ROLE) and there is no cap, so this minter is unbounded at the token level. The same address also holds BURNER_ROLE (count=1)."
+        "evidence": "At Optimism block 154,216,813: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 135 bytes, an ERC-1967 proxy whose implementation slot holds 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5 (verified as UsdtDepositManager); EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", i.e. an OZ v5 UUPS proxy. Verified source: mint(address,uint256) is onlyRole(MINTER_ROLE) and there is no cap, so this minter is unbounded at the token level. The same address also holds BURNER_ROLE (count=1)."
       },
       {
         "chain": "optimism",
@@ -81,7 +81,7 @@
             "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "At Base block 48,621,528: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 100 bytes — an ERC-1967 proxy whose implementation slot holds 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb; EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\" (OZ v5 UUPS). Same address also holds BURNER_ROLE (count=1). This is the USDC DepositManager on Base — a distinct deployment from the Optimism minter."
+        "evidence": "At Base block 48,621,528: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 100 bytes, an ERC-1967 proxy whose implementation slot holds 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb; EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\" (OZ v5 UUPS). Same address also holds BURNER_ROLE (count=1). This is the USDC DepositManager on Base, a distinct deployment from the Optimism minter."
       },
       {
         "chain": "base",
@@ -126,7 +126,7 @@
             "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
           }
         ],
-        "evidence": "At Optimism block 154,217,078: the UsdtDepositManager implementation gates _authorizeUpgrade(address) with onlyRole(UPGRADER_ROLE). Enumerating RoleGranted/RoleRevoked logs on the DepositManager proxy (0x77c1e4…) shows UPGRADER_ROLE has never been granted, but DEFAULT_ADMIN_ROLE is currently held by EOA 0x32d55717901ac132049de8a3e82db03b255091e0 (granted at block 151,189,060; the earlier holder 0xd012c3d2… was revoked at block 151,189,090 — hasRole confirms only 0x32d5… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and upgrade the mint implementation. Upgrade-only: it holds no role on the JPYT token itself."
+        "evidence": "At Optimism block 154,217,078: the UsdtDepositManager implementation gates _authorizeUpgrade(address) with onlyRole(UPGRADER_ROLE). Enumerating RoleGranted/RoleRevoked logs on the DepositManager proxy (0x77c1e4…) shows UPGRADER_ROLE has never been granted, but DEFAULT_ADMIN_ROLE is currently held by EOA 0x32d55717901ac132049de8a3e82db03b255091e0 (granted at block 151,189,060; the earlier holder 0xd012c3d2… was revoked at block 151,189,090, hasRole confirms only 0x32d5… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and upgrade the mint implementation. Upgrade-only: it holds no role on the JPYT token itself."
       },
       {
         "chain": "base",
@@ -148,7 +148,7 @@
             "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "At Base block 48,621,794: UPGRADER_ROLE has never been granted on the Base DepositManager (0x0eab9d…), and DEFAULT_ADMIN_ROLE is currently held by EOA 0x5642c7c728b10c0ddb258783e242833871b5352b (granted at block 45,594,302; the earlier holder 0xc584ac10… was revoked at block 45,594,338 — hasRole confirms only 0x5642… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and replace implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. Upgrade-only: it holds no role on the JPYT token itself."
+        "evidence": "At Base block 48,621,794: UPGRADER_ROLE has never been granted on the Base DepositManager (0x0eab9d…), and DEFAULT_ADMIN_ROLE is currently held by EOA 0x5642c7c728b10c0ddb258783e242833871b5352b (granted at block 45,594,302; the earlier holder 0xc584ac10… was revoked at block 45,594,338, hasRole confirms only 0x5642… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and replace implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. Upgrade-only: it holds no role on the JPYT token itself."
       }
     ],
     "upgradeability": {

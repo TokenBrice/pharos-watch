@@ -36,7 +36,7 @@
 | Safety Scores         | `shared/lib/safety-score-v9/`, `shared/lib/safety-score-v9/policy.ts`, `worker/src/cron/compute-safety-score-v9.ts`, `shared/lib/methodology-versions/safety-score.ts`                                                   |
 | Mint Authority / V9 mint component | `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/methodology-versions/mint-authority.ts`, `shared/data/stablecoins/domains/mint-authority/*.json` |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/methodology-versions/liquidity-score.ts` |
-| Redemption Backstop Route Score | `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-configs/`, `worker/src/lib/redemption-backstop-sources.ts`, `shared/lib/methodology-versions/redemption-backstop.ts` |
+| Redemption Backstop Route Score | `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-configs/`, `worker/src/lib/redemption-backstop/sources.ts`, `shared/lib/methodology-versions/redemption-backstop.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
 | Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/methodology-versions/mint-burn-flow.ts`                                                                                                                     |
 | Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/methodology-versions/yield-methodology.ts` |
@@ -83,7 +83,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 
 1. `docs/pricing-pipeline.md`
 2. `shared/data/methodology-changelogs/pricing-pipeline/`
-3. `docs/data-pipeline.md`
+3. `docs/pricing-pipeline.md#data-integrity-guardrails` and `docs/supply-snapshot.md#supply-pipeline`
 4. `docs/about-page.md` plus `src/app/about/page.tsx`
 
 For the safety-score changelog specifically, update both:
@@ -103,12 +103,9 @@ Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Bac
 
 Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. `BLACKLIST_STABLECOINS` in `shared/types/market.ts` owns the response/UI/archive identity union. Live on-chain scan admission is a separate reviewed contract roster, `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts`; do not infer that every UI identity is actively scanned or that an omitted identity lacks an administrative freeze surface. The source registries and their coverage tests own the volatile roster rather than this page.
 
-The detail page renders the existing per-coin blacklist module unchanged. `RecentBlacklistBanner` (`src/components/stablecoin-detail/recent-blacklist-banner.tsx`) implements a "Recent activity" badge (linking to the `#blacklist` anchor) for when one of two thresholds is hit over a trailing 7-day window, but it currently has no production render site — the hero tertiary-metrics wiring that mounted it was dropped in a later presentation refactor — so the badge does not appear on the detail page today. Its thresholds are:
+The detail page retains its per-coin blacklist module. The unmounted recent-activity banner and its hook have been removed; the retained `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` configuration flag has no render site (see [process/feature-flags.md](process/feature-flags.md)). The summary API still exposes its trailing seven-day per-coin event counts.
 
-- `freezes >= 5` (when `destroys === 0`), or
-- any `destroys > 0`.
-
-The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [process/feature-flags.md](process/feature-flags.md)) and suppressed when the coin is already in `frozen` status so it does not double up with the existing frozen badge. Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/blacklist-tracker.ts` for the versioned methodology snapshot.
+Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/blacklist-tracker.ts` for the versioned methodology snapshot.
 
 ### Bluechip rating {#bluechip}
 

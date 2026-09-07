@@ -25,7 +25,7 @@ Public mint/burn availability causes (`mint_burn_public_degraded`, `mint_burn_pu
 
 ### Historical price debt
 
-The request contract is canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](../api-reference.md#post-apibackfill-mint-burn-prices). Operationally:
+The request contract is canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](../api-reference-admin.md#post-apibackfill-mint-burn-prices). Operationally:
 
 1. Preview a bounded batch and review every disposition, especially `irreducible` and provider-retry outcomes.
 2. Before mutation, take a fresh D1 Time Travel bookmark. Execute the same scope with the required confirmation, bookmark, and a unique `Idempotency-Key`.

@@ -12,7 +12,7 @@
         "url": "https://avenia.io/brla"
       },
       {
-        "label": "Avenia terms — BRLA backed 1:1 by Brazilian real",
+        "label": "Avenia terms: BRLA backed 1:1 by Brazilian real",
         "url": "https://app.avenia.io/Avenia-TC.pdf"
       }
     ]
@@ -29,7 +29,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act statutory summary — payment stablecoins and permitted issuers",
+          "label": "GENIUS Act statutory summary: payment stablecoins and permitted issuers",
           "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
@@ -50,7 +50,7 @@
     "notes": "Avenia describes BRLA as a 1:1 BRL-backed stablecoin with monthly collateral reporting and attestations. The public materials reviewed identify a Brazil-focused issuer/correspondent context, but no U.S. GENIUS PPSI approval, state-qualified pathway, official application, or foreign-issuer exception registration was found as of 2026-08-14. GENIUS remains in proposed-rules phase.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
@@ -68,7 +68,7 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Avenia terms — BRLA backing and transparency report policy",
+        "label": "Avenia terms: BRLA backing and transparency report policy",
         "url": "https://app.avenia.io/Avenia-TC.pdf",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
@@ -94,7 +94,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+          "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "accessedAt": "2026-08-14"

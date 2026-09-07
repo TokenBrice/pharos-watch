@@ -22,6 +22,20 @@ function isFiniteNonnegativeInteger(value: number): boolean {
 export function hasTerminalEvidence(event: DdrrActualEventInput): boolean {
   return event.terminalObserved === true || isTerminalStablecoinStatus(event.stablecoinStatus);
 }
+export function actualOutcomeFromSourceEventState(sourceEventState: DdrrSourceEventState): DdrrActualOutcome {
+  switch (sourceEventState) {
+    case "active":
+      return "still_open";
+    case "missing":
+      return "source_missing";
+    case "recovered":
+    case "terminal":
+    case "orphan_closed":
+    case "data_issue":
+    case "invalidated":
+      return sourceEventState;
+  }
+}
 
 function dataIssue(reason: string, actualEndedAt: number | null = null): DdrrDerivedOutcome {
   return {

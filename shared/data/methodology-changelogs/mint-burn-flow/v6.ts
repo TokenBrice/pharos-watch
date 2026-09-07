@@ -179,7 +179,7 @@ export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
       "CCIP and CCTP bridge mints now tag as `flow_type='bridge_transfer'` (previously leaked into economic mint flow for USDC, EURC, USDO, USD1, avUSD, ZCHF)",
       "LayerZero classifier accepts endpoint-emitter signal alone, catching Executor-only mint patterns previously missed on USDai-Arbitrum",
       "Bank Run Gauge weights each coin's intensity by its circulating supply on tracked-chain scope only (e.g., USDC weighted by Ethereum supply, not global $36B+ total)",
-      "Atomic-roundtrip detection requires sum(mint) and sum(burn) to match within 0.5% — partial same-tx mix is preserved as economic flow rather than erased",
+      "Atomic-roundtrip detection requires sum(mint) and sum(burn) to match within 0.5%; partial same-tx mix is preserved as economic flow rather than erased",
       "Custom-event counterparty extraction now supports unindexed address parameters (reUSD `Deposited` user address no longer null)",
       "Historical rows reclassified via `/api/backfill-mint-burn` replay and `/api/reclassify-atomic-roundtrips` after deploy",
     ],

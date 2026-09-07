@@ -15,6 +15,7 @@ vi.mock("../db-cache", () => ({
 import { batchExecute } from "../db";
 import { getPriceCache } from "../db-cache";
 import { healNullPrices } from "../mint-burn-pipeline/price-heal";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const NOW = 1_700_000_000;
 
@@ -58,9 +59,9 @@ function mockDb(
     })),
   }));
 
-  return {
+  return makeNoopD1({
     prepare,
-  } as unknown as D1Database;
+  });
 }
 
 describe("healNullPrices", () => {
@@ -228,7 +229,7 @@ describe("healNullPrices", () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       }),
     });
-    const db = { prepare } as unknown as D1Database;
+    const db = makeNoopD1({ prepare });
 
     await healNullPrices(db, NOW);
 

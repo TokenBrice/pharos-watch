@@ -30,6 +30,8 @@ export interface CaseStudyTimelineEntry {
 }
 
 export interface CaseStudySection {
+  /** Kebab-case, unique within the case study, immutable after publication; editorial-selector identity, not display text. */
+  readonly id: string;
   readonly heading: string;
   readonly paragraphs: readonly string[];
 }

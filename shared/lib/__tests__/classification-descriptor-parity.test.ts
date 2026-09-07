@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import * as classification from "../classification";
 import {
   BACKING_BADGE_STYLES,
   BACKING_LABELS,
@@ -23,6 +25,15 @@ import {
 import { MICA_STATUS_BADGE_STYLES, MICA_STATUS_DESCRIPTIONS } from "../mica";
 
 describe("classification descriptor projections", () => {
+  it("preserves the completed descriptor projections", () => {
+    const { HERO_CHIP_BACKING_LABELS, HERO_CHIP_GOVERNANCE_LABELS, MECHANISM_ARCHETYPE_DESCRIPTORS,
+      MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_SHORT_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, GRADE_RADAR_COLORS } = classification;
+    const projections = [HERO_CHIP_BACKING_LABELS, HERO_CHIP_GOVERNANCE_LABELS, MECHANISM_ARCHETYPE_DESCRIPTORS,
+      MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_SHORT_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, GRADE_RADAR_COLORS];
+    expect(createHash("sha256").update(JSON.stringify(projections)).digest("hex"))
+      .toBe("d5c2d2f3be63b5eedb2f1c13d1ff0033d2c71d0fd947912cf79cc3f2ee6e1297");
+  });
+
   it("preserves every governance and backing projection", () => {
     expect(GOVERNANCE_LABELS).toEqual({ centralized: "Centralized (CeFi)", "centralized-dependent": "CeFi-Dependent", decentralized: "Decentralized (DeFi)" });
     expect(GOVERNANCE_LABELS_SHORT).toEqual({ centralized: "CeFi", "centralized-dependent": "CeFi-Dep", decentralized: "DeFi" });

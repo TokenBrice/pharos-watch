@@ -1,0 +1,15 @@
+{
+  "mechanism": "bnusd-balanced",
+  "date": "2026-07-27-block-76609151",
+  "sha256": "c335eeeaa831c3a0cddde66959af230ea541bfd7aed5cf28f76f18ba973a4ee1",
+  "bytes": 8680,
+  "r2Key": "captures/bnusd-balanced/2026-07-27-block-76609151.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "bnusd-balanced",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bnusd-balanced/2026-07-27-block-76609151.json",
+    "capturedAt": "2026-07-27T23:17:42Z"
+  }
+}

@@ -22,6 +22,28 @@ type OnchainCallRequest = OnchainCallOptions & {
 
 type OnchainCallMock = (request: OnchainCallRequest) => unknown;
 
+export function makeOnchainMulticall3Mock(options: {
+  uint256: OnchainCallMock;
+  raw: OnchainCallMock;
+}) {
+  return vi.fn(async (input: OnchainCallOptions & {
+    calls: Array<{ label: string; contract: string; data: string }>;
+    [key: string]: unknown;
+  }) => Promise.all(input.calls.map(async (call) => {
+    const request: OnchainCallRequest = { ...input, ...call };
+    const value = call.data === "0xfeaf968c"
+      ? await options.raw(request)
+      : await options.uint256(request);
+    return {
+      label: call.label,
+      success: value != null,
+      returnData: typeof value === "bigint"
+        ? `0x${value.toString(16).padStart(64, "0")}`
+        : value ?? "0x",
+    };
+  })));
+}
+
 export function makeOnchainCallersMock(options: {
   uint256?: OnchainCallMock;
   raw?: OnchainCallMock;

@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import {
+  infiniteQueryOptions,
   keepPreviousData,
   useQuery,
   type QueryFunctionContext,
@@ -140,6 +142,44 @@ export function createApiPollingQueryOptionsWithMeta<T>(
   );
 }
 
+export function createApiInfinitePollingQueryOptions<TPage>(
+  queryKey: readonly unknown[],
+  producerIntervalMs: number,
+  schema: SchemaLikeSource<TPage>,
+  buildPath: (cursor: string | null) => string,
+  getNextCursor: (page: TPage) => string | null | undefined,
+) {
+  const { staleTime, refetchInterval } = getPollingWindow(producerIntervalMs);
+  return infiniteQueryOptions({
+    queryKey,
+    initialPageParam: null as string | null,
+    staleTime,
+    refetchInterval,
+    retry: 2,
+    queryFn: async ({ pageParam, signal }) =>
+      apiFetchWithMeta<TPage>(
+        buildPath(pageParam),
+        await resolveSchemaLike(schema),
+        { signal },
+      ),
+    getNextPageParam: (lastPage) => getNextCursor(lastPage.data) ?? undefined,
+  });
+}
+
+export function useCursorPages<
+  TEvent,
+  TPage extends { events: TEvent[]; nextCursor?: string | null },
+>(pages: readonly { data: TPage; meta: ApiMeta | null }[] | undefined) {
+  return useMemo(() => {
+    const events = pages?.flatMap((page) => page.data.events) ?? [];
+    return {
+      events,
+      nextCursor: pages?.[pages.length - 1]?.data.nextCursor ?? null,
+      meta: pages?.[0]?.meta ?? null,
+    };
+  }, [pages]);
+}
+
 export function usePollingQuery<T>(
   key: readonly unknown[],
   queryFn: PollingQueryFunction<T>,
@@ -170,20 +210,6 @@ export function createStaticQueryOptions<T>(
   };
 }
 
-/**
- * Generic TanStack Query hook for API endpoints.
- * Encodes the staleTime = cronInterval, refetchInterval = 2 × cronInterval rule.
- * When a Zod schema is provided, validates the response at runtime.
- */
-export function useApiQuery<T>(
-  key: readonly unknown[],
-  path: string,
-  cronInterval: number,
-  opts?: ApiQueryOptions<T>,
-): UseQueryResult<T, Error> {
-  return useQuery<T, Error>(createApiPollingQueryOptions(key, path, cronInterval, opts));
-}
-
 export interface ApiQueryWithMetaResult<T> extends Omit<
   UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
   "data"
@@ -201,17 +227,4 @@ export function unwrapApiQueryWithMetaResult<T>(
     data: data?.data,
     meta: data?.meta ?? null,
   };
-}
-
-export function useApiQueryWithMeta<T>(
-  key: readonly unknown[],
-  path: string,
-  cronInterval: number,
-  opts?: ApiQueryOptions<T>,
-): ApiQueryWithMetaResult<T> {
-  return unwrapApiQueryWithMetaResult(
-    useQuery<{ data: T; meta: ApiMeta | null }, Error>(
-      createApiPollingQueryOptionsWithMeta(key, path, cronInterval, opts),
-    ),
-  );
 }

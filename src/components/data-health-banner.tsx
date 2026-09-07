@@ -7,6 +7,7 @@ import {
 } from "@/lib/data-health";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { DATA_HEALTH_COLORS } from "@shared/lib/classification";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 interface DataHealthBannerProps {
   entries: DataHealthInfo[];
@@ -21,6 +22,9 @@ function formatAffectedLabels(labels: string[]): string {
 }
 
 export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHealthBannerProps) {
+  const hydrated = useHydrated();
+  const formatTimestamp = (timestamp: number) =>
+    formatDataHealthTimestamp(timestamp, hydrated ? undefined : "en-US", hydrated ? undefined : "UTC");
   if (entries.length === 0) return null;
 
   const merged = mergeHealthStates(entries);
@@ -28,7 +32,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     if (!showFreshTimestamp || !merged.latestUpdatedAt) return null;
     return (
       <p className="text-xs text-muted-foreground text-center">
-        Last updated: {formatDataHealthTimestamp(merged.latestUpdatedAt)}
+        Last updated: {formatTimestamp(merged.latestUpdatedAt)}
       </p>
     );
   }
@@ -45,8 +49,16 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
   let title = "";
   let message = "";
   if (merged.state === "degraded") {
-    title = "Live refresh is running behind";
-    message = `${affected} refreshed later than expected.`;
+    if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "refresh")) {
+      title = "Refresh failed; showing saved data";
+      message = `${affected} remains available while refresh retries.`;
+    } else if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "source")) {
+      title = "Data quality warning";
+      message = `${affected} is available, but a source or quality check needs attention.`;
+    } else {
+      title = "Live refresh is running behind";
+      message = `${affected} refreshed later than expected.`;
+    }
   } else if (merged.state === "stale") {
     const age = worstAge != null ? formatElapsedSeconds(worstAge / 1000) : "unknown";
     title = "Showing an older snapshot";
@@ -61,7 +73,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
 
   const lastSuccessfulText =
     merged.latestUpdatedAt != null
-      ? `Last successful update: ${formatDataHealthTimestamp(merged.latestUpdatedAt)}`
+      ? `Last successful update: ${formatTimestamp(merged.latestUpdatedAt)}`
       : null;
 
   return (

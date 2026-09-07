@@ -4,14 +4,10 @@ import sboldAsset from "@shared/data/stablecoins/coins/sbold-k3-capital.json";
 import sdaiAsset from "@shared/data/stablecoins/coins/sdai-sky.json";
 import susdaiAsset from "@shared/data/stablecoins/coins/susdai-usd-ai.json";
 import wmAsset from "@shared/data/stablecoins/coins/wm-m0.json";
-import { projectV9MechanismProfile } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
-import { resolveWrapperForm } from "../safety-score-v9-fact-set-wrapper";
+import { resolveWrapperForm } from "../safety-score-v9/fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
-import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
-import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/queue-redeem";
-import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem/configs";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { StablecoinMeta } from "@shared/types/core";
 import { describe, expect, it } from "vitest";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -19,13 +15,13 @@ import {
   MechanismReviewOverlaySchema,
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
-} from "../safety-score-v9-extension-mechanism";
+} from "../safety-score-v9/extension-mechanism";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-// 2026-08-30: past the 2026-08-29 curation batch, with the overlay same-day
-// admission gate fully elapsed.
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 30) / 1_000;
+// 2026-09-06: one UTC day past the 2026-09-05 curation batch, with the
+// overlay same-day admission gate fully elapsed.
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 8, 6) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -84,12 +80,12 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     // algorithmic, so a commodity overlay cannot carry one.
     expect(overlay.profileReview).toBeUndefined();
     expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("commodity-claim");
-    // 15 registry coins migrated; 13 are in the active scored set (GRAMG and
-    // GRAMS are tracked but carry no `llamaId`, so they never enter it). 13
-    // curated overlays — the same two ride the conservative compiler fallback.
+    // XNK remains represented by a curated overlay for readable delisted
+    // metadata, but its lifecycle correction removes it from the active
+    // scored registry: 12 active entries and 13 overlays (XNK plus 12 active).
     expect(
       [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim").length,
-    ).toBe(13);
+    ).toBe(12);
     expect(
       mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim").length,
     ).toBe(13);
@@ -110,12 +106,9 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         quality: "limited",
       },
     ]);
-    // The nine profile facts fold onto four components without losing a grade:
-    // title takes the weakest of holderTitle / physicalAllocation /
-    // custodianSegregation / bankruptcyRemoteness, custody stays the sourced
-    // nondisclosure that covered custodyContinuity and insurance, assurance
-    // takes the weaker of auditCadence / reserveReconciliation, and redemption
-    // is the fact the profile could only express as an exit declaration.
+    // The September 5 custody review adds the contractual oversight and
+    // holder-funded recovery limitations. Title, assurance and physical
+    // redemption retain their previously reviewed qualities.
     expect(review).toMatchObject({
       archetype: "commodity-claim",
       titleAndAllocation: {
@@ -123,8 +116,8 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         quality: "limited",
       },
       custodyContinuity: {
-        status: { observationState: "bounded-unknown" },
-        quality: null,
+        status: { observationState: "known" },
+        quality: "weak",
       },
       assuranceAndReconciliation: {
         status: { observationState: "known" },
@@ -139,27 +132,33 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
 
   it("gives FPI a CPI-hybrid review without erasing FRAX/reflexive exposure", () => {
     const overlay = namedOverlay("fpi-frax");
-    expect(overlay.profileReview?.profile).toBe("inflation-index-hybrid");
-    const profile = projectV9MechanismProfile(overlay.profileReview!);
+    expect(overlay.profileReview).toBeUndefined();
+    expect(overlay).toMatchObject({
+      archetype: "algorithmic",
+      metrics: {
+        exogenousBackingShare: 0.871,
+        reflexiveBackingShare: 0.0,
+        contractionCapacityRatio: 0.871,
+      },
+      components: {
+        contractionCapacity: { applicability: "measured", quality: "adequate" },
+        confidenceAndIncentives: { applicability: "measured", quality: "limited" },
+        oracleAndControlAssumptions: { applicability: "measured", quality: "adequate" },
+        emergencyRecovery: { applicability: "measured", quality: "limited" },
+        lossRecovery: {
+          applicability: "unavailable",
+          sourceUrl: "https://docs.frax.com/protocol/assets/fpi/overview",
+        },
+      },
+    });
     const review = buildSafetyScoreV9MechanismReview(
       PROFILE_FIXED_INPUT,
       { id: "fpi-frax" } as MechanismMeta,
       "algorithmic",
     );
-    if (review?.archetype !== "algorithmic") throw new Error("expected the production FPI profile review");
+    if (review?.archetype !== "algorithmic") throw new Error("expected the production FPI mechanism review");
 
-    expect(profile.metrics).toEqual({
-      exogenousBackingShare: 0.871,
-      reflexiveBackingShare: 0.0,
-      contractionCapacityRatio: 0.871,
-    });
-    expect(getSafetyScoreV9MechanismExitFacts("fpi-frax", "algorithmic", PROFILE_CLOCK_SEC)).toEqual([
-      {
-        factKey: "protocol-redemption",
-        disposition: "supported",
-        quality: "adequate",
-      },
-    ]);
+    expect(getSafetyScoreV9MechanismExitFacts("fpi-frax", "algorithmic", PROFILE_CLOCK_SEC)).toEqual([]);
     expect(review).toMatchObject({
       archetype: "algorithmic",
       exogenousBackingShare: 0.871,
@@ -238,35 +237,35 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
   });
 
   it("retains product-shaped exit families instead of treating delayed exits as absent", () => {
-    expect(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS["xaut-tether"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["xaut-tether"]).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
       outputAssetType: "bluechip-collateral",
     });
-    expect(COLLATERAL_REDEEM_BACKSTOP_CONFIGS["fpi-frax"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["fpi-frax"]).toMatchObject({
       routeFamily: "collateral-redeem",
       settlementModel: "atomic",
       outputAssets: ["asset:frax"],
       capacityModel: { kind: "reserve-sync-metadata" },
     });
-    expect(QUEUE_REDEEM_BACKSTOP_CONFIGS["iusd-infinifi"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["iusd-infinifi"]).toMatchObject({
       routeFamily: "queue-redeem",
       settlementModel: "queued",
       outputAssets: ["usdc-circle"],
     });
-    expect(QUEUE_REDEEM_BACKSTOP_CONFIGS["susdai-usd-ai"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["susdai-usd-ai"]).toMatchObject({
       routeFamily: "queue-redeem",
       settlementModel: "queued",
     });
-    expect(STABLECOIN_REDEEM_BACKSTOP_CONFIGS["sdai-sky"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["sdai-sky"]).toMatchObject({
       routeFamily: "stablecoin-redeem",
       settlementModel: "atomic",
     });
-    expect(STABLECOIN_REDEEM_BACKSTOP_CONFIGS["sbold-k3-capital"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["sbold-k3-capital"]).toMatchObject({
       routeFamily: "stablecoin-redeem",
       settlementModel: "atomic",
     });
-    expect(STABLECOIN_REDEEM_BACKSTOP_CONFIGS["wm-m0"]).toMatchObject({
+    expect(REDEMPTION_BACKSTOP_CONFIGS["wm-m0"]).toMatchObject({
       routeFamily: "stablecoin-redeem",
       settlementModel: "atomic",
       outputAssets: ["m-m0"],

@@ -5,6 +5,7 @@ import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/mock-fetch";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -1136,7 +1137,7 @@ describe("fetchOrcaPools", () => {
         meta: { cursor: { next: null } },
       }));
     const writes: unknown[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn((sql: string) => ({
         bind: vi.fn((...binds: unknown[]) => ({
           first: vi.fn(async () => sql.includes("SELECT cursor")
@@ -1154,7 +1155,7 @@ describe("fetchOrcaPools", () => {
           }),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const result = await fetchOrcaPools(undefined, db);
 
@@ -1198,7 +1199,7 @@ describe("fetchOrcaPools", () => {
 
     let storedCursor = "stored-tail";
     let writeAttempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn((sql: string) => ({
         bind: vi.fn((...binds: unknown[]) => ({
           first: vi.fn(async () => sql.includes("SELECT cursor")
@@ -1218,7 +1219,7 @@ describe("fetchOrcaPools", () => {
           }),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const failedWrite = await fetchOrcaPools(undefined, db);
     const retriedWrite = await fetchOrcaPools(undefined, db);
@@ -1272,7 +1273,7 @@ describe("fetchOrcaPools", () => {
 
     let storedCursor = "far-tail-cursor";
     const persistedCursors: string[] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn((sql: string) => ({
         bind: vi.fn((...binds: unknown[]) => ({
           first: vi.fn(async () => sql.includes("SELECT cursor")
@@ -1291,7 +1292,7 @@ describe("fetchOrcaPools", () => {
           }),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const transientFailure = await fetchOrcaPools(undefined, db);
     const retriedTail = await fetchOrcaPools(undefined, db);
@@ -1327,7 +1328,7 @@ describe("fetchOrcaPools", () => {
       }))
       .mockResolvedValueOnce(new Response("expired cursor", { status: 404 }));
     const writes: unknown[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn((sql: string) => ({
         bind: vi.fn((...binds: unknown[]) => ({
           first: vi.fn(async () => sql.includes("SELECT cursor")
@@ -1345,7 +1346,7 @@ describe("fetchOrcaPools", () => {
           }),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const result = await fetchOrcaPools(undefined, db);
 

@@ -91,14 +91,14 @@
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
         "controllerChain": "arbitrum",
-        "controllerAddress": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "controllerAddress": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
           "contract:arbitrum:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
         ],
         "sources": [
           {
-            "label": "Theo docs — thBILL OFT addresses",
+            "label": "Theo docs: thBILL OFT addresses",
             "url": "https://docs.theo.xyz/resources/addresses"
           },
           {
@@ -123,14 +123,14 @@
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
         "controllerChain": "base",
-        "controllerAddress": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "controllerAddress": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
           "contract:base:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
         ],
         "sources": [
           {
-            "label": "Theo docs — thBILL OFT addresses",
+            "label": "Theo docs: thBILL OFT addresses",
             "url": "https://docs.theo.xyz/resources/addresses"
           },
           {
@@ -155,14 +155,14 @@
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
         "controllerChain": "hyperevm",
-        "controllerAddress": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "controllerAddress": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
           "contract:hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
         ],
         "sources": [
           {
-            "label": "Theo docs — thBILL OFT addresses",
+            "label": "Theo docs: thBILL OFT addresses",
             "url": "https://docs.theo.xyz/resources/addresses"
           },
           {
@@ -188,14 +188,14 @@
         "observedBlock": 33586875,
         "sourceChain": "ethereum",
         "controllerChain": "stable",
-        "controllerAddress": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "controllerAddress": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
           "contract:stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
         ],
         "sources": [
           {
-            "label": "Theo docs — thBILL OFT addresses",
+            "label": "Theo docs: thBILL OFT addresses",
             "url": "https://docs.theo.xyz/resources/addresses"
           },
           {

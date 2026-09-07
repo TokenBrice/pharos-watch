@@ -37,12 +37,31 @@ jobs:
           echo "annotation_status=$annotation_status" >> "$GITHUB_OUTPUT"
           echo "summary_status=$summary_status" >> "$GITHUB_OUTPUT"
           echo "digest_status=$digest_status" >> "$GITHUB_OUTPUT"
+      - name: Retain complete review snapshots
+        if: always()
+        id: snapshots
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agent-maintenance-candidates-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            agents/annotation-candidates.md
+            agents/annotation-candidates.json
+            agents/ai-summary-candidates.md
+            agents/ai-summary-candidates.json
+            agents/curation-digest-*.md
+            agents/*-command.log
+          # Covers monthly review plus a missed monthly review; runs are immutable.
+          retention-days: 90
+          if-no-files-found: error
       - name: Open or update review issue
+        if: always() && steps.generate.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           ANNOTATION_STATUS: ${{ steps.generate.outputs.annotation_status }}
           DIGEST_STATUS: ${{ steps.generate.outputs.digest_status }}
           SUMMARY_STATUS: ${{ steps.generate.outputs.summary_status }}
+          SNAPSHOT_URL: ${{ steps.snapshots.outputs.artifact-url }}
+          SNAPSHOT_STATUS: ${{ steps.snapshots.outcome }}
         shell: bash
         run: |
           set -euo pipefail
@@ -54,6 +73,10 @@ jobs:
             echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). These are review queues only; no product data was changed."
             echo
             echo "Command status: annotations=${ANNOTATION_STATUS}, AI summaries=${SUMMARY_STATUS}, curation digest=${DIGEST_STATUS}."
+            echo
+            echo "Full downloadable queues, source coverage, digest, and logs: ${SNAPSHOT_URL:-artifact upload unavailable}. Retained for 90 days; the excerpts below are not the backlog."
+            echo "Snapshot upload: ${SNAPSHOT_STATUS}. Replay retained annotation snapshots using the annotations-refresh skill before reviewing; preserve reviewer decisions and deferred rows locally across reviews."
+            echo "Run history: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/agent-maintenance-candidates.yml"
             echo
             echo "## Curation digest"
             echo '```text'

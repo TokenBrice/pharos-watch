@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
+import { CanonicalTextSchema, StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 import {
   V9OperationalResilienceIncidentSchema,
   V9OperationalResilienceLatestAssuranceSchema,
@@ -445,23 +445,12 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
     }
   });
 
-export const SafetyScoreV9OperationalResilienceOverlayFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    note: CanonicalTextSchema,
-    overlays: z.array(SafetyScoreV9OperationalResilienceOverlaySchema),
-  })
-  .strict()
-  .superRefine((file, ctx) => {
-    const assetIds = file.overlays.map((overlay) => overlay.assetId);
-    if (new Set(assetIds).size !== assetIds.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["overlays"],
-        message: "Duplicate operational-resilience overlay assetId",
-      });
-    }
-  });
+export const SafetyScoreV9OperationalResilienceOverlayFileSchema = uniqueKeyedCollectionSchema({
+  itemSchema: SafetyScoreV9OperationalResilienceOverlaySchema,
+  collectionKey: "overlays",
+  duplicateMessage: "Duplicate operational-resilience overlay assetId",
+  noteSchema: CanonicalTextSchema,
+});
 
 export type SafetyScoreV9OperationalResilienceOverlay = z.infer<
   typeof SafetyScoreV9OperationalResilienceOverlaySchema

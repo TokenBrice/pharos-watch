@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { PeggedAsset } from "./enrich-prices";
-import { queuePendingTrackedStablecoinAdditions } from "../../lib/telegram-digest-appendices";
+import { queuePendingTrackedStablecoinAdditions } from "../../lib/telegram/digest-appendices";
 
 export async function queueTrackedAdditionsNotice(
   db: D1Database,

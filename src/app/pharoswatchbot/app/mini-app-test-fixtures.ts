@@ -1,4 +1,21 @@
-import type { TelegramMiniAppState } from "./types";
+import type { SubscribedCoin, TelegramMiniAppState } from "./types";
+
+export function makeSubscribedCoin(
+  alertTypes: Partial<SubscribedCoin["alertTypes"]>,
+  alertOverrides: Partial<NonNullable<SubscribedCoin["alertOverrides"]>> = {},
+): SubscribedCoin {
+  return {
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    name: "USD Coin",
+    alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, ...alertTypes },
+    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, ...alertOverrides },
+    dewsMinBand: null,
+    depegStepBps: null,
+    safetyMode: null,
+    snoozeUntilTs: null,
+  };
+}
 
 export const baseState: TelegramMiniAppState = {
   viewer: { userId: "42", username: "watcher", chatId: "42", chatType: "private", canMutate: true, mutationBlockReason: null },

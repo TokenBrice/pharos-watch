@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
   useBluechipRatings,
@@ -18,7 +18,11 @@ import { COMPARE_COLORS } from "@/lib/compare-config";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import {
+  CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
+  loadClientStablecoinDetail,
+} from "@shared/lib/stablecoins/client-registry";
+import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import {
   buildCompareRadarCohortBaseline,
   deriveComparisonCoins,
@@ -26,6 +30,7 @@ import {
   deriveFlowSeries,
   deriveFlowCardData,
 } from "@/lib/compare-derive";
+import type { ComparisonMeta } from "@/lib/compare-derive";
 import type { StablecoinData } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
@@ -52,10 +57,44 @@ function toFreshnessQuery(
 }
 
 export function useCompareDataModel({
+
   selectedIds,
   flowHours,
   radarCohort,
 }: UseCompareDataModelOptions) {
+  const [clientDetailsById, setClientDetailsById] = useState<ReadonlyMap<string, StablecoinClientDetailMeta>>(
+    new Map(),
+  );
+  const selectedIdsSignature = selectedIds.join("\u0000");
+
+  useEffect(() => {
+    let cancelled = false;
+    const ids = selectedIdsSignature ? selectedIdsSignature.split("\u0000") : [];
+    void Promise.all(ids.map((id) => loadClientStablecoinDetail(id))).then((details) => {
+      if (cancelled) return;
+      setClientDetailsById(
+        new Map(
+          details
+            .filter((detail): detail is StablecoinClientDetailMeta => detail != null)
+            .map((detail) => [detail.id, detail]),
+        ),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedIdsSignature]);
+
+  const comparisonMetaMap = useMemo<ReadonlyMap<string, ComparisonMeta>>(
+    () =>
+      new Map<string, ComparisonMeta>(
+        [...TRACKED_META_BY_ID].map(([id, meta]) => [
+          id,
+          clientDetailsById.get(id) ? { ...meta, ...clientDetailsById.get(id) } : meta,
+        ]),
+      ),
+    [clientDetailsById],
+  );
   const listQuery = useStablecoins();
   const pegQuery = usePegSummary();
   const bluechipQuery = useBluechipRatings();
@@ -172,7 +211,7 @@ export function useCompareDataModel({
     return deriveComparisonCoins({
       selectedIds,
       assetMap,
-      metaMap: TRACKED_META_BY_ID,
+      metaMap: comparisonMetaMap,
       pegCoinMap,
       dexData,
       cardMap,
@@ -182,7 +221,19 @@ export function useCompareDataModel({
       yieldMap,
       stressMap: stress.data?.signals,
     });
-  }, [assetMap, bluechip.data, cardMap, dexData, flowCoinMap, pegCoinMap, redemption.data?.coins, selectedIds, stress.data?.signals, yieldMap]);
+  }, [
+    assetMap,
+    bluechip.data,
+    cardMap,
+    comparisonMetaMap,
+    dexData,
+    flowCoinMap,
+    pegCoinMap,
+    redemption.data?.coins,
+    selectedIds,
+    stress.data?.signals,
+    yieldMap,
+  ]);
 
   const supplySeries = useMemo(() => {
     return deriveSupplySeries({

@@ -1,24 +1,21 @@
-import type { Metadata } from "next";
 import { StablecoinTaxonomyHub } from "@/components/stablecoin-taxonomy-hub";
+import { StablecoinTaxonomyPage } from "@/components/stablecoin-taxonomy-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import {
   getStablecoinTaxonomyHubBreadcrumbItems,
   getStablecoinTaxonomyHubTotal,
   type StablecoinTaxonomyHubRouteConfig,
 } from "@/lib/stablecoin-taxonomy";
 
-export function buildStablecoinTaxonomyHubMetadata(route: StablecoinTaxonomyHubRouteConfig): Metadata {
-  const total = getStablecoinTaxonomyHubTotal(route);
-
-  return buildPageMetadata({
+export function createStablecoinTaxonomyHubRoute(route: StablecoinTaxonomyHubRouteConfig) {
+  const metadata = buildPageMetadata({
     title: route.title,
-    description: route.description(total),
+    description: route.description(getStablecoinTaxonomyHubTotal(route)),
     canonical: route.path,
   });
-}
 
-export function createStablecoinTaxonomyHubPage(route: StablecoinTaxonomyHubRouteConfig) {
-  return function StablecoinTaxonomyHubPage() {
+  function Page() {
     return (
       <StablecoinTaxonomyHub
         breadcrumbName={route.breadcrumbName}
@@ -30,5 +27,22 @@ export function createStablecoinTaxonomyHubPage(route: StablecoinTaxonomyHubRout
         pages={route.pages}
       />
     );
-  };
+  }
+
+  return { metadata, Page };
+}
+
+type TaxonomyPage = StablecoinTaxonomyHubRouteConfig["pages"][number];
+
+export function createStablecoinTaxonomyRoute<TParamKey extends string>(config: {
+  paramKey: TParamKey;
+  pages: ReadonlyArray<TaxonomyPage>;
+  pageBySlug: ReadonlyMap<string, TaxonomyPage>;
+  missingTitle: string;
+}) {
+  return createStaticSlugRoute({
+    ...config,
+    ogImage: "/og-stablecoins.png",
+    render: (page) => <StablecoinTaxonomyPage page={page} />,
+  });
 }

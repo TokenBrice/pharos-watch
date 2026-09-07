@@ -1,0 +1,14 @@
+{
+  "mechanism": "apxusd-apyx",
+  "date": "2026-07-27-accountable-dashboard",
+  "sha256": "bb30a142ffdd6e16eaeb37657834fd4b6480069fd9123cb181eec733eaf14096",
+  "bytes": 1696,
+  "r2Key": "captures/apxusd-apyx/2026-07-27-accountable-dashboard.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "apxusd-apyx",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/apxusd-apyx/2026-07-27-accountable-dashboard.json",
+    "capturedAt": "2026-07-27T18:06:33.899Z"
+  }
+}

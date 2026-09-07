@@ -24,7 +24,7 @@ function isOpsApiRequest(request: Request | undefined): boolean {
 }
 
 function isAccessProtectedAdminHost(request: Request | undefined): boolean {
-  return isOpsApiRequest(request) || isWorkerPreviewRequest(request);
+  return isOpsApiRequest(request);
 }
 
 export function isWorkerPreviewRequest(request: Request | undefined): boolean {

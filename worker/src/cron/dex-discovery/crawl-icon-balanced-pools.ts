@@ -10,7 +10,7 @@ import {
   toStagedPool,
   type CrawlStageContext,
 } from "./staged-pool";
-import type { DexDeploymentProviderCheck } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 
 // Balanced's v1 exchange SCORE is the live contract at
@@ -426,16 +426,16 @@ export async function crawlIconBalancedPoolsStage(input: {
       && nonce - 1 <= ICON_BALANCED_MAX_POOL_ID
       && !transportFailure
       && !schemaDegraded;
-    providerChecks.push({
-      chain: target.chain,
-      address: target.address,
-      provider: ICON_BALANCED_PROVIDER,
-      ...(censusComplete
-        ? { status: "success" as const, observedPoolCount }
+    providerChecks.push(makeDexDeploymentProviderCheck(
+      target,
+      ICON_BALANCED_PROVIDER,
+      censusComplete ? "success" : transportFailure ? "failure" : "degraded",
+      censusComplete
+        ? { observedPoolCount }
         : transportFailure
-          ? { status: "failure" as const, retryable: true as const }
-          : { status: "degraded" as const }),
-    });
+          ? { retryable: true }
+          : undefined,
+    ));
   }
 
   return { providerChecks };

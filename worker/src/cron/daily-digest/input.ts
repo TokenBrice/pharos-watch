@@ -1,5 +1,9 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { DigestInputData } from "@shared/types/digest";
+import {
+  DigestSafetyMapCaptureSchema,
+  type DigestInputData,
+  type DigestSafetyMapCapture,
+} from "@shared/types/digest";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
@@ -78,6 +82,35 @@ export interface DailyDigestInputBuildResult {
     yieldAnomalies: NonNullable<DigestInputData["yieldAnomalies"]>;
     liquidityShifts: NonNullable<DigestInputData["liquidityShifts"]>;
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function buildDigestSafetyMapCapture(
+  inputData: DigestInputData,
+  resolution: unknown,
+): DigestSafetyMapCapture | null {
+  if (inputData.safetyContext?.status !== "available" || !isRecord(resolution) || resolution.kind !== "available") {
+    return null;
+  }
+  if (!isRecord(resolution.manifest)) return null;
+  const manifest = resolution.manifest;
+  const parsed = DigestSafetyMapCaptureSchema.safeParse({
+    imageUrl: resolution.imageUrl,
+    freshness: resolution.freshness,
+    ageDays: resolution.ageDays,
+    manifest: {
+      date: manifest.date,
+      asOfSec: manifest.asOfSec,
+      renderedAtSec: manifest.renderedAtSec,
+      edition: manifest.edition,
+      bytes: manifest.bytes,
+      mapSummary: manifest.mapSummary,
+    },
+  });
+  return parsed.success ? parsed.data : null;
 }
 
 export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigestInputBuildResult> {

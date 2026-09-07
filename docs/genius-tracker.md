@@ -1,8 +1,8 @@
 # GENIUS Compliance Tracker
 
-**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `genius-research` skill encodes the workflow; this spec encodes the rules.
+**Status: shipped as part of `/compliance/`.** U.S. GENIUS Act metadata is the `genius` metadata extension on each tracked stablecoin. It renders in the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`, which keeps the exhaustive registry, and per coin on stablecoin detail pages through the Regulatory Standing card (`src/lib/regulatory-standing.ts`) and the hero passport item. This doc is the **source of truth for the `genius` schema, the status criteria, sourcing requirements, and legal framing** — the companion to [mica-tracker.md](./mica-tracker.md). The `compliance-research` skill (`genius` regime) encodes the workflow; this spec encodes the rules.
 
-GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing-non-goals).
+GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins Act** (Public Law, signed 18 Jul 2025), the U.S. federal payment-stablecoin regime. It is an **informational, source-backed tracking surface, not legal advice** — see [Legal framing](#legal-framing--non-goals).
 
 ---
 
@@ -10,7 +10,7 @@ GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins
 
 GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected at build into the slim global client registry for authorization-status labels and into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's long-form evidence.
 
-**No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** One field does leave the presentation surface: `genius.issuerEntity` seeds the Safety Score V9 issuer key (`worker/src/lib/safety-score-v9-extension.ts`, run by the `compute-safety-score-v9` cron), so edit it with that issuer join in mind; `authorizationStatus` and the rest stay presentation-only. Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
+**No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** One field does leave the presentation surface: `genius.issuerEntity` seeds the Safety Score V9 issuer key (`worker/src/lib/safety-score-v9/extension.ts`, run by the `compute-safety-score-v9` cron), so edit it with that issuer join in mind; `authorizationStatus` and the rest stay presentation-only. Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
 
 GENIUS is modeled as a set of **separate public dimensions**, not one broad "compliant" label, because the statute creates distinct questions: is the asset even a payment stablecoin? who is the issuer and on what pathway? what is the federal/state regulator posture? is there a foreign-issuer exception? has there been enforcement? are reserve/redemption disclosures present?
 
@@ -45,7 +45,7 @@ Required: `applicability`, `authorizationStatus`, `issuerPathway`, `reviewer` (s
 | `monthlyAttestationPresent` | boolean | Monthly reserve attestation exists. |
 | `latestReportDate` | `YYYY-MM-DD` | Date of the latest reserve report. |
 | `notes` | string | Reviewer notes / caveats. |
-| `references` | `GeniusReference[]` | See [Sourcing](#sourcing-source-kinds). |
+| `references` | `GeniusReference[]` | See [Sourcing](#sourcing--source-kinds). |
 | `negativeEvidenceReview` | `{ sourcesChecked[], summary (≥12), reviewer, reviewedAt, references? }` | **Required** when `no-public-authorization-found`. |
 | `reviewer` | string | Who performed the review (e.g. `"Pharos compliance research"`). |
 | `reviewedAt` | `YYYY-MM-DD` | When. |
@@ -94,7 +94,7 @@ The headline `authorizationStatus`. **When uncertain between two statuses, pick 
 | `not-applicable` | The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture (pairs with an excluded/`non-payment-token` applicability). | — |
 | `unknown` | Public posture not resolved from available sources. | — |
 
-**HARD RULE:** never assert `ppsi-approved`, `state-qualified`, or `official-application-pending` without a regulator-grade reference that names the issuer of *this* token (not a same-name affiliate). No fabricated approvals. While the regime is in rulemaking (see [Regime state](#regime-state-effective-date)), genuine `ppsi-approved`/`state-qualified` rows should be exceedingly rare — most honest answers are `issuer-announced-intent` or `no-public-authorization-found`.
+**HARD RULE:** never assert `ppsi-approved`, `state-qualified`, or `official-application-pending` without a regulator-grade reference that names the issuer of *this* token (not a same-name affiliate). No fabricated approvals. While the regime is in rulemaking (see [Regime state](#regime-state--effective-date)), genuine `ppsi-approved`/`state-qualified` rows should be exceedingly rare — most honest answers are `issuer-announced-intent` or `no-public-authorization-found`.
 
 ---
 
@@ -140,7 +140,7 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 ## Sourcing & source kinds
 
-Map token → legal issuer entity → public posture. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `mica-research` editorial workflows.
+Map token → legal issuer entity → public posture. This mapping is manual and not cleanly API-able; treat it like the `reserve-research` / `compliance-research` editorial workflows.
 
 `GeniusReference.sourceKind`, in descending authority for U.S. authorization claims:
 
@@ -185,7 +185,7 @@ npm run check:generated-artifacts
 
 After route/crawlability edits: `npm run typecheck`, `npm run build`, `npm run seo:check`.
 
-Ongoing refresh runs through the `genius-research` skill (single coin / audit) or the saved `compliance-research` workflow (broad MiCA + GENIUS pass). GENIUS status is a tracked attribute, **not** a methodology-scored value — assignment criteria live in this doc, not in `/methodology` versioning.
+Ongoing refresh runs through the `compliance-research` skill (`genius` regime for a single coin or audit; `both` for a broad MiCA + GENIUS pass). GENIUS status is a tracked attribute, **not** a methodology-scored value — assignment criteria live in this doc, not in `/methodology` versioning.
 
 ---
 

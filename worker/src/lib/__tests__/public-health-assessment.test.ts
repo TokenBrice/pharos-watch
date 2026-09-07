@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { assessPublicHealth } from "../public-health-assessment";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 /**
  * Minimal D1 mock that returns a stablecoins cache row and empty results for
@@ -14,7 +15,7 @@ function makeMinimalDb(
   stablecoinPublicationMetadata?: Record<string, unknown>,
 ): D1Database {
   const emptyFirst = async <T>() => null as T | null;
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => ({
       bind: (..._args: unknown[]) => ({
         all: async <T>() => {
@@ -53,7 +54,7 @@ function makeMinimalDb(
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 function makeMintBurnAssessmentDb(
@@ -64,6 +65,7 @@ function makeMintBurnAssessmentDb(
     latestSuccessfulSyncError?: unknown;
     rowCount?: number | null;
     rowCountError?: unknown;
+    sentinelAutoRepairCount?: number;
   } = {},
 ): D1Database {
   const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
@@ -114,15 +116,33 @@ function makeMintBurnAssessmentDb(
   };
   const rowCountLookup: MockTableConfig = {
     match: "item_count",
-    matchBinds: ["mint-burn-growth-watchdog"],
+    matchBinds: ["cron-sentinel", "mint-burn-growth-watchdog"],
     rows: [],
     ...(options.rowCountError
       ? { throwError: options.rowCountError }
       : {
-          first:
-            rowCount == null
-              ? null
-              : { item_count: rowCount, metadata: JSON.stringify({ rowCount }) },
+          first: rowCount == null
+            ? null
+            : options.sentinelAutoRepairCount == null
+              ? {
+                  job: "mint-burn-growth-watchdog",
+                  item_count: rowCount,
+                  metadata: JSON.stringify({ rowCount }),
+                }
+              : {
+                  job: "cron-sentinel",
+                  item_count: rowCount,
+                  metadata: JSON.stringify({
+                    mode: "daily",
+                    sources: {
+                      growth: { status: "ok", itemCount: rowCount },
+                      "repair-debt": {
+                        status: "ok",
+                        metadata: { autoRepairCount: options.sentinelAutoRepairCount },
+                      },
+                    },
+                  }),
+                },
         }),
   };
 
@@ -438,6 +458,17 @@ describe("assessPublicHealth upstream provider enrichment", () => {
 });
 
 describe("assessPublicHealth mint/burn subquery failures", () => {
+  it("reads growth and repair diagnostics from the daily sentinel row", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      rowCount: 7654,
+      sentinelAutoRepairCount: 3,
+    }), nowSec, { logPrefix: "test" });
+
+    expect(result.mintBurn.totalEvents).toBe(7654);
+    expect(result.repairRunnerAutoRepairCount).toBe(3);
+  });
+
   it("preserves timestamp lookup failures as mint/burn query errors", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});

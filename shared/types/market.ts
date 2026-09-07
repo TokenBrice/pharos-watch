@@ -9,11 +9,11 @@ import {
 } from "./core";
 import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
 import {
-  DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
-  ExitRouteObservationSchema,
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 export {
   BluechipRatingSchema,
@@ -51,8 +51,26 @@ export {
   type ExitRouteScope,
 } from "./exit-route";
 
-const PegBucketsSchema = z.record(z.string(), z.number());
-const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const PegBucketsSchema = z.record(z.string(), z.number());
+
+const StablecoinDetailTokenSchema = z.object({
+  date: z.number().optional(),
+  totalCirculatingUSD: PegBucketsSchema.optional(),
+  totalCirculating: PegBucketsSchema.optional(),
+  circulating: PegBucketsSchema.optional(),
+}).passthrough();
+
+/** Public per-coin detail response; provider-specific fields intentionally pass through. */
+export const StablecoinDetailResponseSchema = z.object({
+  price: z.number().nullable().optional(),
+  priceSource: z.string().nullable().optional(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
+  priceObservedAt: z.number().nullable().optional(),
+  tokens: z.array(StablecoinDetailTokenSchema).optional(),
+}).passthrough();
+export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
+
 const PriceSourceConfidenceProfileSchema = z.object({
   activeDexLanes: z.number().int().min(0),
   freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
@@ -61,6 +79,7 @@ const PriceSourceConfidenceProfileSchema = z.object({
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
+    chainId: z.string().optional(),
     current: z.number().finite().nonnegative(),
     circulatingPrevDay: z.number().finite().nonnegative(),
     circulatingPrevWeek: z.number().finite().nonnegative(),
@@ -97,7 +116,7 @@ const StablecoinDataRawSchema = z.object({
   chains: z.array(z.string()),
   contracts: z.array(ContractDeploymentSchema).optional(),
   frozen: z.boolean().optional(),
-  frozenAt: IsoDateSchema.optional(),
+  frozenAt: StrictIsoDateSchema.optional(),
 });
 
 export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
@@ -165,6 +184,8 @@ export const LiquidityPoolSourceFamilySchema = z.enum([
   "tezos",
   "icon-balanced",
   "kava-swap",
+  "osmosis-sqs",
+  "noble-swap",
   "direct_api",
 ]);
 export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;
@@ -351,21 +372,6 @@ const DexPriceSourceSchema = z.object({
   tvl: z.number(),
 });
 
-function enforceDexExitRouteObservations(
-  observations: readonly z.infer<typeof ExitRouteObservationSchema>[] | null | undefined,
-  ctx: z.RefinementCtx,
-) {
-  (observations ?? []).forEach((observation, index) => {
-    if (!DexExitRouteObservationSchema.safeParse(observation).success) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exitRouteObservations", index],
-        message: "invalid DEX exit-route observation",
-      });
-    }
-  });
-}
-
 export const LiquidityEvidenceClassSchema = z.enum([
   "unobserved",
   "measured",
@@ -402,6 +408,7 @@ const DexDeploymentCoverageSchema = z.object({
 
 const DexLiquidityDataSchema = z
   .object({
+    warning: z.string().nullable().optional(),
     totalTvlUsd: z.number(),
     totalVolume24hUsd: z.number(),
     totalVolume7dUsd: z.number().nullable(),
@@ -447,10 +454,9 @@ const DexLiquidityDataSchema = z
     lockedLiquidityPct: z.number().nullable(),
     methodologyVersion: z.string(),
     deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
-    exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservations: DexExitRouteObservationsSchema.nullable().optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  })
-  .superRefine((data, ctx) => enforceDexExitRouteObservations(data.exitRouteObservations, ctx));
+  });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
 export const DexLiquidityHistoryPointSchema = z
@@ -465,10 +471,9 @@ export const DexLiquidityHistoryPointSchema = z
     hasMeasuredLiquidityEvidence: z.boolean(),
     trendworthy: z.boolean(),
     methodologyVersion: z.string(),
-    exitRouteObservations: z.array(ExitRouteObservationSchema).optional(),
+    exitRouteObservations: DexExitRouteObservationsSchema.optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  })
-  .superRefine((data, ctx) => enforceDexExitRouteObservations(data.exitRouteObservations, ctx));
+  });
 export type DexLiquidityHistoryPoint = z.infer<typeof DexLiquidityHistoryPointSchema>;
 
 export const DexLiquidityHistoryResponseSchema = z.array(DexLiquidityHistoryPointSchema);
@@ -480,6 +485,18 @@ const SupplyHistoryPointSchema = z.object({
 });
 export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
 export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
+
+const NonUsdSharePointSchema = z.object({
+  date: z.number(),
+  // Aggregate/share fields are nullable; `total` is emitted only when positive.
+  commodityShare: z.number().nullable(),
+  fiatNonUsdShare: z.number().nullable(),
+  commodity: z.number().nullable(),
+  fiatNonUsd: z.number().nullable(),
+  total: z.number(),
+});
+export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
+export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
@@ -551,7 +568,7 @@ export const DepegEventSchema = z.object({
 });
 export type DepegEvent = z.infer<typeof DepegEventSchema>;
 
-/** Build-time depeg archive written to data/depeg-events.json. */
+/** Build-time depeg archive written to data/depeg-events/*.json. */
 export const DepegEventStoredSnapshotSchema = z.array(
   DepegEventSchema.extend({
     slug: z.string().min(1),

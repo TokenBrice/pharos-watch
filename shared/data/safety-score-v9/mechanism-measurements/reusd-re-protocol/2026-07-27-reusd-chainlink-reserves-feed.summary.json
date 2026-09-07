@@ -1,0 +1,14 @@
+{
+  "mechanism": "reusd-re-protocol",
+  "date": "2026-07-27-reusd-chainlink-reserves-feed",
+  "sha256": "de7a7da0d666571b8896928401e065c90cc433eb8d31bd034512dbad7c52b77f",
+  "bytes": 9952,
+  "r2Key": "captures/reusd-re-protocol/2026-07-27-reusd-chainlink-reserves-feed.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "reusd-re-protocol",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/reusd-re-protocol/2026-07-27-reusd-chainlink-reserves-feed.json",
+    "capturedAt": "2026-07-27T23:46:27Z"
+  }
+}

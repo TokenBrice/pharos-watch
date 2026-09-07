@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { getPriceCache, readCacheWithPolicy, savePriceCache, setCacheIfAbsent } from "../db-cache";
 
 interface FullPriceCacheRow {
@@ -34,7 +35,7 @@ function makeDb(options: {
 }) {
   const queries: string[] = [];
 
-  const db = {
+  const db = makeNoopD1({
     prepare: (sql: string) => {
       queries.push(sql);
       return {
@@ -48,7 +49,7 @@ function makeDb(options: {
         },
       };
     },
-  } as unknown as D1Database;
+  });
 
   return { db, queries };
 }
@@ -151,13 +152,13 @@ describe("getPriceCache", () => {
 
 describe("readCacheWithPolicy", () => {
   it("returns a stale fallback value without presenting it as fresh", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           first: async () => ({ value: JSON.stringify({ count: 4 }), updated_at: 100 }),
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const result = await readCacheWithPolicy(db, {
       key: "test:stale-seed",
@@ -183,7 +184,7 @@ describe("readCacheWithPolicy", () => {
 describe("savePriceCache", () => {
   it("bounds cache freshness timestamps to the local sync time", async () => {
     const statements: Array<{ sql: string; bindings: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...bindings: unknown[]) => {
           statements.push({ sql, bindings });
@@ -191,7 +192,7 @@ describe("savePriceCache", () => {
         },
       }),
       batch: async () => [{ success: true, meta: { changes: 1 }, results: [] }],
-    } as unknown as D1Database;
+    });
 
     await savePriceCache(db, [{
       id: "future-priced-asset",
@@ -209,7 +210,7 @@ describe("savePriceCache", () => {
 
   it("uses synced_at as the monotonic conflict guard while preserving observed_at as updated_at", async () => {
     const statements: Array<{ sql: string; bindings: unknown[] }> = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => ({
         bind: (...bindings: unknown[]) => {
           statements.push({ sql, bindings });
@@ -217,7 +218,7 @@ describe("savePriceCache", () => {
         },
       }),
       batch: async () => [{ success: true, meta: { changes: 1 }, results: [] }],
-    } as unknown as D1Database;
+    });
 
     await savePriceCache(db, [{
       id: "usdc-circle",

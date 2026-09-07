@@ -2,8 +2,8 @@ import { getCache, setCache } from "../../lib/db-cache";
 import {
   PENDING_BACKOFF_SCHEDULE_SEC,
   PENDING_TTL_SEC,
-} from "../../lib/telegram-constants";
-import { logTelegramEvent } from "../../lib/telegram-log";
+} from "../../lib/telegram/constants";
+import { logTelegramEvent } from "../../lib/telegram/log";
 
 const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
 export const TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY = "telegram:global-send-backoff-until";

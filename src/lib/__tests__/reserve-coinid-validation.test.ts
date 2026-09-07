@@ -21,22 +21,6 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
-    "buck-bucket-protocol::BUCK V1 Reservoir USDC and USDT balances::USDC",
-    "Bucket V1 Reservoir combines USDC and USDT balances, so no single coinId is representative.",
-  ],
-  [
-    "buck-bucket-protocol::BUCK V1 Reservoir USDC and USDT balances::USDT",
-    "Bucket V1 Reservoir combines USDC and USDT balances, so no single coinId is representative.",
-  ],
-  [
-    "buck-bucket-protocol::BUCK V2 PSM USDC and USDSUI balances::USDC",
-    "Bucket V2 PSM combines USDC and USDSUI balances, so no single coinId is representative.",
-  ],
-  [
-    "buck-bucket-protocol::BUCK V2 PSM USDC and USDSUI balances::USDS",
-    "Bucket V2 PSM combines USDC and USDSUI balances, so no single coinId is representative.",
-  ],
-  [
     "usdm-mega::USDC and USDtb reserve basket::USDC",
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
   ],
@@ -47,6 +31,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "usdm-mega::USDC and USDtb reserve basket::USDtb",
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDtb coinId would overstate the dependency.",
+  ],
+  [
+    "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDC",
+    "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDC coinId would overstate the dependency.",
+  ],
+  [
+    "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDT",
+    "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDT coinId would overstate the dependency.",
   ],
   [
     "gho-aave::GhoDirectFacilitator GSMs Mainnet::GHO",
@@ -155,10 +147,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "syrupusdt-maple::USDT (deployed as overcollateralized institutional loans)::USDT",
     "Maple does not publish the current split between retained USDT and deployed institutional-credit strategies.",
-  ],
-  [
-    "usg-tangent::Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)::USDC",
-    "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
   ],
   [
     "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDC",

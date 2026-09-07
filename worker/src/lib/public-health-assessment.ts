@@ -35,7 +35,7 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
-import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9-publication-store";
+import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
 import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,
@@ -108,6 +108,7 @@ export interface PublicHealthAssessment {
   mintBurnQueryError: string | null;
   mintBurnLastRunStatus: string | null;
   mintBurnBootstrap: boolean;
+  repairRunnerAutoRepairCount: number | null;
   circuits: Record<string, CircuitRecord>;
   openCircuitCount: number;
   circuitImpactStatus: HealthResponse["status"];
@@ -121,6 +122,23 @@ export interface PublicHealthAssessment {
   stablecoinPublicationImpactStatus: HealthResponse["status"];
   activePriceCoverage: ActivePriceCoverageHealth;
   activePriceCoverageImpactStatus: HealthResponse["status"];
+}
+
+export function buildPublicHealthResponse(
+  assessment: PublicHealthAssessment,
+  timestamp: number,
+): HealthResponse {
+  return {
+    status: assessment.overallStatus,
+    timestamp,
+    warnings: assessment.warnings,
+    caches: assessment.caches,
+    blacklist: assessment.blacklist,
+    mintBurn: assessment.mintBurn,
+    circuits: assessment.circuits,
+    stablecoinPublication: assessment.stablecoinPublication,
+    activePriceCoverage: assessment.activePriceCoverage,
+  };
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
@@ -173,15 +191,45 @@ async function checkDbHealth(
   }
 }
 
-function readMintBurnWatchdogRowCount(row: { item_count: number | null; metadata: string | null } | null): number | null {
-  if (typeof row?.item_count === "number") return row.item_count;
-  if (!row?.metadata) return null;
+interface MintBurnGrowthDiagnosticRow {
+  job: string;
+  item_count: number | null;
+  metadata: string | null;
+}
+
+function readDailySentinelDiagnostics(row: MintBurnGrowthDiagnosticRow | null): {
+  totalEvents: number | null;
+  repairRunnerAutoRepairCount: number | null;
+} {
+  if (!row) return { totalEvents: null, repairRunnerAutoRepairCount: null };
+  if (row.job !== "cron-sentinel") {
+    if (typeof row.item_count === "number") {
+      return { totalEvents: row.item_count, repairRunnerAutoRepairCount: null };
+    }
+  }
+  if (!row.metadata) return { totalEvents: null, repairRunnerAutoRepairCount: null };
 
   try {
-    const metadata = JSON.parse(row.metadata) as { rowCount?: unknown };
-    return typeof metadata.rowCount === "number" ? metadata.rowCount : null;
+    const metadata = JSON.parse(row.metadata) as {
+      rowCount?: unknown;
+      sources?: {
+        growth?: { itemCount?: unknown; metadata?: { rowCount?: unknown } };
+        "repair-debt"?: { metadata?: { autoRepairCount?: unknown } };
+      };
+    };
+    const totalEvents = row.job === "cron-sentinel"
+      ? metadata.sources?.growth?.itemCount ?? metadata.sources?.growth?.metadata?.rowCount
+      : metadata.rowCount;
+    const autoRepairCount = metadata.sources?.["repair-debt"]?.metadata?.autoRepairCount;
+    return {
+      totalEvents: typeof totalEvents === "number" ? totalEvents : null,
+      repairRunnerAutoRepairCount:
+        typeof autoRepairCount === "number" && Number.isSafeInteger(autoRepairCount) && autoRepairCount >= 0
+          ? autoRepairCount
+          : null,
+    };
   } catch {
-    return null;
+    return { totalEvents: null, repairRunnerAutoRepairCount: null };
   }
 }
 
@@ -230,6 +278,7 @@ async function loadMintBurnHealth(
   mintBurnQueryError: string | null;
   mintBurnLastRunStatus: string | null;
   mintBurnBootstrap: boolean;
+  repairRunnerAutoRepairCount: number | null;
 }> {
   try {
     const [latestRun, latestSuccessfulSyncResult, totalEventsResult] = await Promise.all([
@@ -265,13 +314,17 @@ async function loadMintBurnHealth(
             .prepare(
               `SELECT item_count, metadata
                FROM cron_runs
-               WHERE job = ? AND status IN ('ok', 'degraded')
+               WHERE (
+                 job = ?
+                 AND json_extract(metadata, '$.mode') = 'daily'
+                 AND json_extract(metadata, '$.sources.growth.status') IN ('ok', 'degraded')
+               ) OR (job = ? AND status IN ('ok', 'degraded'))
                ORDER BY started_at DESC
                LIMIT 1`,
             )
-            .bind("mint-burn-growth-watchdog")
-            .first<{ item_count: number | null; metadata: string | null }>()
-            .then(readMintBurnWatchdogRowCount),
+            .bind("cron-sentinel", "mint-burn-growth-watchdog")
+            .first<MintBurnGrowthDiagnosticRow>()
+            .then(readDailySentinelDiagnostics),
       ),
     ]);
 
@@ -280,7 +333,10 @@ async function loadMintBurnHealth(
       rowCount: totalEventsResult.error,
     };
     const latestSuccessfulSyncAt = latestSuccessfulSyncResult.ok ? latestSuccessfulSyncResult.value : null;
-    const totalEvents = totalEventsResult.ok ? totalEventsResult.value : null;
+    const dailyDiagnostics = totalEventsResult.ok
+      ? totalEventsResult.value
+      : { totalEvents: null, repairRunnerAutoRepairCount: null };
+    const totalEvents = dailyDiagnostics.totalEvents;
     const sync = buildMintBurnSyncHealth(now, latestSuccessfulSyncAt, latestRun?.status ?? null);
     const mintBurn: HealthResponse["mintBurn"] = {
       totalEvents,
@@ -303,6 +359,7 @@ async function loadMintBurnHealth(
       mintBurnLastRunStatus: latestRun?.status ?? null,
       mintBurnBootstrap:
         !mintBurnQueryError && latestRun?.status == null && latestSuccessfulSyncAt == null,
+      repairRunnerAutoRepairCount: dailyDiagnostics.repairRunnerAutoRepairCount,
     };
   } catch (err) {
     logWorkerEvent({
@@ -320,6 +377,7 @@ async function loadMintBurnHealth(
       mintBurnQueryError: publicHealthErrorMessage("mint-burn"),
       mintBurnLastRunStatus: null,
       mintBurnBootstrap: false,
+      repairRunnerAutoRepairCount: null,
     };
   }
 }
@@ -423,6 +481,7 @@ export async function assessPublicHealth(
       mintBurnQueryError: null,
       mintBurnLastRunStatus: null,
       mintBurnBootstrap: false,
+      repairRunnerAutoRepairCount: null,
       circuits: {},
       openCircuitCount: 0,
       circuitImpactStatus: "healthy",
@@ -629,6 +688,7 @@ export async function assessPublicHealth(
     mintBurnQueryError: mintBurnResult.mintBurnQueryError,
     mintBurnLastRunStatus: mintBurnResult.mintBurnLastRunStatus,
     mintBurnBootstrap: mintBurnResult.mintBurnBootstrap,
+    repairRunnerAutoRepairCount: mintBurnResult.repairRunnerAutoRepairCount,
     circuits: circuitResult.circuits,
     openCircuitCount,
     circuitImpactStatus,

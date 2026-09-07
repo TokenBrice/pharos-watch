@@ -180,6 +180,7 @@ function coverage(overrides: Partial<DdrrV2CoverageRow> = {}): DdrrV2CoverageRow
     }),
     kind: "coverage",
     predictionState: "missed_lock_terminal",
+    actualOutcome: "terminal",
     actualEndedAt: null,
     terminalEvidenceSourceDate: "2026-06-29",
     coverageCause: "lock_missed",

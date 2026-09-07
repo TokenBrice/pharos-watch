@@ -1,4 +1,9 @@
-import type { DigestInputData } from "@shared/types/digest";
+import {
+  DigestSafetyMapCaptureSchema,
+  type DigestInputData,
+  type DigestSafetyContext,
+  type DigestSafetyMapCapture,
+} from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
 import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
@@ -22,6 +27,8 @@ export interface DigestMeta {
   coins?: string[];
   usedCandidateIds?: string[];
   suppressedCandidateIds?: string[];
+  editorialStyleVersion?: string;
+  editorialStyleHash?: string;
 }
 
 export function buildUserPrompt(
@@ -74,7 +81,7 @@ export function buildUserPrompt(
   if (data.topDepegs.length > 0) {
     lines.push("Active depegs by market impact (live deviation × mcap):");
     lines.push(
-      "  IMPORTANT: 'now' is the live deviation — quote THAT as the current state. 'peak' is the event's historical extreme; never present peak as today's deviation.",
+      "  IMPORTANT: 'now' is the live deviation; quote THAT as the current state. 'peak' is the event's historical extreme; never present peak as today's deviation.",
     );
     for (const depeg of data.topDepegs) {
       const age = depeg.ageHours != null ? ` | age ${depeg.ageHours}h` : "";
@@ -247,28 +254,7 @@ export function buildUserPrompt(
     }
   }
 
-  if (data.gradeTransitions && data.gradeTransitions.length > 0) {
-    lines.push("", "Grade Transitions (last 48h):");
-    for (const transition of data.gradeTransitions) {
-      if (transition.model === "v9") {
-        const pillars = transition.currentPillars;
-        const cap = transition.bindingCap
-          ? ` | binding cap=${transition.bindingCap.kind} <=${transition.bindingCap.limit} (${transition.bindingCap.reason})`
-          : "";
-        const reasons = transition.reasonCodes.length > 0
-          ? ` | reasons=${transition.reasonCodes.join(",")}`
-          : "";
-        lines.push(
-          `  ${transition.symbol} | V9 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | backing=${pillars.backing.score}, exit=${pillars.exit.score}, control=${pillars.control.score}${cap}${reasons}`,
-        );
-      } else {
-        const dims = transition.currentDimensions;
-        lines.push(
-          `  ${transition.symbol} | V8 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
-        );
-      }
-    }
-  }
+  pushDailySafetyDeskLines(lines, data);
 
   if (data.safetyScores) {
     const { provenance } = data.safetyScores;
@@ -345,10 +331,10 @@ export function buildUserPrompt(
   const rawFallbacks: string[] = [];
   for (let i = 0; i < recentMeta.length; i++) {
     const entry = recentMeta[i];
-    if (entry.meta) {
-      const meta = entry.meta;
+    const meta = entry.meta;
+    if (meta && Object.keys(meta).some((key) => key !== "editorialStyleVersion" && key !== "editorialStyleHash")) {
       metaLines.push(
-        `  Day -${i + 1}: "${entry.title}" — lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`,
+        `  Day ${i + 1}: "${entry.title}" | lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`,
       );
     } else if (entry.rawText) {
       rawFallbacks.push(`- "${entry.rawText}"`);
@@ -358,10 +344,76 @@ export function buildUserPrompt(
     lines.push("", "Recent digest angles (DO NOT repeat any of these approaches):", ...metaLines);
   }
   if (rawFallbacks.length > 0) {
-    lines.push("", "RECENT DIGESTS — do NOT reuse phrasing, metaphors, or structure:", ...rawFallbacks);
+    lines.push("", "RECENT DIGESTS: do NOT reuse phrasing, metaphors, or structure:", ...rawFallbacks);
   }
 
-  return lines.join("\n");
+  // Keep injected history and curated labels from teaching the model a banned
+  // clause glyph or the weekly prompt's retired "quietly significant" wording.
+  return lines.join("\n")
+    .replace(/[\u2012-\u2015]/g, ",")
+    .replace(/\bquietly\s+significant\b/gi, "gradually material");
+}
+
+export function buildSafetyMapCensusLines(
+  capture: DigestSafetyMapCapture | undefined,
+  safetyContext: DigestSafetyContext | undefined,
+): string[] {
+  if (safetyContext?.status !== "available") return [];
+  const parsed = DigestSafetyMapCaptureSchema.safeParse(capture);
+  if (!parsed.success || parsed.data.manifest.mapSummary.totalMcapUsd <= 0) return [];
+  const map = parsed.data;
+  const summary = map.manifest.mapSummary;
+  const freshness = map.freshness === "current"
+    ? `current; depicts ${map.manifest.date} UTC`
+    : `carried-forward, age ${map.ageDays} day${map.ageDays === 1 ? "" : "s"}; depicts ${map.manifest.date} UTC`;
+  const lines = [
+    `  Safety Map census (${freshness}): ${formatCurrency(summary.totalMcapUsd, 1)} mapped supply across ${summary.gradedCount} graded coins; ${summary.notRatedCount} not rated.`,
+  ];
+  for (const tierName of ["A", "B", "C", "D", "F"] as const) {
+    const tier = summary.tiers.find((candidate) => candidate.tier === tierName);
+    if (!tier) return [];
+    const leaders = tier.leaders.length > 0
+      ? tier.leaders.map((leader) => `${leader.symbol} (${leader.score})`).join(", ")
+      : "none listed";
+    lines.push(
+      `    ${tier.tier} tier: ${tier.count} coins, ${tier.sharePct.toFixed(1)}% of mapped supply; leaders: ${leaders}.`,
+    );
+  }
+  lines.push(
+    "  Census rule: quote tier statistics only from this injected block; do not calculate or infer other tier figures. This census is stock, while grade movers are flow and the only evidence of tier crossings.",
+  );
+  return lines;
+}
+
+function pushDailySafetyDeskLines(lines: string[], data: DigestInputData): void {
+  const censusLines = buildSafetyMapCensusLines(data.safetyMap, data.safetyContext);
+  const transitions = data.safetyContext?.status === "available" ? data.gradeTransitions ?? [] : [];
+  if (censusLines.length === 0 && transitions.length === 0) return;
+  lines.push("", "Safety desk:", ...censusLines);
+  if (transitions.length === 0) {
+    lines.push("  Grade movers (last 48h): none recorded. Do not infer tier crossings from the census.");
+    return;
+  }
+  lines.push("  Grade movers (last 48h; sole per-coin mover source):");
+  for (const transition of transitions) {
+    if (transition.model === "v9") {
+      const pillars = transition.currentPillars;
+      const cap = transition.bindingCap
+        ? ` | binding cap=${transition.bindingCap.kind} <=${transition.bindingCap.limit} (${transition.bindingCap.reason})`
+        : "";
+      const reasons = transition.reasonCodes.length > 0
+        ? ` | reasons=${transition.reasonCodes.join(",")}`
+        : "";
+      lines.push(
+        `    ${transition.symbol} | V9 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | backing=${pillars.backing.score}, exit=${pillars.exit.score}, control=${pillars.control.score}${cap}${reasons}`,
+      );
+    } else {
+      const dims = transition.currentDimensions;
+      lines.push(
+        `    ${transition.symbol} | V8 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
+      );
+    }
+  }
 }
 
 function pushLeadRequirementLines(
@@ -377,13 +429,13 @@ function pushLeadRequirementLines(
     if (requirement.severity === "hard" && requirement.candidateIds.length > 0) {
       lines.push(
         "",
-        `REQUIRED LEAD TODAY: ${requirement.candidateIds.join(", ")} — ${requirement.reason}.`,
+        `REQUIRED LEAD TODAY: ${requirement.candidateIds.join(", ")}; ${requirement.reason}.`,
         "Declare this candidate id as meta.leadSignalId and open with its story. This overrides variety preferences for the lead only.",
       );
     } else if (requirement.mentionTokens && requirement.mentionTokens.length > 0) {
       lines.push(
         "",
-        `REQUIRED MENTION (not the lead): ${requirement.mentionTokens.join(", ")} — ${requirement.reason}.`,
+        `REQUIRED MENTION (not the lead): ${requirement.mentionTokens.join(", ")}; ${requirement.reason}.`,
         "Cover it in at most one sentence; do NOT lead with it. Choose today's lead from the other top candidates.",
       );
     }
@@ -392,7 +444,7 @@ function pushLeadRequirementLines(
 
 function pushCauseContextLines(lines: string[], data: DigestInputData): void {
   if (!data.causeContext || data.causeContext.length === 0) return;
-  lines.push("", "CAUSE CONTEXT (curated, primary-sourced — cite when covering the coin):");
+  lines.push("", "CAUSE CONTEXT (curated, primary-sourced; cite when covering the coin):");
   for (const entry of data.causeContext) {
     lines.push(`  ${entry.symbol} | ${entry.date} | ${entry.kind} | ${entry.label}`);
   }
@@ -418,7 +470,7 @@ function pushOngoingStoryLines(
   if (streakEntries.length === 0) return;
   lines.push(
     "",
-    "ONGOING STORIES (lead-streak ledger — the reader has already seen these as headlines):",
+    "ONGOING STORIES (lead-streak ledger; the reader has already seen these as headlines):",
     ...streakEntries,
     "  Do not re-lead an unchanged ongoing story. Day-counting is not news; only a material change re-qualifies it.",
   );

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
@@ -20,7 +21,7 @@ function makeDb(runFn = vi.fn().mockResolvedValue({ meta: { changes: 1 } })) {
   const bindFn = vi.fn().mockReturnValue({ run: runFn });
   const prepareFn = vi.fn().mockReturnValue({ bind: bindFn });
   return {
-    db: { prepare: prepareFn } as unknown as D1Database,
+    db: makeNoopD1({ prepare: prepareFn }),
     prepareFn,
     bindFn,
     runFn,

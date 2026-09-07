@@ -29,8 +29,9 @@ function build(price: number | null, currentDeviationBps: number | null) {
 
 describe("buildStablecoinTableRowModel peg deviation", () => {
   it("uses the Worker deviation for both display and severity", () => {
-    const model = build(1.00496, 50);
+    const model = build(1.02, -50);
 
+    expect(model.pegDeviationBps).toBe(-50);
     expect(model.absPegDeviationBps).toBe(50);
     expect(model.pegDeviationColorClass).toBe("text-amber-700 dark:text-amber-400");
   });

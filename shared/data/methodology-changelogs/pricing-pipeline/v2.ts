@@ -130,7 +130,7 @@ export const PRICING_PIPELINE_V2: readonly MethodologyChangelogEntry[] = [
         "Made pool challenge threshold peg-type-aware. Added Pyth confidence and RedStone venue agreement gating. " +
         "Downgraded CG+DL-only consensus to single-source.",
       impact: [
-        "Pool-level individual prices added as fourth depeg confirmation source — fixes dUSD-like depegs going undetected",
+        "Pool-level individual prices added as fourth depeg confirmation source, fixing dUSD-like depegs going undetected",
         "Pool challenge threshold now peg-type-aware: 300 bps for non-USD (was 500 bps for all)",
         "Pyth feeds with >200 bps confidence excluded from consensus; 100-200 bps downweighted",
         "RedStone excluded when internal venue agreement < 50%",
@@ -144,13 +144,13 @@ export const PRICING_PIPELINE_V2: readonly MethodologyChangelogEntry[] = [
     },
     {
       version: "2.1",
-      title: "Consensus honesty — independent DL list price, GeckoTerminal probe, pool challenge",
+      title: "Consensus honesty: independent DL list price, GeckoTerminal probe, pool challenge",
       date: "2026-03-16",
       effectiveAt: 1773619200,
       summary:
         "Replaced the DL coins API (which mirrored CoinGecko data, creating illusory 2-source agreement) with the independent DL stablecoins list price. Added GeckoTerminal pool-level cross-check for single-source CG-only assets. Added pool challenge guard that downgrades confidence and replaces price with TVL-weighted pool average when large DEX pools diverge from soft-only consensus.",
       impact: [
-        "Dropped DL coins API from primary consensus — it returned CG-sourced data, making CG+DL agreement tautological",
+        "Dropped DL coins API from primary consensus: it returned CG-sourced data, making CG+DL agreement tautological",
         "Added DefiLlama stablecoins list price (weight 1) as a genuinely independent aggregator voice",
         "Added GeckoTerminal pool probe (weight 1) for single-source CG-only assets with $10K TVL gate",
         "Pool challenge guard: downgrades soft-only high confidence to 'low' when any $100K+ TVL DEX pool diverges ≥500 bps",

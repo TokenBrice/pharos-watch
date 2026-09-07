@@ -1,3 +1,3 @@
 [
-  {"date":"2023-02-13","kind":"regulatory","label":"NYDFS halts Paxos BUSD minting — USDP demand fades","severity":"high","href":"https://www.dfs.ny.gov/consumers/alerts/Paxos_and_Binance","note":"2023-02-13 — NYDFS halted Paxos's BUSD minting; USDP demand and supply contracted from ~$480M toward ~$40M over the following years."}
+  {"date":"2023-02-13","kind":"regulatory","label":"NYDFS halts Paxos BUSD minting: USDP demand fades","severity":"high","href":"https://www.dfs.ny.gov/consumers/alerts/Paxos_and_Binance","note":"2023-02-13: NYDFS halted Paxos's BUSD minting; USDP demand and supply contracted from ~$480M toward ~$40M over the following years."}
 ]

@@ -12,11 +12,14 @@ import {
   type BackfillReplayWindow,
 } from "./backfill-depegs-window";
 import type { BackfillReplayPreview } from "./backfill-depegs-preview";
+import type {
+  BackfillEventProvenanceInput,
+  BackfillRunInput,
+  PersistedBackfillEvent,
+} from "./backfill-depegs/persistence";
 import { buildBackfillPlan } from "./backfill-depegs/planning";
 import { executeBackfillForCoin } from "./backfill-depegs/execution";
 import {
-  type BackfillEventProvenanceInput,
-  type BackfillRunInput,
   buildBackfillEventsFingerprint,
   buildInsertProvenanceStmt,
   buildUpsertBackfillRunStmt,
@@ -30,18 +33,7 @@ export { buildBackfillEventsFingerprint };
 export async function applyBackfillEvents(
   db: D1Database,
   meta: { id: string; symbol: string },
-  events: Array<{
-    pegType: string;
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-    startPrice: number;
-    peakPrice: number;
-    recoveryPrice: number | null;
-    pegRef: number;
-    provenance?: BackfillEventProvenanceInput;
-  }>,
+  events: PersistedBackfillEvent[],
   replayWindow: BackfillReplayWindow | null,
   run?: BackfillRunInput,
 ): Promise<void> {

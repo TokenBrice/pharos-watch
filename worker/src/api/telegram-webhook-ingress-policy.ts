@@ -1,14 +1,14 @@
 import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../lib/telegram";
-import { formatAdministratorMentions, getCachedChatAdministrators } from "../lib/telegram-chat-member";
+import { formatAdministratorMentions, getCachedChatAdministrators } from "../lib/telegram/chat-member";
 import {
   CHAT_COMMAND_FLOOD_LIMIT,
   CHAT_COMMAND_FLOOD_WINDOW_SEC,
   GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
   GROUP_CHAT_COMMAND_FLOOD_LIMIT,
-} from "../lib/telegram-constants";
-import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
-import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+} from "../lib/telegram/constants";
+import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram/log";
+import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
 import { isGroupAdminActor, isGroupChatType } from "./telegram-webhook-auth";
 import { parseStartPayload } from "./telegram-webhook-parsing";
 import type { ReplyFn } from "./telegram-webhook-pending-gate";

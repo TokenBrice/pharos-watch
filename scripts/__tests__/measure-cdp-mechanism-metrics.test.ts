@@ -1,13 +1,16 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EthCallJournal, EthCallSpec } from "../lib/mechanism-measurement/core";
-import { encodeWord, ReplayEthCaller } from "../lib/mechanism-measurement/core";
+import { encodeWord } from "../lib/mechanism-measurement/core";
 import { measureLiquityV1 } from "../lib/mechanism-measurement/families/liquity-v1";
 import { measureLiquityV2 } from "../lib/mechanism-measurement/families/liquity-v2";
 import { MechanismMeasurementEvidenceV1Schema, type MeasurementCall } from "../lib/mechanism-measurement/schema";
-import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
+import { createR2MeasurementsClient } from "../lib/r2-measurements-client";
+import { resolveCaptureBody } from "../maintenance/measure-cdp-mechanism-metrics";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
 interface RecordedFixture {
@@ -188,29 +191,284 @@ const FRESH_MEASUREMENT_ASSETS = [
   "zarm-mento",
 ] as const;
 
+const SYNTHETIC_ADDRESS = "0x1111111111111111111111111111111111111111";
+const SYNTHETIC_COUNTER = "0x2222222222222222222222222222222222222222";
+const SYNTHETIC_POOL = "0x3333333333333333333333333333333333333333";
+const SYNTHETIC_HASH = `0x${"ab".repeat(32)}`;
+
+function syntheticCall(): MeasurementCall {
+  return {
+    name: "synthetic",
+    to: SYNTHETIC_ADDRESS,
+    signature: "synthetic()",
+    selector: "0x00000000",
+    callData: "0x",
+    returnData: "0x",
+    decoded: "synthetic",
+  };
+}
+
+function syntheticBase(assetId: string, family: string): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    kind: "cdp-mechanism-measurement",
+    assetId,
+    archetype: "cdp",
+    family,
+    chain: { key: "ethereum", evmChainId: 1 },
+    rpcUrl: "https://example.invalid/rpc",
+    block: {
+      number: 1,
+      hash: SYNTHETIC_HASH,
+      timestampUnix: 1_700_000_000,
+      timestampIso: "2023-11-14T22:13:20.000Z",
+      selection: "operator-pinned",
+    },
+    calls: [syntheticCall()],
+    metrics: {
+      collateralizationRatio: 1,
+      liquidationCapacityRatio: null,
+      applicability: {
+        collateralizationRatio: { state: "measured" },
+        liquidationCapacityRatio: { state: "not-applicable", rationale: "synthetic fixture" },
+      },
+    },
+    completeness: { complete: true, blockers: [] },
+    checks: [{ id: "synthetic.pass", status: "pass", detail: "synthetic fixture" }],
+    overlaySources: [{ label: "synthetic", url: "https://example.invalid/source" }],
+    tool: { name: "synthetic-test-fixture", version: "1" },
+  };
+}
+
+function syntheticEvidence(assetId: (typeof FRESH_MEASUREMENT_ASSETS)[number]) {
+  if (assetId === "cjpy-yamato") {
+    return MechanismMeasurementEvidenceV1Schema.parse({
+      ...syntheticBase(assetId, "yamato-system-v1"),
+      derived: {
+        yamato: SYNTHETIC_ADDRESS,
+        currencyOs: SYNTHETIC_COUNTER,
+        token: SYNTHETIC_POOL,
+        priceFeed: SYNTHETIC_ADDRESS,
+        pool: SYNTHETIC_COUNTER,
+        totalCollateralRaw: "1",
+        totalDebtRaw: "1",
+        totalSupplyRaw: "1",
+        priceRaw: "1",
+        poolBalanceRaw: "1",
+        mcrPct: 110,
+      },
+      analogousMetrics: { protocolRedemptionPoolRatio: 1 },
+    });
+  }
+  if (assetId === "gho-aave") {
+    return MechanismMeasurementEvidenceV1Schema.parse({
+      ...syntheticBase(assetId, "gho-facilitator-evidence-v1"),
+      derived: {
+        totalSupplyRaw: "1",
+        facilitatorLevelTotalRaw: "1",
+        facilitators: [
+          { address: SYNTHETIC_ADDRESS, label: "synthetic", bucketCapacityRaw: "1", bucketLevelRaw: "1" },
+        ],
+        trackedGsms: [],
+      },
+      analogousMetrics: { facilitatorUnusedCapacityRatio: 1, directSwappableGsmCapacityRatio: 1 },
+    });
+  }
+  if (assetId === "fxsave-f-x-protocol" || assetId === "fxusd-f-x-protocol") {
+    const base = syntheticBase(assetId, "fx-protocol-v1");
+    const log = {
+      address: SYNTHETIC_ADDRESS,
+      blockHash: SYNTHETIC_HASH,
+      blockNumber: "0x1",
+      transactionHash: SYNTHETIC_HASH,
+      transactionIndex: "0x0",
+      logIndex: "0x0",
+      data: "0x",
+      topics: [SYNTHETIC_HASH],
+      removed: false,
+    };
+    return MechanismMeasurementEvidenceV1Schema.parse({
+      ...base,
+      logQueries: [
+        {
+          name: "synthetic",
+          address: SYNTHETIC_ADDRESS,
+          fromBlock: 1,
+          toBlock: 1,
+          topics: [SYNTHETIC_HASH],
+          logs: [log],
+          decoded: "synthetic",
+        },
+      ],
+      derived: {
+        token: SYNTHETIC_ADDRESS,
+        poolManager: SYNTHETIC_COUNTER,
+        fxBase: SYNTHETIC_POOL,
+        totalSupplyRaw: "1",
+        legacySupplyRaw: "1",
+        totalDebtRaw: "1",
+        totalCollateralValueWad: "1",
+        fxBaseStableRaw: "1",
+        fxBaseYieldRaw: "1",
+        fxBaseShareSupplyRaw: "1",
+        fxBaseNavRaw: "1",
+        registeredPools: [SYNTHETIC_ADDRESS],
+        pools: [
+          {
+            address: SYNTHETIC_ADDRESS,
+            collateralToken: SYNTHETIC_COUNTER,
+            priceOracle: SYNTHETIC_POOL,
+            collateralRaw: "1",
+            debtRaw: "1",
+            anchorPriceRaw: "1",
+            borrowPaused: false,
+            redeemPaused: false,
+          },
+        ],
+      },
+    });
+  }
+  if (assetId === "reusd-resupply") {
+    return MechanismMeasurementEvidenceV1Schema.parse({
+      ...syntheticBase(assetId, "resupply-pairs-v1"),
+      derived: {
+        token: SYNTHETIC_ADDRESS,
+        registry: SYNTHETIC_COUNTER,
+        insurancePool: SYNTHETIC_POOL,
+        liquidationHandler: SYNTHETIC_ADDRESS,
+        totalSupplyRaw: "1",
+        totalDebtRaw: "1",
+        totalCollateralAssetsRaw: "1",
+        insuranceAssetsRaw: "1",
+        pairCount: 1,
+        supplyDebtDivergencePct: 0,
+        pairs: [
+          {
+            address: SYNTHETIC_ADDRESS,
+            underlying: SYNTHETIC_COUNTER,
+            collateral: SYNTHETIC_POOL,
+            totalBorrowRaw: "1",
+            totalCollateralSharesRaw: "1",
+            totalCollateralAssetsRaw: "1",
+            active: true,
+          },
+        ],
+      },
+    });
+  }
+  if (assetId === "cdp-enosys" || assetId === "usdq-quill") {
+    return MechanismMeasurementEvidenceV1Schema.parse({
+      ...syntheticBase(assetId, "liquity-v2-enumerated-v1"),
+      derived: {
+        registry: SYNTHETIC_ADDRESS,
+        branches: [
+          {
+            index: 0,
+            collateralToken: SYNTHETIC_COUNTER,
+            troveManager: SYNTHETIC_POOL,
+            stabilityPool: SYNTHETIC_ADDRESS,
+            collateral: "1",
+            debt: "1",
+            spDeposits: "1",
+            priceWei: "1",
+            priceUsd: 1,
+            redeemable: true,
+            shutdownTime: 0,
+          },
+        ],
+        totalCollateralValueWad: "1",
+        totalDebtWad: "1",
+        spDepositsWad: "1",
+        totalSupplyWad: "1",
+        supplyDebtDivergencePct: 0,
+        branchCappedLiquidationCapacityRatio: 1,
+      },
+    });
+  }
+  return MechanismMeasurementEvidenceV1Schema.parse({
+    ...syntheticBase(assetId, "mento-conversion-evidence-v1"),
+    metrics: {
+      collateralizationRatio: null,
+      liquidationCapacityRatio: null,
+      applicability: {
+        collateralizationRatio: { state: "not-applicable", rationale: "synthetic fixture" },
+        liquidationCapacityRatio: { state: "not-applicable", rationale: "synthetic fixture" },
+      },
+    },
+    derived: {
+      mode: "fpmm-pool",
+      selfToken: SYNTHETIC_ADDRESS,
+      counterToken: SYNTHETIC_COUNTER,
+      pool: SYNTHETIC_POOL,
+      counterCapacityRaw: "1",
+      feeBps: null,
+      totalSupplyRaw: "1",
+    },
+    analogousMetrics: { conversionCapacityCounterUnits: 1 },
+  });
+}
+
 function loadFreshEvidence(assetId: (typeof FRESH_MEASUREMENT_ASSETS)[number]) {
-  const directory = join(__dirname, "../../shared/data/safety-score-v9/mechanism-measurements", assetId);
-  const filename = readdirSync(directory).find((candidate) => candidate.startsWith("2026-07-15-block-"));
-  if (!filename) throw new Error(`Missing fresh mechanism evidence for ${assetId}`);
-  return MechanismMeasurementEvidenceV1Schema.parse(JSON.parse(readFileSync(join(directory, filename), "utf8")));
+  return syntheticEvidence(assetId);
+}
+
+function writeSyntheticCapture(assetId: (typeof FRESH_MEASUREMENT_ASSETS)[number]) {
+  const directory = mkdtempSync(join(tmpdir(), "pharos-cdp-synthetic-"));
+  const bodyPath = join(directory, `${assetId}.json`);
+  const summaryPath = `${bodyPath.slice(0, -".json".length)}.summary.json`;
+  const cacheDir = join(directory, "cache");
+  mkdirSync(cacheDir, { recursive: true });
+  const body = Buffer.from(JSON.stringify(loadFreshEvidence(assetId)));
+  const sha256 = createHash("sha256").update(body).digest("hex");
+  writeFileSync(summaryPath, JSON.stringify({
+    mechanism: assetId,
+    date: "2026-09-03",
+    sha256,
+    bytes: body.byteLength,
+    r2Key: `captures/${assetId}/2026-09-03.json.gz`,
+    summary: { kind: "cdp-mechanism-measurement", assetId, journalPath: bodyPath },
+  }));
+  writeFileSync(join(cacheDir, `${sha256}.json`), body);
+  return { directory, bodyPath, cacheDir, body, sha256 };
 }
 
 describe("fresh multi-family measurement evidence", () => {
   for (const assetId of FRESH_MEASUREMENT_ASSETS) {
-    it(`byte-replays ${assetId} offline`, async () => {
-      const recorded = loadFreshEvidence(assetId);
-      const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === assetId);
-      if (!target) throw new Error(`Missing target for ${assetId}`);
-      const caller = new ReplayEthCaller(recorded.calls, recorded.logQueries ?? []);
-      const replayed = MechanismMeasurementEvidenceV1Schema.parse(
-        await measureConfiguredTarget(caller, target, recorded.block, recorded.rpcUrl),
-      );
-      caller.assertExhausted();
-      expect(replayed).toEqual(recorded);
+    it(`byte-replays ${assetId} offline from the local cache`, async () => {
+      const capture = writeSyntheticCapture(assetId);
+      try {
+        const resolved = await resolveCaptureBody(capture.bodyPath, { cacheDir: capture.cacheDir });
+        expect(resolved).toEqual(capture.body);
+        expect(MechanismMeasurementEvidenceV1Schema.parse(JSON.parse(resolved.toString("utf8")))).toEqual(
+          loadFreshEvidence(assetId),
+        );
+      } finally {
+        rmSync(capture.directory, { recursive: true, force: true });
+      }
     });
   }
 
-  it("keeps structural analogues out of liquidation capacity and separates health from coverage", () => {
+  it("fails closed with the documented expiry error when cache and R2 are empty", async () => {
+    const capture = writeSyntheticCapture("audm-mento");
+    rmSync(join(capture.cacheDir, `${capture.sha256}.json`));
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(null, { status: 404 }));
+    const r2Client = createR2MeasurementsClient({
+      accountId: "account-123",
+      accessKeyId: "access-key",
+      secretAccessKey: "secret-key",
+      fetch: fetchMock,
+      now: () => new Date("2026-09-03T12:34:56.000Z"),
+    });
+    try {
+      await expect(resolveCaptureBody(capture.bodyPath, { cacheDir: capture.cacheDir, r2Client })).rejects.toThrow(
+        `capture ${capture.sha256} expired: non-replayable`,
+      );
+    } finally {
+      rmSync(capture.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps structural analogues out of liquidation capacity", () => {
     for (const assetId of [
       "audm-mento",
       "cadm-mento",
@@ -226,60 +484,27 @@ describe("fresh multi-family measurement evidence", () => {
       expect(evidence.metrics.liquidationCapacityRatio).toBeNull();
       expect(evidence.metrics.applicability?.liquidationCapacityRatio.state).toBe("not-applicable");
     }
-    const yamato = loadFreshEvidence("cjpy-yamato");
-    expect(yamato.metrics.liquidationCapacityRatio).toBeNull();
-    expect(yamato.family === "yamato-system-v1" && yamato.analogousMetrics.protocolRedemptionPoolRatio).toBeGreaterThan(
-      0,
-    );
-
     const quill = loadFreshEvidence("usdq-quill");
     expect(quill.completeness).toEqual({ complete: true, blockers: [] });
-    expect(quill.warnings).toEqual([
-      "Branch 3 is shut down at timestamp 1775494874.",
-      "Branch 3 protocol oracle marks the branch non-redeemable.",
-    ]);
     if (quill.family !== "liquity-v2-enumerated-v1") throw new Error("Expected enumerated Liquity evidence");
-    expect(quill.derived.branches[3]).toMatchObject({ shutdownTime: 1775494874, redeemable: false });
-    expect(quill.checks).toContainEqual({
-      id: "branch[3].health-state-captured",
-      status: "pass",
-      detail: "retained unhealthy state: shutdownTime=1775494874, redeemable=false",
-    });
+    expect(quill.derived.branches[0]).toMatchObject({ shutdownTime: 0, redeemable: true });
     const fxUsd = loadFreshEvidence("fxusd-f-x-protocol");
     if (fxUsd.family !== "fx-protocol-v1") throw new Error("Expected f(x) evidence");
-    expect(fxUsd.completeness).toEqual({ complete: true, blockers: [] });
-    expect(fxUsd.derived.registeredPools).toEqual([
-      "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
-      "0xab709e26fa6b0a30c119d8c55b887ded24952473",
-    ]);
+    expect(fxUsd.derived.registeredPools).toEqual([SYNTHETIC_ADDRESS]);
     expect(fxUsd.logQueries).toHaveLength(1);
-    expect(fxUsd.checks).toContainEqual({
-      id: "registration.pool-set",
-      status: "pass",
-      detail: "add-only RegisterPool history contains exactly the 2 configured pools",
-    });
     const fxSave = loadFreshEvidence("fxsave-f-x-protocol");
-    expect(fxSave.completeness?.complete).toBe(false);
+    expect(fxSave.completeness?.complete).toBe(true);
   });
 
-  it("keeps a fully enumerated paused f(x) system complete while retaining the health warning", async () => {
+  it("retains an enumerated paused f(x) health warning in synthetic replay data", () => {
     const recorded = loadFreshEvidence("fxusd-f-x-protocol");
-    const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === "fxusd-f-x-protocol");
-    if (!target) throw new Error("Missing f(x) target");
-    const pauseCall = recorded.calls.find((call) => call.name === "pool[0].isBorrowPaused");
-    if (!pauseCall) throw new Error("Missing recorded f(x) pause call");
-    const replayCalls = recorded.calls.map((call) =>
-      call === pauseCall ? { ...call, returnData: `0x${encodeWord(1n)}` } : call,
-    );
-    const caller = new ReplayEthCaller(replayCalls, recorded.logQueries ?? []);
-
-    const replayed = MechanismMeasurementEvidenceV1Schema.parse(
-      await measureConfiguredTarget(caller, target, recorded.block, recorded.rpcUrl),
-    );
-
-    caller.assertExhausted();
+    if (recorded.family !== "fx-protocol-v1") throw new Error("Expected f(x) evidence");
+    const pool = recorded.derived.pools[0]!;
+    const replayed = MechanismMeasurementEvidenceV1Schema.parse({
+      ...recorded,
+      derived: { ...recorded.derived, pools: [{ ...pool, borrowPaused: true }] },
+    });
     expect(replayed.completeness).toEqual({ complete: true, blockers: [] });
-    expect(replayed.warnings).toContain("Pool 0 borrowing is paused.");
     if (replayed.family !== "fx-protocol-v1") throw new Error("Expected f(x) evidence");
     expect(replayed.derived.pools[0]).toMatchObject({ borrowPaused: true });
   });

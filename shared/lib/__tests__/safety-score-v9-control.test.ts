@@ -3,6 +3,7 @@ import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safe
 import {
   evaluateV9EconomicControl,
   evaluateV9EconomicControlAssetFacts,
+  evaluateV9SubthresholdUnresolvedBridgeJoins,
   projectV9EconomicControlEvaluation,
   type EvaluateV9EconomicControlArgs,
   type V9BridgeControlReview,
@@ -1636,6 +1637,196 @@ describe("Safety Score v9 economic control", () => {
 
     expect(result.reasons.map((reason) => reason.code)).toContain("nonmaterial-bridge-supply-unmatched");
     expect(result.reasons.map((reason) => reason.code)).not.toContain("material-bridge-supply-unmatched");
+
+    // ODR-D5a: the same proof, asked directly, must name the row that failed
+    // rather than returning a bare boolean.
+    const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+    const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
+      {
+        ...facts([tempoControl]),
+        supply: {
+          status: requiredKnown("supply"),
+          selectedBridgeRoutes: [
+            {
+              deploymentRouteKey: "ethereum:native",
+              supplyUsd: 99_997,
+              supplyShare: 0.99997,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "native",
+            },
+            {
+              deploymentRouteKey: tempoControl.deploymentKey,
+              supplyUsd: 2,
+              supplyShare: 0.00002,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "controlled",
+            },
+            {
+              deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
+              supplyUsd: 1,
+              supplyShare: 0.00001,
+              reviewState: "unmatched",
+            },
+          ],
+          selectedRouteSupplyShare: 0.99999,
+          unknownRouteSupplyShare: 0.00001,
+          unreviewedRouteSupplyShare: 0,
+        },
+      },
+      [tempoControl],
+      [{ controlKey: tempoControl.controlKey, tier: "external-validated-network" as const }],
+      materiality.deploymentMaterialSharePct / 100,
+      materiality.commonModeShareThreshold,
+    );
+    expect(join.complete).toBe(false);
+    expect(join.cause).toEqual({
+      code: "reviewed-row-control-unproven",
+      deploymentRouteKey: "tempo:0xtempo",
+      reviewState: "selected-reviewed",
+      reviewedRouteKind: "controlled",
+      supplyShare: 0.00002,
+      controlKeys: [tempoControl.controlKey],
+    });
+  });
+
+  it("proves a clean sub-threshold bridge join and names no failing row", () => {
+    const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+    const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
+      {
+        ...facts(),
+        supply: {
+          status: requiredKnown("supply"),
+          selectedBridgeRoutes: [
+            {
+              deploymentRouteKey: "ethereum:native",
+              supplyUsd: 100_000,
+              supplyShare: 1,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "native",
+            },
+          ],
+          selectedRouteSupplyShare: 1,
+          unknownRouteSupplyShare: 0,
+          unreviewedRouteSupplyShare: 0,
+        },
+      },
+      [],
+      [],
+      materiality.deploymentMaterialSharePct / 100,
+      materiality.commonModeShareThreshold,
+    );
+    expect(join).toEqual({ complete: true, cause: null });
+  });
+  it("ignores a matching umbrella control for a reviewed native supply row", () => {
+    const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+    const materialShareThreshold = materiality.deploymentMaterialSharePct / 100;
+    const residueShare = materialShareThreshold / 2;
+    const nativeControl = control("bridge:native-umbrella", "bridge", {
+      deploymentKey: "ethereum:native",
+    });
+    const bridgeRoutes = [
+      { controlKey: nativeControl.controlKey, tier: "external-validated-network" as const },
+    ] as const;
+    const economicFacts: V9EconomicControlAssetFacts = {
+      ...facts([nativeControl]),
+      supply: {
+        status: requiredKnown("supply"),
+        selectedBridgeRoutes: [
+          {
+            deploymentRouteKey: nativeControl.deploymentKey,
+            supplyUsd: 100 * (1 - residueShare),
+            supplyShare: 1 - residueShare,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "native",
+          },
+          {
+            deploymentRouteKey: "unmatched-chain:fixture-asset:arbitrum",
+            supplyUsd: 100 * residueShare,
+            supplyShare: residueShare,
+            reviewState: "unmatched",
+          },
+        ],
+        selectedRouteSupplyShare: 1 - residueShare,
+        unknownRouteSupplyShare: residueShare,
+        unreviewedRouteSupplyShare: 0,
+      },
+    };
+    const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
+      economicFacts,
+      [nativeControl],
+      bridgeRoutes,
+      materialShareThreshold,
+      materiality.commonModeShareThreshold,
+    );
+
+    // Before the fix, this native control joined the row and made the proof
+    // incomplete, which emitted the nonmaterial residue reason below.
+    expect(join).toEqual({ complete: true, cause: null });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: economicFacts,
+        bridge: { status: requiredKnown("bridge"), routes: bridgeRoutes },
+      }),
+    );
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("nonmaterial-bridge-supply-unmatched");
+  });
+
+  it("keeps an unresolved reviewed bridge row incomplete when its control does not join", () => {
+    const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+    const materialShareThreshold = materiality.deploymentMaterialSharePct / 100;
+    const residueShare = materialShareThreshold / 2;
+    const unmatchedControl = control("bridge:unmatched", "bridge", {
+      deploymentKey: "ethereum:other-deployment",
+    });
+    const bridgeRoutes = [
+      { controlKey: unmatchedControl.controlKey, tier: "external-validated-network" as const },
+    ] as const;
+    const economicFacts: V9EconomicControlAssetFacts = {
+      ...facts([unmatchedControl]),
+      supply: {
+        status: requiredKnown("supply"),
+        selectedBridgeRoutes: [
+          {
+            deploymentRouteKey: "ethereum:bridge-representation",
+            supplyUsd: 100 * (1 - residueShare),
+            supplyShare: 1 - residueShare,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "controlled",
+          },
+          {
+            deploymentRouteKey: "unmatched-chain:fixture-asset:arbitrum",
+            supplyUsd: 100 * residueShare,
+            supplyShare: residueShare,
+            reviewState: "unmatched",
+          },
+        ],
+        selectedRouteSupplyShare: 1 - residueShare,
+        unknownRouteSupplyShare: residueShare,
+        unreviewedRouteSupplyShare: 0,
+      },
+    };
+    const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
+      economicFacts,
+      [unmatchedControl],
+      bridgeRoutes,
+      materialShareThreshold,
+      materiality.commonModeShareThreshold,
+    );
+
+    expect(join.complete).toBe(false);
+    expect(join.cause).toEqual(
+      expect.objectContaining({
+        code: "reviewed-row-control-join-not-unique",
+        deploymentRouteKey: "ethereum:bridge-representation",
+      }),
+    );
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: economicFacts,
+        bridge: { status: requiredKnown("bridge"), routes: bridgeRoutes },
+      }),
+    );
+    expect(result.reasons.map((reason) => reason.code)).toContain("nonmaterial-bridge-supply-unmatched");
   });
 
   it("rejects a required-known reviewed bridge inventory with no route joins", () => {
@@ -1822,6 +2013,44 @@ describe("Safety Score v9 economic control", () => {
       expect(bridgeFallback).toMatchObject({ binding: true, score: 25 });
       expect(bridgeFallback?.score).toBeLessThan(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
       expect(result.score).toBe(25);
+    });
+
+    it("HARD RULE: grades a validator quorum at or below issuer-backend, never above a named multisig", () => {
+      // AUTHORITY-LADDER 9.46. The rung is KNOWN (it no longer holds the flat
+      // default because the authority is unresolved) but it earns no lift: an
+      // anonymous rotating quorum is not stronger than a 3-of-5 Safe.
+      const gradeFor = (authority: NonNullable<V9DeploymentControlFactV2["authority"]>) => {
+        const result = evaluateV9EconomicControl(
+          args({
+            facts: materialityGappedBridgeFacts({ authority, delaySec: null }),
+            bridge: knownBridge,
+          }),
+        );
+        return result.components.find((component) => component.componentKey === "bridge:unverified")!.score;
+      };
+      const quorum = gradeFor({
+        authorityKey: "bridge-route:protocol:layerzero-dvns",
+        model: "validator-quorum",
+        threshold: null,
+      });
+      const issuerBackend = gradeFor({
+        authorityKey: "authority:issuer",
+        model: "issuer-backend",
+        threshold: null,
+      });
+      const namedMultisig = gradeFor({
+        authorityKey: "safe:base:0xbbbb",
+        model: "multisig",
+        threshold: { required: 3, total: 5 },
+      });
+
+      expect(quorum).toBeLessThanOrEqual(issuerBackend);
+      expect(quorum).toBeLessThan(namedMultisig);
+      expect(quorum).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+      // The multisig branch starts from the concentrated rung, which is strictly
+      // above this one, so naming a validation domain can never lift a control
+      // into the multisig class.
+      expect(quorum).toBeLessThan(CONTROL_POLICY.mintPostureQuality["concentrated-admin"]);
     });
 
     it("keeps the flat 45 default when the gapped control authority is NOT verified", () => {

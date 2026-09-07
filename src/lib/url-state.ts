@@ -44,9 +44,10 @@ export type UrlStateField<V> =
   | {
       kind: "enumList";
       defaultValue: V;
-      allowedValues: readonly unknown[];
+      allowedValues?: readonly unknown[];
       delimiter?: string;
       maxItems?: number;
+      normalizeItem?: (value: string) => unknown | null;
     };
 
 export type UrlStateSchema<T> = { [K in keyof T]: UrlStateField<T[K]> };
@@ -97,13 +98,14 @@ function decodeField<V>(
       const raw = params.get(key);
       if (raw == null || raw === "") return field.defaultValue;
       const delimiter = field.delimiter ?? ",";
-      const allowed = field.allowedValues;
       const items: unknown[] = [];
       for (const piece of raw.split(delimiter)) {
         const trimmed = piece.trim();
         if (trimmed === "") continue;
-        if (allowed.includes(trimmed) && !items.includes(trimmed)) {
-          items.push(trimmed);
+        const item = field.normalizeItem ? field.normalizeItem(trimmed) : trimmed;
+        if (item === null) continue;
+        if ((!field.allowedValues || field.allowedValues.includes(item)) && !items.includes(item)) {
+          items.push(item);
         }
       }
       const limited = field.maxItems == null ? items : items.slice(0, field.maxItems);

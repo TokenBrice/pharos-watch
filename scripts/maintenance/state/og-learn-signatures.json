@@ -1,0 +1,51 @@
+{
+  "generatedBy": "scripts/maintenance/build-og-learn-images.ts",
+  "fonts": {
+    "newsreader": "9e25af908d11add17f0e32bb096f119aea11da11bcc5abd7d896e620aa61081c",
+    "geistMono": "a4022744c97e497a45bc1d05e68221104df6829f6cac74552e0fdb03a331c648"
+  },
+  "cards": [
+    {
+      "file": "og-learn-fiat-cash.png",
+      "slug": "fiat-cash",
+      "title": "Fiat-Backed Stablecoins, Explained",
+      "svgSha256": "04a8646c786c476731daec6e5d0c364a3f3f0c8bbd4dabc5eba0bc4597fe53c0"
+    },
+    {
+      "file": "og-learn-tbill.png",
+      "slug": "tbill",
+      "title": "Tokenized Treasury Stablecoins, Explained",
+      "svgSha256": "e6c294bc63fc157d40c537734f7678df10a9c51ee84a381568e5f132cdd6d415"
+    },
+    {
+      "file": "og-learn-cdp.png",
+      "slug": "cdp",
+      "title": "CDP Stablecoins, Explained",
+      "svgSha256": "51f228a481fe0b8db864100f42dce42b62633abbcc5d3aa1124bcb383387c8b8"
+    },
+    {
+      "file": "og-learn-synthetic-delta-neutral.png",
+      "slug": "synthetic-delta-neutral",
+      "title": "Delta-Neutral Stablecoins, Explained",
+      "svgSha256": "ec63d64ecf558b745a1e8a1be53e26a856f7249d54aad8d12a2ee7a0660a502c"
+    },
+    {
+      "file": "og-learn-algorithmic.png",
+      "slug": "algorithmic",
+      "title": "Algorithmic Stablecoins, Explained",
+      "svgSha256": "5b1354efca53c342cd6a62d3333b63d177110cf7a2ecc4279628a00227c81809"
+    },
+    {
+      "file": "og-learn-rwa-credit-fund.png",
+      "slug": "rwa-credit-fund",
+      "title": "Tokenized Credit Fund Stablecoins, Explained",
+      "svgSha256": "8041771af1ac46f8b383a36b0848e009349cd68b62ff6123b9c3614733b364db"
+    },
+    {
+      "file": "og-learn-commodity-claim.png",
+      "slug": "commodity-claim",
+      "title": "Gold and Commodity Tokens, Explained",
+      "svgSha256": "6d34367410825654d5eaf7722b6bba216f3ef284b7f318e819117ec741091da9"
+    }
+  ]
+}

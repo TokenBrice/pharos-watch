@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import { pruneOldDexLiquidityGenerations } from "../persistence";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const openDatabases: ReturnType<typeof createLatestSchemaSqlite>["sqlite"][] = [];
 
@@ -89,7 +90,7 @@ describe("DEX liquidity generation retention", () => {
   });
 
   it("reports cleanup errors without throwing", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -97,7 +98,7 @@ describe("DEX liquidity generation retention", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const retention = await pruneOldDexLiquidityGenerations(db, 1_700_000_000);
 

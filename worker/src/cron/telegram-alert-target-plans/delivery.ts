@@ -1,6 +1,6 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../../lib/db";
-import { PENDING_TTL_SEC } from "../../lib/telegram-constants";
+import { PENDING_TTL_SEC } from "../../lib/telegram/constants";
 import { parseTelegramTargetPlan } from "../telegram-alert-target-plan-contract";
 import { reconcileTelegramAlertJobCounters } from "../telegram-alert-job-target-outcomes";
 import {

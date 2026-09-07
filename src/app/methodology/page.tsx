@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { MethodologySections } from "./sections";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
@@ -69,10 +70,8 @@ export default function MethodologyPage() {
           { name: "Methodology", url: "/methodology/" },
         ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
+      <JsonLdScript
+        json={safeJsonLd(
             buildArticleJsonLd({
               additionalType: "https://schema.org/TechArticle",
               headline: "Methodology: How Pharos Grades Stablecoins",
@@ -91,8 +90,7 @@ export default function MethodologyPage() {
                 "liquidity score",
               ],
             }),
-          ),
-        }}
+          )}
       />
 
       {/* Heading */}

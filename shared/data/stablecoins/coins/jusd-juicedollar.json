@@ -14,18 +14,6 @@
   "geckoId": "juice-dollar",
   "links": [
     {
-      "label": "Website",
-      "url": "https://juicedollar.com/"
-    },
-    {
-      "label": "App",
-      "url": "https://bapp.juicedollar.com/"
-    },
-    {
-      "label": "Docs",
-      "url": "https://docs.juicedollar.com/"
-    },
-    {
       "label": "GitHub",
       "url": "https://github.com/JuiceDollar"
     },
@@ -41,8 +29,18 @@
       "decimals": 18
     }
   ],
-  "collateralQuality": "native",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "launchDate": "2026-01-28"
+  "launchDate": "2026-01-28",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-08-10",
+    "reason": "JUSD redemption ended on 2026-08-10 after issuer control was lost; the website and app were permanently shut down and a new uncontrolled minter became active on-chain.",
+    "source": {
+      "label": "JuiceDollar shutdown notice",
+      "url": "https://raw.githubusercontent.com/JuiceDollar/landingPage/main/index.html"
+    }
+  },
+  "windDownAnnouncedAt": "2026-08-06"
 }

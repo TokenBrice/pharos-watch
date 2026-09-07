@@ -1,0 +1,15 @@
+{
+  "mechanism": "nwisdom-nest",
+  "date": "2026-07-27-nest-api",
+  "sha256": "71a331b45228c9d06dd4aaa3cc7d13b86dcbad1c94841541be89386569ec8b34",
+  "bytes": 3252,
+  "r2Key": "captures/nwisdom-nest/2026-07-27-nest-api.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "nwisdom-nest",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/nwisdom-nest/2026-07-27-nest-api.json",
+    "capturedAt": "Nest API nest-wisdom-vault NAV $2,811,114.29 price 0.95151 supply 2,954,371.78; yield xCRDYX ~$2,782,901 + nTBILL ~$1,022 + liquid ~$21,639; eth getRate 0x53148…=951510; lastPriceUpdate 1785187703 (2026-07-27T21:28:23Z)"
+  }
+}

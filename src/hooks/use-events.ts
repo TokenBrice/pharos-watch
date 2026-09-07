@@ -1,21 +1,20 @@
 "use client";
 
 import { useMemo } from "react";
-import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { TAPE_EVENT_SEVERITY_VALUES, type TapeEventSeverity } from "@shared/types/tape-event-constants";
 import type { TapeEvent, TapeEventsResponse } from "@shared/types/tape-event";
-import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_TAPE } from "@/lib/cron-intervals";
-import { createLazySchema } from "@shared/lib/schema-like";
-import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
+import {
+  FRONTEND_API_QUERY_DESCRIPTORS,
+  TAPE_EVENTS_RESPONSE_BODY_SCHEMA,
+} from "@/lib/api-query-descriptors";
+import { useRegisteredApiQuery } from "./api-hooks";
+import { createApiInfinitePollingQueryOptions, useCursorPages } from "./use-api-query";
 import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
 type TapeEventsResponseBody = Omit<TapeEventsResponse, "_meta">;
-
-const loadTapeEventsResponseBodySchema = createLazySchema<TapeEventsResponseBody>(async () =>
-  (await import("@shared/types/tape-event")).TapeEventsResponseSchema.omit({ _meta: true }),
-);
 
 const TAPE_EVENTS_PAGE_SIZE = 500;
 
@@ -88,30 +87,20 @@ function buildEventsPath(filter: UseEventsFilter, options: BuildEventsPathOption
 function eventsInfiniteQueryOptions(filter: UseEventsFilter = {}) {
   // Infinite event feeds keep a custom descriptor because each page carries a
   // cursor and the first page alone requests the expensive total count.
-  const { staleTime, refetchInterval } = getPollingWindow(CRON_TAPE);
-  return infiniteQueryOptions({
-    queryKey: ["events", "infinite", eventsQueryKeyFilters(filter)] as const,
-    initialPageParam: null as string | null,
-    staleTime,
-    refetchInterval,
-    retry: 2,
+  return createApiInfinitePollingQueryOptions<TapeEventsResponseBody>(
+    ["events", "infinite", eventsQueryKeyFilters(filter)] as const,
+    CRON_TAPE,
+    TAPE_EVENTS_RESPONSE_BODY_SCHEMA,
     // `includeTotal` runs an extra COUNT(*) on D1; only request it on the
     // first page so the badge can show "Showing N of M" without paying the
     // cost on every paginated load.
-    queryFn: async ({ pageParam, signal }) => {
-      const schema = await loadTapeEventsResponseBodySchema();
-      return apiFetchWithMeta<TapeEventsResponseBody>(
-        buildEventsPath(filter, {
-          limit: TAPE_EVENTS_PAGE_SIZE,
-          cursor: pageParam,
-          includeTotal: pageParam == null,
-        }),
-        schema,
-        { signal },
-      );
-    },
-    getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
-  });
+    (cursor) => buildEventsPath(filter, {
+      limit: TAPE_EVENTS_PAGE_SIZE,
+      cursor,
+      includeTotal: cursor == null,
+    }),
+    (page) => page.nextCursor,
+  );
 }
 
 export interface UseEventsOptions {
@@ -149,9 +138,7 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
   // invalidate on unrelated re-renders.
   const pages = query.data?.pages;
 
-  const events = useMemo<TapeEvent[]>(() => pages?.flatMap((page) => page.data.events) ?? [], [pages]);
-  const nextCursor = useMemo(() => pages?.[pages.length - 1]?.data.nextCursor ?? null, [pages]);
-  const meta = useMemo(() => pages?.[0]?.meta ?? null, [pages]);
+  const { events, nextCursor, meta } = useCursorPages<TapeEvent, TapeEventsResponseBody>(pages);
   const total = useMemo(() => pages?.[0]?.data.total ?? null, [pages]);
   const data = useMemo(() => ({ events, nextCursor }), [events, nextCursor]);
 
@@ -186,21 +173,22 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
   const { limit = 20, coin, classSlug, since, type, severityFloor, enabled = true } = options;
   const typeFilters = classSlug ? [`${classSlug}.*`] : type;
   const path = buildEventsPath({ coin, since, type: typeFilters, severityFloor }, { limit });
-  const result = useApiQueryWithMeta<TapeEventsResponseBody>(
-    [
-      "events",
-      "latest",
-      {
-        limit,
-        coin: coin ?? null,
-        since: since ?? null,
-        type: typeFilters ? [...typeFilters].sort() : null,
-        severityFloor: severityFloor ?? null,
-      },
-    ],
-    path,
-    CRON_TAPE,
-    { enabled, schema: loadTapeEventsResponseBodySchema },
+  const result = useRegisteredApiQuery<TapeEventsResponseBody>(
+    FRONTEND_API_QUERY_DESCRIPTORS.latestEvents({
+      queryKey: [
+        "events",
+        "latest",
+        {
+          limit,
+          coin: coin ?? null,
+          since: since ?? null,
+          type: typeFilters ? [...typeFilters].sort() : null,
+          severityFloor: severityFloor ?? null,
+        },
+      ],
+      path,
+    }),
+    { enabled },
   );
   return result;
 }

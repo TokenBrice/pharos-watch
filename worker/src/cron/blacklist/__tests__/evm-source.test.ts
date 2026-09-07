@@ -4,7 +4,7 @@ import { parseEvmLogs } from "../evm-source";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import {
   createBudget,
-  fetchEvmLogsForTopicsWithCompleteness,
+  fetchEvmLogsForTopicWithCompleteness,
   type EtherscanLogEntry,
 } from "../../../lib/evm-logs";
 
@@ -394,7 +394,7 @@ describe("parseEvmLogs", () => {
   });
 });
 
-describe("fetchEvmLogsForTopicsWithCompleteness", () => {
+describe("fetchEvmLogsForTopicWithCompleteness", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -416,10 +416,10 @@ describe("fetchEvmLogsForTopicsWithCompleteness", () => {
         .mockResolvedValueOnce(new Response("server error", { status: 500 })),
     );
 
-    const result = await fetchEvmLogsForTopicsWithCompleteness(
+    const result = await fetchEvmLogsForTopicWithCompleteness(
       1,
       "0x123",
-      [{ index: 0, value: "0xabc" }],
+      "0xabc",
       null,
       0,
       100,

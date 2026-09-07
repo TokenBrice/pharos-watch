@@ -75,7 +75,7 @@ function curatedMeta(id: string, compositionAsOf: string, reviewOverrides: Recor
 function replayFixture(options: {
   liveReserveMap?: Record<string, unknown>;
   liveToFallbackCoins?: string[];
-  supplyById?: Record<string, number>;
+  supplyById?: Record<string, number | null>;
 } = {}) {
   return {
     pipeline: {
@@ -101,6 +101,7 @@ describe("buildCurationExpiryQueue", () => {
       // the 10-day lookahead.
       ["small-expiring", curatedMeta("small-expiring", isoDaysAgo(30))],
       ["big-expiring", curatedMeta("big-expiring", isoDaysAgo(30))],
+      ["unknown-supply-expiring", curatedMeta("unknown-supply-expiring", isoDaysAgo(30))],
       // Inadmissible today (non-zero known unknown): the worklist owns it.
       ["gap-inadmissible", curatedMeta("gap-inadmissible", isoDaysAgo(5), { knownUnknownExposurePct: 1.3 })],
       // Already past the 38-day effective bound: also worklist territory, not preventive.
@@ -114,7 +115,11 @@ describe("buildCurationExpiryQueue", () => {
     const rows = buildCurationExpiryQueue(
       replayFixture({
         liveReserveMap: { "live-covered": [{ name: "live", pct: 100, risk: "low" }] },
-        supplyById: { "big-expiring": 5_000_000, "small-expiring": 10_000 },
+        supplyById: {
+          "big-expiring": 5_000_000,
+          "small-expiring": 10_000,
+          "unknown-supply-expiring": null,
+        },
       }),
       10,
       metaById,
@@ -123,6 +128,7 @@ describe("buildCurationExpiryQueue", () => {
     expect(rows.map((row) => [row.assetId, row.supplyUsd])).toEqual([
       ["big-expiring", 5_000_000],
       ["small-expiring", 10_000],
+      ["unknown-supply-expiring", 0],
     ]);
     expect(rows.every((row) => row.hasCollateralLinks)).toBe(true);
     expect(rows.every((row) => row.adapterState === "none")).toBe(true);

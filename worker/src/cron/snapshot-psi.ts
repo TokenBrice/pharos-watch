@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -45,15 +46,15 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
   } catch (err) {
     rethrowIfAborted(err, signal);
     logWorkerEventArgs("handler", "error", "[snapshot-psi] DB query failed:", err);
-    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_query_failed", error: String(err).slice(0, 200) }) };
+    return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: "db_query_failed", error: String(err).slice(0, 200) } });
   }
 
   if (!row || !row.cnt || row.avg_score == null) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "no-samples-for-yesterday", sampleCount: row?.cnt ?? 0 }),
-    };
+      metadata: { reason: "no-samples-for-yesterday", sampleCount: row?.cnt ?? 0 },
+    });
   }
 
   const score = round1(row.avg_score);

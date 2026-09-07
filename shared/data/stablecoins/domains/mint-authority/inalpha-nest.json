@@ -44,7 +44,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
-            "label": "Blockscout — inALPHA BoringVault",
+            "label": "Blockscout: inALPHA BoringVault",
             "url": "https://eth.blockscout.com/token/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
           },
           {
@@ -52,7 +52,7 @@
             "url": "https://docs.nest.credit/introduction/how-to-use-nest"
           },
           {
-            "label": "Nest Protocol repository — inALPHA deployment",
+            "label": "Nest Protocol repository: inALPHA deployment",
             "url": "https://github.com/plumenetwork/nest-protocol/blob/main/README.md"
           }
         ],
@@ -90,7 +90,7 @@
         },
         "sources": [
           {
-            "label": "Safe API — Nest Alpha Vault owner Safe",
+            "label": "Safe API: Nest Alpha Vault owner Safe",
             "url": "https://app.safe.global/eth:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
           }
         ],
@@ -112,11 +112,11 @@
       "disposition": "scoreable",
       "sources": [
         {
-          "label": "Blockscout — inALPHA BoringVault",
+          "label": "Blockscout: inALPHA BoringVault",
           "url": "https://eth.blockscout.com/token/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
         },
         {
-          "label": "Safe API — Nest Alpha Vault owner Safe",
+          "label": "Safe API: Nest Alpha Vault owner Safe",
           "url": "https://app.safe.global/eth:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
         },
         {

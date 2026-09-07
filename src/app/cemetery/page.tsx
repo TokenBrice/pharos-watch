@@ -4,6 +4,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -40,10 +41,8 @@ export default function CemeteryPage() {
           { name: "Stablecoin Cemetery", url: "/cemetery/" },
         ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd([
+      <JsonLdScript
+        json={safeJsonLd([
             ...buildCollectionItemListJsonLd({
               url: `${SITE_URL}/cemetery/`,
               name: "Stablecoin Cemetery",
@@ -59,8 +58,7 @@ export default function CemeteryPage() {
               })),
             }),
             buildCemeteryDatasetJsonLd(),
-          ]),
-        }}
+          ])}
       />
       <div className="space-y-2">
         <h1 className="pharos-page-title">Stablecoin Cemetery</h1>

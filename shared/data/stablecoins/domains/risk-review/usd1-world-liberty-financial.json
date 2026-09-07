@@ -118,7 +118,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads via TronGrid show this is the issuer's own TransparentUpgradeableProxy TRC20 (name 'World Liberty Financial USD', 18 decimals, implementation TTuTMNMSCAfGNfAsEMn4JbvFQx9UEPmZCA, EIP-1967 admin TKk4R4sjAhKij7NNTpvmnGq9bCpNPiSQeW, owner contract TBZbFrVxJ8uoRQUwGSFXucpa8i2aXzGqJ8) — the same issuer-controlled deployment pattern as the canonical Ethereum token, not a bridge representation. World Liberty Financial's current CCIP route matrix does not list Tron, so Tron supply is issuer-minted directly and no bridge control carries the claim.",
+        "reviewNote": "On-chain reads via TronGrid show this is the issuer's own TransparentUpgradeableProxy TRC20 (name 'World Liberty Financial USD', 18 decimals, implementation TTuTMNMSCAfGNfAsEMn4JbvFQx9UEPmZCA, EIP-1967 admin TKk4R4sjAhKij7NNTpvmnGq9bCpNPiSQeW, owner contract TBZbFrVxJ8uoRQUwGSFXucpa8i2aXzGqJ8), the same issuer-controlled deployment pattern as the canonical Ethereum token, not a bridge representation. World Liberty Financial's current CCIP route matrix does not list Tron, so Tron supply is issuer-minted directly and no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 85415575,

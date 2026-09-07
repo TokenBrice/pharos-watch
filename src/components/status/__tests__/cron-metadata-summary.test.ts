@@ -110,6 +110,27 @@ describe("summarizeCronMetadata", () => {
     ]);
   });
 
+  it("renders sentinel source status and nested duration metadata", () => {
+    expect(summarizeCronMetadata("cron-sentinel", {
+      mode: "daily",
+      sources: {
+        growth: { status: "ok", itemCount: 42 },
+        duration: {
+          status: "degraded",
+          metadata: {
+            runtimeBreaching: ["sync-dex-liquidity"],
+            slotAbandonmentBreaching: [],
+          },
+        },
+      },
+    })).toEqual([
+      "mode daily",
+      "sources growth ok, duration degraded",
+      "runtime breaches sync-dex-liquidity",
+      "slot abandonment none",
+    ]);
+  });
+
   it("surfaces live-reserve artifact cleanup counts and warnings", () => {
     const summary = summarizeCronMetadata("sync-live-reserves", {
       synced: 100,

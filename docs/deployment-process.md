@@ -1,6 +1,6 @@
 # Deployment Process
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Worktree hygiene · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
 
 ## Purpose
 
@@ -10,7 +10,8 @@ This document defines the production deploy flow, the GitHub Actions release gat
 
 1. Pull requests into protected `main` must pass the aggregate validation gate. The resulting merge push triggers production deployment, while a separate Pages-only rebuild workflow refreshes the static export daily. Manual production dispatch is main-only.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one. A request to push, publish, release, or take work to production is authorization to use the required protected-main branch/PR path; it is not authorization for a direct `main` push.
-3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run focused checks before opening its PR; GitHub Actions owns the authoritative release gate.
+3. Merge release pull requests with a merge commit (`gh pr merge --merge`), never with squash or rebase merge. Before declaring the release merged, verify the resulting `main` commit has two parents and contains the recorded PR head SHA.
+4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run focused checks before opening its PR; GitHub Actions owns the authoritative release gate.
 
 ## Release Snapshot State Machine
 
@@ -44,26 +45,29 @@ gh pr create --base main --head "$BRANCH_NAME"
 
 4. Merge only after the required `PR gate` status succeeds. The merge push triggers deployment.
 
-## Repo Pre-Commit Hook
+## Worktree hygiene
 
-In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections, materialize the history-derived projections with `npm run bootstrap:generated:history`, and run `git config core.hooksPath .githooks`, so the repo pre-commit hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`, opting into the history-derived projections per job with its `bootstrap-history` input. If hooks were disabled or overridden locally, re-enable them with:
+Auto-isolated or linked worktrees are disposable only when clean and their branch is merged to `main` (or patch-equivalent: `git cherry main <branch>` shows only `-`). Never remove an unmerged branch on age alone.
+Exclude `.worktrees/` and `.claude/worktrees/` from repository-wide searches. Review output before removal; removal requires the clean-and-merged result or explicit owner approval.
 
 ```bash
-git config core.hooksPath .githooks
+git worktree list --porcelain
+git branch --merged main
+git worktree list --porcelain | awk '/^worktree /{print substr($0,10)}' | while IFS= read -r wt; do
+  [ "$wt" = "$PWD" ] && continue; branch=$(git -C "$wt" branch --show-current); clean=$(git -C "$wt" status --short)
+  if [ -n "$branch" ] && [ -z "$clean" ] && git merge-base --is-ancestor "$branch" main; then
+    printf 'eligible: %s (%s)\n' "$wt" "$branch"; else printf 'preserve/review: %s (%s)\n' "$wt" "${branch:-detached}"; fi
+done
+git worktree prune --dry-run
 ```
 
-Hook behavior:
+## Repo Pre-Commit Hook
 
-1. The pre-commit hook regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its selection, abort, no-op, and bypass semantics are owned by [scripts.md](./scripts.md#operational-notes).
-2. The hook does not run a local test/build gate. GitHub branch protection and the aggregate PR gate are authoritative.
+Hook installation, generated-artifact synchronization, staging, abort, no-op, bypass, and non-validation behavior are owned by [Pre-Commit Hook Mechanics](./scripts.md#pre-commit-hook-mechanics).
 
 ## Local Validation Commands
 
-`npm run check:pr -- --base=<ref>` is the local counterpart to a normal code PR. It reads the committed `base...HEAD` diff, runs changed-file lint and source typing, adds Pages/Worker/Telegram guardrails only when relevant, checks affected generated artifacts, and runs the critical plus dependency-selected Vitest files.
-
-`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, the shared Pages release artifact checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
-
-Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `typecheck:tests` directly when a change affects those broad contracts; they also run in nightly/manual validation.
+Validation behavior for `check:pr`, `check:release`, focused iteration, and nightly/manual lanes is owned by [Testing: Commands](./testing.md#commands) and the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
 
 ## Yield History Cleanup Windows
 
@@ -81,12 +85,12 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 
 Production responsibility is split deliberately:
 
-- `.github/workflows/pull-request-checks.yml` owns adaptive source validation before merge; `.github/workflows/nightly-validation.yml` retains broad regression coverage.
-- `.github/workflows/zizmor.yml` analyzes workflow and composite-action changes before merge, after merge to `main`, and on its weekly backstop.
+- Validation workflow ownership and lane composition are documented in [Testing: CI Pipeline](./testing.md#ci-pipeline).
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
 - `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
 - `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.
-- Broad UI, accessibility, ops, analytics, asset-coherence, and transport checks remain PR, scheduled-monitor, or explicit operator commands; they do not control production mutation or automatic rollback.
+
+PRs do not build the static site. A successful protected merge triggers the dependency-free production deploy classifier after Node setup without installing the workspace, and the production Pages workflow performs the one authoritative build. Worker mutation retains migration checks and activation proof, then records a best-effort write-once D1 activation marker keyed by the verified Cloudflare version ID and timestamped from the matched Cloudflare deployment's `created_on`; Pages publication retains artifact checks and the release-marker proof. Static, Next compiler, and Playwright caches are separate so a job restores only the state it can consume.
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
@@ -111,10 +115,10 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
-1. Check out full history, install the workspace without a browser, and restore the dedicated `.next/cache` compiler cache. Full history remains required for per-route and per-doc generated timestamps.
+1. Check out full history and install the workspace without a browser. Production Pages builds do not restore `.next/cache`: stale Webpack/PostCSS entries can pair new Tailwind class names in HTML with an older generated stylesheet. Full history remains required for per-route and per-doc generated timestamps.
 2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests, confirmed depeg events, and public dataset mirrors concurrently through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning. The orchestration command also writes a machine-readable result JSON under its refresh directory.
-3. Materialize `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it, and build with the production feature-flag environment and restored Next compiler cache. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
-4. Run feature-flag inlining, build-size, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
+3. Materialize `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it, and build with the production feature-flag environment and clean compiler state. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
+4. Run feature-flag inlining, build-size/CSS-integrity, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The CSS-integrity gate reads the emitted `out/_next/static/css` bundles and requires the desktop search-width utility, preventing a stale Tailwind stylesheet from shipping beside newer header HTML. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
 6. Record the commit, run URL, artifact size/file count, refresh mode, immutable deployment URL, marker result, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
 
@@ -133,11 +137,32 @@ Workflow success proves activation identity, not every runtime behavior. The rea
 
 The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. The job records no cron probe at all, because a short deploy job cannot safely wait for and correlate a future scheduled run; observing the first matching scheduled execution stays a human step. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
 
+### Monitoring Without Model Polling
+
+Before observing, record the target SHA/run ID, affected jobs, Worker activation time, expected result/publication contract, and observation deadline. Use one deterministic watcher per target, with progress redirected to the campaign's ignored `agents/` directory. Do independent work while it runs; use completion notifications where supported, otherwise the fewest completion checks the harness permits. Do not repeatedly fetch unchanged state or assign a sub-agent solely to wait.
+
+For GitHub, resolve the exact run for the target SHA once. Native watch mode handles refreshes without model turns. For example, after setting `release_run_id` and `watch_log` to the verified run ID and campaign log path:
+
+```bash
+python3 -c 'import subprocess, sys; subprocess.run(sys.argv[1:], timeout=1800, check=True)' \
+  gh run watch "$release_run_id" --repo TokenBrice/pharos-watch --exit-status --compact --interval 30 \
+  > "$watch_log" 2>&1
+```
+
+The wrapper bounds the watch to 30 minutes; choose another explicit deadline when the run warrants it. For PR checks, use the same wrapper with `gh pr checks <pr-number> --repo TokenBrice/pharos-watch --required --watch --fail-fast --interval 30`. On completion, inspect the exit status and a bounded log tail. Timeout leaves checks/deployment pending; failure routes to CI triage. Do not silently restart the watcher.
+
+For Worker acceptance, reuse the existing commands:
+
+- `npm run ops:watch-worker-cron -- --json` collects a **single snapshot**, not a wait-until-healthy loop. Use it when the relevant execution should already have completed.
+- `npm run ops:night-watch-worker -- --start <iso> --end <iso> --interval-minutes 15 --include-d1 --output <report.md> --evidence-json <evidence.json> --checkpoint-jsonl <samples.jsonl>` collects a fixed observation window. Set campaign-specific scratch paths and a window covering the affected schedule plus its expected runtime. Add admin probes only when needed; supply credentials through the documented environment, never command arguments. Use a process deadline with collection grace beyond the observation end, because the window alone does not bound a stuck external command.
+
+These collectors write evidence; exit zero does not certify health, and night-watch does not stop early on a healthy sample. Read the report and correlate a new affected execution with activation and its expected status, duration, memory, and publication evidence. Pre-deploy successes do not satisfy acceptance. Missing evidence at the deadline remains pending with the next scheduled opportunity recorded. A longer unattended watch belongs in an external scheduler/event-triggered workflow, not an indefinitely continuing agent goal.
+
 ## GitHub Deploy Inputs
 
 Repository settings:
 
-- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. That job accepts either the full static-plus-test validation path or the focused docs-only path and always requires the PR secret scan.
+- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. The gate accepts the validation matrix selected from `scripts/lib/pr-lanes.mts`: either the full static-plus-four-test-shard path or the focused docs-only path, with optional docs and four-shard touched-critical coverage lanes. A single preparation job installs dependencies and caches the generated workspace for the matrix; preflight always requires the strict pinned PR secret scan.
 - The GitHub `production` environment is restricted to `main` and is attached only to the Worker and Pages mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
 

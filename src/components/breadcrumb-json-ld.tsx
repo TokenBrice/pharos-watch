@@ -1,5 +1,6 @@
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 export interface BreadcrumbItem {
   name: string;
@@ -9,10 +10,8 @@ export interface BreadcrumbItem {
 
 export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: safeJsonLd({
+    <JsonLdScript
+      json={safeJsonLd({
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: items.map((item, index) => ({
@@ -21,8 +20,7 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
             name: item.name,
             item: `${SITE_URL}${item.url}`,
           })),
-        }),
-      }}
+        })}
     />
   );
 }

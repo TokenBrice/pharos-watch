@@ -1,0 +1,15 @@
+{
+  "mechanism": "mai-qidao",
+  "date": "2026-07-27-tvl-supply",
+  "sha256": "aa59a094fc1b8237299b5c4814186aa527ed01ab481c455e887a46acb3927b3d",
+  "bytes": 835,
+  "r2Key": "captures/mai-qidao/2026-07-27-tvl-supply.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "protocol-api-mechanism-measurement",
+    "assetId": "mai-qidao",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/mai-qidao/2026-07-27-tvl-supply.json",
+    "capturedAt": "2026-07-27T16:54:43Z"
+  }
+}

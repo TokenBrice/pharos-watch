@@ -14,6 +14,9 @@
  * `agents/ai-summary-candidates.{md,json}` under the gitignored `agents/`
  * scratch folder. It never edits summaries — the rewrite is editorial and is
  * driven by the `write-ai-summaries` skill.
+ * Registered claim tokens are resolved by the page from current data. A valid
+ * token therefore closes value-only drift here, while malformed registrations
+ * remain candidates for evidence review.
  *
  * Live data comes from three authenticated public API endpoints
  * (report-cards/v9, stress-signals, peg-summary). Override the production API
@@ -26,6 +29,8 @@ import { dirname, resolve } from "node:path";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { validateAiSummaryClaimTokens } from "@shared/lib/ai-summary-claims";
+import type { AiSummaryClaimToken } from "@shared/types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   ReportCardsV9CurrentResponseSchema,
@@ -115,6 +120,14 @@ interface Candidate {
   findings: Finding[];
 }
 
+interface SummaryEntry {
+  title?: string;
+  text?: string;
+  updatedAt?: string;
+  factsAsOf?: string;
+  claimTokens?: AiSummaryClaimToken[];
+}
+
 // --- grade vocabulary -------------------------------------------------------
 
 const GRADES = ["A+", "A-", "A", "B+", "B-", "B", "C+", "C-", "C", "D+", "D-", "D", "F"];
@@ -164,11 +177,14 @@ interface LiveEndpoint {
   fixtureName: string;
 }
 
-async function fetchJson(endpoint: LiveEndpoint): Promise<unknown> {
+export async function fetchJson(
+  endpoint: LiveEndpoint,
+  apiKey = API_KEY,
+): Promise<unknown> {
   if (FIXTURES_DIR) {
     return JSON.parse(readFileSync(resolve(FIXTURES_DIR, `${endpoint.fixtureName}.json`), "utf8"));
   }
-  const request = buildMaintenanceApiRequest(endpoint.apiPath, API_KEY, API_BASE_URL);
+  const request = buildMaintenanceApiRequest(endpoint.apiPath, apiKey, API_BASE_URL);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -179,7 +195,7 @@ async function fetchJson(endpoint: LiveEndpoint): Promise<unknown> {
     if (!res.ok) {
       throw new Error(`GET ${endpoint.apiPath} -> ${res.status} ${(await res.text()).slice(0, 160)}`);
     }
-    return res.json();
+    return await res.json();
   } finally {
     clearTimeout(timer);
   }
@@ -317,6 +333,24 @@ function retiredDimensionFinding(
   };
 }
 
+function liquidityFinding(text: string, match: RegExpMatchArray, claimed: string, metric: "grade" | "score"): Finding {
+  // Only a local, explicit old Safety Score context establishes retirement.
+  // DEX liquidity is still a current metric; no live DEX comparison is loaded here.
+  const start = match.index ?? 0;
+  const sentenceStart = Math.max(text.lastIndexOf(".", start), text.lastIndexOf("\n", start)) + 1;
+  const sentenceEnd = text.indexOf(".", start + match[0].length);
+  const context = text.slice(sentenceStart, sentenceEnd < 0 ? text.length : sentenceEnd);
+  const legacy = /\b(?:Safety\s+Score\s+(?:v[1-8]\b|(?:legacy|old|former))|(?:v[1-8]|legacy|old|former)\s+Safety\s+Score)\b/i.test(context)
+    && !/\bDEX\b/i.test(context);
+  return {
+    kind: legacy ? `legacy-liquidity-${metric}` : `liquidity-${metric}-review`,
+    claim: match[0],
+    claimed,
+    current: legacy ? "retired in Safety Score v9" : "manual dated/source review required; no current DEX comparison loaded",
+    severity: legacy ? "medium" : "low",
+  };
+}
+
 export function extractFindings(text: string, cur: Current): Finding[] {
   const t = normalize(text);
   const out: Finding[] = [];
@@ -435,8 +469,14 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   for (const [dimRe, label] of legacyDims) {
     const fwd = new RegExp(`${GRADE_TOKEN}(?:\\s+grade)?\\s+(?:in\\s+)?(?:${dimRe.source})`, "gi");
     const rev = new RegExp(`(?:${dimRe.source})(?:\\s+grade)?\\s+(?:of\\s+)?(?:an?\\s+)?${GRADE_TOKEN}`, "gi");
-    for (const m of t.matchAll(fwd)) push(retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
-    for (const m of t.matchAll(rev)) push(retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
+    for (const pattern of [fwd, rev]) {
+      for (const m of t.matchAll(pattern)) {
+        if (!isGrade(m[1])) continue;
+        push(label === "liquidity"
+          ? liquidityFinding(t, m, m[1], "grade")
+          : retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
+      }
+    }
   }
 
   // 5. DEWS band (+ optional score): "in the Calm band", "DEWS at 10 in the Calm band",
@@ -474,6 +514,10 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   const legacyScoreRe =
     /\b(liquidity|resilience|decentralization|dependency(?:\s+risk)?)\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi;
   for (const m of t.matchAll(legacyScoreRe)) {
+    if (m[1].toLowerCase() === "liquidity") {
+      push(liquidityFinding(t, m, m[2], "score"));
+      continue;
+    }
     push({
       kind: `legacy-${m[1].toLowerCase().replace(/\s+/g, "-")}-score`,
       claim: m[0],
@@ -499,15 +543,30 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   return out;
 }
 
+export function extractSummaryFindings(entry: SummaryEntry, cur: Current): Finding[] {
+  const text = entry.text ?? "";
+  const tokenIssues = validateAiSummaryClaimTokens(text, entry.claimTokens);
+  const findings = extractFindings(text, cur);
+
+  for (const issue of tokenIssues) {
+    findings.push({
+      kind: "claim-token-evidence",
+      claim: issue.token ?? issue.code,
+      claimed: issue.code,
+      current: "registered token, placeholder, source, and factsAsOf must match",
+      severity: "medium",
+    });
+  }
+
+  return findings;
+}
+
 const SEV_RANK: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
 
 // --- main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const summaries = JSON.parse(readFileSync(SUMMARIES_PATH, "utf8")) as Record<
-    string,
-    { title?: string; text?: string; updatedAt?: string; factsAsOf?: string }
-  >;
+  const summaries = JSON.parse(readFileSync(SUMMARIES_PATH, "utf8")) as Record<string, SummaryEntry>;
 
   let current: Map<string, Current>;
   try {
@@ -521,13 +580,16 @@ async function main(): Promise<void> {
 
   const candidates: Candidate[] = [];
   let unmatched = 0;
+  let autoClosedTokenClaims = 0;
   for (const [id, entry] of Object.entries(summaries)) {
     const cur = current.get(id);
     if (!cur) {
       unmatched += 1;
       continue;
     }
-    const findings = extractFindings(entry.text ?? "", cur);
+    const tokenIssues = validateAiSummaryClaimTokens(entry.text ?? "", entry.claimTokens);
+    if (tokenIssues.length === 0) autoClosedTokenClaims += entry.claimTokens?.length ?? 0;
+    const findings = extractSummaryFindings(entry, cur);
     if (findings.length === 0) continue;
     const maxSeverity = findings.reduce<Severity>(
       (acc, f) => (SEV_RANK[f.severity] > SEV_RANK[acc] ? f.severity : acc),
@@ -552,12 +614,13 @@ async function main(): Promise<void> {
     low: candidates.filter((c) => c.maxSeverity === "low").length,
   };
 
-  writeOutputs(candidates, { unmatched, total: Object.keys(summaries).length, counts });
+  writeOutputs(candidates, { unmatched, total: Object.keys(summaries).length, counts, autoClosedTokenClaims });
 
   console.log(
     `Audited ${Object.keys(summaries).length} summaries (${unmatched} not in live report cards).`,
   );
   console.log(`Stale: ${candidates.length}  [high ${counts.high} · medium ${counts.medium} · low ${counts.low}]`);
+  console.log(`Auto-closed tokenised value claims: ${autoClosedTokenClaims}`);
   console.log(`Wrote ${OUTPUT_MD} and ${OUTPUT_JSON}`);
   for (const c of candidates.filter((x) => x.maxSeverity !== "low")) {
     const head = c.findings.filter((f) => f.severity !== "low").map((f) => `${f.kind} ${f.claimed}->${f.current}`);
@@ -567,7 +630,12 @@ async function main(): Promise<void> {
 
 function writeOutputs(
   candidates: Candidate[],
-  meta: { unmatched: number; total: number; counts: Record<Severity, number> },
+  meta: {
+    unmatched: number;
+    total: number;
+    counts: Record<Severity, number>;
+    autoClosedTokenClaims: number;
+  },
 ): void {
   mkdirSync(dirname(OUTPUT_MD), { recursive: true });
 
@@ -580,6 +648,7 @@ function writeOutputs(
     "",
     `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (non-active lifecycle) and were skipped.`,
     `Stale: ${candidates.length} — high ${meta.counts.high}, medium ${meta.counts.medium}, low ${meta.counts.low}.`,
+    `Auto-closed tokenised value claims: ${meta.autoClosedTokenClaims}.`,
     "",
     "Severity: **high** = visible hero contradiction (overall grade or DEWS band changed); ",
     "**medium** = pillar-grade change, a retired V8 dimension claim, or a cited score off by 5+; **low** = minor score/count drift.",

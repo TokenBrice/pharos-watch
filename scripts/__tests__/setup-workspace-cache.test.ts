@@ -16,6 +16,16 @@ function extractStepByNeedle(needle: string): string {
 }
 
 describe("setup-workspace caches", () => {
+  it("guards committed outputs after bootstrap and on restore-only consumers before cache post-save", () => {
+    const guard = extractStepByNeedle("name: Verify bootstrap preserved committed artifacts");
+    expect(guard).toContain("inputs.workspace-cache == 'true' ||");
+    expect(guard).toContain("inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true'");
+    expect(guard).toContain("assertBootstrapTrackedOutputsUnchanged();");
+    expect(guard).not.toContain("continue-on-error");
+    expect(action.indexOf(guard)).toBeGreaterThan(action.indexOf("run: npm run bootstrap:generated:history"));
+    // actions/cache's post-save runs only on job success; no explicit early save.
+    expect(action).not.toContain("actions/cache/save@");
+  });
   it("keeps independently restorable static, Next, and browser caches", () => {
     const staticStep = extractStepByNeedle("key: static-cache-");
     const nextStep = extractStepByNeedle("key: next-cache-");
@@ -66,7 +76,8 @@ describe("setup-workspace caches", () => {
     expect(keyStep).toContain('raw_node_version="${RAW_NODE_VERSION}"');
     expect(keyStep).toContain("^v?([0-9]+)(\\..*)?$");
     expect(keyStep).toContain('echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"');
-    expect(action.match(/steps\.cache-key\.outputs\.node-key/g)).toHaveLength(9);
+    // The manifest workflow adds one workspace cache, keyed by the same normalized Node major.
+    expect(action.match(/steps\.cache-key\.outputs\.node-key/g)).toHaveLength(10);
   });
 
   it("installs Playwright Chromium only when requested", () => {

@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
 ];
 
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES]);
-}
+const mockD1 = createMockD1Preset(DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES);
 
 const loadStablecoinsCacheMock = vi.fn();
 const loadDexLiquiditySnapshotMock = vi.fn();
@@ -68,7 +66,7 @@ vi.mock("../../lib/dex-liquidity", () => ({
   loadDexLiquiditySnapshot: loadDexLiquiditySnapshotMock,
 }));
 
-vi.mock("../../lib/redemption-backstop-sources", () => ({
+vi.mock("../../lib/redemption-backstop/sources", () => ({
   buildFailedRedemptionBackstopEntry: buildFailedRedemptionBackstopEntryMock,
   buildRedemptionBackstopEntry: buildRedemptionBackstopEntryMock,
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
@@ -78,7 +76,7 @@ vi.mock("../../lib/redemption-backstops-store", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
 
-vi.mock("../../lib/live-reserves-store", () => ({
+vi.mock("../../lib/live-reserves/store", () => ({
   loadReserveSnapshotMetadataMap: loadReserveSnapshotMetadataMapMock,
 }));
 
@@ -388,6 +386,27 @@ describe("syncRedemptionBackstops", () => {
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {
     const now = Math.floor(Date.now() / 1000);
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now - 60,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "cusd-cap",
+            symbol: "CUSD",
+            circulating: { peggedUSD: 10_000_000 },
+            price: 0.1668,
+            priceSource: "pyth",
+            priceConfidence: "single-source",
+            priceObservedAt: now - 60,
+            priceUpdatedAt: now - 60,
+            priceObservedAtMode: "upstream",
+            agreeSources: ["pyth"],
+          }),
+          makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
+        ],
+      },
+    });
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(
         makeResolvedSnapshot("cusd-cap", now, {
@@ -409,7 +428,7 @@ describe("syncRedemptionBackstops", () => {
         rows: [
           {
             stablecoin_id: "cusd-cap",
-            peak_deviation_bps: -8332,
+            direction: "below",
             started_at: 1_774_145_097,
           },
         ],
@@ -436,6 +455,8 @@ describe("syncRedemptionBackstops", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.availabilityDegraded).toBe(1);
     expect(metadata.availabilityDegradedIds).toEqual(["cusd-cap"]);
+    expect(metadata.marketImpliedDegraded).toBe(1);
+    expect(metadata.marketEvidenceUncertain).toBe(0);
     expect(metadata.unresolvedCritical).toBe(0);
     expect(metadata.severeActiveDepegThresholdBps).toBe(2500);
   });

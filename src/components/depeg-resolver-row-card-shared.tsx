@@ -19,15 +19,15 @@ import {
 } from "@/components/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
-  return <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{children}</p>;
+  return <p className="pharos-kicker">{children}</p>;
 }
 
 function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
   if (value == null || value === "") return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+    <span className="pharos-meta inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 px-2 py-0.5">
       <span>{label}</span>
-      <span className="font-mono tabular-nums text-foreground">{value}</span>
+      <span className="pharos-numeric text-foreground">{value}</span>
     </span>
   );
 }
@@ -71,7 +71,7 @@ export function CoinLockup({
         <span className="block truncate text-sm font-semibold text-foreground group-hover/lockup:underline">
           {row.symbol}
         </span>
-        <span className="block truncate text-[11px] text-muted-foreground">{row.name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
       </span>
     </Link>
   );
@@ -92,7 +92,7 @@ export function LiveFacts({ row }: { row: DdrDisplayRow }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
-      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">
+      <span className="pharos-kicker font-sans">
         Live incident
       </span>
       <span>

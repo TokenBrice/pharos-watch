@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveCoinTargets } from "../telegram-webhook-resolution";
-import { resolveTicker } from "../../lib/telegram-alerts";
+import { resolveTicker } from "../../lib/telegram/alerts";
 
 describe("resolveCoinTargets", () => {
   it("resolves a single unique ticker", () => {

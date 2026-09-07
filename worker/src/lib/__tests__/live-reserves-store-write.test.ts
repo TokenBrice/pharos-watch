@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
-import { cleanupStaleLiveReserveArtifacts } from "../live-reserves-store-write";
+import { cleanupStaleLiveReserveArtifacts } from "../live-reserves/store-write";
 
 describe("cleanupStaleLiveReserveArtifacts", () => {
   it("chunks stale artifact deletes under the D1 IN-clause bind limit", async () => {

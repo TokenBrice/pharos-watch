@@ -1,7 +1,10 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
+import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
+import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
@@ -11,6 +14,7 @@ import type {
   BluechipRatingsMap,
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
+  NonUsdSharePoint,
   PegSummaryResponse,
   StablecoinChartPoint,
   StablecoinListResponse,
@@ -25,9 +29,14 @@ import type {
   SafetyScoreHistoryV2Response,
 } from "@shared/types/safety-score-history";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import type { HealthResponse } from "@shared/types/status/public-health";
+import type {
+  HealthResponse,
+  PublicStatusHistoryResponse,
+  PublicStatusHistoryWindow,
+} from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
 import type { UsdsStatusResponse } from "@shared/types/stability";
+import type { TapeEventsResponse } from "@shared/types/tape-event";
 import type { YieldAdapterManifestResponse, YieldHistoryResponse, YieldRankingsResponse } from "@shared/types/yield";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import {
@@ -39,6 +48,7 @@ import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stabil
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
 import {
   CRON_15MIN,
+  CRON_1MIN,
   CRON_BLACKLIST,
   CRON_BLUECHIP,
   CRON_CHARTS,
@@ -48,12 +58,85 @@ import {
   CRON_SAFETY_GRADE_HISTORY,
   CRON_SUPPLY_SNAPSHOT,
   CRON_TELEGRAM_PULSE,
+  CRON_TAPE,
   CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
-import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
+import { z } from "zod";
 
-export type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
+export type { NonUsdSharePoint } from "@shared/types/market";
+
+/** First-paint window selected by the stablecoin detail market charts. */
+export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
+/** Expanded window fetched only when a detail chart selects 1Y or All. */
+export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
+
+const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
+
+export const StablecoinLiveSummarySchema = z.object({
+  price: z.number().nullable(),
+  priceSource: z.string().nullable(),
+  priceConfidence: PriceConfidenceSchema.nullable(),
+  priceUpdatedAt: z.number().nullable(),
+  priceObservedAt: z.number().nullable(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
+  priceSyncedAt: z.number().nullable().optional(),
+  consensusSources: z.array(z.string()).optional(),
+  agreeSources: z.array(z.string()).optional(),
+  supplyObservedAt: z.number().nullable(),
+  circulating: StablecoinDetailPegBucketsSchema,
+  circulatingPrevDay: StablecoinDetailPegBucketsSchema,
+  circulatingPrevWeek: StablecoinDetailPegBucketsSchema,
+  circulatingPrevMonth: StablecoinDetailPegBucketsSchema,
+});
+export type StablecoinLiveSummary = z.infer<typeof StablecoinLiveSummarySchema>;
+
+function detailBucketsAt(detail: StablecoinDetailResponse, targetDate: number): Record<string, number> {
+  let nearest: NonNullable<StablecoinDetailResponse["tokens"]>[number] | undefined;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const token of detail.tokens ?? []) {
+    if (token.date == null) continue;
+    const distance = Math.abs(token.date - targetDate);
+    if (distance < nearestDistance) {
+      nearest = token;
+      nearestDistance = distance;
+    }
+  }
+  return nearest?.totalCirculatingUSD ?? {};
+}
+
+/** Project the history-heavy endpoint into only the fields consumed above the fold. */
+export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): StablecoinLiveSummary {
+  const datedTokens = (detail.tokens ?? []).filter(
+    (token): token is typeof token & { date: number } => token.date != null,
+  );
+  const latest = datedTokens.reduce<(typeof datedTokens)[number] | undefined>(
+    (candidate, token) => !candidate || token.date > candidate.date ? token : candidate,
+    undefined,
+  );
+  const latestDate = latest?.date ?? null;
+
+  return StablecoinLiveSummarySchema.parse({
+    price: detail.price ?? null,
+    priceSource: detail.priceSource ?? null,
+    priceConfidence: detail.priceConfidence ?? null,
+    priceUpdatedAt: detail.priceUpdatedAt ?? null,
+    priceObservedAt: detail.priceObservedAt ?? detail.priceUpdatedAt ?? null,
+    priceObservedAtMode: detail.priceObservedAtMode,
+    priceSyncedAt: detail.priceSyncedAt,
+    consensusSources: detail.consensusSources,
+    agreeSources: detail.agreeSources,
+    supplyObservedAt: latestDate,
+    circulating: latest?.totalCirculatingUSD ?? {},
+    circulatingPrevDay: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400),
+    circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400),
+    circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400),
+  });
+}
+
+const StablecoinLiveSummaryResponseSchema = StablecoinDetailResponseSchema.transform(
+  projectStablecoinLiveSummary,
+);
 
 export interface MintBurnEventsDescriptorOptions {
   direction?: string;
@@ -67,6 +150,25 @@ type BlacklistEventsDescriptorInput = {
   queryKey: readonly unknown[];
   path: string;
 };
+
+type TapeEventsResponseBody = Omit<TapeEventsResponse, "_meta">;
+
+type TapeEventsDescriptorInput = {
+  queryKey: readonly unknown[];
+  path: string;
+};
+
+export const TAPE_EVENTS_RESPONSE_BODY_SCHEMA = createLazySchema<TapeEventsResponseBody>(async () =>
+  (await import("@shared/types/tape-event")).TapeEventsResponseSchema.omit({ _meta: true }),
+);
+
+function defineTapeEventsQuery() {
+  return defineParameterizedApiQuery(
+    "meta",
+    TAPE_EVENTS_RESPONSE_BODY_SCHEMA,
+    ({ queryKey, path }: TapeEventsDescriptorInput) => ({ queryKey, path, producerIntervalMs: CRON_TAPE }),
+  );
+}
 
 const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec * 1000,
@@ -84,6 +186,15 @@ const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
  * imports stay lazy and are cached per endpoint declaration.
  */
 export const FRONTEND_API_QUERY_DESCRIPTORS = {
+  stablecoinLiveSummary: defineParameterizedApiQuery(
+    "plain",
+    createLazySchema<StablecoinLiveSummary>(async () => StablecoinLiveSummaryResponseSchema),
+    (stablecoinId: string) => ({
+      queryKey: ["stablecoin-live-summary", stablecoinId] as const,
+      path: API_PATHS.stablecoinDetail(stablecoinId),
+      producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
+    }),
+  ),
   stablecoins: defineApiQuery(
     {
       queryKey: DATA_SURFACE_DESCRIPTORS.stablecoins.queryKey,
@@ -105,6 +216,16 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
+  ),
+  chainsDetail: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
+    (chainId: string) => ({
+      queryKey: ["chains", "detail", chainId] as const,
+      path: API_PATHS.chainsDetail(chainId),
+      producerIntervalMs: CRON_15MIN,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
+    }),
   ),
   bluechipRatings: defineApiQuery(
     {
@@ -181,6 +302,19 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       async () => (await import("@shared/types/status/public-health")).HealthResponseSchema,
     ),
   ),
+  publicStatusHistory: defineParameterizedApiQuery(
+    "plain",
+    createLazySchema<PublicStatusHistoryResponse>(
+      async () => (await import("@shared/types/status/public-health")).PublicStatusHistoryResponseSchema,
+    ),
+    (window: PublicStatusHistoryWindow) => ({
+      queryKey: ["public-status-history", window] as const,
+      path: API_PATHS.publicStatusHistory({ window, limit: 200 }),
+      producerIntervalMs: CRON_1MIN,
+    }),
+  ),
+  latestEvents: defineTapeEventsQuery(),
+  chartAnnotationEvents: defineTapeEventsQuery(),
   blacklistSummary: defineApiQuery(
     {
       queryKey: ["blacklist-summary"] as const,
@@ -358,7 +492,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "plain",
     createLazySchema<NonUsdSharePoint[]>(
-      async () => (await import("@/lib/non-usd-share-schema")).NonUsdShareResponseSchema,
+      async () => (await import("@shared/types/market")).NonUsdShareResponseSchema,
     ),
   ),
   stabilityIndex: STABILITY_INDEX_QUERY_DESCRIPTOR,

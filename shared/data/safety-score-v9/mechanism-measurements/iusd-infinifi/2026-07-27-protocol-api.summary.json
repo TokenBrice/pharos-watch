@@ -1,0 +1,14 @@
+{
+  "mechanism": "iusd-infinifi",
+  "date": "2026-07-27-protocol-api",
+  "sha256": "39d54687119cf10910969b4cc5f5c1d702084fb8d606ad6662f385d1d717fab1",
+  "bytes": 4694,
+  "r2Key": "captures/iusd-infinifi/2026-07-27-protocol-api.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "iusd-infinifi",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/iusd-infinifi/2026-07-27-protocol-api.json",
+    "capturedAt": "2026-07-27T23:09:49Z"
+  }
+}

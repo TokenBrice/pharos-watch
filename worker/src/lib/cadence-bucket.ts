@@ -1,6 +1,7 @@
 import { getCache } from "./db-cache";
 import type { CronResult } from "./cron-logger";
 import { parseJsonObject } from "./json-parse";
+import { logWorkerEvent } from "./structured-log";
 
 interface CadenceMarker {
   version: 1;
@@ -54,7 +55,7 @@ export function cadenceBucketFor(scheduledAtSec: number, cadenceSec: number): nu
   return Math.floor(scheduledAtSec / cadenceSec);
 }
 
-export function appendCadenceResultMetadata(
+function appendCadenceResultMetadata(
   result: CronResult,
   cadence: Record<string, unknown>,
 ): CronResult {
@@ -160,4 +161,74 @@ export function failCadenceBucket(
   nowSec: number = Math.floor(Date.now() / 1000),
 ): Promise<boolean> {
   return transitionClaim(db, claim, "failed", nowSec);
+}
+
+export async function runCadenceBucketPublication(
+  db: D1Database,
+  options: {
+    key: string;
+    cadenceSec: number;
+    staleClaimAfterSec: number;
+    scheduledAtSec: number;
+    startedAtSec: number;
+    job: string;
+    releaseFailureEvent: string;
+    releaseFailureMessage: string;
+    publication: () => Promise<CronResult>;
+  },
+): Promise<CronResult> {
+  const bucket = cadenceBucketFor(options.scheduledAtSec, options.cadenceSec);
+  const claimResult = await claimCadenceBucket(db, {
+    key: options.key,
+    bucket,
+    nowSec: options.startedAtSec,
+    staleClaimAfterSec: options.staleClaimAfterSec,
+  });
+  if (claimResult.kind === "skip") {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: claimResult.reason === "already-completed"
+          ? "cadence_bucket_completed"
+          : "cadence_bucket_in_progress",
+        cadence: {
+          bucket,
+          observedBucket: claimResult.bucket,
+          cadenceSec: options.cadenceSec,
+        },
+      }),
+    };
+  }
+
+  try {
+    const result = await options.publication();
+    const resultMetadata = parseJsonObject(result.metadata) ?? {};
+    if (resultMetadata.lastWriteAdvanced !== true) {
+      await failCadenceBucket(db, claimResult.claim);
+      return appendCadenceResultMetadata(
+        { ...result, status: "degraded" },
+        { bucket, cadenceSec: options.cadenceSec, completed: false, retryable: true },
+      );
+    }
+    const completed = await completeCadenceBucket(db, claimResult.claim);
+    return appendCadenceResultMetadata(
+      completed ? result : { ...result, status: "degraded" },
+      { bucket, cadenceSec: options.cadenceSec, completed, retryable: !completed },
+    );
+  } catch (error) {
+    try {
+      await failCadenceBucket(db, claimResult.claim);
+    } catch (transitionError) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: options.releaseFailureEvent,
+        job: options.job,
+        message: options.releaseFailureMessage,
+        error: transitionError,
+        metadata: { bucket },
+      });
+    }
+    throw error;
+  }
 }

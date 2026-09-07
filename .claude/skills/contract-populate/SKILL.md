@@ -1,1 +1,0 @@
-../../../.codex/skills/contract-populate/SKILL.md

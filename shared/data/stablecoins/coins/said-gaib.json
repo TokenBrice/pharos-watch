@@ -14,7 +14,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "aid-gaib",
   "collateral": "AID staked into GAIB's ERC-4626 sAID vault; vault capital is deployed into AI infrastructure financings (GPUs, robotics, and related compute) plus a stable reserve buffer of T-bills and stablecoins for liquidity",
-  "pegMechanism": "sAID is not pegged to $1; it is minted by staking AID at the staking NAV (which ignores unrealized losses, keeping the mint price stable) and redeemed through a monthly withdrawal-cohort cycle: requests submitted within a calendar month are aggregated, liquidity is sourced the following month, and funds settle on the first day of the third month at the unstaking NAV (which subtracts unrealized losses). Selling sAID on a supported DEX is the immediate-liquidity alternative.",
+  "pegMechanism": "sAID is minted by staking AID at the staking NAV (which ignores unrealized losses, keeping the mint price stable) rather than pegged to $1. Redemptions follow a monthly withdrawal-cohort cycle: requests submitted within a calendar month are aggregated, liquidity is sourced the following month, and funds settle on the first day of the third month at the unstaking NAV (which subtracts unrealized losses). Selling sAID on a supported DEX is the immediate-liquidity alternative.",
   "mechanismArchetype": "rwa-credit-fund",
   "archetypeOverride": true,
   "detailProvider": "coingecko",

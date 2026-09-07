@@ -25,19 +25,19 @@
         ],
         "sources": [
           {
-            "label": "ICRC API — GLDT ledger minting account (read 2026-07-27)",
+            "label": "ICRC API: GLDT ledger minting account (read 2026-07-27)",
             "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
           },
           {
-            "label": "IC API — swap canister controllers (read 2026-07-27)",
+            "label": "IC API: swap canister controllers (read 2026-07-27)",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6f6ua-hqaaa-aaaar-qairq-cai"
           },
           {
-            "label": "GoldDAO/gold-dao repository — canister_ids.json",
+            "label": "GoldDAO/gold-dao repository: canister_ids.json",
             "url": "https://github.com/GoldDAO/gold-dao"
           },
           {
-            "label": "Gold DAO whitepaper — GLDT swap",
+            "label": "Gold DAO whitepaper: GLDT swap",
             "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2F1ybIyXj78WyXQ1UO6Clj%2FGoldDAO_Whitepaper.pdf?alt=media&token=7dce3beb-cc89-406f-a2df-a83b3737a021"
           }
         ]
@@ -57,15 +57,15 @@
         "capDescription": "The Internet Computer SNS DAO is the controlling authority of the GLDT swap and ledger canisters and can upgrade their code, so governance can alter the mint rule and its economic bound; GLDT is issued and governed by the Gold DAO.",
         "sources": [
           {
-            "label": "Internet Computer API — GLDT ledger",
+            "label": "Internet Computer API: GLDT ledger",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
           },
           {
-            "label": "Internet Computer API — Gold DAO Root",
+            "label": "Internet Computer API: Gold DAO Root",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
           },
           {
-            "label": "Internet Computer API — Gold DAO Governance",
+            "label": "Internet Computer API: Gold DAO Governance",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tr3th-kiaaa-aaaaq-aab6q-cai"
           }
         ],
@@ -73,7 +73,7 @@
       }
     ],
     "review": {
-      "evidence": "Follow-up 2026-07-27 resolves the 2026-07-20 open questions with reproducible primary ICP reads. (1) The ICRC API's GLDT ledger metadata returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai (total supply 59450000000000 at 8 decimals), binding the live ledger minting account to the Gold DAO dapp/swap canister. (2) The IC API enumerates the complete controller chain: the minting canister and the GLDT ledger are each controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, Root is controlled by Gold DAO Governance tr3th-kiaaa-aaaaq-aab6q-cai, and Governance is controlled by Root — the standard SNS loop, so the Gold DAO SNS is the only authority that can alter the mint code or its economic bound, via proposal-driven canister upgrade. (3) The live code path enforcing the 100-GLDT-per-gram locked-GLD-NFT rule remains unverified at source level; the bound is taken from the issuer whitepaper, so confidence stays manual-review rather than verified. GLDT supply is backed by locked GLD NFTs representing KPMG-audited Swiss vault gold on a quarterly attestation cycle.",
+      "evidence": "Follow-up 2026-07-27 resolves the 2026-07-20 open questions with reproducible primary ICP reads. (1) The ICRC API's GLDT ledger metadata returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai (total supply 59450000000000 at 8 decimals), binding the live ledger minting account to the Gold DAO dapp/swap canister. (2) The IC API enumerates the complete controller chain: the minting canister and the GLDT ledger are each controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, Root is controlled by Gold DAO Governance tr3th-kiaaa-aaaaq-aab6q-cai, and Governance is controlled by Root, the standard SNS loop, so the Gold DAO SNS is the only authority that can alter the mint code or its economic bound, via proposal-driven canister upgrade. (3) The live code path enforcing the 100-GLDT-per-gram locked-GLD-NFT rule remains unverified at source level; the bound is taken from the issuer whitepaper, so confidence stays manual-review rather than verified. GLDT supply is backed by locked GLD NFTs representing KPMG-audited Swiss vault gold on a quarterly attestation cycle.",
       "reviewer": "P2 mint-free cohort; Kimi data review (2026-07-27)",
       "reviewedAt": "2026-07-27",
       "sources": [
@@ -82,23 +82,23 @@
           "url": "https://docs.gold-dao.org/other/key-canisters"
         },
         {
-          "label": "ICRC API — GLDT ledger minting account (read 2026-07-27)",
+          "label": "ICRC API: GLDT ledger minting account (read 2026-07-27)",
           "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
         },
         {
-          "label": "Internet Computer API — GLDT ledger",
+          "label": "Internet Computer API: GLDT ledger",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
         },
         {
-          "label": "Internet Computer API — Gold DAO Root",
+          "label": "Internet Computer API: Gold DAO Root",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         },
         {
-          "label": "Internet Computer API — Gold DAO Governance",
+          "label": "Internet Computer API: Gold DAO Governance",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tr3th-kiaaa-aaaaq-aab6q-cai"
         },
         {
-          "label": "Gold DAO whitepaper — GLDT swap",
+          "label": "Gold DAO whitepaper: GLDT swap",
           "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2F1ybIyXj78WyXQ1UO6Clj%2FGoldDAO_Whitepaper.pdf?alt=media&token=7dce3beb-cc89-406f-a2df-a83b3737a021"
         }
       ],
@@ -118,11 +118,11 @@
           "url": "https://docs.gold-dao.org/other/key-canisters"
         },
         {
-          "label": "Internet Computer API — GLDT ledger",
+          "label": "Internet Computer API: GLDT ledger",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
         },
         {
-          "label": "Internet Computer API — Gold DAO Root",
+          "label": "Internet Computer API: Gold DAO Root",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
       ]

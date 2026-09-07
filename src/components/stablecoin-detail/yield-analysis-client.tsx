@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,7 +32,11 @@ import {
   type YieldPeerRelation,
   type YieldPeerSafetyBand,
 } from "@/lib/yield-peers";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import {
+  CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
+  loadClientStablecoinDetail,
+} from "@shared/lib/stablecoins/client-registry";
+import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type { YieldHistoryPoint } from "@shared/types";
@@ -377,6 +381,17 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   const rankingsQuery = useYieldRankings();
   const historyQuery = useYieldHistory(id, { days: 90, mode: "best" });
   const { getParam, replaceParams } = useUrlFilters();
+  const [coinDetail, setCoinDetail] = useState<StablecoinClientDetailMeta | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadClientStablecoinDetail(id).then((detail) => {
+      if (!cancelled) setCoinDetail(detail);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const coin = TRACKED_META_BY_ID.get(id);
   const shouldHaveYieldData = coin?.flags.yieldBearing ?? false;
@@ -398,11 +413,11 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           lifecycle: coin?.status ?? "active",
           shouldHaveYieldData,
           mode: "full-page",
-          inactiveReason: coin?.listingStatusReview?.reason,
+          inactiveReason: coinDetail?.listingStatusReview?.reason,
         },
         requestedSourceKeys,
       ),
-    [coin?.listingStatusReview?.reason, coin?.status, id, rankingsQuery.data, requestedSourceKeys, shouldHaveYieldData],
+    [coin?.status, coinDetail?.listingStatusReview?.reason, id, rankingsQuery.data, requestedSourceKeys, shouldHaveYieldData],
   );
   const readyModel = detailModel.status === "ready" ? detailModel : null;
   const ranking = readyModel?.ranking ?? null;

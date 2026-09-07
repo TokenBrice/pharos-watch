@@ -1,4 +1,4 @@
-import { resolveTicker, type ResolvedCoin } from "../../lib/telegram-alerts";
+import { resolveTicker, type ResolvedCoin } from "../../lib/telegram/alerts";
 import {
   buildNotFoundMessage,
   buildStatusAmbiguousMessage,

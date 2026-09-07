@@ -1,0 +1,14 @@
+{
+  "mechanism": "zchf-frankencoin",
+  "date": "2026-07-17-api-and-chain-capture",
+  "sha256": "61632f1186b777efcd74b1596b0e87636218e4dfb6b6b90d0e86d6ff2ca0eff8",
+  "bytes": 12475,
+  "r2Key": "captures/zchf-frankencoin/2026-07-17-api-and-chain-capture.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "zchf-frankencoin",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/zchf-frankencoin/2026-07-17-api-and-chain-capture.json"
+  }
+}

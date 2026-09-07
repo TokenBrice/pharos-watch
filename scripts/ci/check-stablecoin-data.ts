@@ -15,6 +15,7 @@ import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
+import { StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { getTrackedAlgorithmicBackingIssue } from "../lib/stablecoin-data-gate-issues";
@@ -58,6 +59,19 @@ const LISTING_CLASS_VALUES = [
   "excluded",
 ] as const;
 
+const STABLECOIN_SOURCE_DEFAULT_FLAG_KEYS = [
+  "pegCurrency",
+  "yieldBearing",
+  "rwa",
+  "navToken",
+] as const;
+const STABLECOIN_SOURCE_DEFAULT_FLAG_VALUES = new Map(
+  STABLECOIN_SOURCE_DEFAULT_FLAG_KEYS.map((key) => [
+    key,
+    StablecoinFlagsSchema.shape[key].parse(undefined),
+  ] as const),
+);
+
 const ListingDecisionRegistrySchema: z.ZodType<ListingDecisionRegistry> = z
   .object({
     schemaVersion: z.literal(1),
@@ -84,6 +98,25 @@ function reportError(message: string): void {
 function reportWarning(message: string): void {
   process.stdout.write(`warning: ${message}\n`);
   warningCount++;
+}
+
+export function getAuthoredDefaultFlagIssues(source: unknown): string[] {
+  if (source === null || typeof source !== "object" || Array.isArray(source)) return [];
+
+  const flags = (source as { flags?: unknown }).flags;
+  if (flags === null || typeof flags !== "object" || Array.isArray(flags)) return [];
+
+  const authoredFlags = flags as Record<string, unknown>;
+  return STABLECOIN_SOURCE_DEFAULT_FLAG_KEYS.flatMap((key) => {
+    if (!Object.prototype.hasOwnProperty.call(authoredFlags, key)) return [];
+
+    const schemaDefault = STABLECOIN_SOURCE_DEFAULT_FLAG_VALUES.get(key);
+    if (!Object.is(authoredFlags[key], schemaDefault)) return [];
+
+    return [
+      `flags.${key} sets the schema default ${JSON.stringify(schemaDefault)}; omit this key from the source file`,
+    ];
+  });
 }
 
 function readCanonicalOrder(): string[] {
@@ -565,6 +598,11 @@ function runStablecoinDataCheck(): void {
     }
 
     for (const entry of allEntries) {
+      const source = JSON.parse(readFileSync(entry.file, "utf8")) as unknown;
+      for (const defaultFlagIssue of getAuthoredDefaultFlagIssues(source)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${defaultFlagIssue}`);
+      }
+
       for (const violation of validateMintBridgeOwnership(entry.coin, { enforce: true })) {
         const message = `${entry.file} (${entry.coin.id}) [${violation.code}] ${violation.path}: ${violation.message}`;
         reportError(message);

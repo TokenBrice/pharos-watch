@@ -1,0 +1,49 @@
+{
+  "distribution": {
+    "expectedCount": 344,
+    "ratedCount": 342,
+    "nrIds": ["brlm-mento", "zeusd-zoth"],
+    "histogram": {
+      "A+": 0,
+      "A": 0,
+      "A-": 0,
+      "B+": 1,
+      "B": 1,
+      "B-": 0,
+      "C+": 2,
+      "C": 9,
+      "C-": 12,
+      "D": 105,
+      "F": 212,
+      "NR": 2
+    },
+    "largestPillarTuple": { "key": "35/35/45", "count": 104 },
+    "largestScoreBucket": { "key": "38", "count": 81 },
+    "scoreIqr": 9,
+    "anchorCard": { "assetId": "bold-liquity", "score": 79, "grade": "B+" }
+  },
+  "adverseCards": {
+    "usdd-tron-dao-reserve": { "score": 31, "grade": "F" },
+    "u-united-stables": { "score": 31, "grade": "F" },
+    "usdai-usd-ai": { "score": 39, "grade": "F" },
+    "tusd-trueusd": { "score": 53, "grade": "C-" },
+    "eurs-stasis": { "score": 20, "grade": "F" },
+    "mim-abracadabra": { "score": 0, "grade": "F" }
+  },
+  "bindings": {
+    "candidateIdentity": {
+      "schemaVersion": 1,
+      "policyId": "safety-score-v9",
+      "policyDigest": "84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d",
+      "evaluationBuildDigest": "b2c0b298bea563d8b548c3f9d594e43cb46b762b62bfd7be3053a72430d320d1",
+      "compilerFactSchemaDigest": "9d7b637e0f808df4f19699f7ad10f09413fb46cc66ed0befb707db59a44ca511",
+      "producerCapabilityDigest": "19f1ab3ce18de294d33482cff07891f987a2715071cf48ba7cd75ff72562f198"
+    },
+    "candidateId": "safety-score-v9:v1:2e833a90ec9847afe24ce18d4f1a74cc17b150d1f337c4e461d612a05e87fecb",
+    "baseInputGenerationId": "report-cards-input:v1:79bcc863f04ce1e55040589185f4a996cc8765e063d7a53e9fb89c0e8c2642a4",
+    "sourceGeneration": "report-cards:8.17:1784214085",
+    "registryFingerprint": "2a821e9b50c4a82177c1589e0375a1a673ecee7be1a642329163486af5a47a39",
+    "factSetDigest": "defb600329157e4b4413c4e1d6e5202ddc0b338d58034ebb4a786060e9309b11",
+    "resultDigest": "0f6623acdcfb427a5ab36a0be9fa88ec5b8e83e97dd0a5141d2567db251cb426"
+  }
+}

@@ -131,6 +131,15 @@ export function LiquidityPoolMatchingDetails() {
           CryptoSwap, legacy pools, and all other unreviewed Curve shapes are not widened.
         </p>
         <p>
+          Explicitly reviewed Curve metapools can instead publish exact same-notional execution through pinned
+          <code className="text-xs"> get_dy_underlying</code> calls. LUSD/3Crv uses this path from v6.2: the producer
+          verifies its legacy factory registration, implementation, 3pool base relationship, coin order, decimals, and
+          runtime code before quoting LUSD to USDC. From v6.3, multiple Curve registry views of the same canonical pool
+          address collapse to one physical fingerprint candidate, while distinct addresses with the same coin set remain
+          ambiguous. Reported TVL is never treated as executable capacity, and any proof or quote failure leaves the route
+          gated.
+        </p>
+        <p>
           Coverage confidence is measurement-aware. Instead of a fixed score by source family, Pharos now weights how much
           retained TVL has measured balances and prices, how broad the protocol mix is, and how much of the row depends on
           synthetic or freshness-decayed fallback liquidity.

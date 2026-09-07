@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
@@ -36,7 +37,7 @@ function dbWithCoreSlot(
   const bind = vi.fn(() => ({ first }));
   const prepare = vi.fn((_sql?: string) => ({ bind }));
   return {
-    db: { prepare } as unknown as D1Database,
+    db: makeNoopD1({ prepare }),
     prepare,
     bind,
     first,
@@ -513,9 +514,9 @@ describe("waitForV9MemoryLaneRelease", () => {
       .mockResolvedValueOnce(null);
     const bind = vi.fn(() => ({ first }));
     const prepare = vi.fn(() => ({ bind }));
-    const pending = waitForV9MemoryLaneRelease({
+    const pending = waitForV9MemoryLaneRelease(makeNoopD1({
       prepare,
-    } as unknown as D1Database);
+    }));
 
     await vi.advanceTimersByTimeAsync(999);
     expect(first).toHaveBeenCalledTimes(1);

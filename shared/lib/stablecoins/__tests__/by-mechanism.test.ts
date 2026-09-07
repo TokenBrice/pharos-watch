@@ -7,6 +7,7 @@ import {
   nestVariants,
 } from "../by-mechanism";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../../types/core";
+import { makeCatalogCoin, NON_RWA_STABLECOIN_FLAGS } from "./test-support";
 
 describe("countActiveByArchetype", () => {
   it("returns a count for every mechanism archetype", () => {
@@ -21,48 +22,35 @@ describe("countActiveByArchetype", () => {
     // Fixture: a commodity coin with a non-null archetype. Real GOLD/SILVER
     // coins currently have null archetype, so injecting one proves the filter
     // — not the resolver — is what excludes it.
-    const goldCoin: StablecoinMeta = {
+    const goldCoin = makeCatalogCoin({
       id: "gold-fixture",
       name: "Gold Fixture",
       symbol: "GOLD-FX",
       flags: {
-        backing: "rwa-backed",
+        ...NON_RWA_STABLECOIN_FLAGS,
         pegCurrency: "GOLD",
-        governance: "centralized",
-        yieldBearing: false,
         rwa: true,
-        navToken: false,
       },
       mechanismArchetype: "fiat-cash",
-    } as StablecoinMeta;
-    const silverCoin: StablecoinMeta = {
+    });
+    const silverCoin = makeCatalogCoin({
       id: "silver-fixture",
       name: "Silver Fixture",
       symbol: "SILVER-FX",
       flags: {
-        backing: "rwa-backed",
+        ...NON_RWA_STABLECOIN_FLAGS,
         pegCurrency: "SILVER",
-        governance: "centralized",
-        yieldBearing: false,
         rwa: true,
-        navToken: false,
       },
       mechanismArchetype: "rwa-credit-fund",
-    } as StablecoinMeta;
-    const usdCoin: StablecoinMeta = {
+    });
+    const usdCoin = makeCatalogCoin({
       id: "usd-fixture",
       name: "USD Fixture",
       symbol: "USD-FX",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+      flags: NON_RWA_STABLECOIN_FLAGS,
       mechanismArchetype: "fiat-cash",
-    } as StablecoinMeta;
+    });
 
     const fixtures = [goldCoin, silverCoin, usdCoin];
     const registry = new Map(fixtures.map((c) => [c.id, c]));
@@ -143,23 +131,14 @@ describe("getCoinsByLifecycleStatus", () => {
     mechanismArchetype: MechanismArchetype,
     variantOf?: string,
   ): StablecoinMeta {
-    return {
+    return makeCatalogCoin({
       id,
-      name: id,
-      symbol: id.toUpperCase(),
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+      flags: NON_RWA_STABLECOIN_FLAGS,
       mechanismArchetype,
       ...(variantOf
         ? { variantOf, variantKind: "savings-passthrough" as const }
         : {}),
-    } as StablecoinMeta;
+    });
   }
 
   it("returns active coins for fiat-cash archetype", () => {
@@ -207,20 +186,11 @@ describe("getCoinsByLifecycleStatus", () => {
 
 describe("nestVariants", () => {
   function makeCoin(id: string, variantOf?: string): StablecoinMeta {
-    return {
+    return makeCatalogCoin({
       id,
-      name: id,
-      symbol: id.toUpperCase(),
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+      flags: NON_RWA_STABLECOIN_FLAGS,
       ...(variantOf ? { variantOf, variantKind: "savings-passthrough" as const } : {}),
-    } as StablecoinMeta;
+    });
   }
 
   it("separates top-level parents from children", () => {

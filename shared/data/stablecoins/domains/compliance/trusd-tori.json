@@ -4,11 +4,11 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Tori trUSD terms — discretionary repurchase only, no stable-value or repurchase guarantee",
+        "label": "Tori trUSD terms: discretionary repurchase only, no stable-value or repurchase guarantee",
         "url": "https://docs.tori.finance/legal/trusd-terms"
       },
       {
-        "label": "Tori trUSD product disclosure — synthetic dollar backed by trading positions",
+        "label": "Tori trUSD product disclosure: synthetic dollar backed by trading positions",
         "url": "https://docs.tori.finance/products/trusd"
       },
       {
@@ -89,7 +89,7 @@
         "FDIC GENIUS Act proposed-rule materials",
         "Congress.gov GENIUS Act text",
         "Tori trUSD terms, product documentation, and transparency disclosures",
-        "Web search for Tori BVI, Tori Foundation, trUSD, GENIUS Act, PPSI, and foreign payment stablecoin registration — none found"
+        "Web search for Tori BVI, Tori Foundation, trUSD, GENIUS Act, PPSI, and foreign payment stablecoin registration: none found"
       ],
       "summary": "No public GENIUS approval, application, or foreign-exception registration naming Tori (BVI) Limited, Tori BVI, or trUSD was found in the reviewed federal or issuer materials as of 2026-08-14.",
       "reviewer": "Pharos compliance research",

@@ -22,19 +22,19 @@
       "observedBlock": 8546734,
       "sources": [
         {
-          "label": "Hiro API — usdh-token-v1 Clarity source",
+          "label": "Hiro API: usdh-token-v1 Clarity source",
           "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/usdh-token-v1"
         },
         {
-          "label": "Hiro API — hq-v1 Clarity source",
+          "label": "Hiro API: hq-v1 Clarity source",
           "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1"
         },
         {
-          "label": "Hiro API — hq-v1 owner data-var",
+          "label": "Hiro API: hq-v1 owner data-var",
           "url": "https://api.hiro.so/v2/data_var/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/owner"
         },
         {
-          "label": "Hermetica tech docs — minting contracts",
+          "label": "Hermetica tech docs: minting contracts",
           "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting"
         }
       ]
@@ -48,14 +48,14 @@
         "chain": "stacks",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Hiro API read of hq-v1 minting-contracts map: two contracts are currently active — minting-otc-v1-1 (burn-block-height=some(927047)) and emergency-recover-v1 (burn-block-height=some(862013)), both deployed by SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG (Hermetica deployer). minting-otc-v1-1 is the primary OTC minting route; emergency-recover-v1 is an emergency recovery contract. minting-auto-v1-1 was deactivated 2026-03-23 and removed. No permissionless mint path exists. Native issuance route checks retained from the former routeChecks block: signingModel = \"USDh minting is two-step: KYC-whitelisted minter request/deposit first, then Hermetica confirm-mint operators release USDh after off-chain hedge execution.\"; onchainAmountBounds = \"hq-v1 minting-contracts map limits active mint routes to reviewed contracts; no permissionless mint path exists.\"; pausersAdminsUpgraders = \"New minting contracts and owner changes are subject to the hq-v1 1008-block timelock.\" These checks govern Stacks-native issuance, not a bridge route.",
+        "evidence": "Hiro API read of hq-v1 minting-contracts map: two contracts are currently active, minting-otc-v1-1 (burn-block-height=some(927047)) and emergency-recover-v1 (burn-block-height=some(862013)), both deployed by SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG (Hermetica deployer). minting-otc-v1-1 is the primary OTC minting route; emergency-recover-v1 is an emergency recovery contract. minting-auto-v1-1 was deactivated 2026-03-23 and removed. No permissionless mint path exists. Native issuance route checks retained from the former routeChecks block: signingModel = \"USDh minting is two-step: KYC-whitelisted minter request/deposit first, then Hermetica confirm-mint operators release USDh after off-chain hedge execution.\"; onchainAmountBounds = \"hq-v1 minting-contracts map limits active mint routes to reviewed contracts; no permissionless mint path exists.\"; pausersAdminsUpgraders = \"New minting contracts and owner changes are subject to the hq-v1 1008-block timelock.\" These checks govern Stacks-native issuance, not a bridge route.",
         "sources": [
           {
             "label": "Hermetica minting contract docs",
             "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting"
           },
           {
-            "label": "Hiro API — hq-v1 minting-contracts map",
+            "label": "Hiro API: hq-v1 minting-contracts map",
             "url": "https://api.hiro.so/v2/map_entry/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/minting-contracts"
           }
         ],
@@ -77,10 +77,10 @@
         "address": "SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Hiro API get-owner read on hq-v1: owner data-var returns Clarity bytes 0x05146fdf77f03a1ace4bf29f8090067a98c65000e1e2, decoded via c32check (version byte 20 = SM P2SH/multisig prefix) to SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. This is a Stacks P2SH multisig address (SM prefix) — signers and threshold not enumerated on-chain. Ownership transferred from deployer SP1N0K23NJTRK19SV9BFP8SVXQQFQ7XGGBFJ8DBVX via 2-step timelock (request-owner-update nonce 24, activate-next-owner nonce 25, executed 2026-02-02 to 2026-02-10). hq-v1 enforces a 1008-block (~7 day) timelock on owner changes and minting-contract additions. Native issuance route checks retained from the former routeChecks block: pausersAdminsUpgraders = \"hq-v1 owner is a Stacks P2SH/multisig address and owner changes/new minting contracts use a 1008-block timelock.\"; unsupportedReason = \"Stacks P2SH signer set and threshold were not enumerated on-chain.\" These checks govern native hq-v1 administration, not bridge machinery.",
+        "evidence": "Hiro API get-owner read on hq-v1: owner data-var returns Clarity bytes 0x05146fdf77f03a1ace4bf29f8090067a98c65000e1e2, decoded via c32check (version byte 20 = SM P2SH/multisig prefix) to SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. This is a Stacks P2SH multisig address (SM prefix), signers and threshold not enumerated on-chain. Ownership transferred from deployer SP1N0K23NJTRK19SV9BFP8SVXQQFQ7XGGBFJ8DBVX via 2-step timelock (request-owner-update nonce 24, activate-next-owner nonce 25, executed 2026-02-02 to 2026-02-10). hq-v1 enforces a 1008-block (~7 day) timelock on owner changes and minting-contract additions. Native issuance route checks retained from the former routeChecks block: pausersAdminsUpgraders = \"hq-v1 owner is a Stacks P2SH/multisig address and owner changes/new minting contracts use a 1008-block timelock.\"; unsupportedReason = \"Stacks P2SH signer set and threshold were not enumerated on-chain.\" These checks govern native hq-v1 administration, not bridge machinery.",
         "sources": [
           {
-            "label": "Hiro API — hq-v1 owner data-var",
+            "label": "Hiro API: hq-v1 owner data-var",
             "url": "https://api.hiro.so/v2/data_var/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/owner"
           }
         ],
@@ -105,7 +105,7 @@
         "observedBlock": 8546734,
         "sources": [
           {
-            "label": "Hiro API — minting-state-v1 Clarity source",
+            "label": "Hiro API: minting-state-v1 Clarity source",
             "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/minting-state-v1"
           },
           {
@@ -132,7 +132,7 @@
           "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting"
         },
         {
-          "label": "Hiro API — hq-v1 contract",
+          "label": "Hiro API: hq-v1 contract",
           "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1"
         }
       ]

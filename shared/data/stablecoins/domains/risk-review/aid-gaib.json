@@ -84,7 +84,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arbitrum",
-        "controllerAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "controllerAddress": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
         "observedAt": "2026-07-14",
         "sources": [
           {
@@ -116,7 +116,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
-        "controllerAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "controllerAddress": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
         "observedAt": "2026-07-14",
         "sources": [
           {

@@ -11,7 +11,7 @@ import {
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
-} from "../../lib/telegram-operation-batch";
+} from "../../lib/telegram/operation-batch";
 
 export interface SubscribeIntentInput {
   chatId: string;

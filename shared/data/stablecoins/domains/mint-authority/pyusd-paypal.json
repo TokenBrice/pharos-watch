@@ -382,7 +382,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana finalized slot 439722870 / block height 417773444, the Token-2022 PYUSD mint had mint authority 8Jornc27vtAYPkwDzsVgLQchAYyC8nD7aCNPCDV8Qk2. The multisig had four valid signers — 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk, 3QaqDJS5angcPhW1HsMbB74vJbzWNcy1r5bwtATUro7d, BfWsvypxRvQ4KUhyJ2gLeFEkhRx3LgfkVahXMj6Kz3LN, and AuVW19qwit2bxZqcspGZLsbq2ZiqosvryTNXE8UZSeGh — with one required signer."
+        "evidence": "At Solana finalized slot 439722870 / block height 417773444, the Token-2022 PYUSD mint had mint authority 8Jornc27vtAYPkwDzsVgLQchAYyC8nD7aCNPCDV8Qk2. The multisig had four valid signers, 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk, 3QaqDJS5angcPhW1HsMbB74vJbzWNcy1r5bwtATUro7d, BfWsvypxRvQ4KUhyJ2gLeFEkhRx3LgfkVahXMj6Kz3LN, and AuVW19qwit2bxZqcspGZLsbq2ZiqosvryTNXE8UZSeGh, with one required signer."
       },
       {
         "chain": "stellar",

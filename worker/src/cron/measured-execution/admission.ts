@@ -1,9 +1,11 @@
-import { DEX_MEASURED_MAX_COST_BPS, getDexMeasuredExecutionFreshnessMaxSec,
-  getDexMeasuredExecutionProbeNotionals, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { getDexMeasuredExecutionFreshnessMaxSec,
+  DEX_EXACT_QUOTE_ADAPTER_IDS, getDexMeasuredExecutionProbeNotionals, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  getDexExecutionCapabilityRegistration,
+  isDexExecutionProfileAdmittedForScoring,
+} from "@shared/lib/p4-exit-route-capability-policy";
 import { DexExitRouteObservationSchema, MAX_DEX_EXIT_ROUTE_OBSERVATIONS, type DexExitRouteObservation } from "@shared/types/market";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
-import { buildMeasuredLedgerCohortKey, countMeasuredLadderCostBoundViolations,
-  countMeasuredLadderMonotonicityViolations, type MeasuredLedgerRecordB } from "@shared/lib/measured-execution-ledger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { parseJsonObject } from "../../lib/json-parse";
@@ -11,15 +13,16 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import type { DexMeasuredQuoteOutcome } from "./persistence";
 import type { DexMeasuredRawQuotePoint } from "./profiles";
-import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible, type DexMeasuredExecutionDeployment } from "./registry";
-import { CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID, getCurveCryptoSwapShadowPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
+import {
+  getDexMeasuredExecutionDeployment,
+  isDexMeasuredExecutionDeploymentScoreEligible,
+  type DexMeasuredExecutionDeployment,
+} from "./registry";
+import { getCurveCryptoSwapShadowPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
 import { CURVE_STABLESWAP_ADAPTER_PROFILE_ID, getCurveStableSwapPolicy, type CurveStableSwapPoolPolicy } from "./curve-stableswap";
-import { CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID, getCurveStableSwapNgPolicy,
-  type CurveStableSwapNgPoolPolicy } from "./curve-stableswap-ng";
-import { getCurveCompositePolicy, isCurveCompositeAdapterProfileId,
-  type CurveCompositePoolPolicy } from "./curve-composite";
-import { UNISWAP_V4_ADAPTER_PROFILE_ID, getUniswapV4Deployment,
-  type UniswapV4Deployment } from "./uniswap-v4";
+import { getCurveStableSwapNgPolicy, type CurveStableSwapNgPoolPolicy } from "./curve-stableswap-ng";
+import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite";
+import { getUniswapV4Deployment, type UniswapV4Deployment } from "./uniswap-v4";
 
 export const MEASURED_EXECUTION_RPC_REQUEST_LIMIT = 1_300;
 const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
@@ -57,11 +60,13 @@ export type TargetDeployment =
     };
 
 export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): TargetDeployment | null {
-  if (target.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
+  const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
+  if (!registration) return null;
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4) {
     const deployment = getUniswapV4Deployment(target.chain);
     return deployment ? { kind: "uniswap-v4", config: deployment } : null;
   }
-  if (target.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -70,7 +75,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  if (target.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -79,7 +84,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-stableswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  if (target.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -88,7 +93,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-stableswap-ng", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  if (isCurveCompositeAdapterProfileId(target.adapterProfileId)) {
+  if (registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
@@ -97,13 +102,19 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
       ? { kind: "curve-composite", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
-  const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
+  const deployment = registration.adapterId === DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2
+    ? getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain)
+    : null;
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
 }
 
 export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExecutionTarget): boolean {
+  const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
+  if (!registration || !isDexExecutionProfileAdmittedForScoring(
+    { adapterProfileId: target.adapterProfileId, chain: target.chain },
+    registration,
+  )) return false;
   const deployment = resolveTargetDeployment(target);
-  if (isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain)) return true;
   switch (deployment?.kind) {
     case "curve-cryptoswap":
     case "curve-stableswap":
@@ -112,6 +123,7 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
     case "uniswap-v4":
       return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
     case "quoter-v2":
+      return isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain);
     case "curve-composite":
     case undefined:
       return false;
@@ -137,7 +149,10 @@ export function summarizeMeasuredExecutionQuoteFailures(
   diagnosticAttemptedFailureCount: number;
 } {
   const attemptedFailures = outcomes.filter(
-    (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
+    (outcome) =>
+      outcome.status === "failed" &&
+      outcome.failureReason !== "budget-deferred" &&
+      outcome.failureReason !== "score-bearing-route-unavailable",
   );
   const scoreEligibleFailures = attemptedFailures.filter(
     (outcome) =>
@@ -155,69 +170,6 @@ export function summarizeMeasuredExecutionQuoteFailures(
       0,
       attemptedFailures.length - scoreEligibleFailures.length - oversizedTargetIds.size,
     ) + scoreEligibleDiagnosticFailureCount,
-  };
-}
-
-/**
- * Failure reasons that mean a target was never attempted this run: the
- * rotating admission budget deferred it up front, or the in-run RPC budget
- * stopped before its ladder (both `evm-quote-plan.ts` stop paths surface as
- * the two budget stop reasons on the quote state).
- */
-const MEASURED_LEDGER_BUDGET_DEFERRED_REASONS: ReadonlySet<string> = new Set([
-  "budget-deferred",
-  "request-budget-exhausted",
-  "runtime-deadline-exceeded",
-]);
-
-/**
- * Builds the durable Record B evidence ledger for one shadow quote run
- * (Liquidity Score v6 Phase 0.4). Monotonicity and cost-bound consistency are
- * computed here, at emission time, from the raw quote ladders — the staged
- * quote generations prune at three hours, so this is the only durable place
- * the ladder health of a daily shadow cycle can be recorded.
- */
-export function buildMeasuredShadowQuoteLedgerRecord(input: {
-  cycle: number;
-  targetGenerationId: string | null;
-  quoteGenerationId: string | null;
-  outcomes: readonly {
-    target: DexMeasuredExecutionTarget;
-    status: "measured" | "failed";
-    failureReason?: string;
-    points?: readonly DexMeasuredRawQuotePoint[];
-  }[];
-}): MeasuredLedgerRecordB {
-  const cohorts: MeasuredLedgerRecordB["cohorts"] = {};
-  for (const outcome of input.outcomes) {
-    const key = buildMeasuredLedgerCohortKey(outcome.target);
-    const cohort = (cohorts[key] ??= {
-      measured: 0,
-      failed: 0,
-      budgetDeferred: 0,
-      monotonicityViolations: 0,
-      costBoundViolations: 0,
-    });
-    if (outcome.status === "measured") {
-      cohort.measured += 1;
-    } else if (MEASURED_LEDGER_BUDGET_DEFERRED_REASONS.has(outcome.failureReason ?? "")) {
-      cohort.budgetDeferred += 1;
-    } else {
-      cohort.failed += 1;
-    }
-    const points = outcome.points ?? [];
-    if (points.length > 0) {
-      cohort.monotonicityViolations += countMeasuredLadderMonotonicityViolations(points);
-      cohort.costBoundViolations += countMeasuredLadderCostBoundViolations(points, DEX_MEASURED_MAX_COST_BPS);
-    }
-  }
-  return {
-    kind: "B",
-    cycle: input.cycle,
-    targetGenerationId: input.targetGenerationId,
-    quoteGenerationId: input.quoteGenerationId,
-    cohorts,
-    truncatedCohorts: 0,
   };
 }
 
@@ -399,11 +351,7 @@ export function selectExpiringScoreBearingPriorityPacket(
   >();
   for (const row of publishedRoutes) {
     const observation = row.observation;
-    if (
-      !observation.scoreEligible ||
-      observation.evidenceKind !== "measured-executable-depth" ||
-      !observation.adapterProfileId
-    ) {
+    if (!isScoreBearingRoute(row)) {
       continue;
     }
     const candidates = targets.filter((target) =>
@@ -523,11 +471,10 @@ interface PublishedDexScoreDetailsRow {
   score_components_json: string;
 }
 
-export async function loadExpiringScoreBearingPriorityPacket(
+export async function loadPublishedScoreBearingDexRoutes(
   db: D1Database,
-  targets: readonly DexMeasuredExecutionTarget[],
   signal?: AbortSignal,
-): Promise<ExpiringScoreBearingPriorityPacket | null> {
+): Promise<PublishedScoreBearingDexRoute[] | null> {
   try {
     throwIfAborted(signal);
     const result = await db
@@ -555,22 +502,27 @@ export async function loadExpiringScoreBearingPriorityPacket(
         });
       }
     }
-    return selectExpiringScoreBearingPriorityPacket(
-      targets,
-      publishedRoutes,
-    );
+    return publishedRoutes;
   } catch (error) {
     rethrowIfAborted(error, signal);
     logWorkerEvent({
       scope: "lib",
       level: "warn",
-      event: "measured_execution.expiring_priority_load_failed",
+      event: "measured_execution.score_bearing_route_load_failed",
       job: "sync-cl-exit-depth",
-      message: "Could not load expiring score-bearing route priority",
+      message: "Could not load published score-bearing routes",
       error,
     });
     return null;
   }
+}
+
+function isScoreBearingRoute(row: PublishedScoreBearingDexRoute): boolean {
+  return (
+    row.observation.scoreEligible === true &&
+    row.observation.evidenceKind === "measured-executable-depth" &&
+    Boolean(row.observation.adapterProfileId)
+  );
 }
 
 export function admitTargetsWithinBudget(
@@ -593,6 +545,7 @@ export function admitTargetsWithinBudget(
   estimatedQuoteRpcRequests: number;
   nextCursor: string | null;
 } {
+  const deferred = new Set<string>();
   const byCoin = new Map<string, DexMeasuredExecutionTarget[]>();
   for (const target of targets) {
     const rows = byCoin.get(target.stablecoinId) ?? [];
@@ -608,7 +561,6 @@ export function admitTargetsWithinBudget(
     startAfterCursor: true,
   }).items;
   const admitted = new Set<string>();
-  const deferred = new Set<string>();
   const oversized = new Set<string>();
   const priorityAdmitted = new Set<string>();
   const oversizedCoinIds: string[] = [];

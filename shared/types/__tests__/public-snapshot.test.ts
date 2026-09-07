@@ -74,7 +74,7 @@ describe("PublicSnapshotEnvelopeSchema", () => {
     expect(PublicSnapshotEnvelopeSchema.safeParse({ ...V2_ENVELOPE, version: 3 }).success).toBe(false);
   });
 
-  it("rejects malformed fields on a versioned envelope", () => {
-    expect(PublicSnapshotEnvelopeSchema.safeParse({ ...V2_ENVELOPE, generatedAt: "now" }).success).toBe(false);
+  it.each([{ generatedAt: "now" }, { snapshotDate: "2026-02-31" }])("rejects malformed versioned field %o", (field) => {
+    expect(PublicSnapshotEnvelopeSchema.safeParse({ ...V2_ENVELOPE, ...field }).success).toBe(false);
   });
 });

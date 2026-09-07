@@ -10,12 +10,9 @@ describe("serializeCronMetadata", () => {
       nested: { ok: true },
     });
 
-    expect(JSON.parse(metadata!)).toEqual({
-      reason: "cache-fresh",
-      rowsWritten: 0,
-      flags: ["cooldown"],
-      nested: { ok: true },
-    });
+    expect(metadata).toBe(
+      '{"reason":"cache-fresh","rowsWritten":0,"flags":["cooldown"],"nested":{"ok":true}}',
+    );
   });
 
   it("omits metadata when no object is supplied", () => {

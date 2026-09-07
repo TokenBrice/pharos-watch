@@ -33,8 +33,10 @@ import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-vi
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import { revealAnchorId } from "@/lib/anchor-reveal";
+import { alignAnchorAfterHydration } from "@/lib/anchor-reveal";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
+import { scoreToGrade } from "@shared/lib/report-card-core";
+import type { AiSummaryClaimValues } from "@shared/types";
 import { buildDetailSharedModules, type DetailSharedModules } from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
 import { DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
@@ -218,12 +220,18 @@ export function DetailContent({
   staticHasCollateralUsage,
   viewModel,
 }: DetailContentProps) {
-  // Direct loads with a hash land before lazy sections settle; opening the
-  // enclosing disclosures for the hash target keeps deep links honest now
-  // that module detail folds by default.
+  // The scrollspy owns its top-level hashes. Nested direct links need the
+  // same bounded alignment after hydration, not only disclosure reveal.
   useEffect(() => {
-    const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
-    if (hash) revealAnchorId(hash);
+    let hash: string;
+    try {
+      hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    } catch {
+      return;
+    }
+    if (hash && !DETAIL_SECTIONS.some((section) => section.id === hash)) {
+      return alignAnchorAfterHydration(hash);
+    }
   }, []);
   const heroModel = viewModel.hero;
   const frozenNote = viewModel.coin.status === "frozen" && viewModel.coin.frozenAt
@@ -255,6 +263,23 @@ export function DetailContent({
       isLoading={reservesLoading}
     />
   ) : null;
+  // Registered AI-summary claim tokens resolve against the same live values the
+  // hero and report card render; pillar grades use the breakdown's scoreToGrade.
+  const card = viewModel.reportCard;
+  const pegScore = viewModel.isNavToken ? null : viewModel.pegScoreResult?.pegScore ?? null;
+  const claimValues: AiSummaryClaimValues = {
+    "report-card.grade": card?.grade ?? null,
+    "report-card.score": card?.score ?? null,
+    "report-card.pillars.backing.grade": card ? scoreToGrade(card.pillars.backing.score) : null,
+    "report-card.pillars.backing.score": card?.pillars.backing.score ?? null,
+    "report-card.pillars.exit.grade": card ? scoreToGrade(card.pillars.exit.score) : null,
+    "report-card.pillars.exit.score": card?.pillars.exit.score ?? null,
+    "report-card.pillars.control.grade": card ? scoreToGrade(card.pillars.control.score) : null,
+    "report-card.pillars.control.score": card?.pillars.control.score ?? null,
+    "peg-summary.grade": pegScore == null ? null : scoreToGrade(pegScore),
+    "peg-summary.score": pegScore,
+    "stablecoin.circulating-usd": viewModel.mcap,
+  };
 
   return (
     <div>
@@ -279,7 +304,7 @@ export function DetailContent({
             ) : null}
           </div>
           <div className="mt-4">
-            {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+            {viewModel.summary ? <AiSummary {...viewModel.summary} claimValues={claimValues} /> : null}
             <DetailNavigation onActiveChange={onActiveBannerChange} viewModel={viewModel} />
           </div>
           <div className="mt-4 min-w-0 space-y-6">

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DependencyTypeSchema, type DependencyType } from "./dependency-types";
+import { DependencyTypeSchema } from "./dependency-types";
 
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
@@ -28,7 +28,7 @@ const RESERVE_ASSET_CLASS_VALUES = [
   "other",
 ] as const;
 export type ReserveAssetClass = (typeof RESERVE_ASSET_CLASS_VALUES)[number];
-const ReserveAssetClassSchema = z.enum(RESERVE_ASSET_CLASS_VALUES);
+export const ReserveAssetClassSchema = z.enum(RESERVE_ASSET_CLASS_VALUES);
 
 const RESERVE_RISK_FACTOR_VALUES = [
   "credit",
@@ -44,29 +44,13 @@ const RESERVE_RISK_FACTOR_VALUES = [
   "leverage",
 ] as const;
 export type ReserveRiskFactor = (typeof RESERVE_RISK_FACTOR_VALUES)[number];
-const ReserveRiskFactorSchema = z.enum(RESERVE_RISK_FACTOR_VALUES);
+export const ReserveRiskFactorSchema = z.enum(RESERVE_RISK_FACTOR_VALUES);
 
 const RESERVE_LIQUIDITY_HORIZON_VALUES = ["immediate", "one-day", "seven-days", "over-seven-days", "unknown"] as const;
 export type ReserveLiquidityHorizon = (typeof RESERVE_LIQUIDITY_HORIZON_VALUES)[number];
 const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
 
-export interface ReserveSlice {
-  sourceKey?: string;
-  name: string;
-  pct: number;
-  risk: ReserveRisk;
-  coinId?: string;
-  depType?: DependencyType;
-  blacklistable?: boolean;
-  blacklistabilityExposure?: ReserveBlacklistabilityExposure;
-  assetClass?: ReserveAssetClass;
-  issuerOrObligor?: string;
-  riskFactors?: ReserveRiskFactor[];
-  liquidityHorizon?: ReserveLiquidityHorizon;
-  maturityDaysMax?: number;
-}
-
-export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
+export const ReserveSliceSchema = z.object({
   sourceKey: z.string()
     .trim()
     .min(3)
@@ -97,6 +81,7 @@ export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
     });
   }
 });
+export type ReserveSlice = z.infer<typeof ReserveSliceSchema>;
 
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 

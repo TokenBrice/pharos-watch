@@ -226,7 +226,12 @@ const REDEMPTION_EXIT_ROUTE_FAMILIES = new Set<ExitRouteFamily>([
 const DEX_EXIT_EVIDENCE_KINDS = new Set<string>(DexExitEvidenceKindSchema.options);
 const REDEMPTION_EXIT_EVIDENCE_KINDS = new Set<string>(RedemptionExitEvidenceKindSchema.options);
 
-function enforceDexExitRouteLane(observation: z.infer<typeof ExitRouteObservationBaseSchema>, ctx: z.RefinementCtx) {
+type ExitRouteIssueContext = Pick<z.RefinementCtx, "addIssue">;
+
+function enforceDexExitRouteLane(
+  observation: z.infer<typeof ExitRouteObservationBaseSchema>,
+  ctx: ExitRouteIssueContext,
+) {
   if (!DEX_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) {
     ctx.addIssue({ code: "custom", path: ["routeFamily"], message: "DEX observations require a DEX route family" });
   }
@@ -288,7 +293,7 @@ function enforceDexExitRouteLane(observation: z.infer<typeof ExitRouteObservatio
 
 function enforceRedemptionExitRouteLane(
   observation: z.infer<typeof ExitRouteObservationBaseSchema>,
-  ctx: z.RefinementCtx,
+  ctx: ExitRouteIssueContext,
 ) {
   if (observation.adapterProfileId !== undefined) {
     ctx.addIssue({
@@ -384,6 +389,36 @@ export const ExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRe
   else enforceRedemptionExitRouteLane(observation, ctx);
 });
 export type ExitRouteObservation = z.infer<typeof ExitRouteObservationSchema>;
+
+function laneExitRouteObservationsSchema(
+  enforceLane: typeof enforceDexExitRouteLane,
+  invalidMessage: string,
+  maxLength?: number,
+) {
+  const arraySchema = maxLength === undefined
+    ? z.array(ExitRouteObservationSchema)
+    : z.array(ExitRouteObservationSchema).max(maxLength);
+
+  return arraySchema.superRefine((observations, ctx) => {
+    observations.forEach((observation, index) => {
+      let invalid = false;
+      enforceLane(observation, { addIssue: () => { invalid = true; } });
+      if (invalid) {
+        ctx.addIssue({ code: "custom", path: [index], message: invalidMessage });
+      }
+    });
+  });
+}
+
+export const DexExitRouteObservationsSchema = laneExitRouteObservationsSchema(
+  enforceDexExitRouteLane,
+  "invalid DEX exit-route observation",
+);
+export const RedemptionExitRouteObservationsSchema = laneExitRouteObservationsSchema(
+  enforceRedemptionExitRouteLane,
+  "invalid redemption exit-route observation",
+  16,
+);
 
 export const ExitRouteObservationCoverageSchema = z
   .object({

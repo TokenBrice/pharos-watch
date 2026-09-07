@@ -19,7 +19,7 @@
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "latestReportDate": "2026-05-31",
-    "notes": "Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank \u2014 not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted \u2014 the approval framework is still in proposed-rules rulemaking as of 2026-06-18 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO.",
+    "notes": "Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank: not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted: the approval framework is still in proposed-rules rulemaking as of 2026-06-18 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO.",
     "references": [
       {
         "label": "OCC: Anchorage national trust bank charter",

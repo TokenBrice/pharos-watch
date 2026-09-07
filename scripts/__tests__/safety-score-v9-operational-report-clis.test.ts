@@ -381,7 +381,10 @@ describe("Safety Score v9 evidence-gap queue", () => {
       policy: loadV9MethodologyPolicy(policyAsset),
     });
     const { responsibilityCounts: _responsibilityCounts, ...summary } = current.summary;
-    const entries = current.entries.map(({ responsibility: _responsibility, ...entry }) => entry);
+    // `responsibility` and `bridgeJoin` are V2-only entry fields.
+    const entries = current.entries.map(
+      ({ responsibility: _responsibility, bridgeJoin: _bridgeJoin, ...entry }) => entry,
+    );
     const core = {
       schemaVersion: 1 as const,
       purpose: current.purpose,
@@ -496,6 +499,102 @@ describe("Safety Score v9 evidence-gap queue", () => {
       );
     },
   );
+
+  it("joins the bridge diagnostics and names the failing row on a bridge-scoped entry", () => {
+    // ODR-D5a. The queue used to carry neither the producer's bridge join
+    // diagnostics nor any hint of which supply row failed the completeness
+    // proof, so a bridge work item read as "some residue is unattributed".
+    const deploymentKey = "eip155:1:0x0000000000000000000000000000000000000001";
+    const core = deploymentControlFactSetCore(deploymentKey, 0.00002);
+    const asset = core.assets[0]!;
+    const controlKey = `bridge-supply:${asset.assetId}`;
+    const diagnostics = {
+      profileRouteCount: 2,
+      canonicalSupplyRowCount: 2,
+      unmatchedRowIdentities: ["icp"],
+      reviewedNativeCoverage: {
+        reviewedRowCount: 1,
+        canonicalSupplyRowCount: 2,
+        supplyShare: 0.99997,
+        complete: false,
+      },
+      bridgeClaimControls: [controlKey],
+      applicabilityBranch: "applicable" as const,
+      unprovenRouteJoins: [
+        {
+          deploymentRouteKey: deploymentKey,
+          reviewState: "selected-reviewed" as const,
+          reviewedRouteKind: "controlled" as const,
+          supplyShare: 0.00002,
+          joinedControlKeys: [controlKey],
+          joinedControlSemanticsResolved: false,
+          joinedControlSupplyShare: 0.00002,
+        },
+      ],
+    };
+    asset.supply.selectedBridgeRoutes = [
+      {
+        deploymentRouteKey: "ethereum:native",
+        supplyUsd: 9_999_700,
+        supplyShare: 0.99997,
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "native",
+      },
+      {
+        deploymentRouteKey: deploymentKey,
+        supplyUsd: 200,
+        supplyShare: 0.00002,
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "controlled",
+      },
+      {
+        deploymentRouteKey: "unmatched-chain:asset-001:icp",
+        supplyUsd: 100,
+        supplyShare: 0.00001,
+        reviewState: "unmatched",
+      },
+    ];
+    asset.supply.selectedRouteSupplyShare = 0.99999;
+    asset.supply.unknownRouteSupplyShare = 0.00001;
+    asset.supply.unreviewedRouteSupplyShare = 0;
+    asset.economicControlReview.bridge = {
+      status: knownStatus("v9.control.bridge-review"),
+      routes: [{ controlKey, tier: "external-validated-network" }],
+      diagnostics,
+    };
+
+    const queue = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV3(core),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+
+    const entry = queue.entries[0]!;
+    expect(entry.reasonCode).toBe("unresolved-control-identity");
+    // (a) the producer's diagnostics now reach the terse queue verbatim.
+    expect(entry.bridgeJoin?.diagnostics).toEqual(diagnostics);
+    // (b) the completeness proof names the row it failed on.
+    expect(entry.bridgeJoin?.subthresholdUnresolvedJoin).toEqual({
+      complete: false,
+      cause: {
+        code: "reviewed-row-control-unproven",
+        deploymentRouteKey: deploymentKey,
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "controlled",
+        supplyShare: 0.00002,
+        controlKeys: [controlKey],
+      },
+    });
+    expect(V9EvidenceGapQueueV2Schema.parse(queue)).toEqual(queue);
+  });
+
+  it("leaves bridgeJoin null on a gap that is not bridge-scoped", () => {
+    const queue = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV3(factSetCore()),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+    expect(queue.entries[0]!.reasonCode).toBe("missing-implementation-date");
+    expect(queue.entries[0]!.bridgeJoin).toBeNull();
+  });
 
   it("keeps unresolved-control-identity admitting both control path kinds", () => {
     // Owner ruling 2026-07-31. A future policy edit that drops either kind

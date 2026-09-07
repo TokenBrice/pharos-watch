@@ -13,6 +13,7 @@ export interface RedemptionBackstopRunRetentionResult {
   runsDeletedCount: number;
   historyCutoff: number;
   historyRowsDeletedCount: number;
+  truncated: boolean;
   warnings: string[];
 }
 
@@ -21,6 +22,7 @@ const REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE = 100;
 /** Daily history has no current reader; retained 90 days for future track-record use (owner ruling 2026-07-22). */
 const REDEMPTION_BACKSTOP_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
 const REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE = 500;
+const REDEMPTION_BACKSTOP_RETENTION_MAX_BATCHES = 12;
 
 export const SNAPSHOT_ROW_COLUMNS = [
   "stablecoin_id",
@@ -49,18 +51,18 @@ export const SNAPSHOT_ROW_COLUMNS = [
 ] as const;
 
 const SNAPSHOT_ROW_UPDATE_COLUMNS = SNAPSHOT_ROW_COLUMNS.filter((column) => column !== "stablecoin_id");
+const SNAPSHOT_RUN_ROW_COLUMNS = ["snapshot_run_id", ...SNAPSHOT_ROW_COLUMNS];
+const SNAPSHOT_RUN_ROW_INSERT_COLUMNS = SNAPSHOT_RUN_ROW_COLUMNS.map((column) => `         ${column}`).join(",\n");
+const SNAPSHOT_RUN_ROW_PLACEHOLDERS = SNAPSHOT_RUN_ROW_COLUMNS.map(() => "?").join(", ");
+const SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS = SNAPSHOT_ROW_UPDATE_COLUMNS
+  .map((column) => `         ${column} = excluded.${column}`)
+  .join(",\n");
+const SNAPSHOT_RUN_ROW_UPSERT_SQL = `INSERT INTO redemption_backstop_run_rows (
+${SNAPSHOT_RUN_ROW_INSERT_COLUMNS}
+       ) VALUES (${SNAPSHOT_RUN_ROW_PLACEHOLDERS})
+       ON CONFLICT(snapshot_run_id, stablecoin_id) DO UPDATE SET
+${SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS}`;
 
-function formatColumnList(columns: readonly string[]): string {
-  return columns.map((column) => `         ${column}`).join(",\n");
-}
-
-function formatUpdateAssignments(columns: readonly string[]): string {
-  return columns.map((column) => `         ${column} = excluded.${column}`).join(",\n");
-}
-
-function placeholderList(count: number): string {
-  return Array.from({ length: count }, () => "?").join(", ");
-}
 
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
@@ -140,15 +142,8 @@ function buildRunRowUpsert(
   record: RedemptionBackstopSnapshotRecord,
   runId: string,
 ): D1PreparedStatement {
-  const columns = ["snapshot_run_id", ...SNAPSHOT_ROW_COLUMNS];
   return db
-    .prepare(
-      `INSERT INTO redemption_backstop_run_rows (
-${formatColumnList(columns)}
-       ) VALUES (${placeholderList(columns.length)})
-       ON CONFLICT(snapshot_run_id, stablecoin_id) DO UPDATE SET
-${formatUpdateAssignments(SNAPSHOT_ROW_UPDATE_COLUMNS)}`,
-    )
+    .prepare(SNAPSHOT_RUN_ROW_UPSERT_SQL)
     .bind(runId, ...buildSnapshotRowValues(record));
 }
 
@@ -320,6 +315,7 @@ function buildWriteMetadata(
     retentionCutoff?: number | null;
     retentionRunRowsDeletedCount?: number;
     retentionRunsDeletedCount?: number;
+    retentionTruncated?: boolean;
     warnings?: string[];
     writeStatus?: string;
     writePhase?: string;
@@ -339,6 +335,7 @@ function buildWriteMetadata(
       ? { retentionRunRowsDeletedCount: facts.retentionRunRowsDeletedCount }
       : {}),
     ...(facts.retentionRunsDeletedCount != null ? { retentionRunsDeletedCount: facts.retentionRunsDeletedCount } : {}),
+    ...(facts.retentionTruncated != null ? { retentionTruncated: facts.retentionTruncated } : {}),
     ...(facts.writeStatus ? { writeStatus: facts.writeStatus } : {}),
     ...(facts.writePhase ? { writePhase: facts.writePhase } : {}),
     ...(facts.warnings && facts.warnings.length > 0 ? { writeWarnings: facts.warnings } : {}),
@@ -358,6 +355,7 @@ function prunableRedemptionBackstopRunsSubquery(): string {
                 ORDER BY completed_at DESC, started_at DESC, run_id DESC
                 LIMIT 1
              )
+           ORDER BY COALESCE(completed_at, started_at) ASC, run_id ASC
            LIMIT ?`;
 }
 
@@ -377,6 +375,7 @@ async function deleteOrphanRedemptionBackstopRunRowsBatch(
                  FROM redemption_backstop_runs AS manifest
                 WHERE manifest.run_id = rr.snapshot_run_id
              )
+             ORDER BY rr.rowid ASC
              LIMIT ?
           )`,
       )
@@ -398,6 +397,7 @@ async function deleteRedemptionBackstopHistoryBatch(
             SELECT rowid
               FROM redemption_backstop_history
              WHERE snapshot_date < ?
+             ORDER BY snapshot_date ASC, rowid ASC
              LIMIT ?
           )`,
       )
@@ -431,23 +431,39 @@ export async function pruneRedemptionBackstopRunRetention(
     historyRetentionSec?: number;
     preserveRunId: string;
     batchSize?: number;
+    maxBatches?: number;
+    deadlineMs?: number;
+    signal?: AbortSignal;
   },
 ): Promise<RedemptionBackstopRunRetentionResult> {
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   const retentionSec = input.retentionSec ?? REDEMPTION_BACKSTOP_RUN_RETENTION_SEC;
   const batchSize = input.batchSize ?? REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE;
+  const maxBatches = input.maxBatches ?? REDEMPTION_BACKSTOP_RETENTION_MAX_BATCHES;
   const cutoff = nowSec - retentionSec;
   let runRowsDeletedCount = 0;
   let runsDeletedCount = 0;
+  let batchesProcessed = 0;
+  let truncated = false;
   const warnings: string[] = [];
+  const stopBeforeNextBatch = () => {
+    const shouldStop =
+      batchesProcessed >= maxBatches ||
+      input.signal?.aborted === true ||
+      (input.deadlineMs != null && Date.now() >= input.deadlineMs);
+    if (shouldStop) truncated = true;
+    return shouldStop;
+  };
 
   try {
     for (;;) {
+      if (stopBeforeNextBatch()) break;
       const deletedRuns = await deleteRedemptionBackstopRunsBatch(db, {
         cutoff,
         preserveRunId: input.preserveRunId,
         batchSize,
       });
+      batchesProcessed += 1;
       runsDeletedCount += deletedRuns;
       if (deletedRuns < batchSize) break;
     }
@@ -458,7 +474,9 @@ export async function pruneRedemptionBackstopRunRetention(
 
   try {
     for (;;) {
+      if (stopBeforeNextBatch()) break;
       const deletedRows = await deleteOrphanRedemptionBackstopRunRowsBatch(db, { batchSize });
+      batchesProcessed += 1;
       runRowsDeletedCount += deletedRows;
       if (deletedRows < batchSize) break;
     }
@@ -471,10 +489,12 @@ export async function pruneRedemptionBackstopRunRetention(
   let historyRowsDeletedCount = 0;
   try {
     for (;;) {
+      if (stopBeforeNextBatch()) break;
       const deletedHistory = await deleteRedemptionBackstopHistoryBatch(db, {
         cutoffDate: historyCutoff,
         batchSize: REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE,
       });
+      batchesProcessed += 1;
       historyRowsDeletedCount += deletedHistory;
       if (deletedHistory < REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE) break;
     }
@@ -483,12 +503,17 @@ export async function pruneRedemptionBackstopRunRetention(
     warnings.push(`Daily-history retention prune failed: ${message}`);
   }
 
+  if (truncated) {
+    warnings.push("Retention prune truncated by its per-invocation work budget; stale rows remain eligible");
+  }
+
   return {
     cutoff,
     runRowsDeletedCount,
     runsDeletedCount,
     historyCutoff,
     historyRowsDeletedCount,
+    truncated,
     warnings,
   };
 }
@@ -536,6 +561,7 @@ export async function upsertRedemptionBackstopSnapshots(
       retentionCutoff: null,
       retentionRunRowsDeletedCount: 0,
       retentionRunsDeletedCount: 0,
+      retentionTruncated: false,
       warnings: ["No redemption backstop records were supplied"],
     };
   }
@@ -556,6 +582,7 @@ export async function upsertRedemptionBackstopSnapshots(
   let retentionRunRowsDeletedCount = 0;
   let retentionRunsDeletedCount = 0;
   let retentionCutoff: number | null = null;
+  let retentionTruncated = false;
   let writePhase = "starting";
 
   try {
@@ -638,6 +665,7 @@ export async function upsertRedemptionBackstopSnapshots(
       retentionCutoff = retention.cutoff;
       retentionRunRowsDeletedCount = retention.runRowsDeletedCount;
       retentionRunsDeletedCount = retention.runsDeletedCount;
+      retentionTruncated = retention.truncated;
       warnings.push(...retention.warnings);
     } catch (error) {
       const message = toErrorMessage(error);
@@ -657,6 +685,7 @@ export async function upsertRedemptionBackstopSnapshots(
           retentionCutoff,
           retentionRunRowsDeletedCount,
           retentionRunsDeletedCount,
+          retentionTruncated,
           warnings,
           writeStatus: warnings.length > 0 ? "completed-with-warnings" : "completed",
           writePhase,
@@ -675,6 +704,7 @@ export async function upsertRedemptionBackstopSnapshots(
       retentionCutoff,
       retentionRunRowsDeletedCount,
       retentionRunsDeletedCount,
+      retentionTruncated,
       warnings,
     };
   } catch (error) {
@@ -694,6 +724,7 @@ export async function upsertRedemptionBackstopSnapshots(
               historyWrittenCount,
               retentionRunRowsDeletedCount,
               retentionRunsDeletedCount,
+              retentionTruncated,
               writeStatus: "failed",
               writePhase,
               failure: {

@@ -5,6 +5,8 @@
       "name": "OpenEden cUSDO tokenized U.S. Treasury bill reserve",
       "pct": 100,
       "risk": "low",
+      "coinId": "cusdo-openeden",
+      "depType": "collateral",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "OpenEden Digital Ltd (cUSDO issuer); underlying U.S. Treasury obligations managed by Adam Eve Capital",
       "riskFactors": [

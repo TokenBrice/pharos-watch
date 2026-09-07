@@ -18,6 +18,7 @@ import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared
 import { decideNextStatus } from "../status-reliability-decision";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 type StatusLevel = "healthy" | "degraded" | "stale";
 
@@ -127,7 +128,7 @@ function makeStatefulDb(options: StatefulDbOptions = {}) {
     } as unknown as D1PreparedStatement;
   }
 
-  const db = {
+  const db = makeNoopD1({
     prepare: (sql: string) => createStatement(sql),
     batch: async (statements: D1PreparedStatement[]) => {
       sqlite.exec("BEGIN IMMEDIATE");
@@ -154,7 +155,7 @@ function makeStatefulDb(options: StatefulDbOptions = {}) {
       return { count: 0, duration: 0 };
     },
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 
   const store = {
     get stateRow(): StatusStateRow | null {
@@ -206,7 +207,7 @@ function makeStatefulDb(options: StatefulDbOptions = {}) {
 }
 
 function makeFailingDb(): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         all: async () => {
@@ -234,7 +235,7 @@ function makeFailingDb(): D1Database {
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 describe("status-reliability", () => {

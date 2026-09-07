@@ -5,7 +5,7 @@ import {
   TELEGRAM_PUBLIC_ALERT_SAMPLES,
   telegramAlertHtmlToPublicText,
 } from "@shared/lib/telegram-alert-samples";
-import { formatConsolidatedMessage, freezeSectionHeader, type ConsolidatedAlerts } from "../telegram-alerts";
+import { formatConsolidatedMessage, freezeSectionHeader, type ConsolidatedAlerts } from "../telegram/alerts";
 
 /**
  * TGB-028 public-sample drift contract: the /pharoswatchbot landing page

@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptJupUsdData, fetchJupUsdReserves } from "../jupusd";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 describe("adaptJupUsdData", () => {
   it("groups published JupUSD holdings and emits whitelisted redemption capacity", () => {
@@ -42,8 +41,7 @@ describe("adaptJupUsdData", () => {
         holderEligibility: "whitelisted-primary",
       },
     });
-    const adapter = getReserveAdapter("jupusd") ?? undefined;
-    expect(validateAdapterOutput(result, { adapter, now: 1776262000 }).valid).toBe(true);
+    expectValidAdapterOutput("jupusd", result, { now: 1776262000 });
   });
 
   it("marks route paused when the oracle reports ripcord mode", () => {

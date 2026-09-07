@@ -42,14 +42,14 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "XOFm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
+        "capDescription": "XOFm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot, immutable.",
         "sources": [
           {
             "label": "Mento V3 deployments",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero — immutable."
+        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero, immutable."
       },
       {
         "chain": "celo",
@@ -67,7 +67,7 @@
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, XOFm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036d78bB3169b4F5560dD77BF93f4412A59852) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor — standard OZ TimelockController). Prior read also confirmed broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
+        "evidence": "At Celo block 69291577, XOFm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036d78bB3169b4F5560dD77BF93f4412A59852) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor, standard OZ TimelockController). Prior read also confirmed broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
       }
     ],
     "economicCapSemantics": "raiseable",

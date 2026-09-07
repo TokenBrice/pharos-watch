@@ -4,17 +4,17 @@ import {
   resolveAlertLinkPreviewOptions,
   splitMessage,
   type ConsolidatedAlerts,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import type { BatchMessage } from "../lib/telegram";
 import {
   BURST_EVENT_THRESHOLD,
   BURST_MARKER_TTL_SEC,
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
-} from "../lib/telegram-constants";
+} from "../lib/telegram/constants";
 import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import type { PerAlertTypeDelivery, PerAlertTypeDeliveryStats, TelegramAlertType } from "@shared/types/status";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import { buildPendingAlertScope, type PendingAlertScopeItem } from "../lib/telegram-pending-provenance";
+import { buildPendingAlertScope, type PendingAlertScopeItem } from "../lib/telegram/pending-provenance";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 

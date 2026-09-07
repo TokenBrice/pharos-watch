@@ -35,7 +35,7 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 4/7 managing vault parameters only, not minting.",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found. The vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 4/7 managing vault parameters only, not minting.",
         "sources": [
           {
             "label": "Morpho vault page",

@@ -16,9 +16,9 @@ export interface IsolateLocalStateRegistryEntry {
  */
 export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
-    sourcePath: "functions/lib/client-ip-hash.ts",
+    sourcePath: "shared/lib/client-ip-hash.ts",
     stateNames: ["cachedSecret", "cachedKey"],
-    owner: "Pages client-IP hashing",
+    owner: "Pages and Worker client-IP hashing",
     kind: "key",
     resetOrTtl: "Replaced when the supplied secret changes; otherwise resets on isolate recycle or deploy.",
     durableTruth: "The runtime secret is authoritative; the non-extractable imported key is only a derived cache.",
@@ -46,6 +46,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "cache",
     resetOrTtl: "One-hour TTL per Access team domain; resets with the isolate.",
     durableTruth: "The Cloudflare Access JWKS endpoint and each presented JWT remain authoritative.",
+  },
+  {
+    sourcePath: "shared/lib/editorial-style.ts",
+    stateNames: ["COMPILED"],
+    owner: "Editorial style scanner",
+    kind: "cache",
+    resetOrTtl: "One compiled RegExp array per policy rule until isolate recycle; the policy is a build-time constant.",
+    durableTruth: "The fenced policy in docs/editorial-style.md and its generated module are authoritative; the cache only avoids recompiling fixed patterns.",
   },
   {
     sourcePath: "shared/lib/format.ts",
@@ -100,6 +108,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current Safety Score V9 publication inputs and stablecoin registry statuses are authoritative; this only avoids repeated per-coin dependency and mint-component scans inside one run.",
   },
   {
+    sourcePath: "worker/src/cron/dex-discovery/crawl-cosmos-pools.ts",
+    stateNames: ["cosmosRequestState"],
+    owner: "Cosmos DEX discovery pacing",
+    kind: "coordination",
+    resetOrTtl: "One last-request timestamp enforcing a 400ms pacing floor inside a discovery run; resets with the isolate and via the test-only reset hook.",
+    durableTruth: "Upstream Osmosis and Noble rate limits are authoritative; this state only spaces requests within one isolate.",
+  },
+  {
     sourcePath: "worker/src/cron/dex-discovery/crawl-horizon-pools.ts",
     stateNames: ["horizonRequestState"],
     owner: "Stellar Horizon discovery pacing",
@@ -108,7 +124,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Horizon's server-side rate limit is authoritative; this state only spaces requests within one isolate to stay under it.",
   },
   {
-    sourcePath: "worker/src/lib/telegram-quiet-hours.ts",
+    sourcePath: "worker/src/lib/telegram/quiet-hours.ts",
     stateNames: ["quietHoursTzFallbackLastLoggedAt"],
     owner: "Telegram quiet-hours telemetry",
     kind: "cache",
@@ -180,6 +196,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Atomic D1 feedback_rate_limit reservations are authoritative.",
   },
   {
+    sourcePath: "worker/src/lib/redemption-backstop/sources.ts",
+    stateNames: ["outputDependencyResolutionRuns"],
+    owner: "Redemption output-dependency resolution",
+    kind: "coordination",
+    resetOrTtl: "At most four snapshot timestamps retain row references while one serial redemption build converges; old runs are evicted and all state resets with the isolate.",
+    durableTruth: "The current redemption build inputs and persisted completed-run snapshot are authoritative; this state only reconciles rows built in either order.",
+  },
+  {
     sourcePath: "worker/src/lib/request-source-attribution.ts",
     stateNames: ["workerRequestRecorder", "apiKeyRequestRecorder"],
     owner: "Worker request attribution",
@@ -188,7 +212,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 api_request_consumer_stats and api_key_request_stats rows are authoritative.",
   },
   {
-    sourcePath: "worker/src/lib/safety-score-v9-fact-set.ts",
+    sourcePath: "worker/src/lib/safety-score-v9/fact-set.ts",
     stateNames: ["materializedExtensions"],
     owner: "Safety Score V9 extension materialization",
     kind: "cache",
@@ -204,7 +228,15 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 status state, transitions, and probe rows are authoritative; this is log-noise suppression only.",
   },
   {
-    sourcePath: "worker/src/lib/telegram-log.ts",
+    sourcePath: "worker/src/lib/worker-version-first-seen.ts",
+    stateNames: ["scheduledVersionFirstSeenAttemptedInIsolate"],
+    owner: "Scheduled Worker-version first-seen diagnostics",
+    kind: "coordination",
+    resetOrTtl: "Set after the first scheduled marker attempt and reset on isolate recycle or deploy.",
+    durableTruth: "The write-once D1 worker-version-first-seen cache row is authoritative; this flag only suppresses repeat attempts in one isolate.",
+  },
+  {
+    sourcePath: "worker/src/lib/telegram/log.ts",
     stateNames: [
       "invalidSecretWindowStartedAt",
       "invalidSecretWindowCount",
@@ -233,12 +265,20 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Env ALCHEMY_API_KEY is authoritative; the map only pairs key-free URLs with their Authorization header.",
   },
   {
-    sourcePath: "worker/src/lib/telegram-mini-app-auth.ts",
+    sourcePath: "worker/src/lib/telegram/mini-app-auth.ts",
     stateNames: ["warnedNovelMiniAppChatTypes"],
     owner: "Telegram Mini App auth telemetry",
     kind: "cache",
     resetOrTtl: "One warning per novel chat_type until isolate recycle.",
     durableTruth: "Signed Telegram initData and current request fields are authoritative; this only suppresses duplicate logs.",
+  },
+  {
+    sourcePath: "worker/src/cron/dispatch-telegram-alerts.ts",
+    stateNames: ["COUNTED_STATEMENT_ORIGINALS"],
+    owner: "Telegram planning rows-written attribution",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by counted prepared statements; entries live only while a batch holds the statement and reset with the isolate.",
+    durableTruth: "D1 meta.rows_written on each executed statement is authoritative; the map only pairs counted wrappers with their originals for batch attribution.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 

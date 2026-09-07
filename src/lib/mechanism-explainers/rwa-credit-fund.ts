@@ -6,27 +6,30 @@ export const content: ArchetypeContent = {
   subtitle:
     "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",
   lead: [
-    "A tokenized credit fund token is a legal share in a regulated private-credit vehicle — not a money-market fund, not a Treasury bill fund. The underlying portfolio holds senior secured loans, CLO tranches, or other non-government debt instruments with meaningfully higher yield, meaningfully higher credit risk, and a redemption rail that is gated by design. Subscriptions are restricted to qualified purchasers or accredited investors via a transfer agent; redemption requests are queued and honored at the next NAV date, subject to a quarterly or monthly window and a fund-level redemption cap.",
-    "The token sits between tokenized Treasuries and private equity on the risk spectrum. Yield is real and roughly 200–500 bps above the Treasury rate in normal market conditions. The cost of that spread is credit-default risk inside the portfolio, valuation opacity at the fund-administrator level, and a redemption gate that is the structural feature, not the emergency response.",
+    "A tokenized credit fund token is a legal share in a regulated private-credit vehicle, not a money-market fund, not a Treasury bill fund. The underlying portfolio holds senior secured loans, CLO tranches, or other non-government debt instruments with meaningfully higher yield, meaningfully higher credit risk, and a redemption rail that is gated by design. Subscriptions are restricted to qualified purchasers or accredited investors via a transfer agent; redemption requests are queued and honored at the next NAV date, subject to a quarterly or monthly window and a fund-level redemption cap.",
+    "The token sits between tokenized Treasuries and private equity on the risk spectrum. Yield is real and roughly 200 to 500 bps above the Treasury rate in normal market conditions. The cost of that spread is credit-default risk inside the portfolio, valuation opacity at the fund-administrator level, and a redemption gate that is the structural feature, not the emergency response.",
   ],
   howItWorks: [
     {
+      id: "institutional-subscription",
       title: "Institutional subscription",
-      body: "A KYC/AML-verified accredited investor or qualified purchaser subscribes through a transfer agent — Securitize for the Apollo and Hamilton Lane funds, Anemoy for the Janus Henderson CLO, Tradable for the structured-receivable PC-series — with USD or an approved stablecoin. The fund manager deploys capital into senior secured loans, CLO tranches, direct-lending facilities, or structured receivables according to the disclosed mandate.",
+      body: "A KYC/AML-verified accredited investor or qualified purchaser subscribes through a transfer agent (Securitize for the Apollo and Hamilton Lane funds, Anemoy for the Janus Henderson CLO, Tradable for the structured-receivable PC-series) with USD or an approved stablecoin. The fund manager deploys capital into senior secured loans, CLO tranches, direct-lending facilities, or structured receivables according to the disclosed mandate.",
     },
     {
+      id: "credit-portfolio-nav",
       title: "Credit portfolio + NAV calculation",
       body: "The fund administrator marks the portfolio to model or to market and publishes a NAV, typically monthly or quarterly. The on-chain token accretes NAV as income is earned. Credit losses, defaults, or downward mark-to-markets flow directly into NAV; there is no separate equity tranche to absorb losses ahead of the token holder.",
     },
     {
+      id: "nav-accruing-fund-share",
       title: "Fund-share token, NAV-accruing",
-      body: "The token is a legal fund share. Redemption requests are queued and honored at the next NAV publication, subject to a fund-level gate if aggregate redemptions exceed the fund's liquid buffer (typically 2–5% of NAV per quarter for diversified private-credit funds). Secondary-market liquidity exists only where a licensed marketplace operates, and transfers are restricted to whitelisted counterparties.",
+      body: "The token is a legal fund share. Redemption requests are queued and honored at the next NAV publication, subject to a fund-level gate if aggregate redemptions exceed the fund's liquid buffer (typically 2-5% of NAV per quarter for diversified private-credit funds). Secondary-market liquidity exists only where a licensed marketplace operates, and transfers are restricted to whitelisted counterparties.",
     },
   ],
   riskProfile: [
     {
       headline: "Quarterly redemption gate under stress",
-      body: "Redemption gates are a structural feature of private credit funds, not an emergency response. The canonical anchor is Blackstone's BREIT — a non-traded private-real-estate REIT, not a credit fund, but the same redemption-gate architecture. From November 2022 through February 2024, BREIT honored only the contractual cap of 2% of NAV per month and 5% of NAV per quarter; aggregate redemption requests overshot the cap for 15 consecutive months, and holders waited until early 2024 for queues to clear. Tokenized credit funds inherit the same structure: the gate is the design, not the failure.",
+      body: "Redemption gates are a structural feature of private credit funds, not an emergency response. The canonical anchor is Blackstone's BREIT (a non-traded private-real-estate REIT, not a credit fund, but the same redemption-gate architecture). From November 2022 through February 2024, BREIT honored only the contractual cap of 2% of NAV per month and 5% of NAV per quarter; aggregate redemption requests overshot the cap for 15 consecutive months, and holders waited until early 2024 for queues to clear. Tokenized credit funds inherit the same structure: the gate is the design, not the failure.",
     },
     {
       headline: "Credit default and portfolio losses",
@@ -68,25 +71,28 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "mf-one-midas",
-      note: "Midas mF-ONE — wrapped exposure to Fasanara's private-credit fund. Multi-strategy short-duration private credit with monthly NAV.",
+      note: "Midas mF-ONE, wrapped exposure to Fasanara's private-credit fund. Multi-strategy short-duration private credit with monthly NAV.",
     },
     {
       coinId: "mglobal-midas-fasanara",
-      note: "Midas Fasanara Global — a sibling Midas product on the same Fasanara fund family with a different mandate slice. Same redemption mechanics.",
+      note: "Midas Fasanara Global, a sibling Midas product on the same Fasanara fund family with a different mandate slice. Same redemption mechanics.",
     },
   ],
   variations: [
     {
+      id: "senior-secured-private-credit",
       title: "Senior secured private credit",
       body: "ACRED, ACRDX, and HLSCOPE hold first-lien direct loans on private companies. Recovery expectations are highest in this sub-category; the spread above Treasuries is the smallest within the credit-fund cohort.",
     },
     {
+      id: "clo-tranche-tokens",
       title: "CLO tranche tokens",
-      body: "JAAA and STAC expose holders to the AAA-rated tranche of collateralized loan obligations. Investment-grade rated but subject to CLO structural complexity — the AAA tranche has never failed in a U.S. CLO, but it is not bankruptcy-remote in an extreme credit cycle.",
+      body: "JAAA and STAC expose holders to the AAA-rated tranche of collateralized loan obligations. Investment-grade rated but subject to CLO structural complexity: the AAA tranche has never failed in a U.S. CLO, but it is not bankruptcy-remote in an extreme credit cycle.",
     },
     {
+      id: "multi-strategy-structured-credit",
       title: "Multi-strategy and structured credit vaults",
-      body: "The Midas family (mAPOLLO, mF-ONE, mGLOBAL, mRe7YIELD, mMEV, mHYPER) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables — rent financing, post-settlement legal financing — outside the diversified-fund template.",
+      body: "The Midas family (mAPOLLO, mF-ONE, mGLOBAL, mRe7YIELD, mMEV, mHYPER) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables (rent financing, post-settlement legal financing) outside the diversified-fund template.",
     },
   ],
   whatToWatch: [
@@ -95,7 +101,7 @@ export const content: ArchetypeContent = {
     "V9 Backing evidence on the report card. Senior secured private credit and AAA CLO tranches are assessed through credit quality, seniority, enforceability, valuation, maturity/liquidity, custody, and recovery evidence; mezzanine, equity-tranche, and concentrated borrower exposure remain adverse facts.",
     "Proof-of-Reserves cadence and attestor tier on the detail page. Credit funds frequently rely on monthly or quarterly NAV reports from a fund administrator rather than daily attestations; Big 4 administrators publish more rigorous and timely marks than niche firms.",
     "Live Reserve view where available. A minority of credit-fund tokens expose live portfolio composition; most expose only the latest published NAV and a manager-disclosed allocation slice.",
-    "Freezewatch surface on `/freezewatch`. These are securities — the transfer agent maintains the registry of record, and admin-controlled transfer restrictions are a structural feature; sudden registry actions surface here before they show up as a peg deviation.",
+    "Freezewatch surface on `/freezewatch`. These are securities: the transfer agent maintains the registry of record, and admin-controlled transfer restrictions are a structural feature. Sudden registry actions surface here before they show up as a peg deviation.",
   ],
   crossLinks: [
     {
@@ -108,7 +114,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/methodology/",
-      label: "Methodology — how RWA collateral is evaluated in V9 Backing",
+      label: "Methodology: how RWA collateral is evaluated in V9 Backing",
     },
     {
       href: "/yield/",

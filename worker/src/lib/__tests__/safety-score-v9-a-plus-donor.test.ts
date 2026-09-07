@@ -8,11 +8,11 @@ import {
   normalizeFixedInput,
   type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9Candidate, computeSafetyScoreV9CandidateId } from "../safety-score-v9-candidate";
+import { buildSafetyScoreV9Candidate, computeSafetyScoreV9CandidateId } from "../safety-score-v9/candidate";
 import {
   SafetyScoreV9FactSetExtensionV2Schema,
   type SafetyScoreV9FactSetExtensionV2,
-} from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/fact-set";
 
 const COMPOSITE_ID = "fixture-a-plus-composite";
 const SUPPORT_ID = "usdc-circle";

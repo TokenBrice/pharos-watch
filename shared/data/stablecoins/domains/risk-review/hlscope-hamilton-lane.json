@@ -164,7 +164,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Tron 2026-07-20 via TronGrid triggerconstantcontract: contract TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X (an ERC1967Proxy) reports symbol()='HLSCOPE', name()='Hamilton Lane SCOPE Securitize Tokenized Feeder Fund LP', owner() = 0x4a833ac40b115635a7300f1cc97ae436c555384a (no contract code on Tron — EOA). This is an independently native Securitize issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
+        "reviewNote": "Verified on Tron 2026-07-20 via TronGrid triggerconstantcontract: contract TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X (an ERC1967Proxy) reports symbol()='HLSCOPE', name()='Hamilton Lane SCOPE Securitize Tokenized Feeder Fund LP', owner() = 0x4a833ac40b115635a7300f1cc97ae436c555384a (no contract code on Tron, EOA). This is an independently native Securitize issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "canonicalChain": "tron",

@@ -3,6 +3,7 @@ import {
   makeReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 const mockLoadSafetyScoreV9PublicationAttempt = vi.fn();
@@ -14,7 +15,7 @@ const mockDeleteCache = vi.fn();
 vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
 }));
-vi.mock("../../lib/safety-score-v9-publication-store", () => ({
+vi.mock("../../lib/safety-score-v9/publication-store", () => ({
   loadSafetyScoreV9PublicationAttempt:
     mockLoadSafetyScoreV9PublicationAttempt,
 }));
@@ -142,9 +143,9 @@ describe("snapshotSafetyGradeHistory", () => {
         },
       ],
     });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ all })),
-    } as unknown as D1Database;
+    });
 
     const result = await snapshotSafetyGradeHistory(db);
 
@@ -211,9 +212,9 @@ describe("snapshotSafetyGradeHistory", () => {
       },
     ]);
     const all = vi.fn().mockResolvedValue({ results: [] });
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ all })),
-    } as unknown as D1Database;
+    });
 
     const result = await snapshotSafetyGradeHistory(db);
 
@@ -276,7 +277,7 @@ describe("snapshotSafetyGradeHistory", () => {
       })),
     );
     const all = vi.fn().mockResolvedValue({ results: [] });
-    const db = { prepare: vi.fn(() => ({ all })) } as unknown as D1Database;
+    const db = makeNoopD1({ prepare: vi.fn(() => ({ all })) });
 
     const result = await snapshotSafetyGradeHistory(db);
 
@@ -330,10 +331,10 @@ describe("snapshotSafetyGradeHistory", () => {
     const all = vi.fn().mockResolvedValue({ results: [] });
     const bind = vi.fn(() => ({ statement: true }));
     const batch = vi.fn().mockResolvedValue([]);
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ all, bind })),
       batch,
-    } as unknown as D1Database;
+    });
 
     const result = await snapshotSafetyGradeHistory(db);
 

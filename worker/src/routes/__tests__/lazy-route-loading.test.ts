@@ -23,7 +23,6 @@ const HTTP_ROOT_MODULES = [
 
 function readSource(relativePath: string): string {
   // The caller only supplies fixed source paths declared above.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url).href), "utf8");
 }
 

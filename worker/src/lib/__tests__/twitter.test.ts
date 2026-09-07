@@ -38,13 +38,36 @@ describe("twitter helpers", () => {
     expect(longWord.endsWith("…")).toBe(true);
   });
 
+  it("prefers the declared lead ticker when it appears, while keeping one cashtag", () => {
+    const result = buildTweetText(
+      "",
+      "$USDT fell while USDC rose and USDT stabilized.",
+      undefined,
+      null,
+      { leadSignalId: "liquidity:usdc", coins: ["USDC", "USDT"] },
+    );
+
+    expect(result).toBe("USDT fell while $USDC rose and USDT stabilized.");
+    expect(result.match(/\$(?:USDT|USDC)/g)).toEqual(["$USDC"]);
+  });
+
+  it("falls back to the first ticker when the declared lead is absent from the text", () => {
+    expect(buildTweetText(
+      "",
+      "USDT fell while USDC rose.",
+      undefined,
+      null,
+      { leadSignalId: "liquidity:dai", coins: ["DAI"] },
+    )).toBe("$USDT fell while USDC rose.");
+  });
+
   it("includes edition number in tweet when provided", () => {
     const result = buildTweetText("Calm Drift", "PSI held firm at 94.1.", 22);
     expect(result).toBe("Calm Drift (#22)\n\nPSI held firm at 94.1.");
   });
 
   it("keeps the complete map hook inside the 270-character boundary", () => {
-    const hook = "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.";
+    const hook = "See the map.";
     const result = buildTweetText(
       "Calm Drift",
       "USDT moved through a deliberately long digest sentence ".repeat(8),
@@ -57,6 +80,19 @@ describe("twitter helpers", () => {
     expect(result).toContain("$USDT");
     expect(result.match(/\$/g)).toHaveLength(1);
     expect(result.slice(0, -hook.length).trimEnd()).toMatch(/\w…$/u);
+  });
+
+  it("does not truncate a representative long edition with the shortened map hook", () => {
+    const text = "USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.";
+    const hook = "See the map.";
+    const result = buildTweetText("Small Flows, Maxed Signals", text, 188, hook);
+
+    expect(result).toBe(`Small Flows, Maxed Signals (#188)\n\n$USD1 took in $4.00M and fxUSD $3.02M while rwaUSDi shed $3.96M, all three pinning intensity at 100 on flows worth a rounding error; if the Bank Run Gauge slips to negative 10, this stops being noise.\n\n${hook}`);
+    expect(result).toHaveLength(249);
+  });
+
+  it("does not append a map hook when captions are unavailable", () => {
+    expect(buildTweetText("Daily Digest", "USDT held steady.", 42, null)).not.toContain("See the map.");
   });
 
   it("omits edition number when null or undefined", () => {
@@ -106,7 +142,7 @@ describe("twitter helpers", () => {
       }
       const payload = JSON.parse(String(init?.body));
       expect(payload.media).toEqual({ media_ids: ["1234567890123456789"] });
-      expect(payload.text).toContain("Find yours on today’s map.");
+      expect(payload.text).toContain("See the map.");
       return new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
     });
     vi.stubGlobal("fetch", fetchSpy);
@@ -117,7 +153,7 @@ describe("twitter helpers", () => {
       creds,
       42,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
-      "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
+      "See the map.",
     )).resolves.toEqual({ tweetId: "1", mediaAttached: true });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
@@ -139,7 +175,7 @@ describe("twitter helpers", () => {
       creds,
       null,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
-      "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
+      "See the map.",
     )).rejects.toThrow("HTTP 404");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     warn.mockRestore();

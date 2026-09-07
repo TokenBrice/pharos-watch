@@ -104,7 +104,8 @@
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
       "redemptionRateProbe": {
         "contract": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
-        "selector": "0xc52861f2"
+        "selector": "0xc52861f2",
+        "decimals": 18
       },
       "mechanismMetrics": {
         "supplyTokenAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d",

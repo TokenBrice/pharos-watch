@@ -103,6 +103,14 @@ export interface MaterialUnlinkedReserveRow extends ReserveSliceCoverageRow {
   dispositionRationale: string | null;
 }
 
+export interface ActiveReserveSymbolLeadRow extends ReserveSliceCoverageRow {
+  candidateCoinId: string;
+  candidateSymbol: string;
+  reviewStatus: "reviewed" | "unresolved" | "unreviewed";
+  disposition: ReserveNonLinkDisposition | null;
+  reason: "unique-symbol-target-unlinked" | "active-target-marked-untracked";
+}
+
 export interface ReserveDispositionRow {
   coinId: string;
   symbol: string;
@@ -155,6 +163,9 @@ export type TargetScoreability =
 
 export interface DependencyEdgeCoverageRow extends DependencyGraphEdge {
   graphSource: "static" | "report-card";
+  reportKind: "serial" | "basket" | null;
+  reportMateriality: "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown" | null;
+  reportedWeight: number | null;
   upstreamSymbol: string | null;
   dependentSymbol: string | null;
   targetLifecycle: DependencyTargetLifecycle | "unknown";
@@ -193,6 +204,16 @@ export interface AdapterMappingReviewGapRow {
   reason: "missing-review" | "duplicate-review" | "stale-review" | "invalid-provenance";
   detail: string;
 }
+
+interface AdapterMappingRequirement {
+  coinId: string;
+  adapter: string;
+}
+
+export type AdapterMappingReviewCoverageStatus =
+  | "evaluated-clean"
+  | "evaluated-with-gaps"
+  | "not-evaluated";
 
 export interface MissingDependencyCandidateRow {
   coinId: string;
@@ -249,12 +270,16 @@ export interface DependencyCoverageAudit {
     unavailableTargetDispositionGapCount: number;
     targetDispositionValidationIssueCount: number;
     adapterMappingReviewGapCount: number;
+    adapterMappingReviewCoverageEvaluated: boolean;
+    adapterMappingReviewCoverageStatus: AdapterMappingReviewCoverageStatus;
     dependencyProvenanceCount: number;
     dependencyAvailableWeight: number | null;
     dependencyUnavailableWeight: number | null;
     liveMappedReserveShare: number | null;
     liveUnmappedReserveShare: number | null;
     materialUnlinkedReserveSliceCount: number;
+    activeUnlinkedReserveSymbolLeadCount: number;
+    subMaterialActiveUnlinkedReserveSymbolLeadCount: number;
     reviewedReserveDispositionCount: number;
     unresolvedReserveDispositionCount: number;
     unresolvedMaterialReserveSliceCount: number;
@@ -280,6 +305,8 @@ export interface DependencyCoverageAudit {
   reserveSlicesMissingCoinId: ReserveSliceCoverageRow[];
   depTypeWithoutCoinIdWarnings: ReserveSliceCoverageRow[];
   materialUnlinkedReserveSlices: MaterialUnlinkedReserveRow[];
+  activeUnlinkedReserveSymbolLeads: ActiveReserveSymbolLeadRow[];
+  subMaterialActiveUnlinkedReserveSymbolLeads: ActiveReserveSymbolLeadRow[];
   reserveDispositions: ReserveDispositionRow[];
   targetDispositionValidationIssues: TargetDispositionValidationIssue[];
   adapterMappingReviews: DependencyAdapterMappingReview[];
@@ -332,9 +359,18 @@ const DEPENDENCY_FALLBACK_REASON_VALUES = new Set<DependencyFallbackReason>([
   "live-cycle-to-curated",
 ]);
 
+type ReportCardEdgeKind = "serial" | "basket";
+type ReportCardEdgeMateriality = "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown";
+
+interface ParsedReportCardEdge extends DependencyGraphEdge {
+  reportKind: ReportCardEdgeKind | null;
+  reportMateriality: ReportCardEdgeMateriality | null;
+  reportedWeight: number | null;
+}
+
 interface ParsedReportCardInput {
   cardsById: Map<string, Record<string, unknown>>;
-  edges: DependencyGraphEdge[];
+  edges: ParsedReportCardEdge[];
 }
 
 function malformedReportCard(path: string, expectation: string): never {
@@ -364,6 +400,33 @@ function dependencyWeightValue(value: unknown, path: string): number {
     malformedReportCard(path, "expected a finite number greater than 0 and at most 1");
   }
   return value;
+}
+
+function reportCardScoreValue(card: Record<string, unknown>, path: string): number | null {
+  const field = card.score !== undefined ? "score" : "overallScore";
+  const value = card[field];
+  if (value !== null && (typeof value !== "number" || !Number.isFinite(value))) {
+    malformedReportCard(`${path}.${field}`, "expected null or a finite number");
+  }
+  return value as number | null;
+}
+
+function reportCardEdgeKindValue(value: unknown, path: string): ReportCardEdgeKind {
+  if (value === "serial" || value === "basket") return value;
+  return malformedReportCard(path, "expected serial or basket");
+}
+
+function reportCardEdgeMaterialityValue(value: unknown, path: string): ReportCardEdgeMateriality {
+  if (
+    value === "serial"
+    || value === "serial-blocked"
+    || value === "basket-weighted"
+    || value === "basket-bounded-unknown"
+  ) return value;
+  return malformedReportCard(
+    path,
+    "expected serial, serial-blocked, basket-weighted, or basket-bounded-unknown",
+  );
 }
 
 function optionalNonnegativeNumber(value: unknown, path: string): void {
@@ -466,15 +529,14 @@ function validateReportCardDiagnostics(value: unknown, path: string): void {
 function parseReportCardInput(payload: unknown): ParsedReportCardInput {
   const envelope = reportCardsEnvelope(payload);
   if (!Array.isArray(envelope.cards)) malformedReportCard("cards", "expected an array");
+  if (envelope.cards.length === 0) malformedReportCard("cards", "expected at least one card");
   const cardsById = new Map<string, Record<string, unknown>>();
   envelope.cards.forEach((candidate, index) => {
     const cardPath = `cards[${index}]`;
     const card = reportCardRecord(candidate, cardPath);
     const id = reportCardId(card.id, `${cardPath}.id`);
     if (cardsById.has(id)) malformedReportCard(`${cardPath}.id`, `duplicate card ID ${id}`);
-    if (card.overallScore !== null && (typeof card.overallScore !== "number" || !Number.isFinite(card.overallScore))) {
-      malformedReportCard(`${cardPath}.overallScore`, "expected null or a finite number");
-    }
+    reportCardScoreValue(card, cardPath);
     if (card.rawInputs !== undefined) {
       validateReportCardRawInputs(reportCardRecord(card.rawInputs, `${cardPath}.rawInputs`), `${cardPath}.rawInputs`);
     }
@@ -485,15 +547,50 @@ function parseReportCardInput(payload: unknown): ParsedReportCardInput {
   const graph = reportCardRecord(envelope.dependencyGraph, "dependencyGraph");
   if (!Array.isArray(graph.edges)) malformedReportCard("dependencyGraph.edges", "expected an array");
   const seenEdges = new Set<string>();
-  const edges = graph.edges.map((candidate, index): DependencyGraphEdge => {
+  const edges = graph.edges.map((candidate, index): ParsedReportCardEdge => {
     const edgePath = `dependencyGraph.edges[${index}]`;
     const edge = reportCardRecord(candidate, edgePath);
-    const parsed = {
-      from: reportCardId(edge.from, `${edgePath}.from`),
-      to: reportCardId(edge.to, `${edgePath}.to`),
-      weight: dependencyWeightValue(edge.weight, `${edgePath}.weight`),
-      type: dependencyTypeValue(edge.type, `${edgePath}.type`),
-    };
+    const from = reportCardId(edge.from, `${edgePath}.from`);
+    const to = reportCardId(edge.to, `${edgePath}.to`);
+    const isV9Edge = edge.kind !== undefined || edge.materiality !== undefined;
+    let parsed: ParsedReportCardEdge;
+    if (isV9Edge) {
+      const kind = reportCardEdgeKindValue(edge.kind, `${edgePath}.kind`);
+      const materiality = reportCardEdgeMaterialityValue(edge.materiality, `${edgePath}.materiality`);
+      const serialMateriality = materiality === "serial" || materiality === "serial-blocked";
+      if ((kind === "serial") !== serialMateriality) {
+        malformedReportCard(edgePath, "kind and materiality must describe the same dependency lane");
+      }
+      if (kind === "serial" && edge.weight !== null) {
+        malformedReportCard(`${edgePath}.weight`, "expected null for a serial dependency");
+      }
+      const reportedWeight = kind === "serial"
+        ? null
+        : dependencyWeightValue(edge.weight, `${edgePath}.weight`);
+      optionalNonnegativeNumber(edge.upstreamScore, `${edgePath}.upstreamScore`);
+      parsed = {
+        from,
+        to,
+        // The shared topology diagnostics still consume the legacy edge shape.
+        // Serial edges are whole-claim paths; basket edges retain their native weight.
+        weight: reportedWeight ?? 1,
+        type: kind === "serial" ? "wrapper" : "collateral",
+        reportKind: kind,
+        reportMateriality: materiality,
+        reportedWeight,
+      };
+    } else {
+      const weight = dependencyWeightValue(edge.weight, `${edgePath}.weight`);
+      parsed = {
+        from,
+        to,
+        weight,
+        type: dependencyTypeValue(edge.type, `${edgePath}.type`),
+        reportKind: null,
+        reportMateriality: null,
+        reportedWeight: weight,
+      };
+    }
     const key = `${parsed.from}->${parsed.to}::${parsed.type}`;
     if (seenEdges.has(key)) malformedReportCard(edgePath, `duplicate dependency edge ${key}`);
     seenEdges.add(key);
@@ -773,12 +870,17 @@ function findReserveReviewRows(input: {
   activeCoins: readonly StablecoinMeta[];
   trackedCoins: readonly StablecoinMeta[];
   marketCapById: ReadonlyMap<string, number> | null;
+  currentEdges: readonly DependencyGraphEdge[];
 }): {
   materialSlices: MaterialUnlinkedReserveRow[];
+  activeSymbolLeads: ActiveReserveSymbolLeadRow[];
+  subMaterialActiveSymbolLeads: ActiveReserveSymbolLeadRow[];
   dispositions: ReserveDispositionRow[];
 } {
   const matchers = buildStablecoinSymbolMatchers(input.trackedCoins);
+  const activeMatchers = buildStablecoinSymbolMatchers(input.activeCoins);
   const trackedIds = new Set(input.trackedCoins.map((coin) => coin.id));
+  const currentEdgeKeys = new Set(input.currentEdges.map((edge) => `${edge.from}->${edge.to}`));
   const dispositions: ReserveDispositionRow[] = [];
   const dispositionBySlice = new Map<string, ReserveNonLinkReview>();
 
@@ -816,19 +918,19 @@ function findReserveReviewRows(input: {
   }
 
   const materialSlices: MaterialUnlinkedReserveRow[] = [];
+  const activeSymbolLeads: ActiveReserveSymbolLeadRow[] = [];
+  const subMaterialActiveSymbolLeads: ActiveReserveSymbolLeadRow[] = [];
   input.activeCoins.forEach((coin, coinIndex) => {
     (coin.reserves ?? []).forEach((reserve, reserveIndex) => {
-      if (reserve.coinId || reserve.pct + WEIGHT_EPSILON < MATERIAL_RESERVE_PCT) return;
+      if (reserve.coinId) return;
       const matched = matchers.filter((matcher) => matcher.matches(reserve.name));
-      const basketSignal = /\b(?:stablecoins?|stables)\b/i.test(reserve.name);
-      if (matched.length === 0 && !basketSignal && reserve.depType == null) return;
       const disposition = dispositionBySlice.get(`${coin.id}::${reserveIndex}`);
       const reviewStatus: MaterialUnlinkedReserveRow["reviewStatus"] = disposition == null
         ? "unreviewed"
         : UNRESOLVED_NON_LINK_DISPOSITIONS.has(disposition.disposition)
           ? "unresolved"
           : "reviewed";
-      materialSlices.push({
+      const baseRow: ReserveSliceCoverageRow = {
         coinId: coin.id,
         symbol: coin.symbol,
         reserveIndex,
@@ -838,16 +940,48 @@ function findReserveReviewRows(input: {
         depType: reserve.depType ?? null,
         marketCapUsd: marketCapForId(input.marketCapById, coin.id),
         rank: coinIndex + 1,
-        matchedSymbols: [...new Set(matched.map((matcher) => matcher.symbol))].sort(),
-        candidateCoinIds: [...new Set(matched.map((matcher) => matcher.coinId))].sort(),
+      };
+      if (reserve.pct + WEIGHT_EPSILON >= MATERIAL_RESERVE_PCT) {
+        const basketSignal = /\b(?:stablecoins?|stables)\b/i.test(reserve.name);
+        if (matched.length > 0 || basketSignal || reserve.depType != null) {
+          materialSlices.push({
+            ...baseRow,
+            matchedSymbols: [...new Set(matched.map((matcher) => matcher.symbol))].sort(),
+            candidateCoinIds: [...new Set(matched.map((matcher) => matcher.coinId))].sort(),
+            reviewStatus,
+            disposition: disposition?.disposition ?? null,
+            dispositionRationale: disposition?.rationale ?? null,
+          });
+        }
+      }
+
+      const activeMatches = activeMatchers.filter((matcher) => (
+        matcher.coinId !== coin.id
+        && matcher.symbol.toUpperCase() !== coin.symbol.toUpperCase()
+        && matcher.matches(reserve.name)
+      ));
+      const activeCandidateIds = [...new Set(activeMatches.map((matcher) => matcher.coinId))];
+      if (activeCandidateIds.length !== 1) return;
+      const candidateCoinId = activeCandidateIds[0]!;
+      const markedUntracked = disposition?.disposition === "untracked-exogenous-asset";
+      if (disposition != null && reviewStatus === "reviewed" && !markedUntracked) return;
+      if (!markedUntracked && currentEdgeKeys.has(`${candidateCoinId}->${coin.id}`)) return;
+      const candidateSymbol = activeMatches.find((matcher) => matcher.coinId === candidateCoinId)!.symbol;
+      const symbolLead: ActiveReserveSymbolLeadRow = {
+        ...baseRow,
+        candidateCoinId,
+        candidateSymbol,
         reviewStatus,
         disposition: disposition?.disposition ?? null,
-        dispositionRationale: disposition?.rationale ?? null,
-      });
+        reason: markedUntracked ? "active-target-marked-untracked" : "unique-symbol-target-unlinked",
+      };
+      (reserve.pct + WEIGHT_EPSILON < MATERIAL_RESERVE_PCT
+        ? subMaterialActiveSymbolLeads
+        : activeSymbolLeads).push(symbolLead);
     });
   });
 
-  materialSlices.sort((left, right) => {
+  const sortReserveCandidates = <T extends ReserveSliceCoverageRow>(left: T, right: T): number => {
     if (left.marketCapUsd != null || right.marketCapUsd != null) {
       const marketCapOrder = (right.marketCapUsd ?? -1) - (left.marketCapUsd ?? -1);
       if (marketCapOrder !== 0) return marketCapOrder;
@@ -860,9 +994,14 @@ function findReserveReviewRows(input: {
       || left.coinId.localeCompare(right.coinId)
       || left.reserveIndex - right.reserveIndex
     );
-  });
+  };
+  materialSlices.sort(sortReserveCandidates);
+  activeSymbolLeads.sort(sortReserveCandidates);
+  subMaterialActiveSymbolLeads.sort(sortReserveCandidates);
   return {
     materialSlices,
+    activeSymbolLeads,
+    subMaterialActiveSymbolLeads,
     dispositions: dispositions.sort((left, right) => (
       left.coinId.localeCompare(right.coinId) || left.reserveIndex - right.reserveIndex
     )),
@@ -967,7 +1106,7 @@ function classifyTargetScoreability(input: {
   if (edgeAvailability != null) return edgeAvailability ? "scoreable" : "active-nr";
   const upstreamCard = input.cardsById.get(input.upstreamId);
   if (!upstreamCard) return "not-evaluated";
-  return numberValue(upstreamCard.overallScore) != null ? "scoreable" : "active-nr";
+  return reportCardScoreValue(upstreamCard, `card ${input.upstreamId}`) != null ? "scoreable" : "active-nr";
 }
 
 function buildDependencyEdgeRows(input: {
@@ -988,6 +1127,11 @@ function buildDependencyEdgeRows(input: {
     return {
       ...edge,
       graphSource: input.graphSource,
+      reportKind: "reportKind" in edge ? edge.reportKind as ReportCardEdgeKind | null : null,
+      reportMateriality: "reportMateriality" in edge
+        ? edge.reportMateriality as ReportCardEdgeMateriality | null
+        : null,
+      reportedWeight: "reportedWeight" in edge ? edge.reportedWeight as number | null : edge.weight,
       upstreamSymbol: upstream?.symbol ?? null,
       dependentSymbol: dependent?.symbol ?? null,
       targetLifecycle: lifecycle,
@@ -1082,10 +1226,12 @@ function validateTargetDispositions(input: {
 
 function validateAdapterMappingReviews(input: {
   activeCoins: readonly StablecoinMeta[];
-  provenance: readonly DependencySetProvenanceRow[];
   reviews: readonly DependencyAdapterMappingReview[];
-  hasReportCards: boolean;
-}): AdapterMappingReviewGapRow[] {
+  requiredMappings: readonly AdapterMappingRequirement[] | null;
+}): {
+  gaps: AdapterMappingReviewGapRow[];
+  coverageEvaluated: boolean;
+} {
   const gaps: AdapterMappingReviewGapRow[] = [];
   const activeAdapters = new Set<string>(
     input.activeCoins.flatMap((coin) => coin.liveReservesConfig?.adapter ? [coin.liveReservesConfig.adapter] : []),
@@ -1127,24 +1273,24 @@ function validateAdapterMappingReviews(input: {
     }
   }
 
-  if (!input.hasReportCards) return gaps;
-  const activeById = new Map(input.activeCoins.map((coin) => [coin.id, coin]));
-  for (const row of input.provenance) {
-    if (row.baseSource !== "live-reserve") continue;
-    const adapter = activeById.get(row.coinId)?.liveReservesConfig?.adapter;
-    if (adapter && reviewByAdapter.has(adapter)) continue;
+  if (input.requiredMappings === null) return { gaps, coverageEvaluated: false };
+  for (const requirement of input.requiredMappings) {
+    if (requirement.adapter !== "unknown" && reviewByAdapter.has(requirement.adapter)) continue;
     gaps.push({
-      coinId: row.coinId,
-      adapter: adapter ?? "unknown",
+      coinId: requirement.coinId,
+      adapter: requirement.adapter,
       reason: "missing-review",
-      detail: adapter
+      detail: requirement.adapter !== "unknown"
         ? "Mapped live dependency set has no reviewed adapter-mapping rule."
         : "Mapped live dependency set has no configured adapter identity.",
     });
   }
-  return gaps.sort((left, right) => (
-    left.adapter.localeCompare(right.adapter) || (left.coinId ?? "").localeCompare(right.coinId ?? "")
-  ));
+  return {
+    gaps: gaps.sort((left, right) => (
+      left.adapter.localeCompare(right.adapter) || (left.coinId ?? "").localeCompare(right.coinId ?? "")
+    )),
+    coverageEvaluated: true,
+  };
 }
 
 function findReserveSlicesMissingCoinId(
@@ -1285,23 +1431,44 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const reserveMissing = findReserveSlicesMissingCoinId(activeCoins, marketCapById);
   const depTypeWithoutCoinIdWarnings = reserveMissing.filter((row) => row.depType != null);
   const manualReview = findManualDependencyReviewRows(activeCoins);
-  const reserveReview = findReserveReviewRows({ activeCoins, trackedCoins, marketCapById });
+  const reserveReview = findReserveReviewRows({
+    activeCoins,
+    trackedCoins,
+    marketCapById,
+    currentEdges: selectedEdges,
+  });
   const rawAuthoredDuplicates = findRawAuthoredDuplicates(activeCoins);
   const overweightEffectiveSets = findOverweightEffectiveSets(activeCoins, cardsById, hasReportCards);
   const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards);
+  const activeById = new Map(activeCoins.map((coin) => [coin.id, coin]));
+  const requiredAdapterMappings: AdapterMappingRequirement[] | null = hasReportCards
+    ? dependencyProvenance.flatMap((row) => {
+        if (row.baseSource !== "live-reserve") return [];
+        return [{
+          coinId: row.coinId,
+          adapter: activeById.get(row.coinId)?.liveReservesConfig?.adapter ?? "unknown",
+        }];
+      })
+    : null;
   const targetDispositionValidationIssues = validateTargetDispositions({
     trackedCoins,
     edges: dependencyEdges,
-    referencedTargetIds: new Set([...staticEdges, ...selectedEdges].map((edge) => edge.from)),
+    referencedTargetIds: new Set(selectedEdges.map((edge) => edge.from)),
     dispositions: targetDispositions,
     hasReportCards,
   });
-  const adapterMappingReviewGaps = validateAdapterMappingReviews({
+  const adapterMappingReviewValidation = validateAdapterMappingReviews({
     activeCoins,
-    provenance: dependencyProvenance,
     reviews: adapterMappingReviews,
-    hasReportCards,
+    requiredMappings: requiredAdapterMappings,
   });
+  const adapterMappingReviewGaps = adapterMappingReviewValidation.gaps;
+  const adapterMappingReviewCoverageStatus: AdapterMappingReviewCoverageStatus =
+    !adapterMappingReviewValidation.coverageEvaluated
+      ? "not-evaluated"
+      : adapterMappingReviewGaps.length > 0
+        ? "evaluated-with-gaps"
+        : "evaluated-clean";
   const l2beatDeploymentContext = findL2BeatDeploymentContextRows(activeCoins);
   const unavailableTargetEdges = dependencyEdges.filter((edge) => (
     edge.targetScoreability !== "scoreable" && edge.targetScoreability !== "not-evaluated"
@@ -1347,6 +1514,8 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       unavailableTargetDispositionGapCount: unavailableTargetDispositionGaps.size,
       targetDispositionValidationIssueCount: targetDispositionValidationIssues.length,
       adapterMappingReviewGapCount: adapterMappingReviewGaps.length,
+      adapterMappingReviewCoverageEvaluated: adapterMappingReviewValidation.coverageEvaluated,
+      adapterMappingReviewCoverageStatus,
       dependencyProvenanceCount: dependencyProvenance.length,
       dependencyAvailableWeight: availableWeights.length > 0
         ? availableWeights.reduce((sum, weight) => sum + weight, 0)
@@ -1361,6 +1530,9 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
         ? liveShares.reduce((sum, row) => sum + row.unmappedLiveReserveShare!, 0) / liveShares.length
         : null,
       materialUnlinkedReserveSliceCount: reserveReview.materialSlices.length,
+      activeUnlinkedReserveSymbolLeadCount: reserveReview.activeSymbolLeads.length,
+      subMaterialActiveUnlinkedReserveSymbolLeadCount:
+        reserveReview.subMaterialActiveSymbolLeads.length,
       reviewedReserveDispositionCount:
         reserveReview.dispositions.filter((row) => row.reviewStatus === "reviewed").length,
       unresolvedReserveDispositionCount:
@@ -1390,6 +1562,8 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
     reserveSlicesMissingCoinId: reserveMissing,
     depTypeWithoutCoinIdWarnings,
     materialUnlinkedReserveSlices: reserveReview.materialSlices,
+    activeUnlinkedReserveSymbolLeads: reserveReview.activeSymbolLeads,
+    subMaterialActiveUnlinkedReserveSymbolLeads: reserveReview.subMaterialActiveSymbolLeads,
     reserveDispositions: reserveReview.dispositions,
     targetDispositionValidationIssues,
     adapterMappingReviews: [...adapterMappingReviews],
@@ -1453,12 +1627,12 @@ function renderGraphDiagnostics(
 
 function renderDependencyEdges(rows: readonly DependencyEdgeCoverageRow[]): string[] {
   return renderBoundedTable(
-    ["dependent", "upstream", "type", "weight", "lifecycle", "scoreability", "unavailable disposition"],
+    ["dependent", "upstream", "type/kind", "materiality", "weight", "lifecycle", "scoreability", "unavailable disposition"],
     rows,
-    (row) => [`${row.dependentSymbol ?? "?"} (${row.to})`, `${row.upstreamSymbol ?? "?"} (${row.from})`, row.type, row.weight, row.targetLifecycle, row.targetScoreability, row.targetDisposition?.action ?? null],
+    (row) => [`${row.dependentSymbol ?? "?"} (${row.to})`, `${row.upstreamSymbol ?? "?"} (${row.from})`, row.reportKind ?? row.type, row.reportMateriality, row.reportedWeight, row.targetLifecycle, row.targetScoreability, row.targetDisposition?.action ?? null],
     FINDING_LIMIT,
     true,
-    ["left", "left", "left", "right", "left", "left", "left"],
+    ["left", "left", "left", "left", "right", "left", "left", "left"],
   );
 }
 
@@ -1484,6 +1658,17 @@ function renderMaterialReserveRows(rows: readonly MaterialUnlinkedReserveRow[]):
     FINDING_LIMIT,
     true,
     ["left", "right", "right", "left", "right", "left", "left", "left"],
+  );
+}
+
+function renderActiveReserveSymbolLeadRows(rows: readonly ActiveReserveSymbolLeadRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "mcap", "index", "slice", "pct", "active target", "reason", "review", "disposition"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, formatUsd(row.marketCapUsd), row.reserveIndex, row.reserveName, row.pct, `${row.candidateSymbol} (${row.candidateCoinId})`, row.reason, row.reviewStatus, row.disposition],
+    FINDING_LIMIT,
+    true,
+    ["left", "right", "right", "left", "right", "left", "left", "left", "left"],
   );
 }
 
@@ -1574,10 +1759,13 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     `- Unavailable target edges: ${audit.summary.unavailableTargetEdgeCount}`,
     `- Unavailable target disposition gaps: ${audit.summary.unavailableTargetDispositionGapCount}`,
     `- Target disposition validation issues: ${audit.summary.targetDispositionValidationIssueCount}`,
+    `- Adapter mapping review coverage: ${audit.summary.adapterMappingReviewCoverageStatus}`,
     `- Adapter mapping review gaps: ${audit.summary.adapterMappingReviewGapCount}`,
     `- Dependency available / unavailable weight: ${audit.summary.dependencyAvailableWeight ?? "not supplied"} / ${audit.summary.dependencyUnavailableWeight ?? "not supplied"}`,
     `- Average live mapped / unmapped reserve share: ${audit.summary.liveMappedReserveShare ?? "not supplied"} / ${audit.summary.liveUnmappedReserveShare ?? "not supplied"}`,
     `- Material stablecoin-looking unlinked slices: ${audit.summary.materialUnlinkedReserveSliceCount}`,
+    `- Active-target reserve symbol leads: ${audit.summary.activeUnlinkedReserveSymbolLeadCount}`,
+    `- Sub-1% active-target reserve symbol leads: ${audit.summary.subMaterialActiveUnlinkedReserveSymbolLeadCount}`,
     `- Reviewed / unresolved / stale reserve dispositions: ${audit.summary.reviewedReserveDispositionCount} / ${audit.summary.unresolvedReserveDispositionCount} / ${audit.summary.staleReserveDispositionCount}`,
     `- Unresolved material reserve slices: ${audit.summary.unresolvedMaterialReserveSliceCount}`,
     `- Manual dependency review gaps: ${audit.summary.manualDependencyReviewGapCount}`,
@@ -1612,6 +1800,14 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     "## Material Stablecoin-Looking Unlinked Reserves",
     "",
     ...renderMaterialReserveRows(audit.materialUnlinkedReserveSlices),
+    "",
+    "## Active-Target Reserve Symbol Leads",
+    "",
+    ...renderActiveReserveSymbolLeadRows(audit.activeUnlinkedReserveSymbolLeads),
+    "",
+    "## Sub-1% Active-Target Reserve Symbol Leads",
+    "",
+    ...renderActiveReserveSymbolLeadRows(audit.subMaterialActiveUnlinkedReserveSymbolLeads),
     "",
     "## Reserve Non-Link Dispositions",
     "",
@@ -1659,15 +1855,25 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
 }
 
 /**
- * Zero-tolerance dependency-graph invariants plus the four review-coverage
- * counters that are legitimately at zero and must stay there. This is the
- * gate half of the audit (`npm run check:dependency-review-gaps`, wired into
- * `check:structural`); the backlog counters it deliberately ignores
+ * Zero-tolerance dependency-graph invariants plus the structurally knowable
+ * review and registry-integrity counters that must stay at zero. Callers with
+ * report-card inputs can additionally require adapter-mapping coverage. This
+ * is the gate half of the audit (`npm run check:dependency-review-gaps`, wired
+ * into `check:structural`); the backlog counters it deliberately ignores
  * (`reserveSlicesMissingCoinId`, `unresolvedMaterialReserveSlices`,
  * `targetDispositionValidationIssues`) stay visible in the manual report.
  */
-export function evaluateDependencyCoverageStructure(audit: DependencyCoverageAudit): string[] {
+export function evaluateDependencyCoverageStructure(
+  audit: DependencyCoverageAudit,
+  options: { requireAdapterMappingCoverage?: boolean } = {},
+): string[] {
   const failures: string[] = [];
+  if (
+    options.requireAdapterMappingCoverage
+    && !audit.summary.adapterMappingReviewCoverageEvaluated
+  ) {
+    failures.push("adapter mapping review coverage was not evaluated");
+  }
   const zeroTolerance: Array<[string, number]> = [
     ["static self-edge", audit.summary.staticSelfEdgeCount],
     ["static duplicate-edge group", audit.summary.staticDuplicateEdgeCount],

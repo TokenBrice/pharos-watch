@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
+import { HeroPriceCard } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -28,10 +29,6 @@ vi.mock("@/components/share-button", () => ({
 
 vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name, size }: { name: string; size?: number }) => <span data-logo-size={size}>logo:{name}</span>,
-}));
-
-vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
-  RecentBlacklistBanner: () => null,
 }));
 
 vi.mock("@/components/methodology-hint", () => ({
@@ -289,49 +286,49 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 }
 
 describe("HeroCard", () => {
-  it("renders shared identity, price, and metric content across responsive layouts", () => {
+  it("renders the existing unavailable placeholder when live price is null", () => {
+    const html = renderToStaticMarkup(
+      <HeroPriceCard
+        coin={coin}
+        coinData={{ ...coinData, price: null, priceConfidence: null }}
+        price={{
+          pegRef: 1,
+          deviationBps: null,
+          gaugeDeviationBps: 0,
+          pegReferenceUnavailable: false,
+          isNavToken: false,
+          limitedDepegCoverageNote: null,
+        }}
+      />,
+    );
+
+    expect(html).toMatch(/>Price<\/p><p[^>]*>N\/A<\/p>/);
+    expect(html).not.toContain("$0.0000");
+  });
+
+  it("uses the published deviation when the live price snapshot disagrees", () => {
+    const html = renderHero({
+      coinData: { price: 1.02 },
+      deviationBps: -50,
+    });
+
+    expect(html).toContain("-50 BPS");
+    expect(html).not.toContain("+200 BPS");
+  });
+
+  it("renders website and social link destinations with accessible names", () => {
     const html = renderHero();
 
-    expect(html).toContain("USD Coin");
-    expect(html).toContain('data-logo-size="56"');
-    expect(html).toMatch(/logo:USD Coin<\/span><span[^>]*>USDC<\/span><h2[^>]*>USD Coin<\/h2>/);
-    expect(html).toContain("Circle-issued dollar stablecoin backed by cash and short-duration reserves.");
     expect(html).toContain('href="https://www.circle.com/usdc"');
     expect(html).toContain('aria-label="Website"');
     expect(html).toContain('href="https://x.com/circle"');
     expect(html).toContain('aria-label="Twitter"');
-    expect(html).toContain("major");
-    expect(html).toContain("fiat-backed");
-    expect(html).toContain("Infrastructure");
-    expect(html).toContain("Liquity v2");
-    expect(html).toContain("Bluechip: B");
   });
 
-  it("renders the prepared hero metric contract across responsive layouts", () => {
+  it("renders the active-depeg chip when the peg summary flags one", () => {
     const html = renderHero();
 
-    // The mobile-only peg gauge and freeze-summary chip were dropped: the hero
-    // renders the same vocabulary at every breakpoint.
-    expect(html).not.toContain("peg-gauge:");
-    expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
-    expect(html).toContain("USD-Pegged");
-    expect(html).toContain("RWA-Backed");
-    expect(html).toContain("Centralized");
-    expect(html).toContain("Liq");
-    expect(html).toContain("30d Excess");
-    expect(html).toContain("+0.85%");
-    expect(html).toContain("30D VS USD 3M T-BILL");
-    expect(html).not.toContain("1Y vs USD");
-    expect(html).toContain("DEWS");
-    expect(html).toContain("Watch");
-    // Task 1.5: DEWS band is now a Badge with the band's semantic color token,
-    // the score keeps mono numeric rendering below/beside the badge.
-    expect(html).toContain("31/100");
-    // Band-specific methodology hint is rendered next to the DEWS label.
-    expect(html).toContain('data-testid="methodology-hint-dewsBand"');
-    expect(html).not.toContain("Issuer controls");
-    expect(html).toContain("Compare");
   });
 
   it("renders the verification passport contract across responsive layouts", () => {
@@ -377,6 +374,7 @@ describe("HeroCard", () => {
     });
 
     expect(html).toContain("NAV token — no fixed peg");
+    expect(html).toContain("USD NAV");
     expect(html).not.toContain("+350 bps");
     expect(html).not.toContain("+350 BPS");
     expect(html).not.toContain("peg-gauge:350");
@@ -407,8 +405,6 @@ describe("HeroCard", () => {
       reportCard: { ...reportCardWithInheritedBlacklistRisk, id: "dai-makerdao" },
     });
 
-    expect(html).toContain("Centralized-Dependent");
-    expect(html).toContain("Upstream freeze — freezing is inherited from an upstream issuer or collateral asset");
     expect(html).toContain(">Upstream<");
     expect(html).not.toContain("No issuer controls");
   });

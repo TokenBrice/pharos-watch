@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -51,14 +52,8 @@ export default function TimelinePage() {
       title="Timeline"
       preface={(
         <>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: safeJsonLd(collectionJsonLd) }}
-          />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
-          />
+          <JsonLdScript json={safeJsonLd(collectionJsonLd)} />
+          <JsonLdScript json={safeJsonLd(itemListJsonLd)} />
         </>
       )}
       leadParagraphs={[

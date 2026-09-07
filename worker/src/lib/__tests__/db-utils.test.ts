@@ -18,6 +18,7 @@ import {
   setCacheIfNewer,
   writeFreshnessSentinel,
 } from "../db-cache";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 type CacheRow = { value: string; updated_at: number };
 
@@ -41,7 +42,7 @@ function makeDb(opts?: {
     }
   };
 
-  const db = {
+  const db = makeNoopD1({
     prepare: (sql: string) => {
       const runForSql = async () => {
         maybeThrowTransientFailure(sql);
@@ -121,7 +122,7 @@ function makeDb(opts?: {
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 
   return { db, calls, batchCalls };
 }
@@ -168,7 +169,7 @@ describe("db utility helpers", () => {
     const batch = vi.fn()
       .mockRejectedValueOnce(new Error("D1 DB is overloaded"))
       .mockResolvedValueOnce(results);
-    const db = { batch } as unknown as D1Database;
+    const db = makeNoopD1({ batch });
     const statements = [{}, {}] as D1PreparedStatement[];
 
     const pending = executeAtomicBatch(db, statements, { returnResults: true });
@@ -214,7 +215,7 @@ describe("db utility helpers", () => {
   it("stops batch execution between chunks when the abort signal fires", async () => {
     const controller = new AbortController();
     const batchCalls: D1PreparedStatement[][] = [];
-    const db = {
+    const db = makeNoopD1({
       prepare: () => {
         throw new Error("prepare unused");
       },
@@ -225,7 +226,7 @@ describe("db utility helpers", () => {
       },
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
     const stmts = Array.from({ length: 3 }, () => ({}) as D1PreparedStatement);
 
     await expect(batchExecute(db, stmts, { chunkSize: 1, signal: controller.signal })).rejects.toThrow(

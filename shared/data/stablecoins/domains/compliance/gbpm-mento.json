@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT issuer registers",
+        "label": "ESMA MiCA register landing page: ART/EMT issuer registers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA interim MiCA register — EMT issuers (checked 2026-08-14)",
+        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-08-14)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Mento stablecoins — GBPm described as a decentralized stablecoin",
+        "label": "Mento stablecoins: GBPm described as a decentralized stablecoin",
         "url": "https://www.mento.org/stablecoins?8f925f5c_page=2"
       },
       {
-        "label": "Mento StableToken documentation — GBPm minted through a CDP system",
+        "label": "Mento StableToken documentation: GBPm minted through a CDP system",
         "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
       }
     ]
@@ -29,7 +29,7 @@
     "notes": "Reviewed issuer-family attribution for GBPm. This identifies the Mento operating entity for cross-asset control-domain attribution; it does not resolve whether decentralized Mento governance is the statutory issuer.",
     "references": [
       {
-        "label": "Mento stablecoins — GBPm product page",
+        "label": "Mento stablecoins: GBPm product page",
         "url": "https://www.mento.org/stablecoins?8f925f5c_page=2",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-24"

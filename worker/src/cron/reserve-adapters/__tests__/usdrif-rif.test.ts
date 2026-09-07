@@ -38,7 +38,7 @@ import { fetchEvmRpcBatch, fetchEvmRpcBatchDetailed } from "../../../lib/evm-rpc
 import { fetchDefiLlamaPrices } from "../helpers";
 import { fetchUsdrifRifReserves } from "../usdrif-rif";
 import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const RIF_BUCKET = "0xa27024ed70035e46dba712609fc2afa1c97aa36a";
 const DOC_BUCKET = "0x697535055aa7afd2c280523c7b062b1f05284661";
@@ -204,7 +204,7 @@ describe("moc-v3-buckets USDRIF promotion", () => {
     expect(result.warnings).toEqual([
       expect.objectContaining({ code: "moc-v3-wallet-accounting-excess", severity: "info" }),
     ]);
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("moc-v3-buckets") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("moc-v3-buckets", result);
   });
 
   it("fails closed when the second token probe succeeds or supply reconciliation drifts", async () => {

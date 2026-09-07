@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SafetyChange } from "../../lib/telegram-alerts";
+import type { SafetyChange } from "../../lib/telegram/alerts";
 import {
   addSafetyReasonLines,
   buildV9SafetyReason,

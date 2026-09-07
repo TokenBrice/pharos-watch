@@ -50,7 +50,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Loomis Schweiz AG, Kloten — Swiss vault operator holding the gold bars underlying GLD NFTs (named in the 2025-09 KPMG factual-findings report)",
+        "name": "Loomis Schweiz AG, Kloten, the Swiss vault operator holding the gold bars underlying GLD NFTs (named in the 2025-09 KPMG factual-findings report)",
         "role": "custodian",
         "jurisdiction": "Switzerland"
       },

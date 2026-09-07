@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 import {
   assertCliUsage,
@@ -21,6 +22,13 @@ import {
   type ProtocolApiMechanismMeasurement,
   type RawProtocolApiObservationInput,
 } from "../lib/mechanism-measurement/protocol-api";
+import {
+  CAPTURE_SUMMARY_SUFFIX,
+  capturePathFromSummary,
+  parseMechanismCaptureSummary,
+} from "../lib/mechanism-measurement/capture-summary";
+import { createR2MeasurementsClient } from "../lib/r2-measurements-client";
+import type { R2MeasurementsClient } from "../lib/r2-measurements-client";
 
 const DEFAULT_OUT_DIR = "shared/data/safety-score-v9/mechanism-measurements";
 const FROZEN_LEGACY_V1_PATH =
@@ -190,14 +198,68 @@ async function fetchRawObservation(
   };
 }
 
+const DEFAULT_CAPTURE_CACHE_DIR = resolve(process.cwd(), "agents/.cache/measurements");
+
+function captureHash(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function decodeCaptureBody(bytes: Uint8Array): Buffer {
+  const body = Buffer.from(bytes);
+  return body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body;
+}
+
+async function resolveArtifactBytes(path: string, r2Client?: R2MeasurementsClient): Promise<Buffer> {
+  const absolutePath = resolve(path);
+  if (existsSync(absolutePath)) return readFileSync(absolutePath);
+  const summaryPath = absolutePath.endsWith(CAPTURE_SUMMARY_SUFFIX)
+    ? absolutePath
+    : `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
+  if (!existsSync(summaryPath)) {
+    const error = new Error(`Missing protocol API capture or summary: ${absolutePath}`);
+    Object.assign(error, { code: "ENOENT" });
+    throw error;
+  }
+  const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
+  const cachePath = resolve(DEFAULT_CAPTURE_CACHE_DIR, `${summary.sha256}.json`);
+  if (existsSync(cachePath)) {
+    const cached = readFileSync(cachePath);
+    if (captureHash(cached) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
+    return cached;
+  }
+  const client = r2Client ?? createR2MeasurementsClient();
+  for (const key of [summary.r2Key.replace(/^captures\//u, "pinned/"), summary.r2Key]) {
+    const encoded = await client.get(key);
+    if (!encoded) continue;
+    const body = decodeCaptureBody(encoded);
+    if (captureHash(body) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
+    mkdirSync(DEFAULT_CAPTURE_CACHE_DIR, { recursive: true });
+    writeFileSync(cachePath, body);
+    return body;
+  }
+  throw new Error(`capture ${summary.sha256} expired: non-replayable`);
+}
+
+
 function discoverProtocolArtifacts(root: string): string[] {
   const paths: string[] = [];
 
   function visit(directory: string): void {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
-      if (entry.isDirectory()) visit(path);
-      else if (entry.isFile() && entry.name.endsWith("-protocol-api.json")) paths.push(path);
+      if (entry.isDirectory()) {
+        visit(path);
+        continue;
+      }
+      if (entry.isFile() && entry.name.endsWith(CAPTURE_SUMMARY_SUFFIX) && entry.name.includes("-protocol-api.")) {
+        paths.push(capturePathFromSummary(path));
+      } else if (
+        entry.isFile() &&
+        entry.name.endsWith("-protocol-api.json") &&
+        !existsSync(`${path.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`)
+      ) {
+        paths.push(path);
+      }
     }
   }
 
@@ -213,9 +275,40 @@ function discoverProtocolArtifacts(root: string): string[] {
   return paths.sort();
 }
 
-function readArtifact(path: string): ProtocolApiMechanismMeasurement | null {
+async function readArtifact(
+  path: string,
+  r2Client?: R2MeasurementsClient,
+  summaryOnly = false,
+): Promise<ProtocolApiMechanismMeasurement | null> {
   const absolutePath = resolve(path);
-  const source = readFileSync(absolutePath, "utf8");
+  if (absolutePath === resolve(FROZEN_LEGACY_V1_PATH) && !existsSync(absolutePath)) {
+    const summaryPath = `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
+    if (existsSync(summaryPath)) {
+      const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
+      if (summary.sha256 !== FROZEN_LEGACY_V1_SHA256) {
+        throw new Error(`Unknown or modified legacy protocol API artifact: ${absolutePath}`);
+      }
+      console.log(
+        `[protocol-api-measurement] frozen legacy V1 fingerprint passed (normalized-only; raw replay unavailable) -> ${absolutePath}`,
+      );
+      return null;
+    }
+  }
+  let sourceBytes: Buffer;
+  try {
+    sourceBytes = await resolveArtifactBytes(absolutePath, r2Client);
+  } catch (error) {
+    if (
+      summaryOnly &&
+      error instanceof Error &&
+      error.message === "Missing CLOUDFLARE_ACCOUNT_ID for R2 measurements"
+    ) {
+      console.log(`[protocol-api-measurement] summary-only replay (raw body unavailable) -> ${absolutePath}`);
+      return null;
+    }
+    throw error;
+  }
+  const source = sourceBytes.toString("utf8");
   const parsed = JSON.parse(source) as unknown;
   if (parsed && typeof parsed === "object" && "schemaVersion" in parsed && parsed.schemaVersion === 1) {
     const fingerprint = createHash("sha256").update(source).digest("hex");
@@ -234,17 +327,17 @@ function readArtifact(path: string): ProtocolApiMechanismMeasurement | null {
   return replayed;
 }
 
-function replayEvidence(path: string): ProtocolApiMechanismMeasurement | null {
+async function replayEvidence(path: string): Promise<ProtocolApiMechanismMeasurement | null> {
   const absolutePath = resolve(path);
-  const replayed = readArtifact(absolutePath);
+  const replayed = await readArtifact(absolutePath);
   if (!replayed) return null;
   console.log(`[protocol-api-measurement] ${replayed.assetId}: offline raw-byte replay passed -> ${absolutePath}`);
   return replayed;
 }
 
-function acceptExistingSnapshot(path: string, incoming: ProtocolApiMechanismMeasurement): boolean {
+async function acceptExistingSnapshot(path: string, incoming: ProtocolApiMechanismMeasurement): Promise<boolean> {
   try {
-    const existing = readArtifact(path);
+    const existing = await readArtifact(path);
     if (!existing) throw new Error(`Legacy V1 evidence cannot occupy a V2 snapshot path: ${path}`);
     if (!isSameProtocolApiSourceSnapshot(existing, incoming)) {
       throw new Error(`Evidence ${path} exists with different source content or derivation`);
@@ -252,22 +345,26 @@ function acceptExistingSnapshot(path: string, incoming: ProtocolApiMechanismMeas
     console.log(`[protocol-api-measurement] identical source snapshot already recorded at ${path}`);
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes("ENOENT")) return false;
+    if (error instanceof Error && (error.message.includes("ENOENT") || error.message.startsWith("Missing protocol API"))) {
+      return false;
+    }
     throw error;
   }
 }
 
-function existingArtifacts(outDir: string): unknown[] {
+async function existingArtifacts(outDir: string): Promise<ProtocolApiMechanismMeasurement[]> {
   try {
-    return discoverProtocolArtifacts(outDir)
-      .map(readArtifact)
-      .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
+    const artifacts: ProtocolApiMechanismMeasurement[] = [];
+    for (const path of discoverProtocolArtifacts(outDir)) {
+      const artifact = await readArtifact(path);
+      if (artifact) artifacts.push(artifact);
+    }
+    return artifacts;
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return [];
     throw error;
   }
 }
-
 async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promise<void> {
   const target = PROTOCOL_API_TARGETS[assetId];
   const observations: RawProtocolApiObservationInput[] = [];
@@ -277,18 +374,18 @@ async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promi
 
   const outPath = resolve(join(outDir, assetId, protocolApiEvidenceFilename(artifact)));
   try {
-    if (acceptExistingSnapshot(outPath, artifact)) return;
+    if (await acceptExistingSnapshot(outPath, artifact)) return;
   } catch (error) {
     if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) throw error;
   }
 
-  validateProtocolApiArtifactSet([...existingArtifacts(outDir), artifact]);
+  validateProtocolApiArtifactSet([...(await existingArtifacts(outDir)), artifact]);
   mkdirSync(dirname(outPath), { recursive: true });
   try {
     writeFileSync(outPath, serializeProtocolApiMeasurement(artifact), { flag: "wx" });
   } catch (error) {
     if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
-    acceptExistingSnapshot(outPath, artifact);
+    await acceptExistingSnapshot(outPath, artifact);
     return;
   }
 
@@ -306,17 +403,21 @@ if (isDirectRun(import.meta.url, process.argv[1])) {
       const options = parseOptions(process.argv.slice(2));
       if (!options) return;
       if (options.replayPaths.length > 0) {
-        const artifacts = options.replayPaths
-          .map(replayEvidence)
-          .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
+        const artifacts: ProtocolApiMechanismMeasurement[] = [];
+        for (const path of options.replayPaths) {
+          const artifact = await replayEvidence(path);
+          if (artifact) artifacts.push(artifact);
+        }
         validateProtocolApiArtifactSet(artifacts);
         return;
       }
       if (options.replayAll) {
         const paths = discoverProtocolArtifacts(DEFAULT_OUT_DIR);
-        const artifacts = paths
-          .map(readArtifact)
-          .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
+        const artifacts: ProtocolApiMechanismMeasurement[] = [];
+        for (const path of paths) {
+          const artifact = await readArtifact(path, undefined, true);
+          if (artifact) artifacts.push(artifact);
+        }
         validateProtocolApiArtifactSet(artifacts);
         console.log(
           `[protocol-api-measurement] replay-all passed: ${artifacts.length} V2 artifact(s), ${paths.length - artifacts.length} frozen legacy V1 artifact(s)`,

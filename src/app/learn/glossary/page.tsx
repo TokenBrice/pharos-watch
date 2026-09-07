@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LearnHero } from "../_shared/learn-hero";
 import { LearnPageShell } from "../_shared/learn-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -170,12 +171,7 @@ export default function GlossaryPage() {
       title="Pharos Glossary"
       subtitle={GLOSSARY_LEAD}
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(GLOSSARY_DEFINED_TERM_SET_JSON_LD),
-        }}
-      />
+      <JsonLdScript json={safeJsonLd(GLOSSARY_DEFINED_TERM_SET_JSON_LD)} />
       <div className="space-y-8">
         <LearnHero
           beamLabel="Terms defined"
@@ -217,8 +213,8 @@ export default function GlossaryPage() {
           <p>
             <span className="font-semibold text-foreground">
               A note on version pins
-            </span>{" "}
-            — every entry pins the methodology version of the section it cites.
+            </span>:
+            every entry pins the methodology version of the section it cites.
             When a methodology version moves, the corresponding entry is
             re-read; entries whose definition the new version changes are
             re-authored before the pin is bumped.

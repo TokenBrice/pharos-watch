@@ -18,7 +18,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://securitize.io/primary-market/vaneck-vbill",
-    "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)",
+    "provider": "Securitize / VanEck (daily AUM, yield, and NAV reporting; public page discloses permitted cash/U.S. Treasury bill/Treasury-repo strategy but not current security-level or category-weighted holdings)",
     "attestorTier": "self",
     "cadence": "daily-nav",
     "attestorJurisdiction": "British Virgin Islands",

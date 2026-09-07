@@ -1,7 +1,7 @@
 import type {
   StatusResponse,
 } from "@shared/types/status";
-import { computeReserveCompositionOverview } from "../live-reserves-store";
+import { computeReserveCompositionOverview } from "../live-reserves/store";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { CronHealthSnapshot } from "./cron-health";
 import {
@@ -54,16 +54,24 @@ export async function loadSupplementalStatusSections(
   let reserveCompositionQueryFailed = false;
   try {
     const reserveOverview = await computeReserveCompositionOverview(db, now);
+    const { historyWriteGapCheckFailed, ...reserveOverviewData } = reserveOverview;
     const reserveAssessment = deriveReserveCompositionStatus({
       ...reserveComposition,
-      ...reserveOverview,
+      ...reserveOverviewData,
     });
     reserveComposition = {
-      ...reserveOverview,
+      ...reserveOverviewData,
       status: reserveAssessment.status,
       freshCoverageRatio: reserveAssessment.freshCoverageRatio,
       authoritativeFreshCoverageRatio: reserveAssessment.authoritativeFreshCoverageRatio,
     };
+    if (historyWriteGapCheckFailed) {
+      reserveCompositionQueryFailed = true;
+      sectionErrors.reserveComposition = {
+        code: "reserve_history_reconciliation_query_failed",
+        message: "Reserve history reconciliation unavailable.",
+      };
+    }
   } catch (err) {
     reserveCompositionQueryFailed = true;
     logWorkerEvent({

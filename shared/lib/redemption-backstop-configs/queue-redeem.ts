@@ -8,6 +8,10 @@ import {
   fixedFee,
   queueRedeemBase,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
 } from "./shared";
 import { NEST_NAV_VAULT_CONFIGS } from "./queue-redeem-nest-nav";
 import {
@@ -128,7 +132,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   }),
   "dusd-dialectic": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
-    accessModel: "whitelisted-onchain",
+    accessModel: "permissionless-onchain",
     holderEligibility: "issuer-discretionary",
     settlementModel: "queued",
     executionModel: "opaque",
@@ -140,7 +144,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: fixedFee(0, "The reviewed standard AsyncRedeemer implementation does not charge a DUSD redemption fee"),
     routeStatus: "open",
     routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-07-30",
+    reviewedAt: "2026-09-03",
     docs: [
       sourceRef("Makina Machine lifecycle", "https://docs.makina.finance/concepts/architecture/lifecycle", [
         "route",
@@ -152,10 +156,10 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "access",
         "settlement",
       ]),
-      sourceRef("Makina DUSD strategy", "https://makina.finance/strategy/dusd", ["route", "capacity"]),
+      sourceRefRouteCapacity("Makina DUSD strategy", "https://makina.finance/strategy/dusd"),
       sourceRef(
-        "DUSD AsyncRedeemer verified source",
-        "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract",
+        "DUSD AsyncRedeemer sanctions-check implementation",
+        "https://eth.blockscout.com/address/0x49c4762ab838f2e5d8252b69b90a1e8587a74511?tab=contract",
         ["route", "fees", "access", "settlement"],
       ),
       sourceRef("DUSD Machine Terms", "https://makina.finance/MeccanicoToS.pdf", [
@@ -165,11 +169,12 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ]),
     ],
     notes: [
-      "The reviewed AsyncRedeemer implementation currently advances sequential request IDs and charges no redemption fee, but the Machine Terms provide no contractual queue priority and no perpetual zero-fee covenant.",
+      "At Ethereum block 25899375 the DirectDepositor and AsyncRedeemer whitelists were disabled and both sanctions checks were enabled. The current on-chain route is permissionless for addresses that pass those checks, while the Risk Manager retains authority to re-enable either whitelist.",
+      "The reviewed AsyncRedeemer sanctions-check implementation advances sequential request IDs and charges no redemption fee, but the Machine Terms provide no contractual queue priority and no perpetual zero-fee covenant.",
       "A DUSD buyback request is not a contractual redemption right, may remain unfilled indefinitely, and has only a 12-hour minimum finalization delay rather than a maximum settlement SLA.",
-      "Verified-User admission, suspension, and revocation are discretionary and have no promised appeal SLA. U.S. persons and other Prohibited Persons or Jurisdictions are ineligible, and EU/EEA-originating transactions may be refused.",
+      "The access model records the currently executable contract path. Holder eligibility remains issuer-discretionary because the published Machine Terms retain Verified-User admission, suspension, and revocation, with no promised appeal SLA. U.S. persons and other Prohibited Persons or Jurisdictions are ineligible, and EU/EEA-originating transactions may be refused.",
       "Settlement is available only in Ethereum USDC after the operator frees accounting-token liquidity; there is no committed alternate settlement asset, and the operator may cease the Machine without notice.",
-      "Fresh Makina route telemetry computes usable queue capacity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). If that same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
+      "Fresh Makina route telemetry computes currently available queue liquidity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). Because finalization is operator-batched and has no proven maximum completion bound, an open route is published as unproven settlement capacity rather than a measured zero-capacity exit. If the same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
     ],
   }),
   "acred-apollo-securitize": defineReviewedQueueRedeemConfig(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT, {
@@ -185,13 +190,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "https://www.nasdaq.com/press-release/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-credit-fund",
         ["route", "access", "settlement"],
       ),
-      sourceRef("RWA.xyz ACRED profile", "https://app.rwa.xyz/assets/ACRED", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("RWA.xyz ACRED profile", "https://app.rwa.xyz/assets/ACRED"),
       sourceRef(
         "Securitize ACRED fund page",
         "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
@@ -305,13 +304,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     executionModel: "rules-based-nav",
     costModel: fixedFee(0, "Aster FAQ says there are no fees to mint or withdraw asUSDF"),
     docs: [
-      sourceRef("Aster asUSDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Aster asUSDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"),
       sourceRef("Aster Earn asUSDF", "https://docs.asterdex.com/product/aster-earn/mint-asusdf", ["route"]),
     ],
     notes: [
@@ -327,13 +320,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Lorenzo states it does not charge user deposit or withdrawal fees; yield is distributed net of protocol and execution service fees",
     ),
     docs: [
-      sourceRef("Lorenzo USD1+ OTF launch", "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Lorenzo USD1+ OTF launch", "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed"),
       sourceRef("Lorenzo OTF app", "https://app.lorenzo-protocol.xyz/otf", ["route", "access", "settlement"]),
       sourceRef("Lorenzo website", "https://lorenzo-protocol.xyz/home", ["capacity"]),
     ],
@@ -416,18 +403,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Brix protocol materials describe standard wiTRY unstaking through a 3-day cooldown plus a fast-withdraw option with an additional fee; public materials reviewed do not publish one global fixed fee",
     ),
     docs: [
-      sourceRef("Brix iTRY audit scope overview", "https://hackmd.io/@EKJz7PaeT2GeAUJS83WWVw/SJPLb3QZWe", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Code4rena Brix Money audit repository", "https://github.com/code-423n4/2025-11-brix-money", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefFull("Brix iTRY audit scope overview", "https://hackmd.io/@EKJz7PaeT2GeAUJS83WWVw/SJPLb3QZWe"),
+      sourceRefRouteCapacityAccess("Code4rena Brix Money audit repository", "https://github.com/code-423n4/2025-11-brix-money"),
       sourceRef("Brix website", "https://www.brix.money/", ["route", "access"]),
     ],
     notes: [
@@ -534,7 +511,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
   }),
   "aznd-mu-digital": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
-    unresolvedOutputDisposition: "issuer-undisclosed",
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     costModel: fixedFee(0, "Mu Digital docs describe minting and redemption as fee-free"),
@@ -550,7 +527,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Tracked metadata describes KYC-gated weekly AZND redemptions against the full reserve book rather than an always-live stablecoin hot-wallet buffer",
-      "2026-07-27 recheck (Kimi data review): Mu Digital documents accepted mint funding assets (USDC, USDT, or AUSD) but still does not identify the asset used to settle an approved AZND redemption ('receipt of funds' after the weekly queue). The output therefore remains an unresolved asset with no guessed identity.",
+      "2026-09-04 adjudication: Mu Digital Terms of Use Section 4.E.ix grants eligible AZND holders the right to withdraw for USDC, and Mu Digital's mint/redeem documentation describes an approximately 7-day queue; the redemption output is therefore resolved to USDC.",
     ],
   }),
   "avusd-avant": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
@@ -563,7 +540,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "https://docs.avantprotocol.com/overview/using-the-avant-protocol/redeeming-avassets",
         ["route", "settlement", "fees", "capacity"],
       ),
-      sourceRef("Avant core tokens", "https://docs.avantprotocol.com/overview/core-tokens", ["route", "capacity"]),
+      sourceRefRouteCapacity("Avant core tokens", "https://docs.avantprotocol.com/overview/core-tokens"),
     ],
     notes: [
       "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
@@ -578,18 +555,11 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: fixedFee(0, "Unitas docs list a 0% redemption fee"),
     reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
     docs: [
-      sourceRef("Unitas minting USDu", "https://docs.unitas.so/solution-design/minting-usdu", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("Unitas minting USDu", "https://docs.unitas.so/solution-design/minting-usdu"),
       sourceRef("Unitas overview", "https://docs.unitas.so/", ["route", "fees"]),
       sourceRef("Unitas off-exchange settlement", "https://docs.unitas.so/off-exchange-settlement", ["settlement"]),
       sourceRef("Unitas terms of service", "https://docs.unitas.so/resources/terms-of-service", ["route"]),
-      sourceRef("Unitas delta-neutral stability", "https://docs.unitas.so/solution-overview/delta-neutral-stability", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacity("Unitas delta-neutral stability", "https://docs.unitas.so/solution-overview/delta-neutral-stability"),
     ],
     notes: [
       "Direct USDu minting and redemption are restricted to whitelisted participants, while docs describe on-demand redemption flows supported by Unitas's OES settlement rails",
@@ -603,11 +573,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     settlementModel: "days",
     costModel: undisclosedReviewedFee(),
     docs: [
-      sourceRef("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money"),
       sourceRef("Yuzu Accountable dashboard", "https://yuzu.accountable.capital/", ["capacity"]),
     ],
     notes: [
@@ -624,7 +590,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ),
     reviewedAt: "2026-04-16",
     docs: [
-      sourceRef("Saturn USDAT", "https://saturn.money/usdat", ["route", "capacity"]),
+      sourceRefRouteCapacity("Saturn USDAT", "https://saturn.money/usdat"),
       sourceRef("Saturn documentation", "https://docs.saturn.money/", ["route", "access"]),
     ],
     notes: [
@@ -665,7 +631,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     reviewedAt: "2026-04-16",
     docs: [
       sourceRef("Hermetica", "https://hermetica.fi/", ["route"]),
-      sourceRef("Hermetica documentation", "https://docs.hermetica.fi/", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Hermetica documentation", "https://docs.hermetica.fi/"),
     ],
     notes: [
       "Delta-neutral BTC strategy (spot long + short perpetual) on Stacks; KYC-gated mint/redeem via the Hermetica app",
@@ -682,11 +648,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
         ["route", "settlement", "access"],
       ),
-      sourceRef("RIF On Chain FAQ", "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacityFees("RIF On Chain FAQ", "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"),
       sourceRef(
         "RIF On Chain system states",
         "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states",
@@ -705,12 +667,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Neutrl redemption is available to whitelisted KYC participants and supports instant or queued execution depending on AssetReserve liquidity; public fee schedule is not disclosed",
     ),
     docs: [
-      sourceRef("Neutrl minting", "https://docs.neutrl.finance/protocol-mechanics/minting", ["route", "capacity"]),
-      sourceRef("Neutrl redemption", "https://docs.neutrl.finance/protocol-mechanics/redemption", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacity("Neutrl minting", "https://docs.neutrl.finance/protocol-mechanics/minting"),
+      sourceRefRouteCapacityAccess("Neutrl redemption", "https://docs.neutrl.finance/protocol-mechanics/redemption"),
       sourceRef("Neutrl transparency", "https://docs.neutrl.finance/protocol-design/transparency", ["capacity"]),
     ],
     notes: [
@@ -734,13 +692,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     },
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
-      sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions"),
       sourceRef("OnRe transparency", "https://app.onre.finance/earn/transparency", ["capacity"]),
     ],
     notes: [
@@ -758,13 +710,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "formula",
     ),
     docs: [
-      sourceRef("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview"),
       sourceRef("Apyx smart contract addresses", "https://docs.apyx.fi/resources/smart-contract-addresses", ["route"]),
     ],
     telemetrySubject: "the vault's idle apxUSD balance",
@@ -779,10 +725,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "StakedAvUSDV2 ERC-4626 (0x06d47f3fb376649c3a9dafe069b3d6e35572219e) charges no exit fee: on-chain previewRedeem == convertToAssets, source shows a vesting-only adjustment; the Avant redemption 'fee' applies to the downstream avUSD leg",
       ),
       docs: [
-        sourceRef(
+        sourceRefFull(
           "Avant staking avAssets",
           "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc",
-          ["route", "capacity", "fees", "access", "settlement"],
         ),
         sourceRef(
           "Avant unstaking savAssets",
@@ -834,13 +779,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: documentedVariableFee("Rings docs describe scAsset redemption after a three-day cooldown"),
     reviewedAt: "2026-07-27",
     docs: [
-      sourceRef("Rings backing", "https://docs.rings.money/backing", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Rings backing", "https://docs.rings.money/backing"),
       sourceRef("Rings docs", "https://docs.rings.money/", ["route", "settlement"]),
       sourceRef("Rings minting tutorial (archived)", "https://web.archive.org/web/20250206125740/https://docs.rings.money/tutorials/minting", [
         "route",
@@ -864,13 +803,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
     },
     docs: [
-      sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"),
       sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
     ],
   }),
@@ -885,13 +818,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Nest docs describe nALPHA/inALPHA redemption requests through the app and atomic queue; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("Nest liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Nest liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions"),
       sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
         "route",
         "capacity",
@@ -915,17 +842,10 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Usual docs describe permissionless bUSD0 redemption into USD0: early par exit requires the matching rt-bUSD0 token, while bUSD0 alone redeems at maturity; public docs reviewed do not publish a separate redemption fee",
     ),
     docs: [
-      sourceRef("Usual bUSD0 docs", "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
+      sourceRefFull("Usual bUSD0 docs", "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"),
+      sourceRefFull(
         "Usual bUSD0 fact sheet",
         "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
     ],
     notes: [
@@ -945,7 +865,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     routeExitCorrelation: "same-protocol-liquidity",
     docs: [
       sourceRef("Redeem guide", "https://doc.monetrix.xyz/guide/redeem.md", ["route", "settlement", "access"]),
-      sourceRef("Mint guide", "https://doc.monetrix.xyz/guide/mint.md", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Mint guide", "https://doc.monetrix.xyz/guide/mint.md"),
       sourceRef("Delta-neutral strategy", "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy.md", [
         "capacity",
         "route",
@@ -968,5 +888,4 @@ const FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   [{ stablecoinIds: ["iusd-infinifi"], reviewedAt: REVIEWED_REMEDIATION_AT }],
 );
 
-export const QUEUE_REDEEM_BACKSTOP_CONFIGS = FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.configs;
 export const QUEUE_REDEEM_BACKSTOP_ENTRIES = FINALIZED_QUEUE_REDEEM_BACKSTOP_REGISTRY.entries;

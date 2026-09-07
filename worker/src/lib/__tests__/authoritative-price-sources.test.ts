@@ -50,6 +50,26 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
         symbol: "sAID",
         contracts: [{ chain: "ethereum", address: "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8", decimals: 18 }],
       },
+      {
+        id: "usds-sky",
+        symbol: "USDS",
+        contracts: [{ chain: "ethereum", address: "0xdc035d45d973e3ec169d2276ddab16f1e407384f", decimals: 18 }],
+      },
+      {
+        id: "susds-sky",
+        symbol: "sUSDS",
+        contracts: [{ chain: "ethereum", address: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", decimals: 18 }],
+      },
+      {
+        id: "usde-ethena",
+        symbol: "USDe",
+        contracts: [{ chain: "ethereum", address: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", decimals: 18 }],
+      },
+      {
+        id: "susde-ethena",
+        symbol: "sUSDe",
+        contracts: [{ chain: "ethereum", address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497", decimals: 18 }],
+      },
     ],
   }),
   // Deliberately permissive: everything is active except the two ids this suite
@@ -65,6 +85,19 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
   resolveClosestBlockAtOrBeforeTimestamp: (...args: unknown[]) => resolveClosestBlockAtOrBeforeTimestampMock(...args),
 }));
+
+const kavaFetchLivePriceMock = vi.fn();
+
+vi.mock("../authoritative-price-sources/kava-pricefeed", async (importOriginal) => {
+  const actual = await importOriginal<typeof KavaPricefeedModule>();
+  return {
+    ...actual,
+    kavaUsdxPricefeedProvider: {
+      ...actual.kavaUsdxPricefeedProvider,
+      fetchLivePrice: (...args: unknown[]) => kavaFetchLivePriceMock(...args),
+    },
+  };
+});
 
 vi.mock("../../api/backfill-price-sources", () => ({
   fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
@@ -84,9 +117,11 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   encodeUint256,
   fetchVaultAssetsPerShareViaSelector,
+  VALIDATED_LIVE_PRICE_NO_QUOTE,
   type Erc4626NavVaultConfig,
   type PriceSourceProvider,
 } from "../authoritative-price-sources/helpers";
+import type * as KavaPricefeedModule from "../authoritative-price-sources/kava-pricefeed";
 import { asset, fetchLiveOverrides, freshParent, unpricedChild } from "./authoritative-price-sources.test-support";
 import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -543,6 +578,76 @@ describe("authoritative-price-sources", () => {
       consecutiveFailures: 1,
     });
     warnSpy.mockRestore();
+  });
+
+  it("heals the asset-scoped circuit after a validated no-quote result without publishing a price", async () => {
+    kavaFetchLivePriceMock.mockReset().mockResolvedValue(VALIDATED_LIVE_PRICE_NO_QUOTE);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchLiveOverrides([unpricedChild("usdx-kava")], { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      emptyCount: 1,
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+  });
+
+  it("records a dedicated circuit success when the asset-scoped provider publishes an override", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    kavaFetchLivePriceMock.mockReset().mockResolvedValue({
+      price: 0.66,
+      source: "kava-pricefeed",
+      confidence: "high",
+      observedAt: nowSec,
+    });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const overrides = await fetchLiveOverrides([unpricedChild("usdx-kava")], { db });
+
+    expect(overrides.get("usdx-kava")).toMatchObject({
+      price: 0.66,
+      source: "kava-pricefeed",
+      confidence: "high",
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.KAVA_PRICEFEED}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
   });
 
   it("records parent-derived live RPC nulls as grouped protocol-redeem failures", async () => {
@@ -1722,6 +1827,7 @@ describe("authoritative-price-sources", () => {
   it("keeps scoped M0 wrapper overrides single-source when inheriting a fresh replay-safe single-source parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchLiveOverrides([
+      asset("m-m0", { circulating: { peggedUSD: 300_000_000 } }),
       asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
       asset("xo-exodus", { circulating: { peggedUSD: 2_400_000 } }),
       freshParent("wm-m0", 0.999674, "coingecko", {
@@ -1730,6 +1836,17 @@ describe("authoritative-price-sources", () => {
       }),
     ]);
 
+    expect(overrides.get("m-m0")).toMatchObject({
+      price: 0.999674,
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentSource: "coingecko",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
     expect(overrides.get("usdk-kast")).toMatchObject({
       price: 0.999674,
       source: "coingecko",
@@ -1782,16 +1899,29 @@ describe("authoritative-price-sources", () => {
     const overrides = await fetchLiveOverrides([
       unpricedChild("m-m0"),
       unpricedChild("usdn-noble"),
-      freshParent("wm-m0", 0.999812, "coingecko+raydium-dex", { nowSec }),
+      freshParent("wm-m0", 0.999812, "coingecko", {
+        nowSec,
+        priceConfidence: "single-source",
+      }),
     ]);
 
     expect(overrides.get("m-m0")).toMatchObject({
       price: 0.999812,
-      metadata: { inheritedFrom: "wm-m0" },
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
     });
     expect(overrides.get("usdn-noble")).toMatchObject({
       price: 0.999812,
-      metadata: { inheritedFrom: "m-m0" },
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "m-m0",
+        parentReplaySafe: true,
+      },
     });
   });
 
@@ -1876,6 +2006,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDT",
         vault: "0xe2e7a17dff93280dec073c995595155283e3c372",
         chain: "ethereum",
+        vaultDecimals: 6,
         outputRaw: 1_020_856n,
         expectedRatio: 1.020856,
       },
@@ -1885,6 +2016,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDC",
         vault: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
         chain: "ethereum",
+        vaultDecimals: 6,
         outputRaw: 1_022_324n,
         expectedRatio: 1.022324,
       },
@@ -1894,6 +2026,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDC",
         vault: "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_021_717n,
         expectedRatio: 1.021717,
       },
@@ -1903,8 +2036,19 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDT",
         vault: "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_013_670n,
         expectedRatio: 1.01367,
+      },
+      {
+        id: "steakusdc-steakhouse",
+        parentId: "usdc-circle",
+        parentSymbol: "USDC",
+        vault: "0xbeef088055857739c12cd3765f20b7679def0f51",
+        chain: "ethereum",
+        vaultDecimals: 18,
+        outputRaw: 1_029_307n,
+        expectedRatio: 1.029307,
       },
       {
         id: "bbqusdc-steakhouse",
@@ -1912,8 +2056,29 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDC",
         vault: "0xbeefff209270748ddd194831b3fa287a5386f5bc",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_114_859n,
         expectedRatio: 1.114859,
+      },
+      {
+        id: "susds-sky",
+        parentId: "usds-sky",
+        parentSymbol: "USDS",
+        vault: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        chain: "ethereum",
+        vaultDecimals: 18,
+        outputRaw: 1_107_520_438_997_439_491n,
+        expectedRatio: 1.10752043,
+      },
+      {
+        id: "susde-ethena",
+        parentId: "usde-ethena",
+        parentSymbol: "USDe",
+        vault: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        chain: "ethereum",
+        vaultDecimals: 18,
+        outputRaw: 1_245_114_135_085_881_836n,
+        expectedRatio: 1.24511413,
       },
       {
         id: "srusde-strata",
@@ -1921,6 +2086,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDe",
         vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_020_871_205_300_000_000n,
         expectedRatio: 1.0208712,
       },
@@ -1930,6 +2096,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDC",
         vault: "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_089_794n,
         expectedRatio: 1.089794,
       },
@@ -1939,6 +2106,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "USDC",
         vault: "0x9be9294722f8aad37b11a9792be2c782182cafa2",
         chain: "ethereum",
+        vaultDecimals: 6,
         outputRaw: 1_026_816n,
         expectedRatio: 1.026816,
       },
@@ -1948,6 +2116,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "YUSD",
         vault: "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_041_919_601_032_091_731n,
         expectedRatio: 1.0419196,
       },
@@ -1957,6 +2126,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "BOLD",
         vault: "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_041_000_000_000_000_000n,
         expectedRatio: 1.041,
       },
@@ -1966,6 +2136,7 @@ describe("authoritative-price-sources", () => {
         parentSymbol: "BOLD",
         vault: "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
         chain: "ethereum",
+        vaultDecimals: 18,
         outputRaw: 1_000_000_000_000_000_000n,
         expectedRatio: 1,
       },
@@ -1982,7 +2153,7 @@ describe("authoritative-price-sources", () => {
       expect(fetchEvmCallHexAtBlockMock).toHaveBeenLastCalledWith(
         testCase.chain,
         testCase.vault,
-        expect.stringMatching(/^0x07a2d13a/),
+        `0x07a2d13a${(10n ** BigInt(testCase.vaultDecimals)).toString(16).padStart(64, "0")}`,
         "latest",
         expect.any(Object),
       );
@@ -2431,6 +2602,26 @@ describe("authoritative-price-sources", () => {
 
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
     expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    warnSpy.mockRestore();
+  });
+
+  it.each([
+    { childId: "susds-sky", parentId: "usds-sky" },
+    { childId: "susde-ethena", parentId: "usde-ethena" },
+  ])("keeps $childId unpriced when its parent is stale or untrusted", async ({ childId, parentId }) => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const nowSec = Math.floor(Date.now() / 1000);
+    const parents = [
+      freshParent(parentId, 1, "coingecko+pyth", { nowSec, priceConfidence: "low" }),
+      freshParent(parentId, 1, "coingecko+pyth", { nowSec, observedAt: nowSec - 24 * 60 * 60 }),
+    ];
+
+    for (const parent of parents) {
+      const overrides = await fetchLiveOverrides([unpricedChild(childId), parent]);
+      expect(overrides.has(childId)).toBe(false);
+    }
+
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 

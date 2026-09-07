@@ -1,5 +1,4 @@
 import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
-import { BPS_PER_UNIT } from "./math";
 import { isFiniteNumber } from "./type-guards";
 import { formatRelativeAgeSeconds } from "./relative-time";
 import { ratioToPercentage, relativeChangeRatio } from "./stats";
@@ -12,12 +11,14 @@ export interface CompactUsdFormatOptions {
   decimals: Readonly<Record<CompactUsdTier, number>>;
   invalidFallback: string | ((value: number | null | undefined) => string);
   compactNegative?: boolean;
+  forcedLowestTier?: Exclude<CompactUsdTier, "unit">;
   /** Highest abbreviation tier to allow; null disables abbreviation. */
   maximumTier?: Exclude<CompactUsdTier, "unit"> | null;
   /** Smallest abbreviation tier to allow; lower values render as units. */
   minimumTier?: Exclude<CompactUsdTier, "unit">;
   positiveSign?: boolean;
   signPosition?: "before-currency" | "after-currency";
+  suffixes?: Readonly<Partial<Record<CompactUsdTier, string>>>;
   thousandSuffix?: "K" | "k";
   trimTrailingZeros?: boolean;
   useGrouping?: boolean;
@@ -58,12 +59,16 @@ export function formatCompactUsdWithOptions(
     ? undefined
     : COMPACT_USD_TIERS
         .slice(maximumTierIndex, minimumTierIndex + 1)
-        .find(({ divisor }) => abs >= divisor);
+        .find(({ divisor }) => abs >= divisor)
+        ?? (options.forcedLowestTier
+          ? COMPACT_USD_TIERS.find(({ tier }) => tier === options.forcedLowestTier)
+          : undefined);
   const tier: CompactUsdTier = selected?.tier ?? "unit";
   const scaled = selected ? abs / selected.divisor : abs;
-  const suffix = selected?.tier === "thousand"
-    ? (options.thousandSuffix ?? selected.suffix)
-    : (selected?.suffix ?? "");
+  const suffix = options.suffixes?.[tier]
+    ?? (selected?.tier === "thousand" ? options.thousandSuffix : undefined)
+    ?? selected?.suffix
+    ?? "";
   const decimals = options.decimals[tier];
   const formatted = options.useGrouping || options.trimTrailingZeros
     ? new Intl.NumberFormat("en-US", {
@@ -79,6 +84,14 @@ export function formatCompactUsdWithOptions(
     ? `${currencyPrefix}${sign}${body}`
     : `${sign}${currencyPrefix}${body}`;
 }
+
+const DEX_PRICING_AUDIT_USD = { decimals: { trillion: 2, billion: 2, million: 2, thousand: 1, unit: 0 }, invalidFallback: "$0", maximumTier: "billion", signPosition: "after-currency" } as const;
+const SAFETY_MAP_USD = { decimals: { trillion: 1, billion: 1, million: 0, thousand: 0, unit: 0 }, forcedLowestTier: "thousand", invalidFallback: "$0K", signPosition: "after-currency" } as const;
+const V9_PRESENTATION_USD = { compactNegative: false, decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 }, invalidFallback: "$0", maximumTier: "million", signPosition: "after-currency", suffixes: { million: "m", thousand: "k" } } as const;
+
+export const formatDexPricingAuditUsd = (value: number): string => formatCompactUsdWithOptions(value, DEX_PRICING_AUDIT_USD);
+export const formatSafetyMapUsd = (value: number): string => formatCompactUsdWithOptions(value < 0 ? Math.round(value / 1e3) * 1e3 : value, value < 0 ? { ...SAFETY_MAP_USD, maximumTier: "thousand" } : SAFETY_MAP_USD);
+export const formatV9PresentationUsd = (value: number): string => formatCompactUsdWithOptions(value, { ...V9_PRESENTATION_USD, decimals: { ...V9_PRESENTATION_USD.decimals, million: value >= 1e7 ? 0 : 1, thousand: value >= 1e4 ? 0 : 1 }, useGrouping: value < 1e3 });
 
 function abbreviateNumber(value: number, decimals: number): string {
   return formatCompactUsdWithOptions(value, {
@@ -187,20 +200,6 @@ export function formatBps(bps: number): string {
   return `${sign}${bps} bps`;
 }
 
-/**
- * Compute peg deviation in basis points.
- * `pegValue` should be the USD price of one unit of the peg currency
- * (e.g. ~1.19 for EUR, ~1.30 for CHF, ~3200 for gold oz, 1 for USD).
- */
-export function formatPegDeviation(price: number | null | undefined, pegValue: number | null = 1): string {
-  if (!isFiniteNumber(price)) return "N/A";
-  if (pegValue == null || !Number.isFinite(pegValue) || pegValue === 0) return "N/A";
-  // Deviation as basis points relative to peg: ((price / pegValue) - 1) * BPS_PER_UNIT
-  const ratio = price / pegValue;
-  const bps = Math.round((ratio - 1) * BPS_PER_UNIT);
-  if (!Number.isFinite(bps)) return "N/A";
-  return formatBps(bps);
-}
 
 export function formatPercentChange(current: number, previous: number): string {
   const changeRatio = relativeChangeRatio(current, previous);

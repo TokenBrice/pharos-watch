@@ -1,5 +1,5 @@
 import type { KVNamespace } from "@shared/types/cloudflare-runtime";
-import { cloneResponseWithPolicy } from "./response-policy";
+import { cloneResponse } from "@shared/lib/http-response";
 
 export interface SafetyMapEnv {
   SELECTOR_SNAPSHOTS?: KVNamespace;
@@ -65,7 +65,7 @@ export function safetyMapTextError(status: number, message: string, headers?: He
 }
 
 export function withoutSafetyMapBody(response: Response): Response {
-  return cloneResponseWithPolicy(response, { body: null });
+  return cloneResponse(response, { body: null });
 }
 
 export type SafetyMapKvReadResult<T> =

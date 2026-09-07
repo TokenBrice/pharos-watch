@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OracleRiskBranch, OracleRiskTier } from "@shared/types/core";
-import { deriveOracleBranchMateriality } from "../safety-score-v9-extension";
+import { deriveOracleBranchMateriality } from "../safety-score-v9/extension";
 
 function branch(id: string, tier: OracleRiskTier, debtSharePct?: number): OracleRiskBranch {
   return {

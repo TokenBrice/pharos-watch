@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
@@ -21,6 +22,7 @@ import {
 import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
+import { PUBLIC_DATASET_JSON_LD_DESCRIPTORS } from "@/lib/analytics-dataset-json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
@@ -93,7 +95,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
   },
 ];
 
-const INLINE_CODE_CLASS = "rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground";
+const INLINE_CODE_CLASS = "rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground [overflow-wrap:anywhere]";
 const METHOD_BADGE_CLASS =
   "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight";
 const METHOD_BADGE_STYLES = {
@@ -398,12 +400,7 @@ export default async function AboutApiPage() {
         </>,
       ]}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(buildApiArtifactCatalogJsonLd()),
-          }}
-        />
+        <JsonLdScript json={safeJsonLd(buildApiArtifactCatalogJsonLd())} />
       }
     >
       <div className="space-y-8">
@@ -461,6 +458,35 @@ export default async function AboutApiPage() {
           <p>
             The default self-serve key is {SELF_SERVE_API_KEY_SUMMARY}, scoped to the public external API lane.
           </p>
+        </div>
+      </section>
+
+      <section id="public-datasets" className="pharos-card-shell space-y-5 px-4 py-5 sm:px-5 sm:py-6">
+        <div className="space-y-2">
+          <p className="pharos-kicker">No API Key Required</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public dataset downloads</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            These exports are published snapshots, not live API responses. Check the JSON metadata for the snapshot
+            time, row count and methodology; the latest download can be older than today.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {PUBLIC_DATASET_JSON_LD_DESCRIPTORS.map((dataset) => (
+            <article key={dataset.slug} id={`dataset-${dataset.slug}`} className="space-y-2 rounded-xl border border-border/60 px-4 py-4">
+              <h3 className="font-semibold text-foreground">{dataset.name}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{dataset.description}</p>
+              <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                {(["json", "csv", "ndjson"] as const).map((format) => (
+                  <li key={format}>
+                    <a className="pharos-prose-link" href={`/datasets/${dataset.slug}/latest.${format}`}>
+                      {format.toUpperCase()}
+                    </a>
+                  </li>
+                ))}
+                <li><a className="pharos-prose-link" href={`/sheets/${dataset.slug}.csv`}>Sheets CSV</a></li>
+              </ul>
+            </article>
+          ))}
         </div>
       </section>
 

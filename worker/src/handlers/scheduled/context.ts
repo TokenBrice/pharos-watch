@@ -12,7 +12,7 @@ import {
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
-import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
+import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
@@ -234,12 +234,6 @@ export function createScheduledRuntimeContext(
             producerKind,
           };
           const leaseOwner = createLeaseOwner(job);
-          await reportProgress({
-            stage: "started",
-            message: `Starting ${job}`,
-            leaseOwner,
-            metadata: slotMeta,
-          });
           const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
           const buildLeaseMeta = (lease: Awaited<ReturnType<typeof runCronWithLease>>) => ({
             leaseOwner: lease.leaseOwner,
@@ -262,6 +256,12 @@ export function createScheduledRuntimeContext(
             ...perJobLeaseOptions,
           };
           const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
+            await reportProgress({
+              stage: "started",
+              message: `Starting ${job}`,
+              leaseOwner,
+              metadata: slotMeta,
+            });
             await reportProgress({
               stage: "lease-acquired",
               message: `Lease acquired for ${job}`,
@@ -298,10 +298,7 @@ export function createScheduledRuntimeContext(
 
           const leaseMeta = buildLeaseMeta(lease);
 
-          const metadata = mergeCronMetadataWithLease(
-            normalizeCronMetadata(result),
-            leaseMeta,
-          );
+          const metadata = normalizeCronMetadataWithLease(result, leaseMeta);
 
           await reportProgress({
             stage: "completed",

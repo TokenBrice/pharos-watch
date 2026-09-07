@@ -9,7 +9,7 @@
     "causeOfDeath": "counterparty-failure",
     "deathDate": "2026-03",
     "epitaph": "When one key minted eighty million",
-    "obituary": "On 22 March 2026, an attacker exploited Resolv's single-EOA minter — no oracle, no amount cap, no max-mint guard — depositing 100K USDC and receiving 50M USR in return, then iterating until 80M unbacked USR existed for ~$25M of extracted ETH. USR crashed to $0.025 in 17 minutes; the RLP insurance layer absorbed the bad debt and was wiped out, dragging Stream Finance's $17M position down with it. Resolv burned 46M of the unbacked supply via a blacklist freeze, but USR never recovered — by April it traded at $0.16 with $95M of collateral against $173M of liabilities. Delta-neutral collateral and Apostro-attested reserves were no defense against an operator-level privilege failure.",
+    "obituary": "On 22 March 2026, an attacker exploited Resolv's single-EOA minter: no oracle, no amount cap, no max-mint guard, depositing 100K USDC and receiving 50M USR in return, then iterating until 80M unbacked USR existed for ~$25M of extracted ETH. USR crashed to $0.025 in 17 minutes; the RLP insurance layer absorbed the bad debt and was wiped out, dragging Stream Finance's $17M position down with it. Resolv burned 46M of the unbacked supply via a blacklist freeze, but USR never recovered; by April it traded at $0.16 with $95M of collateral against $173M of liabilities. Delta-neutral collateral and Apostro-attested reserves were no defense against an operator-level privilege failure.",
     "peakMcap": 586592926,
     "sourceUrl": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million",
     "sourceLabel": "The Block"

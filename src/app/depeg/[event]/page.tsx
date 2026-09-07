@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -273,10 +274,7 @@ export default async function DepegEventPage(
           { name: heroTitle, url: `/depeg/${event.slug}/` },
         ]}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(newsArticleJsonLd) }}
-      />
+      <JsonLdScript json={safeJsonLd(newsArticleJsonLd)} />
 
       <div className="space-y-2">
         <p className="pharos-kicker">

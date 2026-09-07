@@ -56,10 +56,12 @@
       "url": "https://docs.macropod.com/"
     },
     {
+      "id": "proof-of-reserve",
       "label": "Proof of Reserve",
       "url": "https://www.macropod.com/transparency"
     },
     {
+      "id": "legal",
       "label": "Legal",
       "url": "https://www.macropod.com/transparency"
     }

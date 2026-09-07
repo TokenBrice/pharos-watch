@@ -9,7 +9,7 @@
  * See `docs/process/feature-flags.md` for the flag table, defaults, flip
  * readiness gates, and how to toggle them in local dev and on Cloudflare Pages.
  *
- * Each flag carries an `expiresAt` comment. Past that date, the flag should
+ * Each temporary flag carries an `expiresAt` comment. Past that date, the flag should
  * either be flipped on permanently (and the off-path removed) or have its
  * retention rationale documented.
  *
@@ -24,26 +24,80 @@
 export const FEATURE_FLAGS = {
   // Default-enabled after W3 launch. Set
   // `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false` explicitly to disable.
+  // owner: tokenbrice
+  // retirementCriterion: keep permanently after the W3 launch; remove only if the hero verdict is retired.
   heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT !== "false",
   // owner: tokenbrice; evidence: 2026-07-29 blacklist banner and hook tests pass.
-  // expiresAt: 2026-12-01 — awaiting iOS Safari sticky review on a coin with active freezes
+  // retirementCriterion: remove once iOS Safari sticky review passes on a coin with active freezes.
+  // expiresAt: 2026-10-15 — awaiting iOS Safari sticky review on a coin with active freezes
   blacklistBanner: process.env.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER === "true",
   // owner: tokenbrice; evidence: 2026-07-29 CLI contrast review passes AA (min 4.78:1 light, 7.23:1 dark).
-  // expiresAt: 2026-12-01 — awaiting human visual review on USDC, USDe, and an active depeg
+  // retirementCriterion: remove once human visual review passes on USDC, USDe, and an active depeg.
+  // expiresAt: 2026-11-01 — awaiting human visual review on USDC, USDe, and an active depeg
   quietDeviations: process.env.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS === "true",
   // owner: tokenbrice; evidence: 2026-07-29 sticky summary and scrollspy tests pass.
-  // expiresAt: 2026-12-01 — awaiting real-device iOS Safari and Android Chrome scrollspy review
+  // retirementCriterion: remove once real-device iOS Safari and Android Chrome scrollspy review passes.
+  // expiresAt: 2026-11-15 — awaiting real-device iOS Safari and Android Chrome scrollspy review
   mobileStickySummary:
     process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
+  // owner: tokenbrice
+  // retirementCriterion: remove once chart-annotation curation has a named owner and cadence.
   // expiresAt: 2026-12-01 — pending curation owner + cadence
   chartAnnotations:
     process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
-  // expiresAt: 2026-12-01 — DDR emergency rollback, retained through the 4.3 continuity release
+  // owner: tokenbrice
+  // retirementCriterion: remove once DDR v2 has 30 days without rollback.
+  // expiresAt: 2026-12-15 — DDR emergency rollback, retained through the 4.3 continuity release
   depegResolver: process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER !== "false",
-  // expiresAt: 2026-12-01 — DDRR emergency rollback, retained through the 4.3 continuity release
+  // owner: tokenbrice
+  // retirementCriterion: remove once DDRR v2 has 30 days without rollback.
+  // expiresAt: 2027-01-05 — DDRR emergency rollback, retained through the 4.3 continuity release
   depegResolverReviewer:
     process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER !== "false",
 } as const;
+
+export type FeatureFlagLifecycle = {
+  readonly owner: "tokenbrice";
+  readonly expiresAt?: string;
+  readonly retirementCriterion: string;
+};
+
+export const FEATURE_FLAG_LIFECYCLE = {
+  heroVerdict: {
+    owner: "tokenbrice",
+    retirementCriterion: "keep permanently after the W3 launch; remove only if the hero verdict is retired",
+  },
+  blacklistBanner: {
+    owner: "tokenbrice",
+    expiresAt: "2026-10-15",
+    retirementCriterion: "remove once iOS Safari sticky review passes on a coin with active freezes",
+  },
+  quietDeviations: {
+    owner: "tokenbrice",
+    expiresAt: "2026-11-01",
+    retirementCriterion: "remove once human visual review passes on USDC, USDe, and an active depeg",
+  },
+  mobileStickySummary: {
+    owner: "tokenbrice",
+    expiresAt: "2026-11-15",
+    retirementCriterion: "remove once real-device iOS Safari and Android Chrome scrollspy review passes",
+  },
+  chartAnnotations: {
+    owner: "tokenbrice",
+    expiresAt: "2026-12-01",
+    retirementCriterion: "remove once chart-annotation curation has a named owner and cadence",
+  },
+  depegResolver: {
+    owner: "tokenbrice",
+    expiresAt: "2026-12-15",
+    retirementCriterion: "remove once DDR v2 has 30 days without rollback",
+  },
+  depegResolverReviewer: {
+    owner: "tokenbrice",
+    expiresAt: "2027-01-05",
+    retirementCriterion: "remove once DDRR v2 has 30 days without rollback",
+  },
+} satisfies Record<keyof typeof FEATURE_FLAGS, FeatureFlagLifecycle>;
 
 export function isHeroVerdictEnabled(): boolean {
   return FEATURE_FLAGS.heroVerdict;

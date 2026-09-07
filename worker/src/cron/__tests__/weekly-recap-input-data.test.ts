@@ -105,4 +105,71 @@ describe("weekly recap canonical candidate aggregation", () => {
       severityScore: 654,
     });
   });
+
+  it("excludes the retracted USDS liquidity ingestion and records the withheld signal", () => {
+    const incidentAt = 1_787_299_523;
+    const rows = Array.from({ length: 5 }, (_, index) => row(index));
+    rows[4] = row(4, {
+      dataQuality: {
+        generatedAt: incidentAt,
+        stablecoinsCacheUpdatedAt: incidentAt - 60,
+        stablecoinsCacheAgeSec: 60,
+        windows: {
+          blacklistActivity: { label: "rolling last 24h", start: incidentAt - 86_400, end: incidentAt },
+          mintBurnFlows: { label: "rolling last 24h", start: incidentAt - 86_400, end: incidentAt },
+          supplyVelocity: { label: "UTC snapshots", dates: [incidentAt] },
+          psi: { label: "latest sample", sampleAt: incidentAt, dailySnapshotAt: incidentAt - 300 },
+        },
+      },
+      liquidityShifts: [
+        {
+          symbol: "USDS",
+          currentScore: 49,
+          previousScore: 59,
+          scoreDelta: -10,
+          currentTvl: 13_715_691,
+          previousTvl: 162_283_507,
+          mcapUsd: 6_711_545_483,
+          tvlChangePct: -0.915,
+          expectedScoreDeltaFromTvl: -11,
+          coverageClass: "primary",
+          coverageConfidence: 1,
+        },
+        {
+          symbol: "YLDS",
+          currentScore: 51,
+          previousScore: 60,
+          scoreDelta: -9,
+          currentTvl: 13_720_000,
+          previousTvl: 20_000_000,
+          mcapUsd: 500_000_000,
+          tvlChangePct: -0.314,
+          expectedScoreDeltaFromTvl: -5,
+          coverageClass: "primary",
+          coverageConfidence: 1,
+        },
+      ],
+      editorialCandidates: [
+        candidate("liquidity:usds", "liquidity", 67_115, "USDS"),
+        candidate("liquidity:ylds", "liquidity", 4_500, "YLDS"),
+      ],
+    });
+    rows[4] = {
+      ...rows[4],
+      generated_at: incidentAt,
+      digest_title: "USDS Drained",
+      digest_text: "USDS drained to $13.72M.",
+    };
+
+    const weekly = buildWeeklyInputData(rows);
+    const incidentDay = weekly?.dailyDigests.find((digest) => digest.date === "2026-08-21");
+
+    expect(weekly?.degradedSources).toContain("liquidity-shift-quarantined-signal:usds-sky:2026-08-21");
+    expect(incidentDay).toMatchObject({ title: "", text: "" });
+    expect(incidentDay?.inputData.liquidityShifts?.map((shift) => shift.symbol)).toEqual(["YLDS"]);
+    expect(incidentDay?.inputData.editorialCandidates?.map((entry) => entry.id)).toEqual(["liquidity:ylds"]);
+    expect(weekly?.weeklySignals.topLiquidityShifts.map((shift) => shift.symbol)).toEqual(["YLDS"]);
+    expect(weekly?.weeklySignals.riskLeaderboard.some((signal) => signal.symbols.includes("USDS"))).toBe(false);
+    expect(weekly?.weeklySignals.riskLeaderboard.some((signal) => signal.symbols.includes("YLDS"))).toBe(true);
+  });
 });

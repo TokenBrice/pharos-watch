@@ -4,8 +4,8 @@ import { SECONDS } from "../lib/time-constants";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { createCronResult } from "../lib/cron-result";
 import { pruneRepairTasks } from "../lib/repair-tasks";
-import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-checks";
-import { pruneLiveReserveRecoveryCheckpoints } from "../lib/scheduled-recovery-checkpoint";
+import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-prune";
+import { pruneLiveReserveRecoveryCheckpoints } from "../lib/scheduled-recovery-prune";
 import { pruneProducerHistory } from "../lib/producer-history";
 
 // Kept in sync with the retention window previously enforced inline inside

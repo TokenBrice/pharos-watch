@@ -8,7 +8,7 @@
     "authorizedEntity": "Circle Internet Financial Europe SAS",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — Issuers of EMTs (EMTWP.csv, updated 4 Jun 2026)",
+        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv, updated 4 Jun 2026)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {

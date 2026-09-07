@@ -1,0 +1,15 @@
+{
+  "mechanism": "btcusd-btcfi",
+  "date": "2026-07-27-market-api-remeasure",
+  "sha256": "95986761053d1bd7b638392959d2656d32e20a5f3e69e226186c48d2e59503d3",
+  "bytes": 3406,
+  "r2Key": "captures/btcusd-btcfi/2026-07-27-market-api-remeasure.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "btcusd-btcfi",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/btcusd-btcfi/2026-07-27-market-api-remeasure.json",
+    "capturedAt": "btcfi getBtcfiMarket isTestnet=false pin 2026-07-28; total deposit_value USD 7974538.63; BtcUSD borrow_value 6094953.39; CR=1.308384; DefiLlama stablecoin/183 circulating ~6.05M USD"
+  }
+}

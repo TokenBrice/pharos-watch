@@ -15,6 +15,7 @@ import { fetchJsonAdapterInput, fetchOnchainMulticall3 } from "../helpers";
 import { adaptRiverProtocolInfo, fetchRiverProtocolInfoReserves } from "../river-protocol-info";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const SATUSD_BY_CHAIN: Record<string, string> = {
   ethereum: "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
@@ -72,6 +73,10 @@ function primeRiverChainMocks(overrides: Record<string, Partial<ChainState>> = {
     const satUsd = state.debtToken ?? SATUSD_BY_CHAIN[chain];
 
     return Promise.resolve(calls.map(({ label }) => {
+      const appIndex = label.match(/^app:trove-manager:(\d+)$/);
+      if (appIndex && Number(appIndex[1]) >= state.troveManagers.length) {
+        return { label, success: false, returnData: "0x" as const };
+      }
       const returnData = ((): `0x${string}` => {
         if (label === "app:debt-token") return word(satUsd);
         if (label === "app:balances") return `${word(ONE)}${word(state.totalDebt).slice(2)}` as `0x${string}`;
@@ -223,7 +228,7 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
     } as never);
   });
 
-  it("sums per-chain trove debt and reports the highest branch redemption rate", async () => {
+  it("ignores reverting unused manager slots while summing debt and bounding branch fees", async () => {
     const result = await fetchRiverProtocolInfoReserves(makeCoin(), liveConfig, AbortSignal.timeout(5_000));
 
     expect(result.metadata?.redemption).toMatchObject({
@@ -243,8 +248,7 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
     });
     // Aggregate protocol TVL stays a separate, unrelated reserve figure.
     expect(result.metadata?.totalReserveUsd).toBe(250_000_000);
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("river-protocol-info") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("river-protocol-info", result);
   });
 
   it("never probes a chain without a pinned Satoshi app", async () => {
@@ -302,8 +306,7 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
 
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 0, feeBps: 50 });
     expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("river-protocol-info") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("river-protocol-info", result);
   });
 
   it("withholds the whole redemption block when no chain verifies", async () => {
@@ -318,7 +321,6 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
         expect.objectContaining({ code: "river-redemption-unreadable", effect: "info" }),
       ]),
     );
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("river-protocol-info") ?? undefined }).valid)
-      .toBe(true);
+    expectValidAdapterOutput("river-protocol-info", result);
   });
 });

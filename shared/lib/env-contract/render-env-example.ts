@@ -31,6 +31,7 @@ const ENV_EXAMPLE_SECTION_ORDER: readonly {
     key: "workerOptional",
     comments: [
       "# Worker optional active bindings",
+      "# CI/local-only measurement capture uploader credentials (not Worker bindings)",
     ],
   },
   {

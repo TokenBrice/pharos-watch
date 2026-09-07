@@ -121,14 +121,14 @@ describe("collectTableInventory", () => {
     writeText(
       cwd,
       "src/app/demo/page.tsx",
-      `import { DataTableShell, MatrixTable } from "@/components/table";
+      `import { DataTableShell, TableFrame } from "@/components/table";
 
 export function Page() {
   return (
     <section>
       <p>Swipe table horizontally for details.</p>
       <DataTableShell tableId="markets" chrome="embedded" density="compact" columns={[]} />
-      <MatrixTable tableId="matrix" caption="Matrix details" viewportProps={{ mobileScrollHint: false }} />
+      <TableFrame tableId="matrix" caption="Matrix details" viewportProps={{ mobileScrollHint: false }} />
     </section>
   );
 }
@@ -151,7 +151,7 @@ export function Page() {
       },
       {
         tableId: "matrix",
-        primitive: "MatrixTable",
+        primitive: "TableFrame",
         file: "src/app/demo/page.tsx",
         line: 8,
         chrome: "default",

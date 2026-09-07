@@ -9,6 +9,7 @@ import {
   type V9BackingResult,
   type V9BackingStructuralReason,
 } from "../backing";
+import { resolveV9MetricApplicability } from "./rwa-credit-fund";
 
 export type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";
 
@@ -23,57 +24,42 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
   // structural signal firing — unmeasured is never presumed adequate — while
   // an evidenced `not-applicable` metric skips it. Absent applicability means
   // the metric is measured (legacy full-metric reviews).
-  const hedgeApplicability = review.metricApplicability?.hedgeCoverageRatio;
-  const lossAbsorptionApplicability =
-    review.metricApplicability?.lossAbsorptionShare;
-  const hedgeState = hedgeApplicability?.state ?? "measured";
-  const lossAbsorptionState = lossAbsorptionApplicability?.state ?? "measured";
-  const hedgeUnavailable = hedgeState === "unavailable";
-  const lossAbsorptionUnavailable = lossAbsorptionState === "unavailable";
-  const hedgeUnavailableEvidenceRefIds =
-    hedgeApplicability?.state === "unavailable"
-      ? hedgeApplicability.evidenceRefIds
-      : null;
-  const lossAbsorptionUnavailableEvidenceRefIds =
-    lossAbsorptionApplicability?.state === "unavailable"
-      ? lossAbsorptionApplicability.evidenceRefIds
-      : null;
+  const hedgeApplicability = resolveV9MetricApplicability(
+    review.metricApplicability?.hedgeCoverageRatio,
+    review.hedgeReconciliation.status,
+  );
+  const lossAbsorptionApplicability = resolveV9MetricApplicability(
+    review.metricApplicability?.lossAbsorptionShare,
+    review.lossAbsorption.status,
+  );
   if (
-    hedgeUnavailable ||
-    (hedgeState === "measured" &&
+    hedgeApplicability.unavailable ||
+    (hedgeApplicability.state === "measured" &&
       review.hedgeCoverageRatio !== null &&
       review.hedgeCoverageRatio < backing.structural.synthetic.minimumHedgeCoverageRatio)
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.hedgeSignal, {
-        responsibility: hedgeUnavailable
-          ? "issuer-undisclosed"
-          : v9StructuralResponsibilityForStatus(review.hedgeReconciliation.status),
+        responsibility: hedgeApplicability.responsibility,
         pathKey: "mechanism:hedge-reconciliation",
         materialShare: null,
-        evidenceRefIds:
-          hedgeUnavailableEvidenceRefIds ??
-          review.hedgeReconciliation.status.evidenceRefIds,
+        evidenceRefIds: hedgeApplicability.evidenceRefIds,
         failureDomains: review.hedgeReconciliation.failureDomains,
       }),
     );
   }
   if (
-    lossAbsorptionUnavailable ||
-    (lossAbsorptionState === "measured" &&
+    lossAbsorptionApplicability.unavailable ||
+    (lossAbsorptionApplicability.state === "measured" &&
       review.lossAbsorptionShare !== null &&
       review.lossAbsorptionShare < backing.structural.synthetic.minimumLossAbsorptionShare)
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.lossAbsorptionSignal, {
-        responsibility: lossAbsorptionUnavailable
-          ? "issuer-undisclosed"
-          : v9StructuralResponsibilityForStatus(review.lossAbsorption.status),
+        responsibility: lossAbsorptionApplicability.responsibility,
         pathKey: "mechanism:loss-absorption",
         materialShare: review.lossAbsorptionShare,
-        evidenceRefIds:
-          lossAbsorptionUnavailableEvidenceRefIds ??
-          review.lossAbsorption.status.evidenceRefIds,
+        evidenceRefIds: lossAbsorptionApplicability.evidenceRefIds,
         failureDomains: review.lossAbsorption.failureDomains,
       }),
     );

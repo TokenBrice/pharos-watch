@@ -10,26 +10,26 @@ vi.mock("../../lib/abort", async (importOriginal) => {
 });
 
 import {
-  isReasonablePrice,
   hasMissingPrice,
   enrichMissingPrices,
   fetchPrimaryPrices,
   applyResolvedPrice,
-  applyPoolChallenge,
 } from "../sync-stablecoins/enrich-prices";
 import { PEG_HARDCODED_PRICE_BOUNDS } from "@shared/lib/peg-taxonomy";
-import { applyListAggregatorDowngrade } from "../sync-stablecoins/enrich-prices-primary";
-import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
 import {
-  runCmcPass,
-  runDexScreenerPass,
-  runDlContractPasses,
-  runJupiterPass,
-} from "../sync-stablecoins/enrich-prices-passes";
+  applyListAggregatorDowngrade,
+  applyPoolChallenge,
+} from "../sync-stablecoins/enrich-prices-primary-hardening";
+import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+import type { PriceValidationStats } from "../sync-stablecoins/enrich-prices-shared";
+import { runCmcPass } from "../sync-stablecoins/enrich-prices-cmc-pass";
+import { runDexScreenerPass } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
+import { runDlContractPasses } from "../sync-stablecoins/enrich-prices-defillama-pass";
+import { runJupiterPass } from "../sync-stablecoins/enrich-prices-jupiter-pass";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
+import { isReasonablePrice, type PriceValidationContext, type PriceValidationReferences } from "../../lib/price-validation";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;

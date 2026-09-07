@@ -9,12 +9,12 @@ import {
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../report-cards-fixed-input";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
-} from "../safety-score-v9-extension-routes";
+} from "../safety-score-v9/extension-routes";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
@@ -266,7 +266,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     const expectedMissingFields = {
       "axcnh-anchorx": ["capacity", "settlement", "cost"],
       "brla-brla-digital": ["capacity", "settlement", "cost"],
-      "gbpsafo-spiko": ["capacity", "settlement", "cost"],
+      "gbpsafo-spiko": ["capacity", "cost"],
       "jaaa-janus-henderson-anemoy": ["capacity", "settlement", "cost"],
       "mapollo-midas": ["capacity", "settlement", "cost"],
       "mf-one-midas": ["capacity", "settlement"],
@@ -276,7 +276,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       "mxnb-juno": ["capacity", "settlement", "cost"],
       "qcad-stablecorp": ["capacity", "settlement", "cost"],
       "sbc-brale": ["capacity", "settlement", "cost"],
-      "usd1-world-liberty-financial": ["capacity", "cost"],
+      "usd1-world-liberty-financial": ["capacity", "settlement", "cost"],
       "usdn-noble": ["capacity", "settlement", "cost"],
       "vbill-vaneck": ["capacity", "settlement", "cost"],
       "wars-argentine-peso": ["capacity", "settlement", "cost"],
@@ -297,11 +297,13 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       kind: "fee-bps",
       feeBps: 0,
     });
-    expect(getRedemptionBackstopConfig("usd1-world-liberty-financial")?.v9RouteReviewTerms).toMatchObject({
-      settlementModel: "days",
-      settlementDelaySec: 172_800,
-      missingScoringFields: ["capacity", "cost"],
+    const usd1Terms = getRedemptionBackstopConfig("usd1-world-liberty-financial")?.v9RouteReviewTerms;
+    expect(usd1Terms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
     });
+    expect(usd1Terms).not.toHaveProperty("settlementModel");
+    expect(usd1Terms).not.toHaveProperty("settlementDelaySec");
     expect(getRedemptionBackstopConfig("mtbill-midas")?.costModel).toMatchObject({
       kind: "fee-bps",
       feeBps: 7,

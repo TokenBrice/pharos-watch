@@ -1,48 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildPrimaryConsensusResults } from "../enrich-prices-primary-consensus";
 import type {
-  PrimaryConsensusQuoteMaps,
   PrimaryDexPriceSources,
   PrimaryDexRows,
 } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices-shared";
-import type { PriceValidationStats } from "../enrich-prices-primary-shared";
-
-function createEmptyQuoteMaps(): PrimaryConsensusQuoteMaps {
-  return {
-    cgPrices: new Map(),
-    cgObservedAtByGeckoId: new Map(),
-    cgObservedAtModeByGeckoId: new Map(),
-    cgObservedAt: null,
-    cgTickerPrices: new Map(),
-    cgTickerObservedAt: null,
-    binancePrices: new Map(),
-    binanceObservedAt: null,
-    krakenPrices: new Map(),
-    krakenObservedAt: null,
-    bitstampPrices: new Map(),
-    bitstampObservedAtBySymbol: new Map(),
-    coinbasePrices: new Map(),
-    coinbaseObservedAtBySymbol: new Map(),
-    redstonePrices: new Map(),
-    curvePrices: new Map(),
-    curveObservedAtByCoinId: new Map(),
-    curveOraclePrice: null,
-    curveOracleObservedAt: null,
-    navPrices: new Map(),
-    addressProviderQuotes: new Map(),
-  };
-}
-
-function createStats(): PriceValidationStats {
-  return {
-    attempted: 0,
-    high: 0,
-    singleSource: 0,
-    cgOnly: 0,
-    low: 0,
-  };
-}
+import { createEmptyQuoteMaps, createStats } from "./enrich-prices-primary-consensus.test-support";
 
 describe("buildPrimaryConsensusResults", () => {
   it("attributes RedStone quotes by stablecoin id instead of same-symbol peers", () => {

@@ -12,11 +12,11 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       },
       {
-        "label": "Cap stcUSD mechanics — staking and yield-bearing wrapper",
+        "label": "Cap stcUSD mechanics: staking and yield-bearing wrapper",
         "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
       },
       {
-        "label": "Cap protocol actors — cUSD and stcUSD roles",
+        "label": "Cap protocol actors: cUSD and stcUSD roles",
         "url": "https://docs.cap.app/protocol-overview/protocol-actors"
       }
     ]

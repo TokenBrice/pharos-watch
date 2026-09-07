@@ -1,0 +1,12 @@
+# Pharos repo-local omp overlay.
+# Keep task isolation and approval aligned with repository policy.
+# Model roles are NOT overridden here: the global fleet in
+# ~/.omp/agent/config.yml is the single source of truth
+# (luna:max mechanical / sol:medium general / glm-5.3:max non-visual / glm-5.3-flash fast).
+# Owner decisions are final for this repository.
+# Edit only via the plan / agent-artifacts.md.
+task:
+  isolation:
+    enabled: false
+tools:
+  approvalMode: yolo

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { V9EvidenceResponsibilitySchema, compareText } from "./safety-score-v9-fact-primitives";
-import { V9TypedFactPathSchema, V9ResolvedMechanismArchetypeSchema } from "./safety-score-v9-facts";
+import {
+  V9BridgeJoinDiagnosticsV1Schema,
+  V9TypedFactPathSchema,
+  V9ResolvedMechanismArchetypeSchema,
+} from "./safety-score-v9-facts";
 import {
   V9ManualInputClassificationSchema,
   V9PolicyTreatmentSchema,
@@ -197,10 +201,53 @@ const V9EvidenceGapQueueEntryV1Schema = z
   .strict()
   .superRefine(addEntryConsistencyIssues);
 
+/**
+ * ODR-D5a: the bridge-join view the richer missing-data registry already
+ * carries verbatim on `economicControlReview.bridge`, joined into the terse
+ * queue so a bridge work item names the row it failed on instead of leaving the
+ * reader to re-derive the join. Diagnostic only — nothing here scores.
+ */
+const V9EvidenceGapBridgeJoinFailureV1Schema = z
+  .object({
+    code: z.enum([
+      "supply-partition-unreconciled",
+      "duplicate-bridge-route-control",
+      "reviewed-native-row-carries-control",
+      "reviewed-row-kind-unresolved",
+      "reviewed-row-control-join-not-unique",
+      "reviewed-row-control-unproven",
+      "unresolved-row-control-join-not-unique",
+      "unresolved-row-control-unproven",
+    ]),
+    deploymentRouteKey: CanonicalTextSchema.nullable(),
+    reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]).nullable(),
+    reviewedRouteKind: z.enum(["native", "controlled"]).nullable(),
+    supplyShare: z.number().finite().min(0).max(1).nullable(),
+    controlKeys: CanonicalStringArraySchema,
+  })
+  .strict();
+
+const V9EvidenceGapBridgeJoinV1Schema = z
+  .object({
+    diagnostics: V9BridgeJoinDiagnosticsV1Schema.nullable(),
+    subthresholdUnresolvedJoin: z
+      .object({ complete: z.boolean(), cause: V9EvidenceGapBridgeJoinFailureV1Schema.nullable() })
+      .strict()
+      .superRefine((value, ctx) => {
+        if (value.complete !== (value.cause === null)) {
+          ctx.addIssue({ code: "custom", path: ["cause"], message: "An incomplete join must name its cause" });
+        }
+      }),
+  })
+  .strict();
+export type V9EvidenceGapBridgeJoinV1 = z.infer<typeof V9EvidenceGapBridgeJoinV1Schema>;
+
 const V9EvidenceGapQueueEntryV2Schema = z
   .object({
     ...V9EvidenceGapQueueEntryV1Fields,
     responsibility: V9EvidenceResponsibilitySchema,
+    /** Present only on bridge-scoped gaps; null everywhere else. */
+    bridgeJoin: V9EvidenceGapBridgeJoinV1Schema.nullable(),
   })
   .strict()
   .superRefine(addEntryConsistencyIssues);

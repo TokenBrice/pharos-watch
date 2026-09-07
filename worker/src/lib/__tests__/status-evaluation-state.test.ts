@@ -1,93 +1,42 @@
 import { describe, expect, it } from "vitest";
-import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
+import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
+import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { makePublicHealth } from "./public-health.test-support";
-import { buildAvailabilityCauses, buildDataQualityCauses, synthesizeOverallCauses } from "../status/evaluation-causes";
+import {
+  makeDataQuality,
+  makeReserveComposition as makeBaseReserveComposition,
+} from "@shared/types/__tests__/status.test-support";
+import {
+  buildAvailabilityCauses,
+  buildDataQualityCauses,
+  evaluateAvailabilityStatus,
+  evaluateDataQualityStatus,
+  synthesizeOverallCauses,
+} from "../status/evaluation-causes";
 import {
   deriveAvailabilityStatus,
   deriveDataQualityStatus,
   deriveReserveCompositionStatus,
 } from "../status/evaluation-state";
+import type { AvailabilityEvaluationInput, DataQualityEvaluationInput } from "../status/evaluation-rules";
 
 function makeReserveComposition(
   overrides?: Partial<StatusResponse["reserveComposition"]>,
 ): StatusResponse["reserveComposition"] {
-  return {
+  return makeBaseReserveComposition({
     configuredCoins: 10,
     freshCoins: 10,
-    staleCoins: 0,
-    missingCoins: 0,
-    degradedCoins: 0,
-    errorCoins: 0,
-    corruptCoins: 0,
     independentFreshEligible: 4,
     independentFreshUnverified: 2,
     staticValidatedFresh: 2,
     weakProbeFresh: 2,
-    writeTimeoutUncertain: 0,
-    deferredCoins: 0,
-    runBudgetTruncated: false,
-    deferredAt: null,
-    nextCursorStablecoinId: null,
-    cursorTailState: null,
-    cursorTailError: null,
-    cursorRecordedAt: null,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: null,
-    runBudgetTruncationCount: 0,
-    historyWriteGaps: [],
-    persistentlyStaleIndependentCoins: [],
     lastSuccessAt: 1_700_000_000,
     oldestFreshAgeSec: 3600,
-    status: "healthy",
     freshCoverageRatio: 1,
     authoritativeFreshCoverageRatio: 0.8,
     ...overrides,
-  };
-}
-
-function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
-  return {
-    stablecoinsCacheStatus: "ok",
-    stablecoinsCacheReason: null,
-    blacklistGapStatus: "ok",
-    activeDepegStatus: "ok",
-    onchainSupplyQueryStatus: "ok",
-    repairDebt: {
-      status: "ok",
-      openCount: 0,
-      oldestAgeSec: null,
-      byKind: {},
-      availabilityEscalated: false,
-      nextRunnerDueAt: null,
-      source: "worker-repair-tasks",
-    },
-    ddrRepairDebtStatus: "ok",
-    ddrRepairDebtCount: 0,
-    ddrRepairDebtCheckedAt: null,
-    ddrRepairDebtEvents: [],
-    ddrRepairDebtEventsTruncated: false,
-    sourceFailures: [],
-    totalStablecoins: 10,
-    missingPrices: 0,
-    blacklistMissingAmounts: 0,
-    blacklistRecentMissingAmounts: 0,
-    blacklistRecentWindowSec: 86400,
-    blacklistMissingRatio: 0,
-    blacklistTotal: 0,
-    blacklistOldestRecoverableAgeSec: null,
-    blacklistNeverAttemptedCount: 0,
-    blacklistRepeatedFailureCount: 0,
-    onchainSupplyDivergences: 0,
-    onchainDivergenceRatio: 0,
-    onchainSupplyMonitoring: "active",
-    onchainSupplyLatestAt: null,
-    onchainSupplyTrackedCoins: 0,
-    activeDepegs: 0,
-    staleOnchainSupply: 0,
-    onchainStaleRatio: 0,
-    ...overrides,
-  };
+  });
 }
 
 function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
@@ -102,6 +51,26 @@ function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
     cronHistoryQueryFailed: false,
     cronProgressQueryFailed: false,
     cronLeaseQueryFailed: false,
+  };
+}
+
+function makeDataQualityEvaluationInput(
+  overrides: Partial<DataQualityEvaluationInput> = {},
+): DataQualityEvaluationInput {
+  const publicHealth = makePublicHealth();
+  return {
+    dataQuality: makeDataQuality(),
+    activePriceCoverage: publicHealth.activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessment: { status: "healthy", causes: [], representative: false },
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(),
+    reserveCompositionStatus: "healthy",
+    activePriceCoverageImpactStatus: "healthy",
+    ...overrides,
   };
 }
 
@@ -322,13 +291,13 @@ describe("status cause text", () => {
     expect(selected.some((cause) => cause.code === "active_price_coverage_incomplete")).toBe(false);
   });
 
-  it("warns when DEX data is display-valid but stale for live pricing", () => {
+  it("warns when the DEX liquidity dataset exceeds its endpoint publication budget", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
         makePublicHealth("healthy", {
           caches: {
             "dex-liquidity": {
-              ageSeconds: 4_501,
+              ageSeconds: 14_401,
               maxAge: 43_200,
               healthy: true,
             },
@@ -341,11 +310,34 @@ describe("status cause text", () => {
       expect.objectContaining({
         code: "dex_pricing_bridge_stale",
         severity: "warning",
-        metric: "dexPriceAgeSeconds",
-        value: 4_501,
-        threshold: 4_500,
+        metric: "dexLiquidityAgeSeconds",
+        value: 14_401,
+        threshold: 14_400,
       }),
     );
+  });
+
+  it("keeps dataset ages inside the endpoint budget off the stale cause the per-row window used to flag", () => {
+    // Ages past the 4_500 s per-row `DEX_FRESHNESS_SEC` admission window but at
+    // or below the 14_400 s dataset endpoint budget (including the exact
+    // boundary) must not fire the dataset-age diagnostic.
+    for (const ageSeconds of [4_501, 5_000, 14_400]) {
+      const causes = buildAvailabilityCauses(
+        makeAvailabilityCauseInput(
+          makePublicHealth("healthy", {
+            caches: {
+              "dex-liquidity": {
+                ageSeconds,
+                maxAge: 43_200,
+                healthy: true,
+              },
+            },
+          }),
+        ),
+      );
+
+      expect(causes.some((cause) => cause.code === "dex_pricing_bridge_stale")).toBe(false);
+    }
   });
 
   it("emits a warning cache cause when an override-tightened cache breaches its degraded band below the global threshold", () => {
@@ -950,5 +942,56 @@ describe("deriveAvailabilityStatus cron-error semantic", () => {
         }),
       }),
     ).toBe("healthy");
+  });
+});
+
+describe("status rule-set parity at policy boundaries", () => {
+  it("preserves availability diagnostic cause ordering", () => {
+    const input: AvailabilityEvaluationInput = {
+      ...makeAvailabilityCauseInput(makePublicHealth()),
+      availabilityImpactingCronErrors: 1,
+      availabilityImpactingUnhealthyCrons: 1,
+      availabilityImpactingConsecutiveCronErrors: 0,
+      watchUnhealthyCrons: 1,
+      degradedCronRuns: 1,
+      cronErrorCount: 2,
+      cronHistoryQueryFailed: true,
+      cronProgressQueryFailed: true,
+      cronLeaseQueryFailed: true,
+    };
+
+    const combined = evaluateAvailabilityStatus(input);
+    expect(deriveAvailabilityStatus(input)).toBe(combined.status);
+    expect(buildAvailabilityCauses(input)).toEqual(combined.causes);
+    expect(combined.causes.map((cause) => cause.code)).toEqual([
+      "cron_history_query_failed",
+      "cron_progress_query_failed",
+      "cron_lease_query_failed",
+      "cron_error_runs",
+      "watch_cron_error_runs",
+      "unhealthy_crons_present",
+      "watch_unhealthy_crons_present",
+      "degraded_cron_warning",
+    ]);
+  });
+
+  it.each([
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated }, "healthy"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded }, "healthy"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded + 0.0001 }, "degraded"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale }, "degraded"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale + 0.0001 }, "stale"],
+    [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded }, "degraded"],
+    [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale }, "stale"],
+    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded }, "degraded"],
+    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentStale }, "stale"],
+    [{ reserveCompositionStatus: "degraded", reserveComposition: makeReserveComposition({ status: "degraded" }) }, "degraded"],
+    [{ reserveCompositionStatus: "stale", reserveComposition: makeReserveComposition({ status: "stale" }) }, "stale"],
+  ] as Array<[Partial<DataQualityEvaluationInput>, StatusResponse["dataQualityStatus"]]>)("keeps data-quality projections aligned at a policy boundary", (overrides, status) => {
+    const fullInput = makeDataQualityEvaluationInput(overrides);
+    const combined = evaluateDataQualityStatus(fullInput);
+    expect(combined.status).toBe(status);
+    expect(deriveDataQualityStatus(fullInput)).toBe(combined.status);
+    expect(buildDataQualityCauses(fullInput)).toEqual(combined.causes);
   });
 });

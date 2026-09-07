@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Mint Authority and Exit fold into Safety Score V9, the V8 engine is retired, and 25 reserve proofs are corrected.",
   fieldNotes:
-    "Consolidation week. Three separate scoring engines - mint authority, exit, and the V8 core - stopped existing as independent code and became pillars of one published model, which is less a feature than an admission that parallel truths were never sustainable. The reserve work cut the other way: dozens of proof-of-reserves records were downgraded to what the evidence actually supports. Fewer engines, more honest numbers, and coin pages rebuilt to show both.",
+    "Consolidation week. Three separate scoring engines (mint authority, exit, and the V8 core) stopped existing as independent code and became pillars of one published model. The reserve work cut the other way: dozens of proof-of-reserves records were downgraded to what the evidence actually supports. Coin pages now show the unified scoring model alongside those evidence-bounded reserve assessments.",
   summary: [
     {
       label: "Mint authority folded in",

@@ -5,11 +5,7 @@
   "oneLiner": "ftUSD is Flying Tulip's non-yielding base dollar; Ethereum and Sonic lend stablecoins and run borrow-and-stake carry, while sftUSD receives yield.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Cross-chain reserves currently contain USDC, USDT, and a small Sonic USSD position supplied through Aave-compatible lending markets. The live Ethereum strategy borrows WETH and stakes into wstETH exposure; Sonic borrows wS and stakes into stS exposure. Strategy yield is distributed to sftUSD stakers while yield attributable to unstaked ftUSD accrues to the protocol. Borrow costs, staking yield, venue oracle and liquidation mechanics, withdrawal liquidity, and smart-contract execution remain backing risks.",
   "pegMechanism": "The peg and redemption rail mints and redeems ftUSD on-chain against supported stablecoins. Separately, the reserve strategy lends those deposits and runs borrow-and-stake carry on Ethereum and Sonic, using position caps, health factors, rebalancing controls, and withdrawal circuit breakers to manage leverage and liquidity.",

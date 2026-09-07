@@ -132,7 +132,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Solana mainnet 2026-07-20 (getAccountInfo jsonParsed): eUSD SPL mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L, 6 decimals, mintAuthority = freezeAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG (System Program-owned account — no on-chain multisig), matching the mint-authority review. Issuer-minted natively on Solana.",
+        "reviewNote": "Verified on Solana mainnet 2026-07-20 (getAccountInfo jsonParsed): eUSD SPL mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L, 6 decimals, mintAuthority = freezeAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG (System Program-owned account, no on-chain multisig), matching the mint-authority review. Issuer-minted natively on Solana.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",

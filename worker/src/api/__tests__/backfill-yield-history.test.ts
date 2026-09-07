@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
 import type { ResolvedYield } from "../../cron/yield-sync/types";
@@ -42,13 +43,13 @@ describe("handleBackfillYieldHistory", () => {
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillYieldHistory({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
+    const res = await handleBackfillYieldHistory({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
 
     expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts Zephyr yield history row", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([{ match: "INSERT OR IGNORE INTO yield_history", rows: [] }]);
 
     const res = await handleBackfillYieldHistory({ db, url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
 

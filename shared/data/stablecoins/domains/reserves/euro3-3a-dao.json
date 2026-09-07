@@ -95,13 +95,13 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "USDC.e collateral (Linea)",
+      "name": "USDC collateral (Linea)",
       "pct": 0.9340776,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial, Inc. via Linea USDC.e",
+      "issuerOrObligor": "Circle Internet Financial, Inc. via native Linea USDC",
       "riskFactors": [
         "counterparty",
         "custody",

@@ -6,7 +6,7 @@ import {
   captureSafetyScoreV9PegProvenanceById,
   projectSafetyScoreV9PegScoreResult,
   SafetyScoreV9PegProvenanceSummarySchema,
-} from "../safety-score-v9-peg-provenance";
+} from "../safety-score-v9/peg-provenance";
 
 const DAY_SEC = 86_400;
 const CLOCK_SEC = 1_784_869_388;

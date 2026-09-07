@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.42",
+    title: "BOLD and yBOLD Stop Sharing One Yield Row",
+    date: "2026-08-31",
+    effectiveAt: 1788134400,
+    summary:
+      "Base BOLD and the tracked Yearn yBOLD wrapper published identical APY and TVL because BOLD inherited the wrapper's DeFiLlama pool. BOLD now publishes a deterministic Liquity V2 Stability Pool aggregate across its three Ethereum branches, and yBOLD publishes Yearn's own ydaemon numbers.",
+    impact: [
+      "`bold-liquity` gains the deterministic `onchain:bold-liquity` reader, reusing the Base Dollar branch source family across the wstETH, WETH, and rETH Stability Pools: 75% of aggregate accrued borrower interest over total Stability Pool BOLD deposits, with shut-down branches contributing no interest but keeping their deposits, and a fail-closed CollateralRegistry branch-count guard",
+      "BOLD's curated DeFiLlama pool pin and yBOLD variant-map entry are removed. Both resolved to the wrapper's own Yearn pool, so BOLD's headline row was the wrapper's APY and TVL rather than the Stability Pool aggregate a BOLD holder can actually earn",
+      "BOLD's generic Tier-1 exchange-rate config is removed too. It read `convertToAssets` on the yBOLD vault under BOLD's identity, spending an RPC call on every sync and reserving the same `onchain:bold-liquity` key the branch aggregate now owns",
+      "`ybold-yearn` gains the first-party `protocol-api:yearn:ybold` reader: yBOLD vault TVL and the staked ysyBOLD net APR from Yearn's ydaemon endpoint, fail-closed unless the staked vault still wraps the tracked yBOLD vault. The DeFiLlama yBOLD pool stays pinned as a lower-evidence corroborating alternative",
+      "The Yearn venue still reaches BOLD through linked-variant projection, but as a `lending-opportunity` alternative that loses arbitration to the direct on-chain row instead of replacing it",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.41",
     title: "Base Dollar Liquity V2 Stability Pool Source",
     date: "2026-08-21",
@@ -38,7 +55,7 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
     date: "2026-08-19",
     effectiveAt: 1787140800,
     summary:
-      "When the live Safety Score publication is missing, held, or evaluator-incompatible with the hourly yield snapshot, the API now serves the snapshot's own coherent publish-time safety values — explicitly labeled stale — instead of clearing every safety field to NR, bounded by a 24-hour window.",
+      "When the live Safety Score publication is missing, held, or evaluator-incompatible with the hourly yield snapshot, the API now serves the snapshot's own coherent publish-time safety values (explicitly labeled stale) instead of clearing every safety field to NR, bounded by a 24-hour window.",
     impact: [
       "An evaluation-build or methodology rollout no longer blanks public yield safety for up to an hour: `/api/yield-rankings` keeps the cached payload's publish-time scores, grades, PYS, and ordering unchanged and emits `yield-safety-hydration-stale` with `liveSafetyHydration.fallback: \"publish-time-snapshot\"`",
       "Safety fields clear to explicit NR only when the cached payload carries no stamped safety identity or the fallback ages past the 24-hour stale-coherent window; that state now degrades `/api/health` (`yield-safety-unrated-serving:*`) so it is alerted rather than discovered visually",
@@ -54,13 +71,13 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
     date: "2026-08-10",
     effectiveAt: 1786314613,
     summary:
-      "The hourly yield publisher and the API's live-safety hydration now resolve a row's published safety score, grade, provenance, and reason through one shared engine, and both yield engines price venue risk from the continuous weighted score with the coarse tier derived from it — closing four drifted guards without moving any live grade.",
+      "The hourly yield publisher and the API's live-safety hydration now resolve a row's published safety score, grade, provenance, and reason through one shared engine, and both yield engines price venue risk from the continuous weighted score with the coarse tier derived from it, closing four drifted guards without moving any live grade.",
     impact: [
       "Both write and read paths call `resolveYieldRowSafety(...)`; the stricter guard won at each prior divergence: opportunity scores substitute only over an observed AND rated Report Card (an NR grade keeps its own unrating), the reviewed-venue registry fallback applies on both paths, and every external opportunity row is assessed even when it already carries a published contract",
       "Rows hydrated from legacy cached payloads gain an explicitly unrated opportunity contract plus the `opportunity-evidence-missing` warning instead of silently carrying no contract; Royco tranche rows no longer republish a stale opportunity contract beside a refreshed tranche score; a source whose entire history is same-day now stays NR",
-      "Venue risk is canonical on the weighted 1..5 score for both engines; a stored coarse tier that disagrees with (or lacks) its weighted score can no longer be priced — it derives, or prices as `unknown` (an evidence gap), never a guessed penalty",
+      "Venue risk is canonical on the weighted 1..5 score for both engines; a stored coarse tier that disagrees with (or lacks) its weighted score can no longer be priced: it derives, or prices as `unknown` (an evidence gap), never a guessed penalty",
       "The shared penalty-term kit (access, withdrawal, utilization, TVL, venue) carries per-engine magnitude profiles; Royco-only terms remain bespoke and every magnitude is unchanged",
-      "Measured movement: none — 108,000 generic-engine differential cases and 4,000 production-shaped Royco cases are byte-identical, and all 61 reviewed venue registry entries already derive the tier they store",
+      "Measured movement: none. 108,000 generic-engine differential cases and 4,000 production-shaped Royco cases are byte-identical, and all 61 reviewed venue registry entries already derive the tier they store",
     ],
     commits: [],
     reconstructed: false,
@@ -230,7 +247,7 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
       "`3jane-lending` confidence is upgraded partial→verified against Yearn's USD3 report (four dedicated audits plus a Morpho Blue base and Certora coverage); its metadata rationale and evidence are updated to match the new scores",
       "The Sky/Spark legs `sparklend` and `spark-savings` move funds management 1→2 to reflect the shared MCD_VAT backing (~26% off-chain RWA custody plus Circle USDC concentration) that Yearn scores at 1.8; both legs stay below the 2.0 penalty knee, so the blue-chip no-op is preserved and no penalty changes",
       "`yearn`/`yearn-finance` operational moves 2→1 (org-level maturity: BORG legal entity, named multisig signers, active monitoring); funds management is held at 2 to hedge the generic venue's leveraged-vault coverage, and the weighted score stays below 2.0 so the no-op is preserved",
-      "Adds two low-severity (informational, zero-penalty) dependency-concentration entries — `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate) — surfacing the single off-chain Pool-Delegate EOA that originates ~97% of syrupUSDC/USDT AUM; severity is low because the `maple` venue tier already prices the credit/delegate risk (no double-count), matching the existing single-curator Morpho chips",
+      "Adds two low-severity (informational, zero-penalty) dependency-concentration entries, `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate), surfacing the single off-chain Pool-Delegate EOA that originates ~97% of syrupUSDC/USDT AUM; severity is low because the `maple` venue tier already prices the credit/delegate risk (no double-count), matching the existing single-curator Morpho chips",
       "`aave-v3` (assessed against Yearn's sGHO savings-vault report) and `morpho`/`morpho-v1`/`morpho-blue` (against Yearn's Gauntlet Aera-vault report) are unchanged: those reports are proxy matches whose deltas are product-specific and do not re-score the venue",
       "Calibration source is Yearn's published risk reports as a documentation cross-check, not a runtime feed; PYS formula shape, benchmark selection, dependency-concentration registry, history semantics, and publication guards are unchanged",
     ],
@@ -325,8 +342,8 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
     summary:
       "PYS source risk replaces the hand-set 3-bucket venue tier with Yearn's shipped 5-category weighted rubric, scores 49 previously-unreviewed long-tail venues (12 → 61), adds a reviewer-set cross-venue dependency-concentration sub-signal, and anchors calibration to Yearn's own published yvUSDC risk report.",
     impact: [
-      "Each reviewed venue now carries five Yearn-style sub-scores — audits (20%), centralization (30%), funds management (30%), liquidity (15%), operational (5%), each 1–5 with higher = riskier — weighted into a 1–5 venue-risk score; the coarse `venueRiskTier` is now DERIVED from that score (Minimal+Low → low, Medium → medium, Elevated+High → high) rather than hand-set",
-      "The PYS venue penalty moves from the flat low/medium/high buckets (0 / +0.15 / +0.35) to a continuous curve `max(0, weighted − 2.0) × 0.15`; it is calibration-preserving — weighted ≤ 2.0 → 0 (legacy `low` no-op), 3.0 → +0.15 (legacy `medium`), 4.0 → +0.30, 5.0 → +0.45 — and only applies when a venue carries category scores, so unscored venues stay neutral exactly as before",
+      "Each reviewed venue now carries five Yearn-style sub-scores, weighted into a 1-5 venue-risk score: audits (20%), centralization (30%), funds management (30%), liquidity (15%), operational (5%), each 1-5 with higher = riskier; the coarse `venueRiskTier` is now DERIVED from that score (Minimal+Low → low, Medium → medium, Elevated+High → high) rather than hand-set",
+      "The PYS venue penalty moves from the flat low/medium/high buckets (0 / +0.15 / +0.35) to a continuous curve `max(0, weighted − 2.0) × 0.15`; it is calibration-preserving (weighted ≤ 2.0 → 0, the legacy `low` no-op; 3.0 → +0.15, legacy `medium`; 4.0 → +0.30; 5.0 → +0.45) and only applies when a venue carries category scores, so unscored venues stay neutral exactly as before",
       "The reviewed venue registry expands from 12 to 61: the previously-unscored long tail is now scored, including uncollateralized/RWA credit (Clearpool, Goldfinch, 3Jane, Centrifuge, Flux, Cap, Avantis), newer EVM money markets (Euler v2, Gearbox, Curve LlamaLend, Fluid, Dolomite, Exactly, Fraxlend v2, Aave v4, Compound v2), CDPs (Felix, Frankencoin), and app-chain lenders (Kamino, JustLend, BENQI, Aries, Scallop, Echelon, Blend, Jupiter Lend, HyperLend, Curvance, Sovryn)",
       "Reviewed venue scores bind from the DeFiLlama `project` slug carried on auto-discovered lending rows, so the long tail picks up its score without sourceKey inference; remaining unreviewed venues continue to resolve `unknown` and stay neutral",
       "A reviewer-set `dependencyConcentration` sub-signal (keyed by stablecoin id, not auto-derived) captures cross-venue concentration that per-venue tiering structurally misses; it adds +0.10 (medium) or +0.20 (high) to the source-risk penalty. Seeded with `yvusdc-yearn` = Sky (medium): its funded debt sits ~100% behind Sky governance (sUSDS + Spark), matching Yearn's own risk report flagging that coupling as the dominant risk",
@@ -652,7 +669,7 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
     date: "2026-05-15",
     effectiveAt: 1778871300,
     summary:
-      "Benchmark registry adds GBP, JPY, MXN, BRL, AUD, and CAD rate feeds, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. `sourceRiskScore` is now derived from the resolved source-risk penalty so the 0–100 display field stops being universally null, and the first reviewed venue tier batch lands for Aave V3, Compound V3, Spark, and Morpho Blue.",
+      "Benchmark registry adds GBP, JPY, MXN, BRL, AUD, and CAD rate feeds, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. `sourceRiskScore` is now derived from the resolved source-risk penalty so the 0-100 display field stops being universally null, and the first reviewed venue tier batch lands for Aave V3, Compound V3, Spark, and Morpho Blue.",
     impact: [
       "EUR/CHF retain their existing native benchmarks; GBP now uses FRED `IUDSOIA` (SONIA proxy), JPY uses FRED `IRSTCB01JPM156N` (TONA-equivalent overnight call rate proxy), MXN uses Banxico SIE `SF43936` (CETES 28d, requires `BANXICO_TOKEN`), BRL uses BCB SGS series `11` (SELIC), AUD uses FRED `IR3TIB01AUM156N` (3M interbank, RBA cash rate proxy), and CAD uses Bank of Canada Valet series `V122530` (CORRA proxy)",
       "AED, IDR, TRY, ZAR, and SGD continue to fall back to USD until a stable public feed is wired; SGD is registered in the type but no fetcher landed in this batch",

@@ -8,7 +8,6 @@ import {
   jsonResponseWithHeaders,
   methodNotAllowedResponse,
   noStoreResponse,
-  respondWithFreshSnapshot,
   withResponseHeaders,
 } from "../api-response";
 
@@ -131,65 +130,5 @@ describe("jsonFreshDegradedResponse", () => {
     expect(res.headers.get("Cache-Control")).toBe(cacheControl);
     expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(0);
     await expect(res.json()).resolves.toEqual(payload);
-  });
-});
-
-describe("respondWithFreshSnapshot", () => {
-  class SnapshotUnavailableError extends Error {}
-
-  it("returns a freshness-decorated snapshot response", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const res = await respondWithFreshSnapshot({
-      load: async () => ({ updatedAt: nowSec - 5, value: 1 }),
-      cacheControl: "public, max-age=60",
-      maxAgeSec: 60,
-      unavailableError: SnapshotUnavailableError,
-      unavailableMessage: "Snapshot unavailable",
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(0);
-    await expect(res.json()).resolves.toEqual({ updatedAt: nowSec - 5, value: 1 });
-  });
-
-  it("returns configured 503 responses for unavailable snapshots", async () => {
-    const res = await respondWithFreshSnapshot({
-      load: async () => {
-        throw new SnapshotUnavailableError("missing");
-      },
-      cacheControl: "public, max-age=60",
-      maxAgeSec: 60,
-      unavailableError: SnapshotUnavailableError,
-      unavailableMessage: "Snapshot unavailable",
-    });
-
-    expect(res.status).toBe(503);
-    await expect(res.json()).resolves.toEqual({ error: "Snapshot unavailable" });
-  });
-
-  it("returns 503 when a snapshot has not been populated", async () => {
-    const res = await respondWithFreshSnapshot({
-      load: async () => ({ updatedAt: 0 }),
-      cacheControl: "public, max-age=60",
-      maxAgeSec: 60,
-      unavailableError: SnapshotUnavailableError,
-      unavailableMessage: "Snapshot unavailable",
-    });
-
-    expect(res.status).toBe(503);
-    await expect(res.json()).resolves.toEqual({ error: "Data not yet available" });
-  });
-
-  it("rethrows unexpected snapshot loading errors", async () => {
-    await expect(respondWithFreshSnapshot({
-      load: async () => {
-        throw new Error("boom");
-      },
-      cacheControl: "public, max-age=60",
-      maxAgeSec: 60,
-      unavailableError: SnapshotUnavailableError,
-      unavailableMessage: "Snapshot unavailable",
-    })).rejects.toThrow("boom");
   });
 });

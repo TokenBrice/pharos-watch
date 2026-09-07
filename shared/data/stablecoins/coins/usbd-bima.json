@@ -71,8 +71,8 @@
     "semantics": "collateral-mix",
     "breakerScope": "usbd-bima",
     "display": {
-      "url": "https://docs.bima.money/security/mainnet-addresses",
-      "label": "BIMA Mainnet Addresses"
+      "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/docs/mainnet.md",
+      "label": "BIMA DebtToken and collateral registry"
     },
     "inputs": {
       "primary": {

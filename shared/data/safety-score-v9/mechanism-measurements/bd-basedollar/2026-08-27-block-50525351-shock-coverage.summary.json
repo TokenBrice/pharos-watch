@@ -1,0 +1,640 @@
+{
+  "mechanism": "bd-basedollar",
+  "date": "2026-08-27-block-50525351-shock-coverage",
+  "sha256": "200435925f00405faff2964fba625d728041cf82eb682a3c7cfead525389699f",
+  "bytes": 1333729,
+  "r2Key": "captures/bd-basedollar/2026-08-27-block-50525351-shock-coverage.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-shock-coverage-measurement",
+    "assetId": "bd-basedollar",
+    "archetype": "cdp",
+    "family": "liquity-v2-shock-v1",
+    "applicability": {
+      "state": "measured",
+      "failureReason": null
+    },
+    "completeness": {
+      "complete": true,
+      "blockers": []
+    },
+    "block": {
+      "number": 50525351,
+      "hash": "0xedbd745a470b72d22a1d6d6850188bd883a1fd4a3346b2a0fab8fbfea5107927",
+      "timestampUnix": 1787840049,
+      "timestampIso": "2026-08-27T14:14:09.000Z"
+    },
+    "sourcePin": {
+      "repository": "https://github.com/basedollar/basedollar",
+      "commit": "fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941",
+      "liquidationContractPath": "contracts/src/TroveManager.sol"
+    },
+    "shockPolicy": {
+      "scoreShockFractionPpm": 500000,
+      "sensitivityShockFractionsPpm": [
+        400000,
+        500000,
+        600000,
+        750000
+      ],
+      "debtReconciliationTolerancePpm": 1000
+    },
+    "measuredFacts": {
+      "applicability": "measured",
+      "failureReason": null,
+      "stressShockFraction": 0.5,
+      "stressLiquidatableDebt": "39553565035159613927239",
+      "stressPoolOffsetDebt": "11245312931400446072322",
+      "stressLiquidationCoverageRatio": 0.284305925936,
+      "branchContributions": [
+        {
+          "branchIndex": 0,
+          "stressLiquidatableDebt": "15494234467100419966686",
+          "stressPoolOffsetDebt": "3936020882766607457867",
+          "stressLiquidationCoverageRatio": 0.254031323143
+        },
+        {
+          "branchIndex": 1,
+          "stressLiquidatableDebt": "2000508059931557679994",
+          "stressPoolOffsetDebt": "2000508059931557679994",
+          "stressLiquidationCoverageRatio": 1
+        },
+        {
+          "branchIndex": 2,
+          "stressLiquidatableDebt": "6503732670187887392746",
+          "stressPoolOffsetDebt": "2849000000000000000000",
+          "stressLiquidationCoverageRatio": 0.438056135526
+        },
+        {
+          "branchIndex": 3,
+          "stressLiquidatableDebt": "14303238919555333164633",
+          "stressPoolOffsetDebt": "1207933070317865211281",
+          "stressLiquidationCoverageRatio": 0.084451715944
+        },
+        {
+          "branchIndex": 4,
+          "stressLiquidatableDebt": "1251850918384415723180",
+          "stressPoolOffsetDebt": "1251850918384415723180",
+          "stressLiquidationCoverageRatio": 1
+        }
+      ]
+    },
+    "codePins": [
+      {
+        "name": "bold-token",
+        "address": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+        "role": "token",
+        "codeHash": "0x81f94655a3c2dde6c1c6d945f99cf7d5e9221a335c323aa67c712c0c55cdc099"
+      },
+      {
+        "name": "collateral-registry",
+        "address": "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+        "role": "branch-enumerator",
+        "codeHash": "0x64a355fd127b3fd707b80f7421e49a2a0b5955af230c59995ae6f74e59026d21"
+      },
+      {
+        "name": "eth-usd-oracle-0",
+        "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "eth-usd-oracle-implementation-0",
+        "address": "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x8e5954f999e4aa765edefb7e1b0a35ca199c2275ce0c3c5bd7ed50940111e6ff"
+      },
+      {
+        "name": "collateral-token-0",
+        "address": "0x4200000000000000000000000000000000000006",
+        "role": "branch-collateral",
+        "codeHash": "0x8a3a1f6a9f9dce633117adee5b458245835a8645a8c8726a26382a4622508b1c"
+      },
+      {
+        "name": "addresses-registry-0",
+        "address": "0xdad2735973d29e3a8ce26667774a624e0ea97556",
+        "role": "parameter-and-graph-registry",
+        "codeHash": "0xb0a685fb22e858ffc522c63a887a76283c082b38de6a8c3d25b10225a2ad6aa4"
+      },
+      {
+        "name": "trove-manager-0",
+        "address": "0xa957d42c4c43eb97d5f71b8435eb638e5dd9f639",
+        "role": "liquidation-state-machine",
+        "codeHash": "0x0317d6c5f7a2d866db157ccc6a2ca6a6d1f8a66a019818cc7b6c6a0759157fc2"
+      },
+      {
+        "name": "stability-pool-0",
+        "address": "0x7d837bf114785642d225d1101145ddb8af4ba438",
+        "role": "branch-local-committed-pool",
+        "codeHash": "0xe76cbce56757dddfd371729edc9d51f0ab4658dc0f531b35bde61561c64959b7"
+      },
+      {
+        "name": "price-feed-0",
+        "address": "0x40b4199347af7738643ef4a12a771f7421b84e7f",
+        "role": "protocol-oracle",
+        "codeHash": "0xf4b0303494cc4a1e1e7cd834720e3d50c10c585fe0df43b079f140ebd52e44b4"
+      },
+      {
+        "name": "active-pool-0",
+        "address": "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
+        "role": "protocol-accounting",
+        "codeHash": "0x915d4ed8f0aa253d2ce17ee2aebad37503530d128838219a67b07f6b07e1ff83"
+      },
+      {
+        "name": "default-pool-0",
+        "address": "0xf5bba496a225211b102201bb54b57a29863ec876",
+        "role": "redistribution-accounting",
+        "codeHash": "0x4520dcae2d0b9e8af26f9884584b022a1b4635a551f852f694adb36335aa6029"
+      },
+      {
+        "name": "sorted-troves-0",
+        "address": "0x4f1d9102448fde06955a6cd20d085d6b468e92ad",
+        "role": "redemption-order",
+        "codeHash": "0xb53732a03b75addd1984b4e5136eb4f3f318604282d206c775eb1f7ca3f6fc85"
+      },
+      {
+        "name": "borrower-operations-0",
+        "address": "0x1867772fba1bcc13d94eb22f1d100ce524148a3f",
+        "role": "liquidation-state-cleanup",
+        "codeHash": "0xc07f190e14e624a02578e360d2519d3709f6b64dd7459483cdbcbb6e14ae8c0e"
+      },
+      {
+        "name": "trove-nft-0",
+        "address": "0xaed689cf95802fbbd9c8a787379d4dc66768c802",
+        "role": "liquidation-owner-lookup",
+        "codeHash": "0xed76abcdaf2ed86ff15af8d927e022eecb30bbab4247ab17233aa145767ad9e3"
+      },
+      {
+        "name": "gas-pool-0",
+        "address": "0x6cc943f5b476b8db11997899c517cee467258324",
+        "role": "liquidation-gas-compensation",
+        "codeHash": "0x24ebfae8aca0880567e376c82dea5d9cf19b745653fef806f97d13bb4ca05f6b"
+      },
+      {
+        "name": "coll-surplus-pool-0",
+        "address": "0xa304b224e332685bb741cf3d9877172e754983dd",
+        "role": "liquidation-collateral-surplus",
+        "codeHash": "0x0887bdc56828740d6bed0c81c2b12af1643a57eb242f0a945532eb5fad6fc22a"
+      },
+      {
+        "name": "weth-0",
+        "address": "0x4200000000000000000000000000000000000006",
+        "role": "liquidation-gas-compensation-token",
+        "codeHash": "0x8a3a1f6a9f9dce633117adee5b458245835a8645a8c8726a26382a4622508b1c"
+      },
+      {
+        "name": "interest-router-0",
+        "address": "0x519ca17dae2e2a23396ebec12da1f645accec196",
+        "role": "liquidation-interest-minting",
+        "codeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c"
+      },
+      {
+        "name": "eth-usd-oracle-1",
+        "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "eth-usd-oracle-implementation-1",
+        "address": "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x8e5954f999e4aa765edefb7e1b0a35ca199c2275ce0c3c5bd7ed50940111e6ff"
+      },
+      {
+        "name": "secondary-oracle-1",
+        "address": "0x3df401c6ce98d6976acb7395460e32d99eb79d05",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "secondary-oracle-implementation-1",
+        "address": "0xbaf71b9a60c5fe2a6a448c0f2e3d66e42f5b5db8",
+        "role": "oracle-source-implementation",
+        "codeHash": "0xed5f39905daabd095648052e8f99bff1e2963c89d60057ec17d3e8ddfe44046e"
+      },
+      {
+        "name": "rate-provider-1",
+        "address": "0x00caeda3cb375a17a084b1bdce7136bb01bbd13d",
+        "role": "oracle-rate-provider",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "collateral-token-1",
+        "address": "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+        "role": "branch-collateral",
+        "codeHash": "0x93d3f113d81097295a93cbfd054d390c99a34e1525054645567aa9c8c675812e"
+      },
+      {
+        "name": "addresses-registry-1",
+        "address": "0x3e35fcc70d2ed82adce6c1e8f111554a04b74f3f",
+        "role": "parameter-and-graph-registry",
+        "codeHash": "0xe7751391facfccceb4e24d8ac8b1b54b3e55a8b41d5a0e188bd6189f75fe5f0d"
+      },
+      {
+        "name": "trove-manager-1",
+        "address": "0x79a6a3361eae4d4b80939206426f2320c11a4bfb",
+        "role": "liquidation-state-machine",
+        "codeHash": "0x363d37d348f5676fa540db901a286b5f476c285236f0c6cfc01b1af196000a73"
+      },
+      {
+        "name": "stability-pool-1",
+        "address": "0xc65a05737d31e0f42c0806c739f3c88dd009c05f",
+        "role": "branch-local-committed-pool",
+        "codeHash": "0x56137fbcd5f552b0009c90d65ec831d72a729920d53e2787b4b542ecbe0fdb2b"
+      },
+      {
+        "name": "price-feed-1",
+        "address": "0x176363a20ba1dc75b418d7954f5222499b276186",
+        "role": "protocol-oracle",
+        "codeHash": "0xb1350c03bf3cc33d87c97c7ec95f81c965f78d3dbd0cd18d61930135f927c2ae"
+      },
+      {
+        "name": "active-pool-1",
+        "address": "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
+        "role": "protocol-accounting",
+        "codeHash": "0x51a4c7f3db21ec076b5f4310995f497a5dc88470b352458ea848542abd54043b"
+      },
+      {
+        "name": "default-pool-1",
+        "address": "0x38062c11f7b89b234ca71f4fb39f8f8d32844a20",
+        "role": "redistribution-accounting",
+        "codeHash": "0xb5ec229111f3b048493417817dcfa9c5f6c05a4f1b3ccc9e5c0c565bc6f4c4e4"
+      },
+      {
+        "name": "sorted-troves-1",
+        "address": "0x4dad0339c1c33a247fc137f44bbc5dbe8df80ee1",
+        "role": "redemption-order",
+        "codeHash": "0x57f0382b5555d4f78b4146cf3b008128f22388b9851b4d7b6e01bd48fe0fe925"
+      },
+      {
+        "name": "borrower-operations-1",
+        "address": "0xc4b0a1011f2cb0438429724594d2ab3d4d8ef54a",
+        "role": "liquidation-state-cleanup",
+        "codeHash": "0x0c30d1e55e459f76a2605c41021e0029c33dc9bd2753b34b833ac511596bf03d"
+      },
+      {
+        "name": "trove-nft-1",
+        "address": "0xdb5747eaca2c4283ac56fe2b6ce84cb16c259990",
+        "role": "liquidation-owner-lookup",
+        "codeHash": "0x272bfd511409a2964853d93325f37f099da37f9f1ac600ce771cb29a0d00e53e"
+      },
+      {
+        "name": "gas-pool-1",
+        "address": "0x3f0dcac8a658056bb6be30979ecb26ea7702e72d",
+        "role": "liquidation-gas-compensation",
+        "codeHash": "0x24ebfae8aca0880567e376c82dea5d9cf19b745653fef806f97d13bb4ca05f6b"
+      },
+      {
+        "name": "coll-surplus-pool-1",
+        "address": "0xdc87cef2be8e9f7f1ad90260e5584e56835d43b3",
+        "role": "liquidation-collateral-surplus",
+        "codeHash": "0x3954c2310bdace11c8c08c7940398542cb3feb46f9c1493f4ea252f57ebbd61a"
+      },
+      {
+        "name": "weth-1",
+        "address": "0x4200000000000000000000000000000000000006",
+        "role": "liquidation-gas-compensation-token",
+        "codeHash": "0x8a3a1f6a9f9dce633117adee5b458245835a8645a8c8726a26382a4622508b1c"
+      },
+      {
+        "name": "interest-router-1",
+        "address": "0x519ca17dae2e2a23396ebec12da1f645accec196",
+        "role": "liquidation-interest-minting",
+        "codeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c"
+      },
+      {
+        "name": "eth-usd-oracle-2",
+        "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "eth-usd-oracle-implementation-2",
+        "address": "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x8e5954f999e4aa765edefb7e1b0a35ca199c2275ce0c3c5bd7ed50940111e6ff"
+      },
+      {
+        "name": "secondary-oracle-2",
+        "address": "0xd75f2752ded6995106b163da472b96186ccf0441",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "secondary-oracle-implementation-2",
+        "address": "0x73f526b1611f9cebbacd3110b4df3a0342864ae7",
+        "role": "oracle-source-implementation",
+        "codeHash": "0xbc81013886a473137cefdd6e42e317bbed2b366f04049a9a74adc309b794cf4b"
+      },
+      {
+        "name": "rate-provider-2",
+        "address": "0x658843bb859b7b85ceab5cf77167e3f0a78dfe7f",
+        "role": "oracle-rate-provider",
+        "codeHash": "0xabb1c2ff9abff53a5bc2baf34be59a0a5b53a365e7de06db57f44555ab159f88"
+      },
+      {
+        "name": "collateral-token-2",
+        "address": "0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c",
+        "role": "branch-collateral",
+        "codeHash": "0x48b48023ed69f2c27cb6bca379617d5f0915fa9f4255da9fb4eaf13c19ef2090"
+      },
+      {
+        "name": "addresses-registry-2",
+        "address": "0xd4763ae6021927784a7a787c1a98b287f919d165",
+        "role": "parameter-and-graph-registry",
+        "codeHash": "0xe7751391facfccceb4e24d8ac8b1b54b3e55a8b41d5a0e188bd6189f75fe5f0d"
+      },
+      {
+        "name": "trove-manager-2",
+        "address": "0xd31987fcba98f471b6e4220c52f7741b11b2fc5e",
+        "role": "liquidation-state-machine",
+        "codeHash": "0x363d37d348f5676fa540db901a286b5f476c285236f0c6cfc01b1af196000a73"
+      },
+      {
+        "name": "stability-pool-2",
+        "address": "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a",
+        "role": "branch-local-committed-pool",
+        "codeHash": "0xf9f19cfa8c94b3d8053e4bf64af77dd8276bf43325e9e1d58d07db37c1b010cb"
+      },
+      {
+        "name": "price-feed-2",
+        "address": "0x6627b94533be5bba42d1aaaf982330e9746b6133",
+        "role": "protocol-oracle",
+        "codeHash": "0xdd33df2ea1ff23cb903d9d572410503d8ed3340832575d459d29e6f502d39532"
+      },
+      {
+        "name": "active-pool-2",
+        "address": "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
+        "role": "protocol-accounting",
+        "codeHash": "0xe8c7a0694cffcb6afffa0f8bd5e9a150f791d4bffbf73102944559339e7b5148"
+      },
+      {
+        "name": "default-pool-2",
+        "address": "0x3d4eb96fb79ea0d79953423914b2a1472dbdc3cd",
+        "role": "redistribution-accounting",
+        "codeHash": "0xbfa1d1065e5f6f2bbc1412d9e37b84032d5856b3bdf869065c2d34f9eb9f4cdd"
+      },
+      {
+        "name": "sorted-troves-2",
+        "address": "0x637344c0634626bb5d3c8fd5cc0fb332558778f8",
+        "role": "redemption-order",
+        "codeHash": "0xc51ccb0b1e60e81ff5f74a79b1b903c90ab2ba818c061cd8d976b897c8eca52e"
+      },
+      {
+        "name": "borrower-operations-2",
+        "address": "0x69e933767974fcd7cabeea976226783f4b952521",
+        "role": "liquidation-state-cleanup",
+        "codeHash": "0x548c2f538db4de263c1c8f984e007ae9c4fc5468534b6eb25e10948bdea8d8b9"
+      },
+      {
+        "name": "trove-nft-2",
+        "address": "0xec22e1dd649a98d2718cc2d9afb69dbf25ed3fa6",
+        "role": "liquidation-owner-lookup",
+        "codeHash": "0x33286fad1071deb8519f6842b8bf918f384fedde709d3a3cb53fb122ac41cb1e"
+      },
+      {
+        "name": "gas-pool-2",
+        "address": "0xedf7bc788f83e17d9b62da279db02b1bcc582262",
+        "role": "liquidation-gas-compensation",
+        "codeHash": "0x24ebfae8aca0880567e376c82dea5d9cf19b745653fef806f97d13bb4ca05f6b"
+      },
+      {
+        "name": "coll-surplus-pool-2",
+        "address": "0x08699bd503d890ce7fd7bf216d7a6e9da1a179e4",
+        "role": "liquidation-collateral-surplus",
+        "codeHash": "0x594d859bf002207c35190bedcd2b567167ba1605546286ff6a908754b35bf24a"
+      },
+      {
+        "name": "weth-2",
+        "address": "0x4200000000000000000000000000000000000006",
+        "role": "liquidation-gas-compensation-token",
+        "codeHash": "0x8a3a1f6a9f9dce633117adee5b458245835a8645a8c8726a26382a4622508b1c"
+      },
+      {
+        "name": "interest-router-2",
+        "address": "0x519ca17dae2e2a23396ebec12da1f645accec196",
+        "role": "liquidation-interest-minting",
+        "codeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c"
+      },
+      {
+        "name": "eth-usd-oracle-3",
+        "address": "0x021d31211f81bc37ed7c9d535380cfaddd62c111",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "eth-usd-oracle-implementation-3",
+        "address": "0x4b9188dcb11c73b62e49e10791ebc276a2a66fc5",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x4cdb78872a01897ae8c3de14dde2de62eb78ef4cb1a584c52a433b69f2825c86"
+      },
+      {
+        "name": "secondary-oracle-3",
+        "address": "0xb15fb0fe60b20689390f8306dedebc608ae1ff3d",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "secondary-oracle-implementation-3",
+        "address": "0xc1b881e528cf9b3ea4838a327fa0104f49da1489",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x8865f2d5b5d2e904d8e17bdf71fd105f7ed198900ec6fb6bb10971a6217da0eb"
+      },
+      {
+        "name": "collateral-token-3",
+        "address": "0x92a7aee8afaa71ba0a9cc04a3dbe1f34237c33e0",
+        "role": "branch-collateral",
+        "codeHash": "0xf11ac24a06c48272aea7f0b069a80a581425a40fb2dda5fbd2e1b553d90de3d5"
+      },
+      {
+        "name": "addresses-registry-3",
+        "address": "0x1fdea10dc1f6ff27ed9881bdf464fe070dda6f76",
+        "role": "parameter-and-graph-registry",
+        "codeHash": "0xb0a685fb22e858ffc522c63a887a76283c082b38de6a8c3d25b10225a2ad6aa4"
+      },
+      {
+        "name": "trove-manager-3",
+        "address": "0x835b04eefbb0e32d8f75cfe96acb527a42f1a0d9",
+        "role": "liquidation-state-machine",
+        "codeHash": "0x0317d6c5f7a2d866db157ccc6a2ca6a6d1f8a66a019818cc7b6c6a0759157fc2"
+      },
+      {
+        "name": "stability-pool-3",
+        "address": "0x6bd55dd953507641c84a03956760f83d29d65726",
+        "role": "branch-local-committed-pool",
+        "codeHash": "0x164195d0c2d06c9e4a47e508caf059cb3f748684bd12e198a2ad17d0f265a274"
+      },
+      {
+        "name": "price-feed-3",
+        "address": "0x9e191d9f3f3c138c81753acf6f4ec32e84daa89e",
+        "role": "protocol-oracle",
+        "codeHash": "0xd2cad96079007d34a22091269db9a09d7786967256f99d1e789611d8d6ef7baf"
+      },
+      {
+        "name": "active-pool-3",
+        "address": "0xcaa72df531554087318eaf24646958500668b230",
+        "role": "protocol-accounting",
+        "codeHash": "0x3a30f669459e6b3b3015dd564fbc4d25c77e9a05a4b766e6f6ebb6d108d51618"
+      },
+      {
+        "name": "default-pool-3",
+        "address": "0x2019453c36c7272bdea78a0901d448595d8127d2",
+        "role": "redistribution-accounting",
+        "codeHash": "0xd2cf6778816edd886cf1921ab0fb0534d8e38ef6871dedaffb33b874e4642535"
+      },
+      {
+        "name": "sorted-troves-3",
+        "address": "0xe55530a4205ec2eda84adf9f5efb2f456d5cb721",
+        "role": "redemption-order",
+        "codeHash": "0x91d916776dd94ec9e2007976f4835ee095dcad31af13a7a5f61993f579fd239f"
+      },
+      {
+        "name": "borrower-operations-3",
+        "address": "0xb9a3c82486d0b6d72dec55fcc9192af09aaa393b",
+        "role": "liquidation-state-cleanup",
+        "codeHash": "0x5303ecac158abdeb8f356539c92610aaf307b23e43dfed88fa36916562fcf95a"
+      },
+      {
+        "name": "trove-nft-3",
+        "address": "0x9bac1f53bb7d309df424f16ee8a0bbb5803b9776",
+        "role": "liquidation-owner-lookup",
+        "codeHash": "0x33d9d1b13e4b881f77259103cf5859f2dc2e47570f2180b2678f0ca36747e07a"
+      },
+      {
+        "name": "gas-pool-3",
+        "address": "0x503fef97e449d0db569155d8a1408717ee05d363",
+        "role": "liquidation-gas-compensation",
+        "codeHash": "0x24ebfae8aca0880567e376c82dea5d9cf19b745653fef806f97d13bb4ca05f6b"
+      },
+      {
+        "name": "coll-surplus-pool-3",
+        "address": "0xeddcfb454f8756e992601666df5adb3389ef15e4",
+        "role": "liquidation-collateral-surplus",
+        "codeHash": "0xc7fd318822aa6da3a716c13c6875aa1f7019d70988ea4d7606a69faac4727777"
+      },
+      {
+        "name": "weth-3",
+        "address": "0x4200000000000000000000000000000000000006",
+        "role": "liquidation-gas-compensation-token",
+        "codeHash": "0x8a3a1f6a9f9dce633117adee5b458245835a8645a8c8726a26382a4622508b1c"
+      },
+      {
+        "name": "interest-router-3",
+        "address": "0x519ca17dae2e2a23396ebec12da1f645accec196",
+        "role": "liquidation-interest-minting",
+        "codeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c"
+      },
+      {
+        "name": "eth-usd-oracle-4",
+        "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "eth-usd-oracle-implementation-4",
+        "address": "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+        "role": "oracle-source-implementation",
+        "codeHash": "0x8e5954f999e4aa765edefb7e1b0a35ca199c2275ce0c3c5bd7ed50940111e6ff"
+      },
+      {
+        "name": "secondary-oracle-4",
+        "address": "0xbe3efb4209ee6962c309e3ce8650d54b326d9cd3",
+        "role": "oracle-source",
+        "codeHash": "0x6a262fa9116d19f33c6b843c58c22f687293b75052171cfe58d05ba51365c3b1"
+      },
+      {
+        "name": "secondary-oracle-implementation-4",
+        "address": "0x9823fffe5ff8aaaa142dd6a398e501d49aaae9d9",
+        "role": "oracle-source-implementation",
+        "codeHash": "0xf22a5ad1ad14e9b6ed9b0e371c9ca75d1e1efe35568933f5af097343f414720c"
+      },
+      {
+        "name": "collateral-token-4",
+        "address": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+        "role": "branch-collateral",
+        "codeHash": "0x8cd2f08c7ee9e6ab6e0180e8d6cb0613bbd54d2c4ae2ecdcaddfcdd9a226215b"
+      },
+      {
+        "name": "addresses-registry-4",
+        "address": "0x98f5ddda4c0250966a446d39167d0bfb8e4ca1b6",
+        "role": "parameter-and-graph-registry",
+        "codeHash": "0xe7751391facfccceb4e24d8ac8b1b54b3e55a8b41d5a0e188bd6189f75fe5f0d"
+      },
+      {
+        "name": "trove-manager-4",
+        "address": "0x482de97e667330afba99f8ced527118aec66f15d",
+        "role": "liquidation-state-machine",
+        "codeHash": "0x363d37d348f5676fa540db901a286b5f476c285236f0c6cfc01b1af196000a73"
+      },
+      {
+        "name": "stability-pool-4",
+        "address": "0x25afbb09d9804482ed8e24295be4a12704fe93ea",
+        "role": "branch-local-committed-pool",
+        "codeHash": "0xc6e9460fdf3aa46f3b594465d0b4fbe4a27c2b2b8957283b8df71e65e87e8109"
+      },
+      {
+        "name": "price-feed-4",
+        "address": "0x23bb111e94ec68009da6b8fc50c19628a972b9e0",
+        "role": "protocol-oracle",
+        "codeHash": "0x126bcdb4430bcf77e3e9ad5e111dd20c2ab2cc1c0eef9efd9c4ccab2286cf8a9"
+      },
+      {
+        "name": "active-pool-4",
+        "address": "0xddac84ab417677f553cced8ababf497226112218",
+        "role": "protocol-accounting",
+        "codeHash": "0x41453918ea711d056566592c6092375f1c3ee91536d0d4687d72ca5e8f617b9c"
+      },
+      {
+        "name": "default-pool-4",
+        "address": "0xc8eb254aabd8a64193fea55aac36087393baf81b",
+        "role": "redistribution-accounting",
+        "codeHash": "0xd71e1c2268e5170c31c66318964fa05d974bea103a031ef8fc3db1150cc24f9d"
+      },
+      {
+        "name": "sorted-troves-4",
+        "address": "0x2792304889f35b60ccd79c3e173837bc6ec3ab44",
+        "role": "redemption-order",
+        "codeHash": "0x8b2837d637438aec533b93940bcdae5d85e669fc799a5aa88299008687d42cfa"
+      },
+      {
+        "name": "borrower-operations-4",
+        "address": "0xfa6e7e44e538b2cf7d73720b2b1942ab28abd1d5",
+        "role": "liquidation-state-cleanup",
+        "codeHash": "0xf0c72011594a373da689433929a25a981c8b22914e27bdadb69a772b94b7a7d7"
+      },
+      {
+        "name": "trove-nft-4",
+        "address": "0x2c3a69fe04c976a05e72033ac2433bcfaa15b68a",
+        "role": "liquidation-owner-lookup",
+        "codeHash": "0x85f16e52509dae287547f6d05b49bfa70a101662a29a6e5b60a527d930b78af3"
+      },
+      {
+        "name": "gas-pool-4",
+        "address": "0x4ad0d908d81c8b3f2d25ee29a1b01b31bee781bd",
+        "role": "liquidation-gas-compensation",
+        "codeHash": "0x24ebfae8aca0880567e376c82dea5d9cf19b745653fef806f97d13bb4ca05f6b"
+      },
+      {
+        "name": "coll-surplus-pool-4",
+        "address": "0x2d63ae9808cfabdab5cf6aa0202683726e46310f",
+        "role": "liquidation-collateral-surplus",
+        "codeHash": "0xfef268801402fd5451967fb688fe0403cba596e0e843dc1b242f53bc8503cab3"
+      },
+      {
+        "name": "weth-4",
+        "address": "0x4200000000000000000000000000000000000006",
+        "role": "liquidation-gas-compensation-token",
+        "codeHash": "0x8a3a1f6a9f9dce633117adee5b458245835a8645a8c8726a26382a4622508b1c"
+      },
+      {
+        "name": "interest-router-4",
+        "address": "0x519ca17dae2e2a23396ebec12da1f645accec196",
+        "role": "liquidation-interest-minting",
+        "codeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c"
+      }
+    ],
+    "callsConsumed": 236,
+    "codePinsConsumed": 92,
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-27-block-50525351-shock-coverage.json"
+  }
+}

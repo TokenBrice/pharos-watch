@@ -1,4 +1,4 @@
 [
-  {"date":"2023-08-03","kind":"governance","label":"USDY launch — Ondo tokenized T-bill note (non-US)","severity":"med","href":"https://ondo.finance/blog/introducing-ondo-usd-yield-usdy","note":"2023-08-03 — Ondo launches USDY for non-US investors; senior secured note structure"},
-  {"date":"2025-03-03","kind":"governance","label":"USDY crosses $1B TVL","severity":"low","note":"2025-03-03 — USDY crosses $1B TVL"}
+  {"date":"2023-08-03","kind":"governance","label":"USDY launch, Ondo tokenized T-bill note (non-US)","severity":"med","href":"https://ondo.finance/blog/introducing-ondo-usd-yield-usdy","note":"2023-08-03: Ondo launches USDY for non-US investors; senior secured note structure"},
+  {"date":"2025-03-03","kind":"governance","label":"USDY crosses $1B TVL","severity":"low","note":"2025-03-03: USDY crosses $1B TVL"}
 ]

@@ -1,18 +1,25 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES } from "@shared/lib/classification";
+import {
+  BACKING_LABELS,
+  GOVERNANCE_LABELS,
+  POR_BADGE_STYLES,
+  getProfilePegLabel,
+} from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import { resolveAiSummaryClaims } from "@shared/lib/ai-summary-claims";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import type { FaqItem } from "@/lib/faq";
 import { normalizeWhitespace } from "@/lib/page-metadata";
+import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -41,6 +48,13 @@ const FACT_LABEL_CLASS = "text-[11px] font-semibold uppercase tracking-[0.12em] 
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
+
+// Historical context from the existing USDC/SVB case study, not a live peg verdict.
+const USDC_DEPEG_HISTORY_FAQ: FaqItem = {
+  question: "Has USDC depegged?",
+  answer:
+    "Yes. USDC traded below its $1 target in March 2023 after Silicon Valley Bank failed and Circle disclosed reserve exposure to the bank. It recovered after authorities announced protection for SVB depositors. This historical recovery is not a guarantee of future peg stability.",
+};
 
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
@@ -164,7 +178,10 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
 function buildProfileSentence(coin: StablecoinMeta): string {
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const pegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
 
   return `${coin.name} (${coin.symbol}) static profile: governance model ${governanceLabel}; backing model ${backingLabel}; peg ${pegLabel}.`;
 }
@@ -220,7 +237,28 @@ function buildSafetyAnswer(coin: StablecoinMeta): string {
     return `${coin.name} is not in Pharos's active universe. ${coin.listingStatusReview?.reason ?? "Its listing is retained only as a static catalog record."}`;
   }
 
-  return `Pharos does not mark ${coin.symbol} as absolutely safe. Static metadata says ${coin.name} uses a ${governanceLabel} governance model and ${backingLabel} backing, with ${reserveEvidence}; the main caveat is that ${freezeControl}. Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.`;
+  const staticContext = `Static metadata says ${coin.name} uses a ${governanceLabel} governance model and ${backingLabel} backing, with ${reserveEvidence}; the main caveat is that ${freezeControl}.`;
+  const liveRead =
+    "Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.";
+
+  const assessment = getSnapshotSafetyAssessment(coin.id);
+  if (!assessment) {
+    return `Pharos does not mark ${coin.symbol} as absolutely safe. ${staticContext} ${liveRead}`;
+  }
+
+  const article = assessment.grade.startsWith("A") || assessment.grade === "F" ? "an" : "a";
+  const gradeClause = assessment.score !== null
+    ? `${article} ${assessment.grade} Safety Score grade (${assessment.score}/100)`
+    : `${article} ${assessment.grade} Safety Score grade`;
+
+  switch (assessment.bucket) {
+    case "safe":
+      return `${coin.symbol} holds ${gradeClause} in Pharos's latest published rating — a safe-tier grade, so Pharos assesses it as overall safe, though no stablecoin is entirely risk-free. ${staticContext} ${liveRead}`;
+    case "neutral":
+      return `${coin.symbol} holds ${gradeClause} in Pharos's latest published rating — a middle-tier grade that meets baseline expectations but carries meaningful weaknesses, so Pharos does not consider it clearly safe. ${staticContext} ${liveRead}`;
+    case "risky":
+      return `Pharos does not assess ${coin.symbol} as safe: it holds ${gradeClause} in the latest published rating, which flags significant structural risk. ${staticContext} ${liveRead}`;
+  }
 }
 
 function buildAlertCommand(coin: StablecoinMeta): string {
@@ -229,21 +267,31 @@ function buildAlertCommand(coin: StablecoinMeta): string {
 
 /**
  * Data-derived Q&A for AI-search citation on the coin long tail. Every answer
- * is assembled verbatim from checked-in StablecoinMeta fields — no live data,
- * no editorial claims beyond the static profile.
+ * is assembled from checked-in data — StablecoinMeta fields, reviewed historical context, plus the
+ * scores-latest dataset mirror (refreshed from the live API at each Pages
+ * release) for the safety-grade tier. No editorial claims beyond those sources.
  */
 export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const pegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
 
   const identityAnswer = [
     coin.oneLiner
       ? normalizeWhitespace(stripTermMarkup(coin.oneLiner))
-      : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
+      : coin.flags.navToken
+        ? `${coin.name} (${coin.symbol}) is a ${backingLabel} yield-bearing token with ${pegLabel} and a ${governanceLabel} governance model.`
+        : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
     coin.pegMechanism
-      ? `The static profile records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
-      : `Its peg target is ${pegLabel}.`,
+      ? coin.flags.navToken
+        ? `The static profile records its ${pegLabel} accounting mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+        : `The static profile records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+      : coin.flags.navToken
+        ? `Its accounting reference is ${pegLabel}.`
+        : `Its peg target is ${pegLabel}.`,
   ].join(" ");
 
   const backingAnswer = [
@@ -273,6 +321,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
     { question: `Is ${coin.symbol} safe?`, answer: buildSafetyAnswer(coin) },
     { question: `What backs ${coin.symbol}?`, answer: backingAnswer },
     { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
+    ...(coin.id === "usdc-circle" ? [USDC_DEPEG_HISTORY_FAQ] : []),
   ];
 }
 
@@ -308,10 +357,16 @@ export function StablecoinDetailSeoContent({
   summary = null,
 }: StablecoinDetailSeoContentProps) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const pegLabel = getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const summaryUpdatedAt = summary?.updatedAt ? formatAiSummaryDate(summary.updatedAt) : null;
+  // Build-time render has no live values: registered claim tokens print the
+  // unresolved fallback rather than raw placeholders until the client mounts.
+  const summaryText = summary ? resolveAiSummaryClaims(summary.text, summary.claimTokens).text : null;
   const compareHref = getPrimaryStaticComparisonLinkForCoin(coin.id)?.href ?? buildLiveCompareUrl([coin.id]);
   const alertCommand = buildAlertCommand(coin);
   const [identityAnswer, safetyAnswer] = buildStablecoinFaqItems(coin);
@@ -342,6 +397,20 @@ export function StablecoinDetailSeoContent({
           <h2 className="text-lg font-semibold tracking-tight text-foreground">{safetyAnswer.question}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{safetyAnswer.answer}</p>
         </div>
+        {coin.id === "usdc-circle" ? (
+          <div className="mt-4 border-t border-border/50 pt-4">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">USDC depeg history</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{USDC_DEPEG_HISTORY_FAQ.answer}</p>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              <Link href="/depeg/usdc-2023-03-11/" className={INLINE_LINK_CLASS}>
+                March 2023 USDC depeg timeline
+              </Link>
+              <Link href="/learn/case-studies/usdc-svb-2023/" className={INLINE_LINK_CLASS}>
+                Why USDC depegged during the SVB crisis
+              </Link>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section
@@ -400,7 +469,7 @@ export function StablecoinDetailSeoContent({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text, 520)}</p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText ?? "", 520)}</p>
                 {(() => {
                   const disclosure = buildAiDisclosureLine(summary);
                   return disclosure ? (

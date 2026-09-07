@@ -145,7 +145,7 @@ If a feature gains richer user-facing states, update the relevant resolver under
 ## UX Contract
 
 - The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
-- The expandable Safety Score input-coverage card follows the feature snapshot. Its collapsed view shows evaluated inputs and missing-data ownership, or publication-hold context in place of the counts when the publication is held; its disclosure retains owner explanations, per-pillar counts, and missing-input reasons.
+- The expandable Safety Score input-coverage card follows the feature snapshot. Its collapsed view shows evaluated inputs and missing-data ownership, or publication-hold context in place of the counts when the publication is held; its disclosure retains owner explanations (naming the actual cause — e.g. the issuer's reporting cadence for `published-evidence-expired`, not an implied Pharos delay — rather than a generic catch-all), per-pillar counts, and missing-input reasons.
 - The pricing-source card renders after the feature snapshot when consensus-source data is available.
 - Search filters by name and ticker.
 - Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`). `No Dependency` now means unresolved dependency-map coverage (`Gap` or `Data n/a`), not "no upstream dependency."

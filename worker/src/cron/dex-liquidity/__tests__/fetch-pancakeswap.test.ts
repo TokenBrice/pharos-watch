@@ -7,6 +7,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { buildPancakePageSkips, fetchPancakeSwapPools } from "../fetch-pancakeswap";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 describe("fetchPancakeSwapPools", () => {
   it("refreshes the head and rotates a persisted bounded tail", () => {
@@ -231,7 +232,7 @@ describe("fetchPancakeSwapPools", () => {
   it("degrades successful chain reads when their cursors are not durable", async () => {
     vi.mocked(fetchTextWithRetry).mockImplementation(async () =>
       textResult(response({ data: { pools: [] } })));
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({
         bind: vi.fn(() => ({
           first: vi.fn(async () => null),
@@ -240,7 +241,7 @@ describe("fetchPancakeSwapPools", () => {
           }),
         })),
       })),
-    } as unknown as D1Database;
+    });
 
     const result = await fetchPancakeSwapPools("graph-key", undefined, db);
 

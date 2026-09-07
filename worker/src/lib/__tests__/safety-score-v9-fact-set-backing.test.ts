@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+} from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { eligibleReserveMeta, mintMeta } from "./safety-score-v9-reserve-admission.test-support";
 

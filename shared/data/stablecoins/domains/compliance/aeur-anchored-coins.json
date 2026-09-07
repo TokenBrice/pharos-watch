@@ -5,15 +5,15 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Anchored Coins AEUR — issuer confirms no new issuance and orderly wind-down due to MiCAR",
+        "label": "Anchored Coins AEUR: issuer confirms no new issuance and orderly wind-down due to MiCAR",
         "url": "https://www.anchoredcoins.com/en/landing/aeur"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv) — Anchored Coins not listed",
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv): Anchored Coins not listed",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Binance official announcement — AEUR among nine non-MiCA-compliant stablecoins delisted for EEA users effective 31 March 2025",
+        "label": "Binance official announcement: AEUR among nine non-MiCA-compliant stablecoins delisted for EEA users effective 31 March 2025",
         "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
       }
     ]

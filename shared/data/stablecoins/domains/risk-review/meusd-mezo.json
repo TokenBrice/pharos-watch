@@ -540,7 +540,7 @@
             "url": "https://wormhole.com/docs/protocol/security/"
           }
         ],
-        "evidence": "The current official NTT manifest and live manager reads identify one enabled transceiver per chain—Mezo 0x62DEeaFEe06c7442A21c93edeDc79A0cb5791C83, Ethereum 0x147379A0174780570D07d70a14FB244EE5f2D786, and Base 0x15C465E7dF34f8cA06FDCae0569206cEDf3f4467—with threshold 1 on each manager. The manifest identifies transceiver pauser 0x123694886DBf5Ac94DDA07135349534536D14cAf on every chain. The external Wormhole Guardian signer roster and operational quorum were not independently enumerated, so that common failure domain remains explicit rather than inferred away."
+        "evidence": "The current official NTT manifest and live manager reads identify one enabled transceiver per chain: Mezo 0x62DEeaFEe06c7442A21c93edeDc79A0cb5791C83, Ethereum 0x147379A0174780570D07d70a14FB244EE5f2D786, and Base 0x15C465E7dF34f8cA06FDCae0569206cEDf3f4467, with threshold 1 on each manager. The manifest identifies transceiver pauser 0x123694886DBf5Ac94DDA07135349534536D14cAf on every chain. The external Wormhole Guardian signer roster and operational quorum were not independently enumerated, so that common failure domain remains explicit rather than inferred away."
       }
     ]
   }

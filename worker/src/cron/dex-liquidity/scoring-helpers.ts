@@ -4,15 +4,45 @@ import type {
   LiquidityFallbackCounters,
   LiquidityMetrics,
   LiquiditySourceMixByFamily,
+  PoolEntry,
 } from "./types";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
-import { weightedMedian } from "@shared/lib/stats";
+import { median, weightedMedian } from "@shared/lib/stats";
 import { normalizeProtocol } from "./pool-helpers";
 
 type PoolExtra = NonNullable<LiquidityMetrics["topPools"][number]["extra"]>;
 type PoolExtraKey = keyof PoolExtra;
+
+export function hasScoreFacingMeasuredExecution(pool: PoolEntry): boolean {
+  const extra = pool.extra;
+  return Boolean(
+    extra?.measuredExecutionTarget ||
+      extra?.measuredExecutionTargets?.length ||
+      extra?.measuredExecution ||
+      extra?.measuredExecutions?.length ||
+      extra?.measuredExecutionProfile ||
+      extra?.measuredExecutionProfiles?.length,
+  );
+}
+
+export function resolveUniqueTrackedTokenIndex(
+  assetIds: readonly (string | undefined)[],
+  stablecoinId: string,
+):
+  | { trackedTokenIndex: number; reason: null }
+  | { trackedTokenIndex: null; reason: "tracked-input-unresolved" | "ambiguous-token-identity" } {
+  const trackedIndexes = assetIds
+    .map((assetId, index) => (assetId === stablecoinId ? index : -1))
+    .filter((index) => index >= 0);
+  return trackedIndexes.length === 1
+    ? { trackedTokenIndex: trackedIndexes[0]!, reason: null }
+    : {
+        trackedTokenIndex: null,
+        reason: trackedIndexes.length === 0 ? "tracked-input-unresolved" : "ambiguous-token-identity",
+      };
+}
 
 function getPoolExtraNumber(
   extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
@@ -200,7 +230,9 @@ function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["s
     source === "aquarius" ||
     source === "tezos" ||
     source === "icon-balanced" ||
-    source === "kava-swap";
+    source === "kava-swap" ||
+    source === "osmosis-sqs" ||
+    source === "noble-swap";
 }
 
 export function applyProtocolCaps(
@@ -441,14 +473,6 @@ function getObservationIdentityKey(observation: DexPriceObs): string | null {
   return null;
 }
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  if (sorted.length === 0) return 0;
-  if (sorted.length % 2 === 1) return sorted[middle] ?? 0;
-  return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
-}
-
 // Display path: soft `?? 0` fallbacks. Intentionally NOT unified with the confidence-weighted
 // median in scoring.ts (which hard-indexes adjustedObs[0].price); unifying would move outputs.
 function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number {
@@ -487,7 +511,7 @@ export function collapseDuplicateObservations(
     const representative = [...group].sort((left, right) => right.tvl - left.tvl || left.protocol.localeCompare(right.protocol))[0]!;
     passthrough.push({
       ...representative,
-      price: median(group.map((observation) => observation.price)),
+      price: median(group.map((observation) => observation.price)) ?? 0,
       tvl: Math.max(...group.map((observation) => observation.tvl)),
     });
   }

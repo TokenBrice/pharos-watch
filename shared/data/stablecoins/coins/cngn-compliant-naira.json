@@ -8,7 +8,7 @@
     "pegCurrency": "NGN",
     "governance": "centralized"
   },
-  "collateral": "Naira reserves held 1:1 against outstanding cNGN, comprising deposits at licensed Nigerian commercial banks plus naira money-market funds and short-term FGN treasury bills, verified by monthly independent attestations",
+  "collateral": "Naira reserves are stated to back cNGN 1:1 in accounts at licensed Nigerian commercial banks. The issuer states that it conducts monthly reserve audits, but no dated reserve attestation or itemized allocation is currently published.",
   "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -59,7 +59,7 @@
   "jurisdiction": {
     "country": "Nigeria",
     "regulator": "Securities and Exchange Commission Nigeria",
-    "license": "SEC-supervised regulated digital asset"
+    "license": "SEC Accelerated Regulatory Incubation Programme approval-in-principle (not a final licence)"
   },
   "contracts": [
     {
@@ -90,6 +90,16 @@
     {
       "chain": "celo",
       "address": "0xf6829d7393dae24509eb1e52ee8e572e2e271a4f",
+      "decimals": 6
+    },
+    {
+      "chain": "lisk",
+      "address": "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
+      "decimals": 6
+    },
+    {
+      "chain": "assetchain",
+      "address": "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
       "decimals": 6
     }
   ],

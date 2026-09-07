@@ -6,6 +6,7 @@ import {
 } from "../subgraph-source-families";
 import {
   AERODROME_PAIR_PAGE_SIZE,
+  UNISWAP_V4_SUBGRAPHS,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
@@ -134,6 +135,13 @@ describe("subgraph source families", () => {
   });
 
   it("requests exact V4 PoolKey fields and retains hooked collisions", async () => {
+    expect(Object.keys(UNISWAP_V4_SUBGRAPHS)).toEqual([
+      "ethereum",
+      "base",
+      "arbitrum",
+      "polygon",
+      "bsc",
+    ]);
     expect(buildUniswapV4PoolQuery(0)).toContain(
       `first: ${UNISWAP_V4_POOL_PAGE_SIZE}`,
     );
@@ -144,11 +152,17 @@ describe("subgraph source families", () => {
 
     const token0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const token1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    mockFetch([{
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const fetchMock = mockFetch([{
       match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
-      body: {
-        data: {
-          pools: [
+      respond: async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight--;
+        return {
+          body: { data: { pools: [
             {
               id: `0x${"1".repeat(64)}`,
               token0: { id: token0, symbol: "USDC", decimals: "6" },
@@ -173,12 +187,14 @@ describe("subgraph source families", () => {
               token0Price: "1",
               token1Price: "1",
             },
-          ],
-        },
+          ] } },
+        };
       },
     }], { requireMatch: true });
 
     const result = await fetchUniswapV4Data("graph-key");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(maxInFlight).toBe(5);
     const key = buildUniswapV4ExecutionCandidateKey(
       "ethereum",
       [token0, token1],

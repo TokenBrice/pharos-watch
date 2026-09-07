@@ -8,7 +8,6 @@ import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope
 import { isRecord } from "@shared/lib/type-guards";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DdrRow } from "@shared/types/depeg-resolver";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import {
   DEWS_MAX_AGE_SEC,
   DEX_LIQUIDITY_MAX_AGE_SEC,
@@ -16,13 +15,13 @@ import {
   REDEMPTION_BACKSTOP_MAX_AGE_SEC,
 } from "./constants";
 import type { DdrLoadedContext } from "./context";
+import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
 import { fallbackStructural, toStructural } from "./utils";
 
 const DDR_BANK_RUN_SUPPLY_SIGNAL_THRESHOLD = 65;
 const DDR_BLACKLIST_SURGE_SIGNAL_THRESHOLD = 55;
 const MINT_SURGE_NET_INFLOW_PCT = 20;
 const MINT_SURGE_WINDOW_SEC = 7 * DAY;
-const MINT_BURN_COVERED_COIN_IDS = new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 
 type MintBurnHourlyRow = { hourTs: number; netFlowUsd: number };
 

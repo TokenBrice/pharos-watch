@@ -93,12 +93,21 @@ const CRON_SCHEDULE_DEFINITIONS = {
   },
   twoHourlyDexDiscovery: { schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
   // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
+  // The logical cadence remains half-hourly, but each physical trigger is an
+  // hourly expression so Cloudflare grants the hourly Cron CPU class. The
+  // combined sub-hourly expression repeatedly exhausted its 30-second CPU
+  // class and was reconciled as platform-abandoned in production on 2026-09-01.
   halfHourlyMintBurnExtended: {
     schedule: "18,48 * * * *",
+    triggerSchedules: ["18 * * * *", "48 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended,
   },
   halfHourlyMeasuredExecution: {
     schedule: "0,30 * * * *",
+    // Keep the logical :00/:30 evidence slots, but dispatch five minutes later
+    // so this RPC-heavy graph does not overlap the rich quarter-hourly graph in
+    // the same warm Worker isolate.
+    triggerSchedules: ["5,35 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution,
   },
   halfHourlyOffset: {
@@ -136,7 +145,13 @@ const CRON_SCHEDULE_DEFINITIONS = {
     ...CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery,
   },
   digestTriggerPoll: { schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
-  daily0300Utc: { schedule: "0 3 * * *", ...CRON_SCHEDULE_CADENCES.daily0300Utc },
+  // Preserve the 03:00 logical daily slot while moving its physical invocation
+  // off the quarter-hourly + measured-execution :00 collision.
+  daily0300Utc: {
+    schedule: "0 3 * * *",
+    triggerSchedules: ["3 3 * * *"],
+    ...CRON_SCHEDULE_CADENCES.daily0300Utc,
+  },
   daily0800Utc: { schedule: "0 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0800Utc },
   daily0805Utc: { schedule: "5 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0805Utc },
   daily0810Utc: { schedule: "10 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0810Utc },
@@ -165,13 +180,19 @@ export const CRON_CONNECTION_BUDGET = {
  * v9PublicationOffset writer. Removing the neutral DEX `:40` trigger lowered
  * the reviewed topology to 34; ADR-22 raises it to 38 to isolate the zero-fetch
  * DDR heap from supply attribution; the same review pairs the existing mint/
- * burn cadence for one net expression, bringing the topology to 39. The binding constraints remain the
- * fetch-capable-entry and per-trigger connection limits below, plus Cloudflare's
- * 250-Cron-Triggers-per-account platform ceiling.
+ * burn cadence for one net expression, bringing the topology to 39. ADR-23
+ * pairs the extended mint/burn cadence after same-version production runs
+ * proved the same CPU-class fault, bringing the topology to 40 without adding
+ * logical work, fetch surface, or connection pressure. The binding constraints
+ * remain the fetch-capable-entry and per-trigger connection limits below, plus
+ * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 39,
-  maxFetchCapableEntriesBeforeRebalance: 32,
+  maxPhysicalTriggersBeforeRebalance: 40,
+  // The digest publication watchdog is a one-connection serial sidecar on the
+  // existing status lane; admit that reviewed entry without changing trigger
+  // topology or the per-trigger peak.
+  maxFetchCapableEntriesBeforeRebalance: 33,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
     p95DurationMs: 10 * 60 * 1000,
@@ -184,6 +205,7 @@ export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
 export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
 export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
+export type CronFreshnessSurface = "consumer" | "none";
 
 const _cronSchedules: Record<string, CronScheduleExpression> = {};
 const _cronTriggerSchedules: Record<string, readonly string[]> = {};
@@ -223,11 +245,14 @@ export interface CronJobDefinition {
   maxConnections?: number;
   /** Jobs with the same trigger and concurrency group are chained, so their peak is max(), not sum(). */
   connectionGroup?: string;
+  /** Whether this job publishes data whose age is meaningful to consumers. */
+  freshnessSurface?: CronFreshnessSurface;
 }
 
 export interface CronJobMeta extends CronJobDefinition {
   schedule: CronScheduleExpression;
   statusImpact: CronStatusImpact;
+  freshnessSurface: CronFreshnessSurface;
 }
 
 export interface CronConnectionBudgetDefinition {
@@ -326,7 +351,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "sync-fx-rates",
     label: "FX rates",
     group: "quarter-hourly",
-    intervalSec: 1800, // Trigger fires every 15 min alongside sync-stablecoins, but internal cooldown gates actual writes to every 30 min.
+    intervalSec: 1800, // Trigger fires every 15 min; the generation-fenced publication bucket is 30 min and TTL-gates corroboration sources.
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     statusImpact: "critical",
@@ -361,21 +386,13 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "dews-psi-chain",
   },
   {
-    job: "cron-slot-sweeper",
-    label: "Cron slot sweeper",
-    group: "quarter-hourly",
-    scheduleKey: "statusSelfCheckOffset",
-    triggerMode: "isolated",
-    maxConnections: 1, // DB stale-slot reconciliation
-    connectionGroup: "status-self-check-chain",
-  },
-  {
     job: "reserve-recovery",
     label: "Reserve recovery",
     group: "five-minute",
     scheduleKey: "fiveMinuteReserveRecovery",
     triggerMode: "isolated",
     statusImpact: "critical",
+    freshnessSurface: "none",
     maxConnections: 2,
     connectionGroup: "reserve-recovery-chain",
   },
@@ -398,12 +415,13 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "status-self-check-chain",
   },
   {
-    job: "cron-staleness-watchdog",
-    label: "Cron staleness watchdog",
+    job: "cron-sentinel",
+    label: "Cron sentinel",
     group: "quarter-hourly",
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
-    maxConnections: 1, // DB freshness inspection
+    freshnessSurface: "none",
+    maxConnections: 1, // One serial map-manifest fetch or operator alert; D1 reads are local binding work.
     connectionGroup: "status-self-check-chain",
   },
   {
@@ -412,6 +430,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -421,6 +440,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // D1-only deterministic planning; delivery remains in the pending drain
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -430,6 +450,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 1, // DB inspection plus one serial durable-broker webhook retry
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -439,6 +460,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only DELETE of expired pending disambiguation rows
     connectionGroup: "five-minute-telegram-chain",
   },
@@ -510,16 +532,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
     maxConnections: 0, // D1-only consumer of the complete source-stage generation.
-    connectionGroup: "half-hourly-scoring-charts-chain",
-  },
-  {
-    job: "dex-exit-route-turnover-watchdog",
-    label: "DEX exit-route turnover watchdog",
-    group: "multi-hourly",
-    intervalSec: 2 * 3600,
-    scheduleKey: "halfHourlyChartsOffset",
-    triggerMode: "shared",
-    maxConnections: 0, // D1-only comparison against the compact prior publication snapshot.
     connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
@@ -612,9 +624,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "fetch-tbill-rate",
     label: "T-bill rate",
     group: "daily",
+    intervalSec: DAY_SECONDS, // USD/EFFR refresh daily; the remaining benchmark descriptors are isolated to a weekly cadence bucket.
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
-    maxConnections: 1, // Sequential benchmark fetches (ECB/FRED/Treasury/SNB)
+    maxConnections: 1, // Sequential benchmark fetches; the daily USD/EFFR path and weekly descriptor bucket share this chain.
     connectionGroup: "daily-0800-fetch-chain",
   },
   {
@@ -670,15 +683,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "reserve-sync-chain",
   },
   {
-    job: "reserve-post-sync-watchdog",
-    label: "Reserve post-sync watchdog",
-    group: "multi-hourly",
-    scheduleKey: "fourHourlyReserveSync",
-    triggerMode: "shared",
-    maxConnections: 1, // DB drift/cache/age checks
-    connectionGroup: "reserve-sync-chain",
-  },
-  {
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
@@ -719,6 +723,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only DELETE
   },
   {
@@ -727,15 +732,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
-  },
-  {
-    job: "worker-repair-runner",
-    label: "Worker repair runner",
-    group: "daily",
-    scheduleKey: "daily0300Utc",
-    triggerMode: "isolated",
-    maxConnections: 0, // DB-only due/stale repair-debt telemetry
   },
   {
     job: "prune-detail-cache",
@@ -743,6 +741,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only scan + DELETE of detail:* cache rows
   },
   {
@@ -752,6 +751,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 7 * DAY_SECONDS,
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only cascade DELETE per inactive chat
   },
   {
@@ -760,23 +760,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
+    freshnessSurface: "none",
     maxConnections: 0, // DB-only retention DELETEs and target reconciliation
-  },
-  {
-    job: "mint-burn-growth-watchdog",
-    label: "Mint/burn growth budget watchdog",
-    group: "daily",
-    scheduleKey: "daily0300Utc",
-    triggerMode: "isolated",
-    maxConnections: 1, // DB row-count read
-  },
-  {
-    job: "cron-duration-watchdog",
-    label: "Cron duration budget watchdog",
-    group: "daily",
-    scheduleKey: "daily0300Utc",
-    triggerMode: "isolated",
-    maxConnections: 0, // D1-only duration aggregates; no outbound fetches.
   },
 ] as const;
 
@@ -787,6 +772,7 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
     intervalSec,
     schedule: CRON_SCHEDULES[definition.scheduleKey],
     statusImpact: definition.statusImpact ?? "watch",
+    freshnessSurface: definition.freshnessSurface ?? "consumer",
   };
 });
 

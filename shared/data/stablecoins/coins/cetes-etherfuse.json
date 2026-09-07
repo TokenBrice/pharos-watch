@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Short-term Mexican federal government bonds (CETES — Certificados de la Tesorería de la Federación), BBB- rated sovereign debt with maturities set by government auctions; held in segregated custody through INDEVAL (Instituto para el Depósito de Valores) via participating brokerages",
+  "collateral": "Short-term Mexican federal government bonds (CETES: Certificados de la Tesorería de la Federación), BBB- rated sovereign debt with maturities set by government auctions; held in segregated custody through INDEVAL (Instituto para el Depósito de Valores) via participating brokerages",
   "pegMechanism": "NAV-accreting token; price starts near MXN 1.00 and appreciates continuously as zero-coupon CETES bonds discount to face value; bonds rolled at each maturity date; subscription and redemption through Etherfuse at current NAV; KYC required",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",

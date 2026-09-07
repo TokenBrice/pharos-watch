@@ -112,7 +112,7 @@
         "url": "https://docs.unitas.so/"
       },
       {
-        "label": "Unitas docs — Minting USDu (USDC mint/redeem, whitelisted, per chain)",
+        "label": "Unitas docs: Minting USDu (USDC mint/redeem, whitelisted, per chain)",
         "url": "https://docs.unitas.so/solution-design/minting-usdu"
       },
       {
@@ -124,7 +124,7 @@
         "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
       },
       {
-        "label": "MEXC guide (Jan 2026) — LayerZero cross-chain still listed as planned",
+        "label": "MEXC guide (Jan 2026): LayerZero cross-chain still listed as planned",
         "url": "https://blog.mexc.com/news/what-is-unitas-labs-a-complete-guide-to-usdu-and-cross-chain-yield-stablecoins/"
       }
     ],

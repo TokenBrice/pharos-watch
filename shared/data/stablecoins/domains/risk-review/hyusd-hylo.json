@@ -26,48 +26,60 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The observable V1 program uses Sanctum LST accounting and Pyth SOL/USD, while current V2 documentation specifies independent SOL/USD, BTC/USD, and USDC/USD paths. Hylo's address directory does not publish a complete deployed V2 program/pool inventory, so the production oracle graph is unresolved.",
+    "summary": "The observable Hylo deployment uses Sanctum LST accounting and Pyth SOL/USD, while current V2 documentation specifies independent SOL/USD, BTC/USD, and USDC/USD paths. A 2026-09-04 Solana RPC read shows the tracked exchange and router programs remain upgradeable and were recently redeployed, but the official address directory does not publish a complete current V2 pool/branch inventory. The production oracle and liquidation branch topology therefore remains unresolved.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Hylo unquestionably consumes price and value inputs: the observable V1 design uses Pyth EMA SOL/USD and Sanctum LST accounting to calculate hyUSD NAV and the reserve ratio. However, current documentation also specifies isolated per-asset V2 oracle paths while the published address directory still identifies only the V1 deployment, so the production single-path versus market-specific branch topology cannot be resolved from the reviewed sources.",
+      "reviewedAt": "2026-09-04",
+      "reviewer": "OpenAI Codex W1c oracle applicability review",
+      "rationale": "The reviewed source set confirms a live V1-style SOL-LST path with Pyth SOL/USD and Sanctum accounting, but does not establish whether the recently upgraded Solana programs at the tracked exchange/router IDs are operating the documented V2 multi-asset pools. The 2026-09-04 negative search covered Hylo's official on-chain address directory, current Solana ProgramData for the exchange and router, the V2 audit's program IDs, and the published V2 architecture; no complete deployed V2 pool, branch, oracle, or liquidation inventory was available. Keep the oracle branch fact open until those deployed branches and their liquidation semantics are identified.",
       "sources": [
         {
-          "label": "Hylo equations: Pyth SOL/USD, Sanctum LST valuation, NAV, and reserve ratio (modified 2026-07-13)",
-          "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+          "label": "Hylo on-chain address directory read 2026-09-04",
+          "url": "https://docs.hylo.so/security/onchain-addresses.md"
+        },
+        {
+          "label": "Solana mainnet RPC ProgramData reads at finalized slot 444214646",
+          "url": "https://api.mainnet-beta.solana.com"
         },
         {
           "label": "Hylo V2 multi-asset architecture",
-          "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+          "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture.md"
         },
         {
-          "label": "Hylo on-chain address directory",
-          "url": "https://docs.hylo.so/security/onchain-addresses"
+          "label": "Hylo V2 audit scope and program IDs",
+          "url": "https://hylo-audits.s3.us-east-2.amazonaws.com/Accretion-HyloV2-July2026.pdf"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-09-04",
+    "reviewer": "OpenAI Codex W1c oracle applicability review",
     "confidence": "limited",
     "sources": [
       {
         "label": "Hylo V1 hyUSD and xSOL design",
-        "url": "https://docs.hylo.so/protocol-overview/xassets"
+        "url": "https://docs.hylo.so/protocol-overview/xassets.md"
       },
       {
         "label": "Hylo V2 multi-asset architecture",
-        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture.md"
       },
       {
         "label": "Hylo on-chain address directory",
-        "url": "https://docs.hylo.so/security/onchain-addresses"
+        "url": "https://docs.hylo.so/security/onchain-addresses.md"
+      },
+      {
+        "label": "Solana mainnet RPC ProgramData reads at finalized slot 444214646",
+        "url": "https://api.mainnet-beta.solana.com"
       },
       {
         "label": "Hylo equations",
-        "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+        "url": "https://docs.hylo.so/technical-addendum/hylo-equations.md"
+      },
+      {
+        "label": "Hylo V2 audit report",
+        "url": "https://hylo-audits.s3.us-east-2.amazonaws.com/Accretion-HyloV2-July2026.pdf"
       }
     ]
   }

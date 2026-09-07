@@ -1,0 +1,15 @@
+{
+  "mechanism": "nect-beraborrow",
+  "date": "2026-07-27-block-24078093",
+  "sha256": "3e6bc888c6b6a28232ffa4f36fa6d684ca4beb9db2735ad5978b42e3f1575454",
+  "bytes": 1065,
+  "r2Key": "captures/nect-beraborrow/2026-07-27-block-24078093.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "nect-beraborrow",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/nect-beraborrow/2026-07-27-block-24078093.json",
+    "capturedAt": "2026-07-27T16:48:25Z"
+  }
+}

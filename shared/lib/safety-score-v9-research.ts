@@ -4,12 +4,9 @@
 // (Codebase Health Pass WS6.10, ruled 2026-08-09).
 import {
   CompiledV9AssetInputSchema,
-  V9ScoringInputSchema,
   type CompiledV9AssetInput,
-  type V9EvidenceLevel,
   type V9QualityPillar,
   type V9ScoringInput,
-  type V9UnresolvedFact,
   type V9ValidatedPolicyEnvelope,
 } from "../types/safety-score-v9";
 import {
@@ -21,6 +18,7 @@ import {
 } from "./safety-score-v9/formula";
 import { assertV9ValidatedPolicyEnvelope } from "./safety-score-v9/policy";
 import { compareText } from "./safety-score-v9/primitives";
+import { projectV9ScoringInput } from "./safety-score-v9/score";
 
 export {
   V9_CANDIDATE_POLICY_V1,
@@ -54,40 +52,25 @@ export function scoreV9ResearchScenarioInput(
   return scoreV9InputWithScenarioCaps(rawInput, policy, attributedCaps);
 }
 
-function weakestEvidenceLevel(input: CompiledV9AssetInput, policy: V9ValidatedPolicyEnvelope): V9EvidenceLevel {
-  const rank = policy.policy.semantic.evidence.rank;
-  return V9_QUALITY_PILLARS.map((pillar) => input.pillars[pillar].evidenceLevel).sort(
-    (left, right) => rank[right] - rank[left],
-  )[0]!;
-}
-
 function scoringInputFromCompiled(
   input: CompiledV9AssetInput,
   parentScore: number | null,
   policy: V9ValidatedPolicyEnvelope,
 ): V9ScoringInput {
-  const unresolved: V9UnresolvedFact[] = [
-    ...input.unresolved,
-    ...input.peg.unresolved,
-    ...V9_QUALITY_PILLARS.flatMap((pillar) => input.pillars[pillar].unresolved),
-  ];
-  return V9ScoringInputSchema.parse({
-    assetId: input.assetId,
-    pillars: {
-      backing: input.pillars.backing.score,
-      exit: input.pillars.exit.score,
-      control: input.pillars.control.score,
+  return projectV9ScoringInput(
+    input,
+    policy,
+    {
+      parentRequired: input.parent?.required ?? false,
+      parentScore,
+      structuralSignals: input.structuralSignals,
+      unresolved: [
+        ...input.unresolved,
+        ...input.peg.unresolved,
+        ...V9_QUALITY_PILLARS.flatMap((pillar) => input.pillars[pillar].unresolved),
+      ],
     },
-    pegScore: input.peg.score,
-    pegApplicable: input.peg.applicable,
-    evidenceLevel: weakestEvidenceLevel(input, policy),
-    trackRecordMonths: input.trackRecordMonths,
-    activeDepegBps: input.peg.activeDepegBps,
-    parentRequired: input.parent?.required ?? false,
-    parentScore,
-    structuralSignals: input.structuralSignals,
-    unresolved,
-  });
+  );
 }
 
 /** Score one compiled asset. Numeric ceilings are resolved here, never stored in metadata. */

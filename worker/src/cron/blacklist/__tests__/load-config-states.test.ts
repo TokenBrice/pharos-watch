@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { loadBlacklistConfigStates } from "../sync-support";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../../../lib/db";
@@ -20,7 +21,7 @@ describe("loadBlacklistConfigStates", () => {
   it("retries the bulk blacklist_sync_state query after transient D1 overload", async () => {
     const first = ELIGIBLE[0];
     let attempts = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         all: async () => {
           attempts++;
@@ -35,7 +36,7 @@ describe("loadBlacklistConfigStates", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const { configStates } = await loadBlacklistConfigStates(db);
 

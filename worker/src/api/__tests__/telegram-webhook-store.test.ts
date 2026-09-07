@@ -143,7 +143,7 @@ describe("persistPendingDisambiguationRow", () => {
   });
 
   it("rejects pending disambiguation batches above the D1 limit", async () => {
-    const db = mockD1([], { allowUnmatched: true });
+    const db = mockD1([]);
     const operationStatements = Array.from(
       { length: D1_BATCH_SIZE },
       () => db.prepare("UPDATE telegram_subscriptions SET alert_depeg = alert_depeg"),

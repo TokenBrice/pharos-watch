@@ -17,25 +17,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.crown-brlv.com/transparencia/",
-    "provider": "Fact Finance Ltda technical verification memos (an RWA oracle firm, not an audit practice; signer is a technical lead, not a licensed accountant; the 'daily audits' claim is marketing copy with no daily artefact, and the monthly memo series shows no June or July 2026 report)",
+    "provider": "Fact Finance Ltda technical verification memos (an RWA oracle firm, not an audit practice; signer is a technical lead, not a licensed accountant; monthly reports are published through August 2026, while the 'daily audits' claim has no daily artefact)",
     "attestorTier": "none",
-    "cadence": "ad-hoc",
-    "attestorJurisdiction": "Brazil",
-    "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-05-31",
-      "assuranceMethod": "onchain-proof",
-      "scope": "assets-only",
-      "liabilityReconciliation": "none",
-      "reviewer": "PoR verification sweep 2026-08 (memo carries no assurance standard, no opinion, and no accountant signature; series stalled after May 2026)",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "Fact Finance BRLV proof-of-reserves report - May 2026",
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_af8cfa373d.pdf"
-        }
-      ]
-    }
+    "cadence": "monthly",
+    "attestorJurisdiction": "Brazil"
   },
   "links": [
     {

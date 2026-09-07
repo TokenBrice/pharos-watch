@@ -1,5 +1,5 @@
 import { executeAtomicBatch } from "../../lib/db";
-import { isDepegStepValue } from "../../lib/telegram-constants";
+import { isDepegStepValue } from "../../lib/telegram/constants";
 import { prepareCoinSettingStatements } from "../telegram-webhook-settings-mutations";
 import {
   callbackUsername,

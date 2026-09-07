@@ -1,5 +1,5 @@
+import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
-import { GENIUS_COMPLIANCE_PROFILE_BY_ID } from "@shared/lib/stablecoins/genius-compliance-registry";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
@@ -21,7 +21,26 @@ import type {
   PegCurrency,
   StablecoinLink,
 } from "@shared/types";
+
 import type { GeniusComplianceProfile } from "@shared/types/stablecoin-client-meta";
+
+interface ComplianceProjectionEntry {
+  id: string;
+  mica?: MicaProfile;
+  genius?: GeniusComplianceProfile;
+}
+
+const MICA_COMPLIANCE_PROFILE_BY_ID = new Map(
+  (complianceAsset as ComplianceProjectionEntry[])
+    .filter((entry) => entry.mica != null)
+    .map((entry) => [entry.id, entry.mica!] as const),
+);
+
+const GENIUS_COMPLIANCE_PROFILE_BY_ID = new Map(
+  (complianceAsset as ComplianceProjectionEntry[])
+    .filter((entry) => entry.genius != null)
+    .map((entry) => [entry.id, entry.genius!] as const),
+);
 
 export const COMPLIANCE_REGIME_VALUES = ["all", "mica", "genius"] as const;
 export type ComplianceRegimeFilter = (typeof COMPLIANCE_REGIME_VALUES)[number];
@@ -274,8 +293,9 @@ function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: Complianc
   const geniusEffective = isGeniusRegimeEffective(GENIUS_REGIME_STATE);
 
   for (const meta of CLIENT_TRACKED_STABLECOINS) {
-    if (isActiveStablecoinMeta(meta) && meta.mica) {
-      rows.push(buildMicaRow(meta, meta.mica));
+    const mica = MICA_COMPLIANCE_PROFILE_BY_ID.get(meta.id);
+    if (isActiveStablecoinMeta(meta) && mica) {
+      rows.push(buildMicaRow(meta, mica));
     }
 
     const genius = GENIUS_COMPLIANCE_PROFILE_BY_ID.get(meta.id);

@@ -73,17 +73,6 @@
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "OP Mainnet Canonical",
-        "slug": "op-mainnet",
-        "url": "https://l2beat.com/interop/protocols/op-mainnet",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
-      }
-    ],
     "sources": [
       {
         "label": "DePhaser docs",

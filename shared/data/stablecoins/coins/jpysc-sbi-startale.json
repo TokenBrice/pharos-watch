@@ -48,7 +48,7 @@
     {
       "type": "info",
       "title": "Walled-garden circulation; peg-derived price",
-      "message": "JPYSC circulates only inside verified SBI VC Trade accounts — no external-wallet withdrawals and no public-chain secondary market yet. There are zero trading venues, so the tracked price is peg-derived (¥1.00) rather than market-discovered and cannot reflect market stress; supply and market cap come from the DefiLlama path, as CoinGecko's circulating-supply field is inconsistent with its own market cap. Startale says public-chain circulation is technically ready but awaiting legal and tax clarity."
+      "message": "JPYSC circulates only inside verified SBI VC Trade accounts: no external-wallet withdrawals and no public-chain secondary market yet. There are zero trading venues, so the tracked price is peg-derived (¥1.00) rather than market-discovered and cannot reflect market stress; supply and market cap come from the DefiLlama path, as CoinGecko's circulating-supply field is inconsistent with its own market cap. Startale says public-chain circulation is technically ready but awaiting legal and tax clarity."
     }
   ],
   "featuredContent": [
@@ -99,7 +99,7 @@
     {
       "date": "2026-03-31",
       "type": "milestone",
-      "title": "SBI VC Trade begins RLUSD distribution in Japan — JPYSC distributor infrastructure now live",
+      "title": "SBI VC Trade begins RLUSD distribution in Japan: JPYSC distributor infrastructure now live",
       "description": "SBI VC Trade, JPYSC's designated distributor, operationally distributing Ripple's RLUSD stablecoin, de-risking the JPYSC distribution pathway.",
       "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
     },
@@ -113,8 +113,8 @@
     {
       "date": "2026-06-24",
       "type": "milestone",
-      "title": "JPYSC goes live (closed-loop) — issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
-      "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop — SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
+      "title": "JPYSC goes live (closed-loop): issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
+      "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop: SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
       "sourceUrl": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/"
     },
     {

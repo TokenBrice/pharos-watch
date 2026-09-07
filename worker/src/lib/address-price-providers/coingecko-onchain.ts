@@ -65,7 +65,6 @@ export async function runCoingeckoOnchainAddressProvider(
     targets,
     deadlineMs,
     maxRequests: CG_ONCHAIN_ADDRESS_MAX_REQUESTS,
-    includeProcessedTargets: true,
   });
   const { quotes, rejectedTargets } = runner;
 

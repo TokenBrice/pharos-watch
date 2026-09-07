@@ -36,7 +36,7 @@
       "rationale": "Tori has no borrower CDP markets requiring collateral-specific liquidation branch rows, but its backend-defined mint and redemption quote is still a price-sensitive top-level control. The review therefore scores that internal pricing authority without inventing liquidation branches.",
       "sources": [
         {
-          "label": "Tori docs — institutional minting and redemption (signed-order mint/redeem at quoted rate)",
+          "label": "Tori docs: institutional minting and redemption (signed-order mint/redeem at quoted rate)",
           "url": "https://docs.tori.finance/resources/institutional"
         },
         {
@@ -48,7 +48,7 @@
           "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
         },
         {
-          "label": "Tori docs — introduction (delta-neutral strategies, Accountable proof of reserves)",
+          "label": "Tori docs: introduction (delta-neutral strategies, Accountable proof of reserves)",
           "url": "https://docs.tori.finance/"
         }
       ]
@@ -74,7 +74,7 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa0C49fFa4B7941830235cde974d9B2a8420CD375"
       },
       {
-        "label": "Tori docs — institutional minting and redemption",
+        "label": "Tori docs: institutional minting and redemption",
         "url": "https://docs.tori.finance/resources/institutional"
       },
       {
@@ -86,20 +86,20 @@
         "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
       },
       {
-        "label": "Tori docs — contract addresses (full deployed contract inventory, Ethereum mainnet)",
+        "label": "Tori docs: contract addresses (full deployed contract inventory, Ethereum mainnet)",
         "url": "https://docs.tori.finance/resources/contracts"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "trUSD supply is confined to its canonical Ethereum deployment; the single reviewed route is native issuance through the whitelist-gated ToriMinting contract. Tori documents Chainlink CCIP (CCT) cross-chain support as planned only — a Lock & Release pool on Ethereum with Burn & Mint pools elsewhere — with no other live chain deployment, so no bridge route carries the claim.",
+    "summary": "trUSD has no other live chain deployment. The Lock & Release pool is on Ethereum, while Burn & Mint pools elsewhere are not live, so no bridge route carries the claim.",
     "reviewedAt": "2026-08-08",
     "reviewer": "wave3-longtail-l01 (research agent)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Tori docs — contract addresses (Ethereum mainnet primary; other EVM chains planned/TBA; CCIP CCT planned)",
+        "label": "Tori docs: contract addresses (Ethereum mainnet primary; other EVM chains planned/TBA; CCIP CCT planned)",
         "url": "https://docs.tori.finance/resources/contracts"
       },
       {
@@ -129,7 +129,7 @@
         "observedAt": "2026-08-08",
         "sources": [
           {
-            "label": "Tori docs — contract addresses",
+            "label": "Tori docs: contract addresses",
             "url": "https://docs.tori.finance/resources/contracts"
           },
           {

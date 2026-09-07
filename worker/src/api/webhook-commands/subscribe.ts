@@ -1,10 +1,10 @@
 import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   parseSubscribeArgs,
   resolveTicker,
   validateSubscribeArgs,
-} from "../../lib/telegram-alerts";
+} from "../../lib/telegram/alerts";
 import { buildNotFoundMessage } from "../telegram-webhook-messages";
 import { PENDING_OWNERSHIP_CONFLICT_MESSAGE } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";

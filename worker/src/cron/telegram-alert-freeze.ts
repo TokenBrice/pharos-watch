@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { parseJsonObject } from "../lib/json-parse";
 
 /** The tape projector runs every 30 minutes; two missed slots fail closed. */
@@ -27,7 +27,7 @@ interface FreezeTapeRow {
 interface ProjectTapeRunRow { started_at: number; }
 
 function stablecoinIdForSymbol(symbol: string): string | null {
-  const matches = [...TRACKED_META_BY_ID.entries()].filter(([, coin]) => coin.symbol === symbol);
+  const matches = [...WORKER_TRACKED_META_BY_ID.entries()].filter(([, coin]) => coin.symbol === symbol);
   return matches.length === 1 ? matches[0]![0] : null;
 }
 
@@ -39,7 +39,7 @@ function parseFreezeRow(row: FreezeTapeRow): FreezeAlert | null {
     typeof payload.chainName !== "string" ||
     typeof payload.sourceEventId !== "string"
   ) return null;
-  const stablecoinId = typeof payload.stablecoinId === "string" && TRACKED_META_BY_ID.has(payload.stablecoinId)
+  const stablecoinId = typeof payload.stablecoinId === "string" && WORKER_TRACKED_META_BY_ID.has(payload.stablecoinId)
     ? payload.stablecoinId
     : stablecoinIdForSymbol(payload.stablecoin);
   if (!stablecoinId) return null;

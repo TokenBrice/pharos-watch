@@ -1,7 +1,9 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
+import { buildTweetText } from "./twitter-digest-text";
+
+export { buildTweetText } from "./twitter-digest-text";
 
 export interface TwitterCreds {
   apiKey: string;
@@ -26,9 +28,6 @@ export class TwitterPostError extends Error {
   }
 }
 
-const TRACKED_CASHTAG_SYMBOLS = [...new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol))];
-// eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
-const TRACKED_CASHTAG_PATTERN = new RegExp(`\\b(?:${TRACKED_CASHTAG_SYMBOLS.join("|")})\\b`, "i");
 
 /** RFC 3986 percent-encode (stricter than encodeURIComponent for OAuth). */
 function encode(s: string): string {
@@ -75,50 +74,6 @@ async function buildOAuthHeader(method: string, url: string, creds: TwitterCreds
       .map((k) => `${encode(k)}="${encode(oauthParams[k])}"`)
       .join(", ")
   );
-}
-
-/** Inject a `$` cashtag prefix on the earliest tracked-ticker mention in text.
- *  Twitter rejects posts containing more than one cashtag, so only the first
- *  match wins; subsequent ticker mentions remain plain text. */
-function injectCashtags(text: string): string {
-  return text.replace(TRACKED_CASHTAG_PATTERN, (match) => `$${match.toUpperCase()}`);
-}
-
-/** Truncate text to fit within maxLen chars, breaking at a word boundary. */
-function truncateToFit(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  const cut = text.lastIndexOf(" ", maxLen - 1);
-  return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLen - 1)) + "…";
-}
-
-/** Build final tweet text: title + digest with inline cashtags injected on first ticker mention.
- *  The LLM prompt targets 270 combined chars for title+text, leaving ~10 chars headroom
- *  for cashtag `$` prefixes injected below. truncateToFit is a safety net for overflow. */
-export function buildTweetText(
-  digestTitle: string,
-  digestText: string,
-  editionNumber?: number | null,
-  mapHook?: string | null,
-): string {
-  const MAX = 270;
-  const editionTag = editionNumber ? ` (#${editionNumber})` : "";
-  const titlePrefix = digestTitle ? `${digestTitle}${editionTag}\n\n` : "";
-  // Strip title if the LLM accidentally repeated it at the start of the text
-  let text = digestText;
-  if (digestTitle && text.toLowerCase().startsWith(digestTitle.toLowerCase())) {
-    text = text
-      .slice(digestTitle.length)
-      .replace(/^[\s\n:–—-]+/, "")
-      .trim();
-  }
-  const tagged = injectCashtags(text);
-  const mapSuffix = mapHook ? `\n\n${mapHook}` : "";
-  const available = MAX - titlePrefix.length - mapSuffix.length;
-  const fittedText = truncateToFit(tagged, available);
-  if (fittedText !== tagged) {
-    logWorkerEventArgs("lib", "warn", `[twitter] Tweet truncated: ${tagged.length} chars -> ${fittedText.length} chars (limit ${available})`);
-  }
-  return `${titlePrefix}${fittedText}${mapSuffix}`;
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws with delivery ambiguity attached on API error. */
@@ -245,6 +200,7 @@ export async function postDigestTweet(
   editionNumber?: number | null,
   imageUrl?: string | null,
   mapHook?: string | null,
+  digestMetadata?: unknown,
 ): Promise<{ tweetId: string; mediaAttached: boolean }> {
   let mediaId: string | undefined;
   if (imageUrl) {
@@ -266,7 +222,13 @@ export async function postDigestTweet(
       }
     }
   }
-  const tweetText = buildTweetText(digestTitle, digestText, editionNumber, mediaId ? mapHook : null);
+  const tweetText = buildTweetText(
+    digestTitle,
+    digestText,
+    editionNumber,
+    mediaId ? mapHook : null,
+    digestMetadata,
+  );
   const tweetId = await postTweet(tweetText, creds, mediaId);
   logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
   return { tweetId, mediaAttached: Boolean(mediaId) };

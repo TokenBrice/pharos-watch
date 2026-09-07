@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Rss } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -45,7 +46,7 @@ export default function BlogHubPage() {
       variant="longform"
       leadParagraphs={[BLOG_DESCRIPTION]}
     >
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: blogJsonLd }} />
+      <JsonLdScript json={blogJsonLd} />
       <ol className="space-y-8">
         {BLOG_POSTS.map((post) => (
           <li key={post.slug} className="space-y-2.5">

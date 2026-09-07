@@ -9,14 +9,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Mu Digital loAZND vault",
     yieldType: "lending-vault",
   },
-  // BOLD -> yBOLD (Yearn vault over Liquity Stability Pool)
-  "bold-liquity": {
-    variantSymbol: "yBOLD",
-    variantAddress: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
-    variantChain: "ethereum",
-    yieldSource: "Liquity Stability Pool (via Yearn yBOLD)",
-    yieldType: "lending-vault",
-  },
   // USBD -> sUSBD (BIMA savings wrapper)
   "usbd-bima": {
     variantSymbol: "sUSBD",

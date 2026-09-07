@@ -11,7 +11,7 @@ import {
 } from "../telegram-alert-target-plans";
 import { classifyTelegramTargetCounterBucket } from "../telegram-alert-job-target-outcomes";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
-import { parsePendingAlertProvenance } from "../../lib/telegram-pending-provenance";
+import { parsePendingAlertProvenance } from "../../lib/telegram/pending-provenance";
 
 function routed(): RoutedSubscriberAlert {
   const alerts = emptyAlerts();

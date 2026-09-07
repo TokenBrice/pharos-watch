@@ -143,11 +143,11 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "USDD docs — deployment addresses (native BNB Chain stack)",
+            "label": "USDD docs: deployment addresses (native BNB Chain stack)",
             "url": "https://docs.usdd.io/developers/deployment-addresses"
           },
           {
-            "label": "USDD docs — sUSDD mechanism",
+            "label": "USDD docs: sUSDD mechanism",
             "url": "https://docs.usdd.io/system-architecture/susdd-mechanism"
           },
           {

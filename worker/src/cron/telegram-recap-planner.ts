@@ -25,21 +25,22 @@ import {
 import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import type { TelegramPresetId } from "@shared/lib/telegram-presets";
 import { throwIfAborted } from "../lib/abort";
+import { createCronResult } from "../lib/cron-result";
 import { buildInClause } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
-import { serializePendingMarkupPolicy } from "../lib/telegram-pending-provenance";
-import { listTelegramPresets, resolveTelegramPresetTargets } from "../lib/telegram-presets";
-import { isPausedSentinel } from "../lib/telegram-constants";
-import { formatTelegramRecap } from "../lib/telegram-recap-formatting";
-import { parseTelegramRecapFacts, type TelegramRecapFact, type TelegramRecapTapeRow } from "../lib/telegram-recap-facts";
-import { type TelegramRecapMembership, type TelegramRecapScopedFact } from "../lib/telegram-recap-ranking";
+import { serializePendingMarkupPolicy } from "../lib/telegram/pending-provenance";
+import { listTelegramPresets, resolveTelegramPresetTargets } from "../lib/telegram/presets";
+import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import { formatTelegramRecap } from "../lib/telegram/recap-formatting";
+import { parseTelegramRecapFacts, type TelegramRecapFact, type TelegramRecapTapeRow } from "../lib/telegram/recap-facts";
+import { type TelegramRecapMembership, type TelegramRecapScopedFact } from "../lib/telegram/recap-ranking";
 import {
   buildTelegramRecapDedupeKey,
   listDueTelegramRecapPreferences,
   queueTelegramRecapTarget,
   recordTelegramRecapSkip,
   type DueTelegramRecapPreference,
-} from "../lib/telegram-recap-store";
+} from "../lib/telegram/recap-store";
 
 /** Read one extra row so a complete fact ledger is never silently truncated. */
 const TELEGRAM_RECAP_TAPE_FRESHNESS_SEC = 90 * 60;
@@ -380,10 +381,10 @@ export async function planTelegramPersonalizedRecaps(
     oldestDueAgeSec: 0,
     nextDueAt: null as number | null,
   };
-  const finish = (status: "ok" | "degraded", tapeFreshness: "fresh" | "stale"): TelegramRecapPlannerResult => ({
+  const finish = (status: "ok" | "degraded", tapeFreshness: "fresh" | "stale"): TelegramRecapPlannerResult => createCronResult({
     status,
     itemCount: counts.queued + counts.noChanges + counts.paused + counts.stale,
-    metadata: JSON.stringify({
+    metadata: {
       ...counts,
       tapeFreshness,
       wallDurationMs: Math.max(0, Date.now() - startedAtMs),
@@ -395,8 +396,8 @@ export async function planTelegramPersonalizedRecaps(
       },
       aiCalls: 0,
       externalPlanningFetches: 0,
-    }),
-  });
+    },
+  }) as TelegramRecapPlannerResult;
   const deadlineReached = () => Date.now() - startedAtMs >= softDeadlineMs;
 
   if (rolloutPolicy.mode === "off") return finish("ok", "fresh");

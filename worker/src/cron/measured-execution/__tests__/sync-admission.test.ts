@@ -366,6 +366,20 @@ describe("measured execution overflow admission", () => {
       ),
     ).toBeNull();
   });
+  it("admits fresh targets without a published route while protecting measured-route priority", () => {
+    const scored = target("coin-scored", 100_000, "scored");
+    const fresh = target("coin-new", 100_000, "fresh");
+    const priority = selectExpiringScoreBearingPriorityPacket([scored, fresh], [publishedRoute(scored, 1_000)]);
+    const admission = admitTargetsWithinBudget([scored, fresh], {
+      maxEstimatedRpcRequests: 20,
+      priorityTargetIds: new Set(priority?.targetIds),
+    });
+
+    expect(admission.priorityAdmitted).toEqual(new Set([scored.targetId]));
+    expect(admission.admitted).toEqual(new Set([scored.targetId, fresh.targetId]));
+    expect(admission.estimatedRpcRequests).toBeLessThanOrEqual(20);
+    expect(estimateAdmissionRotationCycles([fresh])).toBe(1);
+  });
 
   it("admits one bounded priority without letting it advance the tail cursor", () => {
     const priority = target("coin-priority", 100_000);
@@ -688,6 +702,30 @@ describe("measured execution overflow admission", () => {
     expect(summary.scoreEligibleAttemptedFailureCount).toBe(1);
     expect(summary.scoreEligibleBlockingFailureCount).toBe(0);
     expect(summary.diagnosticAttemptedFailureCount).toBe(1);
+    expect(
+      resolveMeasuredExecutionCronStatus({
+        attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,
+        deferredCount: 0,
+        admissionRotationCycles: 1,
+        cursorWriteStatus: "not-needed",
+      }),
+    ).toBe("ok");
+  });
+
+  it("keeps targets outside the published score-bearing set diagnostic", () => {
+    const summary = summarizeMeasuredExecutionQuoteFailures([
+      {
+        target: target("coin-outside", 100_000),
+        status: "failed",
+        failureReason: "score-bearing-route-unavailable",
+      },
+    ]);
+
+    expect(summary).toMatchObject({
+      attemptedFailureCount: 0,
+      scoreEligibleAttemptedFailureCount: 0,
+      scoreEligibleBlockingFailureCount: 0,
+    });
     expect(
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,

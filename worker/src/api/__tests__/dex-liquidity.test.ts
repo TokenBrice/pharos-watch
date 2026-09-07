@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function makeDexDeploymentOutcomeFallbackTable() {
   return { match: "FROM dex_deployment_outcomes", rows: [] };
@@ -14,6 +15,45 @@ function mockDexD1(tables: MockTableConfig[]) {
 
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
+
+  it("retains a quality warning across skipped runs and clears it after a successful clean run", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1, ?, ?)");
+      insert.run(100, "ok", JSON.stringify({ sourceCoverage: {
+        qualityDriftSeverity: "high", qualityDriftFlags: ["major-tvl-cliff:crvusd-curve"],
+      } }));
+      insert.run(200, "skipped_neutral", null);
+      insert.run(300, "skipped_locked", null);
+      insert.run(350, "ok", JSON.stringify({ persistence: { skippedReason: "liquidity-cadence-reuse" } }));
+      expect((await handleDexLiquidity(db)).headers.get("Warning")).toContain("major-tvl-cliff:crvusd-curve");
+      insert.run(400, "ok", "{}");
+      expect((await handleDexLiquidity(db)).headers.get("Warning")).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    ["ok", ["major-tvl-cliff:crvusd-curve"], false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], true],
+    ["degraded", ["major-tvl-cliff:crvusd-curve"], true],
+    ["error", [], true],
+  ])("scopes %s advisory flags %j without hiding dataset-wide failures", async (status, flags, affectsOtherCoins) => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "cron_runs", rows: [], first: { status, metadata: JSON.stringify({ sourceCoverage: {
+        qualityDriftSeverity: "high", qualityDriftFlags: flags,
+      } }) } },
+      { match: "dex_liquidity", rows: [row, makeDexLiquidityRow({ stablecoin_id: "crvusd-curve" })] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = await res.json() as Record<string, { warning: string | null }>;
+    expect(res.headers.get("Warning")).toBeTruthy();
+    expect(body["crvusd-curve"].warning).toBeTruthy();
+    expect(Boolean(body["usdt-tether"].warning)).toBe(affectsOtherCoins);
+  });
 
   it("returns 200 with liquidity map", async () => {
     const db = mockDexD1([
@@ -429,6 +469,18 @@ describe("handleDexLiquidity", () => {
     ]);
     const res = await handleDexLiquidity(db);
     expect(res.headers.has("X-Data-Age")).toBe(true);
+  });
+
+  it.each([-33 * 3600, 3600])("keeps generic freshness warnings on coin rows at timestamp offset %s", async (offset) => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: Math.floor(Date.now() / 1000) + offset })] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = await res.json() as Record<string, { warning: string | null }>;
+    expect(res.headers.get("Warning")).toBeTruthy();
+    expect(body["usdt-tether"].warning).toBe(res.headers.get("Warning"));
   });
 
   it("passes the stored methodology_version through unchanged", async () => {

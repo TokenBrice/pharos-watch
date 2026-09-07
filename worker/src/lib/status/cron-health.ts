@@ -5,6 +5,7 @@ import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } 
 import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
+import { classifyFreshness } from "./freshness-oracle";
 
 export interface CronHealthSnapshot {
   crons: Record<string, CronStatus>;
@@ -126,7 +127,18 @@ function parseCronRunStatus(status: string): CronRun["status"] {
 }
 
 function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: number): run is CronRun {
-  return run != null && now - run.startedAt <= interval * 2;
+  if (run == null) return false;
+  return classifyFreshness(
+    {
+      job: "status-run",
+      lastSuccessAt: run.startedAt,
+      lastRunAt: run.startedAt,
+      expectedIntervalSec: interval,
+      lastStatus: run.status,
+    },
+    { watchAt: { multiplier: 2 }, staleAt: { multiplier: 2 } },
+    now,
+  ).state === "fresh";
 }
 
 function buildCronHistoryQuery(jobCount: number): string {

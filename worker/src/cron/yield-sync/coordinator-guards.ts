@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import {
   derivePreviousYieldRankingsCount,
   type PreviousYieldPublicationRanking,
@@ -114,10 +115,10 @@ function buildPublishedCoverageRegressionResult(params: {
   previousPublishedRankingCount: number;
   currentPublishedRankingCount: number;
 }): CronResult {
-  return {
+  return createCronResult({
     status: "degraded",
     itemCount: params.itemCount,
-    metadata: JSON.stringify({
+    metadata: {
       reason: params.reason,
       previousPublishedYieldBearingCount: params.previousPublishedYieldBearingCount,
       currentPublishedYieldBearingCount: params.currentPublishedYieldBearingCount,
@@ -126,8 +127,8 @@ function buildPublishedCoverageRegressionResult(params: {
       previousPublishedRankingCount: params.previousPublishedRankingCount,
       currentPublishedRankingCount: params.currentPublishedRankingCount,
       publishedRankingCountDelta: params.currentPublishedRankingCount - params.previousPublishedRankingCount,
-    }),
-  };
+    },
+  });
 }
 
 export function guardTrackedYieldCoverage(params: {
@@ -151,16 +152,16 @@ export function guardTrackedYieldCoverage(params: {
     `(${(yieldCoverageRatio * 100).toFixed(1)}%) — skipping persistence`,
   );
 
-  return {
+  return createCronResult({
     status: "degraded",
     itemCount: params.resolvedYieldBearingCount,
-    metadata: JSON.stringify({
+    metadata: {
       reason: "coverage-regression",
       coverage: yieldCoverageRatio,
       resolvedCount: params.resolvedYieldBearingCount,
       totalCount: params.expectedYieldBearingCount,
-    }),
-  };
+    },
+  });
 }
 
 export async function guardPublishedYieldCoverage(params: {
@@ -201,13 +202,11 @@ export async function guardPublishedYieldCoverage(params: {
 
   if (previousRankingsState.malformed) {
     return {
-      result: {
+      result: createCronResult({
         status: "degraded",
         itemCount: currentPublishedYieldBearingCount,
-        metadata: JSON.stringify({
-          reason: "previous-yield-rankings-cache-invalid",
-        }),
-      },
+        metadata: { reason: "previous-yield-rankings-cache-invalid" },
+      }),
       previousPublishedYieldBearingCount: 0,
       currentPublishedYieldBearingCount,
       previousPublishedOpportunityCount: 0,
@@ -302,10 +301,10 @@ export async function guardPublishedYieldCoverage(params: {
       const qualityMixRegression = detectYieldQualityMixRegression(previousQualityMix, currentQualityMix);
       if (qualityMixRegression) {
         return {
-          result: {
+          result: createCronResult({
             status: "degraded",
             itemCount: currentPublishedRankingCount,
-            metadata: JSON.stringify({
+            metadata: {
               reason: "published-source-quality-mix-regression",
               qualityMixReasons: qualityMixRegression.reasons,
               previousPublishedDirectCuratedCount: previousQualityMix.directCuratedCount,
@@ -321,8 +320,8 @@ export async function guardPublishedYieldCoverage(params: {
               previousPublishedRankingCount,
               currentPublishedRankingCount,
               publishedRankingCountDelta: currentPublishedRankingCount - previousPublishedRankingCount,
-            }),
-          },
+            },
+          }),
           previousPublishedYieldBearingCount,
           currentPublishedYieldBearingCount,
           previousPublishedOpportunityCount,

@@ -1,6 +1,6 @@
 # Font Assets
 
-How the self-hosted webfonts under `src/assets/fonts/` are produced and staged. Which faces Pharos uses, and why, is design intent and lives in [design-context.md](../design-context.md); this page owns the production, licensing, and drift constraints.
+How the self-hosted webfonts under `src/assets/fonts/` are produced and staged. Which faces Pharos uses, and why, is design intent and lives in [Design Language: Context](../design-language.md#context); this page owns the production, licensing, and drift constraints.
 
 ## Tracked Faces
 

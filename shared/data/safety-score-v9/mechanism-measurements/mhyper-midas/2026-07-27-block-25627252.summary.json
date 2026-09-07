@@ -1,0 +1,15 @@
+{
+  "mechanism": "mhyper-midas",
+  "date": "2026-07-27-block-25627252",
+  "sha256": "8d7aab0dfee3ff47c2a7d3b8771dd3484a3787febac2da6dd911f4b50a8bcad1",
+  "bytes": 9324,
+  "r2Key": "captures/mhyper-midas/2026-07-27-block-25627252.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "mechanism-packet-measurement",
+    "assetId": "mhyper-midas",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/mhyper-midas/2026-07-27-block-25627252.json",
+    "capturedAt": "ethereum block 25627252 hash 0x347b97a86510d8e1ccfb4e2b515399cc72c4fc962bdcc7e79066fee89466ef12 timestamp 2026-07-27T22:51:35Z; mHYPER token 0x9b5528528656dbc094765e2abb79f293c21191b9 totalSupply 38793151.73999504; mHYPER/USD oracle 0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68 latestRoundData round 107 answer 111599565 (8 decimals = 1.11599565) updatedAt 2026-07-24T11:19:23Z; SaveRegistryWithClaim 0x2D6e9F608807436DE5D9603B00Abe3FEd1Bc809d proofId mhyper-por 0xac9a528065afb4290ab62fb0ee1a9110d48ed834454d2d04ab369b4832bbda7a proofExists true latestAttestationHash 0xcc9dfdc847830f8bd5e202ee47e851cd536342d9d4bb6d8a2dba8326373870cf attestor 0x230f0b2e321d0E32eA50696710a98Ca84503A391 attestationTimestamp 2026-07-24T14:53:59Z; getAllVerifications one entry same address 0x230f…391 verificationHash 0xc071fd49c4ea3d7cb5d02b5a0dba0c6eb4af431916453e838dd43a189302801c at 2026-07-24T15:12:59Z"
+  }
+}

@@ -4,19 +4,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainRawCall = vi.fn();
+  const fetchOnchainMulticall3 = vi.fn(async ({ calls, ...options }) => Promise.all(
+    calls.map(async (call: { label: string; contract: string; data: string }) => {
+      const returnData = await fetchOnchainRawCall({ ...options, contract: call.contract, data: call.data });
+      return {
+        label: call.label,
+        success: returnData != null,
+        returnData: returnData ?? "0x",
+      };
+    }),
+  ));
   return {
     ...actual,
     fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({ raw: fetchOnchainRawCall }),
+    fetchOnchainMulticall3,
   };
 });
 
-import { fetchOnchainRawCall } from "../helpers";
+import { fetchOnchainMulticall3, fetchOnchainRawCall } from "../helpers";
 import { adaptResupplyPairSnapshots, fetchResupplyPairsReserves } from "../resupply-pairs";
 
-const signal = AbortSignal.timeout(5_000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const CURVE_PAIR = "0xC5184cccf85b81EDdc661330acB3E41bd89F34A1";
 const FRAX_PAIR = "0x3F2b20b8E8Ce30bb52239d3dFADf826eCFE6A5f7";
 const EMPTY_PAIR = "0x212589B06EBBA4d89d9deFcc8DDc58D80E141EA0";
@@ -251,11 +260,15 @@ describe("resupply-pairs adapter", () => {
 
     expect(calls).toContain(`${normalizeAddress(CURVE_PAIR)}:${UNDERLYING_SELECTOR}`);
     expect(calls).toContain(`${normalizeAddress(FRAX_PAIR)}:${UNDERLYING_SELECTOR}`);
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(6);
 
     resolveCurveUnderlying(encodeAddressResult(CRVUSD));
     resolveFraxUnderlying(encodeAddressResult(FRXUSD));
 
     const result = await resultPromise;
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[1]?.[0].calls).toHaveLength(2);
     expect(result.metadata).toMatchObject({
       pairCount: 2,
       activePairCount: 2,
@@ -380,6 +393,7 @@ describe("resupply-pairs adapter", () => {
       pairCount: 3,
       activePairCount: 2,
     });
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
     expect(fetchOnchainRawCall).toHaveBeenCalledTimes(18);
   });
 });

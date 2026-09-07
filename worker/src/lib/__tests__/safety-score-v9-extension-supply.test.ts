@@ -5,17 +5,17 @@ import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-te
 import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gnosis.json";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
-import { adaptBridgeReview } from "../safety-score-v9-extension-bridge";
+import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import {
   ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension-shared";
+} from "../safety-score-v9/extension-shared";
 import {
   buildSafetyScoreV9SupplyReview,
   diagnoseSafetyScoreV9NullSupplyReviewOutcome,
   safetyScoreV9RouteSupplyShare,
-} from "../safety-score-v9-extension-supply";
-import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9-supply-attribution";
+} from "../safety-score-v9/extension-supply";
+import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9/supply-attribution";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {

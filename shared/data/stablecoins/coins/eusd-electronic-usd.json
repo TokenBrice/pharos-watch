@@ -1,6 +1,6 @@
 {
   "id": "eusd-electronic-usd",
-  "name": "Electronic USD",
+  "name": "Electronic Dollar",
   "symbol": "EUSD",
   "oneLiner": "EUSD is a Reserve Protocol RToken backed by a basket of yield-bearing Aave and Compound USDC/USDT lending positions, with RSR stakers as first-loss buffer.",
   "flags": {
@@ -67,21 +67,21 @@
       "assets": [
         {
           "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
-          "name": "Static Aave Ethereum USDC",
+          "name": "Static Aave USDC (saEthUSDC)",
           "risk": "low",
           "coinId": "usdc-circle",
           "depType": "collateral"
         },
         {
           "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
-          "name": "Wrapped Compound USDCv3",
+          "name": "Wrapped Compound USDC (wcUSDCv3)",
           "risk": "low",
           "coinId": "usdc-circle",
           "depType": "collateral"
         },
         {
           "address": "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
-          "name": "Wrapped Compound USDTv3",
+          "name": "Wrapped Compound USDT (wcUSDTv3)",
           "risk": "low",
           "coinId": "usdt-tether",
           "depType": "collateral"
@@ -89,7 +89,7 @@
       ]
     }
   },
-  "launchDate": "2023-02-23",
+  "launchDate": "2023-02-24",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -102,5 +102,6 @@
         "url": "https://docs.reserve.org/"
       }
     ]
-  }
+  },
+  "implementationLaunchDate": "2024-12-13"
 }

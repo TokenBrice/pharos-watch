@@ -12,8 +12,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptSpikoShareClassTotals, fetchSpikoApiReserves, type SpikoShareClassTotals } from "../spiko-api";
 import { fetchJsonWithRetry } from "../helpers";
-
-const signal = AbortSignal.timeout(5000);
+import { mockedReserveHelper, TEST_SIGNAL } from "./reserve-adapter.test-support";
 
 function makeCoin(): StablecoinMeta {
   return { id: "eursafo-spiko", name: "Spiko Euro", ticker: "EURSAFO" } as unknown as StablecoinMeta;
@@ -171,17 +170,17 @@ describe("adaptSpikoShareClassTotals", () => {
 
 describe("fetchSpikoApiReserves", () => {
   it("fetches the configured totals endpoint and adapts the payload", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(EURSAFO_TOTALS);
+    mockedReserveHelper(fetchJsonWithRetry).mockResolvedValue(EURSAFO_TOTALS);
     const config = makeConfig("eurSAFO", {
       name: "Fully collateralized overnight total-return swap exposure",
       risk: "medium",
     });
 
-    const result = await fetchSpikoApiReserves(makeCoin(), config, signal);
+    const result = await fetchSpikoApiReserves(makeCoin(), config, TEST_SIGNAL);
 
     expect(fetchJsonWithRetry).toHaveBeenCalledWith(
       "https://public-api.spiko.io/share-classes/eurSAFO/totals",
-      signal,
+      TEST_SIGNAL,
       12_000,
       undefined,
     );
@@ -191,11 +190,11 @@ describe("fetchSpikoApiReserves", () => {
   });
 
   it("propagates an error when the share class endpoint is missing (404)", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(
+    mockedReserveHelper(fetchJsonWithRetry).mockRejectedValue(
       new Error("HTTP 404 for https://public-api.spiko.io/share-classes/unknownSymbol/totals"),
     );
     const config = makeConfig("unknownSymbol", { name: "Test", risk: "medium" });
 
-    await expect(fetchSpikoApiReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 404");
+    await expect(fetchSpikoApiReserves(makeCoin(), config, TEST_SIGNAL)).rejects.toThrow("HTTP 404");
   });
 });

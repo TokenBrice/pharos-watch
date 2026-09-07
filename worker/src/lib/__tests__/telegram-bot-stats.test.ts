@@ -9,7 +9,7 @@ import {
 import type { TelegramDeliverySliStatus } from "@shared/types/status";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { loadTelegramPendingCapacity } from "../telegram-pending-capacity";
+import { loadTelegramPendingCapacity } from "../telegram/pending-capacity";
 
 function unavailableDeliverySli(): TelegramDeliverySliStatus {
   return {

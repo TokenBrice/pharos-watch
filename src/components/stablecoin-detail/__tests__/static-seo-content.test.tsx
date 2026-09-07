@@ -9,6 +9,13 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
+const mockGetSnapshotSafetyAssessment = vi.hoisted(() =>
+  vi.fn<(stablecoinId: string) => { grade: string; score: number | null; bucket: string } | null>(() => null),
+);
+vi.mock("@/lib/safety-grade-snapshot", () => ({
+  getSnapshotSafetyAssessment: mockGetSnapshotSafetyAssessment,
+}));
+
 const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
 const { FaqSection } = await import("@/components/faq-section");
 
@@ -60,6 +67,47 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
+
+  it("answers USDC depeg history with existing research links and matching FAQ schema", () => {
+    const usdc = { ...coin, id: "usdc-circle", name: "USD Coin", symbol: "USDC" };
+    const items = buildStablecoinFaqItems(usdc);
+    const historyAnswer = items.find((item) => item.question === "Has USDC depegged?");
+    expect(historyAnswer?.answer).toContain("March 2023");
+    expect(historyAnswer?.answer).toContain("not a guarantee of future peg stability");
+    expect(buildStablecoinFaqItems(coin)).toHaveLength(4);
+
+    const { container } = render(
+      <>
+        <StablecoinDetailSeoContent coin={usdc} />
+        <FaqSection items={items} includeJsonLd />
+      </>,
+    );
+    expect(screen.getByRole("heading", { name: "USDC depeg history" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "March 2023 USDC depeg timeline" }).getAttribute("href")).toBe(
+      "/depeg/usdc-2023-03-11/",
+    );
+    expect(screen.getByRole("link", { name: "Why USDC depegged during the SVB crisis" }).getAttribute("href")).toBe(
+      "/learn/case-studies/usdc-svb-2023/",
+    );
+    const schema = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+    const schemaAnswer = schema.mainEntity.find((item: { name: string }) => item.name === historyAnswer!.question);
+    expect(schemaAnswer.acceptedAnswer.text).toBe(historyAnswer!.answer);
+    expect(screen.getAllByText(historyAnswer!.answer)).toHaveLength(2);
+  });
+
+  it("labels NAV tokens by their denominated NAV rather than a fixed peg", () => {
+    const navCoin: StablecoinMeta = {
+      ...coin,
+      id: "test-nav-dollar",
+      name: "Test NAV Dollar",
+      symbol: "nTSTD",
+      flags: { ...coin.flags, yieldBearing: true, navToken: true },
+    };
+
+    const { container } = render(<StablecoinDetailSeoContent coin={navCoin} />);
+    expect(container.textContent).toContain("peg US Dollar-denominated NAV");
+    expect(container.textContent).toContain("yield-bearing token with US Dollar-denominated NAV");
+  });
 
   it("renders one hidden h1 plus a visible static profile with taxonomy links and facts", () => {
     const { container } = render(<StablecoinDetailSeoContent coin={coin} summary={summary} />);
@@ -180,7 +228,8 @@ describe("StablecoinDetailSeoContent", () => {
       "Can TSTD be frozen or blacklisted?",
     ]);
     expect(items[0].answer).toContain("Primary market mint and redeem arbitrage");
-    // The safety answer must stay honest — no absolute-safety claims.
+    // Without a rated snapshot grade the safety answer must stay honest — no
+    // absolute-safety claims.
     expect(items[1].answer).toContain("Pharos does not mark TSTD as absolutely safe");
     expect(items[2].answer).toContain("Real-World Asset Backed");
     expect(items[2].answer).toContain("Cash, Treasury bills, and overnight repos");
@@ -195,5 +244,37 @@ describe("StablecoinDetailSeoContent", () => {
     const faqJsonLd = jsonLdScripts.find((script) => script.textContent?.includes('"FAQPage"'));
     expect(faqJsonLd).toBeTruthy();
     expect(faqJsonLd!.textContent).toContain("Can TSTD be frozen or blacklisted?");
+  });
+
+  it("tiers the safety answer by the snapshot Safety Score grade", () => {
+    try {
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "A-", score: 88, bucket: "safe" });
+      let answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("TSTD holds an A- Safety Score grade (88/100)");
+      expect(answer).toContain("overall safe, though no stablecoin is entirely risk-free");
+      expect(answer).toContain("CeFi-Dependent governance model");
+      expect(answer).toContain("Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below");
+
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "C+", score: 55, bucket: "neutral" });
+      answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("TSTD holds a C+ Safety Score grade (55/100)");
+      expect(answer).toContain("does not consider it clearly safe");
+
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "F", score: 12, bucket: "risky" });
+      answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("Pharos does not assess TSTD as safe");
+      expect(answer).toContain("an F Safety Score grade (12/100)");
+
+      mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "B", score: null, bucket: "safe" });
+      answer = buildStablecoinFaqItems(coin)[1].answer;
+      expect(answer).toContain("TSTD holds a B Safety Score grade in Pharos's latest published rating");
+
+      // Frozen archives never surface a snapshot grade.
+      const frozenAnswer = buildStablecoinFaqItems({ ...coin, status: "frozen", frozenAt: "2026-05-01" })[1].answer;
+      expect(frozenAnswer).toContain("frozen Pharos archive");
+      expect(frozenAnswer).not.toContain("Safety Score grade");
+    } finally {
+      mockGetSnapshotSafetyAssessment.mockReturnValue(null);
+    }
   });
 });

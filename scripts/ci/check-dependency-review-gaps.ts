@@ -7,13 +7,15 @@
  * stays a manual curation tool: most of its counters describe a real backlog
  * that moves slowly and ratcheting it only produced bookkeeping commits.
  *
- * Four of its counters are different — they are legitimately zero and a
+ * Three of its counters are different — they are legitimately zero and a
  * non-zero value means a reviewed record went missing or stale, not that the
  * backlog grew: manual dependency review gaps, stale reserve dispositions,
- * unavailable target disposition gaps, and adapter mapping review gaps. Those
- * plus the zero-tolerance graph invariants (self-edges, duplicate edges,
- * cycles, overweight effective sets, unknown targets, depType-without-coinId)
- * are what this check enforces.
+ * and unavailable target disposition gaps. Adapter mapping registry integrity
+ * is also structural, but missing-review coverage requires report-card
+ * provenance and is therefore reported as not evaluated by this entrypoint.
+ * Those checks plus the zero-tolerance graph invariants (self-edges, duplicate
+ * edges, cycles, overweight effective sets, unknown targets,
+ * depType-without-coinId) are what this check enforces.
  *
  * The analysis itself is not duplicated here: this re-bins the audit's own
  * summary rather than re-deriving it.
@@ -34,6 +36,8 @@ if (failures.length > 0) {
 }
 
 process.stdout.write(
-  `Dependency review gaps OK (${audit.summary.activeCount} active assets, ` +
-    `${audit.summary.staticEdgeCount} static edges, 0 review gaps).\n`,
+  `Dependency structural checks OK (${audit.summary.activeCount} active assets, ` +
+    `${audit.summary.staticEdgeCount} static edges, ` +
+    `${audit.summary.adapterMappingReviewGapCount} adapter registry-integrity gaps). ` +
+    "Adapter-mapping missing-review population NOT EVALUATED (no report cards supplied).\n",
 );

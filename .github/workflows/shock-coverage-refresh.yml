@@ -83,6 +83,18 @@ jobs:
             worker/src/lib/__tests__/safety-score-v9-fact-set-peg-mechanism-evidence.test.ts \
             --run
 
+      # Raw bodies are retained in R2, while compact summaries and generated
+      # registries remain the only committed measurement artifacts.
+      - name: Upload measurement captures and remove raw bodies
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_MEASUREMENTS_ACCESS_KEY_ID: ${{ secrets.R2_MEASUREMENTS_ACCESS_KEY_ID }}
+          R2_MEASUREMENTS_SECRET_ACCESS_KEY: ${{ secrets.R2_MEASUREMENTS_SECRET_ACCESS_KEY }}
+        run: node --import tsx scripts/lib/mechanism-measurement/upload.ts
+
+      - name: Regenerate evaluation build manifest
+        run: npx tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts
+
       - name: Detect journal diff
         id: diff
         run: |

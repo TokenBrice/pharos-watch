@@ -16,7 +16,7 @@ import ts from "typescript";
  * .tsx → TSX  |  .jsx → JSX  |  .ts / .mts / .cts → TS
  * .js / .mjs / .cjs → JS  |  anything else → TS (safe default for unknown types)
  *
- * Note: check-client-registry-imports previously mapped .jsx → TSX.
+ * Note: a retired client-import scanner previously mapped .jsx → TSX.
  * The canonical mapping uses JSX, which is the correct ScriptKind for
  * .jsx files (TSX is for TypeScript JSX; JSX is for JavaScript JSX).
  *
@@ -41,7 +41,6 @@ export function getScriptKind(file: string): ts.ScriptKind {
  * @returns {{ source: string, sourceFile: import("typescript").SourceFile }}
  */
 export function parseSourceFile(file: string): { source: string; sourceFile: ts.SourceFile } {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- parse the explicit scanner target
   const source = readFileSync(file, "utf8");
   return {
     source,

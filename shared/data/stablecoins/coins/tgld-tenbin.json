@@ -58,7 +58,7 @@
   "announcedDate": "2026-01",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (~$232K market cap, ~54 tGLD, ~36 holders). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate — live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) and testnet sibling FX tokens (tBRL, tMXN) exist; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP.",
+  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (~$232K market cap, ~54 tGLD, ~36 holders). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate. Live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) and testnet sibling FX tokens (tBRL, tMXN) exist; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP.",
   "featuredContent": [
     {
       "type": "article",

@@ -4,7 +4,12 @@ import {
   LIVE_RESERVE_RPC_MODE_VALUES,
 } from "../types/live-reserve-core";
 import { RedemptionHolderEligibilitySchema } from "../types/redemption";
-import { ReserveRiskSchema, ReserveSliceSchema } from "../types/reserves";
+import {
+  ReserveAssetClassSchema,
+  ReserveRiskFactorSchema,
+  ReserveRiskSchema,
+  ReserveSliceSchema,
+} from "../types/reserves";
 
 const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
 const LiveReserveRiskSchema = ReserveRiskSchema;
@@ -107,12 +112,6 @@ const usdgoAssuranceParamsSchema = z
     profile: z.literal("usdgo-v1"),
     ...assuranceParamsShape,
     issuerCrossCheckUrl: z.literal("https://www.usdgo.com/api/lark-bitable"),
-    avalancheRpcUrl: z.literal("https://api.avax.network/ext/bc/C/rpc"),
-    avalancheBuidlToken: z.literal("0x53fc82f14f009009b440a706e31c9021e1196a2f"),
-    avalancheBuidlWallet: z.literal("0xc1d56e817d8f6c53d42ed50ed0d789eeb1495b5e"),
-    avalancheBuidlBlock: z.literal(89166720),
-    avalancheBuidlBlockHash: z.literal("0xf39651e0ea42f8f78d0d375fa39ddd531896083e3f5c1daef7e7efa987ee7939"),
-    expectedBuidlCodeHash: z.literal("0xee8a105971995661291a9f284262a87abf2381b3cdc93b2c8fbeffe4cd636dd9"),
   })
   .strict();
 
@@ -580,7 +579,7 @@ const redemptionRateProbeSchema = z
   .object({
     contract: z.string(),
     selector: EvmSelectorSchema,
-    decimals: z.number().int().positive().optional(),
+    decimals: z.number().int().positive(),
   })
   .strict();
 
@@ -888,6 +887,51 @@ const nestVaultPositionsParamsSchema = z
   .object({
     priceUrl: AbsoluteUrlSchema,
     lastPriceUpdateUrl: AbsoluteUrlSchema,
+  })
+  .strict();
+
+// The credit receivable a `IdleCDOEpochVariant` vault holds is not a tracked
+// asset and must never carry a `coinId`: linking it to the deposit token would
+// present a single-obligor loan as that token's own reserves. The classification
+// (asset class, obligor, risk factors) is reviewed curation and therefore
+// config-owned; the *sizing* is always read on-chain.
+const idleCdoCreditSliceSchema = z
+  .object({
+    sourceKey: z.string().trim().min(3),
+    name: z.string().trim().min(1),
+    risk: LiveReserveRiskSchema,
+    assetClass: ReserveAssetClassSchema,
+    issuerOrObligor: z.string().trim().min(1),
+    riskFactors: z.array(ReserveRiskFactorSchema).min(1),
+  })
+  .strict();
+
+// Emitted only when the CDO actually holds an unlent underlying balance. The
+// adapter never synthesises this slice from NAV.
+const idleCdoUnlentSliceSchema = z
+  .object({
+    sourceKey: z.string().trim().min(3),
+    name: z.string().trim().min(1),
+    risk: LiveReserveRiskSchema,
+    coinId: z.string().trim().min(1),
+    depType: LiveReserveDependencyTypeSchema.optional(),
+    assetClass: ReserveAssetClassSchema.optional(),
+    issuerOrObligor: z.string().trim().min(1).optional(),
+    riskFactors: z.array(ReserveRiskFactorSchema).min(1).optional(),
+    blacklistable: z.boolean().optional(),
+  })
+  .strict();
+
+const idleCdoEpochVariantParamsSchema = z
+  .object({
+    cdoAddress: EvmAddressSchema,
+    tranche: z.enum(["AA", "BB"]),
+    underlyingAddress: EvmAddressSchema,
+    underlyingDecimals: z.number().int().nonnegative(),
+    creditSlice: idleCdoCreditSliceSchema,
+    unlentSlice: idleCdoUnlentSliceSchema,
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
   })
   .strict();
 
@@ -1290,9 +1334,52 @@ const abracadabraParamsSchema = z
   })
   .strict();
 
+const astherusEarnWrapperParamsSchema = z
+  .object({
+    earnAddress: EvmAddressSchema,
+    expectedUnderlyingAddress: EvmAddressSchema,
+    expectedShareAddress: EvmAddressSchema,
+    underlyingDecimals: z.number().int().nonnegative().max(36),
+    shareDecimals: z.number().int().nonnegative().max(36),
+    slice: reserveSliceDescriptorSchema,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
+// A 100% parent-inheritance claim must not be repointable by a catalog edit alone.
+// A genuine Initia object migration therefore requires a code change and review.
+const initiaWrapperVaultParamsSchema = z
+  .object({
+    lcdUrl: AbsoluteUrlSchema,
+    iusdDenom: z.literal("move/6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"),
+    iusdMetadataAddress: z.literal("0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"),
+    vaultOwnerAddress: z.literal("0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a"),
+    ausd0MetadataAddress: z.literal("0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef"),
+    decimals: z.literal(6),
+    slice: reserveSliceDescriptorSchema.extend({
+      coinId: z.literal("ausd-agora"),
+      depType: z.literal("wrapper"),
+    }),
+  })
+  .strict();
+
+const stoneyieldRouterPoolParamsSchema = z
+  .object({
+    slice: reserveSliceDescriptorSchema,
+    stusdAddress: EvmAddressSchema,
+    usdcAddress: EvmAddressSchema,
+    susdcAddress: EvmAddressSchema,
+    routerAddress: EvmAddressSchema,
+    venusVaultAddress: EvmAddressSchema,
+    venusVTokenAddress: EvmAddressSchema,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
 export const LIVE_RESERVE_PARAM_SCHEMAS = {
   none: noParamsSchema,
   abracadabra: abracadabraParamsSchema,
+  astherusEarnWrapper: astherusEarnWrapperParamsSchema,
   accountable: accountableParamsSchema,
   attestationPdfIndex: attestationPdfIndexParamsSchema,
   audxAssurance: audxAssuranceParamsSchema,
@@ -1312,6 +1399,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   fraxFpiCollateral: fraxFpiCollateralParamsSchema,
   fx: fxParamsSchema,
   gho: ghoParamsSchema,
+  initiaWrapperVault: initiaWrapperVaultParamsSchema,
   jupusd: jupusdParamsSchema,
   liquityNativeActivePool: liquityNativeActivePoolParamsSchema,
   liquityV1: liquityV1ParamsSchema,
@@ -1327,6 +1415,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   reserveProtocolDtf: reserveProtocolDtfParamsSchema,
   resupplyPairs: resupplyPairsParamsSchema,
   sgForgeCoinvertible: sgForgeCoinvertibleParamsSchema,
+  stoneyieldRouterPool: stoneyieldRouterPoolParamsSchema,
   singleAsset: singleAssetParamsSchema,
   spikoApi: spikoApiParamsSchema,
   superstateLiquidity: superstateLiquidityParamsSchema,
@@ -1337,6 +1426,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   unitedPor: unitedPorParamsSchema,
   usd1BundleOracle: usd1BundleOracleParamsSchema,
   hiveHbdProtocol: hiveHbdProtocolParamsSchema,
+  idleCdoEpochVariant: idleCdoEpochVariantParamsSchema,
   usdaiHub: usdaiHubParamsSchema,
   xdaiBridge: xdaiBridgeParamsSchema,
   yamato: yamatoParamsSchema,

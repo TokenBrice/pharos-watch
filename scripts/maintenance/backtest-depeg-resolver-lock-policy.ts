@@ -10,10 +10,10 @@ import {
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   runAsMain,
-  runReportCli,
-} from "../lib/report-cli";
+  runCoverageAuditCli,
+} from "../lib/coverage-audit-cli";
 
 export const DDR_LOCK_READINESS_THRESHOLD = DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD;
 export const DDR_LOCK_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
@@ -330,7 +330,7 @@ function usage(): string {
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): CliOptions => ({
       fixturePath: null,
       reportPath: null,
@@ -413,7 +413,7 @@ export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()):
     throw error;
   }
 
-  return runReportCli(argv, {
+  return runCoverageAuditCli(argv, {
     parse: () => options,
     cwd,
     build: (parsedOptions) => buildDdrLockPolicyBacktest({

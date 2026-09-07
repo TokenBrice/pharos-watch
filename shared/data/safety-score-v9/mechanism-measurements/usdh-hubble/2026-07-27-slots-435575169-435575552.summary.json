@@ -1,0 +1,15 @@
+{
+  "mechanism": "usdh-hubble",
+  "date": "2026-07-27-slots-435575169-435575552",
+  "sha256": "49fe80296db6da1130108c1b4eb1f22a2dc4be18cdbfd8a557a096441d640610",
+  "bytes": 1197,
+  "r2Key": "captures/usdh-hubble/2026-07-27-slots-435575169-435575552.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "usdh-hubble",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdh-hubble/2026-07-27-slots-435575169-435575552.json",
+    "capturedAt": "2026-07-27T16:49:55Z"
+  }
+}

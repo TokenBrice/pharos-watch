@@ -32,7 +32,7 @@
   "announcedDate": "2025-11",
   "expectedLaunchDate": "2026",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Tempo mainnet live since March 18 but KlarnaUSD still absent — USD1 (WLFI) launched on Tempo May 8 as first native stablecoin, beating KlarnaUSD to market; Bridge OCC charter approved Feb 2026; KlarnaUSD absent from Bridge Open Issuance live issuer list. Klarna's Q1 2026 earnings (May 14) made no mention of KlarnaUSD, and it was absent from Stripe Sessions 2026 Open Issuance partner announcements. The Q2 2026 call on August 18 was silent on it too — no reference to KlarnaUSD, stablecoins, Tempo, or Bridge anywhere in the transcript — on a quarter where Klarna beat on revenue and EPS but cut full-year GMV and revenue guidance on soft German consumer spending, sending the stock down roughly 19% premarket. That leaves no new official KlarnaUSD communication since the Nov 2025 announcement; IPO completed Sep 2025 (NYSE: KLAR), KlarnaUSD in F-1 prospectus as strategic initiative",
+  "launchPhaseDetail": "Tempo mainnet live since March 18 but KlarnaUSD still absent. USD1 (WLFI) launched on Tempo May 8 as first native stablecoin, beating KlarnaUSD to market; Bridge OCC charter approved Feb 2026; KlarnaUSD absent from Bridge Open Issuance live issuer list. Klarna's Q1 2026 earnings (May 14) made no mention of KlarnaUSD, and it was absent from Stripe Sessions 2026 Open Issuance partner announcements. The Q2 2026 call on August 18 was silent on it too. The transcript contains no reference to KlarnaUSD, stablecoins, Tempo, or Bridge. During that quarter Klarna beat on revenue and EPS but cut full-year GMV and revenue guidance on soft German consumer spending, sending the stock down roughly 19% premarket. That leaves no new official KlarnaUSD communication since the Nov 2025 announcement; IPO completed Sep 2025 (NYSE: KLAR), KlarnaUSD in F-1 prospectus as strategic initiative",
   "featuredContent": [
     {
       "type": "tweet",
@@ -88,7 +88,7 @@
       "date": "2026-08-18",
       "type": "milestone",
       "title": "Klarna Q2 2026 earnings again make no mention of KlarnaUSD",
-      "description": "Klarna beats on revenue (up 27% year over year) and EPS but cuts full-year GMV and revenue guidance, citing softer German consumer spending and FX headwinds; the stock falls about 19% premarket. The earnings call transcript contains no reference to KlarnaUSD, stablecoins, Tempo, or Bridge — a second consecutive quarter of silence, with the token still on Tempo testnet five months after Tempo mainnet went live.",
+      "description": "Klarna beats on revenue (up 27% year over year) and EPS but cuts full-year GMV and revenue guidance, citing softer German consumer spending and FX headwinds; the stock falls about 19% premarket. The earnings call transcript contains no reference to KlarnaUSD, stablecoins, Tempo, or Bridge, a second consecutive quarter of silence, with the token still on Tempo testnet five months after Tempo mainnet went live.",
       "sourceUrl": "https://www.investing.com/news/transcripts/earnings-call-transcript-klarna-beats-q2-2026-estimates-but-cuts-outlook-93CH-4865531"
     }
   ]

@@ -102,6 +102,21 @@ describe("evm-rpc helpers", () => {
     expect(fetchWithRetryMock.mock.calls[0]?.[3]).toEqual(expect.objectContaining({ retryMode: "network-only" }));
   });
 
+  it("falls back when an RPC returns a null result", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ result: null }), { status: 200 }),
+    );
+
+    await expect(
+      fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("null result"));
+    warnSpy.mockRestore();
+  });
+
   it("caps each fallback request to the remaining absolute deadline", async () => {
     let nowMs = 1_000;
     const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);

@@ -165,15 +165,15 @@
     },
     {
       "assetId": "dusd-dialectic",
-      "reviewedAt": "2026-07-29",
-      "reviewer": "OpenAI Codex DUSD evidence closure",
+      "reviewedAt": "2026-09-03",
+      "reviewer": "OpenAI Codex DUSD listing correction",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Blockscout verifies the direct MachineShare deployment. It inherits OpenZeppelin ERC-20 transfer and transferFrom without override, pause, blacklist, allowlist, seizure, or transfer hook. The owner/Machine can mint and can burn its own balance or a holder balance only when the Machine itself is the caller; it cannot bypass holder authorization to transfer DUSD. The separate AsyncRedeemer whitelist gates entry to and claims from the redemption queue, not ERC-20 transfers.",
+          "evidence": "Blockscout verifies the direct MachineShare deployment. It inherits OpenZeppelin ERC-20 transfer and transferFrom without override, pause, blacklist, allowlist, seizure, or transfer hook. The owner/Machine can mint and can burn its own balance or a holder balance only when the Machine itself is the caller; it cannot bypass holder authorization to transfer DUSD. At Ethereum block 25899375 the separate DirectDepositor and AsyncRedeemer whitelists were disabled while their sanctions checks were enabled. Those route-level controls do not affect ordinary ERC-20 transfers, and the Risk Manager can re-enable either whitelist.",
           "sources": [
             {
               "label": "Blockscout verified DUSD MachineShare source",
@@ -182,6 +182,14 @@
             {
               "label": "DUSD share token on Etherscan",
               "url": "https://etherscan.io/address/0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+            },
+            {
+              "label": "Risk Manager transaction disabling the DUSD route whitelists",
+              "url": "https://etherscan.io/tx/0xce35aa978654e799969076baf9025e6dff67b5d2467a1603bfe9acb16902c286"
+            },
+            {
+              "label": "Ethereum PublicNode fixed-block route-state reads",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }
@@ -3244,7 +3252,7 @@
     {
       "assetId": "pht-pht",
       "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewer": "Claude ACC-B TRANSFER-FACT; Claude ODR-A5 Tron deployment review",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -3277,6 +3285,31 @@
             {
               "label": "Polygon public RPC used for the block 90573891 reads",
               "url": "https://polygon-bor-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "tron",
+          "contractOrTokenId": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Tron carried 44,489,606 PHT of the 225,011,900 PHT DefiLlama reports across the three registry deployments (19.8%), so this leg is material and had no reviewed row. Read at Tron block 85862220 (state) and 85862243 (storage): name() \"PHT Stablecoin\", symbol() \"PHT\", decimals() 18, totalSupply() 44,489,605 PHT, sharedDecimals() 6, owner() 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee, endpoint() 0x0af59750d5db5460e5d89e268c474d5f7407c061, msgInspector() and preCrime() both the zero address. Tronscan does not hold verified source for this address (verify_status 0), so the surface was established from contract state rather than source: the EIP-1967 implementation and admin slots both read zero, Tronscan reports is_proxy false, and the account's on-chain ABI declares a 42-function PhtOFT with no mint, burn, pause, blacklist, freeze, allowlist, seizure or upgrade entry point. That ABI was corroborated against the 15,551-byte runtime bytecode: every one of the 42 declared functions appears as a PUSH4 dispatch selector, and none of pause()/unpause()/paused(), mint(address,uint256), burn(uint256), burn(address,uint256), isBlacklisted/isBlackListed/addBlackList/removeBlackList/blacklist/destroyBlackFunds, freeze/unfreeze/frozen/isFrozen, wipeFrozenAddress, seize, upgradeTo or upgradeToAndCall is present anywhere in the dispatch table. Same-chain holder transfer and transferFrom are therefore plain ERC-20 with no discretionary restriction, and Tron contract code is immutable, so no authority can add one. owner() retains the LayerZero OFT rail controls (setPeer, setDelegate, setEnforcedOptions, setMsgInspector); a msgInspector could revert an outbound cross-chain send, but that is the bridge rail rather than same-chain holder transfer, which is how the rest of this overlay scopes OFT owner authority.",
+          "sources": [
+            {
+              "label": "PHT on Tronscan",
+              "url": "https://tronscan.org/#/contract/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+            },
+            {
+              "label": "TronGrid full-node API used for the block 85862220 contract, ABI, bytecode and constant-call reads",
+              "url": "https://api.trongrid.io"
+            },
+            {
+              "label": "TronGrid JSON-RPC used for the block 85862243 EIP-1967 slot reads",
+              "url": "https://api.trongrid.io/jsonrpc"
+            },
+            {
+              "label": "DefiLlama PHT per-chain circulating used for the materiality split",
+              "url": "https://stablecoins.llama.fi/stablecoin/299"
             }
           ]
         }
@@ -4156,7 +4189,7 @@
     {
       "assetId": "syzusd-yuzu",
       "reviewedAt": "2026-07-30",
-      "reviewer": "Kimi T38 unknown-reduction wave 2",
+      "reviewer": "Kimi T38 unknown-reduction wave 2; Claude ODR-A5 Ethereum deployment review",
       "deployments": [
         {
           "chainId": "plasma",
@@ -4189,6 +4222,31 @@
             {
               "label": "Yuzu syzUSD documentation",
               "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "The third registry deployment, previously unreviewed. At Ethereum block 25881805 this is a transparent proxy: EIP-1967 implementation 0x692d91e94b55ec1360f20970010538263ce29b58, admin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9, beacon slot zero. name() returned 'Staked Yuzu USD', symbol() 'syzUSD', decimals() 18 and totalSupply() 809,744.18 syzUSD. Sourcify holds an exact creation-and-runtime match for the implementation as BridgeableTokenUpgradeable (solc 0.8.22), a LayerZero OFT built on OpenZeppelin ERC20Upgradeable, OwnableUpgradeable and AccessControlUpgradeable: it does not override _update or _beforeTokenTransfer, so holder transfer and allowance-gated transferFrom are unmodified ERC-20, and its only privileged supply entry points are mint(address,uint256) behind CCIP_MINTER_ROLE and burn(uint256), which burns the caller's own balance. Live probes at the same block confirm the absence of a restriction surface: paused(), isBlacklisted(address), isBlackListed(address), frozen(address), isFrozen(address), wards(address), PAUSER_ROLE() and MINTER_ROLE() all revert; owner() is the live EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, which holds only OFT rail authority (setPeer, setDelegate, setEnforcedOptions, setMsgInspector, setPreCrime). The deployment is restrictable because the ProxyAdmin can replace the implementation with one that does restrict holders: it is owned by 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38, a Sourcify exact-match OpenZeppelin TimelockController whose getMinDelay() returned 300 seconds, so an upgrade is gated by five minutes rather than by a meaningful holder exit window. This matches the restrictable posture already recorded for the Plasma and Monad vaults.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match BridgeableTokenUpgradeable implementation (chain 1)",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x692d91e94b55ec1360f20970010538263ce29b58"
+            },
+            {
+              "label": "Sourcify exact-match TimelockController owning the syzUSD ProxyAdmin (chain 1)",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38"
+            },
+            {
+              "label": "syzUSD on Etherscan",
+              "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12"
+            },
+            {
+              "label": "Ethereum public RPC used for the block 25881805 reads",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }
@@ -4793,16 +4851,28 @@
     },
     {
       "assetId": "xdai-gnosis",
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Grok T19 safety-v9 unknown-reduction w2",
+      "reviewedAt": "2026-09-01",
+      "reviewer": "Grok T19 safety-v9 unknown-reduction w2; Claude ODR-A5 deployment re-key",
       "deployments": [
         {
           "chainId": "gnosis",
-          "contractOrTokenId": "xDAI",
+          "contractOrTokenId": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "xDAI is the native Gnosis Chain gas balance. Ordinary holder transfers are consensus/ledger value transfers with no issuer ERC-20 transfer hook, blacklist, freeze, pause, or allowlist. Bridge mint/burn (Home Bridge 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 + BlockReward 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA) only creates or destroys balances on bridge execution, not selective transfer restriction of existing holders. Observed against Gnosis block 47473648. Traded WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is a plain WETH-style wrapper and is not the canonical native supply contract.",
+          "evidence": "The registry's canonical contract deployment for xDAI is the WXDAI wrapper 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d, re-read at Gnosis block 48024275. Sourcify holds a creation-and-runtime match for WXDAI.sol (solc 0.4.26, optimizer off), a verbatim WETH9 clone: transfer/transferFrom check only the holder balance and, for a third-party spender, the allowance; there is no owner, pause, blacklist, freeze, allowlist, seizure, mint, or transfer hook in the source, and the contract is not upgradeable. At that block all three EIP-1967 slots (implementation, admin, beacon) read zero, name() returned \"Wrapped XDAI\", symbol() \"WXDAI\", decimals() 18 and totalSupply() 53,871,464.34 WXDAI. Probes for owner(), paused(), isBlacklisted(address), isBlackListed(address), frozen(address), isFrozen(address), hasRole, admin(), implementation() and proxiableUUID() all returned empty data because no such function exists and the WETH-style payable fallback swallows the unmatched selector. The underlying native xDAI gas balance the wrapper holds is a consensus/ledger value with no issuer transfer hook either; the xDAI bridge (Home Bridge 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 plus BlockReward 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA) only creates or destroys balances on bridge execution and cannot selectively restrict an existing holder. Previously keyed as the non-contract token id \"xDAI\", which does not match the registry deployment inventory the transfer material-scope test resolves against.",
           "sources": [
+            {
+              "label": "Sourcify verified WXDAI source (chain 100)",
+              "url": "https://sourcify.dev/server/v2/contract/100/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+            },
+            {
+              "label": "WXDAI contract on Gnosis Blockscout",
+              "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
+            },
+            {
+              "label": "Gnosis public RPC used for the block 48024275 reads",
+              "url": "https://rpc.gnosischain.com"
+            },
             {
               "label": "Gnosis Chain token docs",
               "url": "https://docs.gnosischain.com/about/tokens/"
@@ -4810,14 +4880,6 @@
             {
               "label": "Gnosis xDAI bridge docs",
               "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
-            },
-            {
-              "label": "Gnosis block 47473648",
-              "url": "https://gnosis.blockscout.com/block/47473648"
-            },
-            {
-              "label": "WXDAI wrapper contract",
-              "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
             }
           ]
         }
@@ -4825,48 +4887,27 @@
     },
     {
       "assetId": "usdx-kava",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-04",
       "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
-          "chainId": "kava",
-          "contractOrTokenId": "usdx",
-          "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At Kava height 22013136, USDX was the native bank denom usdx and the live send_enabled query returned no override, so transfers were enabled. Kava wires the governance authority into the bank keeper, however, and Cosmos SDK MsgSetSendEnabled lets that authority disable ordinary sends for the individual denom. The currently enabled but governance-pausable denom is therefore restrictable.",
-          "sources": [
-            {
-              "label": "Kava x/cdp params API (live read at height 21878704)",
-              "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
-            },
-            {
-              "label": "Kava evmutil params API (no USDX conversion pair)",
-              "url": "https://api.data.kava.io/kava/evmutil/v1beta1/params"
-            },
-            {
-              "label": "Kava CDP module docs",
-              "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
-            },
-            {
-              "label": "Kava application bank-keeper governance wiring",
-              "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/app/app.go#L462-L468"
-            },
-            {
-              "label": "Kava USDX bank send-enabled state",
-              "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
-            }
-          ]
-        },
-        {
           "chainId": "osmosis",
           "contractOrTokenId": "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
-          "scope": "material-bridge",
+          "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The only tracked off-chain USDX representation is this ibc-go transfer voucher on Osmosis; ibc-go x/transfer vouchers are bank denoms with no issuer freeze, denylist, pause, or transfer-hook authority.",
+          "evidence": "The tracked off-chain USDX representation is the ibc-go transfer voucher identified by the official Osmosis denom trace; Cosmos bank vouchers have no issuer freeze, denylist, pause, or transfer-hook authority in this route.",
           "sources": [
             {
               "label": "Mintscan Osmosis IBC USDX denom",
               "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+            },
+            {
+              "label": "Osmosis USDX denom trace",
+              "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+            },
+            {
+              "label": "Osmosis transfer module account at height 69885664",
+              "url": "https://lcd.osmosis.zone/cosmos/auth/v1beta1/module_accounts"
             }
           ]
         }
@@ -4961,6 +5002,107 @@
             {
               "label": "Viction public RPC",
               "url": "https://rpc.viction.xyz"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usda-anzens",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "OpenAI Codex Safety Score gap campaign",
+      "deployments": [
+        {
+          "chainId": "cardano",
+          "contractOrTokenId": "fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The Cardano Foundation token-registry mapping pinned at commit 8a2cd449b86ac6f27a7de34dd0845160a832266b binds this exact policy ID and asset name to Anzens USDA, its issuer domain, and six decimals. Cardano executes the asset minting policy only when a transaction mints or burns that asset; an ordinary transfer of already-minted native tokens spends the holder UTxO without invoking the policy. The issuer therefore has no token-level holder-transfer hook. Issuer account, custody, and direct-redemption restrictions are separate from transferability of holder-controlled native tokens.",
+          "sources": [
+            {
+              "label": "Pinned Cardano Foundation USDA identity mapping",
+              "url": "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json"
+            },
+            {
+              "label": "Cardano Foundation minting-policy execution semantics (updated July 1, 2026)",
+              "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdm-moneta",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "OpenAI Codex Safety Score gap campaign",
+      "deployments": [
+        {
+          "chainId": "cardano",
+          "contractOrTokenId": "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The Cardano Foundation token-registry mapping pinned at commit 8a2cd449b86ac6f27a7de34dd0845160a832266b binds this exact policy ID and asset name to Moneta USDM, its issuer domain, and six decimals. Cardano executes the asset minting policy only when a transaction mints or burns that asset; an ordinary transfer of already-minted native tokens spends the holder UTxO without invoking the policy. The issuer therefore has no token-level holder-transfer hook. Issuer account, custody, and direct-redemption restrictions are separate from transferability of holder-controlled native tokens.",
+          "sources": [
+            {
+              "label": "Pinned Cardano Foundation USDM identity mapping",
+              "url": "https://github.com/cardano-foundation/cardano-token-registry/blob/8a2cd449b86ac6f27a7de34dd0845160a832266b/mappings/c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d.json"
+            },
+            {
+              "label": "Cardano Foundation minting-policy execution semantics (updated July 1, 2026)",
+              "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "aznd-mu-digital",
+      "reviewedAt": "2026-09-05",
+      "reviewer": "OpenAI Codex Safety Score gap campaign",
+      "deployments": [
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At Monad block 102222519, canonical AZND was a direct ERC20 deployment with a zero EIP-1967 implementation slot. Its verified transfer paths have no pause or blacklist, but burn(owner, amount) grants the immutable PRIMARY_MARKET 0xe64730de04aeaf8d38925825d77d7a4c00340c89 authority over an arbitrary holder balance without allowance. The current PrimaryMarket implementation 0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb burns only the redemption caller, but its UUPS replacement is authorized by the AccessManager default admin. At the same block, EOA 0x8b5f269f68d42490dee19fc4ab275cdd80940068 held that role in manager 0x7b14860ecd88fb65a22a1d259d1248bf199fb47f, and read-only eth_call of upgradeToAndCall to the existing implementation succeeded from that EOA. The live upgrade path can replace the holder consent guard around the privileged burn, so transfer posture is restrictable.",
+          "sources": [
+            {
+              "label": "MonadScan verified canonical AZND source",
+              "url": "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code"
+            },
+            {
+              "label": "MonadScan verified PrimaryMarket implementation and UUPS authority",
+              "url": "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code"
+            },
+            {
+              "label": "Monad observation block 102222519",
+              "url": "https://monadscan.com/block/102222519"
+            },
+            {
+              "label": "Mu Digital canonical and representation address registry",
+              "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "At Ethereum block 25912083, the AZND OFT proxy resolved to verified implementation 0x2e49c14a73210356de9f23a46a98de777b8a0db6. ContractBaseUpgradeable authorizes UUPS replacement through the default-admin role of accessManager 0xe683fcd4411dde6fc2be16c2512f9109c907b520. Address 0x8b5f269f68d42490dee19fc4ab275cdd80940068 held that role and a read-only eth_call of upgradeToAndCall to the existing implementation succeeded from that address. Ordinary ERC20 transfers are currently open, but this active token-logic replacement path can change holder transfer behavior, making the representation restrictable.",
+          "sources": [
+            {
+              "label": "Blockscout verified Ethereum AZND OFT implementation and bundled dependencies",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2e49c14a73210356de9f23a46a98de777b8a0db6"
+            },
+            {
+              "label": "Ethereum AZND proxy",
+              "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+            },
+            {
+              "label": "Ethereum observation block 25912083",
+              "url": "https://etherscan.io/block/25912083"
             }
           ]
         }

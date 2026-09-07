@@ -7,6 +7,7 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import * as activeSafetyScoreSource from "../safety-score-active-source";
 import {
+  WORKER_CANARY_RUN_RETENTION_SEC,
   loadCanaryStatus,
   normalizeWorkerCanaryMode,
   pruneWorkerCanaryRuns,
@@ -150,10 +151,9 @@ function healthyD1(
     rowCount?: number;
     latestPublishedRows?: number;
     latestGenerationPublishedRows?: number;
-    retainedLegacyRows?: number;
-    retainedOlderPublishedRows?: number;
     unpublishedRows?: number;
     generationCount?: number;
+    globalRows?: number;
     stablecoinsActiveCount?: number;
     blacklistEventNullIdentityRows?: number;
     blacklistBalanceNullIdentityRows?: number;
@@ -164,35 +164,52 @@ function healthyD1(
   const rowCount = dex.rowCount ?? 408;
   const latestPublishedRows = dex.latestPublishedRows ?? rowCount;
   const latestGenerationPublishedRows = dex.latestGenerationPublishedRows ?? latestPublishedRows;
-  const retainedLegacyRows = dex.retainedLegacyRows ?? 0;
-  const retainedOlderPublishedRows = dex.retainedOlderPublishedRows ?? 0;
   const unpublishedRows = dex.unpublishedRows ?? 0;
   const generationCount = dex.generationCount ?? 1;
+  const globalRows = dex.globalRows ?? 1;
+  const generationMetadata = JSON.stringify({
+    activeStablecoinCount: Math.max(0, latestPublishedRows - globalRows),
+  });
   const publishedDewsRows = dewsRows();
   return mockD1([
     {
-      match: "FROM dex_liquidity_publication_generations",
+      match: "canary-dex-current-summary",
+      first: {
+        row_count: latestPublishedRows,
+        unpublished_rows: unpublishedRows,
+        generation_count: generationCount,
+        latest_updated_at: NOW - 30,
+      },
+      rows: [],
+    },
+    {
+      match: "canary-dex-latest-published-generation",
       first: {
         generation_id: "dex-gen-1",
         current_row_count: latestPublishedRows,
         expected_row_count: latestPublishedRows,
+        metadata_json: generationMetadata,
         published_at: NOW - 30,
       },
       rows: [],
     },
     {
-      match: "latest_generation_rows",
-      matchBinds: ["dex-gen-1", "dex-gen-1"],
+      match: "canary-dex-latest-generation-summary",
+      matchBinds: ["dex-gen-1"],
       first: {
         latest_generation_rows: latestGenerationPublishedRows,
-        retained_legacy_rows: retainedLegacyRows,
-        retained_older_published_rows: retainedOlderPublishedRows,
+        retained_legacy_rows: 0,
+        retained_older_published_rows: 0,
       },
       rows: [],
     },
     {
-      match: "stablecoin_id = '__global__'",
-      first: { current_rows: rowCount, global_rows: 1 },
+      match: "canary-dex-global-row",
+      first: {
+        current_row_count: latestPublishedRows,
+        expected_row_count: latestPublishedRows,
+        metadata_json: generationMetadata,
+      },
       rows: [],
     },
     {
@@ -200,16 +217,6 @@ function healthyD1(
       first: {
         event_rows: dex.blacklistEventNullIdentityRows ?? 0,
         balance_rows: dex.blacklistBalanceNullIdentityRows ?? 0,
-      },
-      rows: [],
-    },
-    {
-      match: "unpublished_rows",
-      first: {
-        row_count: rowCount,
-        unpublished_rows: unpublishedRows,
-        generation_count: generationCount,
-        latest_updated_at: NOW - 30,
       },
       rows: [],
     },
@@ -264,6 +271,7 @@ describe("worker data invariant canaries", () => {
     expect(summary).toMatchObject({
       mode: "status",
       totalChecks: 8,
+
       okCount: 8,
       degradedCount: 0,
       errorCount: 0,
@@ -274,6 +282,19 @@ describe("worker data invariant canaries", () => {
     expect(
       summary.results.find((result) => result.checkId === "safety-score-v9-publication")?.metadata,
     ).toMatchObject({ safetyScoreIdentity: { model: "v9" } });
+  });
+
+  it("uses publication-generation counts for DEX canaries", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const db = healthyD1();
+
+    await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+
+    const dexQueries = db.getHistory().filter((entry) => entry.sql.includes("canary-dex-"));
+    expect(dexQueries.length).toBe(4);
+    expect(dexQueries.every((entry) => entry.sql.includes("FROM dex_liquidity_publication_generations"))).toBe(true);
+    expect(dexQueries.some((entry) => /FROM dex_liquidity(?:\s|$)/.test(entry.sql))).toBe(false);
   });
 
   it("flags a seeded null-identity blacklist row", async () => {
@@ -413,8 +434,6 @@ describe("worker data invariant canaries", () => {
         rowCount: 377,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
-        retainedLegacyRows: 4,
-        retainedOlderPublishedRows: 5,
         generationCount: 2,
       }),
       { observedAt: NOW, mode: "status" },
@@ -426,11 +445,11 @@ describe("worker data invariant canaries", () => {
       status: "ok",
       severity: "info",
       metadata: expect.objectContaining({
-        rowCount: 377,
+        rowCount: 368,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
-        retainedLegacyRows: 4,
-        retainedOlderPublishedRows: 5,
+        retainedLegacyRows: 0,
+        retainedOlderPublishedRows: 0,
       }),
     });
     expect(summary.worstStatus).toBe("ok");
@@ -444,8 +463,6 @@ describe("worker data invariant canaries", () => {
         rowCount: 377,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
-        retainedLegacyRows: 4,
-        retainedOlderPublishedRows: 5,
         unpublishedRows: 1,
         generationCount: 2,
       }),
@@ -467,8 +484,6 @@ describe("worker data invariant canaries", () => {
         rowCount: 377,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 367,
-        retainedLegacyRows: 4,
-        retainedOlderPublishedRows: 6,
         generationCount: 2,
       }),
       { observedAt: NOW, mode: "status" },
@@ -479,7 +494,7 @@ describe("worker data invariant canaries", () => {
       severity: "error",
       error: "DEX latest-generation rows 367 differ from latest published generation 368",
       metadata: expect.objectContaining({
-        rowCount: 377,
+        rowCount: 368,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 367,
       }),
@@ -492,23 +507,28 @@ describe("worker data invariant canaries", () => {
     const unhealthyDewsRows = dewsRows(NOW - 60, 2);
     const db = mockD1([
       {
-        match: "FROM dex_liquidity_publication_generations",
+        match: "canary-dex-current-summary",
+        first: { row_count: 408, unpublished_rows: 3, generation_count: 1, latest_updated_at: NOW - 30 },
+        rows: [],
+      },
+      {
+        match: "canary-dex-latest-published-generation",
         first: {
           generation_id: "dex-gen-1",
           current_row_count: 408,
           expected_row_count: 408,
+          metadata_json: JSON.stringify({ activeStablecoinCount: 408 }),
           published_at: NOW - 30,
         },
         rows: [],
       },
       {
-        match: "stablecoin_id = '__global__'",
-        first: { current_rows: 408, global_rows: 0 },
-        rows: [],
-      },
-      {
-        match: "unpublished_rows",
-        first: { row_count: 408, unpublished_rows: 3, generation_count: 1, latest_updated_at: NOW - 30 },
+        match: "canary-dex-global-row",
+        first: {
+          current_row_count: 408,
+          expected_row_count: 408,
+          metadata_json: JSON.stringify({ activeStablecoinCount: 408 }),
+        },
         rows: [],
       },
       {
@@ -711,7 +731,7 @@ describe("worker data invariant canaries", () => {
     expect(query?.binds).not.toContain("report-card-cache-methodology");
   });
 
-  it("prunes canary run rows older than the retention cutoff", async () => {
+  it("prunes canary run rows older than the 14-day retention cutoff", async () => {
     const db = mockD1([
       {
         match: "DELETE FROM worker_canary_runs WHERE observed_at < ?",
@@ -719,12 +739,14 @@ describe("worker data invariant canaries", () => {
         runMeta: { changes: 4 },
       },
     ]);
+    const cutoff = NOW - WORKER_CANARY_RUN_RETENTION_SEC;
 
-    await expect(pruneWorkerCanaryRuns(db, NOW - 90 * 24 * 3600)).resolves.toBe(4);
+    expect(WORKER_CANARY_RUN_RETENTION_SEC).toBe(14 * 24 * 3600);
+    await expect(pruneWorkerCanaryRuns(db, cutoff)).resolves.toBe(4);
     expect(db.getHistory()).toEqual([
       expect.objectContaining({
         sql: expect.stringContaining("DELETE FROM worker_canary_runs WHERE observed_at < ?"),
-        binds: [NOW - 90 * 24 * 3600],
+        binds: [cutoff],
       }),
     ]);
   });
@@ -734,13 +756,13 @@ describe("worker data invariant canaries", () => {
     vi.setSystemTime(new Date(NOW * 1000));
     const db = mockD1([
       {
-        match: "unpublished_rows",
-        throwError: new Error("D1_ERROR: no such table: dex_liquidity"),
+        match: "canary-dex-current-summary",
+        throwError: new Error("D1_ERROR: no such table: dex_liquidity_publication_generations"),
         rows: [],
       },
       {
-        match: "stablecoin_id = '__global__'",
-        throwError: new Error("D1_ERROR: no such table: dex_liquidity"),
+        match: "canary-dex-global-row",
+        throwError: new Error("D1_ERROR: no such table: dex_liquidity_publication_generations"),
         rows: [],
       },
       {

@@ -4,7 +4,7 @@ import { runScheduledSlotGroups } from "./slot-groups";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 
 const DDR_WINDOW_MS = 2 * 60_000;
-const DDR_MINIMUM_REMAINING_MS = 60_000;
+const DDR_MINIMUM_REMAINING_MS = 45_000;
 
 interface StablecoinsCapabilityRow {
   metadata: string | null;

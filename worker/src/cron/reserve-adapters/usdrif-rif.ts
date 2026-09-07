@@ -44,38 +44,8 @@ const SELECTORS = {
   paused: "0x5c975abb",
 } as const;
 
-interface BucketParams {
-  address: string;
-  expectedProxyCodeHash: string;
-  expectedImplementationAddress: string;
-  expectedImplementationCodeHash: string;
-  collateralToken: string;
-  collateralDecimals: number;
-  expectedPegContainerProvider: string;
-  expectedPriceProvider: string;
-}
-
-interface MocV3Params {
-  rpcUrl: string;
-  fallbackRpcUrl: string;
-  confirmationDepth: number;
-  maxBlockAgeSec: number;
-  maxFutureSkewSec: number;
-  maxMarketProtocolDivergencePct: number;
-  walletExcessInfoPct: number;
-  walletExcessDegradedPct: number;
-  branchMaterialityPct: number;
-  canonicalUsdrif: {
-    address: string;
-    expectedProxyCodeHash: string;
-    decimals: number;
-  };
-  rifToken: { address: string; expectedCodeHash: string; decimals: number };
-  docToken: { address: string; expectedCodeHash: string; decimals: number };
-  rifBucket: BucketParams;
-  docBucket: BucketParams;
-  sourceUrls: string[];
-}
+type MocV3Params = LiveReserveAdapterParamsByKey["moc-v3-buckets"];
+type BucketParams = MocV3Params["rifBucket"];
 
 interface BucketObservation {
   label: "rif" | "doc";
@@ -226,11 +196,6 @@ function protocolCoverage(collateralRaw: bigint, priceRaw: bigint, liabilityRaw:
   return ratio;
 }
 
-function parseParams(config: LiveReservesConfig): MocV3Params {
-  return parseLiveReserveAdapterParams(ADAPTER_KEY, config.params) as
-    LiveReserveAdapterParamsByKey["moc-v3-buckets"] as MocV3Params;
-}
-
 function verifyTrackedToken(coin: StablecoinMeta, params: MocV3Params): void {
   const rootstock = coin.contracts?.find((contract) => contract.chain === ROOTSTOCK_CHAIN);
   if (!rootstock
@@ -353,7 +318,7 @@ export async function fetchUsdrifRifReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const params = parseParams(config);
+  const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   if (input.chain !== ROOTSTOCK_CHAIN || input.rpcMode !== "public-rpc") {
     throw new Error(`${ADAPTER_KEY}: primary input must be Rootstock public RPC`);

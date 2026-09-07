@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
@@ -89,7 +90,7 @@ import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 
 function createMockDb(): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         all: async () => ({ results: [] }),
@@ -103,7 +104,7 @@ function createMockDb(): D1Database {
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 function createCoinGeckoStageContext() {

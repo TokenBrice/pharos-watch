@@ -199,7 +199,6 @@ describe("runSafetyScoreV9DiffCli", () => {
     cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
     return [baselineCards, candidateCards].map((cards, index) => {
       const path = resolve(dir, `${index === 0 ? "baseline" : "candidate"}.json`);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- isolated temporary test path.
       writeFileSync(path, JSON.stringify(artifact(cards)), "utf8");
       return path;
     });

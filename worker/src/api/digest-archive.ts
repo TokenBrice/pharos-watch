@@ -18,6 +18,12 @@ type DigestArchiveInput = {
   forwardLookOutcomes?: unknown[];
   riskTape?: unknown[];
 };
+type DigestArchiveMeta = {
+  type?: string;
+  internal?: unknown;
+  editorialStyleVersion?: string;
+  editorialStyleHash?: string;
+};
 
 function isDigestInputDataSummary(
   value: unknown,
@@ -53,8 +59,8 @@ function decodeDigestInputData(value: string | null, generatedAt: number) {
   return decoded.ok ? decoded.payload : null;
 }
 
-function decodeDigestMeta(value: string | null, generatedAt: number) {
-  const decoded = decodeJsonString<{ type?: string; internal?: unknown }, "missing" | "json-parse-failed" | "invalid-shape">(
+function decodeDigestMeta(value: string | null, generatedAt: number): DigestArchiveMeta | null {
+  const decoded = decodeJsonString<DigestArchiveMeta, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       updatedAt: generatedAt,
@@ -64,7 +70,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number) {
         if (typeof parsed !== "object" || parsed === null) {
           return { ok: false, reason: "invalid-shape" };
         }
-        return { ok: true, payload: parsed as { type?: string; internal?: unknown } };
+        return { ok: true, payload: parsed as DigestArchiveMeta };
       },
     },
   );
@@ -113,6 +119,8 @@ export const handleDigestArchive = async (db: D1Database): Promise<Response> => 
       digestType = "weekly";
     }
     const isInternal = meta?.internal === true || meta?.internal === 1 || meta?.internal === "true";
+    // Legacy rows have no stored style provenance. This display-only marker
+    // is computed at the API boundary and is never written back to D1.
     return {
       isInternal,
       digestText: r.digest_text,
@@ -127,6 +135,8 @@ export const handleDigestArchive = async (db: D1Database): Promise<Response> => 
       forwardLookOutcomes,
       riskTape,
       digestType,
+      editorialStyleVersion: meta?.editorialStyleVersion ?? "pre-policy",
+      editorialStyleHash: meta?.editorialStyleHash ?? "pre-policy",
       editionNumber: 0, // computed below
     };
   });

@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
-import { ChangelogTable, WeightRow, changelogTableClassNames } from "./content-shared";
+import { ChangelogDataTable, WeightRow } from "./content-shared";
+
+const GOVERNANCE_QUALITY_COLUMNS = [
+  { id: "tier", label: "Tier", rowHeader: true },
+  { id: "score", label: "Score" },
+];
+const GOVERNANCE_QUALITY_ROWS = [
+  ["immutable-code", "100"], ["dao-governance", "85"], ["multisig", "55"],
+  ["regulated-entity", "40"], ["single-entity", "20"], ["wrapper", "10"],
+].map(([tier, score]) => ({ id: tier, cells: { tier, score } }));
 
 export const scoringChangelogV5Details: Record<string, ReactNode> = {
   "5.9": (
@@ -151,37 +159,13 @@ export const scoringChangelogV5Details: Record<string, ReactNode> = {
       </p>
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Full GovernanceQuality tiers</h3>
-        <ChangelogTable
+        <ChangelogDataTable
           ariaLabel="Safety Score v5 GovernanceQuality tiers"
           tableId="scoring-v5-governance-quality-tiers"
           testId="scoring-v5-governance-quality-tiers-table"
-        >
-          <TableHeader>
-            <TableRow>
-              <TableHead scope="col" className={changelogTableClassNames.head}>
-                Tier
-              </TableHead>
-              <TableHead scope="col" className={changelogTableClassNames.head}>
-                Score
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[
-              ["immutable-code", "100"],
-              ["dao-governance", "85"],
-              ["multisig", "55"],
-              ["regulated-entity", "40"],
-              ["single-entity", "20"],
-              ["wrapper", "10"],
-            ].map(([tier, score]) => (
-              <TableRow key={tier}>
-                <TableCell className={changelogTableClassNames.rowHeader}>{tier}</TableCell>
-                <TableCell className={changelogTableClassNames.cell}>{score}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </ChangelogTable>
+          columns={GOVERNANCE_QUALITY_COLUMNS}
+          rows={GOVERNANCE_QUALITY_ROWS}
+        />
       </div>
     </>
   ),

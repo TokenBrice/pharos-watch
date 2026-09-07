@@ -8,6 +8,7 @@ import {
   MethodologyDetails,
   MethodologyDiagramFlow,
   MethodologyFacts,
+  MethodologyPreconditions,
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
@@ -131,10 +132,8 @@ export function StabilityIndexMethodologySection() {
           { label: "Main use", value: "Bands: BEDROCK to MELTDOWN" },
         ]}
       />
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-        <MethodologyFacts
-          facts={[
+      <MethodologyPreconditions
+        facts={[
             {
               label: "Aggregate universe",
               value:
@@ -160,9 +159,8 @@ export function StabilityIndexMethodologySection() {
               value:
                 "Backfills score any depeg overlapping the UTC day, canonicalize legacy depeg IDs into the current PSI universe, use same-day supply_history prices when they capture the move, cap replayed daily deviation at the event peak, and keep peak event deviation as a start-day floor only when the depeg stayed open through the UTC close and the daily snapshot misses the move",
             },
-          ]}
-        />
-      </div>
+        ]}
+      />
       <WorkedExample summary="Worked example (verified against computeStabilityIndex)">
         <p className="pharos-numeric">
           Inputs: bps=-120, depegMcap=$2B, totalMcap=$200B, age=10d, trend=+1.2, stressBreadth=1.5

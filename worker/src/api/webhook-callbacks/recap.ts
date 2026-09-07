@@ -3,11 +3,11 @@ import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   isTelegramRecapAvailableToChat,
 } from "@shared/lib/telegram-recap-rollout";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   getTelegramRecapPreference,
   setTelegramRecapPreference,
-} from "../../lib/telegram-recap-store";
+} from "../../lib/telegram/recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import {

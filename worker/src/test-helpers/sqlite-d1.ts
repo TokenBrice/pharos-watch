@@ -1,5 +1,7 @@
+import type { DatabaseSync } from "node:sqlite";
+
 function makeSqliteStatement(
-  sqlite: import("node:sqlite").DatabaseSync,
+  sqlite: DatabaseSync,
   sql: string,
   boundValues: unknown[] = [],
   options: SqliteD1Options = {},
@@ -9,7 +11,11 @@ function makeSqliteStatement(
     all: async <T>() => {
       const results = sqlite.prepare(sql).all(...(boundValues as never[])) as T[];
       options.onAll?.(sql);
-      return { results, success: true, meta: {} };
+      return {
+        results,
+        success: true,
+        meta: { rows_written: options.rowsWritten ? options.rowsWritten(sql, 0) : 0 },
+      };
     },
     first: async <T>() => {
       const row = sqlite.prepare(sql).get(...(boundValues as never[])) as T | undefined;
@@ -18,21 +24,26 @@ function makeSqliteStatement(
     run: async () => {
       options.onRun?.(sql);
       const result = sqlite.prepare(sql).run(...(boundValues as never[]));
+      const changes = Number(result.changes ?? 0);
       return {
         success: true,
-        meta: { changes: Number(result.changes ?? 0) },
+        meta: {
+          changes,
+          rows_written: options.rowsWritten ? options.rowsWritten(sql, changes) : changes,
+        },
       };
     },
   } as unknown as D1PreparedStatement;
 }
 
-interface SqliteD1Options {
+export interface SqliteD1Options {
   onAll?: (sql: string) => void;
   onRun?: (sql: string) => void;
+  rowsWritten?: (sql: string, changes: number) => number | null;
 }
 
 export function createSqliteD1(
-  sqlite: import("node:sqlite").DatabaseSync,
+  sqlite: DatabaseSync,
   options: SqliteD1Options = {},
 ): D1Database {
   return {

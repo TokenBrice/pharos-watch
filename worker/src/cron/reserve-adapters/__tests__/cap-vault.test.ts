@@ -21,8 +21,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptCapVaultState, fetchCapVaultReserves } from "../cap-vault";
 import { fetchOnchainUint256, fetchOnchainRawCall } from "../helpers";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 function makeSignal(): AbortSignal {
   return AbortSignal.timeout(5_000);
@@ -111,7 +110,7 @@ describe("adaptCapVaultState", () => {
 
     expect(result.metadata?.redemptionFeeBps).toBe(0);
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 0 });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("cap-vault") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("cap-vault", result);
   });
 
   it("omits the redemption fee telemetry when the redeem fee could not be read", () => {
@@ -540,7 +539,7 @@ describe("fetchCapVaultReserves", () => {
     const result = await fetchCapVaultReserves(coin, config, makeSignal());
     expect(result.metadata?.redemptionFeeBps).toBe(10);
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("cap-vault") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("cap-vault", result);
   });
 
   it("omits the redemption fee when getRedeemFee() is unreadable", async () => {

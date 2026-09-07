@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "A7A5 has issuer-native issuance on Ethereum and Tron, and those native routes remain issuer-native minting. The verified Ethereum wA7A5 wrapper is a same-chain, parent-backed lock-mint representation: wrap() mints and invokes the parent A7A5 transferFrom in the same transaction, while unwrap() burns wA7A5 before returning parent A7A5, so its verified route-level invariant is supply-conserving and tiered single-chain-or-native. The roadmap's proposed CEX bridge between the native chains remains unverified; no current controller, custody accounting, or burn-before-credit invariant was identified.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; mint-bridge-boundary migration",
+    "summary": "A7A5 has issuer-native issuance on Ethereum and Tron, and those native routes remain issuer-native minting. The verified Ethereum wA7A5 wrapper at 0xF442fF10b8deF89514560A66C0AD28777094636a was re-reviewed on 2026-09-01 and is deliberately not carried as an A7A5 deployment: its verified source declares the parent A7A5 immutable, wrap() mints wA7A5 and invokes the parent transferFrom in the same transaction while unwrap() burns wA7A5 before returning parent A7A5, so every wA7A5 unit is fully collateralised by parent A7A5 already inside the canonical Ethereum totalSupply. DefiLlama confirms the accounting: at Ethereum block 25881932 the canonical A7A5 totalSupply() read 574,613,506.73, exactly the Ethereum circulating figure DefiLlama publishes for pegged asset 258, while wA7A5's own totalSupply() of 98,672,082.601066 is not counted anywhere. Carrying the wrapper as a second Ethereum contract therefore added no liability and only made the Ethereum chain-supply row unjoinable to a single route, so both the catalog contract and its route row were withdrawn on 2026-09-01. The wrapper has no owner of its own; its only privileged surface is destroyBlackFunds(address), gated on the parent's compliance address 0x760e226fe0767c5db016ef0e55a4ac677ae869c0. The roadmap's proposed CEX bridge between the native chains remains unverified; no current controller, custody accounting, or burn-before-credit invariant was identified, and no cross-chain representation of A7A5 is tracked today.",
+    "reviewedAt": "2026-09-01",
+    "reviewer": "Codex bridge route review; mint-bridge-boundary migration; ODR-D3 same-chain disambiguation",
     "confidence": "verified",
     "sources": [
       {
@@ -33,6 +33,14 @@
       {
         "label": "A7A5 wA7A5 verified source",
         "url": "https://eth.blockscout.com/address/0xF442fF10b8deF89514560A66C0AD28777094636a?tab=contract"
+      },
+      {
+        "label": "Ethereum public JSON-RPC reads at block 25881932 (2026-09-01)",
+        "url": "https://eth.drpc.org"
+      },
+      {
+        "label": "DefiLlama pegged asset 258 chain balances (Ethereum and Tron only)",
+        "url": "https://stablecoins.llama.fi/stablecoin/258"
       }
     ],
     "routes": [
@@ -84,39 +92,6 @@
           {
             "label": "A7A5 Tron verified contract code",
             "url": "https://tronscan.org/#/contract/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ/code"
-          }
-        ]
-      },
-      {
-        "id": "ethereum:0xf442ff10b8def89514560a66c0ad28777094636a",
-        "sourceChain": "ethereum",
-        "destinationChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "contractAddress": "0xf442ff10b8def89514560a66c0ad28777094636a",
-        "representationId": "wA7A5",
-        "protocol": "A7A5 wA7A5 wrapper",
-        "issuanceModel": "wrapped-representation",
-        "routeClass": "canonical",
-        "riskTier": "single-chain-or-native",
-        "semantics": "lock-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Verified current wA7A5 wrapper: its immutable parent is A7A5 at Ethereum 0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9; wrap() mints and invokes parent A7A5 transferFrom in the same transaction, and unwrap() burns wA7A5 before returning parent A7A5. This same-chain route is parent-backed and supply-conserving under the verified wrapper invariant, with no external validator or cross-chain bridge controller.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770648,
-        "sources": [
-          {
-            "label": "A7A5 token contracts",
-            "url": "https://docs.a7a5.io/a7a5-token/token-contracts.md"
-          },
-          {
-            "label": "A7A5 wA7A5 wrapper mechanics",
-            "url": "https://docs.a7a5.io/a7a5-token/wa7a5.md"
-          },
-          {
-            "label": "A7A5 wA7A5 verified source",
-            "url": "https://eth.blockscout.com/address/0xF442fF10b8deF89514560A66C0AD28777094636a?tab=contract"
           }
         ]
       }

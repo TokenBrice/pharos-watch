@@ -3,15 +3,15 @@ import type { ChangelogEntry } from "./types";
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-08-17", to: "2026-08-23" },
   headline:
-    "The Safety Score map ships daily, Liquidity Score v6 lands, and the yield surface stops blanking.",
+    "The Safety Score map goes daily and Liquidity Score v6 completes its staged cutover; yield rankings no longer blank after scoring deploys.",
   fieldNotes:
-    "A week of turning fragile things into scheduled ones. The Safety Score landscape stopped being a manual monthly artifact and became a guarded daily publication that rides along with the social digest. Liquidity Score v6 completed its staged cutover, correcting a Raydium double count that had been quietly inflating depth. Most of the remaining effort went where it usually goes after a busy month: cron lanes, memory ceilings, and the duplication that accumulates when everything ships at once.",
+    "A week of turning fragile things into scheduled ones. The Safety Score map stopped being a manual monthly artifact and became a guarded daily publication that rides along with the social digest. Liquidity Score v6 completed its staged cutover, correcting a Raydium double count that had been quietly inflating depth. Most of the remaining effort went where it usually goes after a busy month: cron lanes, memory ceilings, and the duplication that accumulates when everything ships at once.",
   summary: [
     {
       label: "Daily Safety Score map",
       tag: "feature",
       description:
-        "The shareable Safety Score landscape became a daily 07:20 UTC publication, generated behind fail-closed guards for stale data, join coverage, font loading, and layout collisions, and it rides the social digest.",
+        "The shareable Safety Score map became a daily 07:20 UTC publication, generated behind fail-closed guards for stale data, join coverage, font loading, and layout collisions, and it rides the social digest.",
     },
     {
       label: "Safety Score V9 stability",

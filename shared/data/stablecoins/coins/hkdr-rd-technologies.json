@@ -38,7 +38,7 @@
   ],
   "expectedLaunchDate": "2026-H2",
   "launchPhase": "auditing",
-  "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort. Raised $40M in Series A2 (July 30 2025, led by ZA Global) and signed a Memorandum of Understanding with ZA Bank for HKDR reserve custody and potential distribution pending regulatory approval — the first major collaboration between a licensed HK virtual bank and a stablecoin development company. Hong Kong Stablecoins Ordinance took effect August 1 2025; 36 formal applications were received by the September deadline. HKMA granted its first two stablecoin licences on April 10 2026 to Anchorpoint Financial (FRS01) and HSBC (FRS02) — RD InnoTech was not in the first batch. HSBC plans its HKD stablecoin launch for H2 2026; a second licence wave is expected and RD InnoTech, with its early sandbox participation, $40M war chest, and ZA Bank partnership, remains among the credible next-round candidates. HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions.",
+  "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort. Raised $40M in Series A2 (July 30 2025, led by ZA Global) and signed a Memorandum of Understanding with ZA Bank for HKDR reserve custody and potential distribution pending regulatory approval, the first major collaboration between a licensed HK virtual bank and a stablecoin development company. Hong Kong Stablecoins Ordinance took effect August 1 2025; 36 formal applications were received by the September deadline. HKMA granted its first two stablecoin licences on April 10 2026 to Anchorpoint Financial (FRS01) and HSBC (FRS02). RD InnoTech was not in the first batch. HSBC plans its HKD stablecoin launch for H2 2026; a second licence wave is expected and RD InnoTech, with its early sandbox participation, $40M war chest, and ZA Bank partnership, remains among the credible next-round candidates. HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions.",
   "featuredContent": [
     {
       "type": "article",
@@ -135,7 +135,7 @@
       "date": "2026-06-10",
       "type": "regulatory",
       "title": "HKMA confirms further stablecoin licence applications under review with no set timetable",
-      "description": "In a LegCo LCQ6 reply, the HKMA said the remaining licence applications stay under review with an open-but-cautious stance and no timetable for further grants — leaving RD InnoTech's licence, and any HKDR launch window, unconfirmed.",
+      "description": "In a LegCo LCQ6 reply, the HKMA said the remaining licence applications stay under review with an open-but-cautious stance and no timetable for further grants, leaving RD InnoTech's licence, and any HKDR launch window, unconfirmed.",
       "sourceUrl": "https://www.info.gov.hk/gia/general/202606/10/P2026061000429.htm"
     }
   ]

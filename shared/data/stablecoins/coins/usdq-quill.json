@@ -58,7 +58,8 @@
       "rpcUrl": "https://rpc.scroll.io",
       "redemptionRateProbe": {
         "contract": "0x358d90036e70542ae24b3813c0efecc1f8811442",
-        "selector": "0xc52861f2"
+        "selector": "0xc52861f2",
+        "decimals": 18
       },
       "branches": [
         {

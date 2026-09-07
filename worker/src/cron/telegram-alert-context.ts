@@ -1,10 +1,11 @@
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
+import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../lib/telegram/usd-profile";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadActiveAlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import { buildInClause, chunkArray } from "../lib/db";
-import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
+import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram/log";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
 import { getCache } from "../lib/db-cache";
@@ -12,23 +13,13 @@ import { safeJsonParse } from "../lib/api-cache-read";
 
 /** 24h mint/burn flow older than this is omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
-const ALERT_USD_PROFILE = {
-  decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },
-  invalidFallback: "n/a",
-  maximumTier: "billion",
-  signPosition: "after-currency",
-} as const;
 
 function formatUsdCompact(value: number | null | undefined): string {
-  return formatCompactUsdWithOptions(value, ALERT_USD_PROFILE);
+  return formatCompactUsdWithOptions(value, TELEGRAM_USD_PROFILE);
 }
 
 function formatSignedUsdCompact(value: number): string {
-  return formatCompactUsdWithOptions(value, {
-    ...ALERT_USD_PROFILE,
-    positiveSign: true,
-    signPosition: "before-currency",
-  });
+  return formatCompactUsdWithOptions(value, TELEGRAM_SIGNED_USD_PROFILE);
 }
 
 export async function buildAlertContextLines(
@@ -39,16 +30,19 @@ export async function buildAlertContextLines(
   if (uniqueIds.length === 0) return new Map();
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const [snapshot, stablecoinsResult, liquidityResult, flowResult] = await Promise.all([
-    loadActiveSafetyScoreSource(db).then((source) =>
-      source.kind === "v9" ? source : null,
-    ).catch(() => null),
+  // The thin alert envelope carries grade/score/identity per coin. Decoding
+  // the full V9 publication here (the previous path) added an ~8MB gunzip +
+  // parse spike to every event-carrying dispatch and OOM-killed the
+  // five-minute isolate on the :27/:57 safety fan-out runs.
+  const [safety, stablecoinsResult, liquidityResult, flowResult] = await Promise.all([
+    loadActiveAlertSafetySourceAssessment(db, nowSec)
+      .then((assessment) => (assessment.state === "ok" ? assessment.envelope : null))
+      .catch(() => null),
     loadStablecoinsCache(db, { mode: "strict" }).catch(() => null),
     loadLiquidityRows(db, uniqueIds),
     loadFlowRows(db, uniqueIds, nowSec),
   ]);
 
-  const cards = new Map((snapshot?.snapshot.cards ?? []).map((card) => [card.id, card]));
   const supplies = new Map<string, number>();
   if (stablecoinsResult?.kind === "ok") {
     const wantedIds = new Set(uniqueIds);
@@ -62,11 +56,11 @@ export async function buildAlertContextLines(
   const out = new Map<string, string>();
   for (const id of uniqueIds) {
     const parts: string[] = [];
-    const card = cards.get(id);
+    const card = safety?.snapshot[id];
     const liq = liquidityResult.get(id);
     if (card) {
       parts.push(
-        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""} (${snapshot!.snapshot.safetyScoreIdentity.model.toUpperCase()} ${snapshot!.snapshot.safetyScoreIdentity.methodologyVersion})`,
+        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""} (${safety!.safetyScoreIdentity.model.toUpperCase()} ${safety!.safetyScoreIdentity.methodologyVersion})`,
       );
     }
     if (liq) parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);

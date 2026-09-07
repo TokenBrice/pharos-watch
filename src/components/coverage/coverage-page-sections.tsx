@@ -5,7 +5,7 @@ import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
 import { SafetyScoreDataCoverage } from "@/components/safety-scores/data-coverage-module";
-import { MatrixTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -499,12 +499,13 @@ export function CoverageMatrixCard(
                 logos={model.logos}
               />
             ) : (
-              <MatrixTable
+              <TableFrame
                 tableId="coverage-matrix"
                 testId="coverage-matrix-table"
                 caption={`Per-coin feature availability across ${model.rows.length} active stablecoins.`}
                 captionClassName="sr-only"
                 chrome="bare"
+                density="compact"
                 className="hidden overflow-hidden rounded-xl border border-border/70 bg-background/30 md:block"
                 tableClassName="min-w-[64rem] table-fixed"
                 viewportClassName="overflow-auto"
@@ -558,7 +559,7 @@ export function CoverageMatrixCard(
                     );
                   })}
                 </TableBody>
-              </MatrixTable>
+              </TableFrame>
             )}
           </>
         )}

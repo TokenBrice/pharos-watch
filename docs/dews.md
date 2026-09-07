@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/methodology-versions/depeg-dews.ts`.
 
-- **Current methodology version:** `v6.21`
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.22`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-dews.ts`
 
@@ -41,14 +41,14 @@ Known and accepted: the market-price evidence gate is `value >= 10`, which sits 
 
 | Signal                  | Key      | Weight | Data Source             | What It Detects                                                                      |
 | ----------------------- | -------- | ------ | ----------------------- | ------------------------------------------------------------------------------------ |
-| Supply Velocity         | `supply` | 0.25   | stablecoins cache       | Rapid redemptions (bank run)                                                         |
-| Pool Balance Drift      | `pool`   | 0.20   | `dex_liquidity`         | One-sided selling pressure in DEX pools                                              |
-| Liquidity Erosion       | `liq`    | 0.15   | `dex_liquidity_history` | LPs fleeing                                                                          |
-| Price Confidence        | `price`  | 0.15   | stablecoins cache       | Oracle/data source failures                                                          |
-| Cross-Source Divergence | `diverg` | 0.15   | `dex_prices` + cache    | Fragmented pricing, trust breakdown                                                  |
-| Blacklist Activity      | `black`  | 0.10   | `blacklist_events`      | Issuer emergency freeze surge                                                        |
-| Mint/Burn Flow          | `flow`   | 0.10   | `mint_burn_hourly`      | Redemption surge vs minting                                                          |
-| Yield Anomaly           | `yield`  | 0.05   | `yield_data` + `yield-rankings` cache | Yield warning signals plus populated source-risk and rank-attribution stress evidence |
+| Supply Velocity         | `supply` | <!-- GENERATED-START: dews-supply-weight -->0.25<!-- GENERATED-END: dews-supply-weight -->   | stablecoins cache       | Rapid redemptions (bank run)                                                         |
+| Pool Balance Drift      | `pool`   | <!-- GENERATED-START: dews-pool-weight -->0.20<!-- GENERATED-END: dews-pool-weight -->   | `dex_liquidity`         | One-sided selling pressure in DEX pools                                              |
+| Liquidity Erosion       | `liq`    | <!-- GENERATED-START: dews-liq-weight -->0.15<!-- GENERATED-END: dews-liq-weight -->   | `dex_liquidity_history` | LPs fleeing                                                                          |
+| Price Confidence        | `price`  | <!-- GENERATED-START: dews-price-weight -->0.15<!-- GENERATED-END: dews-price-weight -->   | stablecoins cache       | Oracle/data source failures                                                          |
+| Cross-Source Divergence | `diverg` | <!-- GENERATED-START: dews-diverg-weight -->0.15<!-- GENERATED-END: dews-diverg-weight -->   | `dex_prices` + cache    | Fragmented pricing, trust breakdown                                                  |
+| Blacklist Activity      | `black`  | <!-- GENERATED-START: dews-black-weight -->0.10<!-- GENERATED-END: dews-black-weight -->   | `blacklist_events`      | Issuer emergency freeze surge                                                        |
+| Mint/Burn Flow          | `flow`   | <!-- GENERATED-START: dews-flow-weight -->0.10<!-- GENERATED-END: dews-flow-weight -->   | `mint_burn_hourly`      | Redemption surge vs minting                                                          |
+| Yield Anomaly           | `yield`  | <!-- GENERATED-START: dews-yield-weight -->0.05<!-- GENERATED-END: dews-yield-weight -->   | `yield_data` + `yield-rankings` cache | Yield warning signals plus populated source-risk and rank-attribution stress evidence |
 
 Weights sum to 1.15 but only available signals participate, so redistribution normalizes by actual available weight. When `S_flow` and `S_yield` are both unavailable (most coins), effective weight is 1.00 across the 6 original signals.
 
@@ -58,11 +58,11 @@ Weights sum to 1.15 but only available signals participate, so redistribution no
 
 | Range  | Band        | Hex       | Description                            |
 | ------ | ----------- | --------- | -------------------------------------- |
-| 0-15   | **CALM**    | `#22c55e` | No stress signals detected             |
-| 16-35  | **WATCH**   | `#14b8a6` | Mild stress on 1-2 indicators          |
-| 36-55  | **ALERT**   | `#eab308` | Multiple indicators elevated           |
-| 56-75  | **WARNING** | `#f97316` | Strong stress signals, depeg plausible |
-| 76-100 | **DANGER**  | `#ef4444` | Severe stress across available weighted signals |
+| <!-- GENERATED-START: dews-calm-range -->0-15<!-- GENERATED-END: dews-calm-range -->   | <!-- GENERATED-START: dews-calm-label -->**CALM**<!-- GENERATED-END: dews-calm-label -->    | <!-- GENERATED-START: dews-calm-hex -->`#22c55e`<!-- GENERATED-END: dews-calm-hex --> | No stress signals detected             |
+| <!-- GENERATED-START: dews-watch-range -->16-35<!-- GENERATED-END: dews-watch-range -->  | <!-- GENERATED-START: dews-watch-label -->**WATCH**<!-- GENERATED-END: dews-watch-label -->   | <!-- GENERATED-START: dews-watch-hex -->`#14b8a6`<!-- GENERATED-END: dews-watch-hex --> | Mild stress on 1-2 indicators          |
+| <!-- GENERATED-START: dews-alert-range -->36-55<!-- GENERATED-END: dews-alert-range -->  | <!-- GENERATED-START: dews-alert-label -->**ALERT**<!-- GENERATED-END: dews-alert-label -->   | <!-- GENERATED-START: dews-alert-hex -->`#eab308`<!-- GENERATED-END: dews-alert-hex --> | Multiple indicators elevated           |
+| <!-- GENERATED-START: dews-warning-range -->56-75<!-- GENERATED-END: dews-warning-range -->  | <!-- GENERATED-START: dews-warning-label -->**WARNING**<!-- GENERATED-END: dews-warning-label --> | <!-- GENERATED-START: dews-warning-hex -->`#f97316`<!-- GENERATED-END: dews-warning-hex --> | Strong stress signals, depeg plausible |
+| <!-- GENERATED-START: dews-danger-range -->76-100<!-- GENERATED-END: dews-danger-range --> | <!-- GENERATED-START: dews-danger-label -->**DANGER**<!-- GENERATED-END: dews-danger-label -->  | <!-- GENERATED-START: dews-danger-hex -->`#ef4444`<!-- GENERATED-END: dews-danger-hex --> | Severe stress across available weighted signals |
 
 ---
 
@@ -116,6 +116,8 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 ### S_black — Blacklist Activity
 
 Only for stablecoin IDs with direct live blacklist tracker configs. Recent `blacklist_events` rows are resolved through tracker provenance (`config_key` / `contract_address`) to the owning canonical stablecoin ID before scoring, so same-symbol siblings do not inherit each other's freeze events. Legacy rows without provenance fall back only when the symbol maps to a single tracker-owned stablecoin ID. Uses 24h event count with spike detection relative to 7d daily average.
+
+Only public events (`suppression_reason IS NULL`) enter either window. Suppressed EURC mirror-zero rows remain stored for provenance but cannot create a blacklist surge. The daily digest applies the same public-event eligibility before counting its rolling 24-hour activity or selecting candidates; unsuppressed zero-value events remain eligible. Excluding rows can change both the numerator and the 7-day baseline, so it does not imply every resulting DEWS score decreases.
 
 ### S_flow — Mint/Burn Flow
 
@@ -276,7 +278,7 @@ Repair modes:
 | ------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
 | `DEWSBadge`   | `src/components/dews-badge.tsx`   | Table rows (hidden when CALM)                                                         |
 | `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
-| `DEWSSummary` | `src/components/dews-summary.tsx` | Depeg-page hero radar; title-level contextual methodology hint                         |
+| `DEWSRadarPanel` | `src/components/dews-summary.tsx` | Embedded in the `/depeg/` hero (`DepegOutlookHero`), which supplies the heading and contextual methodology hint |
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/api-hooks.ts`
 
@@ -284,13 +286,13 @@ Repair modes:
 
 **Design tokens:** `--dews-calm` through `--dews-danger`, plus radar contrast tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`, `--dews-radar-band-ring-opacity`, `--dews-radar-outer-ring-opacity`, `--dews-radar-calm-dot-bloom`, `--dews-radar-calm-dot-core`) in `src/styles/tokens/semantic.css`
 
-### Radar Layout (`DEWSSummary`)
+### Radar Layout (`DEWSRadarPanel`)
 
 The radar is center-is-danger: higher threat bands occupy inner rings, CALM coins form an ambient starfield at the periphery.
 
 | Zone           | Radius range | Description                                                                     |
 | -------------- | ------------ | ------------------------------------------------------------------------------- |
-| Center label   | r 0–38       | `SCANNING` status label + total monitored count                                 |
+| Center label   | r 0–38       | `SCANNING` status label + total DEWS-covered count                              |
 | DANGER         | r 45–90      | Innermost elevated ring                                                         |
 | WARNING        | r 95–140     |                                                                                 |
 | ALERT          | r 143–175    |                                                                                 |

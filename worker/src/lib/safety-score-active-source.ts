@@ -8,7 +8,7 @@ import {
 import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationHealth,
-} from "./safety-score-v9-publication-store";
+} from "./safety-score-v9/publication-store";
 
 /**
  * The canonical Safety Score source in one union. `v9` is the only usable

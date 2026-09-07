@@ -18,19 +18,31 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
-    "confidence": "unknown",
+    "reviewedAt": "2026-09-05",
+    "reviewer": "GLM U6 MAI Base+Polygon vault and PSM census review",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "QiDao documentation",
-        "url": "https://docs.mai.finance/"
+        "label": "QiDao smart-contract registry (issuer docs)",
+        "url": "https://docs.mai.finance/docs/functions/smart-contract-addresses"
+      },
+      {
+        "label": "Polygon public RPC reads, dual provider (dRPC, publicnode)",
+        "url": "https://polygon.drpc.org"
+      },
+      {
+        "label": "Base public RPC reads (publicnode)",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "CoinGecko MAI (mimatic) market data",
+        "url": "https://www.coingecko.com/en/coins/mai"
       }
     ],
-    "rationale": "BLOCKED: QiDao documents overcollateralized multi-market vaults but does not publish a current all-chain collateral composition or market weights for MAI.",
-    "compositionBasis": "QiDao CDP design; current vault composition undisclosed",
+    "rationale": "QiDao publishes no reserve composition; the defunct HTTP API (api.mai.finance, 404) is gone, so the only primary source is on-chain. A bounded census of the live wind-down scope (Base and Polygon per the applied oneLiner) was executed on 2026-09-05 against the issuer registry: all 33 registry Polygon vault entries plus 2 Polygon PSMs and all 7 registry Base vaults plus 3 Base PSMs were read over public JSON-RPC, dual-provider verified. One registry entry (Polygon \"MATIC Vault\" at 0xa3fa99a148fa48d14ed51d610c367c61876997f1) is the MAI ERC20 token itself, not a vault. Outstanding vault debt was aggregated per vault id (vaultDebt over 26,242+ ids on the largest market, Multicall3 batched; v2 markets cross-checked against maiDebt()). The identifiable live-scope pool is approximately 2.94 million USD: Polygon vault collateral near 795k (WBTC V2 251,233; camWETH 157,970; WBTC v1 115,410; camWBTC 90,687 revalued at market BTC because its own oracle reads 96,913 against a 79,742 market, a 21 percent stale spread; WETH v1 48,581; cxWETH 36,785; camAAVE 26,164; smaller markets below 10k each), Base vault collateral near 645k (WETH 402,888; wstETH 129,427; cbBTC 69,602; cbETH 31,468; ezETH 11,755; AERO and veAERO markets hold zero value and zero debt), and PSM USDC liquidity 1,498,828 (Base live 1,178,975 across Beefy Compound, Morpho Gauntlet and Morpho Steakhouse; Polygon 319,853, both Polygon PSMs carrying the stopped flag). Vault oracle prices cross-check against CoinGecko spot within normal spreads for ETH, BTC, POL and majors. Claim reconciliation: Polygon MAI supply is 305.13 million of which the Guardians multisig (the registry's unbacked-MAI handler owner) holds 118.36 million and the dead address holds 90.87 million; CoinGecko circulating is 11.86 million at 0.9798. The Guardians wallet holds no material non-MAI assets (756 USDC.e and 45 WPOL). Wound-down legacy chains still carry about 75.4 million readable MAI (Ethereum 11.2M, Arbitrum 12.15M, Optimism 19.38M, Avalanche 19.21M, Gnosis 2.55M, Metis 4.25M, BSC 5.12M, Linea 0.685M, Fraxtal 0; Fantom, Moonbeam, zkEVM and Kava RPC-unread) plus residual collateral outside the live scope (the Ethereum WETH vault alone still holds 64.55 WETH). Percentage composition was not published from this census: the required single-block-per-chain pinned re-pass over the ABI-aware read list did not complete, and the census reads, while dual-provider consistent, span multiple blocks within 2026-09-05, so normalizing them would break same-checkpoint coherence. The aggregate category slice therefore remains unknown rather than partially recomputed from a non-pinned capture.",
+    "compositionBasis": "Live-scope on-chain census read 2026-09-05 (issuer registry enumeration, dual-provider public RPC); percentage normalization pending the pinned same-block pass",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The full recorded multi-market crypto-vault category lacks current public constituent weights.",
+    "knownUnknownExposure": "The full recorded multi-market crypto-vault category lacks published constituent weights. Within the census, three Polygon markets have no usable price path (dQUICK, KMM LP token, CEL) and stMATIC has no market price, so their collateral is unvalued or floored; the three CelsiusX wrapped markets (cxWETH, cxADA, cxDOGE, about 55k USD at one-to-one underlying parity) carry issuer-bankruptcy redemption uncertainty; and the share of circulating MAI covered by the identifiable pool versus treasury-absorbed or bridged claims is unreconciled at issuer level.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -38,7 +50,7 @@
         "reserveName": "QiDao overcollateralized crypto vaults",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "No current cross-market collateral allocation is published."
+        "rationale": "No issuer-published composition exists and the census percentage split awaits the pinned same-block capture; the enumerated collateral is documented in the rationale and in agents/mai-qidao-u6-closeout/evidence-2026-09-05.json."
       }
     ]
   }

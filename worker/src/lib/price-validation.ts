@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   classifyPegClass,
   type PegClass,
@@ -90,12 +90,12 @@ function getCommodityScale(pegType: string | undefined, commodityOunces: number 
 export function buildPriceValidationContext(
   input: BuildPriceValidationContextInput,
 ): PriceValidationContext {
-  const trackedMeta = input.stablecoinId ? TRACKED_META_BY_ID.get(input.stablecoinId) : undefined;
-  const pegCurrency = trackedMeta?.flags?.pegCurrency ?? input.pegCurrency;
+  const trackedMeta = input.stablecoinId ? WORKER_TRACKED_META_BY_ID.get(input.stablecoinId) : undefined;
+  const pegCurrency = trackedMeta?.pegCurrency ?? input.pegCurrency;
   const pegType =
     pegTypeFromCurrency(pegCurrency) ??
     input.pegType;
-  const navToken = trackedMeta?.flags?.navToken ?? !!input.navToken;
+  const navToken = trackedMeta?.navToken ?? !!input.navToken;
   const commodityOunces =
     typeof trackedMeta?.commodityOunces === "number" && Number.isFinite(trackedMeta.commodityOunces) && trackedMeta.commodityOunces > 0
       ? trackedMeta.commodityOunces
@@ -244,7 +244,7 @@ function getHardcodedBounds(context: PriceValidationContext): { min: number; max
   return null;
 }
 
-function isFixedPegContext(context: PriceValidationContext): boolean {
+export function isFixedPegContext(context: PriceValidationContext): boolean {
   return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
 }
 

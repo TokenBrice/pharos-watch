@@ -2,15 +2,15 @@ import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { isSubscribableCoin } from "../../lib/telegram/subscription-eligibility";
 import {
   decodeWatchlistToken,
   packWatchlistDirectState,
   packWatchlistPresetState,
   WATCHLIST_TOKEN_REGISTRY_VERSION,
-} from "../../lib/telegram-watchlist-token";
-import { TELEGRAM_PRESET_LABEL_BY_ID } from "../../lib/telegram-presets";
+} from "../../lib/telegram/watchlist-token";
+import { TELEGRAM_PRESET_LABEL_BY_ID } from "../../lib/telegram/presets";
 import {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   buildWatchlistImportPreview,

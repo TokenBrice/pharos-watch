@@ -261,6 +261,13 @@ function deriveGovernance(
       if (control.authority.model === "eoa" || control.authority.model === "issuer-backend") {
         return "single-entity";
       }
+      // AUTHORITY-LADDER 9.46: `validator-quorum` lands here, with `multisig`,
+      // `contract` and `timelock`. This axis reports how concentrated the acting
+      // party is, not how strong it is: an external validation quorum is a
+      // bounded operator set, not one entity, so `single-entity` would publish a
+      // false fact. The ruling that a quorum never grades above a named multisig
+      // binds on the quality ladder in `control.ts`, where both sit no higher
+      // than the concentrated rung; here they are equal, never better.
       return "concentrated";
     })();
     known.push(posture);

@@ -5,6 +5,7 @@ import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
@@ -68,13 +69,13 @@ function makeContext() {
 }
 
 function makePriceDb(price: number | null, updatedAt = Math.floor(Date.now() / 1000)): D1Database {
-  return {
+  return makeNoopD1({
     prepare: vi.fn(() => ({
       bind: vi.fn(() => ({
         first: vi.fn(async () => (price == null ? null : { price, updated_at: updatedAt })),
       })),
     })),
-  } as unknown as D1Database;
+  });
 }
 
 type BlacklistRowOverrides = NonNullable<Parameters<typeof makeBlacklistRow>[0]>;

@@ -84,7 +84,7 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "M0 Research — approved collateral structures for Minters (2024-11-20)",
+        "label": "M0 Research: approved collateral structures for Minters (2024-11-20)",
         "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
       },
       {
@@ -92,7 +92,7 @@
         "url": "https://docs.m0.org/protocol/roles"
       },
       {
-        "label": "M0 Adopted Guidance — Validators",
+        "label": "M0 Adopted Guidance: Validators",
         "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/validators"
       },
       {
@@ -100,7 +100,7 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "uncertainty": "M0 Foundation documentation (2024-11-20) names the approved collateral structures — Superstate Inc. (investment manager) / Superstate Asset Trust (Delaware collateral storage vehicle) / UMB Bank, N.A. (custodian), and CrossLend GmbH (SPV operator) / Asset Repository S.a.r.l (Luxembourg SPV) / DEKA Bank (custodian) — with asset segregation under the Delaware Statutory Trust Act and bankruptcy-remoteness stated as a required structural property. The 97.9% UMB share maps the 2026-07-15 first-party collateral capture (97.9% USTB, sole eligible on-chain collateral token) to the USTB structure's documented custodian, so one structure/custodian chain concentrates >90% of collateral. Current minter-level allocation across the two structures, the ~2.1% cash custody arrangements, and a general rehypothecation prohibition are not publicly documented.",
+    "uncertainty": "M0 Foundation documentation (2024-11-20) names the approved collateral structures, Superstate Inc. (investment manager) / Superstate Asset Trust (Delaware collateral storage vehicle) / UMB Bank, N.A. (custodian), and CrossLend GmbH (SPV operator) / Asset Repository S.a.r.l (Luxembourg SPV) / DEKA Bank (custodian), with asset segregation under the Delaware Statutory Trust Act and bankruptcy-remoteness stated as a required structural property. The 97.9% UMB share maps the 2026-07-15 first-party collateral capture (97.9% USTB, sole eligible on-chain collateral token) to the USTB structure's documented custodian, so one structure/custodian chain concentrates >90% of collateral. Current minter-level allocation across the two structures, the ~2.1% cash custody arrangements, and a general rehypothecation prohibition are not publicly documented.",
     "knownUnknownExposurePct": 2.1
   }
 }

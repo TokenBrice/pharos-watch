@@ -19,7 +19,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/table";
-import { METHODOLOGY_LINK_CLASS, MethodologyDetails, MethodologyDiagramFlow } from "../../methodology-shared";
+import {
+  METHODOLOGY_LINK_CLASS,
+  MethodologyDetails,
+  MethodologyDiagramFlow,
+  ResponsiveMethodologyPipeline,
+  type ResponsiveMethodologyPipelineCard,
+  type ResponsiveMethodologyPipelineProps,
+} from "../../methodology-shared";
 
 const DEWS_SIGNAL_KEYS = Object.keys(DEWS_SIGNAL_WEIGHTS) as DewsSignalKey[];
 
@@ -39,37 +46,54 @@ function getThreatBandLowerBound(index: number): number {
   return index === 0 ? 0 : DEWS_THREAT_BANDS[index - 1].upper + 1;
 }
 
-function DewsSignalCards({ compact = false }: { compact?: boolean }) {
-  return (
-    <>
-      {DEWS_SIGNAL_KEYS.map((key) => (
-        <div key={key} className="rounded-lg border p-2 text-center">
-          <p className="text-foreground font-medium text-xs">
-            {compact ? DEWS_SIGNAL_SHORT_LABELS[key] : DEWS_SIGNAL_LABELS[key]}
-          </p>
-          <p className="text-xs text-muted-foreground">{formatDewsWeight(key)}</p>
-        </div>
-      ))}
-    </>
-  );
+const DEWS_CARD_CLASS_NAMES = ["rounded-lg border p-2 text-center", "text-foreground font-medium text-xs", "text-xs text-muted-foreground"] as const;
+
+function dewsSignalCards(compact = false): ResponsiveMethodologyPipelineCard[] {
+  return DEWS_SIGNAL_KEYS.map((key) => ({
+    title: compact ? DEWS_SIGNAL_SHORT_LABELS[key] : DEWS_SIGNAL_LABELS[key],
+    subtitle: formatDewsWeight(key),
+  }));
 }
 
-function DewsThreatBandCards({ compact = false }: { compact?: boolean }) {
-  return (
-    <>
-      {DEWS_THREAT_BANDS.map(({ band, upper }, index) => {
-        const lower = getThreatBandLowerBound(index);
-        const label = compact && band === "WARNING" ? "WARN" : band;
-        return (
-          <div key={band} className="rounded-lg border p-2 text-center">
-            <p className={`${THREAT_BAND_STYLES[band].textCls} font-medium text-xs`}>{label}</p>
-            <p className="text-xs text-muted-foreground">{lower}&ndash;{upper}</p>
-          </div>
-        );
-      })}
-    </>
-  );
+function dewsThreatBandCards(compact = false): ResponsiveMethodologyPipelineCard[] {
+  return DEWS_THREAT_BANDS.map(({ band, upper }, index) => ({
+    title: compact && band === "WARNING" ? "WARN" : band,
+    subtitle: <>{getThreatBandLowerBound(index)}&ndash;{upper}</>,
+    exactClassNames: [DEWS_CARD_CLASS_NAMES[0], `${THREAT_BAND_STYLES[band].textCls} font-medium text-xs`, DEWS_CARD_CLASS_NAMES[2]] as const,
+  }));
 }
+
+const DEWS_PIPELINE = {
+  desktop: {
+    wrapperClassName: "hidden md:flex items-stretch gap-4",
+    arrow: { className: "flex items-center text-muted-foreground text-xl font-bold", symbol: "→" },
+    exactClassNames: DEWS_CARD_CLASS_NAMES,
+    stages: [
+      { wrapperClassName: "grid grid-cols-2 gap-2 flex-1", cards: dewsSignalCards() },
+      { cards: [{
+          title: "DEWS",
+          subtitle: <>&Sigma;(W&sdot;S) / &Sigma;(W)</>,
+          footer: { className: "text-xs text-muted-foreground", content: "0–100" },
+          exactClassNames: ["rounded-lg border p-3 text-center w-36 flex flex-col justify-center flex-shrink-0", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+        }] },
+      { wrapperClassName: "flex flex-col gap-1.5 w-36 justify-center flex-shrink-0", cards: dewsThreatBandCards() },
+    ],
+  },
+  mobile: {
+    wrapperClassName: "flex flex-col items-center gap-3 md:hidden",
+    arrow: { className: "text-muted-foreground text-xl font-bold", symbol: "↓" },
+    exactClassNames: DEWS_CARD_CLASS_NAMES,
+    stages: [
+      { wrapperClassName: "grid grid-cols-2 gap-2 w-full", cards: dewsSignalCards(true) },
+      { cards: [{
+          title: "DEWS",
+          subtitle: <>&Sigma;(W&sdot;S) / &Sigma;(W) &mdash; 0–100</>,
+          exactClassNames: ["w-full rounded-lg border p-3 text-center", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
+        }] },
+      { wrapperClassName: "grid grid-cols-5 gap-1 w-full", cards: dewsThreatBandCards(true) },
+    ],
+  },
+} satisfies ResponsiveMethodologyPipelineProps;
 
 export function PegScoreDewsTechnicalDetails() {
   return (
@@ -220,36 +244,7 @@ function DewsTechnicalDetails() {
         </p>
       </div>
 
-      <div className="hidden md:flex items-stretch gap-4">
-        <div className="grid grid-cols-2 gap-2 flex-1">
-          <DewsSignalCards />
-        </div>
-        <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
-        <div className="rounded-lg border p-3 text-center w-36 flex flex-col justify-center flex-shrink-0">
-          <p className="text-foreground font-medium">DEWS</p>
-          <p className="text-xs text-muted-foreground mt-0.5">&Sigma;(W&sdot;S) / &Sigma;(W)</p>
-          <p className="text-xs text-muted-foreground">0–100</p>
-        </div>
-        <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
-        <div className="flex flex-col gap-1.5 w-36 justify-center flex-shrink-0">
-          <DewsThreatBandCards />
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center gap-3 md:hidden">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <DewsSignalCards compact />
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
-          <p className="text-foreground font-medium">DEWS</p>
-          <p className="text-xs text-muted-foreground mt-0.5">&Sigma;(W&sdot;S) / &Sigma;(W) &mdash; 0–100</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="grid grid-cols-5 gap-1 w-full">
-          <DewsThreatBandCards compact />
-        </div>
-      </div>
+      <ResponsiveMethodologyPipeline {...DEWS_PIPELINE} />
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Score Formula</h3>

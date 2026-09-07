@@ -79,7 +79,7 @@
             "url": "https://solscan.io/account/71a1tEfnCULkcR1YokJiAt1M8JVMRFhcJPSTf3G3aLX8"
           }
         ],
-        "evidence": "At slot 432852804 the BPF-upgradeable programData account 9JWSfaJZ6iVARqkJvbVKCjW5xuy1LaZ3xfWRQmfCEWo2 for program D4AiKFxj reports upgrade authority CSJJKrBP32T71Zqto6hm7Yi8LXd7eBTWn7piFxCjQfsY. CSJJKrBP is System-owned with zero data, but it is not an EOA: it is the Squads v4 vault PDA at index 0 (bump 250) of multisig 71a1tEfnCULkcR1YokJiAt1M8JVMRFhcJPSTf3G3aLX8, reproduced from seeds ['multisig', multisig, 'vault', 0] under program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, and it CPI-signs a transferChecked inside the Squads VaultTransactionExecute transaction 3HmoZfjjLMGn4VVVPQS4PAgMtVGrAnYKSfnUyyu3GNywwTtxX3uG9mfs137o74A8CA6wCsb7TKw8JUQy75a5jzt6. The multisig account (Anchor discriminator e07479ba44a14fec = account:Multisig, 561 bytes) decodes to threshold 3, nine members each holding Initiate, Vote and Execute permissions, time_lock 0, and config_authority set to the system default, meaning configuration changes are member-governed with no external config owner."
+        "evidence": "At slot 432852804 the BPF-upgradeable programData account 9JWSfaJZ6iVARqkJvbVKCjW5xuy1LaZ3xfWRQmfCEWo2 for program D4AiKFxj reports upgrade authority CSJJKrBP32T71Zqto6hm7Yi8LXd7eBTWn7piFxCjQfsY. CSJJKrBP is System-owned with zero data, but it is not an EOA. It is the Squads v4 vault PDA at index 0 (bump 250) of multisig 71a1tEfnCULkcR1YokJiAt1M8JVMRFhcJPSTf3G3aLX8, reproduced from seeds ['multisig', multisig, 'vault', 0] under program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, and it CPI-signs a transferChecked inside the Squads VaultTransactionExecute transaction 3HmoZfjjLMGn4VVVPQS4PAgMtVGrAnYKSfnUyyu3GNywwTtxX3uG9mfs137o74A8CA6wCsb7TKw8JUQy75a5jzt6. The multisig account (Anchor discriminator e07479ba44a14fec = account:Multisig, 561 bytes) decodes to threshold 3, nine members each holding Initiate, Vote and Execute permissions, time_lock 0, and config_authority set to the system default, meaning configuration changes are member-governed with no external config owner."
       },
       {
         "chain": "solana",
@@ -131,7 +131,7 @@
           "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing"
         },
         {
-          "label": "Solomon Ceffu attestation archive — latest 2026-04-01 report",
+          "label": "Solomon Ceffu attestation archive: latest 2026-04-01 report",
           "url": "https://github.com/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf"
         },
         {

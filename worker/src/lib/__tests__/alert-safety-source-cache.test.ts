@@ -11,6 +11,7 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("canonical V9 alert safety source", () => {
   it("projects the accepted publication with native V9 explanations", () => {
@@ -178,7 +179,7 @@ describe("persisted V9 alert source envelope", () => {
         ],
         ["alert-safety-v9-source", { value: JSON.stringify(envelope), updated_at: response.updatedAt }],
       ]);
-      return {
+      return makeNoopD1({
         prepare: (sql: string) => ({
           bind: (key: string) => ({
             first: async () => {
@@ -190,7 +191,7 @@ describe("persisted V9 alert source envelope", () => {
             },
           }),
         }),
-      } as unknown as D1Database;
+      });
     };
 
     await expect(

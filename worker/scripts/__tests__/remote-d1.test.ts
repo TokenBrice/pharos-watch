@@ -55,7 +55,6 @@ describe("worker remote D1 script helpers", () => {
     ]);
     expect(fileArg).toBeTypeOf("string");
     // Test-owned path captured from the mocked wrangler invocation.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     expect(existsSync(dirname(fileArg as string))).toBe(false);
   });
 

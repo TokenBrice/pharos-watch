@@ -1,0 +1,15 @@
+{
+  "mechanism": "usd3-3jane",
+  "date": "2026-07-27-backing-dashboard",
+  "sha256": "06d8012d58b0887a52fd6d90254bb61d0b5bd8c4a8134535baef01a744f47723",
+  "bytes": 1072,
+  "r2Key": "captures/usd3-3jane/2026-07-27-backing-dashboard.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "protocol-api-mechanism-measurement",
+    "assetId": "usd3-3jane",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usd3-3jane/2026-07-27-backing-dashboard.json",
+    "capturedAt": "2026-07-27T16:42:00Z"
+  }
+}

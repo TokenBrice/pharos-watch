@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   insertPendingDepeg,
   makePendingDepegRow,
-  openLatestSchemaFixture,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
@@ -18,11 +18,8 @@ import type {
 import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
 
 const NOW_SEC = 1_700_000_000;
-const openSqliteDatabases: DatabaseSync[] = [];
-
-function openFixture(): { sqlite: DatabaseSync; db: D1Database } {
-  return openLatestSchemaFixture({ openDatabases: openSqliteDatabases });
-}
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+const openFixture = sqliteFixtures.open;
 
 const makePendingRow = (overrides: Partial<ReturnType<typeof makePendingDepegRow>> = {}) =>
   makePendingDepegRow(overrides, { firstSeenBps: -220, firstPrice: 0.978 });
@@ -113,7 +110,7 @@ async function settle(
 }
 
 afterEach(() => {
-  for (const sqlite of openSqliteDatabases.splice(0)) sqlite.close();
+  sqliteFixtures.closeAll();
 });
 
 describe("evaluatePromotionDecision", () => {

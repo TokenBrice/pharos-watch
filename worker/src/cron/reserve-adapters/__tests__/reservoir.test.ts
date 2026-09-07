@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop-live-metadata";
-import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop-sources";
+import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
+import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();

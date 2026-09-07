@@ -1,6 +1,7 @@
 import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
+import { WorkflowEntrypoint } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -42,6 +43,7 @@ const cronMocks = vi.hoisted(() => ({
   })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runDigestPublicationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncSafetyScoreV9SupplyAttribution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -178,8 +180,8 @@ vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }))
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
-vi.mock("../lib/telegram-recap-store", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/telegram-recap-store")>();
+vi.mock("../lib/telegram/recap-store", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/telegram/recap-store")>();
   return {
     ...original,
     cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,
@@ -244,6 +246,9 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/cron-staleness-watchdog", () => ({
   runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
+}));
+vi.mock("../cron/digest-publication-watchdog", () => ({
+  runDigestPublicationWatchdog: cronMocks.runDigestPublicationWatchdog,
 }));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
 vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks.snapshotChainSupply }));
@@ -354,8 +359,8 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/telegram-webhook-registration", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/telegram-webhook-registration")>();
+vi.mock("../lib/telegram/webhook-registration", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/telegram/webhook-registration")>();
   return {
     ...original,
     reconcileTelegramCommandRegistration: cronMocks.reconcileTelegramCommandRegistration,
@@ -378,7 +383,7 @@ vi.mock("../lib/coingecko", async (importOriginal) => {
   return { ...original };
 });
 
-import worker from "../index";
+import worker, { SafetyScoreV9PublicationWorkflow } from "../index";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { makeScheduledEnv } from "../test-helpers/scheduled-runtime.test-support";
@@ -387,10 +392,24 @@ import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
 } from "../lib/public-dataset-snapshot-budget";
 
+const indexImportCronCalls = Object.entries(cronMocks)
+  .filter(([, mock]) => mock.mock.calls.length > 0)
+  .map(([name]) => name);
+
 describe("worker.scheduled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => undefined);
+  });
+
+  it("imports without cron side effects and resolves the Workflow test stub", () => {
+    const ctx = {} as ExecutionContext;
+    const env = makeScheduledEnv();
+    const workflow = new SafetyScoreV9PublicationWorkflow(ctx, env);
+
+    expect(indexImportCronCalls).toEqual([]);
+    expect(workflow).toBeInstanceOf(WorkflowEntrypoint);
+    expect(workflow).toMatchObject({ ctx, env });
   });
 
   it("records the worker-version first-seen marker without blocking scheduled execution", async () => {
@@ -528,7 +547,7 @@ describe("worker.scheduled", () => {
 
   it("runs V9 attribution, DDR, and compilation only on their dedicated triggers", async () => {
     const env = createWorkerEnv({
-      DB: mockD1([], { allowUnmatched: true }),
+      DB: mockD1([{ match: "", rows: [], allowUnused: true }]),
       CORS_ORIGIN: "https://pharos.watch",
     });
     const supply = makeExecutionContext();
@@ -1149,26 +1168,28 @@ describe("worker.scheduled", () => {
     const env = makeScheduledEnv();
 
     await worker.scheduled(
-      { cron: "*/5 * * * *" } as ScheduledEvent,
+      // Pinned to a Wednesday: the poll's weekly-resume branch is Monday-only,
+      // and an unpinned slot time made this case depend on the wall clock.
+      { cron: "*/5 * * * *", scheduledTime: Date.parse("2026-08-26T12:05:00Z") } as ScheduledEvent,
       env,
       ctx,
     );
     await Promise.all(waits);
 
-    // Idle poll reads the force-run intent and the safety-map deferral key.
-    expect(cronMocks.getCache).toHaveBeenCalledTimes(2);
+    // Idle poll reads the force-run intent.
+    expect(cronMocks.getCache).toHaveBeenCalledTimes(1);
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });
 
-  it("runs daily 03:00 housekeeping on its dedicated trigger", async () => {
+  it("runs the logical daily 03:00 housekeeping slot on its staggered trigger", async () => {
     const { ctx, waits } = makeExecutionContext();
     const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
     });
 
     await worker.scheduled(
-      { cron: "0 3 * * *" } as ScheduledEvent,
+      { cron: "3 3 * * *" } as ScheduledEvent,
       env,
       ctx,
     );
@@ -1197,27 +1218,30 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
-  it("runs the extended mint/burn lane on the offset 30-min slot", async () => {
-    const { ctx, waits } = makeExecutionContext();
-    const env = makeScheduledEnv({
-      ALCHEMY_API_KEY: "alchemy-key",
-    });
+  it.each(["18 * * * *", "48 * * * *"])(
+    "runs the extended mint/burn lane on physical trigger %s",
+    async (cron) => {
+      const { ctx, waits } = makeExecutionContext();
+      const env = makeScheduledEnv({
+        ALCHEMY_API_KEY: "alchemy-key",
+      });
 
-    await worker.scheduled(
-      { cron: "18,48 * * * *" } as ScheduledEvent,
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
+      await worker.scheduled(
+        { cron } as ScheduledEvent,
+        env,
+        ctx,
+      );
+      await Promise.all(waits);
 
-    expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
-    const extendedCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
-    expect(extendedCall?.[2]).toMatchObject({
-      lane: "extended",
-      jobName: "sync-mint-burn-extended",
-    });
-    expect(cronMocks.refreshAggregateMintBurnFlowCache).not.toHaveBeenCalled();
-    expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
-    expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
-  });
+      expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
+      const extendedCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
+      expect(extendedCall?.[2]).toMatchObject({
+        lane: "extended",
+        jobName: "sync-mint-burn-extended",
+      });
+      expect(cronMocks.refreshAggregateMintBurnFlowCache).not.toHaveBeenCalled();
+      expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
+      expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
+    },
+  );
 });

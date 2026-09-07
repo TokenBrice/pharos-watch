@@ -22,7 +22,7 @@ vi.mock("@shared/lib/redemption-backstop-configs", () => ({
 import { fetchCuratedValidatedReserves } from "../curated-validated";
 import { makeOnchainCallers, probeTrackedTokenSupply } from "../helpers";
 
-const signal = AbortSignal.timeout(5000);
+import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 
 function makeCoin(
   reserves?: ReserveSlice[],

@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Mento reserve holding AUSD, sUSDS, CELO, USDT, EURC, USDC, stETH, and ETH; reserve composition is pulled from the live Mento reserve API and changes over time.",
+  "collateral": "Mento reserve backing is based on the live Mento reserve API composition, which changes over time.",
   "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
   "llamaId": "24",
   "detailProvider": "defillama",
@@ -20,8 +20,8 @@
     "cadence": "real-time",
     "provider": "Mento Reserve dashboard",
     "latestReport": {
-      "periodEnd": "2026-07-27",
-      "publishedAt": "2026-07-27",
+      "periodEnd": "2026-09-04",
+      "publishedAt": "2026-09-04",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -29,11 +29,11 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Mento reserve overview as of July 15, 2026",
+          "label": "Mento reserve overview as of September 4, 2026",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
         },
         {
-          "label": "Mento reserve asset ledger as of July 15, 2026",
+          "label": "Mento reserve asset ledger as of September 4, 2026",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
@@ -109,30 +109,7 @@
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     },
-    "params": {
-      "redemption": {
-        "kind": "broker-pool",
-        "pools": [
-          {
-            "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
-            "counterAsset": {
-              "address": "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
-              "label": "USDC"
-            }
-          },
-          {
-            "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
-            "counterAsset": {
-              "address": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
-              "label": "USDT"
-            }
-          }
-        ],
-        "sourceUrls": [
-          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
-        ]
-      }
-    }
+    "params": {}
   },
   "launchDate": "2020-04-22",
   "mechanismArchetype": "fiat-cash",

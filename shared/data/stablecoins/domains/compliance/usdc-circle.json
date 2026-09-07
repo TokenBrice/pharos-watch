@@ -8,11 +8,11 @@
     "authorizedEntity": "Circle Internet Financial Europe SAS",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register – Issuers of EMTs (EMTWP.csv)",
+        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Circle – First Global Stablecoin Issuer to Comply with MiCA (Business Wire, 1 Jul 2024)",
+        "label": "Circle is First Global Stablecoin Issuer to Comply with MiCA (Business Wire, 1 Jul 2024)",
         "url": "https://www.businesswire.com/news/home/20240701820713/en/Circle-is-First-Global-Stablecoin-Issuer-to-Comply-with-MiCA-EU%E2%80%99s-Landmark-Crypto-Law"
       },
       {
@@ -40,7 +40,7 @@
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "latestReportDate": "2026-04-30",
-    "notes": "Circle received conditional OCC approval on Dec 12 2025 for First National Digital Currency Bank, N.A. — a federal-qualified-nonbank trust charter pathway consistent with the GENIUS Act framework. This is a conditional charter under existing OCC authority, not a PPSI approval; GENIUS Act rulemaking remains in proposed-rules phase with no approvals granted. Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "notes": "Circle received conditional OCC approval on Dec 12 2025 for First National Digital Currency Bank, N.A.: a federal-qualified-nonbank trust charter pathway consistent with the GENIUS Act framework. This is a conditional charter under existing OCC authority, not a PPSI approval; GENIUS Act rulemaking remains in proposed-rules phase with no approvals granted. Pharos found no token-specific public GENIUS PPSI approval as of review.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -48,7 +48,7 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Circle – OCC Conditional Approval for National Trust Charter (Business Wire, 12 Dec 2025)",
+        "label": "Circle Receives Conditional Approval from OCC for National Trust Charter (Business Wire, 12 Dec 2025)",
         "url": "https://www.businesswire.com/news/home/20251210456415/en/Circle-Receives-Conditional-Approval-from-OCC-for-National-Trust-Charter",
         "sourceKind": "issuer-disclosure"
       },

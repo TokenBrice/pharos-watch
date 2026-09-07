@@ -5,7 +5,7 @@ import {
   resolveCostScenarioScores,
   resolveBoundedFeeScore,
   resolveRedemptionStaticFields,
-} from "../redemption-backstop-cost";
+} from "../redemption-backstop/cost";
 
 describe("resolveBoundedFeeScore", () => {
   it("scores 0 bps as 100", () => {

@@ -20,10 +20,9 @@ One generator, one composition, two editions selected by `--edition`.
 | Trigger | Unattended, by the refresh workflow | Deliberate, by an operator |
 | Date treatment | Once in the footer | Issue lockup in the masthead plus footer provenance (the month reaches the archive name and alt text, not the poster) |
 | Default basename | `safety-score-map-latest` | `safety-score-map-<YYYY-MM>` |
-| Movers window | Since the previous snapshot | Month-boundary snapshots |
 | Published to | KV, and therefore the live route | Not published by any automation |
 
-The monthly edition is never inferred from the data clock. Archive and output naming use the **UTC run date**; visible date provenance uses the report-card capture clock (`asOfSec`). Without that split, a run on the first of a month over the previous month's data would file itself under the wrong month and collide with the existing monthly archive. The Movers window names the snapshot comparison baseline; that comparison currently feeds the delta guard and is not yet rendered on the poster.
+The monthly edition is never inferred from the data clock. Archive and output naming use the **UTC run date**; visible date provenance uses the report-card capture clock (`asOfSec`). Without that split, a run on the first of a month over the previous month's data would file itself under the wrong month and collide with the existing monthly archive.
 
 `--issue <n>` supplies the monthly issue number; it is a positive integer and applies to the monthly lockup only.
 
@@ -33,7 +32,7 @@ The monthly edition is never inferred from the data clock. Archive and output na
 
 Data comes from the keyed maintenance API — the V9 report cards, stablecoin list, and current Stability Index response — so `PHAROS_API_KEY` is required (env or `.env.local`), with `PHAROS_API_BASE` as an optional origin override. Supply is read through `getCirculatingRaw()` and treated as already USD-denominated. The PSI footer follows the same display rule as the Stability Index page: the rolling 24-hour level and band when both are available, labeled `24H AVG`; otherwise the raw current sample is labeled `RAW`. A missing, malformed, future-dated, or stale PSI reading fails the render instead of publishing an old regime.
 
-Beside the PNG, sharing its basename, the run writes `.svg` and `.html` (the rendered scene and its screenshot host), `.alt.json` (alt text plus the per-tier table), `.snapshot.json` (per-coin `{id, symbol, score, grade, mcap}` under a header of `{edition, date, publicationStatus, asOfSec, renderedAtSec, methodologyVersion, counts, mapSummary}`), and `.manifest.json`. The snapshot is both the movers baseline and the next run's delta-guard input.
+Beside the PNG, sharing its basename, the run writes `.svg` and `.html` (the rendered scene and its screenshot host), `.alt.json` (alt text plus the per-tier table), and `.manifest.json` (publication provenance, render counts, and the public `mapSummary`). The map keeps no historical score snapshot because comparing score movements is outside the renderer's responsibility.
 
 Every figure on the poster is computed from the fetched data. No headline number is a literal — under an unattended daily cadence a hardcoded figure becomes a published falsehood within days.
 
@@ -47,7 +46,7 @@ The two largest A-tier circles form one tangent hero pair whose area-weighted vi
 
 The generator exits non-zero rather than publishing something wrong. All of these are unconditional:
 
-- **Freshness and publication status.** The report-card capture must be future-free and under 48 hours old (the exact 48-hour boundary fails), and the API must label it `current`. The PSI sample must also be future-free and stay within the shared Stability Index endpoint freshness budget. A stalled or held producer must fail the job, not publish old scores or an old PSI regime under today's date.
+- **Canonical inputs.** Report cards must satisfy the canonical API schema. Their publication status and capture time are preserved as provenance but do not gate rendering: a valid held or aged Safety Score publication still renders. The PSI sample must remain future-free and within the shared Stability Index endpoint freshness budget because the poster presents it as current context.
 - **Input hygiene.** The response must have unique card IDs, finite scores in range, exact grade vocabulary, and score/grade agreement. Negative finite supply buckets fail closed before the supply join.
 - **Join coverage.** At least 95% of graded cards must join a list row with real supply, or the map is drawing legibility floors instead of data.
 - **Grade vocabulary.** An unrecognized grade letter fails; a silently dropped tier is worse than no map.
@@ -57,24 +56,16 @@ The generator exits non-zero rather than publishing something wrong. All of thes
 - **Fonts.** Each family is checked explicitly; `document.fonts.ready` resolves even when a face fails, and fallback metrics visibly change the publication typography.
 - **Raster size.** The screenshot must come back at exactly 3200x1800 (1600x900 at `deviceScaleFactor: 2`).
 
-One guard is skippable: the **day-over-day delta guard**, armed by `--previous-snapshot <path>`. It fails the run when the graded count falls more than 2% or the not-rated count moves more than 5 against the prior snapshot, and also checks per-tier counts, per-coin grade transitions, tier and leader supply, join identity, and missing-logo count. A missing path or no supplied baseline skips it with a warning, so a first run can bootstrap; a present but malformed baseline fails closed rather than being treated as absent.
-
-The tier-leader check tolerates an explained swap: a new tier leader passes when the prior snapshot's census already recorded the coin and its own supply moved within the same 25% tolerance. Near-tied coins trade the top spot on ordinary market movement (2026-08-29: a ~0.6% BUIDL/USYC gap in tier C flipped, failed both scheduled runs, and shipped the digest without the map), and a failed run never advances the snapshot baseline, so a hard identity check kept failing against the same stale leader. A leader the previous census never saw, or one whose supply moved more than 25%, still fails closed as a suspected join or scoring fault.
-
-An operator may accept a reviewed methodology or census transition through the manual workflow's `accept_snapshot_transition` input. The publication planner permits that flag only on `workflow_dispatch`, requires the current live snapshot to be readable, and records the acceptance in the run state and summary. The renderer still parses and validates that snapshot against the full current publication contract, then skips only the day-over-day comparisons; freshness, finite geometry, composition, header clearance, font, and raster-size guards remain mandatory. Scheduled runs cannot use this path, and normal tolerances are unchanged.
-
-The join-identity check applies only to coins present in both snapshots, and tolerates immaterial flips: a coin whose joined state changes in either direction (supply crossing zero, or its list row appearing/disappearing) is warned about and published from the current supply state — a coin that lost its join draws at the size floor, one that regained it draws at its real size — rather than failing the run, as long as at most 3 coins flip and their combined supply stays under 0.1% of the previous snapshot's mapped supply. Beyond either bound the run still fails closed. Census additions and removals are deliberately not join flips — they are bounded by the graded-count, tier-count, tier-supply and leader checks instead. The original check counted them, which failed the run the day after any coin entered the census (2026-08-26: `hollar-hydrated` moving NR → graded under methodology 9.44 blocked that day's publication and digest map) — and, because a failed run never advances `safety-map:snapshot:latest`, every later run kept failing against the same stale baseline until the census change was accommodated in code.
+There is deliberately no day-over-day score, grade, tier, leader, census, supply-movement, or missing-logo comparison. The Safety Score publication pipeline and its history own movement validation; the map's single responsibility is to render the canonical publication it receives. This prevents legitimate scoring or methodology changes from blocking the presentation surface.
 
 ## Publication
 
-`.github/workflows/safety-map-refresh.yml` owns checkout, credentials, scheduling, and artifact upload. `scripts/maintenance/publish-safety-score-map.ts` owns the tested operational state machine through explicit `plan`, `render`, `publish`, and `summary` phases. `plan --dry-run` inspects live KV state and prints the same-day decision without rendering or writing KV; it still requires the purpose-scoped KV credentials because a useful plan cannot guess at live state.
+`.github/workflows/safety-map-refresh.yml` owns checkout, credentials, scheduling, and artifact upload. Its lightweight `plan` job inspects live KV with Node but no browser, emits `should_render` and an immutable plan token, and hands the state to the browser-enabled `render` job only when rendering is needed. `scripts/maintenance/publish-safety-score-map.ts` owns the tested operational state machine through explicit `plan`, `render`, `publish`, and `summary` phases; the workflow passes the plan token to render and publish so a stale plan cannot publish.
 
-The workflow reads `safety-map:snapshot:latest` to arm the delta guard, renders the daily edition, builds a KV manifest from the snapshot header, and publishes. Key order is load-bearing:
+The workflow reads the live manifest only in the plan-before-browser phase to decide whether a scheduled slot has already produced a sufficiently fresh same-day map. When needed, the render job installs Playwright/Firefox, renders the daily edition, builds the compact KV manifest from the renderer's manifest sidecar, and publishes. Key order is load-bearing:
 
 | Key | Contents |
 | --- | --- |
-| `safety-map:snapshot:YYYY-MM-DD` | Dated snapshot, archival |
-| `safety-map:snapshot:latest` | Rolling pointer, read by the next run |
 | `safety-map:alt:latest` | Alt text and the per-tier table |
 | `safety-map:YYYY-MM-DD.png` | Dated image — the URL the digest embeds |
 | `safety-map:latest.png` | Same bytes, stable URL for the site |
@@ -90,13 +81,13 @@ Failure surfaces as a red run and a GitHub notification. It does **not** page an
 
 `vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, which deploys production Pages and is used only from workflows running under the `production` environment protection that this unattended job does not have.
 
-The workflow runs on two daily schedules, 04:20 and 06:20 UTC, and also supports `workflow_dispatch`. GitHub delays scheduled runs by up to about an hour under load (observed: 47 minutes on 2026-08-24, which made the original single 07:20 slot miss that day's digest; 53 minutes on 2026-08-26), so a single slot leaves exactly one attempt before the 08:05 UTC digest cron. The 04:20 attempt normally publishes; the 06:20 attempt retries after a failed or delayed first run and exits early — rendering and writing nothing — when the live manifest already carries today's date with data fresh enough (`asOfSec` under 6 hours) to clear the digest's own 24-hour staleness gate. Manual dispatches never take that early exit, so an operator can always supersede a bad same-day poster; selecting `accept_snapshot_transition` is reserved for a separately reviewed baseline transition and remains visible in the workflow summary.
+The workflow runs on three daily schedules, 02:20, 04:20, and 06:20 UTC, and also supports `workflow_dispatch`. GitHub delays scheduled runs by up to about an hour under load (observed: 47 minutes on 2026-08-24, which made the original single 07:20 slot miss that day's digest; 53 minutes on 2026-08-26), so a single slot leaves exactly one attempt before the 08:05 UTC digest cron. A later scheduled slot exits early — rendering and writing nothing — when the live manifest already carries today's date with data under six hours old. Manual dispatches never take that early exit, so an operator can always supersede a bad same-day poster.
 
 ## Serving
 
 `functions/safety-scores/map.png.ts` serves `/safety-scores/map.png` from KV. `GET` and `HEAD` only; HEAD answers exactly as GET does minus the body, because several social platforms probe an image URL with HEAD before fetching it.
 
-`functions/safety-scores/map.json.ts` serves the manifest commit marker at `/safety-scores/map.json` with `no-store`. The daily digest reads this bounded endpoint to validate publication date and data freshness without adding the Pages KV namespace to the API Worker. Missing, malformed, or unreachable manifest state fails closed: the digest is withheld until a fresh map publishes (see the digest map gate below).
+`functions/safety-scores/map.json.ts` serves the manifest commit marker at `/safety-scores/map.json` with `no-store`. The daily digest reads this bounded endpoint to validate publication date and data freshness without adding the Pages KV namespace to the API Worker. A same-day manifest is current; when publication is late, the newest manifest up to two whole UTC days old may be carried forward. Missing, malformed, unreachable, or older state makes the map attachment unavailable, but never withholds the digest itself (see the bounded carry-forward pairing below).
 
 `?date=YYYY-MM-DD` selects the dated archive, validated against a strict pattern; anything else is a 400. The Function never lists the namespace and never accepts a caller-supplied key fragment beyond the date. The archive lives on a query parameter rather than a nested path segment so it cannot shadow the static `/safety-scores/map/` page; Cloudflare includes the query string in the default cache key, so the two remain distinct cache entries.
 
@@ -106,31 +97,31 @@ Cache headers differ by resource: `latest.png` gets a short edge TTL with a long
 
 The page at `src/app/safety-scores/map/page.tsx` embeds the image with a download link and prose on how to read it. `src/app/safety-scores/map/poster.tsx` swaps in an explanatory panel on image error, so both the local-development state (no Pages Function exists under `next dev`) and the post-kill-switch state read as deliberate rather than broken.
 
-## Digest Map Gate (Fail Closed)
+## Digest Map Pairing (Bounded Carry-Forward)
 
-The digest ships with the map **iff all four hold**:
+The digest attaches a map when all four hold:
 
 1. `safety-map:latest.json` exists,
-2. `manifest.date` is today (UTC), and
-3. `manifest.asOfSec` is under 24 hours old, and
-4. a HEAD probe confirms that today's dated PNG exists and is served as `image/png`.
+2. `manifest.date` is the requested UTC date or no more than two whole UTC days older,
+3. `manifest.asOfSec` is future-free and under 72 hours old, and
+4. a HEAD probe confirms that the dated PNG for `manifest.date` exists and is served as `image/png`.
 
-It embeds the **dated** URL, never `latest.png`. Telegram and X cache by URL, so a stable URL lets their CDNs keep serving a superseded image and makes a bad poster unrecallable. With dated URLs, rollback is simply "the next post uses a new URL".
+It embeds the **dated** URL built from `manifest.date`, never `latest.png`. Telegram and X cache by URL, so a stable URL lets their CDNs keep serving a superseded image and makes a bad poster unrecallable. With dated URLs, rollback is simply "the next post uses a new URL". A carried-forward attachment and its channel captions name the date the poster actually depicts; only a current attachment is described as today's map.
 
 When available, X downloads the PNG, uploads it through the OAuth 1.0a media endpoint, and references the returned media id on the digest post. Telegram stores the canonical dated link inside the immutable outbox payload and requests a large link preview above the message. This preserves Telegram's exact-payload replay and accepted-chunk cursor contracts without creating a separate photo send.
 
-In any other state the digest is withheld, not posted text-only: `generateDailyDigest` defers before generating (no row, no LLM call, no post), records a `digest:safety-map-deferral` intent, and the `digestTriggerPoll` slot retries every five minutes until the map publishes — see [digest-pipeline.md](./digest-pipeline.md#distribution). A day whose map never publishes rolls over with its digest deliberately unsent (`daily_digest_unsent_safety_map_never_published`). An X media-upload failure after the gate passed retries once and then aborts the tweet as a retryable definitive failure; it never falls back to a text-only post.
+If any condition fails, the digest still generates and delivers without the map attachment or map prose; map unavailability is not a digest precondition. The resolver reports the bounded reason (`manifest-too-old`, HTTP/read failure, or image probe failure) for observability, while a valid carried-forward manifest keeps the dated attachment available. An X media-upload failure after the pairing check remains a channel-local retryable definitive failure; it does not withhold the digest or the other channel.
 
 ## Kill Switch
 
 Three levers, in increasing order of what has already escaped:
 
 1. **Stop generating.** `gh workflow disable safety-map-refresh.yml`. Previously published keys stay live and served.
-2. **Stop serving the image.** Delete `safety-map:latest.png` **and today's dated key** (`safety-map:YYYY-MM-DD.png`), then run `.github/workflows/purge-pages-zone-cache.yml`. The Function then returns 404 with `no-store` and the page renders its unavailable panel. No Pages release is required.
+2. **Stop serving the image.** Delete `safety-map:latest.png` and today's dated key plus any dated keys still eligible for the two-day carry-forward window, then run `.github/workflows/purge-pages-zone-cache.yml`. The Function then returns 404 with `no-store` and the page renders its unavailable panel. No Pages release is required.
 
    The purge is not optional. `latest.png` is served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.
 
-   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the Function never reads the manifest, so the image keeps serving. What the manifest controls is the digest's map gate (see above) — and because that gate fails closed, deleting the manifest also **holds the daily digest itself** until a fresh map publishes or the date rolls over unsent. Delete the manifest to pull the map (and the digest) from social channels; delete the PNG keys to stop it appearing on the site. To stop both, delete all three.
+   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the Function never reads the manifest, so the image keeps serving. What the manifest controls is whether the digest carries a map (see above); deleting it removes the map attachment but does **not** hold the digest. Delete the manifest to pull the map from social channels; delete the PNG keys to stop it appearing on the site. To stop both, delete all three.
 3. **A bad image is already live and scraped.** Re-render, overwrite the keys, and run `.github/workflows/purge-pages-zone-cache.yml`. Social CDNs that already hold the dated URL are not recallable — this is why the digest embeds dated URLs, so the next post simply supersedes.
 
 ## Related

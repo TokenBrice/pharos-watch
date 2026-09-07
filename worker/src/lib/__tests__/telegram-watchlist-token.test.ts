@@ -2,7 +2,7 @@ import searchableCoinsAsset from "@shared/data/stablecoins/coins.telegram-mini-a
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { describe, expect, it } from "vitest";
 
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../telegram-constants";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../telegram/constants";
 import {
   decodeWatchlistToken,
   encodeWatchlistTokenV3,
@@ -10,7 +10,7 @@ import {
   WATCHLIST_TOKEN_REGISTRY_VERSION,
   type WatchlistTokenDirectState,
   type WatchlistTokenV2State,
-} from "../telegram-watchlist-token";
+} from "../telegram/watchlist-token";
 
 // Byte-identical to the historical V1 wire literal; built via the independent
 // test-local encoder so secret scanners do not flag the high-entropy string.

@@ -25,7 +25,7 @@ Review the resolver and its inputs:
 
 ```bash
 # Source-of-truth for resolver behavior
-worker/src/lib/telegram-presets.ts
+worker/src/lib/telegram/presets.ts
 # Specifically: resolveTelegramPresetTargets
 ```
 

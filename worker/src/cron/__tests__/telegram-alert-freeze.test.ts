@@ -3,9 +3,10 @@ import { loadFreshFreezeAlerts } from "../telegram-alert-freeze";
 import { dispatchFreezeAlertOutbox } from "../telegram-freeze-outbox";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function db(rows: unknown[], latestRun: number | null): D1Database {
-  return {
+  return makeNoopD1({
     prepare(sql: string) {
       return {
         bind() { return this; },
@@ -17,7 +18,7 @@ function db(rows: unknown[], latestRun: number | null): D1Database {
         all: async () => ({ results: rows }),
       };
     },
-  } as unknown as D1Database;
+  });
 }
 
 describe("freeze Telegram source gate", () => {

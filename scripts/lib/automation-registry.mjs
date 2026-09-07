@@ -1,3 +1,4 @@
+import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "./safety-score-v9-evaluation-inputs.mts";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
 import { createRequire } from "node:module";
 
@@ -105,7 +106,14 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
-    sourcePaths: ["shared/data/stablecoins/coins/**", "shared/data/stablecoins/domains/**"],
+    sourcePaths: [
+      "shared/data/stablecoins/coins/**",
+      "shared/data/stablecoins/domains/**",
+      "shared/data/stablecoins/canonical-order.json",
+      "shared/lib/stablecoins/**",
+      "shared/types/**",
+      "scripts/lib/stablecoin-catalog-sources.ts",
+    ],
   }),
   generatedArtifact({
     id: "agents-doc",
@@ -175,7 +183,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-depeg-event-search-data.ts",
-    sourcePaths: ["data/depeg-events.json", "src/lib/depeg-event-config.ts"],
+    sourcePaths: ["data/depeg-events/**", "src/lib/depeg-event-config.ts"],
   }),
   generatedArtifact({
     id: "postman",
@@ -244,9 +252,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     sourcePaths: [
-      "shared/lib/safety-score-v9/**",
-      "shared/types/safety-score-v9*.ts",
-      "worker/src/lib/safety-score-v9*.ts",
+      ...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "scripts/lib/safety-score-v9-evaluation-inputs.mts",
+      "scripts/lib/mechanism-measurement/capture-summary.ts",
+      "scripts/lib/mechanism-measurement/shock-schema.ts",
+      "shared/data/safety-score-v9/mechanism-measurements/**/*.summary.json",
     ],
   }),
   generatedArtifact({
@@ -261,6 +271,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-report-card-registry-fingerprint.ts",
     sourcePaths: [
+      "scripts/lib/report-card-registry-fingerprint.ts",
       "shared/data/stablecoins/coins.generated.json",
       "shared/data/stablecoins/canonical-order.json",
       "shared/data/dead-stablecoins.json",
@@ -292,14 +303,22 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     bootstrap: true,
     dependsOn: ["stablecoin-catalog"],
     outputPaths: [
-      "shared/data/stablecoins/coins.client.generated.json",
+      "shared/data/stablecoins/coins.client.list.generated.json",
+      "shared/data/stablecoins/coins.client.detail",
       "shared/data/stablecoins/coins.compliance.generated.json",
       "shared/data/stablecoins/coins.telegram-mini-app.generated.json",
+      "shared/data/stablecoins/coins.worker-runtime.generated.json",
     ],
     phase: 1,
     reproducibility: "deterministic",
     script: "scripts/build-data/build-client-registry.mjs",
-    sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
+    sourcePaths: [
+      "shared/data/stablecoins/canonical-order.json",
+      "shared/data/stablecoins/coins.generated.json",
+      "shared/data/stablecoins/listing-decisions.json",
+      "shared/types/stablecoin-client-meta.ts",
+      "scripts/lib/ts-ast.mts",
+    ],
   }),
   generatedArtifact({
     id: "stablecoin-client-projections",
@@ -329,6 +348,28 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     ],
   }),
   generatedArtifact({
+    id: "stablecoin-detail-snapshots",
+    buildLifecycle: "compile-input",
+    checkCommand: "PHAROS_DETAIL_SNAPSHOT_CHECK=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    command: "node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    bootstrapCommand: "PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    bootstrap: true,
+    dependsOn: ["stablecoin-catalog"],
+    outputPaths: ["src/generated/stablecoin-detail-snapshots"],
+    phase: 1,
+    reproducibility: "network-derived",
+    script: "scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    sourcePaths: [
+      "scripts/lib/sync-from-api.ts",
+      "shared/data/stablecoins/coins.generated.json",
+      "shared/lib/api-endpoints/paths.ts",
+      "shared/types/market.ts",
+      "src/lib/api-query-descriptors.ts",
+      "worker/src/api/stablecoin-detail.ts",
+      "worker/src/api/stablecoin-detail/**",
+    ],
+  }),
+  generatedArtifact({
     id: "cemetery-dataset",
     buildLifecycle: "maintenance-only",
     autoStage: true,
@@ -339,12 +380,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-cemetery-dataset.ts",
-    sourcePaths: ["shared/data/dead-stablecoins.json", "shared/lib/cemetery*.ts"],
+    sourcePaths: ["shared/data/dead-stablecoins.json", "shared/lib/cemetery*.ts", "data/logos.json"],
   }),
   generatedArtifact({
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
-    autoStage: true,
+    autoStage: false,
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
@@ -352,7 +393,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",
-    sourcePaths: ["shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
+    sourcePaths: ["data/depeg-events/**", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
   }),
   generatedArtifact({
     id: "llms-txt",
@@ -398,26 +439,55 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["src/data/changelogs/*.ts"],
   }),
   generatedArtifact({
+    id: "editorial-style",
+    buildLifecycle: "compile-input",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/generate-editorial-style.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-editorial-style.ts",
+    outputPaths: ["shared/lib/editorial-style.generated.ts"],
+    phase: 2,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-editorial-style.ts",
+    sourcePaths: ["docs/editorial-style.md"],
+  }),
+  generatedArtifact({
     id: "og-editorial",
     buildLifecycle: "maintenance-only",
     checkCommand: "node scripts/maintenance/build-og-editorial.mjs --check",
     command: "node scripts/maintenance/build-og-editorial.mjs",
-    outputPaths: ["public/og-*.png", "scripts/maintenance/state/og-editorial-signatures.json"],
+    outputPaths: ["public/og-editorial-*.png", "scripts/maintenance/state/og-editorial-signatures.json"],
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-editorial.mjs",
-    sourcePaths: ["scripts/maintenance/state/og-editorial-signatures.json", "src/app/**"],
+    sourcePaths: [
+      "scripts/lib/og-image-checks.mts",
+      "scripts/lib/og-static-runner.mts",
+      "scripts/maintenance/build-og-editorial.mjs",
+      "scripts/maintenance/state/og-editorial-signatures.json",
+      "src/app/**",
+      "src/assets/fonts/*.woff2",
+      "shared/lib/methodology-versions/current-version.json",
+    ],
   }),
   generatedArtifact({
     id: "og-learn",
     buildLifecycle: "maintenance-only",
-    checkCommand: "tsx scripts/maintenance/build-og-learn-images.ts --check",
-    command: "tsx scripts/maintenance/build-og-learn-images.ts",
-    outputPaths: ["agents/og-learn-staging/og-learn-*.svg", "public/og-learn-*.png"],
+    checkCommand: "node --import tsx scripts/maintenance/build-og-learn-images.ts --check",
+    command: "node --import tsx scripts/maintenance/build-og-learn-images.ts",
+    outputPaths: [
+      "agents/og-learn-staging/og-learn-*.svg",
+      "public/og-learn-*.png",
+      "scripts/maintenance/state/og-learn-signatures.json",
+    ],
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-learn-images.ts",
     sourcePaths: [
+      "scripts/lib/og-image-checks.mts",
+      "scripts/lib/og-static-runner.mts",
+      "scripts/maintenance/build-og-learn-images.ts",
+      "scripts/maintenance/state/og-learn-signatures.json",
+      "src/assets/fonts/*.woff2",
       "src/components/stablecoin-detail/mechanism-diagrams/**",
       "src/lib/mechanism-explainer-registry.ts",
     ],
@@ -425,14 +495,35 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "og-case-studies",
     buildLifecycle: "maintenance-only",
-    checkCommand: "tsx scripts/maintenance/build-og-case-studies.ts --check",
-    command: "tsx scripts/maintenance/build-og-case-studies.ts",
+    checkCommand: "node --import tsx scripts/maintenance/build-og-case-studies.ts --check",
+    command: "node --import tsx scripts/maintenance/build-og-case-studies.ts",
     dependsOn: ["cemetery-dataset"],
     outputPaths: ["public/og-learn-case-*.png", "scripts/maintenance/state/og-case-study-signatures.json"],
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-case-studies.ts",
-    sourcePaths: ["data/logos.json", "public/datasets/stablecoin-cemetery.json", "src/lib/case-studies/**"],
+    sourcePaths: [
+      "data/logos.json",
+      "public/datasets/stablecoin-cemetery.json",
+      "scripts/lib/og-image-checks.mts",
+      "scripts/lib/og-static-runner.mts",
+      "scripts/maintenance/build-og-case-studies.ts",
+      "scripts/maintenance/state/og-case-study-signatures.json",
+      "src/assets/fonts/*.woff2",
+      "src/lib/case-studies/**",
+    ],
+  }),
+  generatedArtifact({
+    id: "compact-logos",
+    buildLifecycle: "maintenance-only",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/generate-compact-logos.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-compact-logos.ts",
+    outputPaths: ["public/logos/compact/**", "src/lib/logo-variants.generated.json"],
+    phase: 3,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-compact-logos.ts",
+    sourcePaths: ["public/logos/*.{png,jpg,jpeg,webp}"],
   }),
 ];
 
@@ -573,7 +664,9 @@ export function buildGeneratedArtifactPhases({
   const phaseGroups = new Map();
 
   for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, only, phases: phaseFilters })) {
-    const command = check && artifact.checkCommand ? artifact.checkCommand : artifact.command;
+    const command = check && artifact.checkCommand
+      ? artifact.checkCommand
+      : (bootstrap ? artifact.bootstrapCommand ?? artifact.command : artifact.command);
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });
     phaseGroups.set(artifact.phase, phaseArtifacts);

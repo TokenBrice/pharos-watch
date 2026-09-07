@@ -2,7 +2,7 @@
 
 Reference for adding a tracked asset to Pharos.
 
-Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
+Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the maintained agent skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-identity-contracts`, `reserve-research`, `compliance-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`) remain optional workflow aids. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
 
 > Completion gate: do not consider the job done until every phase below has been evaluated. The minimum committed diff is the per-coin registry JSON, `shared/data/stablecoins/canonical-order.json`, `shared/data/stablecoins/listing-decisions.json`, `data/logos.json`, `data/ai-summaries.json`, the hand-edited couplings and test snapshots in Phase 4a and 4b, and the checked-in registry-derived artifacts in Phase 4c. The regenerated `shared/data/stablecoins/coins.generated.json` is required for the build and the checks but is gitignored, so it never appears in the diff. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Mint Authority, Bluechip, Safety Score V9 scoreability, and history-backfill branches.
 
@@ -23,7 +23,8 @@ Useful repo references before editing:
 
 - `docs/classification.md`
 - `docs/listing-policy.md`
-- `docs/data-pipeline.md`
+- `docs/pricing-pipeline.md`
+- `docs/supply-snapshot.md`
 - `docs/live-reserves.md`
 - `docs/yield-intelligence.md`
 - `docs/redemption-backstops.md`
@@ -45,7 +46,7 @@ Useful repo references before editing:
 - For an existing coin with a research sidecar, update the sidecar and keep every field owned by that domain out of the base file. Do not create sidecars for unrelated scalar metadata.
 - Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin metadata edits; do not edit the generated aggregate by hand.
 - New keys in `data/logos.json` and `data/ai-summaries.json` must use canonical stablecoin IDs; existing keys are canonical today, though many logo values still point at legacy numeric filenames such as `/logos/1-usdt.svg`.
-- Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
+- Do not add manual supply overrides. Pharos uses DefiLlama first, then the reviewed fail-closed fallback paths in [Supply Snapshot](../supply-snapshot.md#supply-data-source).
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
 - Keep `reserves[]` curated even when `liveReservesConfig` exists. Curated reserves still drive dependency inference and fallback views.
 - Use only chain IDs that already exist in `shared/lib/chains/index.ts`.
@@ -135,14 +136,14 @@ Do the research manually, or use the maintained skills when they match the task:
 
 - `stablecoin-addition-orchestrator`: run the full phase checklist and coordinate the supporting skills.
 - `stablecoin-runtime-price-marketcap-gate`: prove the hard active-asset price and market-cap path from Phase 1a.
-- `stablecoin-info-fetch`: audit/populate a single coin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts).
-- `contract-populate` / `contract-enrich`: resolve `contracts[]` across chains from CoinGecko + DefiLlama + explorer verification.
+- `stablecoin-addition-orchestrator`: gather generic scalar metadata and route the full phase checklist.
+- `stablecoin-identity-contracts`: verify `geckoId`, populate known deployments, or discover missing chain coverage.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
+- `compliance-research`: research `genius`, `mica`, or both into the compliance sidecar.
 - Mint Authority does not have a publication skill yet. Use the Phase 5f review rubric below; `scripts/maintenance/audit-mint-authority.ts` is only a local candidate producer.
-- `write-ai-summaries` (Claude-only): draft or refresh the `data/ai-summaries.json` entry.
+- `write-ai-summaries`: draft or refresh the `data/ai-summaries.json` entry.
 - `resilience-classify`: pick `collateralQuality` and `custodyModel` overrides.
-- `pre-launch-update` (Claude-only): refresh milestones, launch phase, and featured content for pre-launch entries.
-- `coingecko-id-verif`: confirm a `geckoId` resolves to the correct asset before saving.
+- `pre-launch-update`: refresh milestones, launch phase, and featured content for pre-launch entries.
 
 These skills do not replace review — they are research scaffolding. Always verify the output against official sources before editing the registry.
 
@@ -707,6 +708,7 @@ Notes:
 - `data/logos.json` keys are canonical stablecoin IDs today, though some values still point at legacy numeric filenames such as `/logos/1-usdt.svg`. Ignore that for new work.
 - `scripts/maintenance/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
+- Oversized tracked logos (over 64px in either dimension and over 2500 bytes) also need a compact 32x32 WebP derivative. These are checked-in generated artifacts owned by the `compact-logos` registry entry: staging a `public/logos/*.{png,jpg,jpeg,webp}` source regenerates and stages `public/logos/compact/**` plus `src/lib/logo-variants.generated.json` automatically via the pre-commit hook, `npm run logos:compact` regenerates them manually (pruning orphans), and `npm run check:generated-artifacts -- --only=compact-logos` verifies freshness. Two source logos sharing one basename (for example `foo.png` and `foo.jpg`) collide on `compact/foo.webp` and are rejected — keep basenames unique.
 
 ### 6b. Editorial summary
 
@@ -789,19 +791,17 @@ For a normal stablecoin addition, generate the working-tree projections and run 
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
-npm test
-cd worker && npx tsc --noEmit
+npx vitest run shared/lib/__tests__/stablecoins.test.ts
+npm run typecheck:worker
 ```
 
-Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically — no separate settle step is required. Validate the committed snapshot:
+Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically and is not committed. Use the [smallest adequate checks](../testing.md#smallest-adequate-check-per-area) and the generated-artifact IDs selected by the router:
 
 ```bash
-npm run check:generated-artifacts
-npm run check:pr -- --base=origin/main
-npm run build
+npm run check:generated-artifacts -- --only=stablecoin-client-projections
 ```
 
-Commit the sitemap output separately or amend it into the source commit without changing the source author date. Run `check:stablecoin-data` first for fast feedback, then run the focused generated-artifact checks selected by the change. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
+Run `check:stablecoin-data` first for fast feedback, then the focused generated-artifact checks selected by the change. Run `npm run build` when rendering changed or an explicit production-build rehearsal is requested. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
 
 You can also run the individual checks directly when iterating:
 

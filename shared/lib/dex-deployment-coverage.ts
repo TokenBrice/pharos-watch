@@ -3,6 +3,14 @@ import { canonicalExitRouteScopedId } from "./exit-route-identity";
 import { getAddress } from "viem/utils";
 
 export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
+export type DexCensusAttemptResult =
+  | "observed_pools"
+  | "verified_no_pools"
+  | "bounded_pending"
+  | "provider_outage"
+  | "provider_non_exhaustive"
+  | "unsupported_scope";
+export type DexCensusEvidenceState = "current" | "missing" | "stale" | "superseded" | "invalid";
 export type DexDiscoveryProvider =
   | "coingecko"
   | "geckoterminal"
@@ -12,7 +20,34 @@ export type DexDiscoveryProvider =
   | "aquarius"
   | "tezos"
   | "icon-balanced"
-  | "kava-swap";
+  | "kava-swap"
+  | "osmosis-sqs"
+  | "noble-swap"
+  | "soroban-exhaustive"
+  | "btcusd-public-https";
+
+export type DexDiscoveryCrawlerLeafId =
+  | "coingecko"
+  | "geckoterminal"
+  | "dexscreener"
+  | "curve"
+  | "horizon"
+  | "aquarius"
+  | "tezos"
+  | "icon-balanced"
+  | "kava-swap"
+  | "cosmos";
+
+export interface DexDiscoveryProviderAdapter {
+  providerId: DexDiscoveryProvider;
+  lifecycle: "active" | "disabled";
+  supports(chain: string, address?: string): boolean;
+  scope: "exhaustive" | "supplemental";
+  requestCostMs: number;
+  executionOrder: number;
+  timeoutMs: number;
+  crawlerLeaf?: DexDiscoveryCrawlerLeafId;
+}
 
 /**
  * The chains on which Curve's getPools/all endpoint is queried and counts as a
@@ -68,6 +103,28 @@ export const ICON_BALANCED_BNUSD_DISCOVERY_ADDRESS = "cx88fd7df7ddff82f7cc735c87
 
 /** Canonical native Kava USDX deployment identity. */
 export const KAVA_SWAP_USDX_DISCOVERY_ADDRESS = "usdx";
+
+/**
+ * Cosmos bank denominations the two Cosmos census adapters can query.
+ *
+ * Osmosis' sidecar query server (`sqsprod.osmosis.zone`) and Noble's LCD both
+ * address a pool leg by its bank denom, so the registry identity is used
+ * verbatim. IBC hashes are case-sensitive on the wire and both chains are
+ * `type: "other"` in the chain registry, so `canonicalExitRouteScopedId` leaves
+ * them untouched — the census identity and the provider query string are the
+ * same string.
+ */
+const COSMOS_IBC_DENOM_RE = /^ibc\/[0-9A-F]{64}$/;
+const COSMOS_FACTORY_DENOM_RE = /^factory\/[a-z0-9]{8,90}\/[A-Za-z0-9._:-]{1,64}$/;
+const COSMOS_NATIVE_DENOM_RE = /^[a-z][a-z0-9]{1,63}$/;
+
+function isCosmosDiscoveryDenom(address: string): boolean {
+  return (
+    COSMOS_IBC_DENOM_RE.test(address) ||
+    COSMOS_NATIVE_DENOM_RE.test(address) ||
+    COSMOS_FACTORY_DENOM_RE.test(address)
+  );
+}
 
 /**
  * GeckoTerminal networks that are safe for the deployment census but are not
@@ -158,6 +215,32 @@ export function isKavaSwapDiscoveryDeployment(chain: string, address?: string): 
   return chain === "kava" && address?.trim().toLowerCase() === KAVA_SWAP_USDX_DISCOVERY_ADDRESS;
 }
 
+/**
+ * Whether an Osmosis deployment can be queried through the Osmosis sidecar
+ * query server's denom filter.
+ *
+ * The filter is served by Osmosis' own indexer across every pool module
+ * (balancer, stableswap, concentrated, CosmWasm), which is why the provider is
+ * registered exhaustive. `mantra` is deliberately not routed here: its Cosmos
+ * IBC denoms live on a different chain whose pools this index does not hold.
+ */
+export function isOsmosisSqsDiscoveryDeployment(chain: string, address?: string): boolean {
+  return chain === "osmosis" && address != null && isCosmosDiscoveryDenom(address.trim());
+}
+
+/**
+ * Whether a Noble deployment can be queried through Noble's `swap` module.
+ *
+ * Investigated before wiring (2026-09-01): Noble is a permissioned app-chain
+ * with no CosmWasm and no third-party AMM, but it does host a first-party
+ * `noble/swap/v1` StableSwap module, so the census answer is a real query
+ * rather than a standing not-applicable ruling. That single module is the
+ * whole DEX surface of the chain, which is why the provider is exhaustive.
+ */
+export function isNobleSwapDiscoveryDeployment(chain: string, address?: string): boolean {
+  return chain === "noble" && address != null && isCosmosDiscoveryDenom(address.trim());
+}
+
 /** Translate one eligible registry identity to Horizon's `CODE:ISSUER` filter. */
 export function getHorizonDiscoveryAsset(address: string, symbol?: string): string | null {
   const trimmed = address.trim();
@@ -220,6 +303,119 @@ export function getGeckoTerminalDiscoveryTarget(
   };
 }
 
+export const DEX_DISCOVERY_BOUNDED_CRAWL_REASON =
+  "No provider completed a query for this deployment in the bounded crawl";
+export const DEX_DISCOVERY_FAILED_CRAWL_REASON =
+  "Bounded discovery crawl failed before a complete deployment census";
+export const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
+  "All attempted token-pool provider queries failed";
+export const DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON =
+  "Provider census is not exhaustive for this chain";
+export const DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON =
+  "No registered token-pool provider supports this chain";
+
+export interface DexCensusLegacyCodecValue {
+  attemptResult: DexCensusAttemptResult;
+  legacyReason: string;
+}
+
+/** Lossless adapter for the existing D1 `outcome + reason` columns. */
+export function decodeDexCensusAttemptResult(
+  outcome: DexDeploymentOutcome,
+  reason: string,
+): DexCensusLegacyCodecValue {
+  if (outcome === "observed_pools") return { attemptResult: "observed_pools", legacyReason: reason };
+  if (outcome === "verified_no_pools") return { attemptResult: "verified_no_pools", legacyReason: reason };
+  if (reason === DEX_DISCOVERY_BOUNDED_CRAWL_REASON || reason === DEX_DISCOVERY_FAILED_CRAWL_REASON) {
+    return { attemptResult: "bounded_pending", legacyReason: reason };
+  }
+  if (reason === DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON) {
+    return { attemptResult: "provider_non_exhaustive", legacyReason: reason };
+  }
+  if (reason === DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON) {
+    return { attemptResult: "unsupported_scope", legacyReason: reason };
+  }
+  return { attemptResult: "provider_outage", legacyReason: reason };
+}
+
+export function encodeDexCensusAttemptResult(
+  value: DexCensusLegacyCodecValue,
+): { outcome: DexDeploymentOutcome; reason: string } {
+  const outcome =
+    value.attemptResult === "observed_pools" || value.attemptResult === "verified_no_pools"
+      ? value.attemptResult
+      : "provider_inaccessible";
+  return { outcome, reason: value.legacyReason };
+}
+
+export function isDexCensusAttemptComplete(
+  evidenceState: DexCensusEvidenceState,
+  attemptResult: DexCensusAttemptResult,
+): boolean {
+  return evidenceState === "current" &&
+    (attemptResult === "observed_pools" || attemptResult === "verified_no_pools");
+}
+
+export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapter[] = [
+  {
+    providerId: "coingecko", lifecycle: "active", supports: (chain) => Boolean(CG_CHAIN_MAP[chain]),
+    scope: "exhaustive", requestCostMs: 1_450, executionOrder: 10, timeoutMs: 15_000, crawlerLeaf: "coingecko",
+  },
+  {
+    providerId: "geckoterminal", lifecycle: "active",
+    supports: (chain, address) => getGeckoTerminalDiscoveryNetwork(chain, address) != null,
+    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 20, timeoutMs: 15_000,
+    crawlerLeaf: "geckoterminal",
+  },
+  {
+    providerId: "dexscreener", lifecycle: "active", supports: (chain) => Boolean(DS_CHAIN_MAP[chain]),
+    scope: "exhaustive", requestCostMs: 1_700, executionOrder: 30, timeoutMs: 15_000,
+    crawlerLeaf: "dexscreener",
+  },
+  {
+    providerId: "curve", lifecycle: "active", supports: (chain) => CURVE_NATIVE_DISCOVERY_CHAINS.has(chain),
+    scope: "exhaustive", requestCostMs: 1_200, executionOrder: 40, timeoutMs: 15_000, crawlerLeaf: "curve",
+  },
+  {
+    providerId: "horizon", lifecycle: "active", supports: isHorizonDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 1_600, executionOrder: 50, timeoutMs: 15_000, crawlerLeaf: "horizon",
+  },
+  {
+    providerId: "aquarius", lifecycle: "active", supports: isAquariusSorobanDeployment,
+    scope: "supplemental", requestCostMs: 8_000, executionOrder: 60, timeoutMs: 15_000, crawlerLeaf: "aquarius",
+  },
+  {
+    providerId: "tezos", lifecycle: "active", supports: isTezosDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 16_000, executionOrder: 70, timeoutMs: 15_000, crawlerLeaf: "tezos",
+  },
+  {
+    providerId: "icon-balanced", lifecycle: "active", supports: isIconBalancedDiscoveryDeployment,
+    scope: "supplemental", requestCostMs: 8_000, executionOrder: 80, timeoutMs: 15_000,
+    crawlerLeaf: "icon-balanced",
+  },
+  {
+    providerId: "kava-swap", lifecycle: "active", supports: isKavaSwapDiscoveryDeployment,
+    scope: "supplemental", requestCostMs: 16_000, executionOrder: 90, timeoutMs: 15_000,
+    crawlerLeaf: "kava-swap",
+  },
+  {
+    providerId: "osmosis-sqs", lifecycle: "active", supports: isOsmosisSqsDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 100, timeoutMs: 15_000, crawlerLeaf: "cosmos",
+  },
+  {
+    providerId: "noble-swap", lifecycle: "active", supports: isNobleSwapDiscoveryDeployment,
+    scope: "exhaustive", requestCostMs: 2_000, executionOrder: 110, timeoutMs: 15_000, crawlerLeaf: "cosmos",
+  },
+  {
+    providerId: "soroban-exhaustive", lifecycle: "disabled", supports: () => false,
+    scope: "exhaustive", requestCostMs: 0, executionOrder: 120, timeoutMs: 15_000,
+  },
+  {
+    providerId: "btcusd-public-https", lifecycle: "disabled", supports: () => false,
+    scope: "supplemental", requestCostMs: 0, executionOrder: 130, timeoutMs: 15_000,
+  },
+] as const;
+
 export interface DexCoverageWaiver {
   stablecoinId: string;
   chain: string;
@@ -228,12 +424,14 @@ export interface DexCoverageWaiver {
   expiresAt: number;
 }
 
-const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
-  ["usdn-noble", "noble"],
-  ["uusd-youves", "tezos"],
-  ["usdx-kava", "osmosis"],
-  ["silk-shade-protocol", "secret"],
-] as const;
+/**
+ * Every entry must still satisfy the waiver's own claim — that no registered
+ * provider supports the chain. `usdn-noble`/noble and `usdx-kava`/osmosis were
+ * removed when the Noble `swap` and Osmosis sidecar providers were registered,
+ * and `uusd-youves`/tezos when the TzKT census was; keeping them would publish
+ * "no provider supports this chain" beside a census row naming one.
+ */
+const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [["silk-shade-protocol", "secret"]] as const;
 
 const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;
 
@@ -253,34 +451,36 @@ export const DEX_COVERAGE_WAIVERS: readonly DexCoverageWaiver[] = EXCLUSIVE_UNSU
   }),
 );
 
-export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscoveryProvider, boolean>> = {
-  coingecko: true,
-  geckoterminal: true,
-  dexscreener: true,
-  curve: true,
-  horizon: true,
-  aquarius: false, // Aquarius index only; Soroswap/Phoenix are unregistered.
-  tezos: true, // TzKT token-holder census is chain-wide by construction.
-  "icon-balanced": false, // Balanced venue only, not chain-wide.
-  "kava-swap": false, // x/swap module only; Kava EVM venues exist.
-};
-
-export function isDexDiscoveryProviderExhaustive(provider: DexDiscoveryProvider): boolean {
-  return DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[provider];
-}
+export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscoveryProvider, boolean>> =
+  Object.fromEntries(
+    DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => [provider.providerId, provider.scope === "exhaustive"]),
+  ) as Record<DexDiscoveryProvider, boolean>;
 
 export function getDexDiscoveryProviders(chain: string, address?: string): DexDiscoveryProvider[] {
-  const providers: DexDiscoveryProvider[] = [];
-  if (CG_CHAIN_MAP[chain]) providers.push("coingecko");
-  if (getGeckoTerminalDiscoveryNetwork(chain, address)) providers.push("geckoterminal");
-  if (DS_CHAIN_MAP[chain]) providers.push("dexscreener");
-  if (CURVE_NATIVE_DISCOVERY_CHAINS.has(chain)) providers.push("curve");
-  if (isHorizonDiscoveryDeployment(chain, address)) providers.push("horizon");
-  if (isAquariusSorobanDeployment(chain, address)) providers.push("aquarius");
-  if (isTezosDiscoveryDeployment(chain, address)) providers.push("tezos");
-  if (isIconBalancedDiscoveryDeployment(chain, address)) providers.push("icon-balanced");
-  if (isKavaSwapDiscoveryDeployment(chain, address)) providers.push("kava-swap");
-  return providers;
+  return DEX_DISCOVERY_PROVIDER_REGISTRY
+    .filter((provider) => provider.lifecycle === "active" && provider.supports(chain, address))
+    .sort((left, right) => left.executionOrder - right.executionOrder)
+    .map((provider) => provider.providerId);
+}
+
+/**
+ * Whether a persisted census provider set is contradicted by the live registry.
+ *
+ * A census row's provider set is a snapshot of a *registry* fact, not an
+ * observation: an empty set means "no registered provider supported this chain
+ * when the row was written". When discovery coverage for a chain is added, rows
+ * written before it keep asserting an empty provider set until the crawl
+ * rotation reaches that deployment again — for a windowed footprint that is
+ * several runs. The registry, not the row, owns which providers exist, so a
+ * contradicted row is superseded metadata awaiting a re-crawl rather than a
+ * standing method limit.
+ */
+export function isCensusProviderSetSupersededByRegistry(
+  chain: string,
+  address: string | undefined,
+  persistedProviderCount: number,
+): boolean {
+  return persistedProviderCount === 0 && getDexDiscoveryProviders(chain, address).length > 0;
 }
 
 export function getActiveDexCoverageWaiver(

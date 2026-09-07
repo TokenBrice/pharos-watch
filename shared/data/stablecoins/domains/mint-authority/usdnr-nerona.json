@@ -110,7 +110,7 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
-        "capDescription": "Sole owner of the USDnr token's ProxyAdmin; can push a new implementation with no on-chain timelock, module, or multisig — a single compromised key could rewrite USDnr's mint, wrap, or freeze logic.",
+        "capDescription": "Sole owner of the USDnr token's ProxyAdmin; can push a new implementation with no on-chain timelock, module, or multisig, a single compromised key could rewrite USDnr's mint, wrap, or freeze logic.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [

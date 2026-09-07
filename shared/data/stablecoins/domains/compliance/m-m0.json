@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no M0/M entry found on 2026-08-14",
+        "label": "ESMA MiCA interim register and scope page: ART/EMT issuer registers reviewed; no M0/M entry found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "M0 M Token documentation — M is a stable token backed 1:1 by approved collateral and can be used as a stablecoin",
+        "label": "M0 M Token documentation: M is a stable token backed 1:1 by approved collateral and can be used as a stablecoin",
         "url": "https://docs.m0.org/protocol/m-token"
       },
       {
-        "label": "M0 issuer documentation — permissioned issuers mint application-specific stablecoins on the M0 infrastructure",
+        "label": "M0 issuer documentation: permissioned issuers mint application-specific stablecoins on the M0 infrastructure",
         "url": "https://docs.m0.org/issuers/overview"
       }
     ]
@@ -33,7 +33,7 @@
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "M0 Foundation is a Swiss-domiciled protocol layer and governance entity — not itself a US-formed PPSI candidate. Actual M token minting is performed by separately permissioned Minter entities (MXON, Anchorage Digital, Bridge/Stripe, MoonPay, etc.), which may individually seek GENIUS Act status. No PPSI application, state-qualified approval, or foreign-issuer exception has been publicly announced for M0 Foundation or the base M token. Rulemaking remains at NPRM stage as of 2026-06-18.",
+    "notes": "M0 Foundation is a Swiss-domiciled protocol layer and governance entity: not itself a US-formed PPSI candidate. Actual M token minting is performed by separately permissioned Minter entities (MXON, Anchorage Digital, Bridge/Stripe, MoonPay, etc.), which may individually seek GENIUS Act status. No PPSI application, state-qualified approval, or foreign-issuer exception has been publicly announced for M0 Foundation or the base M token. Rulemaking remains at NPRM stage as of 2026-06-18.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -61,7 +61,7 @@
         "sourceKind": "news"
       },
       {
-        "label": "MoneyGram MGUSD launch — M0 infrastructure, Bridge as regulated issuer",
+        "label": "MoneyGram MGUSD launch: M0 infrastructure, Bridge as regulated issuer",
         "url": "https://en.cryptonomist.ch/2026/06/03/moneygram-mgusd-stablecoin-launch-stellar/",
         "sourceKind": "news"
       }

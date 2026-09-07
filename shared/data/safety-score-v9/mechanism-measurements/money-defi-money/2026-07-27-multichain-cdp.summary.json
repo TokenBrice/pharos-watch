@@ -1,0 +1,15 @@
+{
+  "mechanism": "money-defi-money",
+  "date": "2026-07-27-multichain-cdp",
+  "sha256": "0f4fbd2b4e068ff78162778a6d84de68ae5b59c3ea2cf30800e667dcfb8c14dd",
+  "bytes": 1009,
+  "r2Key": "captures/money-defi-money/2026-07-27-multichain-cdp.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "money-defi-money",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/money-defi-money/2026-07-27-multichain-cdp.json",
+    "capturedAt": "2026-07-27T16:56:42Z"
+  }
+}

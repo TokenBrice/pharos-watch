@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Safety Score V9 goes live with mechanism-backed coin pages, a wave-7/8 evidence drain, and five new FX pegs.",
   fieldNotes:
-    "The V9 safety model finally left the shadows: it became the active score, the preview scaffolding came down, and coin pages now explain each grade by naming the evidence and the party responsible for it. Behind that visible change sat weeks of unglamorous drainage — dozens of mechanism packets verified across vendors, DEX pipelines bounded to their memory budgets, and publication taught to hold rather than guess when an input goes dark.",
+    "The V9 safety model finally left the shadows: it became the active score, the preview scaffolding came down, and coin pages now explain each grade by naming the evidence and the party responsible for it. Behind that visible change sat weeks of unglamorous drainage: dozens of mechanism packets verified across vendors, DEX pipelines bounded to their memory budgets, and publication taught to hold rather than guess when an input goes dark.",
   summary: [
     {
       label: "V9 goes live",
@@ -38,7 +38,7 @@ export const entry: ChangelogEntry = {
       label: "Fail-closed publication",
       tag: "infra",
       description:
-        "Publication now holds rather than guesses — V9 input is skipped after a failed DEX stage, producer holds baseline by identity, transition caches survive rollout, and report-card failures stay isolated to one asset.",
+        "Publication now holds rather than guesses: V9 input is skipped after a failed DEX stage, producer holds baseline by identity, transition caches survive rollout, and report-card failures stay isolated to one asset.",
     },
     {
       label: "Wider coverage",

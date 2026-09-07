@@ -8,13 +8,16 @@ import {
 } from "../lib/db";
 import { SUPPLY_HISTORY_UPSERT_PREFIX } from "../lib/supply-history-db";
 import { prepareCacheUpsert } from "../lib/db-cache";
-import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
+  buildStablecoinsCacheFreshnessGateResult,
   buildSupplySnapshotCompletionMarker,
   preflightSupplySnapshot,
   SNAPSHOT_SUPPLY_LAST_WRITE_KEY,
@@ -25,8 +28,13 @@ import {
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
 
-const CACHE_MAX_AGE_SEC = 1200;
-const CACHE_DEGRADED_AGE_SEC = 600;
+// Freshness gates follow the stablecoins producer cadence (`sync-stablecoins`
+// via the shared lane descriptor): the snapshot logs a degraded-freshness
+// warning after one missed interval and skips after two, so a cadence change
+// moves these gates with it instead of stranding unanchored literals.
+const STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC = CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
+const CACHE_DEGRADED_AGE_SEC = STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC;
+const CACHE_MAX_AGE_SEC = 2 * STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC;
 
 interface SnapshotSupplyOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
@@ -35,41 +43,6 @@ interface SnapshotSupplyOptions {
   publicationWaivers?: readonly StablecoinPublicationWaiver[];
   requiredActiveIds?: readonly string[];
   snapshotEligibleIds?: readonly string[];
-}
-
-function buildStablecoinsCacheBeforeSlotResult(
-  cacheUpdatedAt: number,
-  requiredUpdatedAt: number,
-  freshnessGateLabel?: string,
-): CronResult {
-  return {
-    status: "degraded",
-    itemCount: 0,
-    metadata: JSON.stringify({
-      reason: "stablecoins_cache_before_slot",
-      cacheUpdatedAt,
-      requiredUpdatedAt,
-      freshnessGateLabel,
-    }),
-  };
-}
-
-function buildAlreadyWrittenBeforeFreshnessGateResult(params: {
-  snapshotDate: number;
-  cacheUpdatedAt: number;
-  requiredUpdatedAt: number;
-  freshnessGateLabel?: string;
-}): CronResult {
-  return {
-    itemCount: 0,
-    metadata: JSON.stringify({
-      reason: "already_written_today_before_freshness_gate",
-      snapshotDate: params.snapshotDate,
-      cacheUpdatedAt: params.cacheUpdatedAt,
-      requiredUpdatedAt: params.requiredUpdatedAt,
-      freshnessGateLabel: params.freshnessGateLabel,
-    }),
-  };
 }
 
 async function repairSameDayMissingPrices(
@@ -101,11 +74,9 @@ export async function snapshotSupply(
   throwIfAborted(signal);
 
   const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
-  const configuredRequiredActiveIds = options.requiredActiveIds ?? PSI_ELIGIBLE_STABLECOINS
-    .map((stablecoin) => stablecoin.id)
-    .filter((id) => ACTIVE_IDS.has(id));
+  const configuredRequiredActiveIds = options.requiredActiveIds ?? [...WORKER_ACTIVE_IDS];
   const snapshotEligibleIds = new Set(
-    options.snapshotEligibleIds ?? PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => stablecoin.id),
+    options.snapshotEligibleIds ?? [...WORKER_ACTIVE_IDS, ...SHADOW_IDS],
   );
   const preflight = await preflightSupplySnapshot(db, {
     nowSec: options.nowSec,
@@ -155,18 +126,18 @@ export async function snapshotSupply(
   throwIfAborted(signal);
   if (preflight.kind === "cache-unavailable") {
     logWorkerEventArgs("handler", "error", "[snapshot-supply] No stablecoins cache found");
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: preflight.reason }),
-    };
+      metadata: { reason: preflight.reason },
+    });
   }
   if (preflight.kind === "cache-stale") {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec }),
-    };
+      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec },
+    });
   }
   const {
     cache: stablecoinsCache,
@@ -188,28 +159,29 @@ export async function snapshotSupply(
       && lastWrite?.snapshotDate === snapshotDate
       && lastWrite.exactCoverageVerified
     ) {
-      return buildAlreadyWrittenBeforeFreshnessGateResult({
-        snapshotDate,
+      return buildStablecoinsCacheFreshnessGateResult({
+        alreadyWrittenSnapshotDate: snapshotDate,
         cacheUpdatedAt: stablecoinsCache.updatedAt,
         requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
         freshnessGateLabel: options.freshnessGateLabel,
       });
     }
-    return buildStablecoinsCacheBeforeSlotResult(
-      stablecoinsCache.updatedAt,
-      options.minStablecoinsCacheUpdatedAtSec,
-      options.freshnessGateLabel,
-    );
+    return buildStablecoinsCacheFreshnessGateResult({
+      cacheUpdatedAt: stablecoinsCache.updatedAt,
+      requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
+      freshnessGateLabel: options.freshnessGateLabel,
+    });
   }
 
-  // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
+  // Verify cache freshness — skip once the cache has missed two producer
+  // intervals, to avoid snapshotting outdated data
   if (cacheAge > CACHE_MAX_AGE_SEC) {
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }),
-    };
+      metadata: { reason: "cache_stale", cacheAgeSec: cacheAge },
+    });
   }
   if (cacheAge > CACHE_DEGRADED_AGE_SEC) {
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
@@ -231,22 +203,22 @@ export async function snapshotSupply(
   ) {
     try {
       const repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, snapshotRows, signal);
-      return {
+      return createCronResult({
         itemCount: repairedPriceRows,
-        metadata: JSON.stringify({
+        metadata: {
           reason: repairedPriceRows > 0 ? "repaired_missing_prices_today" : "already_written_today",
           snapshotDate,
           repairedPriceRows,
-        }),
-      };
+        },
+      });
     } catch (err) {
       rethrowIfAborted(err, signal);
       recordCronFailure("snapshot-supply", err, { metadata: { stage: "sameDayPriceRepair" } });
-      return {
+      return createCronResult({
         status: "degraded",
         itemCount: 0,
-        metadata: JSON.stringify({ reason: "same_day_price_repair_failed", error: String(err).slice(0, 200) }),
-      };
+        metadata: { reason: "same_day_price_repair_failed", error: String(err).slice(0, 200) },
+      });
     }
   }
   if (!publicationCoverage.complete) {
@@ -265,10 +237,10 @@ export async function snapshotSupply(
       `${publicationCoverage.presentActiveCount}/${publicationCoverage.expectedActiveCount}; ` +
       `missing=${guardMissingActiveIds.slice(0, 20).join(",")}`,
     );
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         reason: "partial_snapshot_blocked",
         validRows: publicationCoverage.presentActiveCount,
         expectedCount: publicationCoverage.expectedActiveCount,
@@ -277,8 +249,8 @@ export async function snapshotSupply(
         invalidSupplyIds,
         restoredOnlyIds,
         waivedActiveIds: publicationCoverage.waivedActiveIds,
-      }),
-    };
+      },
+    });
   }
 
   if (snapshotRows.length > 0) {
@@ -316,29 +288,29 @@ export async function snapshotSupply(
     } catch (err) {
       rethrowIfAborted(err, signal);
       recordCronFailure("snapshot-supply", err, { metadata: { stage: "atomicDateReplacement" } });
-      return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
+      return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: "db_write_failed", error: String(err).slice(0, 200) } });
     }
   }
 
   if (snapshotRows.length === 0) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "all_coins_zero_supply" }),
-    };
+      metadata: { reason: "all_coins_zero_supply" },
+    });
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
   if (restoredOnlyIds.length > 0) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: snapshotRows.length,
-      metadata: JSON.stringify({
+      metadata: {
         reason: "snapshot_written_restored_skipped",
         writtenRows: snapshotRows.length,
         restoredOnlyIds,
-      }),
-    };
+      },
+    });
   }
   return { itemCount: snapshotRows.length };
 }

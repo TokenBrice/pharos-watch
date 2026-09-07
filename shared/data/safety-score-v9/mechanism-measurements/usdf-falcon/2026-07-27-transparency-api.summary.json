@@ -1,0 +1,14 @@
+{
+  "mechanism": "usdf-falcon",
+  "date": "2026-07-27-transparency-api",
+  "sha256": "66b00a030b5b700c8aa5fecbd2e3bd0c3ad7567b1ec5a87fe9d1da248c15817a",
+  "bytes": 1382,
+  "r2Key": "captures/usdf-falcon/2026-07-27-transparency-api.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "usdf-falcon",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-07-27-transparency-api.json",
+    "capturedAt": "2026-07-27T12:03:01.000Z"
+  }
+}

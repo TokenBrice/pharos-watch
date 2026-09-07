@@ -10,6 +10,7 @@ import {
 } from "./staged-pool";
 import {
   STAGED_POOL_MAX_TVL_USD,
+  makeDexDeploymentProviderCheck,
   type DexDeploymentProviderCheck,
 } from "./types";
 
@@ -126,20 +127,6 @@ function parseAquariusTickers(value: unknown): AquariusTicker[] | null {
   return tickers;
 }
 
-function checkForTarget(
-  target: ContractDeployment,
-  status: DexDeploymentProviderCheck["status"],
-  extras?: Pick<DexDeploymentProviderCheck, "observedPoolCount" | "retryable">,
-): DexDeploymentProviderCheck {
-  return {
-    chain: target.chain,
-    address: target.address,
-    provider: AQUARIUS_PROVIDER,
-    status,
-    ...extras,
-  };
-}
-
 function isTickerForToken(ticker: AquariusTicker, tokenId: string): boolean {
   return (
     canonicalSorobanTokenId(ticker.baseCurrency) === tokenId ||
@@ -214,14 +201,18 @@ export async function crawlSorobanPoolsStage(input: {
 
     if (!result) {
       return {
-        providerChecks: targets.map((target) => checkForTarget(target, "failure", { retryable: true })),
+        providerChecks: targets.map((target) =>
+          makeDexDeploymentProviderCheck(target, AQUARIUS_PROVIDER, "failure", { retryable: true }),
+        ),
       };
     }
 
     const tickers = parseAquariusTickers(result.body);
     if (!tickers) {
       return {
-        providerChecks: targets.map((target) => checkForTarget(target, "degraded")),
+        providerChecks: targets.map((target) =>
+          makeDexDeploymentProviderCheck(target, AQUARIUS_PROVIDER, "degraded"),
+        ),
       };
     }
 
@@ -231,14 +222,18 @@ export async function crawlSorobanPoolsStage(input: {
       const matchingTickers = tickers.filter((ticker) => isTickerForToken(ticker, tokenId));
       for (const ticker of matchingTickers) addTickerPool(input.context, target, tokenId, ticker);
       providerChecks.push(
-        checkForTarget(target, "success", { observedPoolCount: matchingTickers.length }),
+        makeDexDeploymentProviderCheck(target, AQUARIUS_PROVIDER, "success", {
+          observedPoolCount: matchingTickers.length,
+        }),
       );
     }
     return { providerChecks };
   } catch (error) {
     if (input.context.signal?.aborted) throw error;
     return {
-      providerChecks: targets.map((target) => checkForTarget(target, "failure", { retryable: true })),
+      providerChecks: targets.map((target) =>
+        makeDexDeploymentProviderCheck(target, AQUARIUS_PROVIDER, "failure", { retryable: true }),
+      ),
     };
   }
 }

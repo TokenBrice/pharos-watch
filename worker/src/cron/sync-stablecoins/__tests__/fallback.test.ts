@@ -27,22 +27,23 @@ const NOW_SEC = 1_700_000_000;
 // ---------------------------------------------------------------------------
 
 const subPhaseMocks = vi.hoisted(() => ({
-  restoreFallbackCacheState: vi.fn(async () => ({
+  loadPreviousStablecoinsById: vi.fn(async () => ({
     previousAssetsById: new Map<string, PeggedAsset>(),
-    previousCacheState: { state: "missing" as const },
+    cacheState: { state: "missing" as const },
   })),
+  loadFreshFxRates: vi.fn(async () => ({
+    fxFallbackRates: undefined,
+    validationReferences: undefined,
+  })),
+  loadReplayPriceCacheForTrustedContinuity: vi.fn(async () => new Map()),
+  createValidationContextResolver: vi.fn(() => () => ({})),
+  buildPreviousTrustedPriceLookup: vi.fn(() => new Map()),
   checkStablecoinsPriceStaleness: vi.fn(async () => ({
     state: "missing-previous-cache" as string,
     stalenessWarning: false,
     stalenessSummary: null,
     stalenessCheckFailed: false,
     stalenessCheckFailureReason: undefined as string | undefined,
-  })),
-  hydrateFallbackFxPhase: vi.fn(async () => ({
-    fxFallbackRates: undefined,
-    validationReferences: undefined,
-    validationContexts: () => ({}),
-    previousTrustedPrices: new Map(),
   })),
   runFallbackPriceEnrichmentPhase: vi.fn(async () => ({
     enrichStats: {},
@@ -71,12 +72,17 @@ const subPhaseMocks = vi.hoisted(() => ({
   queueTrackedAdditionsNotice: vi.fn(async () => undefined),
 }));
 
-vi.mock("../fallback-cache", () => ({
-  restoreFallbackCacheState: subPhaseMocks.restoreFallbackCacheState,
+vi.mock("../shared", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../shared")>()),
+  loadPreviousStablecoinsById: subPhaseMocks.loadPreviousStablecoinsById,
+  loadFreshFxRates: subPhaseMocks.loadFreshFxRates,
+  loadReplayPriceCacheForTrustedContinuity: subPhaseMocks.loadReplayPriceCacheForTrustedContinuity,
 }));
 
-vi.mock("../fallback-fx", () => ({
-  hydrateFallbackFxPhase: subPhaseMocks.hydrateFallbackFxPhase,
+vi.mock("../pricing", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../pricing")>()),
+  createValidationContextResolver: subPhaseMocks.createValidationContextResolver,
+  buildPreviousTrustedPriceLookup: subPhaseMocks.buildPreviousTrustedPriceLookup,
 }));
 
 vi.mock("../fallback-enrichment", () => ({
@@ -178,6 +184,10 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       missingActiveIds: expect.any(Array),
       records: [],
     });
+    expect(subPhaseMocks.loadReplayPriceCacheForTrustedContinuity).toHaveBeenCalledTimes(1);
+    expect(subPhaseMocks.runFallbackPriceEnrichmentPhase).toHaveBeenCalledWith(
+      expect.objectContaining({ priceCache: expect.any(Map) }),
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -203,7 +213,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(meta.validationFailures).toBeGreaterThanOrEqual(1);
 
     // None of the heavy sub-phases should have been called
-    expect(subPhaseMocks.restoreFallbackCacheState).not.toHaveBeenCalled();
+    expect(subPhaseMocks.loadPreviousStablecoinsById).not.toHaveBeenCalled();
     expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
   });
 

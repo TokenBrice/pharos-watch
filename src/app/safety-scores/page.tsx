@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading";
@@ -32,7 +33,7 @@ const FAQ_ITEMS = [
   {
     question: "How often do safety grades change?",
     answer:
-      "Safety Score V9 is evaluated on the report-card producer cadence. If a transient infrastructure failure would create an unsupported downgrade, Pharos holds the last verified V9 ratings and shows the accepted and attempted times separately instead of publishing the failed attempt or falling back to V8.",
+      "Pharos evaluates safety grades every 30 minutes. If an update cannot be verified, the last verified ratings remain visible with their publication time and an update notice.",
   },
   {
     question: "What should I do with this information?",
@@ -64,10 +65,7 @@ const route = createClientFeaturePage({
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
     preface: (
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest")) }}
-      />
+      <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest"))} />
     ),
     leadParagraphs: [
       "Every tracked stablecoin assessed across three dimensions: Backing, Exit, and Economic Control, distilled into a single comprehensive safety grade.",
@@ -81,7 +79,7 @@ const route = createClientFeaturePage({
       >
         Get notified when a safety grade changes.{" "}
         <Link
-          href="/pharoswatchbot/#bot"
+          href="/pharoswatchbot/#getting-started"
           className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
         >
           Set up alerts&nbsp;&rarr;

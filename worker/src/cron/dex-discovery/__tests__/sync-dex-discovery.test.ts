@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
-vi.mock("@shared/lib/stablecoins/registry", () => {
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
     {
       id: "coin-a",
@@ -12,12 +13,12 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       contracts: [{ chain: "ethereum", address: "0xbbb", decimals: 18 }],
     },
   ];
-  return mockRegistry({ stablecoins });
+  const registry = mockRegistry({ stablecoins });
+  return {
+    WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
+    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+  };
 });
-
-vi.mock("../../dex-liquidity/pool-helpers", () => ({
-  getTrackedContracts: vi.fn((coin: { contracts?: unknown[] }) => coin.contracts ?? []),
-}));
 
 vi.mock("../../../lib/price-validation", () => ({
   loadPriceValidationReferences: vi.fn(async () => undefined),
@@ -74,6 +75,7 @@ vi.mock("../deployment-outcomes", () => ({
 vi.mock("../persistence", () => ({
   cleanupStaging: vi.fn(async () => {}),
   incrementRunSeq: vi.fn(async () => 1),
+  readDiscoveryCensusSummaries: vi.fn(async () => new Map()),
   readDiscoveryMeta: vi.fn(async () => new Map()),
   readDiscoveryTargetCursors: vi.fn(async () => new Map()),
   recordDiscoveryAttemptFence: vi.fn(async () => {}),
@@ -136,7 +138,7 @@ function makeStagedPool(poolId: string) {
   };
 }
 
-const db = {
+const db = makeNoopD1({
   prepare: (sql: string) => ({
     all: async () => ({
       results: sql.includes("FROM dex_liquidity")
@@ -147,9 +149,30 @@ const db = {
         : [],
     }),
   }),
-} as unknown as D1Database;
+});
 
 describe("syncDexDiscovery", () => {
+  it("prioritizes due supplemental refresh even when the weekly cohort is ineligible", async () => {
+    const refreshDb = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [
+      { stablecoin_id: "coin-b", pool_count: 20, chain_count: 4, has_supplemental_coverage: 1 },
+    ] }) }) });
+    await syncDexDiscovery(refreshDb, null);
+    expect(vi.mocked(crawlCoin).mock.calls[0]?.[1]).toBe("coin-b");
+  });
+
+  it("refreshes a zero-pool census before two-day expiry despite weekly miss backoff", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map([
+      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: 6,
+        lastCrawlAt: nowSec - 36 * 3600, lastHitAt: null }],
+    ]));
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a"]);
+    expect(JSON.parse(result.metadata ?? "{}").tierBreakdown).toMatchObject({ refresh: 1, t3: 0 });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
@@ -179,6 +202,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -197,7 +221,8 @@ describe("syncDexDiscovery", () => {
       runSeq: 2,
       failedCoins: [],
       tierBreakdown: {
-        t1: 1,
+        refresh: 1,
+        t1: 0,
         t2: 0,
         t3: 0,
         dormant: 0,
@@ -229,6 +254,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -245,11 +271,12 @@ describe("syncDexDiscovery", () => {
       finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
       runSeq: 1,
       tierBreakdown: {
-        t1: 1,
-        t2: 1,
+        refresh: 1,
+        t1: 0,
+        t2: 0,
         t3: 0,
         dormant: 0,
-        skipped: 0,
+        skipped: 1,
       },
     });
 
@@ -289,6 +316,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -313,6 +341,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       undefined,
     );
@@ -340,6 +369,7 @@ describe("syncDexDiscovery", () => {
     expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
       db,
       "coin-a",
+      [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
       expect.any(Number),
       controller.signal,
     );

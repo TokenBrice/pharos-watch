@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { loadStatusSupplements } from "../status-supplements";
+import { loadStatusSupplements } from "../../lib/status/supplements";
 
 const NOW = 1_775_910_000;
 

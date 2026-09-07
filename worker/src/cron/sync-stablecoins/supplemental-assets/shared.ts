@@ -264,10 +264,11 @@ export async function resolveCuratedAggregateSupplementalSupply(
     mcap: aggregate.mcap,
     supplySource: aggregate.supplySource,
     chainCirculating: Object.fromEntries(
-      Object.entries(aggregate.chainCirculating ?? {}).map(([chainLabel, current]) => [
+      Object.entries(aggregate.chainCirculating ?? {}).map(([chainLabel, row]) => [
         chainLabel,
         {
-          current,
+          ...(row.chainId ? { chainId: row.chainId } : {}),
+          current: row.current,
           circulatingPrevDay: 0,
           circulatingPrevWeek: 0,
           circulatingPrevMonth: 0,

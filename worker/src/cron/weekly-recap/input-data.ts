@@ -1,5 +1,6 @@
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
+import { findDigestSignalQuarantineBySymbol } from "@shared/lib/digest-signal-quarantine";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import {
   DigestSafetyContextSchema,
@@ -205,13 +206,105 @@ function buildWeeklyRiskLeaderboard(params: {
     .slice(0, 7);
 }
 
-function parseDailyRows(dailyRows: DailyDigestSourceRow[]): WeeklyParsedRow[] {
+function removeCandidateIds(ids: string[] | undefined, quarantinedIds: ReadonlySet<string>): string[] | undefined {
+  return ids?.filter((id) => !quarantinedIds.has(id));
+}
+
+function quarantineRetractedLiquidity(
+  inputData: DigestInputData,
+  timestamp: number,
+): { inputData: DigestInputData; quarantinedStablecoinIds: string[] } {
+  const quarantinedBySymbol = new Map<string, string>();
+  for (const shift of inputData.liquidityShifts ?? []) {
+    const quarantine = findDigestSignalQuarantineBySymbol(shift.symbol, "liquidity", timestamp);
+    if (quarantine) quarantinedBySymbol.set(shift.symbol.toUpperCase(), quarantine.stablecoinId);
+  }
+  if (quarantinedBySymbol.size === 0) return { inputData, quarantinedStablecoinIds: [] };
+
+  const quarantinedSymbols = new Set(quarantinedBySymbol.keys());
+  const candidateIsQuarantined = (candidate: DigestEditorialCandidate): boolean =>
+    candidate.kind === "liquidity" &&
+    candidate.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase()));
+  const quarantinedCandidateIds = new Set(
+    (inputData.editorialCandidates ?? []).filter(candidateIsQuarantined).map((candidate) => candidate.id),
+  );
+  for (const symbol of quarantinedSymbols) quarantinedCandidateIds.add(`liquidity:${symbol.toLowerCase()}`);
+
+  const changeSummary = inputData.changeSummary
+    ? {
+        ...inputData.changeSummary,
+        newSignals: inputData.changeSummary.newSignals.filter((signal) =>
+          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
+        ),
+        worsenedSignals: inputData.changeSummary.worsenedSignals.filter((signal) =>
+          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
+        ),
+        improvedSignals: inputData.changeSummary.improvedSignals.filter((signal) =>
+          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
+        ),
+        resolvedSignals: inputData.changeSummary.resolvedSignals.filter((signal) =>
+          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
+        ),
+        repeatedSignals: inputData.changeSummary.repeatedSignals.filter((signal) =>
+          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
+        ),
+      }
+    : undefined;
+  const editorialAudit = inputData.editorialAudit
+    ? {
+        ...inputData.editorialAudit,
+        topCandidateIds: removeCandidateIds(inputData.editorialAudit.topCandidateIds, quarantinedCandidateIds) ?? [],
+        usableCandidateIds: removeCandidateIds(inputData.editorialAudit.usableCandidateIds, quarantinedCandidateIds) ?? [],
+        suppressedCandidateIds: removeCandidateIds(inputData.editorialAudit.suppressedCandidateIds, quarantinedCandidateIds) ?? [],
+        momentumCandidateIds: removeCandidateIds(inputData.editorialAudit.momentumCandidateIds, quarantinedCandidateIds) ?? [],
+        requiredLeadCandidateIds: removeCandidateIds(inputData.editorialAudit.requiredLeadCandidateIds, quarantinedCandidateIds),
+        usedCandidateIds: removeCandidateIds(inputData.editorialAudit.usedCandidateIds, quarantinedCandidateIds),
+        modelSuppressedCandidateIds: removeCandidateIds(inputData.editorialAudit.modelSuppressedCandidateIds, quarantinedCandidateIds),
+        ...(inputData.editorialAudit.leadCandidateId && quarantinedCandidateIds.has(inputData.editorialAudit.leadCandidateId)
+          ? { leadCandidateId: null, leadCandidateTitle: null }
+          : {}),
+      }
+    : undefined;
+
+  return {
+    inputData: {
+      ...inputData,
+      liquidityShifts: (inputData.liquidityShifts ?? []).filter(
+        (shift) => !quarantinedSymbols.has(shift.symbol.toUpperCase()),
+      ),
+      editorialCandidates: inputData.editorialCandidates?.filter((candidate) => !candidateIsQuarantined(candidate)),
+      ...(changeSummary ? { changeSummary } : {}),
+      nextTriggers: inputData.nextTriggers?.filter((trigger) =>
+        trigger.metric !== "liquidity-score" ||
+        trigger.symbol == null ||
+        !quarantinedSymbols.has(trigger.symbol.toUpperCase()),
+      ),
+      ...(editorialAudit ? { editorialAudit } : {}),
+    },
+    quarantinedStablecoinIds: [...new Set(quarantinedBySymbol.values())],
+  };
+}
+
+function parseDailyRows(
+  dailyRows: DailyDigestSourceRow[],
+): { parsed: WeeklyParsedRow[]; degradedSources: string[] } {
   const parsed: WeeklyParsedRow[] = [];
+  const degradedSources = new Set<string>();
   for (const row of dailyRows) {
     try {
-      const inputData = JSON.parse(row.input_data) as DigestInputData;
+      const rawInputData = JSON.parse(row.input_data) as DigestInputData;
+      const timestamp = rawInputData.dataQuality?.generatedAt ?? row.generated_at;
+      const quarantined = quarantineRetractedLiquidity(rawInputData, timestamp);
       const date = formatIsoDate(row.generated_at);
-      parsed.push({ date, title: row.digest_title ?? "Untitled", text: row.digest_text, inputData });
+      for (const stablecoinId of quarantined.quarantinedStablecoinIds) {
+        degradedSources.add(`liquidity-shift-quarantined-signal:${stablecoinId}:${date}`);
+      }
+      parsed.push({
+        date,
+        title: quarantined.quarantinedStablecoinIds.length > 0 ? "" : row.digest_title ?? "Untitled",
+        text: quarantined.quarantinedStablecoinIds.length > 0 ? "" : row.digest_text,
+        inputData: quarantined.inputData,
+      });
     } catch (error) {
       logMalformedJsonPath(
         {
@@ -226,7 +319,7 @@ function parseDailyRows(dailyRows: DailyDigestSourceRow[]): WeeklyParsedRow[] {
       );
     }
   }
-  return parsed;
+  return { parsed, degradedSources: [...degradedSources] };
 }
 
 function parsePersistedSafetyIdentity(value: unknown): SafetyScorePublicationIdentity | null {
@@ -582,8 +675,10 @@ export function buildWeeklyInputData(
   priorDailyRows: DailyDigestSourceRow[] = [],
   safetyContext?: DigestSafetyContext,
 ): WeeklyInputData | null {
-  const parsed = sanitizeSafetyForWeekly(parseDailyRows(currentDailyRows), safetyContext);
-  const priorParsed = sanitizeSafetyForWeekly(parseDailyRows(priorDailyRows), safetyContext);
+  const currentParsed = parseDailyRows(currentDailyRows);
+  const prior = parseDailyRows(priorDailyRows);
+  const parsed = sanitizeSafetyForWeekly(currentParsed.parsed, safetyContext);
+  const priorParsed = sanitizeSafetyForWeekly(prior.parsed, safetyContext);
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
@@ -628,15 +723,20 @@ export function buildWeeklyInputData(
     outcomeCounts.hit + outcomeCounts.missed + outcomeCounts.pending + outcomeCounts.expired > 0
       ? outcomeCounts
       : null;
+  const degradedSources = [
+    ...currentParsed.degradedSources,
+    ...prior.degradedSources,
+    ...(safetyContext?.status === "unavailable"
+      ? [`safety-canonical-snapshot:${safetyContext.reason}`]
+      : []),
+  ];
 
   return {
     weekStartDate: parsed[0].date,
     weekEndDate: parsed[parsed.length - 1].date,
     periodType: "trailing-daily-editions",
     ...(safetyContext ? { safetyContext } : {}),
-    ...(safetyContext?.status === "unavailable"
-      ? { degradedSources: [`safety-canonical-snapshot:${safetyContext.reason}`] }
-      : {}),
+    ...(degradedSources.length > 0 ? { degradedSources: [...new Set(degradedSources)] } : {}),
     dailyDigests: parsed,
     psiRange: {
       min: Math.min(...psiScores),

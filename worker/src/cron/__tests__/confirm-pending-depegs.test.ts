@@ -5,9 +5,9 @@ import {
   insertDexPrice,
   insertPendingDepeg,
   makePendingDepegRow,
-  openLatestSchemaFixture,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -54,11 +54,8 @@ import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 
 const NOW_SEC = 1_700_000_000;
-const openSqliteDatabases: DatabaseSync[] = [];
-
-function openFixture(): { sqlite: DatabaseSync; db: D1Database } {
-  return openLatestSchemaFixture({ openDatabases: openSqliteDatabases });
-}
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+const openFixture = sqliteFixtures.open;
 
 const makePendingRow = makePendingDepegRow;
 const insertPending = insertPendingDepeg;
@@ -110,7 +107,7 @@ afterEach(() => {
       }],
     },
   });
-  for (const sqlite of openSqliteDatabases.splice(0)) sqlite.close();
+  sqliteFixtures.closeAll();
 });
 
 describe("confirmPendingDepegs", () => {
@@ -135,7 +132,7 @@ describe("confirmPendingDepegs", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending_outcomes").get()).toEqual({ count: 0 });
   });
 
-  it("promotes a pending depeg after independent DEX groups confirm the deviation", async () => {
+  it("promotes with independent DEX confirmations even when Binance throws", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     const { sqlite, db } = openFixture();
     const pending = makePendingRow({ id: 10, first_seen_bps: -220, first_price: 0.978 });
@@ -144,6 +141,7 @@ describe("confirmPendingDepegs", () => {
       { price: 0.97, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
       { price: 0.969, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
     ]);
+    vi.mocked(fetchBinancePricesDetailed).mockRejectedValueOnce(new Error("Binance transport failed"));
 
     await confirmPendingDepegs(db, [
       makeAsset({

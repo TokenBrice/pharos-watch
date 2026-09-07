@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import {
   V9_EVALUATION_BUILD_DIGEST_DOMAIN,
   V9_EVALUATION_BUILD_SOURCE_PATHS,
@@ -22,6 +23,20 @@ function fixtureRoot(): string {
 }
 
 describe("Safety Score v9 evaluation-build manifest", () => {
+  it("enrolls every fixed identity input and recursive capture summaries for regeneration", () => {
+    for (const source of [...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "shared/data/safety-score-v9/mechanism-measurements/one.summary.json",
+      "shared/data/safety-score-v9/mechanism-measurements/nested/deleted.summary.json",
+      "scripts/lib/mechanism-measurement/capture-summary.ts",
+    ]) {
+      expect(selectChangedGeneratedArtifactIds([source]), source).toContain("safety-score-v9-evaluation-build");
+    }
+    for (const source of ["shared/lib/cron-jobs.ts", "shared/lib/safety-score-v9/public.ts",
+      "worker/src/lib/safety-score-v9/candidate.ts", "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+    ]) {
+      expect(selectChangedGeneratedArtifactIds([source]), source).not.toContain("safety-score-v9-evaluation-build");
+    }
+  });
   it("uses an explicit evaluator and fact-producer allowlist", () => {
     const root = fixtureRoot();
     const paths = collectV9EvaluationBuildSourcePaths(root);
@@ -33,7 +48,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/wrapper-risk.ts");
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/mechanism-profiles.ts");
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/operational-resilience.ts");
-    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-fact-set.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9/fact-set.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/p4-exit-route-capacity.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/supply.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/redemption-backstop-providers.ts");
@@ -46,24 +61,24 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
     );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
-      "worker/src/lib/safety-score-v9-extension-operational-resilience.ts",
+      "worker/src/lib/safety-score-v9/extension-operational-resilience.ts",
     );
-    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-extension-transfer.ts");
-    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-extension-shock.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9/extension-transfer.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9/extension-shock.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
-      "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
-    );
-    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
-      "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
+      "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
     );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
-      "worker/src/lib/safety-score-v9-supply-observation-primitives.ts",
+      "worker/src/lib/safety-score-v9/wm-supply-observer.ts",
     );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
-      "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
+      "worker/src/lib/safety-score-v9/supply-observation-primitives.ts",
     );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
-      "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
+      "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/safety-score-v9/xaut-supply-observer.ts",
     );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
       "worker/src/lib/evm-rpc.ts",
@@ -75,7 +90,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "worker/src/lib/fetch-retry.ts",
     );
     expect(paths).toContain("shared/lib/safety-score-v9/score.ts");
-    expect(paths).toContain("worker/src/lib/safety-score-v9-fact-set.ts");
+    expect(paths).toContain("worker/src/lib/safety-score-v9/fact-set.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9/public.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9/coverage.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9/validation.ts");
@@ -88,9 +103,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(paths).not.toContain("shared/data/safety-score-v9/shock-coverage-measurements-v1.json");
     expect(paths).not.toContain("shared/data/safety-score-v9/shock-coverage-replay-attestations-v1.json");
     expect(paths).not.toContain("shared/data/safety-score-v9/matched-invariants-v1.ts");
-    expect(paths).not.toContain("worker/src/lib/safety-score-v9-candidate.ts");
-    expect(paths).not.toContain("worker/src/lib/safety-score-v9-release-window.ts");
-    expect(paths).not.toContain("worker/src/lib/safety-score-model-publication.ts");
+    expect(paths).not.toContain("worker/src/lib/safety-score-v9/candidate.ts");
     expect(buildV9EvaluationBuildManifest(root)).toEqual(buildV9EvaluationBuildManifest(root));
   });
 

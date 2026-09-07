@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page — ART/EMT register reviewed; no GHO match found on 2026-08-14",
+        "label": "ESMA MiCA register landing page: ART/EMT register reviewed; no GHO match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA/EBA/EIOPA crypto-assets factsheet — fully decentralized crypto-assets are outside MiCA",
+        "label": "ESMA/EBA/EIOPA crypto-assets factsheet: fully decentralized crypto-assets are outside MiCA",
         "url": "https://www.esma.europa.eu/sites/default/files/2025-10/Updated_Joint_ESAs_Factsheet_on_crypto-assets_MT_EN.pdf"
       },
       {
-        "label": "Aave GHO — decentralized, overcollateralized stablecoin governed by Aave DAO",
+        "label": "Aave GHO: decentralized, overcollateralized stablecoin governed by Aave DAO",
         "url": "https://aave.com/gho?trk=public_post_main-feed-card-text"
       },
       {
-        "label": "Aave GHO facilitators — minting and burning authorized by Aave DAO",
+        "label": "Aave GHO facilitators: minting and burning authorized by Aave DAO",
         "url": "https://aave.com/help/gho-stablecoin/facilitators"
       }
     ]
@@ -27,14 +27,14 @@
       "summary": "GHO is a prominent dollar-denominated stablecoin used in Aave liquidity and collateral flows, but it is overcollateralized, minted and burned through Aave DAO-authorized facilitators, and does not present a resolved legal issuer or fixed-value payment-issuer pathway. Those facts make its GENIUS payment-stablecoin classification materially uncertain.",
       "references": [
         {
-          "label": "GENIUS Act enacted text — payment stablecoin definition and exclusions",
+          "label": "GENIUS Act enacted text: payment stablecoin definition and exclusions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Aave GHO — decentralized, overcollateralized stablecoin",
+          "label": "Aave GHO: decentralized, overcollateralized stablecoin",
           "url": "https://aave.com/gho?trk=public_post_main-feed-card-text",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
@@ -53,27 +53,27 @@
     "notes": "GHO was assessed explicitly because its name, dollar peg, and stablecoin use make it confusable with a GENIUS payment stablecoin. The record is conservative: no public qualifying GENIUS approval or issuer-specific application was located in the reviewed federal materials, but the decentralized DAO/facilitator model leaves applicability unresolved.",
     "references": [
       {
-        "label": "GENIUS Act enacted text — payment stablecoin definition and exclusions",
+        "label": "GENIUS Act enacted text: payment stablecoin definition and exclusions",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC digital assets licensing applications — public pending-application table",
+        "label": "OCC digital assets licensing applications: public pending-application table",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Aave GHO — decentralized, overcollateralized stablecoin",
+        "label": "Aave GHO: decentralized, overcollateralized stablecoin",
         "url": "https://aave.com/gho?trk=public_post_main-feed-card-text",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"

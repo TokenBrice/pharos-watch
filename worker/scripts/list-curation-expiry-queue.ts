@@ -17,12 +17,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import {
-  buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
-  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
-  buildSafetyScoreV9ReviewedStandaloneReserveRows,
-  buildSafetyScoreV9ReviewedStaticReserveRows,
-} from "../src/lib/safety-score-v9-extension-reserves";
+import { resolveReviewedReserveRows } from "../src/lib/safety-score-v9/extension";
 import {
   assertCliUsage,
   parseCliInteger,
@@ -53,7 +48,7 @@ const ReplaySchema = z
                   stressState: z
                     .object({
                       exitPortfolio: z
-                        .object({ circulatingUsd: z.number().optional() })
+                        .object({ circulatingUsd: z.number().nullable().optional() })
                         .loose()
                         .optional(),
                     })
@@ -95,19 +90,13 @@ export function buildCurationExpiryQueue(
   for (const [assetId, meta] of metaById) {
     const liveRows = fixedInput.liveReserveMap[assetId];
     if (Array.isArray(liveRows) && liveRows.length > 0) continue;
-    const registryMeta = meta as never;
-    const admitAt = (clockSec: number) => {
-      const staticRows = buildSafetyScoreV9ReviewedStaticReserveRows(registryMeta, clockSec);
-      if (staticRows !== null) return staticRows;
-      if (meta.liveReservesConfig != null) {
-        if (!fixedInput.liveToFallbackCoins.includes(assetId)) return null;
-        return (
-          buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(registryMeta, clockSec) ??
-          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(registryMeta, clockSec)
-        );
-      }
-      return buildSafetyScoreV9ReviewedStandaloneReserveRows(registryMeta, clockSec);
-    };
+    const admitAt = (clockSec: number) =>
+      resolveReviewedReserveRows({
+        meta,
+        clockSec,
+        liveReserveRows: [],
+        liveFallbackAllowed: fixedInput.liveToFallbackCoins.includes(assetId),
+      });
     // Currently-inadmissible compositions already surface in the worklist's
     // RESV/DEP streams; this queue is preventive and lists only admitted
     // compositions that stop being admitted within the lookahead.
@@ -167,12 +156,10 @@ async function main(): Promise<void> {
   assertCliUsage(typeof values.replay === "string", "--replay is required");
   const lookaheadDays =
     values.days === undefined ? 10 : parseCliInteger(String(values.days), { name: "--days", min: 1 });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   const replay = ReplaySchema.parse(JSON.parse(readFileSync(String(values.replay), "utf8")));
   const rows = buildCurationExpiryQueue(replay, lookaheadDays);
   const markdown = renderCurationExpiryQueue(rows, lookaheadDays);
   if (typeof values.output === "string") {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
     writeFileSync(values.output, markdown, "utf8");
   } else {
     process.stdout.write(markdown);

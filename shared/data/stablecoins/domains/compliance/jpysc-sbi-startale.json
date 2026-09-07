@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requirements",
+        "label": "ESMA MiCA Article 48: Union EMT offer/admission requirements",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
       },
       {
-        "label": "ESMA interim MiCA register — EMT issuers",
+        "label": "ESMA interim MiCA register: EMT issuers",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Startale/SBI — JPYSC initially limited to SBI VC Trade accounts; public-chain circulation is prospective",
+        "label": "Startale/SBI: JPYSC initially limited to SBI VC Trade accounts; public-chain circulation is prospective",
         "url": "https://startale.com/ja/blog/jpysc-launch"
       }
     ]
@@ -30,7 +30,7 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Japan FSA — trust-bank route for electronic payment instruments",
+          "label": "Japan FSA: trust-bank route for electronic payment instruments",
           "url": "https://www.fsa.go.jp/en/news/2018/20180717.html",
           "sourceKind": "foreign-regulator",
           "accessedAt": "2026-08-14"
@@ -48,7 +48,7 @@
     "notes": "The issuer's announcement describes JPYSC as a Japanese electronic payment instrument, initially usable only inside SBI VC Trade accounts; public-chain circulation, including overseas use, is prospective after legal, tax, and supervisory treatment is clarified. The current U.S. GENIUS rulemaking materials and OCC application list contain no JPYSC or SBI Shinsei Trust Bank approval, application, or foreign-issuer registration. issuerPathway remains unknown because Japanese authorization is not a GENIUS pathway and no U.S. or GENIUS foreign-exception route was found.",
     "references": [
       {
-        "label": "OCC Digital Assets Licensing Applications — no JPYSC or SBI Shinsei Trust Bank applicant listed",
+        "label": "OCC Digital Assets Licensing Applications: no JPYSC or SBI Shinsei Trust Bank applicant listed",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"

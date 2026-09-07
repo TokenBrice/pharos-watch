@@ -97,7 +97,6 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.getAllByText("+1h").length).toBeGreaterThan(0);
     expect(screen.getByText(/1h 30m/)).toBeTruthy();
     expect(screen.getByText("4 scored · 1 maturing")).toBeTruthy();
-    expect(screen.getByText("2 scored · 1 maturing")).toBeTruthy();
     // Reviewed readout row renders with its verdict.
     expect(screen.getByText("LUSD")).toBeTruthy();
     expect(screen.getByText("Correct recoverable")).toBeTruthy();

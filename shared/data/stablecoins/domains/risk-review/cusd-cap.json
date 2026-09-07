@@ -61,7 +61,7 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "Cap docs — contract addresses",
+            "label": "Cap docs: contract addresses",
             "url": "https://docs.cap.app/developers/addresses"
           },
           {
@@ -97,7 +97,7 @@
             "url": "https://megaeth.blockscout.com/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
           },
           {
-            "label": "Cap docs — contract addresses",
+            "label": "Cap docs: contract addresses",
             "url": "https://docs.cap.app/developers/addresses"
           }
         ]

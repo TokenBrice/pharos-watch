@@ -20,6 +20,7 @@ import {
   pruneExpiredDexPriceStages,
 } from "../dex-liquidity/scoring";
 import type { DexPriceObs, PoolEntry } from "../dex-liquidity/types";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const NOW_SEC = 1_700_000_000;
 const GENERATION_ID = `dex-liquidity-${NOW_SEC}`;
@@ -38,7 +39,7 @@ function seedPublishedDexGeneration(options: SeedGenerationOptions = {}): {
 
 function failAfterSuccessfulBatches(db: D1Database, successfulBatchLimit: number): D1Database {
   let successfulBatches = 0;
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => db.prepare(sql),
     batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
       if (successfulBatches >= successfulBatchLimit) {
@@ -48,13 +49,13 @@ function failAfterSuccessfulBatches(db: D1Database, successfulBatchLimit: number
       successfulBatches++;
       return result;
     },
-  } as unknown as D1Database;
+  });
 }
 
 function failOnceAfterCommittedPublication(db: D1Database): D1Database {
   let batchCount = 0;
   let injected = false;
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => db.prepare(sql),
     batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
       batchCount++;
@@ -65,7 +66,7 @@ function failOnceAfterCommittedPublication(db: D1Database): D1Database {
       }
       return result;
     },
-  } as unknown as D1Database;
+  });
 }
 
 function supersedeBeforePublication(
@@ -73,7 +74,7 @@ function supersedeBeforePublication(
   sqlite: import("node:sqlite").DatabaseSync,
 ): D1Database {
   let batchCount = 0;
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => db.prepare(sql),
     batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
       batchCount++;
@@ -111,7 +112,7 @@ function supersedeBeforePublication(
       }
       return db.batch<T>(statements);
     },
-  } as unknown as D1Database;
+  });
 }
 
 function computePriceGeneration(
@@ -449,7 +450,7 @@ describe("DEX scoring publication atomicity", () => {
   });
 
   it("reports price-stage cleanup errors without throwing", async () => {
-    const db = {
+    const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
           run: async () => {
@@ -457,7 +458,7 @@ describe("DEX scoring publication atomicity", () => {
           },
         }),
       }),
-    } as unknown as D1Database;
+    });
 
     const retention = await pruneExpiredDexPriceStages(db, GENERATION_ID, NOW_SEC);
 

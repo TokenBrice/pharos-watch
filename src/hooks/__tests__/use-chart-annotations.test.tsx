@@ -4,17 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 const {
-  useApiQueryWithMetaMock,
+  useRegisteredApiQueryMock,
   isChartAnnotationsEnabledMock,
   getCuratedAnnotationsMock,
 } = vi.hoisted(() => ({
-  useApiQueryWithMetaMock: vi.fn(),
+  useRegisteredApiQueryMock: vi.fn(),
   isChartAnnotationsEnabledMock: vi.fn(),
   getCuratedAnnotationsMock: vi.fn(),
 }));
 
-vi.mock("../use-api-query", () => ({
-  useApiQueryWithMeta: useApiQueryWithMetaMock,
+vi.mock("../api-hooks", () => ({
+  useRegisteredApiQuery: useRegisteredApiQueryMock,
 }));
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -51,14 +51,14 @@ function tape(partial: Partial<TapeEvent> & Pick<TapeEvent, "id" | "type" | "ts"
 
 describe("useChartAnnotations", () => {
   beforeEach(() => {
-    useApiQueryWithMetaMock.mockReset();
+    useRegisteredApiQueryMock.mockReset();
     isChartAnnotationsEnabledMock.mockReset();
     getCuratedAnnotationsMock.mockReset();
   });
 
   it("returns empty + suspends the query when the flag is off", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(false);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2023, 2, 11), kind: "depeg", label: "curated", severity: "high" },
     ]);
@@ -68,13 +68,13 @@ describe("useChartAnnotations", () => {
     );
 
     expect(result.current.data).toEqual([]);
-    const opts = useApiQueryWithMetaMock.mock.calls.at(-1)?.[3] as { enabled: boolean };
+    const opts = useRegisteredApiQueryMock.mock.calls.at(-1)?.[1] as { enabled: boolean };
     expect(opts.enabled).toBe(false);
   });
 
   it("returns empty when from/to are missing", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2023, 2, 11), kind: "depeg", label: "curated", severity: "high" },
     ]);
@@ -88,19 +88,19 @@ describe("useChartAnnotations", () => {
 
   it("uses the events producer polling interval for tape event annotations", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([]);
 
     renderHook(() =>
       useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
     );
 
-    expect(useApiQueryWithMetaMock.mock.calls.at(-1)?.[2]).toBe(CRON_TAPE);
+    expect(useRegisteredApiQueryMock.mock.calls.at(-1)?.[0]?.producerIntervalMs).toBe(CRON_TAPE);
   });
 
   it("clamps curated annotations to the [fromMs, toMs] window", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2022, 11, 31), kind: "depeg", label: "before", severity: "low" },
       { ts: Date.UTC(2023, 2, 11), kind: "depeg", label: "in range", severity: "high" },
@@ -119,7 +119,7 @@ describe("useChartAnnotations", () => {
     const bucketStart = 30 * DAY_MS * 650;
     const rawFrom = bucketStart + 5 * DAY_MS;
     const rawTo = bucketStart + 10 * DAY_MS;
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -158,9 +158,9 @@ describe("useChartAnnotations", () => {
     );
 
     expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
-    const firstCall = useApiQueryWithMetaMock.mock.calls.at(-1);
-    const firstKey = JSON.stringify(firstCall?.[0]);
-    const firstPath = firstCall?.[1] as string;
+    const firstCall = useRegisteredApiQueryMock.mock.calls.at(-1);
+    const firstKey = JSON.stringify(firstCall?.[0]?.queryKey);
+    const firstPath = firstCall?.[0]?.path as string;
     const firstUrl = new URL(firstPath, "https://pharos.test");
     expect(firstUrl.searchParams.get("since")).toBe(String(bucketStart));
     expect(firstUrl.searchParams.get("until")).toBe(String(bucketStart + 30 * DAY_MS));
@@ -170,22 +170,22 @@ describe("useChartAnnotations", () => {
 
     rerender({ from: rawFrom + 60_000, to: rawTo + 60_000 });
 
-    const secondCall = useApiQueryWithMetaMock.mock.calls.at(-1);
-    expect(JSON.stringify(secondCall?.[0])).toBe(firstKey);
-    expect(secondCall?.[1]).toBe(firstPath);
+    const secondCall = useRegisteredApiQueryMock.mock.calls.at(-1);
+    expect(JSON.stringify(secondCall?.[0]?.queryKey)).toBe(firstKey);
+    expect(secondCall?.[0]?.path).toBe(firstPath);
     expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
   });
 
   it("pushes chart annotation relevance filters into the bucketed API request", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([]);
 
     renderHook(() =>
       useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 0, 2)),
     );
 
-    const path = useApiQueryWithMetaMock.mock.calls.at(-1)?.[1] as string;
+    const path = useRegisteredApiQueryMock.mock.calls.at(-1)?.[0]?.path as string;
     const url = new URL(path, "https://pharos.test");
     expect(url.searchParams.get("severityFloor")).toBe("warning");
     expect(url.searchParams.getAll("type")).toEqual(["depeg.opened", "depeg.peak_worsened"]);
@@ -195,7 +195,7 @@ describe("useChartAnnotations", () => {
 
   it("merges curated + tape sources and dedupes same-day same-kind (curated wins)", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -251,7 +251,7 @@ describe("useChartAnnotations", () => {
 
   it("drops mint_burn and freeze tape rows from chart annotations", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -286,7 +286,7 @@ describe("useChartAnnotations", () => {
 
   it("ignores tape rows with unmapped event-type prefixes", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -319,7 +319,7 @@ describe("useChartAnnotations", () => {
 
   it("drops low-severity tape rows (info, notice) but keeps curated annotations", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -371,7 +371,7 @@ describe("useChartAnnotations", () => {
 
   it("drops depeg.resolved tape rows even when severity passes the filter", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -406,7 +406,7 @@ describe("useChartAnnotations", () => {
 
   it("keeps material depeg peak-worsened tape rows", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({
@@ -443,7 +443,7 @@ describe("useChartAnnotations", () => {
 
   it("sorts merged output by timestamp ascending", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         events: [
           tape({

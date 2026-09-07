@@ -2,16 +2,42 @@
 
 import { useMemo } from "react";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
-import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
 import { usePlotInsets, type ChartMargin } from "@/components/chart-primitives/axes";
 import { useChartSyncHandlers, useMarketDataChartSync } from "@/components/chart-primitives/sync";
 
-interface TimePoint {
+export interface MarketDataTimePoint {
   ts: number;
 }
 
-export function useMarketDataChartWindow<T extends TimePoint>({
+export function useMarketDataChartFrame<T extends MarketDataTimePoint>({
+  chartData, controlledRange, stablecoinId,
+}: {
+  chartData: T[]; controlledRange?: TimeRangeOption; stablecoinId: string;
+}) {
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
+    externalRange: controlledRange,
+  });
+  const margin = useMemo(() => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }), [range]);
+  const chartWindow = useMarketDataChartWindow({ filteredData, margin, range, stablecoinId });
+  const crosshair = chartWindow.sync
+    ? {
+        hoveredTs: chartWindow.sync.hoveredTs, domain: chartWindow.xDomain,
+        plotInsetLeft: chartWindow.plotInsetLeft, plotInsetRight: chartWindow.plotInsetRight,
+        plotInsetTop: chartWindow.plotInsetTop, plotInsetBottom: chartWindow.plotInsetBottom,
+      }
+    : null;
+
+  return {
+    chartContainerRef, crosshair, filteredData, height, isChartReady, margin, options, range, setRange, width,
+    ...chartWindow,
+  };
+}
+
+export function useMarketDataChartWindow<T extends MarketDataTimePoint>({
   filteredData,
   margin,
   range,

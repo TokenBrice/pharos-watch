@@ -22,11 +22,11 @@
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "defi.money documentation — how MONEY is made",
+        "label": "defi.money documentation: how MONEY is made",
         "url": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made"
       },
       {
-        "label": "defi.money documentation — deployed contract addresses",
+        "label": "defi.money documentation: deployed contract addresses",
         "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
       }
     ],
@@ -61,7 +61,7 @@
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "defi.money documentation — deployed contract addresses",
+        "label": "defi.money documentation: deployed contract addresses",
         "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
       }
     ],

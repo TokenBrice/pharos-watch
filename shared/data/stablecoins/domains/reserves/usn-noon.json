@@ -183,7 +183,7 @@
         "reserveName": "Undeployed",
         "pct": 2.1,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable labels this balance Undeployed but does not establish whether it is cash, a stablecoin, or another asset, nor identify its custodian."
+        "rationale": "Accountable labels this balance Undeployed but does not establish whether the balance is cash, a stablecoin, or another asset, nor identify its custodian."
       }
     ]
   },

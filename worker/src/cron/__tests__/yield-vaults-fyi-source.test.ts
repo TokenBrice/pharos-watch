@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockRegistry } from "../../test-helpers/cron";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -85,7 +86,7 @@ function detailedVault(overrides: Record<string, unknown> = {}) {
 function creditLedgerDb(initialValue: string | null) {
   let value = initialValue;
   const writes: string[] = [];
-  const db = {
+  const db = makeNoopD1({
     prepare: () => ({
       bind: (...binds: unknown[]) => ({
         first: async () => value == null ? null : { value, updated_at: 1_782_885_600 },
@@ -96,7 +97,7 @@ function creditLedgerDb(initialValue: string | null) {
         },
       }),
     }),
-  } as unknown as D1Database;
+  });
   return { db, writes };
 }
 

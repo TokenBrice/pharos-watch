@@ -37,9 +37,15 @@
       "chain": "bifrost",
       "address": "0x6906ccda405926fc3f04240187dd4fad5df6d555",
       "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x4f2c996248ed9592e64b59f781a15deb1e2b0d4c",
+      "decimals": 18
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "cex",
   "governanceQuality": "single-entity",
   "infrastructures": [
     "liquity-v1"

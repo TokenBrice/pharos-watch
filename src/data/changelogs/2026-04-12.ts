@@ -4,10 +4,10 @@ export const entry: ChangelogEntry = {
   dateRange: { from: "2026-04-05", to: "2026-04-12" },
   headline: "Infrastructure axis launches, PSI hero gets arc gauge and event timeline, and Liquidity Score v5.0 brings size-aware scoring.",
   summary: [
-    { label: "Infrastructure axis", tag: "feature", description: "New filter dimension lets users browse stablecoins by underlying protocol — Liquity v1/v2 and M0 tagged across 25 coins, replacing the deprecated protocol-lineage fields." },
+    { label: "Infrastructure axis", tag: "feature", description: "New filter dimension lets users browse stablecoins by underlying protocol: Liquity v1/v2 and M0 tagged across 25 coins, replacing the deprecated protocol-lineage fields." },
     { label: "Stability intelligence", tag: "feature", description: "PSI page ships an arc gauge hero with annotated crisis events from COVID Crash to BTC ATH, plus hardened non-USD depeg replay for BRZ, TRYB, and commodity pegs." },
     { label: "Safety Scores redesign", tag: "design", description: "Grade-grouped card grid, systemic risk headline, entrance animations, and v6.93 scoring with steeper peg multiplier and active-depeg grade cap.", href: "/methodology/scoring-changelog/" },
-    { label: "Live reserves surge", tag: "coverage", description: "10+ new adapters — Frax balance-sheet, Block Analitica for DAI/USDS, MIM cauldrons, eUSD, feUSD, Honey — push live reserve tracking to 126 coins." },
+    { label: "Live reserves surge", tag: "coverage", description: "10+ new adapters push live reserve tracking to 126 coins, including Frax's balance sheet, Block Analitica for DAI/USDS, MIM cauldrons, eUSD, feUSD, and Honey." },
     { label: "Liquidity Score v5.0", tag: "feature", description: "Size-aware scoring formulas, best-path exit model with diversification premium, and Uniswap V2/V4 split replace the v4 blend.", href: "/methodology/liquidity-score-changelog/" },
     { label: "Broader coverage", tag: "coverage", description: "Seven new stablecoins (USDat, wM, USDnr, USDK, XO Cash, evaUSDC, evaUSDT) bring the dashboard to 194 tracked coins; RAI retired to the cemetery." },
     { label: "Navigation & pages", tag: "design", description: "Collapsible sidebar groups, two-column API reference with scrollspy, redesigned /telegram page, and changelog timeline with category tags." },

@@ -252,7 +252,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     expect(result).toMatchObject({
       mcap: 1_739_632.096715,
       supplySource: "onchain-total-supply",
-      chainCirculating: { Movement: 1_739_632.096715 },
+      chainCirculating: { Movement: { current: 1_739_632.096715, chainId: "movement" } },
     });
   });
 
@@ -300,10 +300,10 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       mcap: 1_000,
       supplySource: "onchain-total-supply",
       chainCirculating: {
-        Ethereum: 825,
-        Base: 100,
-        Optimism: 50,
-        Arbitrum: 25,
+        Ethereum: { current: 825, chainId: "ethereum" },
+        Base: { current: 100, chainId: "base" },
+        Optimism: { current: 50, chainId: "optimism" },
+        Arbitrum: { current: 25, chainId: "arbitrum" },
       },
     });
   });
@@ -329,10 +329,10 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
 
     expect(result?.supplySource).toBe("onchain-total-supply");
     expect(result?.mcap).toBeCloseTo(55_641_624.55225472, 6);
-    expect(result?.chainCirculating?.Ethereum).toBeCloseTo(55_641_624.55225472, 6);
-    expect(result?.chainCirculating?.Polygon).toBe(0);
-    expect(result?.chainCirculating?.Base).toBe(0);
-    expect(result?.chainCirculating?.Tempo).toBe(0);
+    expect(result?.chainCirculating?.Ethereum?.current).toBeCloseTo(55_641_624.55225472, 6);
+    expect(result?.chainCirculating?.Polygon?.current).toBe(0);
+    expect(result?.chainCirculating?.Base?.current).toBe(0);
+    expect(result?.chainCirculating?.Tempo?.current).toBe(0);
     expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(4);
   });
 
@@ -366,9 +366,9 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     const result = await fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1);
 
     expect(result?.mcap).toBe(1_000);
-    expect(result?.chainCirculating?.Ethereum).toBe(700);
-    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]).toBe(70);
-    const published = Object.values(result?.chainCirculating ?? {}).reduce((sum, value) => sum + value, 0);
+    expect(result?.chainCirculating?.Ethereum?.current).toBe(700);
+    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBe(70);
+    const published = Object.values(result?.chainCirculating ?? {}).reduce((sum, value) => sum + value.current, 0);
     expect(published).toBeCloseTo(1_000, 6);
     // balanceOf(0x211cc4dd…) on the canonical Ethereum sUSDe contract.
     expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
@@ -403,8 +403,8 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     const result = await fetchCuratedAggregateOnChainMcap(makeAcrdxMeta(), 1);
 
     expect(result?.mcap).toBe(42_634_423);
-    expect(result?.chainCirculating?.Base).toBe(0);
-    expect(result?.chainCirculating?.Solana).toBe(0);
+    expect(result?.chainCirculating?.Base?.current).toBe(0);
+    expect(result?.chainCirculating?.Solana?.current).toBe(0);
     expect(fetchSolanaTokenSupplyMock).toHaveBeenCalledTimes(1);
     // The Solana leg must never route through the probe, which rejects zero.
     expect(probeTrackedTokenSupplyMock.mock.calls.every(([, input]) => input?.kind !== "onchain-solana")).toBe(true);
@@ -422,10 +422,10 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     const result = await fetchCuratedAggregateOnChainMcap(makeGldtMeta(), 1);
 
     expect(result?.mcap).toBe(594_500);
-    expect(result?.chainCirculating?.["Internet Computer"]).toBeCloseTo(589_146.951629, 6);
-    expect(result?.chainCirculating?.Base).toBeCloseTo(5_345.40392636, 6);
-    expect(result?.chainCirculating?.Ethereum).toBeCloseTo(7.64444464, 6);
-    expect(result?.chainCirculating?.Arbitrum).toBe(0);
+    expect(result?.chainCirculating?.["Internet Computer"]?.current).toBeCloseTo(589_146.951629, 6);
+    expect(result?.chainCirculating?.Base?.current).toBeCloseTo(5_345.40392636, 6);
+    expect(result?.chainCirculating?.Ethereum?.current).toBeCloseTo(7.64444464, 6);
+    expect(result?.chainCirculating?.Arbitrum?.current).toBe(0);
     expect(fetchIcrcLedgerTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
       canisterId: "6c7su-kiaaa-aaaar-qaira-cai",
     });
@@ -442,7 +442,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     const result = await fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1);
 
     expect(result?.mcap).toBe(8_009_514);
-    expect(result?.chainCirculating?.Starknet).toBe(175_676);
+    expect(result?.chainCirculating?.Starknet?.current).toBe(175_676);
     expect(fetchStarknetTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
       contract: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
     });

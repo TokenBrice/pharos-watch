@@ -110,10 +110,11 @@ export async function fetchFiatCoinGeckoTokens(
             mcap = aggregateOnChainMcap.mcap;
             supplySource = aggregateOnChainMcap.supplySource;
             chainCirculating = Object.fromEntries(
-              Object.entries(aggregateOnChainMcap.chainCirculating ?? {}).map(([chainLabel, current]) => [
+              Object.entries(aggregateOnChainMcap.chainCirculating ?? {}).map(([chainLabel, row]) => [
                 chainLabel,
                 {
-                  current,
+                  ...(row.chainId ? { chainId: row.chainId } : {}),
+                  current: row.current,
                   circulatingPrevDay: 0,
                   circulatingPrevWeek: 0,
                   circulatingPrevMonth: 0,

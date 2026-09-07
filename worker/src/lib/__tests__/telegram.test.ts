@@ -6,43 +6,20 @@ let fetchSpy = mockFetch([], { requireMatch: true });
 const {
   answerCallbackQuery,
   answerInlineQuery,
+  buildTelegramRecapCta,
   buildTelegramMessage,
   editMessage,
-  postDigestToTelegram,
   schedulePerChatBatches,
+  sendPhotoToChat,
   sendToChat,
   sendBatch,
 } = await import("../telegram");
-
-const digestCreds = {
-  botToken: "bot-token",
-  chatId: "12345",
-};
 
 beforeEach(() => {
   fetchSpy = mockFetch([], { requireMatch: true });
 });
 
 describe("sendToChat", () => {
-  it("drains the success response body for digest sends", async () => {
-    const response = new Response(JSON.stringify({ ok: true }), { status: 200 });
-    fetchSpy.mockResolvedValueOnce(response);
-
-    await postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds);
-
-    expect(response.bodyUsed).toBe(true);
-  });
-
-  it("drains the error response body for digest sends", async () => {
-    const response = new Response("Forbidden", { status: 403 });
-    fetchSpy.mockResolvedValueOnce(response);
-
-    await expect(postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds)).rejects.toThrow(
-      "Telegram API 403:",
-    );
-    expect(response.bodyUsed).toBe(true);
-  });
-
   it("sends HTML message and returns ok", async () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const result = await sendToChat("12345", "<b>Test</b>", "bot-token");
@@ -67,6 +44,56 @@ describe("sendToChat", () => {
   it("builds weekly Telegram digest links with a trailing slash", () => {
     const body = buildTelegramMessage("Weekly Recap", "PSI held steady.", "2026-03-21-weekly", 1);
     expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21-weekly/">Read on Pharos →</a>`);
+  });
+
+  it("does not render a Safety Score map as a hoped-for link preview", () => {
+    const body = buildTelegramMessage(
+      "Daily Digest",
+      "PSI held steady.",
+      "2026-03-21",
+      null,
+      null,
+      "<b>Today’s map</b>",
+    );
+    expect(body).toContain("<b>Today’s map</b>");
+    expect(body).not.toContain("View today’s map");
+  });
+
+  it("keeps the map summary next to the map bubble and isolates standing context", () => {
+    const body = buildTelegramMessage(
+      "Daily Digest",
+      "The lead moved first.\n\nStanding: USX d3 250bps",
+      "2026-03-21",
+      12,
+      "<b>Tracking Changes</b>\n\n<blockquote expandable><code>USDX</code> Example USD</blockquote>",
+      "<b>Today’s map</b>\nMapped supply: $100B across 318 coins\nA tier: 13 coins · 81.8%\nC/D/F tiers: 264 coins · 11.2%",
+    );
+
+    expect(body.indexOf("<b>Today’s map</b>")).toBeLessThan(body.indexOf("Pharos Daily Digest #12"));
+    expect(body).toContain("<blockquote expandable>Standing: USX d3 250bps</blockquote>");
+    expect(body).not.toContain("The lead moved first.\n\nStanding:");
+    expect(body.indexOf("<blockquote expandable>Standing:")).toBeLessThan(body.indexOf("<b>Tracking Changes</b>"));
+  });
+
+  it("only advertises the private recap CTA in public rollout", () => {
+    const publicPolicy = { mode: "public" as const, allowedChatIds: new Set<string>() };
+    const canaryPolicy = { mode: "canary" as const, allowedChatIds: new Set(["channel-1"]) };
+
+    expect(buildTelegramRecapCta(publicPolicy)).toBe(
+      '<a href="https://t.me/PharosWatchBot">Open @PharosWatchBot for a private /recap →</a>',
+    );
+    expect(buildTelegramRecapCta(canaryPolicy)).toBeNull();
+    expect(buildTelegramRecapCta({ mode: "dark", allowedChatIds: new Set() })).toBeNull();
+    expect(buildTelegramRecapCta({ mode: "off", allowedChatIds: new Set() })).toBeNull();
+    expect(buildTelegramRecapCta(undefined)).toBeNull();
+
+    const publicBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, publicPolicy);
+    const offBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, {
+      mode: "off",
+      allowedChatIds: new Set(),
+    });
+    expect(publicBody).toContain("private /recap");
+    expect(offBody).not.toContain("private /recap");
   });
 
   it("returns blocked: true on 403", async () => {
@@ -206,6 +233,44 @@ describe("sendToChat", () => {
 
     expect(result.retryAfterSec).toBe(12);
     expect(result.rateLimitScope).toBe("chat");
+  });
+
+  it("sends a photo with a capped HTML caption and the shared result shape", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await sendPhotoToChat(
+      "12345",
+      "https://pharos.watch/safety-scores/map.png?date=2026-03-21",
+      "x".repeat(1_100),
+      "bot-token",
+      { disableNotification: true },
+    );
+
+    expect(result).toMatchObject({ ok: true, statusCode: 200, delivery: "sent" });
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/sendPhoto");
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body).toMatchObject({
+      chat_id: "12345",
+      photo: "https://pharos.watch/safety-scores/map.png?date=2026-03-21",
+      parse_mode: "HTML",
+      disable_notification: true,
+    });
+    expect(body.caption).toHaveLength(1_024);
+  });
+
+  it("classifies sendPhoto transport failures like sendMessage failures", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
+
+    const result = await sendPhotoToChat("12345", "https://example.com/map.png", "Map", "bot-token");
+
+    expect(result).toMatchObject({
+      ok: false,
+      blocked: true,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 403,
+      delivery: "blocked",
+    });
   });
 
   it("does not infer global scope from Telegram description text", async () => {

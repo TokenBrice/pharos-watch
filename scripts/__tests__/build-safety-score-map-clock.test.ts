@@ -23,8 +23,7 @@ import {
  * production, months later. These tests pin it here instead:
  *
  *  - the structural pin below fails immediately on a second clock read;
- *  - the emitted-artifact test proves the shipped triple actually agrees, and
- *    is the only coverage of the exit-0 first-run bootstrap path.
+ *  - the emitted-artifact test proves the shipped sidecars actually agree.
  */
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -48,7 +47,7 @@ describe("clock discipline — structural pin on the generator source", () => {
 
   it("never re-reads the clock after renderedAtSec is fixed", () => {
     // Everything after this point — naming, the backwards-publish check, the
-    // render, and all three emitted files — must share the hoisted read. The
+    // render, and all emitted files — must share the hoisted read. The
     // backwards-publish comparison is the sole permitted later `Date.now()`.
     const tail = source.slice(source.indexOf("const renderedAtSec ="));
     const laterClockReads = tail.match(/Date\.now\(\)/g) ?? [];
@@ -60,8 +59,8 @@ describe("clock discipline — structural pin on the generator source", () => {
   it("stamps every emitted artifact with the same runDate value", () => {
     const tail = source.slice(source.indexOf("const renderedAtSec ="));
     const dateFields = tail.match(/\bdate: [A-Za-z.]+/g) ?? [];
-    // alt.json, snapshot.json, manifest.json, and snapshot.mapSummary — one each, all runDate.
-    expect(dateFields).toEqual(["date: runDate", "date: runDate", "date: runDate", "date: runDate"]);
+    // manifest.mapSummary, alt.json, and manifest.json — one each, all runDate.
+    expect(dateFields).toEqual(["date: runDate", "date: runDate", "date: runDate"]);
     expect(tail).toMatch(/renderedAt: new Date\(renderedAtSec \* 1000\)\.toISOString\(\)/);
   });
 });
@@ -177,7 +176,7 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
   });
 
   it(
-    "renders a first run with no previous snapshot (exit 0) and stamps date, renderedAtSec and asOfSec consistently",
+    "renders canonical data and stamps date, renderedAtSec and asOfSec consistently",
     { timeout: 120_000 },
     async () => {
       const outDir = mkdtempSync(join(tmpdir(), "pharos-safety-map-render-"));
@@ -192,40 +191,32 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
       child.stderr.on("data", (chunk) => (stderr += String(chunk)));
       const status = await new Promise<number | null>((done) => child.on("close", done));
 
-      // The bootstrap path: a missing delta baseline warns, it does not fail.
-      expect(`${stdout}${stderr}`).toMatch(/No --previous-snapshot supplied — day-over-day delta guard skipped/);
       expect(status, `${stdout}\n${stderr}`).toBe(0);
       expect(existsSync(pngPath)).toBe(true);
 
       const read = (suffix: string) => JSON.parse(readFileSync(join(outDir, `map${suffix}`), "utf8"));
-      const snapshot = read(".snapshot.json");
       const manifest = read(".manifest.json");
       const alt = read(".alt.json");
       const svg = readFileSync(join(outDir, "map.svg"), "utf8");
 
       // Rule 7: `date` is the UTC date of `renderedAtSec`, in every artifact.
-      expect(snapshot.date).toBe(utcDate(snapshot.renderedAtSec));
       expect(manifest.date).toBe(utcDate(manifest.renderedAtSec));
-      expect(alt.date).toBe(snapshot.date);
-      expect(manifest.renderedAtSec).toBe(snapshot.renderedAtSec);
+      expect(alt.date).toBe(manifest.date);
       expect(manifest.renderedAt).toBe(new Date(manifest.renderedAtSec * 1000).toISOString());
 
       // The capture clock is carried through untouched and is a *different* UTC
       // day, so a run that confused the two would be caught here.
-      expect(snapshot.asOfSec).toBe(capturedAtSec);
       expect(manifest.asOfSec).toBe(capturedAtSec);
       expect(alt.asOfSec).toBe(capturedAtSec);
-      expect(utcDate(capturedAtSec)).not.toBe(snapshot.date);
+      expect(utcDate(capturedAtSec)).not.toBe(manifest.date);
       expect(alt.altText).toContain(`data as of ${utcDate(capturedAtSec)}`);
       expect(alt.psi).toEqual({ score: 93.8, band: "BEDROCK", basis: "24H AVG", computedAt: expect.any(Number) });
       expect(alt.altText).toContain("PSI 93.8 · BEDROCK · 24H AVG at render time");
 
-      // The census the next run's delta guard will read back.
-      expect(snapshot.counts.graded).toBe(cards.length);
-      expect(snapshot.coins).toHaveLength(cards.length);
-      expect(snapshot.publicationStatus).toBe("current");
-      expect(snapshot.mapSummary.floorMcapByTier.a).toBeGreaterThan(snapshot.mapSummary.floorMcapByTier.other);
-      expect(snapshot.mapSummary.tiers).toHaveLength(5);
+      expect(manifest.counts.graded).toBe(cards.length);
+      expect(manifest.publicationStatus).toBe("current");
+      expect(manifest.mapSummary.floorMcapByTier.a).toBeGreaterThan(manifest.mapSummary.floorMcapByTier.other);
+      expect(manifest.mapSummary.tiers).toHaveLength(5);
       expect(alt.altText).toContain("five discrete grade bands: A at the centre, then B, C, D, and F outward");
       expect(alt.altText).toContain("orbit = grade band, not a continuous score");
       expect(alt.altText).toContain("assets below those thresholds share a fixed presence marker");

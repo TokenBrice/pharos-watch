@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTelegramRecapFact, parseTelegramRecapFacts, type TelegramRecapTapeRow } from "../telegram-recap-facts";
+import { parseTelegramRecapFact, parseTelegramRecapFacts, type TelegramRecapTapeRow } from "../telegram/recap-facts";
 
 const baseRow: TelegramRecapTapeRow = {
   event_id: "event-1",

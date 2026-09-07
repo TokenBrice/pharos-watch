@@ -1,0 +1,25 @@
+{
+  "mechanism": "usdq-quill",
+  "date": "2026-07-15-block-34367075",
+  "sha256": "65df86118036b0e8589f160534ca0a12a28d5da44c991ea3c4f449879c5ae9b4",
+  "bytes": 22241,
+  "r2Key": "captures/usdq-quill/2026-07-15-block-34367075.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "usdq-quill",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdq-quill/2026-07-15-block-34367075.json",
+    "chain": {
+      "key": "scroll",
+      "evmChainId": 534352
+    },
+    "block": {
+      "number": 34367075,
+      "hash": "0x11f21746bf40a8592909819694e51aa10fadd7ba192b1bc6fda8db4e1845f51d",
+      "timestampUnix": 1784098965,
+      "timestampIso": "2026-07-15T07:02:45.000Z",
+      "selection": "finalized"
+    }
+  }
+}

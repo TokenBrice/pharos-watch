@@ -91,6 +91,116 @@
       "chain": "arbitrum",
       "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
       "decimals": 18
+    },
+    {
+      "chain": "aurora",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon-zkevm",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "stable",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x137643f7b2c189173867b3391f6629cab46f0f1a",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x91a3f8a8d7a881fbdfcfecd7a2dc92a46dcfa14e",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x592a48c0fb9c7f8bf1701cb0136b90dea2a5b7b6",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0xc6b2be25d65760b826d0c852fd35f364250619c2",
+      "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+      "decimals": 18
+    },
+    {
+      "chain": "abstract",
+      "address": "0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45",
+      "decimals": 9
+    },
+    {
+      "chain": "aptos",
+      "address": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+      "decimals": 6
+    },
+    {
+      "chain": "movement",
+      "address": "0xc9bdfdc965bb7fcdcfa6b45870eab33bfaf8f4e8e3f6b89d3e0203aba634a1c9",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

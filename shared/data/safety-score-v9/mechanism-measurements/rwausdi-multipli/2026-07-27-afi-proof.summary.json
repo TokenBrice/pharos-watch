@@ -1,0 +1,14 @@
+{
+  "mechanism": "rwausdi-multipli",
+  "date": "2026-07-27-afi-proof",
+  "sha256": "c2becc50f0df2c33c0f92ae7a65306c11cef00a4d49e7c2e02174163324605c4",
+  "bytes": 1451,
+  "r2Key": "captures/rwausdi-multipli/2026-07-27-afi-proof.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "rwausdi-multipli",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/rwausdi-multipli/2026-07-27-afi-proof.json",
+    "capturedAt": "2026-07-27T12:30:38.219Z"
+  }
+}

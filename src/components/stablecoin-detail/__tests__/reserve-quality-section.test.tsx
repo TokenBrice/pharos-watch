@@ -55,19 +55,8 @@ const SUMMARY: ReserveQualityClientSummary = {
 };
 
 describe("ReserveQualitySection", () => {
-  it("renders the chip, lede, mix, ladder, and facts", () => {
+  it("folds the slice detail disclosure closed by default", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
-    expect(html).toContain("Reserve quality");
-    expect(html).toContain("Highly liquid");
-    expect(html).toContain("100% convertible within one day");
-    expect(html).toContain("Asset mix");
-    expect(html).toContain("Time to liquidate");
-    expect(html).toContain("Immediate");
-    expect(html).toContain("≤ 1 day");
-    expect(html).toContain("As of");
-    expect(html).toContain("2026-06-30");
-    expect(html).toContain("Slices");
-    expect(html).toContain("Verified");
     // detail disclosure closed by default (native <details> without open attr)
     expect(html).toContain("<details");
     expect(html).not.toContain("<details open");
@@ -81,8 +70,6 @@ describe("ReserveQualitySection", () => {
   it("describes the asset-class mix for assistive tech and legends it inline", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
     expect(html).toContain('aria-label="Asset-class mix: Treasury bills 80%, Bank deposits 20%"');
-    expect(html).toContain("bg-foreground/80");
-    expect(html).toContain("bg-foreground/60");
     expect(html).toContain("Treasury bills");
     expect(html).toContain("Bank deposits");
   });

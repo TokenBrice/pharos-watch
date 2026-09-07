@@ -14,6 +14,7 @@ import {
   MethodologyDetails,
   MethodologyDiagramFlow,
   MethodologyFacts,
+  MethodologyPreconditions,
   MethodologySectionShell,
   WorkedExample,
 } from "../methodology-shared";
@@ -152,19 +153,16 @@ export function PricingPipelineMethodologySection() {
             { label: "Output", value: "Price + confidence tag per asset" },
           ]}
         />
-        <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
-          <MethodologyFacts
-            facts={[
-              { label: "Minimum data", value: "At least 1 source must return a price; consensus requires 2+ for high confidence" },
-              { label: "Circuit breakers", value: "Most live upstream families are breaker-gated: opens after 3 failures, probes every 30 min" },
-              {
-                label: "Failure behavior",
-                value: "Degraded sources are excluded from consensus; enrichment pipeline fills remaining gaps; stale cache used as last resort",
-              },
-            ]}
-          />
-        </div>
+        <MethodologyPreconditions
+          facts={[
+            { label: "Minimum data", value: "At least 1 source must return a price; consensus requires 2+ for high confidence" },
+            { label: "Circuit breakers", value: "Most live upstream families are breaker-gated: opens after 3 failures, probes every 30 min" },
+            {
+              label: "Failure behavior",
+              value: "Degraded sources are excluded from consensus; enrichment pipeline fills remaining gaps; stale cache used as last resort",
+            },
+          ]}
+        />
         <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
           <p className="pharos-numeric">
             Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Binance=1.0001 (w2),
@@ -279,7 +277,7 @@ export function PricingPipelineMethodologySection() {
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">RedStone</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Oracle</TableCell><TableCell className="py-2 whitespace-normal">Per-venue breakdown; requires at least 2 venues and 60% agreement</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Curve on-chain</TableCell><TableCell className="py-2 pr-4">3</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Curve oracle</TableCell><TableCell className="py-2 pr-4">3</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></TableCell></TableRow>
-                <TableRow><TableCell className="py-2 pr-4 text-foreground">DEX pools</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">DEX pools</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Protocol DEX APIs</TableCell><TableCell className="py-2 pr-4">2-3</TableCell><TableCell className="py-2 pr-4">On-chain / pool-state API</TableCell><TableCell className="py-2 whitespace-normal">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">GeckoTerminal</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</TableCell></TableRow>
                 <TableRow><TableCell className="py-2 pr-4 text-foreground">Exact-address providers</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Market / on-chain</TableCell><TableCell className="py-2 whitespace-normal">Optional targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes; currently disabled in production Worker config for quarter-hour sync headroom</TableCell></TableRow>
@@ -313,9 +311,9 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">iUSD (infiniFi):</span> <code className="text-xs">receiptToAsset()</code> &mdash; iUSD &rarr; USDC redemption rate</li>
               <li><span className="text-foreground font-medium">USDai:</span> inherits tracked <code className="text-xs">PYUSD</code> pricing because base USDAI is treated as an instantly redeemable PYUSD wrapper</li>
               <li><span className="text-foreground font-medium">iUSD (Initia) / USDCx:</span> inherit tracked <code className="text-xs">AUSD</code> or <code className="text-xs">USDC</code> pricing when the parent rail is fresh and replay-safe</li>
-              <li><span className="text-foreground font-medium">USDK / XO / USDnr:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as instantly redeemable M0 extension units rather than free-floating market-priced assets</li>
+              <li><span className="text-foreground font-medium">M / USDK / XO / USDnr:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as base-unit or instantly redeemable M0 extension paths rather than free-floating market-priced assets; M requires wM itself to report fresh replay-safe single-source confidence</li>
               <li><span className="text-foreground font-medium">Scoped par references:</span> source-reviewed USD and FX redeemables can use fresh/static FX references when active supply is observable</li>
-              <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> audited vaults such as Spark Savings, Gauntlet, Steakhouse, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use <code className="text-xs">convertToAssets()</code> multiplied by a fresh trusted tracked parent price</li>
+              <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> audited vaults such as Sky sUSDS, Ethena sUSDe, Spark Savings, Gauntlet, Steakhouse, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use canonical-chain <code className="text-xs">convertToAssets()</code> reads multiplied by a fresh trusted tracked parent price; without that parent price, the wrapper remains unpriced</li>
               <li><span className="text-foreground font-medium">sGHO / Idle tranches:</span> protocol-specific <code className="text-xs">previewRedeem()</code> or <code className="text-xs">virtualPrice()</code> reads price assets whose executable value is not represented by thin secondary markets</li>
               <li><span className="text-foreground font-medium">AZND thin-pool recovery:</span> the exact Curve AZND/USDC route must pass identity, freshness, balance-floor, and quote-impact guards; a guarded no-quote remains an explicit coverage gap, while a thrown provider failure counts against the route circuit</li>
               <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>

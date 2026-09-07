@@ -213,7 +213,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified via starknet_call 2026-07-20 (rpc.starknet.lava.build, cross-checked on 1rpc.io/onfinality): token 0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07 reports decimals() = 5 and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d — the same Spiko Starknet owner account as USTBL/SPKCC (3/5 Argent multisig per the 2026-07-15 mint-authority sweep). symbol()/name() string storage reads back partially corrupted ('eurSPKD\\0', name ByteArray zero-padded after the first bytes) identically on two independent RPCs — a storage quirk of this deployment, recorded as a data-quality note. Issuer-native Spiko deployment; no third-party bridge.",
+        "reviewNote": "Verified via starknet_call 2026-07-20 (rpc.starknet.lava.build, cross-checked on 1rpc.io/onfinality): token 0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07 reports decimals() = 5 and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d, the same Spiko Starknet owner account as USTBL/SPKCC (3/5 Argent multisig per the 2026-07-15 mint-authority sweep). symbol()/name() string storage reads back partially corrupted ('eurSPKD\\0', name ByteArray zero-padded after the first bytes) identically on two independent RPCs, a storage quirk of this deployment, recorded as a data-quality note. Issuer-native Spiko deployment; no third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "ADA-backed Indigo V3 iUSD CDP debt",
-      "pct": 92.62,
+      "pct": 91.9622,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Cardano ADA and Indigo Protocol",
@@ -17,7 +17,7 @@
     },
     {
       "name": "NIGHT-backed Indigo V3 iUSD CDP debt",
-      "pct": 0.35,
+      "pct": 0.3472,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "NIGHT token and Indigo Protocol",
@@ -31,7 +31,7 @@
     },
     {
       "name": "USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance",
-      "pct": 7.03,
+      "pct": 7.6906,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "USDCx (IOG xReserve bridge of Circle USDC), USDM (Moneta), and Indigo Protocol CDP vaults",
@@ -43,7 +43,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
+    "reviewedAt": "2026-09-04",
     "reviewer": "Codex Indigo current indexer reserve review",
     "confidence": "verified",
     "sources": [
@@ -64,39 +64,35 @@
         "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880&_asset_name=69555344"
       },
       {
-        "label": "Koios address_assets for Indigo stableswap and CDP validator payment credentials",
-        "url": "https://api.koios.rest/api/v1/address_assets"
-      },
-      {
         "label": "Indigo V3 mainnet system parameters",
         "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
       }
     ],
-    "rationale": "Re-opened 2026-08-29. Indigo's public analytics endpoint returned 194 open iUSD CDPs: 1,293,801.377091 iUSD of debt on the native ADA branch (the API's empty collateral_asset denotes ADA) and 4,836.874073 iUSD on the NIGHT branch. Koios asset_info reported total iUSD supply of 1,396,821.282064. Indexed CDP debt therefore covers 1,298,638.251164 iUSD, represented as 92.62% ADA and 0.35% NIGHT after rounding; the 98,183.030900 iUSD residual is 7.03%. The API responses do not expose one shared historical ledger point for CDP debt and supply, and the residual may include USDCx/USDM peg-stability or CDP paths not represented in the index, so it remains explicitly unresolved rather than normalized away.",
-    "compositionBasis": "Indigo analytics iUSD CDP index and Koios iUSD supply fetched 2026-08-29; indexed minted debt attributed by collateral branch, with residual retained",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "Re-opened 2026-09-04. Indigo's public analytics endpoint returned 1,304,791.489011 iUSD of debt on the native ADA branch (the API's empty collateral_asset denotes ADA) and 4,925.589863 iUSD on the NIGHT branch. Koios asset_info reported total iUSD supply of 1,418,834.456586. Indexed CDP debt therefore covers 1,309,717.078874 iUSD, represented as 91.9622% ADA and 0.3472% NIGHT after rounding; the 109,117.377712 iUSD residual is 7.6906%. The API responses do not expose one shared historical ledger point for CDP debt and supply, and the residual may include USDCx/USDM peg-stability or CDP paths not represented in the index, so it remains explicitly unresolved rather than normalized away.",
+    "compositionBasis": "Indigo analytics iUSD CDP index and Koios iUSD supply fetched 2026-09-04; indexed minted debt attributed by collateral branch, with residual retained",
+    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 98,183.030900 iUSD difference between policy supply and indexed CDP debt is not attributed by a shared snapshot. Indigo mint transactions and validator balances show USDCx/USDM collateral paths, but no current public endpoint reconciles those balances to individual iUSD CDPs or a peg-stability module.",
-    "knownUnknownExposurePct": 7.03,
+    "knownUnknownExposure": "The 109,117.377712 iUSD difference between policy supply and indexed CDP debt is not attributed by a shared snapshot. Indigo mint transactions and validator balances show USDCx/USDM collateral paths, but no current public endpoint reconciles those balances to individual iUSD CDPs or a peg-stability module.",
+    "knownUnknownExposurePct": 7.6906,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "ADA-backed Indigo V3 iUSD CDP debt",
-        "pct": 92.62,
+        "pct": 91.9622,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ADA is the external Cardano collateral asset rather than a Pharos-tracked stablecoin reserve dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "NIGHT-backed Indigo V3 iUSD CDP debt",
-        "pct": 0.35,
+        "pct": 0.3472,
         "disposition": "untracked-exogenous-asset",
         "rationale": "NIGHT is the external Cardano collateral asset rather than a Pharos-tracked stablecoin reserve dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance",
-        "pct": 7.03,
+        "pct": 7.6906,
         "disposition": "basket-needs-split",
         "rationale": "The current indexer omits the residual, while Indigo's public mint evidence and validator balances show USDCx/USDM paths. No current endpoint attributes the residual to individual CDPs or a peg-stability module, so no constituent link or finer split is asserted."
       }

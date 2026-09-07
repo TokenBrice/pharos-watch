@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset, findD1HistoryEntry, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
@@ -20,9 +20,7 @@ const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
   { match: "FROM supply_history", rows: [] },
 ];
 
-function mockD1(tables: MockTableConfig[] = []): MockD1Database {
-  return createMockD1([...tables, ...DEFAULT_CHART_D1_TABLES]);
-}
+const mockD1 = createMockD1Preset(DEFAULT_CHART_D1_TABLES);
 
 function makeRawChartPoints(
   count: number,
@@ -57,11 +55,7 @@ function makeRawChartPointsWithStringDates(
   }));
 }
 
-function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
-  return db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "stablecoin-charts");
-}
+const getCacheInsert = (db: MockD1Database) => findD1HistoryEntry(db, "INSERT INTO cache", [0, "stablecoin-charts"]);
 
 function getCadenceCompletion(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
   return db

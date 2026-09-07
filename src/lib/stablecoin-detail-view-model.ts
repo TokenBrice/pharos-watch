@@ -159,7 +159,7 @@ export function buildStablecoinDetailViewModel({
     reserves: supplemental.reserves.live ?? getReserves(coin),
     reserveFetchError: supplemental.reserves.error ?? null,
     supplyError: supplyHistory.error,
-    staleQueries: buildDetailStaleQueries(queries, supplemental),
+    staleQueries: buildDetailStaleQueries(queries, supplemental, id),
     featureStates,
     verdict,
     mintAuthority,

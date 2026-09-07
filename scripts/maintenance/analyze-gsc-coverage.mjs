@@ -7,11 +7,14 @@ import {
   collectInputEntries,
   cleanPathLabel,
   compareText,
+  findHeader,
   firstNumberToken,
   formatGscUsage,
+  hasHeader,
   KNOWN_GSC_FILES,
-  normalizeHeaderName,
   parseCsv,
+  parseCsvNumber,
+  recordFromCsvRow,
   runAsyncDirect,
   runGscCli,
   uniqueHeaders,
@@ -23,9 +26,13 @@ export {
   collectInputEntries,
   compareText,
   firstNumberToken,
+  findHeader,
+  hasHeader,
   isDigit,
   normalizeHeaderName,
   parseCsv,
+  parseCsvNumber,
+  recordFromCsvRow,
   stripBom,
   uniqueHeaders,
 } from "../lib/gsc-report.mts";
@@ -74,44 +81,21 @@ function csvRecords(text) {
   const rows = parseCsv(text);
   if (rows.length === 0) return { headers: [], records: [], rawRows: [] };
   const headers = uniqueHeaders(rows[0] ?? []);
-  const records = rows.slice(1).map((row) => {
-    const record = {};
-    headers.forEach((header, index) => {
-      record[header] = String(row[index] ?? "").trim();
-    });
-    return record;
-  });
+  const records = rows.slice(1).map((row) => recordFromCsvRow(headers, row));
   return { headers, records, rawRows: rows };
 }
 
-function buildHeaderLookup(record) {
-  const lookup = new Map();
-  for (const key of Object.keys(record)) {
-    lookup.set(normalizeHeaderName(key), key);
-  }
-  return lookup;
-}
-
 function getField(record, candidates) {
-  const lookup = buildHeaderLookup(record);
   for (const candidate of candidates) {
-    const key = lookup.get(normalizeHeaderName(candidate));
+    const key = findHeader(Object.keys(record), [candidate]);
     if (key && String(record[key] ?? "").trim()) return String(record[key]).trim();
   }
   return "";
 }
 
-function hasHeader(headers, candidates) {
-  const normalized = new Set(headers.map((header) => normalizeHeaderName(header)));
-  return candidates.some((candidate) => normalized.has(normalizeHeaderName(candidate)));
-}
-
 function parseCount(value) {
-  const token = firstNumberToken(value);
-  if (!token) return null;
-  const parsed = Number(token);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.trunc(parsed);
+  const parsed = parseCsvNumber(value);
+  return parsed === null ? null : Math.trunc(parsed);
 }
 
 function isPlainCountText(value) {

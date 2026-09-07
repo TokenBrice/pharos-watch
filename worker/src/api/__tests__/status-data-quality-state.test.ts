@@ -1,4 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
+import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleStatus,
@@ -77,7 +78,7 @@ describe("handleStatus", () => {
   it("counts only recently refreshed on-chain rows as actively monitored", async () => {
     const now = Math.floor(Date.now() / 1000);
     const onchainActiveWindowStart = now - 3 * 24 * 3600;
-    const onchainFreshWindowStart = now - 2 * 3600;
+    const onchainFreshWindowStart = now - STATUS_ONCHAIN_FRESH_WINDOW_SEC;
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 } }],
     });
@@ -147,7 +148,7 @@ describe("handleStatus", () => {
   it("does not let a tiny on-chain monitor population escalate data quality via ratios alone", async () => {
     const now = Math.floor(Date.now() / 1000);
     const onchainActiveWindowStart = now - 3 * 24 * 3600;
-    const onchainFreshWindowStart = now - 2 * 3600;
+    const onchainFreshWindowStart = now - STATUS_ONCHAIN_FRESH_WINDOW_SEC;
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 } }],
     });

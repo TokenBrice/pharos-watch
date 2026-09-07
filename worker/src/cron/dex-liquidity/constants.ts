@@ -7,7 +7,7 @@
  * Reusable DEX utilities (symbol maps, quality multipliers):
  * see ../../lib/dex-constants.ts
  */
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 
@@ -78,11 +78,16 @@ export const buildUniV3PoolQuery = (skip: number): string => `{
  * Official Uniswap V4 Ethereum subgraph deployment:
  * https://developers.uniswap.org/api/subgraph/subgraphs-devs/deployments
  *
- * Only Ethereum is reviewed here. Other chains remain unsupported until an
- * official endpoint and deployment identities are pinned independently.
+ * The non-Ethereum sources are published by the same Uniswap Graph account and
+ * feed target-review evidence only. Their runtime deployments remain outside
+ * active scoring until independently pinned code identities survive shadow.
  */
 export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
   ethereum: "DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G",
+  base: "CHz2jQ8g62rewnrMyGF9yHktmkGjMwKBw4rVx82E64Um",
+  arbitrum: "EpEZyTnADuwvqpMh7vcTPFHDN3MwqiUN9QHapCBPbRWW",
+  polygon: "2CB2uQxcDKWDenagn2z17KQVCtfwSx5eXYuvqTciRTJu",
+  bsc: "EAq1nJKgjnuKH6Gj4RFjCW7LcL7E2uipbncdwV7TTWkX",
 };
 
 export const UNISWAP_V4_POOL_PAGE_SIZE = 1000;
@@ -148,10 +153,10 @@ export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
   CBBTC: 0.6,
 };
 
-/** Symbol → governance type lookup from ACTIVE_STABLECOINS */
+/** Symbol → governance type lookup from the active Worker runtime registry. */
 export const SYMBOL_GOVERNANCE = new Map<string, string>();
-for (const meta of ACTIVE_STABLECOINS) {
-  SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.flags.governance);
+for (const meta of WORKER_ACTIVE_STABLECOINS) {
+  SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.governance);
 }
 
 export const CG_TICKERS_RATE_MS = 2500; // conservative: ~24 req/min well under free-tier limit

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios or evidence-backed qualitative legal and custody facts (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund, fiat-cash, tbill). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9-extension-mechanism.ts.",
+  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios or evidence-backed qualitative legal and custody facts (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund, fiat-cash, tbill). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9/extension-mechanism.ts.",
   "overlays": [
     {
       "assetId": "bd-basedollar",
@@ -829,64 +829,41 @@
     },
     {
       "assetId": "zarm-mento",
-      "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-09-05",
       "sources": [
         {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+          "label": "Mento itemized reserve assets, custody wallets and positions (fetched 2026-09-05)",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Mento V3 reserve conversion documentation",
-          "url": "https://docs.mento.org/mento-v3"
+          "label": "Mento protocol-wide reserve, liquidity and governance risk disclosure",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview.md"
+        },
+        {
+          "label": "Mento shared V2/V3 Reserve and StableTokenZAR deployment inventory",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+        },
+        {
+          "label": "Sourcify verified ZARm proxy source on Celo",
+          "url": "https://sourcify.dev/server/v2/contract/42220/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6?fields=abi,metadata,sources"
+        },
+        {
+          "label": "Celo finalized block 76721442 (ZARm and Reserve code; ZARm totalSupply reads)",
+          "url": "https://celoscan.io/block/76721442"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/zarm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 30 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
-      "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 10000000
-      },
+      "notes": "Reviewed 2026-09-05: replaces the stale CDP overlay to match the existing fiat-cash classification for shared protocol-reserve inventory. The official deployment inventory identifies StableTokenZAR at 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 and the shared Reserve at 0x9380fa34fd9e4fd14c06305fd7b6199089ed4eb9. The itemized reserve API disclosed $19,959,907.699599963 of collateral across named hot, cold and operational wallets and deployed positions; its CDP rows contain no ZARm debt. At finalized Celo block 76721442, both deployment addresses had contract code and ZARm totalSupply was 10925.176443780387 tokens. These primary disclosures and on-chain anchors support limited claim/segregation, custody continuity, and assurance/reconciliation under the same shared-reserve framing as CADm, KESm and BRLm. Claim/segregation is limited to observable protocol reserve inventory, not a direct legal holder claim or a ZARm-specific partition. Custody continuity is limited because the disclosed reserve wallets and protocol governance remain shared failure domains. Assurance is limited to itemized self-reported assets corroborated by contract and token-supply reads, not an independently attested reserve-to-liability reconciliation or a complete cross-chain balance audit. No independent auditor, enforceable holder seniority, bankruptcy-remoteness, or dedicated ZARm recovery commitment is established. The broad fiat-cash classification is economically broader than ordinary custodial fiat cash. Raw primary responses and block reads are retained in agents/2026-09-05-safety-score-gap-campaign/evidence/zarm-*. No current CDP ratio, liquidation capacity or historical virtual conversion inventory is carried into the fiat-cash overlay.",
+      "metrics": {},
       "components": {
-        "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "backstop": {
-          "applicability": "measured",
+        "claimAndSegregation": {
           "quality": "limited"
         },
-        "branchIsolation": {
-          "applicability": "measured",
+        "custodyContinuity": {
           "quality": "limited"
         },
-        "shutdownAndBadDebt": {
-          "applicability": "measured",
+        "assuranceAndReconciliation": {
           "quality": "limited"
-        },
-        "structuralRedemption": {
-          "applicability": "measured",
-          "quality": "adequate"
         }
       }
     },
@@ -2372,67 +2349,62 @@
     {
       "assetId": "fpi-frax",
       "archetype": "algorithmic",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-04",
       "sources": [
         {
-          "label": "Frax FPI overview (CPI target, 100% collateral-ratio design, FPIS backstop with documented phase-out to FRAX conversion on 2028-03-22, and monthly Chainlink oracle updates)",
+          "label": "Frax FPI overview (reviewed 2026-09-04; CPI-U peg, 100% collateral-ratio design, FPIS mint-and-sell response to AMO yield shortfall, and FPIS phase-out)",
           "url": "https://docs.frax.com/protocol/assets/fpi/overview"
         },
         {
-          "label": "Frax FPI Controller Pool (FRAX mint and redemption path)",
+          "label": "Frax FPI Controller Pool documentation (reviewed 2026-09-04; FRAX mint/redeem and AMO controls)",
           "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
         },
         {
-          "label": "Frax FPI collateral API (reviewed reserve composition snapshot at Ethereum block 25627253, 2026-07-27T22:51:47Z)",
+          "label": "FIP-341 Frax Singularity Roadmap Part 1 (proposal dated 2024-03-21; FPIS resolution)",
+          "url": "https://gov.frax.finance/t/fip-341-frax-singularity-roadmap-part-1/2987"
+        },
+        {
+          "label": "Frax FPI collateral API snapshot at Ethereum block 25627253 (updatedAt 2026-07-27T22:51:47Z; fetched 2026-07-27T22:52:02Z)",
           "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
         },
         {
-          "label": "Frax FPIControllerPool Solidity source pinned at frax-solidity commit 30532c8 (direct mint/redemption, peg bands, manual TWAMM, FPI burn, AMO FRAX give/return, and governance pause controls)",
-          "url": "https://github.com/FraxFinance/frax-solidity/blob/30532c8cefcbf5c7efafcff4369261bd435a4859/src/hardhat/contracts/FPI/FPIControllerPool.sol"
+          "label": "Ethereum JSON-RPC batch at block 25638254 (active Controller Pool state; reviewed 2026-08-08)",
+          "url": "https://ethereum-rpc.publicnode.com"
         },
         {
-          "label": "Ethereum JSON-RPC batch at block 25638254 (active Controller Pool redemption state, quote, liquid FRAX balance, owner, and 3-of-5 Safe threshold/owners)",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "FPIControllerPool Solidity source pinned at frax-solidity commit 30532c8 (commit dated 2025-10-03; reviewed 2026-09-04)",
+          "url": "https://github.com/FraxFinance/frax-solidity/blob/30532c8cefcbf5c7efafcff4369261bd435a4859/src/hardhat/contracts/FPI/FPIControllerPool.sol"
         }
       ],
-      "notes": "FPI is an inflation-index hybrid, not an uncollateralized reflexive dollar. Frax documents a CPI-U target updated through a specialized Chainlink oracle on each monthly BLS release, a 100%-collateral-ratio design, FRAX mint and redemption through the Controller Pool (0.30% fee), and FPIS sales via TWAMM when AMO yield trails the target inflation rate; the overview now also documents the community-approved FPIS phase-out, with FPIS convertible to FRAX at 2.5:1 on 2028-03-22. The reviewed 2026-07-27 collateral API snapshot (updatedAtBlock 25627253, updatedAtTimestampSec 1785192707, fetched 2026-07-27T22:52:02Z) identifies, over the non-FPI collateral base of $1,090,519.52: 87.1% FRAX ($949,391.42 across the Ethereum Comptroller, a second Ethereum wallet balance, and Fraxtal), 12.9% LP positions (staked Convex FPI/FRAX at $124,758.08 and Fraxswap V2 FRAX/FPIS FRAX-portion at $16,370.02), and a de minimis FXS remainder (~$0.005). The profile therefore records 0.871 directly identified exogenous stablecoin backing, 0.000 explicitly reflexive FXS/FPIS exposure (down from 0.076 as the Comptroller FXS balance ran down to dust), and leaves the LP remainder outside either claim instead of pretending it is cash, unchanged in method from the 2026-07-23 review. The API separately lists $6.32M of Comptroller-held FPI against 5,855,654.51 FPI total supply, but per the established profile method the backing shares are computed over the non-FPI collateral only. Collateral coverage, the oracle path, the reflexive backstop, and protocol redemption remain supported; a re-check of docs.frax.com FPI pages on 2026-07-27 found reserve unwind depth, emergency recovery, and a holder loss-recovery waterfall still issuer-undisclosed, so those facts keep their prior dispositions. No grade target is encoded: those unavailable facts remain bounded in their own mechanism components, and the 87.1% FRAX reserve dependency remains separately evaluated. 2026-07-29 delta: the official Controller Pool documentation and its linked Solidity source establish direct FPI-for-FRAX redemption, a 5% oracle peg band, manual TWAMM peg operations, FPI burning, AMO FRAX give/return, and governance mint/redemption pause controls. At Ethereum block 25638254 (2026-07-29T11:40:59Z), a raw JSON-RPC batch independently verified that minting and redemption were unpaused, the mint/redeem peg check was in range, the redemption fee was 0.30%, one FPI quoted 1.154462263410036891 FRAX, the Controller held 621,116.754320155679341723 liquid FRAX, and the Controller owner was a 3-of-5 Safe. The same-block issuer API snapshot reported 5,855,654.505980514 aggregate FPI supply, exactly 5,500,387 FPI in the two FraxFerry contracts, and 0.09 other protocol-held FPI, leaving 355,267.41598051396 external FPI; the direct Controller balance could quote about 538,013.91 FPI, or 1.514x that external amount. This last ratio is context-only evidence for current direct redemption headroom, not an overlay metric. The established profile metrics remain unchanged at exogenousBackingShare 0.871, reflexiveBackingShare 0, and contractionCapacityRatio 0.871; no proxy or method change is introduced. contractionLiquidity is adequate because the documented direct route was active, unthrottled by a quota, and independently verified with liquid contract-held FRAX exceeding external FPI at the pinned block; strong is not claimed because redemption is governance-pausable, limited to the peg band, dependent on Legacy FRAX, and cross-chain holders depend on ferry availability. emergencyRecovery is limited because the linked deployed design exposes pause, manual-TWAMM, burn, and AMO-return intervention levers under a verified 3-of-5 Safe, but publishes no emergency trigger matrix, shutdown/global-settlement runbook, response-time commitment, or independent control test. lossRecovery remains issuer-undisclosed: documented FPIS sales address AMO yield falling below CPI, not realized reserve losses or holder loss allocation, and the reviewed sources establish no holder waterfall, insurance, make-whole, or post-loss recapitalization obligation.",
-      "metrics": {},
-      "profileReview": {
-        "profile": "inflation-index-hybrid",
+      "notes": "Reviewed 2026-09-04. Frax's current FPI overview documents FPIS mint-and-sale only as a response to AMO yield falling below CPI and the dated FIP-341 governance proposal documents FPIS absorption and conversion. The Controller Pool documentation and pinned implementation establish FRAX mint/redeem, TWAMM peg operations, AMO lending, and governance pause controls, but the reviewed source set publishes no post-loss holder waterfall, reserve-loss allocation, reserve draw priority, insurance, sponsor support, or enforceable recapitalization/recovery commitment. Those peg and shortfall controls are not a loss-recovery promise, so lossRecovery is recorded as reviewed unavailable rather than as a measured weakness. The 2026-07-27 collateral snapshot and 2026-08-08 fixed-block contract reads retain the existing measured profile inputs.",
+      "metrics": {
         "exogenousBackingShare": 0.871,
         "reflexiveBackingShare": 0,
-        "contractionCapacityRatio": 0.871,
-        "facts": {
-          "collateralCoverage": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "contractionLiquidity": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "indexOracle": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "reflexiveBackstop": {
-            "disposition": "supported",
-            "quality": "limited"
-          },
-          "emergencyRecovery": {
-            "disposition": "supported",
-            "quality": "limited"
-          },
-          "lossRecovery": {
-            "disposition": "issuer-undisclosed"
-          },
-          "protocolRedemption": {
-            "disposition": "supported",
-            "quality": "adequate"
-          }
-        }
+        "contractionCapacityRatio": 0.871
       },
-      "components": {}
+      "components": {
+        "contractionCapacity": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "confidenceAndIncentives": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "oracleAndControlAssumptions": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "emergencyRecovery": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "lossRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Reviewed 2026-09-04: the FPI overview, Controller Pool documentation, and FIP-341 proposal describe FPIS issuance and sale for an AMO yield shortfall and later FPIS conversion, but publish no post-loss holder waterfall, reserve-loss allocation, reserve draw priority, insurance, sponsor support, or enforceable recapitalization/recovery commitment. This is reviewed issuer non-disclosure, not a measured weakness.",
+          "sourceUrl": "https://docs.frax.com/protocol/assets/fpi/overview"
+        }
+      }
     },
     {
       "assetId": "ausd-agora",
@@ -4509,7 +4481,7 @@
     {
       "assetId": "xaut-tether",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-29",
+      "reviewedAt": "2026-09-05",
       "sources": [
         {
           "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026 (report dated 2026-07-31)",
@@ -4522,18 +4494,28 @@
         {
           "label": "Tether Gold FAQ (allocated-bar ownership and physical redemption terms)",
           "url": "https://gold.tether.to/faq"
+        },
+        {
+          "label": "Tether Gold binding Terms of Sale and Service (last updated 2025-09-09, browser-verified 2026-09-05; sections 4.4, 4.7 and 16)",
+          "url": "https://gold.tether.to/legal/termsofservice"
+        },
+        {
+          "label": "Tether Gold incorporated Risk Disclosure Statement (last updated 2025-01-27, browser-verified 2026-09-05; sections 4, 6, 7 and 8)",
+          "url": "https://gold.tether.to/legal/riskdisclosurestatement"
+        },
+        {
+          "label": "Archived current issuer application bundle containing the rendered binding legal texts (observed 2026-09-05)",
+          "url": "https://gold.tether.to/assets/index-CzdxJ7of.js"
         }
       ],
-      "notes": "Re-reviewed 2026-08-29 against BDO's ISAE 3000R reasonable-assurance report dated 2026-07-31 for the 2026-06-30 23:59 UTC reporting point. BDO verified inventory procedures, specialist inventory and quality reports, and management accounting-to-blockchain liability reconciliations, and concluded the Tether Gold-Reserves Report was fairly presented: 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT in circulation. This dated independent reconciliation supports adequate assuranceAndReconciliation only. The BDO report and FAQ do not identify the Swiss custodian, provider shares, rehypothecation or insurance terms, successor custody, or insolvency continuity; title and physical redemption remain at their existing limited grades.",
+      "notes": "Reviewed 2026-09-05 against the current rendered Tether Gold Terms of Sale and Service (last updated 2025-09-09), their incorporated Risk Disclosure Statement (last updated 2025-01-27), and the existing BDO ISAE 3000R report signed 2026-07-31 for the 2026-06-30 reporting point. The custodyContinuity grade is weak because the contract explicitly leaves the holder to finance and pursue custody-loss recovery personally: Terms 4.7 and Risk Statement 6 state that Tether Gold will not pursue claims for holders or indemnify custody loss, while Risk Statement 7 expressly denies any legal obligation to monitor the custodian. Terms 4.4 allocate losses to holders assigned to the affected bullion bars. Terms 4.7 further state that the custodian chooses insurance whose coverage is not expected to cover all Gold Reserves and Tether cannot dictate it; Risk Statement 8 describes potential insolvency access freezes and reductions from unpaid custodian fees. These are affirmative limits to custody oversight and recovery continuity, not an inference that undisclosed provider identities are weak and not a claim that a custody loss or insolvency has occurred. Legal title and intended third-party-beneficiary claims against the custodian are retained under Terms 4.3/4.7; the grading does not erase those rights or treat the missing custody agreement as zero recovery. The June 30 report remains a distinct adequate assurance claim: BDO verified inventory procedures and accounting-to-blockchain liability reconciliation and gave an unmodified reasonable-assurance conclusion; the report itself is point-in-time and expressly refers holders to the risk disclosure. Existing limited title/allocation and physical-redemption grades are retained; Terms 4.3 and 5.1-5.5 support allocated title and conditional Swiss physical delivery without providing an unconditional recovery guarantee. No reserve percentage or report date is refreshed. Issuer legal bundle SHA-256 37cda0e72e00bfe16dbbadf7a44d286798db29f6a5ec0d48dd796bf9adb44442; source-declared legal version dates are separate from the September 5 observation/review date. The date-only overlay becomes admissible after September 5 UTC ends.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed BDO ISAE 3000R report and the Tether Gold reports index refer only to unnamed custodian(s) and do not identify the Swiss vault operator, provider shares, reserve-wide rehypothecation controls, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Carried over from the allocated-commodity-claim profile, where custodyContinuity and insurance were both issuer-undisclosed.",
-          "sourceUrl": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+          "quality": "weak"
         },
         "assuranceAndReconciliation": {
           "quality": "adequate"
@@ -9783,7 +9765,7 @@
           "url": "https://docs.transfero.com/"
         }
       ],
-      "notes": "Reviewed 2026-08-08. Transfero's product page reports R$15.2 million of collateral against R$12.3 million circulating and says BRZ is redeemable 1:1 through regulated partners. The only downloadable reserve report is an issuer-produced snapshot dated 2024-03-31, and the whitepaper describes separate reserve managers but supplies no holder trust, segregated-account instrument, or current external anchor for the reserve claim. claimAndSegregation is therefore unavailable under the fiat-cash evidence standard, not stretched to limited. The report names only an unidentified BCB-authorized institution and publishes no continuity terms, so custodyContinuity is unavailable. The product's Parsiq reference concerns blockchain monitoring, not financial reserve assurance, and the sole reserve statement is stale and self-produced; assuranceAndReconciliation is unavailable.",
+      "notes": "Reviewed 2026-08-08. Transfero's product page reports R$15.2 million of collateral against R$12.3 million circulating and says BRZ is redeemable 1:1 through regulated partners. The only downloadable reserve report is an issuer-produced snapshot dated 2024-03-31, and the whitepaper describes separate reserve managers but supplies no holder trust, segregated-account instrument, or current external anchor for the reserve claim. claimAndSegregation is therefore unavailable under the fiat-cash evidence standard, not stretched to limited. The report names only an unidentified BCB-authorized institution and publishes no continuity terms, so custodyContinuity is unavailable. The product's Parsiq reference concerns blockchain monitoring, not financial reserve assurance. assuranceAndReconciliation is intentionally omitted as of 2026-09-01: a proofOfReserves.latestReport (self-verification, recorded 2026-08-29) now exists on the coin record and auto-resolves the component as known-weak, superseding the earlier unavailable adjudication that predated it.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -9795,11 +9777,6 @@
           "applicability": "unavailable",
           "rationale": "Searched https://transfero.com/brz-stablecoin, the March 2024 reserve report at https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf, the whitepaper, and https://docs.transfero.com/. The reserve institution and reserve managers are not identified, and no allocation, anti-rehypothecation, failure, replacement, or successor-custody terms are published.",
           "sourceUrl": "https://docs.transfero.com/"
-        },
-        "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Searched https://transfero.com/brz-stablecoin, https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf, and https://docs.transfero.com/. Only a stale 2024 issuer statement was found; Parsiq blockchain monitoring is not an independent financial reserve-to-liability examination, and no current dated independent reconciliation is published.",
-          "sourceUrl": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
         }
       }
     },
@@ -10351,52 +10328,49 @@
     },
     {
       "assetId": "usdat-saturn",
-      "archetype": "tbill",
-      "reviewedAt": "2026-07-29",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-09-04",
       "sources": [
         {
-          "label": "Saturn USDat overview (reserves 100% M at launch; permissioned access)",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview.md"
+          "label": "Saturn USDat implementation pinned at commit 67a27eba (repository commit dated 2026-08-25)",
+          "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/src/USDat.sol"
         },
         {
-          "label": "Saturn mint-and-redeem mechanics through the M0 Swap Facility",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md"
+          "label": "Saturn USDat PYUSDx migration runbook pinned at commit 67a27eba (runbook last updated 2026-08-20; repository commit dated 2026-08-25)",
+          "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
         },
         {
-          "label": "Saturn transparency disclosure (USDat capital held directly in the USDat smart contract, verifiable onchain)",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+          "label": "USDat migration execution transaction 0x489450d4 (finalized Ethereum block 25789911 at 2026-08-19T15:00:11Z)",
+          "url": "https://etherscan.io/tx/0x489450d4a23d076918ce70adbc4c5693b6634728269ba5991f355447c699b51f"
         },
         {
-          "label": "Saturn key contract addresses (USDat token and M0 Swap Facility)",
-          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          "label": "Ethereum block 25789911 (finalized 2026-08-19T15:00:11Z; migration execution block)",
+          "url": "https://etherscan.io/block/25789911"
         },
         {
-          "label": "Ethereum public RPC endpoint used for pinned eth_call reads at block 25,572,262",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "M0 and MoonPay PYUSDx backing announcement (dated 2026-02-27; PYUSDx application-specific stablecoin framework backed by PYUSD)",
+          "url": "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
         },
         {
-          "label": "M0 protocol roles and independent Validator collateral attestations",
-          "url": "https://docs.m0.org/protocol/roles"
-        },
-        {
-          "label": "M0 MinterGateway collateral verification, expiry, and short-term Treasury design",
-          "url": "https://docs.m0.org/protocol/minting-burning"
+          "label": "Saturn live reserve analytics (checked 2026-09-04; issuer dashboard reports 100.00% USDat reserve ratio and 100.0% PYUSDx allocation)",
+          "url": "https://app.saturn.credit/insights/saturn-protocol"
         }
       ],
-      "notes": "USDat is Saturn's permissioned M0-extension stablecoin; Saturn documents that reserves at launch are 100% M (M0) and that all USDat capital is held directly in the USDat smart contract (0x23238f20b894f29041f48D88eE91131C395Aaa71), verifiable onchain. Mint and redemption are KYC-gated 1:1 through the M0 Swap Facility (USDC routed via wM on a Uniswap V3 1bps pool), so holders have an issuer-documented wrapper claim on M, not a direct share or senior claim on M0 Minter SPV Treasuries; this supports limited fund claim and seniority. On-chain verification 2026-07-20 via eth_call through https://ethereum-rpc.publicnode.com at Ethereum block 25,572,262: USDat totalSupply() = 106,923,086.62 vs M (0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b) balanceOf(USDat contract) = 106,973,897.77, i.e. 100.05% coverage on the Ethereum branch (wM balance of the contract is zero; reserves are native M). However, the BSC USDat contract (13,794,598.93 supply near BSC block 111,049,630) and the Monad USDat contract (14,096,549.85 supply near Monad block 88,944,845) hold no local M or wM, and no bridge escrow or other documented account reconciling those branches was established, so the on-chain proof does not reconcile complete cross-chain liabilities; lossRecoveryDesign is limited rather than adequate, mirroring the branch-reconciliation standard applied to USD0. No independent reserve attestation was established (Accountable and Chainlink NAV integrations are documented as in progress for sUSDat, not USDat), and USDat is a par wrapper with no fund NAV process and no portfolio maturity/WAM disclosure; navValuation and durationAndLiquidity remain uncurated. 2026-07-29 preparation-only candidate: durationAndLiquidity=known/limited, navValuation=known/limited. Every candidate conclusion remains non-score-bearing pending independent review and later authorization; no existing non-target component or source is removed.",
+      "notes": "Reviewed 2026-09-04 against Saturn's implementation and migration runbook pinned at commit 67a27eba, the finalized 2026-08-19 migration transaction, the dated M0/MoonPay PYUSDx announcement, and Saturn's live reserve analytics. The implementation makes PYUSDx the current MultiMint backing path and preserves permissioned wrap/unwrap and compliance controls; the migration transaction records the deployed implementation upgrade at block 25789911. M0 and MoonPay describe PYUSDx as an application-specific stablecoin framework backed by PYUSD, while Saturn's dashboard reports a 100.00% USDat reserve ratio and 100.0% PYUSDx allocation on the review date. This issuer-published structured data, corroborated by the immutable on-chain migration record and pinned implementation, supports limited claimAndSegregation and custodyContinuity; it does not establish a legal senior reserve claim, named provider-failure succession, or independent assurance. The current USDat catalog has proofOfReserves without latestReport, so assuranceAndReconciliation is deliberately reviewed unavailable rather than asserted from the compiler shortcut.",
       "metrics": {},
       "components": {
-        "fundClaimAndSeniority": {
+        "claimAndSegregation": {
+          "applicability": "measured",
           "quality": "limited"
         },
-        "lossRecoveryDesign": {
+        "custodyContinuity": {
+          "applicability": "measured",
           "quality": "limited"
         },
-        "durationAndLiquidity": {
-          "quality": "limited"
-        },
-        "navValuation": {
-          "quality": "limited"
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Reviewed 2026-09-04: Saturn's reserve analytics page reports a current reserve ratio and PYUSDx allocation but is self-published dashboard data, not a dated independent reserve-to-liability attestation or examination. No current USDat-specific independent reconciliation was found, and the catalog's proofOfReserves entry has no latestReport for the compiler auto-known rule. This is reviewed issuer non-disclosure, not a measured weakness.",
+          "sourceUrl": "https://app.saturn.credit/insights/saturn-protocol"
         }
       }
     },
@@ -12572,7 +12546,7 @@
     {
       "assetId": "brl1-brl1",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-05",
       "sources": [
         {
           "label": "BRL1 How It Works page and current proof-of-reserves link",
@@ -12583,33 +12557,29 @@
           "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr"
         },
         {
-          "label": "BRL1 self-produced proof-of-reserves report dated 2025-04-14",
-          "url": "https://drive.google.com/uc?export=download&id=1q6arJKrt3wWta7kYCnppD1awhgzsz8AW"
+          "label": "BRL1 issuer-produced August 1, 2026 reserve report (observed September 5; publication and separate signature dates unestablished)",
+          "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD"
         },
         {
-          "label": "BRL1 self-produced proof-of-reserves report dated 2025-11-01",
-          "url": "https://docs.google.com/document/d/1GCDXJ0r7HP2D1AChim1MUCxq44Ukai79/export?format=txt"
+          "label": "Polygon block 91256109 (August 1, 2026 12:59:44 UTC)",
+          "url": "https://polygonscan.com/block/91256109"
         },
         {
-          "label": "BRL1 May 2026 proof-of-reserves file searched but Google-sign-in gated",
-          "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+          "label": "Polygon archival RPC used to verify BRL1 totalSupply at block 91256109",
+          "url": "https://polygon.drpc.org"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08. BRL1's whitepaper and product page document 1:1 partner redemption and reserves in LFT federal bonds, repos, and cash. The 2025 reports provide structured asset/liability figures and Polygon block anchors, supporting limited claim and segregation, but no trust, bankruptcy-remoteness, or holder-priority instrument is published. The 2025-04 report named Banco XP; the later 2025-11 report anonymized providers, and the current May 2026 report link is Google-sign-in gated. The current reserve review records 86.16% LFTs, 13.75% repos, and 0.09% bank balances from the inaccessible issuer file, but it cannot be independently pinned as a mechanism overlay source. Current provider identity/allocations and continuity terms are therefore unavailable. Every reviewed report is self-produced and expressly not independently audited, while the current report cannot be publicly re-verified, so assurance is unavailable rather than weak.",
+      "notes": "Reviewed 2026-09-05. The issuer-linked August 1 reserve report is publicly downloadable (PDF SHA-256 5b3eb3a0dba8731947887ef0b66047cef3e361cb7bc980b97d0e5abb09199312). It itemizes R$878,069 bank cash, R$6,177,240 LFTs and R$6,039,473 repos, totaling R$13,094,782, and identifies Banco XP S.A. as custodian of all reserves in a segregated, unencumbered account owned by BRL1 CONSORTIUM S.A. The report describes internal bank-balance/investment reconciliation, board approval and no independent audit. An archival eth_call at Polygon block 91256109 exactly reproduced the reported 12,725,909.54 BRL1 totalSupply; both queried block-header sources return hash 0x8cafd922ed5cf037c09ceae8f37b465f568eed85a9cedf0a84ff17afd77b2e68 and timestamp 12:59:44 UTC, one second after the issuer-stated 12:59:43 observation. The itemized issuer report plus external liability anchor supports limited assuranceAndReconciliation; it does not independently prove off-chain balances or support an adequate assurance grade. Current sole-provider attribution and segregated own-account custody support limited custodyContinuity, with no successor-custodian process, enforceable insolvency protections or prospective reuse prohibition established. claimAndSegregation remains limited: issuer reserve ownership and partner redemption are documented, but no trust or holder-priority instrument is supplied. Actual publication and separate signature dates are unknown; September 5 is the observation/review date, not a refreshed composition date. Review admission begins only after the reviewed UTC day ends.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "Searched the BRL1 product page, whitepaper, April and November 2025 reports, and current May 2026 report link. Banco XP appears only in the stale April report; the later accessible report anonymizes institutions and the current file is sign-in gated. No current provider set or allocation, anti-rehypothecation terms, or failure/replacement/successor-custody process is publicly verifiable.",
-          "sourceUrl": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+          "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Searched the BRL1 product page and its current report link, whitepaper, and April/November 2025 reports. The accessible reports are issuer-produced and expressly unaudited; the May 2026 file requires Google sign-in. No publicly pin-able dated independent attestation, audit, or third-party assets-and-liabilities reconciliation was found.",
-          "sourceUrl": "https://brl1.io/en/como_funciona"
+          "quality": "limited"
         }
       }
     },
@@ -12836,11 +12806,6 @@
           "applicability": "unavailable",
           "rationale": "Searched the binding terms, product pages, licenses page, and referenced transparency surface. No active gold custodian/vault is named and no provider allocation, anti-rehypothecation term, insurance schedule, or failure/replacement procedure is published.",
           "sourceUrl": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md"
-        },
-        "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The current Reserve Report page embeds a June 25, 2026 VISTO CPA HKSAE 3000 report, but only 50.86% of the claimed bullion was physically counted, the remainder relies on shipping and issuer/insider assertions, the liability perimeter covers the Arbitrum contract while a separate Ethereum native supply exists, and no recurring cadence is stated. This newly located report remains pending an explicit methodology ruling and does not yet replace the bounded disposition.",
-          "sourceUrl": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md"
         },
         "physicalRedemption": {
           "quality": "limited"
@@ -18022,10 +17987,10 @@
     {
       "assetId": "dusd-dialectic",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-30",
+      "reviewedAt": "2026-09-03",
       "sources": [
         {
-          "label": "Dialectic Meccanico Machine Terms v1.2 (official team-supplied PDF; SHA-256 beb0e92828a923048b19f78837b3482f7c3f4075052df81e8a34f2bbbcc7637c; expected publication URL)",
+          "label": "Dialectic Meccanico Machine Terms v1.2 (official published PDF; last revised 31 July 2026; SHA-256 f53e8e9e65095956520b278415bbb4628ebf267eab8150eab4f9b4003d8638e9)",
           "url": "https://makina.finance/MeccanicoToS.pdf"
         },
         {
@@ -18057,7 +18022,7 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "DUSD is the Dialectic-curated Makina Machine share over USDC, not a par-redeemable issuer dollar. The Makina strategy API names Dialectic as the DUSD operator, and latest Ethereum PublicNode reads at block 25647044 returned operator() = mechanic() = 0x425BbC2cfF0c7E7960baA9BaC2f0Cb67B41d3beF for Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721. The official team-supplied Dialectic Meccanico Machine Terms v1.2 (SHA-256 beb0e92828a923048b19f78837b3482f7c3f4075052df81e8a34f2bbbcc7637c; expected publication URL pending during the 2026-07-30 review) identify Dialectic Meccanico Ltd as Operator and apply to Machines identified by on-chain operator attribution and/or an Operator Agreement. The holder's on-chain claim remains a code-mediated share claim against Machine AUM: deposits mint shares through DirectDepositor at the current share price, redemptions enter the AsyncRedeemer FIFO queue with a 12-hour minimum finalization delay and operator-liquidity dependency, and the share price is AUM divided by share supply in USDC terms. On-chain reads at Ethereum block 25636769 verified the share token 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, accountingToken() = Circle USDC, shareToken() = the DUSD share token, shareLimit() = 75,000,000e18, totalSupply() = 5,618,599.537452822458574240 shares, and recoveryMode() = false. CLAIM AND SEGREGATION is weak from affirmative legal evidence: the Machine Terms establish that acquisitions are sales by the Operator as principal, settlement assets and Machine assets become or remain the Operator's property, Users have no legal/equitable/proprietary/custody/trust/underlying/yield/governance/priority/bankruptcy-remote rights, buybacks are discretionary rather than contractual redemption rights, and Machine cessation or Operator insolvency creates no holder asset-return process or Makina Party claim. The code-mediated share accounting and technical Machine/Caliber controls remain relevant implementation facts, but they do not cure the legal claim and segregation deficiency. CUSTODY CONTINUITY is limited: Makina documentation and the reviewed allocation API identify strategy deployment through approved Calibers into protocol positions, and the Machine/fee/governance graph was verified on-chain, but assets are actively deployed into Morpho, Aave, Pareto/FalconX, Re, and Royco exposures and no independent custodian-continuity, trustee-custody, legal segregation, or bankruptcy-remote operator-replacement framework was established. ASSURANCE AND RECONCILIATION is limited: Makina publishes structured current strategy/AUM/allocation data and the share-supply/accounting-token relationship is verifiable on-chain, but the reviewed evidence is issuer-operated plus on-chain contract state rather than an independent reserve attestation, audit, or third-party reconciliation of strategy positions to DUSD liabilities.",
+      "notes": "DUSD is the Dialectic-curated Makina Machine share over USDC, not a par-redeemable issuer dollar. The Makina strategy API names Dialectic as the DUSD operator, and Ethereum PublicNode reads at block 25647044 returned operator() = mechanic() = 0x425BbC2cfF0c7E7960baA9BaC2f0Cb67B41d3beF for Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721. The published Dialectic Meccanico Machine Terms v1.2, last revised 31 July 2026 and fetched with SHA-256 f53e8e9e65095956520b278415bbb4628ebf267eab8150eab4f9b4003d8638e9, identify Dialectic Meccanico Ltd as Operator and apply to Machines identified by on-chain operator attribution and/or an Operator Agreement. The holder's on-chain claim remains a code-mediated share claim against Machine AUM: deposits mint shares through DirectDepositor at the current share price, redemptions enter the AsyncRedeemer FIFO queue with a 12-hour minimum finalization delay and operator-liquidity dependency, and the share price is AUM divided by share supply in USDC terms. On-chain reads at Ethereum block 25636769 verified the share token 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, accountingToken() = Circle USDC, shareToken() = the DUSD share token, shareLimit() = 75,000,000e18, totalSupply() = 5,618,599.537452822458574240 shares, and recoveryMode() = false. CLAIM AND SEGREGATION is weak from affirmative legal evidence: the Machine Terms establish that acquisitions are sales by the Operator as principal, settlement assets and Machine assets become or remain the Operator's property, Users have no legal/equitable/proprietary/custody/trust/underlying/yield/governance/priority/bankruptcy-remote rights, buybacks are discretionary rather than contractual redemption rights, and Machine cessation or Operator insolvency creates no holder asset-return process or Makina Party claim. The code-mediated share accounting and technical Machine/Caliber controls remain relevant implementation facts, but they do not cure the legal claim and segregation deficiency. CUSTODY CONTINUITY is limited: Makina documentation and the reviewed allocation API identify strategy deployment through approved Calibers into protocol positions, and the Machine/fee/governance graph was verified on-chain, but assets are actively deployed into Morpho, Pareto/FalconX, Pendle, another Makina Machine, Fluid Lite, and Royco exposures and no independent custodian-continuity, trustee-custody, legal segregation, or bankruptcy-remote operator-replacement framework was established. ASSURANCE AND RECONCILIATION is limited: Makina publishes structured current strategy/AUM/allocation data and the share-supply/accounting-token relationship is verifiable on-chain, but the reviewed evidence is issuer-operated plus on-chain contract state rather than an independent reserve attestation, audit, or third-party reconciliation of strategy positions to DUSD liabilities.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {

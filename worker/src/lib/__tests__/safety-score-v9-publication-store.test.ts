@@ -5,12 +5,13 @@ import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-ca
 import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationAttempt,
+  loadSafetyScoreV9PublicationIdentityEnvelope,
   loadSafetyScoreV9FailedPublicationAttempt,
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
   SAFETY_SCORE_V9_CACHE_KEYS,
-} from "../safety-score-v9-publication-store";
+} from "../safety-score-v9/publication-store";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const databases: DatabaseSync[] = [];
@@ -489,6 +490,48 @@ describe("Safety Score V9 publication store", () => {
       { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt },
       { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth },
     ]);
+  });
+
+  it("reads the publication identity from the storage envelope without the body", async () => {
+    const { sqlite, db } = database();
+    await expect(loadSafetyScoreV9PublicationIdentityEnvelope(db)).resolves.toBeNull();
+
+    const publication = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 110 });
+    await persistSafetyScoreV9Publication(db, {
+      publication,
+      publicationHealth: {
+        schemaVersion: 1,
+        status: "current",
+        acceptedPublicationGenerationId: publication.publicationGenerationId,
+        acceptedAtSec: publication.publishedAtSec,
+        attemptedAtSec: publication.publishedAtSec,
+        heldSinceSec: null,
+        reasons: [],
+      },
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: publication.publishedAtSec,
+        outcome: "published-clean",
+        publicationGenerationId: publication.publicationGenerationId,
+        quarantines: [],
+        affectedAssetIds: [],
+      },
+      publicationClockSec: publication.publishedAtSec,
+    });
+
+    await expect(loadSafetyScoreV9PublicationIdentityEnvelope(db)).resolves.toMatchObject({
+      model: "v9",
+      methodologyVersion: publication.policyVersion,
+      policyId: publication.policy.id,
+      publicationGenerationId: publication.publicationGenerationId,
+    });
+
+    // A tampered envelope identity reads as absent rather than throwing into a
+    // polled monitor.
+    sqlite
+      .prepare("UPDATE cache SET value = json_set(value, '$.identity', json('{\"policyId\":1}')) WHERE key = ?")
+      .run(SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    await expect(loadSafetyScoreV9PublicationIdentityEnvelope(db)).resolves.toBeNull();
   });
 
   it("records failed attempt metadata without replacing accepted attempt, publication, or health", async () => {

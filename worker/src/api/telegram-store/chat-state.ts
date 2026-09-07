@@ -1,4 +1,4 @@
-import { coerceCount } from "../../lib/telegram-usage-analytics";
+import { coerceCount } from "../../lib/telegram/usage-analytics";
 
 export interface TelegramPendingAlertCountRow {
   pending_count?: number | string | null;

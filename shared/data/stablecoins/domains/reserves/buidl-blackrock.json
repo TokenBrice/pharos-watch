@@ -2,7 +2,7 @@
   "id": "buidl-blackrock",
   "reserves": [
     {
-      "name": "Tri-party repo — Deutsche Bank AG",
+      "name": "Tri-party repo (Deutsche Bank AG)",
       "pct": 16.56599496,
       "risk": "very-low",
       "assetClass": "repo",
@@ -12,7 +12,7 @@
       "maturityDaysMax": 1
     },
     {
-      "name": "Tri-party repo — BofA Securities",
+      "name": "Tri-party repo (BofA Securities)",
       "pct": 16.18826869,
       "risk": "very-low",
       "assetClass": "repo",
@@ -22,7 +22,7 @@
       "maturityDaysMax": 1
     },
     {
-      "name": "Tri-party repo — Citigroup Global Markets",
+      "name": "Tri-party repo (Citigroup Global Markets)",
       "pct": 12.59087565,
       "risk": "very-low",
       "assetClass": "repo",
@@ -32,7 +32,7 @@
       "maturityDaysMax": 1
     },
     {
-      "name": "Tri-party repo — J.P. Morgan Securities",
+      "name": "Tri-party repo (J.P. Morgan Securities)",
       "pct": 14.38957217,
       "risk": "very-low",
       "assetClass": "repo",
@@ -42,7 +42,7 @@
       "maturityDaysMax": 1
     },
     {
-      "name": "Tri-party repo — Royal Bank of Canada",
+      "name": "Tri-party repo (Royal Bank of Canada)",
       "pct": 17.08761695,
       "risk": "very-low",
       "assetClass": "repo",

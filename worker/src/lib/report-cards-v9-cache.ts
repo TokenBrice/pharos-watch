@@ -7,14 +7,11 @@ import {
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import {
-  SafetyScoreV9CurrentResponseSchema,
-  type SafetyScoreV9CurrentResponse,
-} from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationHealth,
-} from "./safety-score-v9-publication-store";
+} from "./safety-score-v9/publication-store";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -83,10 +80,11 @@ export function resolveSafetyScoreV9EffectivePublicationHealth(
 }
 
 export function projectSafetyScoreV9PublicationToPublicSnapshot(
-  input: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9CurrentResponse,
   publicationHealth: V9PublicationHealth,
 ): ReportCardsV9CurrentResponse {
-  const publication = SafetyScoreV9CurrentResponseSchema.parse(input);
+  // The storage decoder already validated this publication. Parsing it again
+  // deep-copies every card; validate only the public projection below.
   const effectiveHealth = resolveSafetyScoreV9EffectivePublicationHealth(
     publication,
     publicationHealth,

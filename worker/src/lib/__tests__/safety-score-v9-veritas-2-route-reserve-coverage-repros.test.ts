@@ -16,8 +16,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "../report-cards-fixed-input";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import miniCapture from "./fixtures/safety-score-v9-rateable-mini-capture.json";
 
 const ASSET_ID = "usdc-circle";

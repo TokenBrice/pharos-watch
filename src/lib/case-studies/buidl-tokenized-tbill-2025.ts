@@ -65,6 +65,7 @@ export const content: CaseStudy = {
   ],
   sections: [
     {
+      id: "what-buidl-is",
       heading: "What BUIDL is",
       paragraphs: [
         "BUIDL is not a retail payment stablecoin. It is the on-chain share class of an institutional liquidity fund. Investors subscribe through Securitize, assets are held in cash, Treasury bills, and repos, and the token is designed to maintain a stable $1 value while distributing fund income through additional tokens.",
@@ -72,6 +73,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "why-it-held",
       heading: "Why it held",
       paragraphs: [
         "BUIDL held because the token did not pretend every holder had an instant, ungated dollar claim in every context. The fund's value is rooted in short-duration government collateral and institutional redemption, not an AMM pool or a governance token subsidy. The token can move onchain, but its economic promise remains a fund-share promise.",
@@ -79,6 +81,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "flat-chart-is-the-feature",
       heading: "The flat chart is the feature",
       paragraphs: [
         "Most case studies in this archive are about a violent price move. BUIDL is included because the absence of one is instructive. Tokenized Treasuries are supposed to be boring: the collateral is short duration, the NAV is explainable, and yield accrues through the fund rather than through reflexive token economics.",
@@ -86,6 +89,7 @@ export const content: CaseStudy = {
       ],
     },
     {
+      id: "lessons",
       heading: "Lessons",
       paragraphs: [
         "A tokenized T-bill can survive by being less composable than DeFi wants it to be. Investor restrictions, transfer controls, and formal fund administration are not cosmetic frictions; they are the mechanisms that keep the token's liquidity promise aligned with the assets underneath it.",
@@ -98,7 +102,7 @@ export const content: CaseStudy = {
       kind: "peg-deviation",
       coinId: "buidl-blackrock",
       caption:
-        "BUIDL on Pharos — the flat line is the point. A tokenized T-bill fund should read as NAV discipline, not as a volatile peg-defense drama.",
+        "BUIDL on Pharos: the flat line is the point. A tokenized T-bill fund should read as NAV discipline, not as a volatile peg-defense drama.",
     },
   ],
   watchpoints: [
@@ -121,23 +125,23 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "BlackRock / BusinessWire — BUIDL launch",
+      label: "BlackRock / BusinessWire: BUIDL launch",
       href: "https://www.businesswire.com/news/home/20240320771318/en/BlackRock-Launches-Its-First-Tokenized-Fund-BUIDL-on-the-Ethereum-Network",
     },
     {
-      label: "Securitize — BUIDL product page",
+      label: "Securitize: BUIDL product page",
       href: "https://securitize.io/blackrock/buidl",
     },
     {
-      label: "Securitize / PR Newswire — BUIDL surpasses $1B AUM",
+      label: "Securitize / PR Newswire: BUIDL surpasses $1B AUM",
       href: "https://www.prnewswire.com/news-releases/blackrock-usd-institutional-digital-liquidity-fund-buidl-tokenized-by-securitize-surpasses-1b-in-aum-302401480.html",
     },
     {
-      label: "Securitize — BUIDL launches multichain",
+      label: "Securitize: BUIDL launches multichain",
       href: "https://securitize.io/learn/press/blackrocks-buidl-tokenized-by-securitize-launches-multi-chain",
     },
     {
-      label: "Securitize / PR Newswire — BUIDL collateral on Binance and BNB Chain",
+      label: "Securitize / PR Newswire: BUIDL collateral on Binance and BNB Chain",
       href: "https://www.prnewswire.com/news-releases/blackrocks-buidl-tokenized-by-securitize-now-accepted-as-collateral-for-trading-on-binance-and-launches-on-bnb-chain-302613374.html",
     },
   ],

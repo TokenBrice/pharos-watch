@@ -2,17 +2,21 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [
-    { id: "brz-transfero", flags: { pegCurrency: "BRL", navToken: false } },
-    { id: "ggbr-goldfish-gold", flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 0.001 },
-    { id: "ousg-ondo-finance", flags: { pegCurrency: "USD", navToken: true } },
-    { id: "fpi-frax", flags: { pegCurrency: "VAR", navToken: true } },
-  ],
-}));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
+  const stablecoins = [
+    { id: "brz-transfero", pegCurrency: "BRL", navToken: false },
+    { id: "ggbr-goldfish-gold", pegCurrency: "GOLD", navToken: false, commodityOunces: 0.001 },
+    { id: "ousg-ondo-finance", pegCurrency: "USD", navToken: true },
+    { id: "fpi-frax", pegCurrency: "VAR", navToken: true },
+  ];
+  const registry = mockRegistry({ stablecoins });
+  return { WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID };
+});
 
 import {
+  buildPriceReasonablenessOptions,
   buildPriceValidationContext,
+  isReasonablePrice,
   isSevereFixedPegDownside,
   loadPriceValidationReferences,
   normalizePegTypeFromCurrency,
@@ -64,6 +68,30 @@ describe("buildPriceValidationContext", () => {
       pegClass: "fiat_fx",
       tracked: false,
     });
+  });
+});
+
+describe("legacy price reasonableness compatibility", () => {
+  it("normalizes optional metadata before validation", () => {
+    expect(buildPriceReasonablenessOptions({ navToken: 1, commodityOunces: 0.001 })).toEqual({
+      navToken: true,
+      commodityOunces: 0.001,
+    });
+    expect(buildPriceReasonablenessOptions({ commodityOunces: Number.NaN })).toEqual({
+      navToken: false,
+      commodityOunces: undefined,
+    });
+  });
+
+  it("covers fixed, referenced, NAV, and unknown peg paths", () => {
+    expect(isReasonablePrice(0, "peggedUSD")).toBe(false);
+    expect(isReasonablePrice(1, "peggedUSD")).toBe(true);
+    expect(isReasonablePrice(100, "peggedUSD", undefined, { navToken: true })).toBe(true);
+    expect(isReasonablePrice(2, undefined)).toBe(true);
+    expect(isReasonablePrice(1.08, "peggedEUR", { peggedEUR: 1.08 })).toBe(true);
+    expect(isReasonablePrice(3, "peggedEUR", { peggedEUR: 1.08 })).toBe(false);
+    expect(isReasonablePrice(2_915, "peggedGOLD")).toBe(true);
+    expect(isReasonablePrice(5, "peggedUNKNOWN")).toBe(true);
   });
 });
 

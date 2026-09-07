@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -13,6 +11,11 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { fetchNestVaultPositionsReserves } from "../nest-vault-positions";
 import { fetchJsonWithRetry } from "../helpers";
+import {
+  expectValidAdapterOutput,
+  mockedReserveHelper,
+  TEST_SIGNAL,
+} from "./reserve-adapter.test-support";
 
 describe("fetchNestVaultPositionsReserves", () => {
   beforeEach(() => {
@@ -20,7 +23,7 @@ describe("fetchNestVaultPositionsReserves", () => {
   });
 
   it("groups Nest positions into stablecoin, treasury, and private credit slices", async () => {
-    vi.mocked(fetchJsonWithRetry)
+    mockedReserveHelper(fetchJsonWithRetry)
       .mockResolvedValueOnce({
         data: {
           positions: {
@@ -84,7 +87,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     const result = await fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
-      AbortSignal.timeout(5_000),
+      TEST_SIGNAL,
     );
 
     expect(result.slices).toEqual([
@@ -135,14 +138,11 @@ describe("fetchNestVaultPositionsReserves", () => {
     expect(result.warnings).toEqual([
       expect.objectContaining({ code: "nest-nav-coverage-gap", effect: "degraded" }),
     ]);
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("nest-vault-positions") ?? undefined,
-      now: 1778474625,
-    }).valid).toBe(true);
+    expectValidAdapterOutput("nest-vault-positions", result, { now: 1778474625 });
   });
 
   it("keeps other Nest assets on settled-only accounting without pending transaction arrays", async () => {
-    vi.mocked(fetchJsonWithRetry)
+    mockedReserveHelper(fetchJsonWithRetry)
       .mockResolvedValueOnce({
         data: {
           positions: {
@@ -170,7 +170,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     const result = await fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
-      AbortSignal.timeout(5_000),
+      TEST_SIGNAL,
     );
 
     expect(result.slices).toEqual([
@@ -213,7 +213,7 @@ describe("fetchNestVaultPositionsReserves", () => {
       error: "cannot reconcile positive nOPAL pending withdrawals",
     },
   ])("fails nOPAL closed for $label", async ({ pendingTransactions, error }) => {
-    vi.mocked(fetchJsonWithRetry)
+    mockedReserveHelper(fetchJsonWithRetry)
       .mockResolvedValueOnce({
         data: {
           positions: {
@@ -241,7 +241,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     await expect(fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
-      AbortSignal.timeout(5_000),
+      TEST_SIGNAL,
     )).rejects.toThrow(error);
   });
 });

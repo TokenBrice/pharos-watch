@@ -77,15 +77,21 @@ describe("report-card evidence journal runtime", () => {
     const alphaNew = createReportCardEvidenceJournalV1(payload("alpha", "attempt:new", 200));
     const beta = createReportCardEvidenceJournalV1(payload("beta", "attempt:beta", 150));
 
-    expect(
-      ReportCardEvidenceJournalByIdV1Schema.parse({
-        beta: [beta],
-        alpha: [alphaNew, alphaOld],
-      }),
-    ).toEqual({
+    const canonical = ReportCardEvidenceJournalByIdV1Schema.parse({
+      beta: [beta],
+      alpha: [alphaNew, alphaOld],
+    });
+
+    expect(canonical).toEqual({
       alpha: [alphaOld, alphaNew],
       beta: [beta],
     });
+    expect(alphaOld.journalId).toBe(
+      "report-card-evidence:v1:737810dca00eb6f9f55ce9e5926a56a89232dd71dc86cdddddfd83dbc017f3b2",
+    );
+    expect(JSON.stringify({ alpha: [alphaOld], beta: [beta] })).toBe(
+      '{"alpha":[{"schemaVersion":1,"lane":"reserve","assetId":"alpha","attemptId":"attempt:old","sourceId":"fixture-reserve-adapter","sourceOriginClass":"onchain-observation","attemptCode":"reserve.collector.attempted","admissionCode":"reserve.admission.accepted","fallbackCode":"reserve.fallback.not-used","attemptedAtSec":100,"completedAtSec":101,"sourceTimestampSec":100,"sourceBlock":null,"contentSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sidecarMaterializationSha256":null,"journalId":"report-card-evidence:v1:737810dca00eb6f9f55ce9e5926a56a89232dd71dc86cdddddfd83dbc017f3b2"}],"beta":[{"schemaVersion":1,"lane":"reserve","assetId":"beta","attemptId":"attempt:beta","sourceId":"fixture-reserve-adapter","sourceOriginClass":"onchain-observation","attemptCode":"reserve.collector.attempted","admissionCode":"reserve.admission.accepted","fallbackCode":"reserve.fallback.not-used","attemptedAtSec":150,"completedAtSec":151,"sourceTimestampSec":150,"sourceBlock":null,"contentSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sidecarMaterializationSha256":null,"journalId":"report-card-evidence:v1:1b4bf86e533e66c4d1ff46b36df8796495fa1a4767e6c128b0235420803179bc"}]}'
+    );
   });
 
   it("rejects unknown fields, secret-bearing identifiers, and oversized records", () => {

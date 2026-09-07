@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-share-image";
 import { copyText } from "@/lib/clipboard";
+import { triggerBlobDownload } from "@/lib/exports/download";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -18,9 +19,9 @@ interface CompareCoinForShare {
   name: string;
   data: StablecoinData;
   meta: ComparisonMeta;
-  pegScore: number | null;
-  liquidityScore: number | null;
-  safetyGrade: string | null;
+  pegDetails?: { pegScore: number | null } | null;
+  liquidity?: { liquidityScore: number | null } | null;
+  safetyCard?: { grade: string | null } | null;
 }
 
 interface CompareRadarCard {
@@ -94,13 +95,13 @@ export function useCompareShareActions({
         name: coin.name,
         price: formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, pegRef),
         marketCap: formatCurrency(cap),
-        pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}` : "—",
+        pegScore: coin.pegDetails?.pegScore != null ? `${coin.pegDetails.pegScore.toFixed(1)}` : "—",
         weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "—",
-        liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}` : "—",
+        liquidityScore: coin.liquidity?.liquidityScore != null ? `${coin.liquidity.liquidityScore.toFixed(1)}` : "—",
         governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
         backing: BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing,
         pegCurrency: coin.meta.flags.pegCurrency,
-        safetyRating: coin.safetyGrade,
+        safetyRating: coin.safetyCard?.grade ?? null,
         logoImg: logoImages[index],
       };
     });
@@ -202,12 +203,7 @@ export function useCompareShareActions({
       const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
       if (!canvas) return;
       const blob = await canvasToBlob(canvas);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "pharos-compare.png";
-      anchor.click();
-      URL.revokeObjectURL(url);
+      triggerBlobDownload(blob, "pharos-compare.png", "sync");
       trackEvent("comparison_exported", { method: "download", coin_count: comparisonCoins.length });
     } catch (error) {
       console.warn("Share image render failed:", error);

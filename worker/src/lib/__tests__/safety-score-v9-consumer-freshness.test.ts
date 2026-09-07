@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isSafetyScoreV9SnapshotFresh,
   SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-} from "../safety-score-v9-consumer-freshness";
+} from "../safety-score-v9/consumer-freshness";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
 describe("Safety Score V9 consumer freshness", () => {

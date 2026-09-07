@@ -2,7 +2,7 @@
 
 **Status: shipped as part of `/compliance/`.** MiCA metadata remains the `mica` metadata extension, but the public route moved from `/mica/` to the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`. `/mica` is a 301 legacy redirect only.
 
-The tracker maps assessed stablecoins to their standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. Missing `mica` metadata means "not assessed", not out-of-scope or non-compliant. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing-non-goals).
+The tracker maps assessed stablecoins to their standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. Missing `mica` metadata means "not assessed", not out-of-scope or non-compliant. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing--non-goals).
 
 The data foundation already exists in the tracked registry: many coins carry a `jurisdiction` block, EU regulators and `"EMI (MiCA)"` licenses appear as free text, and EUR-pegged plus major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort. Derive current inventory counts from the registry rather than freezing them in this doc.
 
@@ -184,7 +184,7 @@ This is the dominant cost, not the code.
 - **Sources of truth:** ESMA register of authorized entities; EBA registers of EMT/ART issuers; national authority registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania).
 - **Mapping is manual:** token → issuer entity → authorization is not cleanly API-able. Treat like the existing `reserve-research` / `resilience-classify` editorial workflows.
 - **Backfill scope:** Prioritize EUR coins, major EU-traded USD coins, existing structured `mica` metadata, and records whose licenses mention MiCA. Assets without structured metadata remain unassessed, not implicitly out of scope; use the live compliance surface or source metadata for current status totals.
-- **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Recommend a `mica-research` skill (modeled on `reserve-research`) for periodic refresh against the registers.
+- **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Periodic refresh against the registers runs through the `compliance-research` skill (`mica` regime).
 
 ### Worked reference examples (verify before entry)
 
@@ -201,7 +201,7 @@ These illustrate the model only — confirm each against the ESMA/EBA/NCA regist
 
 ## Maintenance
 
-MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `mica-research` skill plus normal route/build checks.
+MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `compliance-research` skill (`mica` regime) plus normal route/build checks.
 
 - Data refresh: update or create the compliance sidecar's `mica` block with sourced register references, then run `npm run bootstrap:generated`, `npm run check:stablecoin-data`, and `npm run check:generated-artifacts`.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.

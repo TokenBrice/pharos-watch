@@ -25,7 +25,7 @@ describe("analyze-gsc-performance", () => {
         'https://pharos.watch/stablecoin/usdc-circle/?utm_source=search,20,"1,000",2.00%,6.2',
         "https://pharos.watch/chains/ethereum/,10,200,5.00%,3.4",
         "https://pharos.watch/coverage/,1,80,1.25%,6.0",
-        "https://pharos.watch/compare/,0,120,0%,11.0",
+        "https://pharos.watch/compare/,-0.9,120.9,0%,11.0",
       ].join("\n"),
     );
     writeFileSync(
@@ -72,6 +72,8 @@ describe("analyze-gsc-performance", () => {
         expect.objectContaining({
           path: "/compare/",
           family: "non-indexable-or-retired",
+          clicks: 0,
+          impressions: 120,
           targetClickGap: 6,
         }),
       ]),

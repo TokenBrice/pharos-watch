@@ -106,6 +106,26 @@ describe("snapshotChainSupply", () => {
     expect(inserts[0]!.binds.filter((_, index) => index % 4 === 3)).toEqual([1, 1, 1]);
   });
 
+  it("skips once the stablecoins cache is older than two producer intervals (>1800s)", async () => {
+    const payload = completePayload();
+    const staleUpdatedAt = Math.floor(Date.now() / 1000) - 1801;
+    const db = mockD1({ stablecoins: { assets: payload, updatedAt: staleUpdatedAt } });
+    const result = await snapshotChainSupply(db);
+    expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "cache_stale" });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"))).toBe(false);
+  });
+
+  it("still snapshots a cache age of 1799s (boundary below the two-interval skip gate)", async () => {
+    const payload = completePayload();
+    const boundaryUpdatedAt = Math.floor(Date.now() / 1000) - 1799;
+    const db = mockD1({ stablecoins: { assets: payload, updatedAt: boundaryUpdatedAt } });
+    const result = await snapshotChainSupply(db);
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(3);
+  });
+
   it("returns degraded when the stablecoins cache produces no valid chain rows", async () => {
     const payload = {
       peggedAssets: [

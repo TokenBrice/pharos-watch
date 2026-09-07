@@ -30,13 +30,18 @@ interface InheritedTrackedPriceConfig {
   multiplier?: number;
   allowFreshNonReplaySafeParent?: boolean;
   allowFreshReplaySafeSingleSourceParent?: boolean;
+  requireReportedSingleSourceConfidence?: boolean;
 }
 
 const INHERITED_TRACKED_PRICE_CONFIGS = {
   [USDAI_USD_AI_ID]: { parentId: PYUSD_PAYPAL_ID },
   "iusd-initia": { parentId: AUSD_AGORA_ID },
   "usdcx-movement": { parentId: USDC_CIRCLE_ID },
-  [M_M0_ID]: { parentId: WM_M0_ID },
+  [M_M0_ID]: {
+    parentId: WM_M0_ID,
+    allowFreshReplaySafeSingleSourceParent: true,
+    requireReportedSingleSourceConfidence: true,
+  },
   [USDK_KAST_ID]: {
     parentId: WM_M0_ID,
     allowFreshNonReplaySafeParent: true,
@@ -105,6 +110,7 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
       {
         allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent,
         allowFreshReplaySafeSingleSourceParent: config.allowFreshReplaySafeSingleSourceParent,
+        requireReportedSingleSourceConfidence: config.requireReportedSingleSourceConfidence,
       },
     );
     if (!parent) return null;

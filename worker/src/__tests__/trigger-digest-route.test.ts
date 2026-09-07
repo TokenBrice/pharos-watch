@@ -19,11 +19,16 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { handleTriggerDigest } from "../api/admin-actions";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest-style-gate";
 
-function makeRequest(): Request {
+function makeRequest(body?: string): Request {
   return new Request("https://ops-api.pharos.watch/api/trigger-digest", {
     method: "POST",
-    headers: { "X-Pharos-Admin": "1" },
+    headers: {
+      "X-Pharos-Admin": "1",
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body,
   });
 }
 
@@ -76,6 +81,50 @@ describe("trigger-digest route", () => {
 
     // waitUntil is not used for digest execution anymore.
     expect(ctx.waitUntil).not.toHaveBeenCalled();
+  });
+
+  it("validates and persists the runtime style gate mode with the queued trigger", async () => {
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ styleGateMode: { weekly: "enforce" } })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response?.status).toBe(202);
+    expect(await response?.json()).toMatchObject({
+      styleGateMode: { daily: "shadow", weekly: "enforce" },
+    });
+    expect(dbCacheMocks.setCache).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly,
+      "enforce",
+    );
+    expect(dbCacheMocks.setCache).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      "digest:force-run-request",
+      expect.any(String),
+    );
+  });
+
+  it.each([
+    { styleGateMode: "enforce" },
+    { styleGateMode: { daily: "enforce", weekly: "shadow" } },
+    { styleGateMode: { monthly: "enforce" } },
+    { styleGateMode: { daily: "blocking" } },
+    { styleGateMode: null },
+  ])("rejects an unscoped or malformed style gate payload without queueing (%j)", async (body) => {
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify(body)),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response?.status).toBe(400);
+    expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
   });
 
 });

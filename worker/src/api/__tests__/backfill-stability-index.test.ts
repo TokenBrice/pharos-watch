@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { computeStabilityIndex } from "../../lib/stability-index";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 stubCryptoForAuth();
 
@@ -141,7 +142,7 @@ function makeDb(options?: {
     run: async () => ({ success: true, meta: { changes: 1 } }),
   });
 
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => buildPreparedStatement(sql),
     batch: async (stmts: D1PreparedStatement[]) => {
       for (const stmt of stmts as Array<{ __sql?: string; __boundArgs?: unknown[] }>) {
@@ -197,7 +198,7 @@ function makeDb(options?: {
       return { count: 0, duration: 0 };
     },
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 describe("handleBackfillStabilityIndex", () => {

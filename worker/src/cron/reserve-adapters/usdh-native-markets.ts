@@ -8,7 +8,7 @@ import {
   parseTimestampLikeToUnixSeconds,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
-import { MONTH_INDEX, MONTH_LABEL } from "./attestation-pdf-index";
+import { MONTH_INDEX, MONTH_LABEL, lastDayOfMonth } from "./report-date";
 
 interface AttestationLink {
   year: number;
@@ -43,8 +43,7 @@ function findLatestAttestationLink(html: string): AttestationLink | null {
 }
 
 function lastDayOfMonthLabel(year: number, monthIndex: number): string {
-  // Date.UTC with day 0 of the NEXT month == last day of the requested month.
-  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const lastDay = lastDayOfMonth(year, monthIndex + 1);
   return `${MONTH_LABEL[monthIndex]} ${lastDay}, ${year}`;
 }
 

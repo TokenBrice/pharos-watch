@@ -1,6 +1,7 @@
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import {
+  computePYSFromComponents,
   computePysComponents,
   computePysRewardShare,
   derivePysSourceRiskPenalty,
@@ -15,13 +16,12 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
+import { derivePysNullReasonFromComponents } from "../../lib/yield-ranking-helpers";
 import {
   classifyYieldSourceFreshness,
   getComparisonAnchorStaleThresholdMs,
   computeApyVarianceScore,
-  computePYS,
   computeYieldStability,
-  derivePysNullReason,
   detectWarningSignals,
 } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
@@ -401,14 +401,7 @@ function evaluateYieldSourceGroup(
       benchmarkRate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
-    const computedPharosYieldScore = computePYS({
-      apy30d,
-      safetyScore,
-      apyVarianceScore,
-      scalingFactor: PYS_SCALING_FACTOR,
-      benchmarkRate,
-      sourceRiskPenalty: sourceRiskPenaltyInput,
-    });
+    const computedPharosYieldScore = computePYSFromComponents(apy30d, PYS_SCALING_FACTOR, pysComponents);
     const evidenceNullReason = sourceFreshness === "stale"
       ? "source-stale" as const
       : sourceFreshness === "unknown"
@@ -424,14 +417,7 @@ function evaluateYieldSourceGroup(
       : evidenceNullReason ?? (
         computedPharosYieldScore > 0
           ? null
-          : derivePysNullReason({
-              apy30d,
-              safetyScore,
-              apyVarianceScore,
-              scalingFactor: PYS_SCALING_FACTOR,
-              benchmarkRate,
-              sourceRiskPenalty: sourceRiskPenaltyInput,
-            })
+          : derivePysNullReasonFromComponents(apy30d, PYS_SCALING_FACTOR, pysComponents.effectiveYield)
       );
     const yieldToRisk = !safetySnapshotUnavailable && 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 

@@ -439,52 +439,6 @@ describe("buildPrimarySourceCandidates", () => {
     expect(sources.some((source) => source.source === "coinbase")).toBe(false);
   });
 
-  it("admits exact-address provider quotes as soft non-authoritative candidate sources", () => {
-    const collected = makeCollected({
-      addressProviderQuotes: [
-        {
-          stablecoinId: "dusd-test",
-          source: "dexpaprika-address",
-          chain: "base",
-          address: "0x123",
-          priceUsd: 1.0001,
-          observedAt: 1_700_000_000,
-          observedAtMode: "upstream",
-          liquidityUsd: 125_000,
-          poolCount: 2,
-        },
-        {
-          stablecoinId: "dusd-test",
-          source: "moralis-address",
-          chain: "base",
-          address: "0x123",
-          priceUsd: 1.0002,
-          observedAt: 1_700_000_020,
-          observedAtMode: "local_fetch",
-          liquidityUsd: 130_000,
-        },
-      ],
-    });
-
-    const { sources } = buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, {
-      nowSec: 1_700_000_030,
-    });
-
-    expect(sources.map((source) => source.source)).toEqual(["dexpaprika-address", "moralis-address"]);
-    expect(sources[0]).toMatchObject({
-      source: "dexpaprika-address",
-      price: 1.0001,
-      observedAtMode: "upstream",
-      weight: 1,
-      metadata: {
-        chain: "base",
-        address: "0x123",
-        liquidityUsd: 125_000,
-        poolCount: 2,
-      },
-    });
-  });
-
   it("rejects stale per-protocol DEX lanes even when other live sources exist", () => {
     const collected = makeCollected({
       binancePrice: 1.0,

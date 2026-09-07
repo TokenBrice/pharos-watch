@@ -5,15 +5,16 @@ import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/li
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
-import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases";
+import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs } from "./types";
+import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs, LiquidityPoolSourceFamily } from "./types";
 import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
@@ -194,6 +195,7 @@ function registerRetainedPoolExactStablecoins(
         poolAddressOrId: pool.poolId,
         tokenAddresses: [],
       });
+      if (identity.exactPoolKey) knownPoolIndex.exactKeys.add(identity.exactPoolKey);
       registerKnownPoolExactStablecoin(knownPoolIndex, identity, stablecoinId);
     }
   }
@@ -333,8 +335,14 @@ function requiresAuthoritativeProtocolConfirmation(
   chain: string,
   poolType: string,
   dexId: string,
+  tvlUsd: number | null,
 ): boolean {
   if (!authoritativeConfirmation) return false;
+  // Every direct-API census drops pools under DIRECT_API_POOL_MIN_TVL_USD before
+  // it is ever read, so a smaller staged pool is outside the census's reach and
+  // can never be confirmed. Demanding confirmation there deletes real liquidity
+  // for exactly the assets whose only pools sit below the direct-source floor.
+  if (tvlUsd == null || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) return false;
   const familyDescriptor = `${dexId} ${poolType}`.toLowerCase();
   if (protocol === "pancakeswap") {
     if (familyDescriptor.includes("v2")) return false;
@@ -374,6 +382,24 @@ function incrementSkipDimension(
     ...(details?.conflict ? { conflict: details.conflict } : {}),
   });
 }
+
+// Exhaustive staged-source → published source-family mapping: adding a staged
+// source without a row fails this record's type. The gecko_terminal fallback
+// still covers staged rows whose persisted source string outlives this deploy,
+// including prototype-named keys that plain Record indexing would inherit.
+const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], Exclude<LiquidityPoolSourceFamily, "dl">> = {
+  cg_onchain: "cg_onchain",
+  gecko_terminal: "gecko_terminal",
+  dexscreener: "dexscreener",
+  cg_tickers: "cg_tickers",
+  horizon: "horizon",
+  aquarius: "aquarius",
+  tezos: "tezos",
+  "icon-balanced": "icon-balanced",
+  "kava-swap": "kava-swap",
+  "osmosis-sqs": "osmosis-sqs",
+  "noble-swap": "noble-swap",
+};
 
 /**
  * Read staged pools from dex_pool_staging (refreshed within 24h),
@@ -509,6 +535,7 @@ export async function mergeStagedPools(
         stagedPool.chain,
         poolType,
         dexId,
+        stagedPool.tvlUsd,
       )
     ) {
       const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(normalizedProtocol);
@@ -656,22 +683,9 @@ export async function mergeStagedPools(
       poolType,
       price: stagedPool.priceUsd ?? 0,
       symbol: stagedPool.symbol,
-      sourceFamily:
-        stagedPool.source === "dexscreener"
-          ? "dexscreener"
-          : stagedPool.source === "cg_tickers"
-            ? "cg_tickers"
-            : stagedPool.source === "horizon"
-              ? "horizon"
-              : stagedPool.source === "aquarius"
-                ? "aquarius"
-                : stagedPool.source === "tezos"
-                  ? "tezos"
-                  : stagedPool.source === "icon-balanced"
-                    ? "icon-balanced"
-                    : stagedPool.source === "kava-swap"
-                      ? "kava-swap"
-                      : "gecko_terminal",
+      sourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, stagedPool.source)
+        ? STAGED_SOURCE_FAMILY[stagedPool.source]
+        : "gecko_terminal",
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {

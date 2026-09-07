@@ -531,7 +531,7 @@ describe("protocol API CLI policy", () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-legacy-protocol-api-test-"));
     try {
       const copiedPath = join(directory, "copied-protocol-api.json");
-      writeFileSync(copiedPath, readFileSync(legacyPath));
+      writeFileSync(copiedPath, JSON.stringify({ schemaVersion: 1, kind: "protocol-api-mechanism-measurement" }));
       const copied = spawnSync("npx", ["tsx", script, "--replay", copiedPath], {
         cwd: process.cwd(),
         encoding: "utf8",
@@ -544,11 +544,11 @@ describe("protocol API CLI policy", () => {
   });
 
   it("keeps replay-all scoped to protocol API refresh target directories", () => {
-    const unrelatedLegacyPath =
-      "shared/data/safety-score-v9/mechanism-measurements/iusd-infinifi/2026-07-27-protocol-api.json";
-    expect(JSON.parse(readFileSync(unrelatedLegacyPath, "utf8"))).toMatchObject({
-      schemaVersion: 1,
-      assetId: "iusd-infinifi",
+    const unrelatedSummaryPath =
+      "shared/data/safety-score-v9/mechanism-measurements/iusd-infinifi/2026-07-27-protocol-api.summary.json";
+    expect(JSON.parse(readFileSync(unrelatedSummaryPath, "utf8"))).toMatchObject({
+      mechanism: "iusd-infinifi",
+      summary: { assetId: "iusd-infinifi" },
     });
 
     const result = spawnSync("npx", ["tsx", script, "--replay-all"], {

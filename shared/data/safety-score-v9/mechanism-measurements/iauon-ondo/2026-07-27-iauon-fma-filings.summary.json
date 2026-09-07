@@ -1,0 +1,14 @@
+{
+  "mechanism": "iauon-ondo",
+  "date": "2026-07-27-iauon-fma-filings",
+  "sha256": "4ac07b7fd8a3f0ec2b210dd05eca05cd08f4368b294a3164cd02970b89c6b743",
+  "bytes": 7529,
+  "r2Key": "captures/iauon-ondo/2026-07-27-iauon-fma-filings.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "assetId": "iauon-ondo",
+    "archetype": "rwa-credit-fund",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/iauon-ondo/2026-07-27-iauon-fma-filings.json",
+    "capturedAt": "2026-07-27T23:46:27Z"
+  }
+}

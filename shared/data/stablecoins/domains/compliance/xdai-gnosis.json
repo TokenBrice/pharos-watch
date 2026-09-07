@@ -4,15 +4,15 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed; no Gnosis or xDAI issuer match found on 2026-08-14",
+        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Gnosis or xDAI issuer match found on 2026-08-14",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Gnosis xDAI Bridge — native gas asset minted and burned by bridge infrastructure",
+        "label": "Gnosis xDAI Bridge: native gas asset minted and burned by bridge infrastructure",
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Gnosis Chain glossary — xDAI as the native gas token",
+        "label": "Gnosis Chain glossary: xDAI as the native gas token",
         "url": "https://docs.analytics.gnosis.io/reference/glossary/"
       }
     ]
@@ -23,13 +23,13 @@
       "summary": "xDAI is used for Gnosis Chain gas and is described as a stable asset, but its public issuance path is bridge and consensus infrastructure rather than a legal issuer promising fixed-value redemption. That leaves payment-stablecoin applicability unresolved.",
       "references": [
         {
-          "label": "Gnosis xDAI Bridge — mint/burn and gas-token mechanics",
+          "label": "Gnosis xDAI Bridge: mint/burn and gas-token mechanics",
           "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "GENIUS Act — payment stablecoin definition and distributed-ledger exclusions",
+          "label": "GENIUS Act: payment stablecoin definition and distributed-ledger exclusions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "accessedAt": "2026-08-14"
@@ -48,19 +48,19 @@
     "notes": "xDAI's native gas role and bridge mint/burn model make a blanket non-payment classification too strong, but no legal issuer, issuer redemption obligation, or U.S. GENIUS pathway was identified. The bridge documentation establishes the on-chain mechanism only. The GENIUS rulemaking phase remains proposed-rules.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC Digital Assets Licensing Applications — current pending-application table",
+        "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Federal Register 91 FR 10202 — payment stablecoin definition and proposed framework",
+        "label": "Federal Register 91 FR 10202: payment stablecoin definition and proposed framework",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"

@@ -4,33 +4,20 @@ import {
   buildAddressPriceTargetsByProvider,
   collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
-  resolveAddressProviderCursorAdvance,
   resolveFallbackChain,
-  rotateAddressPriceTargets,
 } from "../address-price-providers";
-import { runAlchemyAddressProvider } from "../address-price-providers/alchemy";
-import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
 import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
-import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
-import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
-import {
-  applyReviewedAddressPriceTargetOverride,
-  isReviewedAddressPriceTargetOverride,
-} from "../address-price-providers/reviewed-target-overrides";
-import { emptyProviderResult } from "../address-price-providers/shared";
 import type { AddressPriceTarget } from "../address-price-providers";
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+const LIVE_PROVIDER = "coingecko-onchain-address" as const;
 
-function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTarget> = {}): AddressPriceTarget {
+function makeTarget(overrides: Partial<AddressPriceTarget> = {}): AddressPriceTarget {
   return {
-    stablecoinId: `coin-${index}`,
-    symbol: "USD",
+    stablecoinId: "fixture-usd",
+    symbol: "FUSD",
     chain: "base",
     providerChainId: "base",
-    address: `0x${index.toString(16).padStart(40, "0")}`,
+    address: "0x0000000000000000000000000000000000000001",
     origin: "contracts",
     previousSourceDepth: 1,
     previousMissingGenerations: 0,
@@ -38,1183 +25,183 @@ function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTar
     recentlyMissingPrice: false,
     missingPrice: false,
     expiresBeforeNextGeneration: false,
-    circulatingUsd: 1_000_000 - index,
+    circulatingUsd: 1_000_000,
     ...overrides,
   };
 }
 
-const PUBLISHABLE_PRICE_META = {
-  priceSource: "coingecko",
-  priceObservedAt: 1_800_000_000,
-} as const;
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("address price providers", () => {
-  it("auto-enables the stable no-key provider plus configured key-backed providers", () => {
-    expect(resolveEnabledAddressPriceProviders({
-      cgApiKey: "cg",
-      moralisApiKey: "moralis",
-      birdeyeApiKey: "birdeye",
-    })).toEqual([
-      "dexpaprika-address",
-      "coingecko-onchain-address",
-      "moralis-address",
-      "birdeye-address",
-    ]);
+  it("enables no provider when the allowlist is unset", () => {
+    expect(resolveEnabledAddressPriceProviders({ cgApiKey: "cg" })).toEqual([]);
   });
 
-  it("treats bare 0x fallback addresses as undecidable and solana otherwise", () => {
+  it("retains only the explicitly allowlisted CoinGecko Onchain provider", () => {
+    expect(resolveEnabledAddressPriceProviders({
+      enabledProviders: "coingecko-onchain-address,dexpaprika-address,moralis-address",
+      cgApiKey: "cg",
+    })).toEqual(["coingecko-onchain-address"]);
+    expect(resolveEnabledAddressPriceProviders({
+      enabledProviders: "coingecko-onchain-address",
+    })).toEqual([]);
+    expect(resolveEnabledAddressPriceProviders({
+      enabledProviders: "none",
+      cgApiKey: "cg",
+    })).toEqual([]);
+  });
+
+  it("targets only missing or low-depth rows on CoinGecko-supported chains", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["coingecko-onchain-address"],
+      previousAssetsById: new Map([
+        ["thin", { id: "thin", symbol: "THIN", consensusSources: ["coingecko", "defillama-list"] }],
+        ["deep", { id: "deep", symbol: "DEEP", consensusSources: ["a", "b", "c"] }],
+      ]),
+      assets: [
+        {
+          id: "thin",
+          symbol: "THIN",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+          priceSource: "coingecko+defillama-list",
+          priceObservedAt: 1_800_000_000,
+        },
+        {
+          id: "deep",
+          symbol: "DEEP",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: 1,
+          priceSource: "coingecko+defillama-list",
+          priceObservedAt: 1_800_000_000,
+        },
+      ],
+    });
+
+    expect(targets.get("coingecko-onchain-address")).toMatchObject([{
+      stablecoinId: "thin",
+      chain: "base",
+      providerChainId: "base",
+      address: "0x0000000000000000000000000000000000000001",
+    }]);
+  });
+
+  it("treats bare EVM fallback addresses as undecidable and non-EVM addresses as Solana", () => {
     expect(resolveFallbackChain("0x0000000000000000000000000000000000000001")).toBeNull();
     expect(resolveFallbackChain("So11111111111111111111111111111111111111112")).toBe("solana");
   });
 
-  it("honors explicit allowlists, including DexScreener opt-in, and skips providers with missing credentials", () => {
-    expect(resolveEnabledAddressPriceProviders({
-      enabledProviders: "dexscreener-address,moralis-address,dexpaprika-address,birdeye-address",
-      moralisApiKey: "moralis",
-    })).toEqual(["dexscreener-address", "moralis-address", "dexpaprika-address"]);
-    expect(resolveEnabledAddressPriceProviders({ enabledProviders: "none", moralisApiKey: "moralis" })).toEqual([]);
-  });
-
-  it("builds exact-address targets only for previous below-depth assets on supported provider chains", () => {
+  it("builds targets from explicit chain hints and bare Solana addresses", () => {
     const targets = buildAddressPriceTargetsByProvider({
-      providers: ["dexpaprika-address", "moralis-address"],
-      previousAssetsById: new Map([
-        ["below", { id: "below", symbol: "BUSD", consensusSources: ["coingecko", "defillama-list"] }],
-        ["covered", { id: "covered", symbol: "CUSD", consensusSources: ["a", "b", "c"] }],
-      ]),
+      providers: [LIVE_PROVIDER],
       assets: [
         {
-          id: "below",
-          symbol: "BUSD",
-          address: "base:0x0000000000000000000000000000000000000001",
+          id: "chain-hint",
+          symbol: "CHAIN",
+          address: "0x0000000000000000000000000000000000000003",
           chains: ["Base"],
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
         },
         {
-          id: "covered",
-          symbol: "CUSD",
-          address: "base:0x0000000000000000000000000000000000000002",
-          chains: ["Base"],
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
+          id: "bare-solana",
+          symbol: "SOL",
+          address: "So11111111111111111111111111111111111111112",
         },
       ],
+    }).get(LIVE_PROVIDER);
+
+    expect(targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stablecoinId: "chain-hint", chain: "base", providerChainId: "base" }),
+      expect.objectContaining({ stablecoinId: "bare-solana", chain: "solana", providerChainId: "solana" }),
+    ]));
+  });
+
+  it("reports the live provider's empty and circuit-blocked branches", async () => {
+    const empty = await collectAddressPriceProviderQuotes({
+      targetsByProvider: new Map(),
+      providers: [LIVE_PROVIDER],
+      sourceAllowed: { [LIVE_PROVIDER]: true },
+      config: { cgApiKey: "cg" },
+      nowSec: 1_800_000_000,
     });
+    expect(empty.providerOutcomes.get(LIVE_PROVIDER)).toBe("success");
+    expect(empty.diagnostics[0]?.stage).toBe("no-candidates");
 
-    expect(targets.get("dexpaprika-address")).toMatchObject([
-      {
-        stablecoinId: "below",
-        chain: "base",
-        providerChainId: "base",
-        address: "0x0000000000000000000000000000000000000001",
-      },
-    ]);
-    expect(targets.get("moralis-address")).toMatchObject([
-      {
-        stablecoinId: "below",
-        chain: "base",
-        providerChainId: "base",
-      },
-    ]);
-  });
-
-  it("skips bare 0x asset addresses when no chain or deployment metadata exists", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["dexpaprika-address", "moralis-address"],
-      assets: [
-        {
-          id: "bare-evm-unknown-chain",
-          symbol: "B0X",
-          address: "0x0000000000000000000000000000000000000001",
-          price: 0,
-        },
-      ],
+    const blocked = await collectAddressPriceProviderQuotes({
+      targetsByProvider: new Map([[LIVE_PROVIDER, [makeTarget()]]]),
+      providers: [LIVE_PROVIDER],
+      sourceAllowed: { [LIVE_PROVIDER]: false },
+      config: { cgApiKey: "cg" },
+      nowSec: 1_800_000_000,
     });
-
-    expect(targets.get("dexpaprika-address")).toEqual([]);
-    expect(targets.get("moralis-address")).toEqual([]);
-  });
-
-  it("narrows CoinGecko Onchain VUSD targeting to the reviewed IOTA EVM deployment", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["coingecko-onchain-address"],
-      assets: [{
-        id: "vusd-virtue",
-        symbol: "VUSD",
-        price: null,
-      }],
-    });
-
-    expect(targets.get("coingecko-onchain-address")).toEqual([expect.objectContaining({
-      stablecoinId: "vusd-virtue",
-      chain: "iota-evm",
-      providerChainId: "iota-evm",
-      address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
-      origin: "contracts",
-    })]);
-  });
-
-  it("fails a reviewed target override closed when metadata or provider support drifts", () => {
-    const deployment = {
-      chain: "iota-evm",
-      address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
-      origin: "contracts" as const,
-    };
-
-    expect(applyReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
-      stablecoinId: "vusd-virtue",
-      deployments: [deployment],
-      metadataDeployments: [{ chain: "iota", address: "0xstale::vusd::VUSD" }],
-      providerChainMap: { "iota-evm": "iota-evm" },
-    })).toEqual([]);
-
-    expect(applyReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
-      stablecoinId: "vusd-virtue",
-      deployments: [deployment],
-      metadataDeployments: [deployment],
-      providerChainMap: {},
-    })).toEqual([]);
-
-    expect(isReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
-      stablecoinId: "vusd-virtue",
-      chain: "unknown-chain",
-      address: deployment.address,
-    })).toBe(false);
-    expect(isReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
-      stablecoinId: "vusd-virtue",
-      chain: deployment.chain,
-      address: "",
-    })).toBe(false);
-  });
-
-  it("leaves unrelated address-provider deployments unchanged", () => {
-    const deployments = [
-      { chain: "ethereum", address: "0x0000000000000000000000000000000000000001" },
-      { chain: "base", address: "0x0000000000000000000000000000000000000002" },
-    ];
-
-    expect(applyReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
-      stablecoinId: "fixture-usd",
-      deployments,
-      metadataDeployments: deployments,
-      providerChainMap: { eth: "eth", base: "base" },
-    })).toEqual(deployments);
-  });
-
-  it("prioritizes missing prices before low-depth priced rows, then material source-depth gaps", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["dexpaprika-address"],
-      previousAssetsById: new Map([
-        ["low-depth-large", { id: "low-depth-large", symbol: "LDL", consensusSources: ["coingecko", "defillama-list"] }],
-        ["low-depth-small", { id: "low-depth-small", symbol: "LDS", consensusSources: ["coingecko"] }],
-        ["missing", { id: "missing", symbol: "MISS", consensusSources: ["coingecko", "defillama-list"] }],
-      ]),
-      assets: [
-        {
-          id: "low-depth-small",
-          symbol: "LDS",
-          address: "base:0x0000000000000000000000000000000000000001",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-          circulating: { base: 100_000 },
-        },
-        {
-          id: "missing",
-          symbol: "MISS",
-          address: "base:0x0000000000000000000000000000000000000002",
-          price: 0,
-          circulating: { base: 10_000 },
-        },
-        {
-          id: "low-depth-large",
-          symbol: "LDL",
-          address: "base:0x0000000000000000000000000000000000000003",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-          circulating: { base: 10_000_000 },
-        },
-      ],
-    });
-
-    expect(targets.get("dexpaprika-address")?.map((target) => target.stablecoinId)).toEqual([
-      "missing",
-      "low-depth-large",
-      "low-depth-small",
-    ]);
-  });
-
-  it("treats positive prices without publication provenance as missing exact-address targets", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["dexpaprika-address"],
-      previousAssetsById: new Map([
-        ["numeric-without-source", {
-          id: "numeric-without-source",
-          symbol: "NWS",
-          consensusSources: ["coingecko", "defillama-list", "coinbase"],
-        }],
-        ["refresh", { id: "refresh", symbol: "REF", consensusSources: ["coingecko"] }],
-      ]),
-      assets: [
-        {
-          id: "refresh",
-          symbol: "REF",
-          address: "base:0x0000000000000000000000000000000000000001",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-          circulating: { base: 10_000_000 },
-        },
-        {
-          id: "numeric-without-source",
-          symbol: "NWS",
-          address: "base:0x0000000000000000000000000000000000000002",
-          price: 1,
-          circulating: { base: 100_000 },
-        },
-      ],
-    });
-
-    expect(targets.get("dexpaprika-address")?.map((target) => ({
-      id: target.stablecoinId,
-      missing: target.missingPrice,
-    }))).toEqual([
-      { id: "numeric-without-source", missing: true },
-      { id: "refresh", missing: false },
-    ]);
-  });
-
-  it("orders expiring thin-coverage rows first without re-targeting deep high-confidence assets", () => {
-    const nowSec = 1_800_000_000;
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["dexpaprika-address"],
-      nowSec,
-      previousAssetsById: new Map([
-        ["deep-expiring", {
-          id: "deep-expiring",
-          symbol: "EXP",
-          consensusSources: ["coingecko", "defillama-list", "coinbase"],
-          priceSource: "coingecko",
-          priceObservedAt: nowSec,
-        }],
-        ["thin-expiring", {
-          id: "thin-expiring",
-          symbol: "TEX",
-          consensusSources: ["coingecko"],
-          priceSource: "coingecko",
-          priceObservedAt: nowSec,
-        }],
-        ["low-depth", { id: "low-depth", symbol: "LOW", consensusSources: ["coingecko"] }],
-      ]),
-      assets: [
-        {
-          id: "low-depth",
-          symbol: "LOW",
-          address: "base:0x0000000000000000000000000000000000000001",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-        },
-        {
-          id: "deep-expiring",
-          symbol: "EXP",
-          address: "base:0x0000000000000000000000000000000000000002",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-        },
-        {
-          id: "thin-expiring",
-          symbol: "TEX",
-          address: "base:0x0000000000000000000000000000000000000003",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-        },
-      ],
-    });
-
-    // A deep, high-confidence asset is not re-targeted merely because a
-    // short-window composite member makes its price look expiring — that rule
-    // would re-target every oracle-covered major each run and append a
-    // non-replay-safe lane to their consensus provenance. Expiring still
-    // orders cohorts among rows included for thin coverage.
-    expect(targets.get("dexpaprika-address")?.map((target) => ({
-      id: target.stablecoinId,
-      expiring: target.expiresBeforeNextGeneration,
-    }))).toEqual([
-      { id: "thin-expiring", expiring: true },
-      { id: "low-depth", expiring: false },
-    ]);
-  });
-
-  it("pins persistent active price gaps ahead of broader exact-address refresh targets", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["dexpaprika-address"],
-      previousAssetsById: new Map([
-        ["persistent-gap", {
-          id: "persistent-gap",
-          symbol: "GAP",
-          consensusSources: ["coingecko", "defillama-list", "coinbase"],
-        }],
-        ["new-gap", {
-          id: "new-gap",
-          symbol: "NEW",
-          consensusSources: ["coingecko", "defillama-list", "coinbase"],
-        }],
-        ["refresh", {
-          id: "refresh",
-          symbol: "REF",
-          consensusSources: ["coingecko"],
-        }],
-      ]),
-      previousMissingGenerationsById: new Map([["persistent-gap", 1]]),
-      assets: [
-        {
-          id: "refresh",
-          symbol: "REF",
-          address: "base:0x0000000000000000000000000000000000000001",
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-          circulating: { base: 10_000_000 },
-        },
-        {
-          id: "new-gap",
-          symbol: "NEW",
-          address: "base:0x0000000000000000000000000000000000000002",
-          price: null,
-          circulating: { base: 100_000_000 },
-        },
-        {
-          id: "persistent-gap",
-          symbol: "GAP",
-          address: "base:0x0000000000000000000000000000000000000003",
-          price: null,
-          circulating: { base: 10_000 },
-        },
-      ],
-    });
-
-    expect(targets.get("dexpaprika-address")?.map((target) => ({
-      id: target.stablecoinId,
-      previousMissingGenerations: target.previousMissingGenerations,
-      alertEligibleMissingPrice: target.alertEligibleMissingPrice,
-    }))).toEqual([
-      { id: "persistent-gap", previousMissingGenerations: 1, alertEligibleMissingPrice: true },
-      { id: "new-gap", previousMissingGenerations: 0, alertEligibleMissingPrice: false },
-      { id: "refresh", previousMissingGenerations: 0, alertEligibleMissingPrice: false },
-    ]);
-  });
-
-  it("rotates targets within priority cohorts without moving priced rows ahead of missing assets", () => {
-    const targets = [
-      makeDexScreenerTarget(1, { stablecoinId: "missing-large", missingPrice: true }),
-      makeDexScreenerTarget(2, { stablecoinId: "missing-small", missingPrice: true }),
-      makeDexScreenerTarget(3, { stablecoinId: "expiring", expiresBeforeNextGeneration: true, previousSourceDepth: 3 }),
-      makeDexScreenerTarget(4, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
-      makeDexScreenerTarget(5, { stablecoinId: "priced-covered", previousSourceDepth: 3 }),
-    ];
-
-    expect(rotateAddressPriceTargets(targets, 3).map((target) => target.stablecoinId)).toEqual([
-      "missing-small",
-      "missing-large",
-      "expiring",
-      "priced-low-depth",
-      "priced-covered",
-    ]);
-  });
-
-  it("keeps alert-eligible gaps pinned ahead of rotated missing cohorts", () => {
-    const targets = [
-      makeDexScreenerTarget(1, { stablecoinId: "alert-gap", missingPrice: true, previousMissingGenerations: 1, alertEligibleMissingPrice: true, recentlyMissingPrice: true }),
-      makeDexScreenerTarget(2, { stablecoinId: "missing-large", missingPrice: true }),
-      makeDexScreenerTarget(3, { stablecoinId: "missing-small", missingPrice: true }),
-      makeDexScreenerTarget(4, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
-    ];
-
-    expect(rotateAddressPriceTargets(targets, 2).map((target) => target.stablecoinId)).toEqual([
-      "alert-gap",
-      "missing-large",
-      "missing-small",
-      "priced-low-depth",
-    ]);
-  });
-
-  it("keeps Birdeye targeting scoped to Solana deployments", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["birdeye-address"],
-      previousAssetsById: new Map([
-        ["base-only", { id: "base-only", symbol: "BO", consensusSources: [] }],
-        ["solana-only", { id: "solana-only", symbol: "SO", consensusSources: [] }],
-      ]),
-      assets: [
-        {
-          id: "base-only",
-          symbol: "BO",
-          address: "base:0x0000000000000000000000000000000000000001",
-          chains: ["Base"],
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-        },
-        {
-          id: "solana-only",
-          symbol: "SO",
-          address: "solana:So11111111111111111111111111111111111111112",
-          chains: ["Solana"],
-          price: 1,
-          ...PUBLISHABLE_PRICE_META,
-        },
-      ],
-    });
-
-    expect(targets.get("birdeye-address")).toMatchObject([
-      {
-        stablecoinId: "solana-only",
-        chain: "solana",
-        providerChainId: "solana",
-        address: "So11111111111111111111111111111111111111112",
-      },
-    ]);
-  });
-
-  it("queries Birdeye Solana targets through the Standard-compatible price endpoint", async () => {
-    const target = makeDexScreenerTarget(0, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: "So11111111111111111111111111111111111111112",
-    });
-    let requestedUrl: string | null = null;
-    const fetchMock = mockFetch([{ match: () => true, respond: (request) => {
-      requestedUrl = request.url;
-      return new Response(JSON.stringify({
-        success: true,
-        data: {
-          value: "1.001",
-          liquidity: "75000",
-          updateUnixTime: 1_700_000_000,
-          priceChange24h: 0.02,
-          priceInNative: 0.004,
-        },
-      }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    } }]);
-
-    const result = await runBirdeyeAddressProvider(
-      [target],
-      { birdeyeApiKey: "test-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const requestUrl = new URL(requestedUrl ?? "");
-    expect(requestUrl.pathname).toBe("/defi/price");
-    expect(requestUrl.searchParams.get("address")).toBe(target.address);
-    expect(requestUrl.searchParams.get("include_liquidity")).toBe("true");
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(1);
-    expect(result.quotes).toMatchObject([
-      {
-        stablecoinId: target.stablecoinId,
-        source: "birdeye-address",
-        chain: "solana",
-        address: target.address,
-        priceUsd: 1.001,
-        observedAt: 1_700_000_000,
-        observedAtMode: "upstream",
-        liquidityUsd: 75_000,
-        metadata: {
-          providerChainId: "solana",
-          priceChange24h: 0.02,
-          priceInNative: 0.004,
-        },
-      },
-    ]);
-    expect(result.rejectedTargets).toEqual({});
-    expect(result.diagnostics).toMatchObject([
-      {
-        source: "birdeye-address",
-        status: 200,
-        ok: true,
-        success: true,
-        candidateCount: 1,
-        responseRowCount: 1,
-        matchedCount: 1,
-      },
-    ]);
-  });
-
-  it("treats Birdeye null price payloads as coverage misses instead of provider failures", async () => {
-    const target = makeDexScreenerTarget(0, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: "So11111111111111111111111111111111111111112",
-    });
-    mockFetch([{ match: () => true, body: { success: true, data: null } }]);
-
-    const result = await runBirdeyeAddressProvider(
-      [target],
-      { birdeyeApiKey: "test-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(1);
-    expect(result.quotes).toEqual([]);
-    expect(result.rejectedTargets).toEqual({ "missing-quote": 1 });
-    expect(result.diagnostics).toMatchObject([
-      {
-        source: "birdeye-address",
-        status: 200,
-        ok: true,
-        success: true,
-        candidateCount: 1,
-        responseRowCount: 0,
-        matchedCount: 0,
-        rejectionReasonCounts: { "missing-quote": 1 },
-      },
-    ]);
-  });
-
-  it("treats Birdeye 200-level error payloads as provider failures", async () => {
-    const target = makeDexScreenerTarget(0, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: "So11111111111111111111111111111111111111112",
-    });
-    mockFetch([{ match: () => true, body: { success: false, message: "Invalid API key", data: null } }]);
-
-    const result = await runBirdeyeAddressProvider(
-      [target],
-      { birdeyeApiKey: "test-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(0);
-    expect(result.quotes).toEqual([]);
-    expect(result.rejectedTargets).toEqual({});
-    expect(result.diagnostics).toMatchObject([
-      {
-        source: "birdeye-address",
-        status: 200,
-        ok: true,
-        success: false,
-        errorClass: "invalid-shape",
-        errorMessage: "Expected Birdeye price data object",
-        rejectionReasonCounts: { "invalid-shape": 1 },
-      },
-    ]);
-  });
-
-  it("stops Birdeye requests after provider-wide compute-unit exhaustion", async () => {
-    const targets = [0, 1, 2].map((index) => makeDexScreenerTarget(index, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: `So1111111111111111111111111111111111111111${index}`,
-    }));
-    const fetchMock = mockFetch([{ match: () => true, body: "Compute units usage limit exceeded", status: 400 }]);
-
-    const result = await runBirdeyeAddressProvider(
-      targets,
-      { birdeyeApiKey: "test-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(0);
-    expect(result.quotes).toEqual([]);
-    expect(result.diagnostics[0]).toMatchObject({
-      source: "birdeye-address",
-      status: 400,
-      success: false,
-      errorClass: "quota-exhausted",
-      snippet: "Compute units usage limit exceeded",
-    });
-    expect(result.diagnostics[1]).toMatchObject({
-      endpoint: "birdeye-address:request-cap",
-      errorClass: "cap",
-      candidateCount: 2,
+    expect(blocked.providerOutcomes.get(LIVE_PROVIDER)).toBe("neutral");
+    expect(blocked.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({
+      state: "skipped",
+      skipReason: "circuit-open",
     });
   });
 
-  it("stops Birdeye requests after the first HTTP 429", async () => {
-    const targets = [0, 1].map((index) => makeDexScreenerTarget(index, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: `So1111111111111111111111111111111111111111${index}`,
-    }));
-    const fetchMock = mockFetch([{ match: () => true, body: "Too many requests", status: 429, headers: { "Retry-After": "60" } }]);
-
-    const result = await runBirdeyeAddressProvider(
-      targets,
-      { birdeyeApiKey: "test-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(0);
-    expect(result.diagnostics[0]).toMatchObject({
-      status: 429,
-      success: false,
-      errorClass: "quota-exhausted",
-      retryAfterSec: 60,
-    });
-    expect(result.diagnostics[1]).toMatchObject({
-      endpoint: "birdeye-address:request-cap",
-      candidateCount: 1,
-    });
-  });
-
-  it("omits provider Retry-After diagnostics for malformed headers", async () => {
-    const targets = [makeDexScreenerTarget(0, {
-      chain: "solana",
-      providerChainId: "solana",
-      address: "So11111111111111111111111111111111111111110",
-    })];
+  it("collects successful quotes through the live single-provider path", async () => {
+    const target = makeTarget();
     mockFetch([{
       match: () => true,
-      body: "Too many requests",
-      status: 429,
-      headers: { "Retry-After": "later-ish" },
+      respond: () => Response.json({
+        data: [{
+          attributes: {
+            address: target.address,
+            price_usd: "1.001",
+            total_reserve_in_usd: "75000",
+          },
+        }],
+      }),
     }]);
 
-    const result = await runBirdeyeAddressProvider(
-      targets,
-      { birdeyeApiKey: "test-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(result.diagnostics[0].retryAfterSec).toBeUndefined();
-  });
-
-  it("reports Birdeye targets skipped by the request cap", async () => {
-    vi.useFakeTimers();
-    try {
-      const fetchMock = mockFetch([{ match: () => true, body: {
-          success: true,
-          data: {
-            value: "1.001",
-            liquidity: "75000",
-            updateUnixTime: 1_700_000_000,
-          },
-        } }]);
-
-      const resultPromise = runBirdeyeAddressProvider(
-        Array.from({ length: 11 }, (_, index) => makeDexScreenerTarget(index, {
-          chain: "solana",
-          providerChainId: "solana",
-          address: `So1111111111111111111111111111111111111111${index}`,
-        })),
-        { birdeyeApiKey: "test-key" },
-        undefined,
-        Number.MAX_SAFE_INTEGER,
-      );
-      await vi.runAllTimersAsync();
-      const result = await resultPromise;
-
-      expect(fetchMock).toHaveBeenCalledTimes(10);
-      expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
-        source: "birdeye-address",
-        endpoint: "birdeye-address:request-cap",
-        errorClass: "cap",
-        candidateCount: 1,
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("redacts the Alchemy API key from retry logs while fetching with the real endpoint", async () => {
-    const target = makeDexScreenerTarget(0);
-    const secret = "ALCH_SECRET_123/plus+space value";
-    const encodedSecret = encodeURIComponent(secret);
-    const fetchMock = mockFetch([{ match: () => true, body: "upstream error", status: 520 }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    const result = await runAlchemyAddressProvider(
-      [target],
-      { alchemyApiKey: secret },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(result.attemptedRequests).toBe(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      `https://api.g.alchemy.com/prices/v1/${encodedSecret}/tokens/by-address`,
-      expect.any(Object),
-    );
-    const warnLine = warnSpy.mock.calls
-      .map((call) => call[0])
-      .find((value): value is string => typeof value === "string");
-    expect(warnLine).toBeDefined();
-    if (typeof warnLine !== "string") throw new Error("expected a structured retry log line");
-    const warnRecord = JSON.parse(warnLine) as { metadata?: Record<string, unknown> };
-    expect(warnRecord.metadata?.url).toBe("[url]");
-    expect(warnLine).not.toContain(secret);
-    expect(warnLine).not.toContain(encodedSecret);
-    warnSpy.mockRestore();
-  });
-
-  it("reports Alchemy targets skipped by the request cap", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
-
-    const result = await runAlchemyAddressProvider(
-      Array.from({ length: 501 }, (_, index) => makeDexScreenerTarget(index)),
-      { alchemyApiKey: "alchemy-key" },
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(20);
-    expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
-      source: "alchemy-address",
-      endpoint: "alchemy-address:request-cap",
-      errorClass: "cap",
-      candidateCount: 1,
-    });
-  });
-
-  it("reports CoinGecko onchain targets skipped by the request cap", async () => {
-    vi.useFakeTimers();
-    try {
-      const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
-
-      const resultPromise = runCoingeckoOnchainAddressProvider(
-        Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index)),
-        null,
-        undefined,
-        1_700_000_000,
-        Number.MAX_SAFE_INTEGER,
-      );
-      await vi.runAllTimersAsync();
-      const result = await resultPromise;
-
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-      expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
-        source: "coingecko-onchain-address",
-        endpoint: "coingecko-onchain-address:request-cap",
-        errorClass: "cap",
-        candidateCount: 1,
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("round-robins CoinGecko batches across networks before spending a second request on one network", async () => {
-    vi.useFakeTimers();
-    try {
-      const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
-      const ethereumTargets = Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index, {
-        chain: "ethereum",
-        providerChainId: "eth",
-      }));
-      const crossNetworkTargets = [
-        makeDexScreenerTarget(1_000, { chain: "celo", providerChainId: "celo" }),
-        makeDexScreenerTarget(1_001, { chain: "cardano", providerChainId: "cardano" }),
-        makeDexScreenerTarget(1_002, { chain: "citrea", providerChainId: "citrea" }),
-      ];
-
-      const resultPromise = runCoingeckoOnchainAddressProvider(
-        [...ethereumTargets, ...crossNetworkTargets],
-        null,
-        undefined,
-        1_700_000_000,
-        Number.MAX_SAFE_INTEGER,
-      );
-      await vi.runAllTimersAsync();
-      await resultPromise;
-
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-      const requestedNetworks = fetchMock.mock.calls.map(([input]) => {
-        const match = String(input).match(/\/onchain\/networks\/([^/]+)\/tokens\/multi\//);
-        return match?.[1];
-      });
-      expect(requestedNetworks).toEqual(["eth", "celo", "cardano", "citrea", "eth"]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("reserves a capped CoinGecko network slot for reviewed VUSD after production-shaped target rotation", async () => {
-    vi.useFakeTimers();
-    try {
-      const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
-      const vusdTargets = buildAddressPriceTargetsByProvider({
-        providers: ["coingecko-onchain-address"],
-        assets: [{ id: "vusd-virtue", symbol: "VUSD", price: null }],
-      }).get("coingecko-onchain-address") ?? [];
-      const precedingNetworks = [
-        makeDexScreenerTarget(1_100, { chain: "ethereum", providerChainId: "eth", missingPrice: true }),
-        makeDexScreenerTarget(1_101, { chain: "celo", providerChainId: "celo", missingPrice: true }),
-        makeDexScreenerTarget(1_102, { chain: "cardano", providerChainId: "cardano", missingPrice: true }),
-        makeDexScreenerTarget(1_103, { chain: "citrea", providerChainId: "citrea", missingPrice: true }),
-        makeDexScreenerTarget(1_104, { chain: "arbitrum", providerChainId: "arbitrum", missingPrice: true }),
-      ];
-      const productionShapedTargets = rotateAddressPriceTargets(
-        [...precedingNetworks, ...vusdTargets],
-        0,
-      );
-      expect(productionShapedTargets.findIndex((target) => target.stablecoinId === "vusd-virtue")).toBe(5);
-
-      const resultPromise = runCoingeckoOnchainAddressProvider(
-        productionShapedTargets,
-        null,
-        undefined,
-        1_700_000_000,
-        Number.MAX_SAFE_INTEGER,
-      );
-      await vi.runAllTimersAsync();
-      const result = await resultPromise;
-
-      const requestedNetworks = fetchMock.mock.calls.map(([input]) => {
-        const match = String(input).match(/\/onchain\/networks\/([^/]+)\/tokens\/multi\//);
-        return match?.[1];
-      });
-      expect(requestedNetworks).toEqual(["iota-evm", "eth", "celo", "cardano", "citrea"]);
-      expect(requestedNetworks).not.toContain("iota");
-      expect(result.processedTargets).toContain(vusdTargets[0]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("advances CoinGecko rotation only past the contiguous targets actually attempted", async () => {
-    vi.useFakeTimers();
-    try {
-      mockFetch([{ match: () => true, body: { data: [] } }]);
-      const ethereumTargets = Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index, {
-        chain: "ethereum",
-        providerChainId: "eth",
-      }));
-      const targets = [
-        ...ethereumTargets,
-        makeDexScreenerTarget(1_000, { chain: "celo", providerChainId: "celo" }),
-        makeDexScreenerTarget(1_001, { chain: "cardano", providerChainId: "cardano" }),
-        makeDexScreenerTarget(1_002, { chain: "citrea", providerChainId: "citrea" }),
-      ];
-
-      const firstRunPromise = runCoingeckoOnchainAddressProvider(
-        targets,
-        null,
-        undefined,
-        1_700_000_000,
-        Number.MAX_SAFE_INTEGER,
-      );
-      await vi.runAllTimersAsync();
-      const firstRun = await firstRunPromise;
-      const cursorAdvance = resolveAddressProviderCursorAdvance(targets, firstRun);
-      expect(cursorAdvance).toBe(60);
-
-      const secondRunTargets = rotateAddressPriceTargets(targets, cursorAdvance);
-      const secondRunPromise = runCoingeckoOnchainAddressProvider(
-        secondRunTargets,
-        null,
-        undefined,
-        1_700_000_900,
-        Number.MAX_SAFE_INTEGER,
-      );
-      await vi.runAllTimersAsync();
-      const secondRun = await secondRunPromise;
-      const attemptedAcrossRuns = new Set(
-        [...(firstRun.processedTargets ?? []), ...(secondRun.processedTargets ?? [])]
-          .map((target) => target.stablecoinId),
-      );
-      expect(attemptedAcrossRuns).toEqual(new Set([
-        ...Array.from({ length: 120 }, (_, index) => `coin-${index}`),
-        "coin-1000",
-        "coin-1001",
-        "coin-1002",
-      ]));
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("limits DexScreener address augmentation to one batch per run", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: [] }]);
-
-    const result = await runDexScreenerAddressProvider(
-      Array.from({ length: 60 }, (_, index) => makeDexScreenerTarget(index)),
-      undefined,
-      1_700_000_000,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(1);
-  });
-
-  it("averages the two middle DexScreener address prices for even pool counts", async () => {
-    const target = makeDexScreenerTarget(0, {
-      stablecoinId: "even-median",
-      symbol: "USDV",
-      address: "0x0000000000000000000000000000000000000001",
-    });
-    const pair = (priceUsd: string, pairAddress: string) => ({
-      chainId: "base",
-      dexId: "uniswap",
-      pairAddress,
-      baseToken: { address: target.address, name: "Verified USD", symbol: "USDV" },
-      quoteToken: { address: "0x0000000000000000000000000000000000000002", name: "USD Coin", symbol: "USDC" },
-      priceUsd,
-      priceNative: null,
-      volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-      liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-      pairCreatedAt: null,
-    });
-    mockFetch([{ match: () => true, body: [
-      pair("0.99", "0xpair1"),
-      pair("1.01", "0xpair2"),
-    ] }]);
-
-    const result = await runDexScreenerAddressProvider(
-      [target],
-      undefined,
-      1_700_000_000,
-      Date.now() + 60_000,
-    );
-
-    expect(result.quotes).toHaveLength(1);
-    // Canonical median averages the two middle quotes: (0.99 + 1.01) / 2.
-    expect(result.quotes[0]?.priceUsd).toBe(1.0);
-  });
-
-  it("snapshots DexScreener address rejection counts on diagnostics", async () => {
-    const matchedTarget = makeDexScreenerTarget(0, {
-      stablecoinId: "matched",
-      symbol: "USDV",
-      address: "0x0000000000000000000000000000000000000001",
-    });
-    const missingTarget = makeDexScreenerTarget(1, {
-      stablecoinId: "missing",
-      symbol: "USDV",
-      address: "0x0000000000000000000000000000000000000003",
-    });
-    mockFetch([{ match: () => true, body: [
-      {
-        chainId: "base",
-        dexId: "uniswap",
-        pairAddress: "0xpair1",
-        baseToken: { address: matchedTarget.address, name: "Verified USD", symbol: "USDV" },
-        quoteToken: { address: "0x0000000000000000000000000000000000000002", name: "USD Coin", symbol: "USDC" },
-        priceUsd: "1.00",
-        priceNative: null,
-        volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-        liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-        pairCreatedAt: null,
-      },
-    ] }]);
-
-    const result = await runDexScreenerAddressProvider(
-      [matchedTarget, missingTarget],
-      undefined,
-      1_700_000_000,
-      Date.now() + 60_000,
-    );
-
-    const diagnosticRejections = result.diagnostics[0]?.rejectionReasonCounts;
-    expect(result.rejectedTargets).toEqual({ "missing-quote": 1 });
-    expect(diagnosticRejections).toEqual({ "missing-quote": 1 });
-    expect(diagnosticRejections).not.toBe(result.rejectedTargets);
-
-    result.rejectedTargets["missing-quote"] = 99;
-    expect(diagnosticRejections).toEqual({ "missing-quote": 1 });
-  });
-
-  it("does not continue DexScreener address batches after an upstream refusal", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: "forbidden", status: 403 }]);
-
-    const result = await runDexScreenerAddressProvider(
-      Array.from({ length: 60 }, (_, index) => makeDexScreenerTarget(index)),
-      undefined,
-      1_700_000_000,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.successfulRequests).toBe(0);
-    expect(result.diagnostics).toMatchObject([
-      {
-        source: "dexscreener-address",
-        status: 403,
-        success: false,
-        rejectionReasonCounts: { "non-ok": 1 },
-      },
-      {
-        source: "dexscreener-address",
-        errorClass: "cap",
-        candidateCount: 30,
-      },
-    ]);
-  });
-
-  it("reports DexPaprika request-cap skips without raising the cap", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: {
-      address: "0x0000000000000000000000000000000000000000",
-      summary: { price_usd: 1, liquidity_usd: 100_000 },
-    } }]);
-
-    const result = await runDexPaprikaAddressProvider(
-      Array.from({ length: 61 }, (_, index) => makeDexScreenerTarget(index, {
-        address: `0x${"0".repeat(39)}${(index % 10).toString(16)}`,
-      })),
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(60);
-    expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
-      source: "dexpaprika-address",
-      endpoint: "dexpaprika-address:request-cap",
-      errorClass: "cap",
-      candidateCount: 1,
-    });
-  });
-
-  it("marks malformed DexPaprika token details as invalid shape diagnostics", async () => {
-    mockFetch([{ match: () => true, body: ["not", "a", "token"] }]);
-
-    const result = await runDexPaprikaAddressProvider(
-      [makeDexScreenerTarget(1)],
-      undefined,
-      Date.now() + 60_000,
-    );
-
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.successfulRequests).toBe(0);
-    expect(result.quotes).toEqual([]);
-    expect(result.diagnostics).toMatchObject([
-      {
-        source: "dexpaprika-address",
-        ok: true,
-        success: false,
-        rejectionReasonCounts: { "invalid-shape": 1 },
-      },
-    ]);
-  });
-
-  it("skips durable DexPaprika 404 negatives without opening a request", async () => {
-    const target = makeDexScreenerTarget(1);
-    const targetKey = `${target.providerChainId}:${target.address.toLowerCase()}`;
-    const fetchMock = mockFetch([], { requireMatch: true });
-    const db = {
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn(() => ({
-          first: vi.fn(async () => sql.includes("pricing_provider_runtime_state") ? null : null),
-          all: vi.fn(async () => sql.includes("pricing_provider_negative_cache")
-            ? { results: [{ target_key: targetKey }] }
-            : { results: [] }),
-          run: vi.fn(async () => ({ meta: { changes: 1 } })),
-        })),
-      })),
-    } as unknown as D1Database;
-
-    const result = await runDexPaprikaAddressProvider(
-      [target],
-      undefined,
-      Date.now() + 60_000,
-      { db, nowSec: 1_700_000_000 },
-    );
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.attemptedRequests).toBe(0);
-    expect(result.diagnostics[0]).toMatchObject({
-      endpoint: "dexpaprika-address:negative-cache",
-      status: 404,
-      candidateCount: 1,
-    });
-  });
-
-  it("honors Retry-After by stopping a DexPaprika run after the first 429", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: "slow down", status: 429, headers: { "Retry-After": "120" } }]);
-    const writes: unknown[][] = [];
-    const db = {
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn((...binds: unknown[]) => ({
-          first: vi.fn(async () => null),
-          all: vi.fn(async () => ({ results: [] })),
-          run: vi.fn(async () => {
-            writes.push([sql, ...binds]);
-            return { meta: { changes: 1 } };
-          }),
-        })),
-      })),
-    } as unknown as D1Database;
-
-    const result = await runDexPaprikaAddressProvider(
-      [makeDexScreenerTarget(1), makeDexScreenerTarget(2)],
-      undefined,
-      Date.now() + 60_000,
-      { db, nowSec: 1_700_000_000 },
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.attemptedRequests).toBe(1);
-    expect(result.diagnostics[0]).toMatchObject({ status: 429, retryAfterSec: 120 });
-    expect(writes.some(([sql]) => String(sql).includes("pricing_provider_runtime_state"))).toBe(true);
-  });
-
-  it("keeps blocked address providers neutral for circuit-breaker accounting", async () => {
-    const fetchMock = mockFetch([], { requireMatch: true });
-
     const result = await collectAddressPriceProviderQuotes({
-      targetsByProvider: new Map([[
-        "dexscreener-address",
-        [makeDexScreenerTarget(1)],
-      ]]),
-      providers: ["dexscreener-address"],
-      sourceAllowed: {
-        "alchemy-address": true,
-        "moralis-address": true,
-        "dexscreener-address": false,
-        "dexpaprika-address": true,
-        "coingecko-onchain-address": true,
-        "birdeye-address": true,
-      },
-      config: {},
-      nowSec: 1_700_000_000,
+      targetsByProvider: new Map([[LIVE_PROVIDER, [target]]]),
+      providers: [LIVE_PROVIDER],
+      sourceAllowed: { [LIVE_PROVIDER]: true },
+      config: { cgApiKey: "cg" },
+      nowSec: 1_800_000_000,
     });
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.providerOutcomes.get("dexscreener-address")).toBe("neutral");
-    expect(result.diagnostics).toMatchObject([
-      {
-        source: "dexscreener-address",
-        errorClass: "blocked",
-        success: false,
-      },
+    expect(result.providerOutcomes.get(LIVE_PROVIDER)).toBe("success");
+    expect(result.quotesByStablecoinId.get(target.stablecoinId)).toEqual([
+      expect.objectContaining({ source: LIVE_PROVIDER, priceUsd: 1.001 }),
     ]);
   });
 
-  it("marks empty provider results as unsuccessful diagnostics without request attempts", () => {
-    const result = emptyProviderResult("moralis-address", 2, "missing-provider");
-
-    expect(result).toMatchObject({
-      quotes: [],
-      attemptedRequests: 0,
-      successfulRequests: 0,
-    });
-    expect(result.diagnostics).toEqual([
-      expect.objectContaining({
-        source: "moralis-address",
-        ok: false,
-        success: false,
-        candidateCount: 2,
-        rejectionReasonCounts: { "missing-provider": 2 },
+  it("fetches the retained exact-address provider with local-fetch provenance", async () => {
+    const target = makeTarget();
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: () => Response.json({
+        data: [{
+          attributes: {
+            address: target.address,
+            price_usd: "1.001",
+            total_reserve_in_usd: "75000",
+            volume_usd: { h24: "10000" },
+          },
+        }],
       }),
-    ]);
+    }]);
+
+    const result = await runCoingeckoOnchainAddressProvider(
+      [target],
+      "cg-key",
+      undefined,
+      1_800_000_000,
+      Date.now() + 60_000,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.quotes).toEqual([expect.objectContaining({
+      stablecoinId: "fixture-usd",
+      source: "coingecko-onchain-address",
+      priceUsd: 1.001,
+      observedAt: 1_800_000_000,
+      observedAtMode: "local_fetch",
+    })]);
   });
 });

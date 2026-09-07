@@ -73,12 +73,12 @@ describe("generate-reserve-coverage-audit", () => {
       frozenCoins: [coin({ id: "frozen" })],
       reportCards: {
         cards: [
-          { id: "live-a", rawInputs: { collateralFromLive: true, dependencyFromLive: true } },
-          { id: "live-b", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
-          { id: "live-c", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
-          { id: "plain", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
-          { id: "busd0-usual", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
-          { id: "defunct", isDefunct: true, rawInputs: { collateralFromLive: true, dependencyFromLive: true } },
+          { id: "live-a", backingFromLiveReserves: true },
+          { id: "live-b", backingFromLiveReserves: false },
+          { id: "live-c", backingFromLiveReserves: false },
+          { id: "plain", backingFromLiveReserves: false },
+          { id: "busd0-usual", backingFromLiveReserves: false },
+          { id: "defunct", isDefunct: true, backingFromLiveReserves: true },
         ],
       },
       stablecoins: stablecoinsPayload,
@@ -105,8 +105,8 @@ describe("generate-reserve-coverage-audit", () => {
       curatedOnlyActiveCount: 2,
       curatedOnlyCandidateRankSource: "stablecoin-api-market-cap",
       reportCardActiveCount: 5,
-      collateralFromLiveActiveCount: 1,
-      dependencyFromLiveActiveCount: 1,
+      backingFromLiveReservesActiveCount: 1,
+      dependencyFromLiveActiveCount: null,
       independentConfiguredButNotScoreGradeCount: 0,
     });
     expect(audit.liveEnabledByEvidenceClass).toEqual({
@@ -209,13 +209,57 @@ describe("generate-reserve-coverage-audit", () => {
             uncertainty: "Provider shares are not disclosed.",
           },
         }),
+        coin({
+          id: "aup",
+          symbol: "AUP",
+          reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+          reserveReview: {
+            reviewedAt: "2026-07-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Review", url: "https://example.com/review" }],
+            rationale: "Fixture review rationale",
+            compositionBasis: "Fixture disclosure",
+            compositionAsOf: "2026-07-01",
+            scope: "full-composition",
+            knownUnknownExposure: "No material known unknown exposure.",
+            knownUnknownExposurePct: 0,
+          },
+          proofOfReserves: {
+            type: "agreed-upon-procedures",
+            url: "https://example.com/proof",
+            cadence: "monthly",
+          },
+        }),
+        coin({
+          id: "attested",
+          symbol: "ATT",
+          reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+          reserveReview: {
+            reviewedAt: "2026-07-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Review", url: "https://example.com/review" }],
+            rationale: "Fixture review rationale",
+            compositionBasis: "Fixture disclosure",
+            compositionAsOf: "2026-07-01",
+            scope: "full-composition",
+            knownUnknownExposure: "No material known unknown exposure.",
+            knownUnknownExposurePct: 0,
+          },
+          proofOfReserves: {
+            type: "attestation",
+            url: "https://example.com/proof",
+            cadence: "monthly",
+          },
+        }),
       ],
       generatedAt: "2026-07-13T00:00:00.000Z",
     });
 
     expect(audit.summary).toMatchObject({
       activeStructuredReserveSliceCount: 1,
-      activeWithReserveReviewCount: 2,
+      activeWithReserveReviewCount: 4,
       activeMissingReserveReviewCount: 0,
       activeStaleReserveReviewCount: 1,
       activeStaleCompositionCount: 1,
@@ -223,6 +267,10 @@ describe("generate-reserve-coverage-audit", () => {
       activeOpaqueReserveSliceCount: 1,
       activeIndependentAuditCount: 2,
       activeIndependentAuditMissingLatestReportCount: 1,
+      activeAgreedUponProceduresCount: 1,
+      activeAgreedUponProceduresMissingLatestReportCount: 1,
+      activeAttestationCount: 1,
+      activeAttestationMissingLatestReportCount: 1,
       activeWithLatestProofReportCount: 1,
       activeLatestProofAssetsAndLiabilitiesCount: 1,
       activeExplicitCustodyModelCount: 2,
@@ -235,13 +283,14 @@ describe("generate-reserve-coverage-audit", () => {
       disposition: "basket-needs-split",
     });
     expect(audit.independentAuditMissingLatestReport.map((row) => row.coinId)).toEqual(["reviewed"]);
-    expect(audit.custodyConsistencyWarnings[0]?.reason).toContain("onchain custodyModel");
+    expect(audit.agreedUponProceduresMissingLatestReport.map((row) => row.coinId)).toEqual(["aup"]);
+    expect(audit.attestationMissingLatestReport.map((row) => row.coinId)).toEqual(["attested"]);
   });
 
   it("renders missing score-grade independent configs when report cards are supplied", () => {
     const audit = buildReserveCoverageAudit({
       activeCoins,
-      reportCards: { cards: activeCoins.map((entry) => ({ id: entry.id, rawInputs: {} })) },
+      reportCards: { cards: activeCoins.map((entry) => ({ id: entry.id, backingFromLiveReserves: false })) },
       generatedAt: "2026-06-03T00:00:00.000Z",
     });
 
@@ -252,6 +301,28 @@ describe("generate-reserve-coverage-audit", () => {
     expect(markdown).toContain("- Live-enabled independent: 1");
     expect(markdown).toContain("- live-a");
     expect(markdown).toContain("## Highest-Market-Cap Curated-Only Active Candidates");
+  });
+
+  it("treats an absent backingFromLiveReserves field as unavailable", () => {
+    const audit = buildReserveCoverageAudit({
+      activeCoins,
+      reportCards: { cards: activeCoins.map((entry) => ({ id: entry.id })) },
+      generatedAt: "2026-06-03T00:00:00.000Z",
+    });
+
+    expect(audit.summary.backingFromLiveReservesActiveCount).toBeNull();
+    expect(audit.summary.independentConfiguredButNotScoreGradeCount).toBeNull();
+    expect(audit.independentConfiguredButNotScoreGradeIds).toBeNull();
+    expect(renderReserveCoverageAuditMarkdown(audit)).toContain(
+      "_backingFromLiveReserves unavailable in one or more active report cards._",
+    );
+  });
+
+  it("rejects empty report-card input while preserving static mode", () => {
+    expect(() => buildReserveCoverageAudit({ activeCoins, reportCards: { cards: [] } })).toThrow(
+      "Report-card input must contain at least one card.",
+    );
+    expect(() => buildReserveCoverageAudit({ activeCoins })).not.toThrow();
   });
 
   it("warns when a reviewed source-quality note no longer matches an active stablecoin", () => {
@@ -319,7 +390,7 @@ describe("generate-reserve-coverage-audit", () => {
           process.cwd(),
           fetchMock as unknown as typeof fetch,
         ),
-      ).resolves.toBe(0);
+      ).rejects.toThrow("Report-card input must contain at least one card.");
     } finally {
       stdout.mockRestore();
     }

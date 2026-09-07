@@ -3,6 +3,8 @@ import {
   documentedBoundSupplyFull,
   fixedFee,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacityAccess,
   stablecoinRedeemBase,
   type RedemptionBackstopConfig,
 } from "../shared";
@@ -79,7 +81,7 @@ export function steakhousePrimeInstantConfig(symbol: "USDC" | "USDT"): Redemptio
     ),
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     docs: [
-      sourceRef("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRefFull("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"),
       sourceRef("Morpho vault integration", "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/", ["route"]),
     ],
     notes: [
@@ -100,14 +102,8 @@ export function gauntletMorphoConfig(vaultLabel: string, vaultUrl: string): Rede
     ),
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
-      sourceRef("Morpho vault docs", "https://docs.morpho.org/curation/overview", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(vaultLabel, vaultUrl, ["route", "capacity", "access"]),
+      sourceRefFull("Morpho vault docs", "https://docs.morpho.org/curation/overview"),
+      sourceRefRouteCapacityAccess(vaultLabel, vaultUrl),
     ],
     notes: [
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; the prior reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",

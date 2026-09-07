@@ -1,9 +1,9 @@
 "use client";
 
 import {
+  formatBps,
   formatCurrency,
   formatNativePrice,
-  formatPegDeviation,
   formatPercentChange,
   formatSupply,
   pegCurrencySymbol,
@@ -91,19 +91,17 @@ function CompactMetricCell({
 }
 
 function formatPriceReferenceLine({
-  coinData,
-  pegRef,
+  deviationBps,
   pegReferenceUnavailable,
   isNavToken,
 }: {
-  coinData: StablecoinData;
-  pegRef: number | null;
+  deviationBps: number | null;
   pegReferenceUnavailable: boolean;
   isNavToken: boolean;
 }): string {
   if (pegReferenceUnavailable) return "Peg reference unavailable";
   if (isNavToken) return "NAV token — no fixed peg";
-  return formatPegDeviation(coinData.price, pegRef);
+  return deviationBps == null ? "N/A" : formatBps(deviationBps);
 }
 
 export function HeroCompactPriceCell({
@@ -113,8 +111,7 @@ export function HeroCompactPriceCell({
 }: HeroPriceCardProps) {
   const price = formatHeroNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
   const deviationLabel = formatPriceReferenceLine({
-    coinData,
-    pegRef,
+    deviationBps,
     pegReferenceUnavailable,
     isNavToken,
   }).toUpperCase();
@@ -363,7 +360,7 @@ export function HeroPriceCard({
                 : deviationColorClass(Math.abs(deviationBps))
         }`}
       >
-        {formatPriceReferenceLine({ coinData, pegRef, pegReferenceUnavailable, isNavToken })}
+        {formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken })}
       </p>
       {limitedDepegCoverageNote ? (
         <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>

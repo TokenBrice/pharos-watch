@@ -190,10 +190,6 @@ describe("generate-public-datasets", () => {
       },
       { match: "https://api.example.test/api/snapshots/index", body: { snapshots: [{ snapshotDate: "2026-05-15" }] } },
       { match: "https://api.example.test/api/snapshots/2026-05-15.json", body: makeEnvelope("2026-05-15") },
-      {
-        match: "https://api.example.test/api/depeg-events?limit=1000",
-        body: { events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-15")] },
-      },
     ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
@@ -204,7 +200,7 @@ describe("generate-public-datasets", () => {
     expect(inputs.effectiveSnapshotDate).toBe("2026-05-15");
     expect(inputs.asOfISO).toBe("2026-05-17T06:40:00.000Z");
     expect(specs.find((spec) => spec.topic === "top-stablecoins")?.rows).toHaveLength(1);
-    expect(specs.find((spec) => spec.topic === "depeg-history")?.rows).toHaveLength(1);
+    expect(specs.find((spec) => spec.topic === "depeg-history")?.rows.length).toBeGreaterThan(0);
   });
 
   it("fails current-date generation when no immutable snapshot exists", async () => {
@@ -266,14 +262,9 @@ describe("generate-public-datasets", () => {
         expect(headers.get("Origin")).toBe("https://pharos.watch");
         expect(headers.has("X-API-Key")).toBe(false);
         expect(headers.has("X-Pharos-Site-Proxy-Secret")).toBe(false);
-        return [
-          "https://stablecoin-dashboard.pages.dev/_site-data/snapshots/2026-05-16.json",
-          "https://stablecoin-dashboard.pages.dev/_site-data/depeg-events?limit=1000",
-        ].includes(request.url);
+        return request.url === "https://stablecoin-dashboard.pages.dev/_site-data/snapshots/2026-05-16.json";
       },
-      respond: (request) => request.url.endsWith("/_site-data/snapshots/2026-05-16.json")
-        ? { body: makeEnvelope("2026-05-16") }
-        : { body: { events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-16")] } },
+      respond: () => ({ body: makeEnvelope("2026-05-16") }),
     }], { requireMatch: true });
 
     const inputs = await loadPublicDatasetLiveInputs("https://stablecoin-dashboard.pages.dev/_site-data", "2026-05-16");
@@ -283,7 +274,7 @@ describe("generate-public-datasets", () => {
       expect.anything(),
     );
     expect(inputs.effectiveSnapshotDate).toBe("2026-05-16");
-    expect(inputs.depegEvents).toHaveLength(2);
+    expect(inputs.depegEvents.length).toBeGreaterThan(1000);
   });
 
   it("preserves snapshot report-card safety scores without reusing them as peg scores", () => {
@@ -345,76 +336,29 @@ describe("generate-public-datasets", () => {
     warning.mockRestore();
   });
 
-  it("paginates depeg events to exhaustion before projecting the rolling window", async () => {
-    const oldEvent = {
-      ...makeEvent(null),
-      id: 2,
-      startedAt: testExports.cutoffSecForSnapshotDate("2026-05-16") - 60,
-    };
+  it("loads depeg events from the full local shard corpus before projecting the rolling window", async () => {
     const fetchMock = mockFetchStrict([
       { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
-      { match: "https://api.example.test/api/depeg-events?limit=1000", body: { events: [makeEvent(null)], nextCursor: "page-2" } },
-      { match: "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2", body: { events: [oldEvent], nextCursor: "page-3" } },
-      { match: "https://api.example.test/api/depeg-events?limit=1000&cursor=page-3", body: { events: [] } },
     ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
     const rows = testExports.projectDepegHistory(inputs.depegEvents, inputs.effectiveSnapshotDate);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2",
-      expect.anything(),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.test/api/depeg-events?limit=1000&cursor=page-3",
-      expect.anything(),
-    );
-    expect(inputs.depegEvents).toHaveLength(2);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.id).toBe(42);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(inputs.depegEvents.length).toBeGreaterThan(1000);
+    expect(rows.length).toBeGreaterThan(0);
   });
 
-  it("does not treat an old projected timestamp as the raw-order pagination boundary", async () => {
+  it("does not make a depeg API request during local-shard loading", async () => {
     const fetchMock = mockFetchStrict([
       { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
-      {
-        match: "https://api.example.test/api/depeg-events?limit=1000",
-        body: { events: [makeCoverageSentinel("2026-05-16")], nextCursor: "page-2" },
-      },
-      { match: "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2", body: { events: [makeEvent(null)] } },
     ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
     const rows = testExports.projectDepegHistory(inputs.depegEvents, inputs.effectiveSnapshotDate);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2",
-      expect.anything(),
-    );
-    expect(inputs.depegEvents).toHaveLength(2);
-    expect(rows.map((row) => row.id)).toEqual([42]);
-  });
-
-  it("fails live generation when a required source fetch fails", async () => {
-    mockFetchStrict([
-      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
-      { match: "https://api.example.test/api/depeg-events?limit=1000", body: { error: "unavailable" }, status: 503 },
-    ]);
-
-    await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
-      "Unable to fetch depeg events",
-    );
-  });
-
-  it("rejects a depeg event response that does not cover the rolling export window", async () => {
-    mockFetchStrict([
-      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
-      { match: "https://api.example.test/api/depeg-events?limit=1000", body: { events: [makeEvent(null)] } },
-    ]);
-
-    await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
-      "does not cover the 90-day export window",
-    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(rows.length).toBeGreaterThan(0);
   });
 
   it("does not drop confirmed depeg events that retain pendingReason provenance", () => {

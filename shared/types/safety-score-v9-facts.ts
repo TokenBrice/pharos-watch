@@ -17,6 +17,7 @@ import {
   ExitRouteObservationHistorySchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
+import { ReserveAssetClassSchema } from "./reserves";
 import {
   V9EvidenceResponsibilitySchema,
   V9FactStatusV2Schema,
@@ -42,8 +43,7 @@ import {
   Sha256Schema,
   UnixSecondsSchema,
   V9ClaimImpairmentSchema,
-  V9ControlCapKindSchema,
-  V9ControlCapUnitSchema,
+  V9ControlCapSemanticsSchema,
   V9ControlCapabilitySchema,
   V9ControlKindSchema,
   V9ControlScopeSchema,
@@ -354,24 +354,7 @@ export const V9EffectiveDependenciesV3Schema = z
   .superRefine(validateDependencyEnvelope);
 export type V9EffectiveDependenciesV3 = z.infer<typeof V9EffectiveDependenciesV3Schema>;
 
-export const V9ReserveAssetClassSchema = z.enum([
-  "cash",
-  "bank-deposit",
-  "treasury-bill",
-  "government-security",
-  "repo",
-  "money-market-fund",
-  "stablecoin",
-  "cryptoasset",
-  "hedged-crypto",
-  "private-credit",
-  "public-credit",
-  "tokenized-security",
-  "fund-share",
-  "protocol-position",
-  "commodity-allocated",
-  "other",
-]);
+export const V9ReserveAssetClassSchema = ReserveAssetClassSchema;
 
 const V9ReserveExposureFactV2Schema = z
   .object({
@@ -519,6 +502,19 @@ const V9RouteOutputV2Schema = z
     }
   });
 
+/**
+ * Settlement-limit fragments shared by the compiled exit-route fact
+ * (`V9ExitRouteFactV2`) and the producer-side route review
+ * (`worker/src/lib/safety-score-v9/fact-set-schema.ts`), so the producer's
+ * accepted/rejected set cannot drift from the published fact contract.
+ */
+
+/** Reviewed SLA bound on settlement completion; null encodes a reviewed "no SLA evidence". */
+export const V9RouteSettlementSlaSecSchema = z.number().int().nonnegative().nullable();
+
+/** Reviewed USD settlement quantity; absent when unreviewed, null when reviewed as unavailable. */
+export const V9RouteSettlementUsdAmountSchema = NonNegativeUsdSchema.nullable().optional();
+
 const V9ExitRouteFactV2Schema = z
   .object({
     routeKey: CanonicalTextSchema,
@@ -546,10 +542,10 @@ const V9ExitRouteFactV2Schema = z
     settlementBoundUnproven: z.boolean().optional(),
     capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
     settlementModel: V9RouteSettlementModelSchema,
-    settlementSlaSec: z.number().int().nonnegative().nullable(),
-    queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
-    dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
-    minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
+    settlementSlaSec: V9RouteSettlementSlaSecSchema,
+    queueDepthUsd: V9RouteSettlementUsdAmountSchema,
+    dailyLimitUsd: V9RouteSettlementUsdAmountSchema,
+    minRedeemUsd: V9RouteSettlementUsdAmountSchema,
     settlementEvidenceRefIds: CanonicalStringArraySchema,
     physicalResourceKeys: CanonicalStringArraySchema,
     status: V9FactStatusV2Schema,
@@ -625,6 +621,50 @@ const V9ExitRouteFactV2Schema = z
   });
 export type V9ExitRouteFactV2 = z.infer<typeof V9ExitRouteFactV2Schema>;
 
+/**
+ * Authority and custody fragments shared by the compiled control fact
+ * (`V9DeploymentControlFactV2`) and the producer-side control review overlay
+ * (`worker/src/lib/safety-score-v9/fact-set-schema.ts`), so a new
+ * authority-ladder rung cannot diverge between review validation and the
+ * published fact contract.
+ */
+export const V9ControlAuthoritySchema = z
+  .object({
+    authorityKey: CanonicalTextSchema,
+    // AUTHORITY-LADDER 9.46: `validator-quorum` is an external
+    // message-validation quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP
+    // group, IBC light-client validator set). Known-but-weak: it grades at or
+    // below `issuer-backend` and never above a named multisig.
+    model: z.enum([
+      "none",
+      "eoa",
+      "multisig",
+      "governance",
+      "contract",
+      "issuer-backend",
+      "validator-quorum",
+      "unknown",
+    ]),
+    threshold: z
+      .object({ required: z.number().int().positive(), total: z.number().int().positive() })
+      .strict()
+      .nullable(),
+  })
+  .strict()
+  .nullable();
+
+/** Reviewed key-custody attestation for the authority holding this control. An
+ * attested MPC/HSM key is an operationally different object from a bare
+ * externally-owned key even though both present as one address on chain. */
+export const V9KeyCustodySchema = z.enum(["mpc", "hsm", "unknown"]).default("unknown");
+
+/** Reviewed Safe module/guard surface. "none-detected" is positive evidence that
+ * no side-door module bypasses the quorum; "present" is a reviewed extension
+ * surface; "unknown" fails conservative. */
+export const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown");
+
+export const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
+
 const V9DeploymentControlFactV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
@@ -637,46 +677,19 @@ const V9DeploymentControlFactV2Schema = z
     scope: V9ControlScopeSchema,
     status: V9FactStatusV2Schema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
-    capSemantics: z
-      .object({
-        kind: V9ControlCapKindSchema,
-        bound: z
-          .object({
-            amount: z.number().finite().nonnegative(),
-            unit: V9ControlCapUnitSchema,
-          })
-          .strict()
-          .nullable(),
-      })
-      .strict(),
+    capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
     economicLossScope: V9EconomicLossScopeSchema,
-    authority: z
-      .object({
-        authorityKey: CanonicalTextSchema,
-        model: z.enum(["none", "eoa", "multisig", "governance", "contract", "issuer-backend", "unknown"]),
-        threshold: z
-          .object({ required: z.number().int().positive(), total: z.number().int().positive() })
-          .strict()
-          .nullable(),
-      })
-      .strict()
-      .nullable(),
+    authority: V9ControlAuthoritySchema,
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
     // A reviewer authored a scoped open question naming this control, and that
     // review is fresh at compile time. Grants the bounded scoped-gap ceiling
     // instead of the control-unverified ceiling while the question stays open.
     scopedQuestionFresh: z.boolean().optional(),
-    // Reviewed key-custody attestation for the authority holding this control.
-    // An attested MPC/HSM key is an operationally different object from a bare
-    // externally-owned key even though both present as one address on chain.
-    keyCustody: z.enum(["mpc", "hsm", "unknown"]).default("unknown"),
-    // Reviewed Safe module/guard surface. "none-detected" is positive evidence
-    // that no side-door module bypasses the quorum; "present" is a reviewed
-    // extension surface; "unknown" fails conservative.
-    modulesOrGuards: z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown"),
-    incidentState: z.enum(["none", "active", "resolved", "unknown"]),
+    keyCustody: V9KeyCustodySchema,
+    modulesOrGuards: V9ModulesOrGuardsSchema,
+    incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict()
@@ -844,7 +857,29 @@ const V9BridgeRouteControlReviewV2Schema = z
   })
   .strict();
 
-const V9BridgeJoinDiagnosticsV1Schema = z
+/**
+ * ODR-D5a: a selected supply row the producer cannot show joined to one proven
+ * bridge control. Only rows the evaluator's completeness proof can actually
+ * fail on are recorded — the tolerated sub-threshold branches (RULED D-J pool,
+ * sub-material unmatched dust) are omitted, so this stays empty for a clean
+ * asset and names the residue for a carrier. Diagnostic only: nothing here
+ * reaches a score, a reason, or a cap.
+ */
+const V9BridgeSupplyRouteJoinV1Schema = z
+  .object({
+    deploymentRouteKey: CanonicalTextSchema,
+    reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
+    reviewedRouteKind: z.enum(["native", "controlled"]).nullable(),
+    supplyShare: FractionSchema,
+    joinedControlKeys: CanonicalStringArraySchema,
+    /** Null when the row joins no single control to describe. */
+    joinedControlSemanticsResolved: z.boolean().nullable(),
+    joinedControlSupplyShare: FractionSchema.nullable(),
+  })
+  .strict();
+export type V9BridgeSupplyRouteJoinV1 = z.infer<typeof V9BridgeSupplyRouteJoinV1Schema>;
+
+export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
     canonicalSupplyRowCount: z.number().int().nonnegative(),
@@ -859,6 +894,12 @@ const V9BridgeJoinDiagnosticsV1Schema = z
       .strict(),
     bridgeClaimControls: CanonicalStringArraySchema,
     applicabilityBranch: z.enum(["native-only-not-applicable", "applicable"]),
+    // Retained facts predate this field; an absent list is "not recorded",
+    // which is why it defaults to empty rather than being required.
+    unprovenRouteJoins: canonicalArrayBy(
+      V9BridgeSupplyRouteJoinV1Schema,
+      (row) => row.deploymentRouteKey,
+    ).default([]),
   })
   .strict();
 export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1Schema>;

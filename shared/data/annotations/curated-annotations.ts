@@ -163,6 +163,7 @@ import source147 from "./coins/bd-basedollar.json";
 import source148 from "./coins/kusd-kerne.json";
 import source149 from "./coins/usr-resolv.json";
 import source150 from "./coins/zeusd-zoth.json";
+import source151 from "./coins/idrt-rupiah-token.json";
 
 type CuratedAnnotationSource = Readonly<Record<string, unknown>>;
 type CuratedAnnotationSourceAsset = readonly CuratedAnnotationSource[];
@@ -319,12 +320,13 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "kusd-kerne": source148,
   "usr-resolv": source149,
   "zeusd-zoth": source150,
+  "idrt-rupiah-token": source151,
 };
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);
 const ALLOWED_KINDS = new Set<string>(CHART_ANNOTATION_KINDS);
 const ALLOWED_SEVERITIES = new Set(["low", "med", "high"]);
-const ALLOWED_FIELDS = new Set(["date", "kind", "label", "severity", "href", "note"]);
+const ALLOWED_FIELDS = new Set(["date", "kind", "label", "severity", "href", "note", "quoted"]);
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape ISO timestamp; finite quantifiers, no backtracking ambiguity.
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
@@ -378,6 +380,7 @@ function resolveAnnotation(
   const severity = raw.severity;
   const href = raw.href;
   const note = raw.note;
+  const quoted = raw.quoted;
   if (typeof kind !== "string" || !ALLOWED_KINDS.has(kind)) {
     invalid(coinId, index, "kind is not in CHART_ANNOTATION_KINDS");
   }
@@ -400,6 +403,9 @@ function resolveAnnotation(
   if (note !== undefined && (typeof note !== "string" || note.length === 0)) {
     invalid(coinId, index, "note must be a non-empty string when present");
   }
+  if (quoted !== undefined && typeof quoted !== "boolean") {
+    invalid(coinId, index, "quoted must be a boolean when present");
+  }
 
   return {
     ts: date,
@@ -409,6 +415,7 @@ function resolveAnnotation(
       ? { severity: severity as ChartAnnotation["severity"] }
       : {}),
     ...(href !== undefined ? { href: href as string } : {}),
+    ...(quoted !== undefined ? { quoted: quoted as boolean } : {}),
   };
 }
 

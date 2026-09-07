@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 /**
  * Shared hook for managing URL search-param-based filters.
@@ -78,38 +78,24 @@ export function isUrlFilterClearValue(value: string): boolean {
   return value === "all" || value === "";
 }
 
+function subscribeToUrlChanges(listener: () => void): () => void {
+  window.addEventListener("popstate", listener);
+  const unsubscribe = subscribeToHistoryChanges(listener);
+  return () => {
+    window.removeEventListener("popstate", listener);
+    unsubscribe();
+  };
+}
+
+const getSearchSnapshot = () => window.location.search;
+const getServerSearchSnapshot = () => null;
+
 export function useUrlFilters() {
-  const [search, setSearch] = useState(() => (
-    typeof window !== "undefined" ? window.location.search : ""
-  ));
-
-  // syncFromLocation is referentially stable (empty useCallback deps) —
-  // safe to use as a useEffect dependency without causing re-subscription loops.
-  const syncFromLocation = useCallback(() => {
-    if (typeof window === "undefined") return;
-    setSearch(window.location.search);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    window.addEventListener("popstate", syncFromLocation);
-    const unsubscribeFromHistoryChanges = subscribeToHistoryChanges(syncFromLocation);
-    const syncAfterCommit = () => {
-      if (active) syncFromLocation();
-    };
-    if (typeof window.queueMicrotask === "function") {
-      window.queueMicrotask(syncAfterCommit);
-    } else {
-      window.setTimeout(syncAfterCommit, 0);
-    }
-    return () => {
-      active = false;
-      window.removeEventListener("popstate", syncFromLocation);
-      unsubscribeFromHistoryChanges();
-    };
-  }, [syncFromLocation]);
-
-  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  // Static HTML and its first hydration render cannot know the browser query.
+  // null distinguishes that phase from a ready URL with no search parameters.
+  const search = useSyncExternalStore(subscribeToUrlChanges, getSearchSnapshot, getServerSearchSnapshot);
+  const isReady = search !== null;
+  const searchParams = useMemo(() => new URLSearchParams(search ?? ""), [search]);
 
   const getParam = useCallback(
     (key: string, defaultValue = ""): string => {
@@ -122,7 +108,7 @@ export function useUrlFilters() {
     if (typeof window === "undefined") return;
     const qs = params.toString();
     const nextSearch = qs ? `?${qs}` : "";
-    const nextUrl = `${window.location.pathname}${nextSearch}`;
+    const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
     if (window.location.search !== nextSearch) {
       if (mode === "push") {
         window.history.pushState(null, "", nextUrl);
@@ -130,7 +116,9 @@ export function useUrlFilters() {
         window.history.replaceState(null, "", nextUrl);
       }
     }
-    setSearch(nextSearch);
+    // Hook-owned writes retain immediate state updates; unrelated history
+    // wrappers still notify in a microtask to avoid render-phase updates.
+    window.dispatchEvent(new Event(URL_FILTER_HISTORY_CHANGE_EVENT));
   }, []);
 
   const setParam = useCallback(
@@ -179,5 +167,5 @@ export function useUrlFilters() {
     [searchParams, writeParams],
   );
 
-  return { searchParams, getParam, setParam, setParams, pushSearchParams, replaceParams };
+  return { searchParams, isReady, getParam, setParam, setParams, pushSearchParams, replaceParams };
 }

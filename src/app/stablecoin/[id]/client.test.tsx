@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createContagionSnapshotMock,
@@ -12,12 +12,17 @@ import {
   createNoopComponentMock,
   createStablecoinLogoMock,
   createViewModelMock,
+  makeFrozenViewModel,
   makeReadyViewModel,
+  obituary,
 } from "./client-test-support";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { StablecoinMeta } from "@shared/types";
+import { DISABLED_DETAIL_QUERY_CONTROLS } from "@/hooks/__tests__/use-stablecoin-detail-view-model.test-support";
 
 const {
   lazyViewportValues,
@@ -161,7 +166,9 @@ vi.mock("@/components/stablecoin-detail/redemption-backstop-card", () => ({
   ),
 }));
 
-vi.mock("@/components/ai-summary", () => createNoopComponentMock("AiSummary"));
+vi.mock("@/components/ai-summary", () => ({
+  AiSummary: () => <div data-testid="ai-summary" />,
+}));
 
 vi.mock("@/components/coin-notice", () => createNoopComponentMock("CoinNotices"));
 
@@ -170,8 +177,6 @@ vi.mock("@/components/tape-for-coin-teaser", () => createNoopComponentMock("Tape
 vi.mock("@/components/feedback-modal", () => createNoopComponentMock("FeedbackModal"));
 
 vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
-
-vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => createNoopComponentMock("RecentBlacklistBanner"));
 
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
@@ -182,9 +187,10 @@ describe("StablecoinDetailClient", () => {
     useNearViewportMock.mockReset();
     useNearViewportMock.mockImplementation((rootMargin?: string) => {
       const queue = rootMargin === "600px" ? nearViewportValues : lazyViewportValues;
+      const near = useRef(queue.shift() ?? true).current;
       return {
         ref: { current: null },
-        near: queue.shift() ?? true,
+        near,
       };
     });
     useStablecoinDetailViewModelMock.mockReset();
@@ -215,7 +221,7 @@ describe("StablecoinDetailClient", () => {
     expect(container.textContent).toContain("Loading research dossier");
   });
 
-  it("passes near-viewport section gates into supplemental query controls", () => {
+  it("loads hero metrics and near-viewport sections without requiring interaction", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(false, true, false);
 
@@ -226,6 +232,11 @@ describe("StablecoinDetailClient", () => {
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         supplementalQueryControls: {
+          liquidity: true,
+          reportCards: true,
+          redemption: true,
+          yield: true,
+          stress: true,
           flows: true,
           blacklist: true,
           reserves: false,
@@ -245,6 +256,11 @@ describe("StablecoinDetailClient", () => {
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         supplementalQueryControls: {
+          liquidity: true,
+          reportCards: true,
+          redemption: true,
+          yield: true,
+          stress: true,
           flows: true,
           blacklist: false,
           reserves: true,
@@ -253,7 +269,7 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  it("keeps supplemental query controls disabled before their sections are near", () => {
+  it("keeps hero metric queries eager while offscreen-only lanes remain disabled", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(false, false, false);
 
@@ -264,9 +280,11 @@ describe("StablecoinDetailClient", () => {
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         supplementalQueryControls: {
-          flows: false,
-          blacklist: false,
-          reserves: false,
+          ...DISABLED_DETAIL_QUERY_CONTROLS,
+          liquidity: true,
+          reportCards: true,
+          yield: true,
+          stress: true,
         },
       }),
     );
@@ -696,5 +714,63 @@ describe("StablecoinDetailClient", () => {
 
     expect(screen.queryByTestId("price-transparency-card")).toBeNull();
     expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
+  });
+});
+
+describe("StablecoinDetailClient (frozen)", () => {
+  beforeEach(() => {
+    useStablecoinDetailViewModelMock.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders the FrozenStateBanner alongside the hero when status === frozen", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
+    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /cemetery/i })).toBeTruthy();
+  });
+
+  it("renders FrozenDataNote labels above each chart section", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
+    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    const notes = screen.getAllByText(/no longer collects new metrics/i);
+    // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
+    // sections render unconditionally for this fixture.
+    expect(notes.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("renders the frozen banner before preserved AI prose", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue({
+      ...makeFrozenViewModel(coin),
+      summary: {
+        title: "Archived note",
+        text: "Pre-freeze prose.",
+        updatedAt: "2026-04-01",
+      },
+    });
+    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+
+    const banner = screen.getByRole("heading", { name: /Sunset by issuer\./ });
+    const summary = screen.getByTestId("ai-summary");
+    expect(banner.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("buildStablecoinDetailMetadata (frozen)", () => {
+  it("uses the archive-themed title and preserves the OG image", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const frozen: StablecoinMeta = { ...coin, status: "frozen", frozenAt: "2026-04-27", obituary };
+    const meta = buildStablecoinDetailMetadata(frozen);
+    expect(typeof meta.title === "string" ? meta.title : "").toContain("Failed Stablecoin Archive");
+    const ogImages = meta.openGraph?.images;
+    const firstImage = Array.isArray(ogImages) ? ogImages[0] : ogImages;
+    const imageUrl = typeof firstImage === "object" && firstImage && "url" in firstImage ? firstImage.url : firstImage;
+    expect(String(imageUrl)).toContain(`/api/og/stablecoin/${frozen.id}`);
   });
 });

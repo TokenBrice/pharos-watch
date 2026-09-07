@@ -1,8 +1,8 @@
 # Digest Pipeline
 
-Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Generation · Data collection · DEX liquidity admission gate · LLM call · Editorial style gate · Failure handling · Storage · API Endpoints · Distribution · Weekly Recap · Frontend · Static Generation Pipeline · Internal sentinel rows · Environment Variables.
 
-> **Agent navigation** — Grep the heading you need: Overview · Generation · Storage · API Endpoints · Distribution · Weekly Recap · Frontend · Static Generation Pipeline · Environment Variables.
+Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
 
 ---
 
@@ -47,9 +47,10 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Editorial candidates | derived from all collected signals | Pre-ranked lead candidates with impact, novelty, confidence, artifact risk, and suppression reasons |
 | Depeg events | `depeg_events` table + fresh `stablecoins` cache price and the event's `peg_reference` | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events). Severity decisions — criticality, suppression, sort order, impact score, candidate titles — run on the **live deviation** (`currentBps`, computed from a cache price within the public stablecoins freshness budget vs the event's peg reference); the stored peak is carried separately as context (`peakBps`) and used only as a flagged fallback (`severityBasis: "peak-fallback"`) when no live price resolves or the stablecoins cache is stale. Top 8 are ranked by critical severity then impact (\|live bps\| × mcap when fresh, peak fallback otherwise), with active age/chronic suppression and the critical-depeg override evaluated on the selected severity basis |
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 30-minute sample, yesterday's from daily table |
-| Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR >$10M single; zero-value bursts are artifact-risk candidates |
+| Blacklist activity | Public `blacklist_events` (`suppression_reason IS NULL`, rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR >$10M single; unsuppressed zero-value bursts are artifact-risk candidates; suppressed mirror-zero rows cannot create candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | canonical V9 publication | Native V9 grades, three pillars, reviewed reasons, caps, and publication health |
+| Safety Map census | dated map manifest + validated `mapSummary` | Mapped supply, per-tier coin counts and supply shares, tier leaders, not-rated count, and explicit poster freshness/date |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >100 bps AND mcap >$20M; top 5 by impact score |
 | Mint-burn flows | published `GET /api/mint-burn-flows` aggregate payload (cache key `mint-burn-flows:v3:aggregate:24`) | Bank Run Gauge (mcap-weighted composite, **re-binned from the publication, never recomputed**), Flight-to-Quality (safe-haven vs risky net flows from the canonical V9 publication), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
@@ -72,11 +73,13 @@ Four additional optional fields were added to `DigestInputData` in the v2 refine
 
 A further enrichment pass added four more optional fields: `psiContributors`, `yieldAnomalies`, `liquidityShifts`, and `crossDayTrends`. All are populated only when their source data exists.
 
+`safetyMap` is another optional, archive-compatible field. It stores the exact dated image URL, manifest capture (including the validated summary), and `current` or `carried-forward` freshness with whole-day age. It is persisted only when the summary is complete and capture-matched and the edition's canonical `safetyContext` is available; older rows and degraded editions omit it.
+
 The digest intelligence pass runs after editorial candidates are built and before the LLM prompt is assembled. It adds:
 
 - `riskTape`: compact reader-facing state for PSI, active depegs, Bank Run Gauge, DEWS, and the largest supply mover.
 - `changeSummary`: deterministic "what changed since yesterday" buckets (`newSignals`, `worsenedSignals`, `improvedSignals`, `resolvedSignals`, `repeatedSignals`) derived from the previous archived input.
-- `forwardLookOutcomes`: evaluation of yesterday's `nextTriggers` against today's input (`hit`, `missed`, `pending`).
+- `forwardLookOutcomes`: evaluation of yesterday's `nextTriggers` against today's input (`hit`, `missed`, `pending`, `expired`).
 - `nextTriggers`: structured threshold checks the next digest can evaluate — depeg bps, supply velocity, DEWS band, Bank Run Gauge, PSI, yield-anomaly cooling (`yield-apy`), and DEX liquidity follow-through (`liquidity-score`). Triggers have a lifecycle: an armed threshold is **sticky** (never re-derived toward the metric's drift — the PSI goalpost once moved 89→93 chasing the index), a trigger that fires re-arms fresh, and a trigger pending for 3 consecutive editions **expires** (recorded as an `expired` forward-look outcome) and cedes its slot. Depeg thresholds arm off the live deviation, not the stored peak.
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
@@ -115,41 +118,63 @@ Liquidity impact is scored per $1B of market cap, matching `getDepegMarketImpact
 
 **4. Publication gate.** `validateDigestModelOutput()` raises a hard `suppressed-lead` issue when the declared `meta.leadSignalId` resolves to a suppressed candidate. Suppression used to be advisory: the prompt asked the model not to lead with one and nothing checked. A hard issue takes the existing path — one corrective retry, then `qualityGate = "blocked"`, no X post and no Telegram edition.
 
+**Retraction propagation.** The four admission layers govern collection and publication of a new daily edition; they cannot retroactively invalidate evidence already stored in an archived daily row. `shared/lib/digest-signal-quarantine.ts` is therefore the checked-in, runtime-neutral registry for confirmed contaminated signals, keyed by stablecoin id, signal family, and an inclusive ingestion window. The initial entry quarantines the USDS liquidity ingestion at 2026-08-21 08:05:23 UTC that produced edition #179's false `$162.28M -> $13.72M` claim. The registry is deliberately scoped to that ingestion rather than the whole day, so unrelated signals and the 2026-06-22 YLDS `$13.72M` coincidence remain admissible.
+
 What was deliberately **not** built: no coverage-weighted rescoring (coverage never fed the score, and damping it would hide genuinely thin coins); no rule that the composite must move proportionally with TVL (TVL Depth is `35 * log10(depthRatio / 0.0007)` at 30% weight, so a 91% TVL drop implies only about -11 points **by design** — #179's "score fell only ten points" was a correct number framed as a scandal, and the prompt now carries the implied move as `tvl-implies` so coverage cannot repeat that reading); no per-coin publication hold in the producer, because withholding a real crisis from the primary dataset is worse than reporting it and refusing to headline it; and no magnitude cap anywhere that a corroborated event cannot pass, because every gate here must fail toward *not publishing an unverified claim*, never toward *not seeing a real one*.
 
 ### LLM call
 
-- **Model:** `claude-opus-4-8` (swapped from Opus 4.7 on 2026-07-18; identical price and API contract, watch the first ~5-7 editions for voice drift) via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `xhigh` reasoning effort (`output_config.effort = "xhigh"`)
-- **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7+). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected). `xhigh` is Opus's recommended level for complex editorial work; `max` was dropped on 2026-04-18 after a second runaway-thinking failure (`stopReason=max_tokens, outputTokens=32000`, only a `signature_delta` emitted) — `max` has no constraint on thinking depth.
+- **Model:** typed per-job configuration defaults daily generation to `claude-opus-5` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `xhigh` reasoning effort (`output_config.effort = "xhigh"`). Stored editions retain requested model, served model, and effort so voice drift remains auditable when server-side refusal fallback serves another model.
+- **Reasoning:** adaptive thinking is on; no `budget_tokens` or sampling parameters are sent. `xhigh` is deliberate: measured Opus 5 `high` runs omitted the mandated forward-look line on both sampled daily editions, while `xhigh` had zero soft issues. Cost is bounded with the 16k token ceiling rather than by lowering effort.
 - **Timeout:** 12-minute Anthropic outer timeout with an 11-minute per-attempt fetch timeout. The daily digest cron wrapper allows 14 minutes total, which stays below Cloudflare's 15-minute scheduled-trigger wall-clock ceiling while leaving tail room for persistence, logging, and channel delivery.
 - **Streaming:** Requests set `Accept: text/event-stream` and `stream: true`. This is part of the Worker runtime contract because Opus adaptive thinking can take minutes before emitting text; streaming keeps the subrequest active with early headers / ping events during long thinking phases.
-- **Max tokens:** 64000 daily, 64000 weekly (max_tokens covers thinking + output). Anthropic's documented floor for Opus at xhigh/max effort. Earlier bumps to 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 was lowering effort to `xhigh` and raising the ceiling per Anthropic's guidance in one change.
+- **Max tokens:** 16000 for both jobs (thinking + visible output). The former 64k value guarded runaway thinking but did not bound spend. **`max_tokens` alone still does not bound spend**: a fetch-level timeout after Anthropic has produced output is billed and retried, so one edition can bill up to `DIGEST_FETCH_MAX_RETRIES + 1` generations per leg across the original and corrective legs — six at the ceiling, roughly 3x the single-retry figure. The actual bound comes from `DIGEST_MAX_EDITION_OUTPUT_TOKENS` (24000), an aggregate per-edition output budget: no request starts unless its full `max_tokens` still fits, an unknown post-submit failure is charged the full ceiling, and a server rejection carrying an HTTP status is charged nothing because it is rejected before generation. That caps the blended daily+weekly worst case near $1.10/day even when every attempt bills. Measured normal cost is $0.354/day blended, $0.712/day at the measured worst-case retry rate. `stop_reason=max_tokens` remains a hard failure.
 - **Overload retries:** Anthropic `529 Overloaded` responses retry at most 2 times (3 attempts total), bounded by the 12-minute outer timeout
-- **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks, with a compact few-shot EXEMPLAR embedded in the system prompt to anchor voice and structure
+- **Refusals:** requests enable Claude-API server-side fallback with `fallbacks: "default"` and beta header `server-side-fallback-2026-07-01`. This preserves streaming and one outer timeout; a client-side second-model call could overrun the 12-minute Anthropic, 14-minute cron, or 15-minute scheduled-trigger bounds after existing HTTP retries. A final streamed refusal discards partial text, records nullable `stop_details.category`, publishes no edition, and does not affect the infrastructure circuit breaker.
+- **Attempt telemetry:** every original, corrective, and HTTP attempt records requested/served model, effort, ceiling, input/cache/output tokens, attempt identities, stop reason, refusal category, latency, HTTP status, and computed cost in cron progress/run metadata. Successful editions also store the full attempt list under `digest_meta.llm`.
+- **Editorial style:** Daily prose follows [Pharos Editorial Style](./editorial-style.md). `buildEditorialPrompt("daily")` in `shared/lib/editorial-style.ts` derives the system prompt from the authority's register and policy. This document does not restate voice rules.
 - **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
 - **Critical depeg override (novelty-gated with a lead quota):** active depegs at or above 2,500 bps on at least $50M mcap, or 5,000 bps on at least $10M mcap — measured on the **live deviation** — bypass stale/chronic suppression. The top eligible critical is ranked by impact score (not raw bps) and produces a **hard** lead-validation requirement only when it is newly critical (event ≤48h old) or worsened ≥500 bps since the previous edition. One event may hard-lead at most 2 consecutive editions and 3 per trailing 7 (`shared/lib/digest-lead-policy.ts`, owner-ratified constants); past quota, and for older unchanged criticals, the requirement demotes to a **soft mention-only** rule (the symbol must appear, the lead is free). A material worsening re-qualifies the story regardless of quota. The prompt receives an explicit `REQUIRED LEAD TODAY` or `REQUIRED MENTION` line plus an `ONGOING STORIES` lead-streak ledger, and `editorialAudit` records `leadRequirementReasons` and `demotedLeadMentionTokens`. If Opus ignores a hard requirement, the quality gate retries and then blocks external delivery if unresolved.
 - **Momentum candidates:** a separate in-prompt block surfaces candidates with `novelty ∈ {new, accelerating, reversal}` so the model has explicit forward-watch material upstream of the regex-based forward-look validator.
-- **Deterministic next triggers:** the prompt receives `nextTriggers` with concrete thresholds. The model should use one for the required forward-look line instead of writing vague "watch this" closers.
+- **Deterministic next triggers:** the prompt receives `nextTriggers` with concrete thresholds. The model should use one for the required forward-look line instead of writing vague "watch this" closers, but must paraphrase the condition rather than transcribe its label/detail. Armed thresholds are explicitly identified as conditions, never prior observations; this prevents an unchanged trigger value from being laundered into a false "narrowed from N bps" claim.
 - **Change/outcome context:** the prompt receives `changeSummary` plus `forwardLookOutcomes`, allowing the digest to say what changed since yesterday and whether prior forward-look checks hit, missed, or remain pending.
-- **Opening rule:** the first sentence of the extended field must surface a fact from the lead candidate (coin/number), not a templated PSI verb. Opening-fingerprint validator raises a soft issue on PSI-verb openings that repeat within the last 3 digests.
+- **Safety desk:** when `input_data.safetyMap` passes the same capture and canonical-context gate, daily and weekly prompts receive one deterministic census block with mapped supply, every tier's count/share and leaders, not-rated count, and the UTC date depicted. A carried-forward census always names that date. The census is stock; `gradeTransitions` remains the sole per-coin mover/tier-crossing source. Missing, partial, malformed, or mismatched captures add no map language to the prompt, and the model may quote only the injected tier statistics rather than derive new ones.
+- **Opening rule:** the first sentence of the extended field must surface a fact from the lead candidate (coin/number), not a templated PSI verb. The opening-fingerprint validator now checks the trailing 7-edition variety window, rather than only 3 editions, and raises a soft issue on a repeated PSI-verb opening. PSI remains the headline index but is no longer compulsory copy: include it when it moved, materially diverged, or frames the lead.
 - **Forward-look mandate:** every digest must contain at least one anticipatory line (if/when/next-trigger/watch-for); a soft validator rejects retrospective-only digests.
 - **Calm-day storytelling:** in CALM regimes without a critical lead, the prompt uses `calmNarrativeFrame` to frame documented quiet, supply rotation, issuer concentration, liquidity divergence, chronic risk boundaries, or explicit non-events without manufacturing menace.
-- **Spice budget:** the prompt allows one sharp sentence per digest (named analogy, historical parallel, concrete-stakes observation, or ironic contrast); over-reach is discouraged by the forbidden-tic list.
+- **Spice budget:** The prompt allows one sharp sentence per digest when the evidence earns it. The [daily register](./editorial-style.md) defines its temperature and limits.
 - **Artifact policy:** candidates can be marked high-risk or suppressed for chronic small depegs, zero-value blacklist bursts, thin-liquidity artifacts, very high APY anomalies, or other weak evidence. The prompt explicitly tells Opus not to dramatize these.
 - **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, impact-weighted active depeg pressure, gauge score, FTQ status, and ALERT+ mcap rather than raw coin counts alone. Depegs older than 7 days contribute to regime pressure only when they worsened since the previous edition, so chronic standing conditions cannot pin the register at TENSION indefinitely (which had made the calm-day machinery unreachable).
-- **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI is always referenced but doesn't have to open; default 3 paragraphs, 4 only when a distinct secondary story cannot fold into 1-3
+- **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI appears when it moved, materially diverged, or frames the lead, rather than by daily fiat; default 3 paragraphs, 4 only when a distinct secondary story cannot fold into 1-3
 - **Density contract:** 40–70 words per paragraph, 150–280 words total for the extended field
 - **Structured sections:** When the digest covers two distinct stories, the LLM may use bold inline headers (e.g., `**Peg Watch**`, `**Capital Flows**`) to separate paragraphs. P1 (the lead) never has a header. The frontend renders these as styled inline spans.
 - **Variety enforcement:** normalized structured `meta` field (lead signal id, lead type, tone, featured coins, used/suppressed candidate ids) from recent non-weekly digests replaces raw text dump; falls back to raw text for pre-meta entries. A coarse `leadFamily` mapper (psi, depeg, dews, flow, risk, macro) drives `repeated-lead-family` so variety enforcement survives the 28-token allowed-leads enum.
-- **Voice guards:** a forbidden-tic list (21 anywhere-patterns plus closer-position bans on "worth watching / monitoring / bears watching"; the enforced source of truth is `FORBIDDEN_TICS_ANYWHERE` / `FORBIDDEN_TICS_CLOSER` in `worker/src/cron/daily-digest/voice-guards.ts`) fires a soft issue when hit. Opening-pattern fingerprint flags repeated "PSI [verb]" openings. Forward-look cue detector flags retrospective-only digests. Tone-cluster detector flags a register appearing 3+ times in the last 5 digests.
-- **Quality gate:** parsed LLM output is validated for required fields, paragraph/word budget, title+text length, code fences, forbidden tics, opening-pattern repetition, missing forward-look, repeated lead-family, tone-cluster, and recent title/tone/coin repetition. Editorial-consistency lints (all soft): `price-bps-mismatch` (a sentence quoting a coin's dollar price and a bps figure must have the two agree within 150 bps against the coin's live facts), `unverifiable-movement-claim` ("narrowed/widened from N bps" must trace to a previous-edition depeg fact), `title-symbol-streak` (same coin in three consecutive titles), `title-day-counting` (day/hour-count titles on repeat coverage), and title dedupe against a 30-edition trailing window. Sub-$50M depegs are suppressed as lead material after 48h (break-day-only coverage, owner-ratified floor). The worker retries once with validation errors before accepting the copy. If hard issues remain after retry, the digest is stored as degraded and social posting is skipped. Soft-only residual issues stay in cron metadata but do not mark the operational cron lane degraded.
+- **Variety and local guards:** The digest still validates opening and structural repetition, forward-look coverage, lead-family rotation, tone clusters, and recent title, tone, and coin repetition. These are digest-specific checks. Universal prose rules come from the style gate below.
+- **Quality gate:** Parsed output is checked for required fields, paragraph and word budgets, title plus text length, code fences, lead requirements, movement-claim evidence, and safety-copy binding. Hard content issues can block after the applicable retry. Editorial style findings follow the staged gate below.
 - **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "...", "meta": { "lead": "...", "tone": "...", "coins": [...] } }` — no markdown fences
+
+### Editorial style gate
+
+The daily and weekly prompts derive their voice and register rules from [Pharos Editorial Style](./editorial-style.md) through `buildEditorialPrompt(register)` in `shared/lib/editorial-style.ts`. The prompt and scanner use the same policy records.
+
+Pass 1 scans the model-owned `title`, `text`, and `extended` fields before any compatibility mutation or persistence. Each finding records its rule id, severity, field, excerpt, and position. Hard findings count as `would-block` events. Advisory findings feed telemetry and review and never block.
+
+The gate mode comes from two validated D1 runtime values: `digest:style-gate-mode:daily` and `digest:style-gate-mode:weekly`. Each kind reads only its own key, and a missing or invalid value fails safe to `shadow` independently. The Access-authenticated `POST /api/trigger-digest` action accepts one explicitly scoped update, such as `{"styleGateMode":{"daily":"enforce"}}` or `{"styleGateMode":{"weekly":"enforce"}}`; an unscoped string, unknown kind, invalid mode, or two-kind update is rejected. The response returns the full effective `{daily, weekly}` state. No deploy is needed after these controls exist. For the selected kind, shadow keeps `stripForbiddenDashes` active after the trustworthy raw scan and does not block an edition on a style finding. Enforce disables the repair and lets unresolved hard findings block after the corrective retry. The repair covers the same U+2012 through U+2015 range as `no-clause-dash`.
+
+Every generated row stores a bounded `digest_meta.editorialStyleGate` object and copies it into completion cron metadata. It contains the effective mode; an uncapped `firstPassWouldBlock` boolean; at most 12 first-pass findings as `{ruleId, field, excerpt, originalSeverity}` with excerpts capped at 160 characters; uncapped counts and truncation flags; `{eligible, attempted, outcome}` retry state; and at most 12 final unresolved findings under the same bound. `firstPassWouldBlock` makes the flip count reliable even when detail is truncated, while `retry.eligible` separately records whether the corrective generation fit the time and token budgets. Daily and weekly rows remain distinguishable through `digest_meta.type`; the operator query and flip procedure live in [`blocked-digest-edition.md`](./runbooks/blocked-digest-edition.md).
+
+Daily enforcement flips independently after its 30-edition window records at most one would-block event. Weekly remains in shadow until its separate readiness criterion is met, then its own key flips without changing daily. An unresolved hard style finding blocks only editions of an enforced kind after at most one corrective retry. Advisory findings never block.
+
+The corrective retry is field-targeted. It names the rule, field, and excerpt and asks for corrected JSON while preserving unaffected fields. The retry is skipped when the first pass crosses the elapsed-time threshold, currently half of the Anthropic timeout, or when the aggregate output-token budget cannot reserve another request. Shadow telemetry records each skip reason. These limits are why enforcement is staged.
+
+Wrapper-owned findings are scanned under `delivery-wrapper` against the fully rendered X or Telegram payload immediately before send/enqueue. Model-owned spans are masked from this second enforcement decision because they have already passed their own mode-aware gate. A hard wrapper finding returns `skipped: editorial-style-wrapper` only for that channel, records bounded `wrapperEditorialAlerts` in cron metadata, and never calls the model. Telegram scans the cemetery appendix separately with the named `literal-cemetery` exemption; the remainder of the rendered payload receives no cemetery exemption. The Worker stores `editorialStyleVersion` and `editorialStyleHash` on each current edition, and the archive API returns those fields as copy provenance. Legacy editions without stored fields are surfaced as `pre-policy` at the API and UI read boundary. Archives remain historical record, byte-identical, and are never edited or retroactively tagged. See [`runbooks/blocked-digest-edition.md`](./runbooks/blocked-digest-edition.md) for operator triage.
 
 ### Failure handling
 
-If quality validation fails with **hard** issues, the worker sends one corrective retry to Opus containing the hard checks plus the failed response itself, so the model fixes the flagged problems instead of regenerating blind. Soft-only issues never trigger a retry (during the July 2026 forced-lead streak, unfixable soft variety issues burned a second full Opus call every day). A `stop_reason=max_tokens` stream is treated as a hard failure before parsing — truncated output can no longer flow into the raw-text fallback.
 
-If the retry still has hard quality issues, the digest row is stored with `digest_meta.qualityGate = "blocked"` for operator inspection: blocked rows are excluded from every public read endpoint, from edition numbering, from recent-copy variety context, and from lead-streak history (they never reached readers), and external delivery is skipped as `quality-gate`. Soft-only quality issues remain visible in run metadata without changing cron health. Forbidden throat-clearing phrases are now flagged as a soft `forbidden-phrase` issue rather than silently stripped (which left grammar fragments), and `meta.coins` labels are cross-checked against the copy (`meta-coins-mismatch`).
+If parsing or content validation produces hard issues, the worker sends one corrective retry to the configured model containing the hard checks plus the failed response itself, so the model fixes the flagged problems instead of regenerating blind. Style hard findings use the same retry when enforcement is active; in shadow they remain telemetry-only. Soft-only content issues never trigger a retry. A `stop_reason=max_tokens` stream is treated as a hard failure before parsing. A `stop_reason=refusal` is a distinct policy outcome: pre-output and mid-stream refusals both discard text, skip publication, retain the classifier category for operators, and never count as Anthropic circuit failures.
+
+When a blocking hard issue remains after the applicable retry, the digest row is stored with `digest_meta.qualityGate = "blocked"` for operator inspection: blocked rows are excluded from every public read endpoint, from edition numbering, from recent-copy variety context, and from lead-streak history because they never reached readers, and external delivery is skipped as `quality-gate`. Style-only findings in shadow do not set `qualityGate = "blocked"`. Advisory findings remain visible in run metadata without changing cron health. `meta.coins` labels are cross-checked against the copy (`meta-coins-mismatch`).
 
 `suppressed-lead` is a hard issue: a declared `meta.leadSignalId` that resolves to a suppressed editorial candidate fails validation instead of publishing. Suppression previously lived only in prompt instructions, which is how edition #179's suppression-eligible USDS liquidity claim reached X and Telegram. See [DEX liquidity admission gate](#dex-liquidity-admission-gate).
 
@@ -191,7 +216,7 @@ CREATE INDEX idx_daily_digest_generated_at ON daily_digest(generated_at);
 
 The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. It includes the deterministic intelligence fields listed above and the authored `safetyContext` when generated by the current pipeline. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
 
-The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
+The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. It also stores `editorialStyleVersion` and `editorialStyleHash` for current editions. Older rows without style provenance remain absent and are surfaced as `pre-policy` at the API and UI read boundary; they are never edited or retroactively tagged. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
 
 Retention policy: `daily_digest` is a product archive kept forever. The public archive/detail pages, static digest sync, recent-copy context, cross-day trends, and the total-mcap ATH collector all read historical rows. Do not add age-based pruning unless ATH and archive dependencies are materialized first or an explicit public-output change is accepted.
 
@@ -209,15 +234,15 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-archive` | All digests, newest first (up to 365), including compact PSI/mcap/risk summaries plus stored `riskTape`, `nextTriggers`, and forward-look outcomes parsed from input data |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
-| `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a bounded pending intent (`requestId`, timestamps, attempt count, retry state, and last error) into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min), retries transient failures with bounded backoff, retains exhausted/permanent failures as dead letters, and persists outcome to `digest:last-trigger-result`. All poll-driven runs (forced or deferred) are resume-first: when today already has a publishable digest row, delivery resumes from the stored edition instead of regenerating a duplicate, and the fail-closed map gate applies to forced runs too. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
+| `POST /api/trigger-digest` *(admin)* | **Deferred**: optionally validates and persists one explicitly scoped `styleGateMode` update (`{"daily":"shadow|enforce"}` or `{"weekly":"shadow|enforce"}`), writes a bounded pending intent (`requestId`, timestamps, attempt count, retry state, and last error) into the D1 `cache` table, and returns 202 with the full effective `{daily, weekly}` mode state. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min), retries transient failures with bounded backoff, retains exhausted/permanent failures as dead letters, and persists outcome to `digest:last-trigger-result`. Poll-driven daily runs are resume-first: when today already has a publishable digest row, delivery resumes from the stored edition instead of regenerating a duplicate. The same poll resumes a missed weekly recap on Monday after 08:10 UTC when no non-blocked weekly row exists for that scheduled edition day. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
 
-An idle `digestTriggerPoll` with no pending force-run intent is a neutral conditional poll, not an omitted daily-digest execution. Stale-slot reconciliation therefore creates no synthetic `daily-digest` failure when no durable child progress exists. If a forced digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
+An idle `digestTriggerPoll` with no pending force-run intent or due Monday recovery is a neutral conditional poll, not an omitted daily or weekly execution. Stale-slot reconciliation therefore creates no synthetic digest failure when neither child has durable progress. If a digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
 
 ---
 
 ## Distribution
 
-When Twitter/X or Telegram is configured, the daily digest ships with the Safety Score map or not at all — the pipeline fails closed rather than posting a text-only social edition. Web-only runs skip this map gate. Before any generation work (including the LLM call), `generateDailyDigest` reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old passes the gate; any unavailable or stale state withholds the whole run — no digest row, no LLM spend, no post — and records a `digest:safety-map-deferral` intent plus a `daily_digest_safety_map_deferred` warning. The `digestTriggerPoll` slot re-checks that intent every five minutes: while the map stays unpublished it waits; once the map is live it either generates the digest (no row for today yet) or resumes the stored edition's delivery.
+The daily digest never blocks on Safety Score map publication. A current manifest or one carried forward by up to two whole UTC days enables the dated map attachment; otherwise the digest still generates and delivers without map attachment or map prose. Attached and persisted URLs always use `manifest.date`, never `latest.png`, and carried-forward captions and prompts identify the date the poster depicts. A complete capture is resolved before generation so the same immutable `safetyMap` object feeds the prompt, stored web snapshot, and channel copy.
 
 After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. The manifest's optional `mapSummary` enables deterministic channel prose only when its complete typed shape is valid and the digest has an available canonical Safety Score context. An absent, partial, malformed, or capture-mismatched summary still permits the image attachment but emits no map prose. Twitter/X persists a same-day delivery ledger (see below).
 
@@ -225,12 +250,14 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 
 `/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Individual digest detail pages stay indexable and sitemap-listed because they are durable archive/citation pages with unique editorial text and point-in-time snapshots. Crawl and URL Inspection quota should be managed through post-deploy GSC prioritization, not by dropping older daily digests from `src/app/sitemap.ts`.
 
+The interactive archive may narrow the visible wire table with URL-addressable `view` (`all`, `daily`, or `weekly`), `month`, and `q` (title/body search) parameters. These controls do not alter the server-rendered crawlable link index or the sitemap's complete digest membership.
+
 ### Twitter
 
 **File:** `worker/src/lib/twitter.ts`
 
 - Auth: **OAuth 1.0a** signed with `crypto.subtle.HMAC-SHA1` (no third-party library)
-- Format: `{title} (#N)\n\n{text}` — an edition-number suffix `(#N)` is appended to the title (N = running count of non-weekly digests, present on every post); a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed. When map media upload succeeds with a valid summary and Safety Score context, the full computed hook `Of {total} USD in mapped supply, A tier’s {count} coins hold {share}%; C/D/F’s {count} hold {share}%. Find yours on today’s map.` is reserved inside that budget, and the digest text is word-boundary truncated first.
+- Format: `{title} (#N)\n\n{text}` — an edition-number suffix `(#N)` is appended to the title (N = running count of non-weekly digests, present on every post); exactly one `$` cashtag is retained on a tracked-ticker mention, preferring the declared lead ticker when metadata is supplied and it appears, otherwise falling back to the earliest match; truncated to 270 chars if needed. When map media upload succeeds with a valid summary and Safety Score context, the short pointer hook `See the map.` (or `See the {UTC date} map.` for a carried-forward map) is reserved inside that budget, and the digest text is word-boundary truncated first.
 - Endpoints: `POST https://upload.twitter.com/1.1/media/upload.json` for the PNG, then `POST https://api.twitter.com/2/tweets` with its media id
 - Mapped editions are all-or-nothing: a media upload failure is retried once, then aborts the tweet as a `definitive_failure` (no tweet was attempted, so the ledger's bounded retry path stays open) instead of degrading to a text-only post.
 
@@ -243,35 +270,35 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically advances `daily-digest:twitter-sent:YYYY-MM-DD` through `queued` → `sending` → `sent`, `execution_unknown`, or `failed`. Success records the tweet id. A clear Twitter 4xx rejection enters `failed` and may retry up to three total attempts; timeout, network, ambiguous 5xx, lost sending ownership, or accepted-post persistence ambiguity enters or is treated as `execution_unknown`, retains the ledger marker, disables automatic retry, and emits a structured warning with the manual reconciliation step. Legacy markers and terminal `sent` rows remain duplicate-safe. If the ledger claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. A map download or media-upload failure is handled before tweet creation and falls back to the text-only post; the map can never turn a publishable digest into a failed Twitter delivery.
+If any of the four are absent or blank, Twitter posting returns `skipped: no-creds`; the missing variable names are surfaced in structured run metadata, and the digest run is non-green rather than silently skipped. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically advances `daily-digest:twitter-sent:YYYY-MM-DD` through `queued` → `sending` → `sent`, `execution_unknown`, or `failed`. Success records the tweet id. A clear Twitter 4xx rejection enters `failed` and may retry up to three total attempts; timeout, network, ambiguous 5xx, lost sending ownership, or accepted-post persistence ambiguity enters or is treated as `execution_unknown`, retains the ledger marker, disables automatic retry, and emits a structured error with the manual reconciliation step. Legacy markers and terminal `sent` rows remain duplicate-safe. If the ledger claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. When no acceptable map is available, the tweet remains text-only; when a map is selected, a media upload failure aborts the mapped tweet before creation and remains eligible for the ledger's bounded retry path.
 
 ### Telegram
 
-**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-digest-outbox.ts`
+**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram/digest-outbox.ts`
 
 - Auth: bot token embedded in the request URL (no OAuth)
 - Parse mode: **HTML** — title is wrapped in `<b>`, link uses `<a href>`
 - Format (the `Pharos Daily Digest #N` kicker is prepended whenever an edition number is present, which is the normal case):
   ```
-  Pharos Daily Digest #N
-  <b>{title}</b>
-
-  {extended}
-
   <b>Today’s map</b>
   Mapped supply: ${total} across {gradedCount} coins
   A tier: {count} coins · {share}%
   C/D/F tiers: {count} coins · {share}%
 
-  <a href="https://pharos.watch/safety-scores/map.png?date=YYYY-MM-DD">View today’s map →</a>
+  Pharos Daily Digest #N
+  <b>{title}</b>
+
+  {extended}
 
   <a href="https://pharos.watch/digest/YYYY-MM-DD/">Read on Pharos →</a>
+
+  <a href="https://t.me/PharosWatchBot">Open @PharosWatchBot for a private /recap →</a>
   ```
-- Endpoint: `POST https://api.telegram.org/bot{token}/sendMessage`
+- Endpoints: `POST https://api.telegram.org/bot{token}/sendPhoto` for mapped editions, followed by `POST https://api.telegram.org/bot{token}/sendMessage` for text chunks
 
-The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. When today's map passes the readiness contract, the canonical dated URL and any map block are persisted together in the rendered HTML at enqueue time, and the matching chunk is sent with `link_preview_options` selecting a large preview above the text. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
+The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. It is the first text section after the separate map photo so the numbers stay adjacent to the image. A deterministic `Standing:` chronic-conditions line is rendered as its own expandable context blockquote (still capped at five entries). `New Cemetery Entries` and `Tracking Changes` are each rendered as expandable blockquotes; they remain in the same message, so no second-message cursor is needed. The private-recap CTA is emitted only when the resolved rollout policy is `public`, and links to `@PharosWatchBot` rather than suggesting that a channel can receive a private recap; a missing policy deliberately emits no CTA. Telegram persists the dated map URL, depicted date, and media delivery state with the immutable edition. Delivery sends the map first through `sendPhoto`, durably records `media_state=sent`, then resumes text from the existing chunk cursor. Retryable photo failures do not advance that cursor, and text retries never resend an accepted photo. Editions without a map remain text-only with `media_state=none`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
-Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body:
+Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram/digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
 
 - `New Cemetery Entries` for newly added cemetery rows
 - `Tracking Changes` for newly tracked coins, split into live tracked vs pre-launch
@@ -291,7 +318,7 @@ A same-day forced regeneration can render different copy after that immutable Te
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Channel username (e.g. `@pharoswatch`) or numeric channel ID |
 
-If either is absent, Telegram posting is skipped silently.
+If either is absent or blank, Telegram delivery returns `no-creds`, surfaces the missing variable names in run metadata, and degrades the digest run.
 
 **Channel setup (one-time):**
 
@@ -300,25 +327,31 @@ If either is absent, Telegram posting is skipped silently.
 3. Add the bot as Admin with "Post Messages" permission only
 4. Add secrets from the worker directory: `cd worker && npx --no-install wrangler secret put TELEGRAM_BOT_TOKEN` and `cd worker && npx --no-install wrangler secret put TELEGRAM_CHAT_ID`
 
-`telegram.ts` also exports `sendToChat()` for the Telegram webhook command handler, but digest generation still uses the same HTML `sendMessage` API path and credentials.
+`telegram.ts` also exports `sendToChat()` for the Telegram webhook command handler; digest media and text use the same bot/channel credentials through the durable outbox.
 
 ### Distribution status logging
 
-Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `POST /api/trigger-digest` does not run delivery inline anymore; it enqueues a retryable force-run intent and returns `202` with `{ ok, accepted, requestId, message }`, then the 5-minute digest-trigger poll writes each eventual result to cron history and the `digest:last-trigger-result` cache entry. Transient failures remain pending with bounded backoff for up to three attempts; permanent or exhausted failures remain as a retained `dead_letter` intent, while a successful run clears the intent.
+Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `POST /api/trigger-digest` does not run delivery inline anymore; it optionally updates one kind's runtime style mode, enqueues a retryable force-run intent, and returns `202` with `{ ok, accepted, requestId, styleGateMode: { daily, weekly }, message }`, then the 5-minute digest-trigger poll writes each eventual result to cron history and the `digest:last-trigger-result` cache entry. Transient failures remain pending with bounded backoff for up to three attempts; permanent or exhausted failures remain as a retained `dead_letter` intent, while a successful run clears the intent.
 
 ```json
-{ "metadata": "243 chars, tweet: ok, telegram: ok" }
+{
+  "summary": "243 chars, tweet: ok, telegram: ok",
+  "channels": {
+    "twitter": { "status": "ok", "disposition": "delivered", "missingCredentialNames": [] },
+    "telegram": { "status": "ok", "disposition": "delivered", "missingCredentialNames": [] }
+  }
+}
 ```
 
-Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error>"`, `"queued: <state>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`. Outbox retry and terminal backlog counts are separately exposed under the budget-only `telegram-digest-outbox-drain` status surface.
+Possible channel values include `"skipped: no-creds"` (Twitter), `"no-creds"` (Telegram), `"ok"`, `"failed: <truncated error>"`, `"queued: <state>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`. Outbox retry and terminal backlog counts are separately exposed under the budget-only `telegram-digest-outbox-drain` status surface.
 
 ---
 
 ## Weekly Recap
 
 **File:** `worker/src/cron/weekly-recap.ts`
-**Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`)
-**Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` only while its delivery status is non-terminal. Quality-gate, `execution_unknown`, and `failed_permanent` rows require review rather than automatic weekly reruns.
+**Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`), with missed-edition recovery from the five-minute digest poll after 08:10 Monday UTC
+**Dedup guard:** derives Monday and the edition date from the scheduled slot timestamp, returns `skipped_neutral` outside Monday UTC or when that scheduled day already has a non-blocked weekly row with no retryable channel, and retries only duplicate-safe channel states. Quality-gate, `execution_unknown`, and `failed_permanent` outcomes require review rather than blind channel replay.
 **Period semantics:** trailing daily editions available at the Monday 08:10 UTC start, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection
@@ -343,14 +376,16 @@ Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding wee
 | Forward-look scoreboard | sum of daily `forwardLookOutcomes` statuses | `{hit, missed, pending, expired}` across the week's editions; the prompt instructs the recap to publish the score and own the misses |
 | Week-over-week deltas | prior 7 daily rows (same aggregation shape) produce `{ current, prior }` values for mcap end, PSI midpoint, PSI dominant band, active-depeg observations, unique depeg signals, blacklist events/USD, grade transitions, gauge midpoint; `null` when prior-week coverage is below 5 daily rows |
 
+Before these aggregates are built, archived daily signals are checked against the shared quarantine registry using the signal ingestion timestamp. A quarantined liquidity row and its canonical editorial candidate, trigger context, and archived authored headline/summary are withheld from weekly input. The weekly input records `liquidity-shift-quarantined-signal:<stablecoinId>:<date>` in `degradedSources`, distinguishing an explicit retraction from a quiet week. As a second fail-closed layer, weekly validation raises the hard `quarantined-signal-claim` issue if generated copy repeats a registered collapse/drain claim; the normal single corrective retry applies, then unresolved copy is stored with `qualityGate = "blocked"` and is not distributed.
+
 Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 is tolerated; `weekOverWeekDeltas` is then `null` and the prompt notes the gap instead.
 
 ### LLM call
 
-- **Model:** `claude-opus-4-8` with adaptive thinking + `xhigh` effort (identical contract to the daily digest)
-- **Timeout:** shared 12-minute Anthropic request cap; the scheduled weekly wrapper also has a 12-minute cron lease, so the lease can abort slow Monday recap runs
-- **max_tokens:** 64000
-- **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
+- **Model:** weekly typed configuration defaults to `claude-opus-5` with adaptive thinking + `xhigh` effort; validated runtime overrides are resolved at the shared scheduled invocation seam and invalid values fall back to checked-in weekly defaults
+- **Timeout:** shared 12-minute Anthropic request cap; the scheduled weekly wrapper has a 14-minute cron lease, preserving about two minutes for persistence and two-channel delivery
+- **max_tokens:** 16000, with the same hard truncation, refusal fallback, provenance, and per-attempt telemetry contract as daily generation
+- **Editorial style:** Weekly prose uses the same authority through `buildEditorialPrompt("weekly")`; its register and policy findings follow the staged style gate above.
 - **Structure:** 4-6 paragraphs, 250-400 words: top unsuppressed Weekly Risk Leaderboard item as the week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation
 - **Artifact policy:** Same suppression principle as daily. Weekly recaps separate repeated active observations from unique signals so chronic conditions are not counted as fresh events.
 - **Critical lead validation:** if the weekly risk leaderboard's top unsuppressed item is a critical depeg, its `id` is passed as a hard `leadSignalId` requirement.
@@ -358,11 +393,11 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 
 ### Storage
 
-Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, the authored safety context, and Telegram delivery fields (`telegramDelivered`, `telegramDeliveryStatus`, `telegramDeliveryUpdatedAt`, and `telegramDeliveredAt` after success). The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`) with the exact active safety identity or an explicit unavailable state.
+Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, the authored safety context, and parallel Twitter/Telegram delivery status, update, and delivered-at fields. The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`) with the exact active safety identity or an explicit unavailable state.
 
 ### Distribution
 
-Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. The exact rendered weekly edition uses the same durable outbox as daily distribution. Confirmed retryable failures are polled every five minutes without another LLM call; ambiguous or permanent outcomes stop for operator reconciliation. The compatibility fields in `daily_digest.digest_meta` are updated after outbox success.
+Posted to both Twitter/X and Telegram. Twitter/X uses the distinct replay-safe ledger key `weekly-recap:twitter-sent:YYYY-MM-DD`; both channels attach the current or bounded carried-forward dated Safety Score map when available and otherwise publish without map prose or media. Telegram's title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. The exact rendered weekly edition uses the same durable outbox as daily distribution. Confirmed retryable Telegram failures are polled every five minutes without another LLM call; ambiguous or permanent outcomes stop for operator reconciliation. Channel compatibility fields in `daily_digest.digest_meta` are updated after delivery.
 
 ---
 
@@ -396,7 +431,9 @@ The archive page has two zones:
 1. **Broadsheet** — today's digest in full broadsheet layout (via `DailyDigest`)
 2. **Wire table** — all historical digests in a dense, wire-service style list
 
-The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, optional active-depeg **risk badge**, **PSI badge** (pill colored by condition band), and **total market cap**. A month picker dropdown filters the table by month. PSI, mcap, and risk data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd`, `riskSignal` — parsed from the stored `input_data` JSON).
+The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, optional active-depeg **risk badge**, **PSI badge** (pill colored by condition band), and **total market cap**. The archive exposes URL-addressable All/Daily/Weekly, month, and title/body search controls; the selected view is shareable without dropping the server-rendered links. PSI, mcap, and risk data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd`, `riskSignal` — parsed from the stored `input_data` JSON).
+
+The archive also renders a trigger record from `forwardLookOutcomes`. Hit, missed, expired, and pending outcomes remain separate; the headline hit share is `hit / (hit + missed + expired)`, with pending excluded from that denominator. Rows are grouped by the archived trigger metric when it is available, and outcomes without a metric stay in an explicit unclassified bucket. No single-edition claim is promoted to a site-wide accuracy statement.
 
 The archive route emits server-rendered digest links for crawlability plus `CollectionPage` / `ItemList` JSON-LD over the checked-in `data/digests.json` entries. The visible archive, daily lead story, and latest weekly recap render in the client archive component after `/api/digest-archive` loads; detail pages remain the canonical `Article` surfaces for individual digests.
 
@@ -410,7 +447,7 @@ The archive route emits server-rendered digest links for crawlability plus `Coll
 
 Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query. The snapshot API filters target rows by requested type, so daily and weekly rows generated on the same UTC date cannot shadow each other.
 
-Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus a deterministic intelligence panel and up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). The intelligence panel renders `riskTape`, yesterday's trigger outcomes, "what changed", and next triggers when present in stored `input_data`. The Active Depegs card uses `/api/digest-snapshot` depeg episodes active on that date, ordered by absolute deviation, with stored `input_data.topDepegs` only as fallback. If snapshot context fails or has no usable input data, the page renders a small unavailable-state card instead of silently dropping the section. Detail pages also render a small research-context link grid back to PSI, depeg, flow, and safety-score surfaces. Includes JSON-LD Article structured data and prev/next navigation.
+Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus a deterministic intelligence panel, the stored dated Safety Score map when its complete `input_data.safetyMap` capture is present, and up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). The map uses the stored `imageUrl` and `manifest.date` (never `latest.png`) plus the validated summary's deterministic tally; a missing or failed poster renders the existing unavailable state and never fabricates figures. The intelligence panel renders `riskTape`, yesterday's trigger outcomes, "what changed", and next triggers when present in stored `input_data`. The Active Depegs card uses `/api/digest-snapshot` depeg episodes active on that date, ordered by absolute deviation, with stored `input_data.topDepegs` only as fallback. If snapshot context fails or has no usable input data, the page renders a small unavailable-state card instead of silently dropping the section. Detail pages also render a small research-context link grid back to PSI, depeg, flow, and safety-score surfaces. Includes JSON-LD Article structured data and prev/next navigation.
 
 ---
 
@@ -419,7 +456,7 @@ Each detail page shows the short summary intro (`text`) followed by every extend
 **Script:** `scripts/maintenance/sync-digests.ts`
 **Command:** `npm run sync:digests`
 
-Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`), and writes the file. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set. CI syncs add a one-off query parameter plus `Cache-Control: no-cache` request headers so the static build sees a digest row that was just written, without waiting for the public archive endpoint's 5-minute edge TTL.
+Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`, `editorialStyleVersion`, `editorialStyleHash`), and writes the file. Each style field is copied only when upstream carries a real value. If upstream returns `pre-policy` for display or omits a field, sync leaves that field absent; it never writes the sentinel into `data/digests.json` or back-fills archived rows. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_URL` (or the Pages URL) only when explicitly enabled.
 
 For local/manual use, point it at the intended environment explicitly:
 
@@ -430,7 +467,7 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
 1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Code releases via `deploy-cloudflare.yml` now also pass `refresh_data: true`, so a merge no longer regresses digest detail pages, the sitemap, and the RSS feed to the committed snapshot's age until the next scheduled rebuild.
-2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events.json`, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
+2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events/` index and yearly shards, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
 3. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
 4. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot and remains the safety net if a fail-open deploy shipped the committed snapshot.
 

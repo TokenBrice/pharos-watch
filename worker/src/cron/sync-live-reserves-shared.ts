@@ -2,7 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
-import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";
+import type { ReserveSyncStateRecord } from "../lib/live-reserves/store";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { fnv1aHash } from "../lib/hash";
 
@@ -80,6 +80,40 @@ export interface ReserveAttemptFailureSummary {
 
 export interface ReserveAdapterAttemptChainError extends Error {
   attemptSummaries: ReserveAttemptFailureSummary[];
+}
+
+export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";
+
+export interface LiveReserveDeferredTailOutcome {
+  nextCursorStablecoinId: string | null;
+  cursorTailState: LiveReserveCursorTailState | null;
+  cursorRecordedAt: number | null;
+  cursorTailCompletedAt: number | null;
+  cursorTailFailedAt: number | null;
+  cursorTailError: string | null;
+  runBudgetTruncationCount: number;
+}
+
+export interface LiveReserveQueueCounts {
+  synced: number;
+  failed: number;
+  skipped: number;
+  circuitSkipped: number;
+  deferredSkipped: number;
+  deferredCoins: number;
+  attemptedCoins: number;
+}
+
+export interface LiveReserveBreakerOutcome {
+  breakerKeys: ReadonlySet<string>;
+  breakerOutcomes: ReadonlyMap<string, boolean>;
+}
+
+export interface LiveReservePhaseTimings {
+  setup: number;
+  queue: number;
+  adapter: number;
+  d1CoinPersistence: number;
 }
 
 export type ReserveFailureCategory =

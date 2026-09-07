@@ -96,6 +96,7 @@ describe("ScreenerTable mobile cards", () => {
     expect(screen.getAllByText(/Liq/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Adequate").length).toBeGreaterThan(0);
     expect(screen.getByText("Mint authority")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Supply" }));
 
@@ -116,6 +117,7 @@ describe("ScreenerTable desktop table", () => {
     expect(screen.queryByText("Sort Results")).toBeNull();
     expect(screen.getByText("V9 Profile")).toBeTruthy();
     expect(screen.getByText("Adequate")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
   });
 
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
@@ -126,7 +128,7 @@ describe("ScreenerTable desktop table", () => {
     await waitFor(() => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
     });
-    expect(screen.queryByRole("img", { name: /30-day peg deviation for USDT/i })).toBeNull();
+    expect(screen.queryByRole("img", { name: /Peg range: worst \/ current for USDT/i })).toBeNull();
     expect(screen.queryByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeNull();
   });
 
@@ -136,8 +138,25 @@ describe("ScreenerTable desktop table", () => {
     render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("img", { name: /30-day peg deviation for USDT/i })).toBeTruthy();
+      expect(screen.getByRole("img", { name: /Peg range: worst \/ current for USDT/i })).toBeTruthy();
       expect(screen.getByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeTruthy();
     });
+  });
+
+  it("labels the peg sparkline column as a worst/current range, not a 30-day history", async () => {
+    installViewportMatchMedia(1400);
+
+    render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    });
+    // The cell renders two endpoint samples (all-time worst, current), so the
+    // column must not claim a 30-day window.
+    const header = screen.getByText("Peg Range");
+    expect(screen.queryByText("30d Peg")).toBeNull();
+    expect(header.closest("th")?.getAttribute("title")).toBe(
+      "Peg range: worst / current deviation (±bps around the peg)",
+    );
   });
 });

@@ -83,6 +83,56 @@ export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9Missing
   }
 }
 
+const V9_CURATION_WORKLIST_REASON_CODES: ReadonlySet<string> = new Set([
+  "unresolved-mint-authority",
+  "missing-mint-authority",
+  "unknown-upgrade-authority",
+  "missing-upgradeability-review",
+  "missing-upgrade-control",
+  "unresolved-control-identity",
+  "unknown-control-cap-authority",
+  "unknown-control-mint-ability",
+  "mint-control-question",
+  "missing-oracle-profile",
+  "unreviewed-oracle-profile",
+  "incomplete-oracle-liquidation-branch",
+  "unresolved-oracle-branch-applicability",
+  "missing-required-oracle-branches",
+  "missing-bridge-routes",
+  "missing-bridge-route-rows",
+  "selected-bridge-route-missing",
+  "selected-bridge-route-unresolved",
+  "runtime-bridge-materiality-unavailable",
+  "material-bridge-supply-unmatched",
+  "missing-reserve-composition",
+  "stale-audited-reserve-composition",
+  "unreviewed-reserve-envelope",
+  "material-unknown-reserve-exposure",
+  "material-reserve-slice-unstructured",
+  "partial-reserve-review",
+  "missing-latest-assurance-report",
+  "missing-custody-profile",
+  "missing-same-notional-route",
+  "unsupported-same-notional-route",
+  "missing-runtime-route-evidence",
+  "incomplete-dex-route-coverage",
+  "unresolved-exit-output",
+  "incomparable-route-requests",
+  "missing-applicable-peg",
+  "missing-peg-input",
+  "unreviewed-dependency-relationships",
+  "material-dependency-unavailable",
+  "missing-archetype",
+]);
+
+/** Sole routing source for the legacy markdown view of the typed registry. */
+export function classifyV9CurationWorklistStream(reasonCode: string): string | null {
+  if (!V9_CURATION_WORKLIST_REASON_CODES.has(reasonCode)) return null;
+  const workType = classifyV9ScoreProjectionWorkType(reasonCode);
+  if (workType === null) throw new Error(`Curation worklist reason ${reasonCode} has no missing-data work type`);
+  return WORK_TYPES[workType].stream;
+}
+
 /**
  * Archetypes whose mechanism components are curated directly from issuer
  * disclosure under the ratified strict evidence standard, rather than waiting

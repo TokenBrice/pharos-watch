@@ -81,7 +81,7 @@ export function filterAndSortV9Cards(
   });
 }
 
-export function pegMatchesFilter(pegType: string | undefined, pegFilter: Exclude<PegFilter, "all">): boolean {
+function pegMatchesFilter(pegType: string | undefined, pegFilter: Exclude<PegFilter, "all">): boolean {
   if (pegFilter === "usd") return pegType === "peggedUSD";
   const isCommodity = pegType === "peggedGOLD" || pegType === "peggedSILVER";
   if (pegFilter === "commodities") return isCommodity;

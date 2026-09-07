@@ -1,4 +1,4 @@
-import type { CostCategory, CostLineItem, Donation } from "./types";
+import type { CostCategory, CostLineItem, Donation } from "./schema";
 
 const CATEGORY_ORDER: readonly CostCategory[] = ["team", "infra"];
 

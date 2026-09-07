@@ -32,99 +32,55 @@ export function assessOnchainDataQuality(input: {
   divergenceRatio: number;
 }): OnchainDataQualityAssessment {
   const representative = hasRepresentativeOnchainRatioSample(input.trackedCoins);
-  const causes: StatusCause[] = [];
-
   if (input.monitoring !== "active") {
-    if (input.monitoring === "unavailable") {
-      causes.push({
-        code: "onchain_monitor_unavailable",
+    const causes: StatusCause[] = input.monitoring === "unavailable"
+      ? [{
+          code: "onchain_monitor_unavailable",
+          layer: "data-quality",
+          severity: "info",
+          message: "On-chain supply monitor has no active producer. On-chain integrity checks are skipped.",
+        }]
+      : [];
+    return { causes, representative, status: "healthy" };
+  }
+
+  const ratioStale = representative &&
+    (input.staleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
+      input.divergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale);
+  const ratioDegraded = representative && !ratioStale &&
+    (input.staleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
+      input.divergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded);
+  const absoluteStale = input.staleSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
+    input.divergences >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale;
+  const causes: StatusCause[] = ratioStale || ratioDegraded
+    ? [{
+        code: ratioStale ? "onchain_integrity_stale" : "onchain_integrity_degraded",
         layer: "data-quality",
-        severity: "info",
-        message: "On-chain supply monitor has no active producer. On-chain integrity checks are skipped.",
-      });
-    }
+        severity: ratioStale ? "critical" : "warning",
+        message: `On-chain integrity ${ratioStale ? "stale" : "degraded"} (stale=${formatPercentFromRatio(input.staleRatio)}, divergence=${formatPercentFromRatio(input.divergenceRatio)}).`,
+        metric: "onchainStaleRatio",
+        value: input.staleRatio,
+        threshold: ratioStale ? STATUS_ONCHAIN_THRESHOLDS.ratioStale : STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
+      }]
+    : !representative && input.trackedCoins >= ONCHAIN_LOW_SAMPLE_STRUCTURAL_FLOOR &&
+        (input.staleSupply > 0 || input.divergences > 0)
+      ? [{
+          code: "onchain_monitor_low_sample",
+          layer: "data-quality",
+          severity: "info",
+          message:
+            `On-chain monitor has only ${input.trackedCoins} recently refreshed coin(s); ratio-based stale/degraded thresholds stay inactive until ` +
+            `${STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins} coins are live.`,
+          metric: "onchainSupplyTrackedCoins",
+          value: input.trackedCoins,
+          threshold: STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins,
+        }]
+      : [];
+  const status: StatusResponse["dataQualityStatus"] = absoluteStale || ratioStale
+    ? "stale"
+    : ratioDegraded
+      ? "degraded"
+      : "healthy";
 
-    return {
-      causes,
-      representative,
-      status: "healthy",
-    };
-  }
-
-  const status: StatusResponse["dataQualityStatus"] =
-    input.staleSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
-    input.divergences >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale ||
-    (representative && input.staleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale) ||
-    (representative && input.divergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale)
-      ? "stale"
-      : representative &&
-          (
-            input.staleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
-            input.divergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
-          )
-        ? "degraded"
-        : "healthy";
-
-  if (
-    representative &&
-    (
-      input.staleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
-      input.divergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
-    )
-  ) {
-    causes.push({
-      code: "onchain_integrity_stale",
-      layer: "data-quality",
-      severity: "critical",
-      message: `On-chain integrity stale (stale=${formatPercentFromRatio(input.staleRatio)}, divergence=${formatPercentFromRatio(input.divergenceRatio)}).`,
-      metric: "onchainStaleRatio",
-      value: input.staleRatio,
-      threshold: STATUS_ONCHAIN_THRESHOLDS.ratioStale,
-    });
-  } else if (
-    representative &&
-    (
-      input.staleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
-      input.divergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
-    )
-  ) {
-    causes.push({
-      code: "onchain_integrity_degraded",
-      layer: "data-quality",
-      severity: "warning",
-      message:
-        `On-chain integrity degraded (stale=${formatPercentFromRatio(input.staleRatio)}, ` +
-        `divergence=${formatPercentFromRatio(input.divergenceRatio)}).`,
-      metric: "onchainStaleRatio",
-      value: input.staleRatio,
-      threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
-    });
-  } else if (
-    !representative
-    // Structural floor: only emit the low-sample cause when the tracked count
-    // is in the legitimate partial-coverage band. Current prod has exactly 2
-    // tracked coins (KAU + KAG from sync-kinesis-supply), which will never
-    // reach the 10-coin ratio threshold with the current writer set — firing
-    // the cause forever adds noise without actionable signal.
-    && input.trackedCoins >= ONCHAIN_LOW_SAMPLE_STRUCTURAL_FLOOR
-    && (input.staleSupply > 0 || input.divergences > 0)
-  ) {
-    causes.push({
-      code: "onchain_monitor_low_sample",
-      layer: "data-quality",
-      severity: "info",
-      message:
-        `On-chain monitor has only ${input.trackedCoins} recently refreshed coin(s); ratio-based stale/degraded thresholds stay inactive until ` +
-        `${STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins} coins are live.`,
-      metric: "onchainSupplyTrackedCoins",
-      value: input.trackedCoins,
-      threshold: STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins,
-    });
-  }
-
-  return {
-    causes,
-    representative,
-    status,
-  };
+  return { causes, representative, status };
 }

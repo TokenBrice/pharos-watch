@@ -1,5 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { buildGlobalAlertSummaryMessage, buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { parseSetCommand } from "../telegram-webhook-parsing";

@@ -7,7 +7,7 @@ import {
   buildV9EvaluationBuildManifest,
 } from "../maintenance/generate-safety-score-v9-evaluation-build-manifest";
 
-const OMITTED_SCORE_BEARING_SOURCE = "worker/src/lib/safety-score-v9-extension-supply.ts";
+const OMITTED_SCORE_BEARING_SOURCE = "worker/src/lib/safety-score-v9/extension-supply.ts";
 
 function fixtureRoot(): string {
   const root = mkdtempSync(resolve(tmpdir(), "pharos-ver-010-"));

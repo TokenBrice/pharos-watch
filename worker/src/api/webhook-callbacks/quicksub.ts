@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { logTelegramEvent } from "../../lib/telegram-log";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
+import { logTelegramEvent } from "../../lib/telegram/log";
 import { upsertSubscriberAndSubscriptions } from "../telegram-webhook-store";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";

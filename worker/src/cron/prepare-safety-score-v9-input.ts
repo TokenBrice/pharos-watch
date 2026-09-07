@@ -1,26 +1,27 @@
 import { getCacheUpdatedAt, setCacheMany } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
-import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9-capture";
-import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9-native-input";
+import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9/capture";
+import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9/native-input";
 import {
   buildSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionSource,
-} from "../lib/safety-score-v9-supply-attribution-source";
+} from "../lib/safety-score-v9/supply-attribution-source";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import {
   buildSafetyScoreV9PegProvenanceSeedCacheEntry,
   captureSafetyScoreV9PegProvenanceById,
-} from "../lib/safety-score-v9-peg-provenance";
-import { observeSafetyScoreV9TransferMaterialityGeneration } from "../lib/safety-score-v9-transfer-materiality-observer";
+} from "../lib/safety-score-v9/peg-provenance";
+import { observeSafetyScoreV9TransferMaterialityGeneration } from "../lib/safety-score-v9/transfer-materiality-observer";
 import {
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
   serializeSafetyScoreV9TransferMaterialityGeneration,
-} from "../lib/safety-score-v9-transfer-materiality";
+} from "../lib/safety-score-v9/transfer-materiality";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
@@ -145,22 +146,22 @@ export async function prepareSafetyScoreV9Input(
 
   const stablecoinsReadiness = await waitForStablecoinsCacheReadiness(db, signal);
   if (stablecoinsReadiness.status === "pending") {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
       productivity: {
         productive: false,
         reason: "safety-score-v9-input-source-unavailable",
       },
-      metadata: JSON.stringify({
+      metadata: {
         stage: "stablecoins-cache-readiness",
         reason: "stablecoins-generation-pending",
         waitedMs: stablecoinsReadiness.waitedMs,
         cacheUpdatedAt: stablecoinsReadiness.cacheUpdatedAt,
         pendingStablecoinsStartedAt: stablecoinsReadiness.pendingStartedAt,
         pendingStablecoinsStage: stablecoinsReadiness.pendingStage,
-      }),
-    };
+      },
+    });
   }
 
   const capture = await buildNativeSafetyScoreV9Capture(db, {

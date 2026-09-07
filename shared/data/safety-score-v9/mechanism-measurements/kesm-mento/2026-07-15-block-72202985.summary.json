@@ -1,0 +1,25 @@
+{
+  "mechanism": "kesm-mento",
+  "date": "2026-07-15-block-72202985",
+  "sha256": "777da9ba18e7e2bdc22d78163a7c1e3dbd895ddfe5163c2c66224c3b6ec68de9",
+  "bytes": 24477,
+  "r2Key": "captures/kesm-mento/2026-07-15-block-72202985.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "cdp-mechanism-measurement",
+    "assetId": "kesm-mento",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/kesm-mento/2026-07-15-block-72202985.json",
+    "chain": {
+      "key": "celo",
+      "evmChainId": 42220
+    },
+    "block": {
+      "number": 72202985,
+      "hash": "0x26a9f9589f4d014e03ff934eb197507e481cecc8bdb23d5c8e9f81a83270b120",
+      "timestampUnix": 1784103743,
+      "timestampIso": "2026-07-15T08:22:23.000Z",
+      "selection": "finalized"
+    }
+  }
+}

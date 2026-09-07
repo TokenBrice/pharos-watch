@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadDewsSourceState } from "../../../lib/dews/source-state";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
   DEWS_STALE_DEX_LIQUIDITY_SEC,
@@ -85,12 +86,12 @@ function mockDbWithPrevRows(
       run,
     };
   };
-  return {
+  return makeNoopD1({
     prepare: (sql: string) => stmt(sql),
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 describe("loadDewsSourceState legacy signals_json hydration", () => {
@@ -309,14 +310,15 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect(sourceState.blacklistCounts.has("usda-anzens")).toBe(false);
   });
 
-  it("starts independent D1 source hydrators without waiting for the first query to finish", async () => {
+  it("preserves replay, coverage, and state order when source reads settle out of order", async () => {
     type PendingCall = {
       label: string;
       kind: "all" | "first";
       resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
     };
     const pending: PendingCall[] = [];
-    const started: string[] = [];
+    const replayOrder: string[] = [];
 
     const labelSql = (sql: string, binds: unknown[]): string => {
       if (sql.includes("FROM dex_liquidity_history")) return "dex-liquidity-history";
@@ -338,16 +340,10 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       return sql.replace(/\s+/g, " ").trim();
     };
 
-    const resultFor = (call: PendingCall): unknown => {
-      if (call.kind === "first") return null;
-      return { results: [] };
-    };
-
     const stmt = (sql: string, binds: unknown[] = []) => {
-      const enqueue = (kind: "all" | "first") => new Promise<unknown>((resolve) => {
+      const enqueue = (kind: "all" | "first") => new Promise<unknown>((resolve, reject) => {
         const label = labelSql(sql, binds);
-        started.push(label);
-        pending.push({ label, kind, resolve });
+        pending.push({ label, kind, resolve, reject });
       });
       return {
         bind: (...args: unknown[]) => stmt(sql, args),
@@ -357,19 +353,19 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       };
     };
 
-    const db = {
+    const db = makeNoopD1({
       prepare: (sql: string) => stmt(sql),
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     let settled = false;
     const loadPromise = loadDewsSourceState({
       db,
       nowSec,
       bootstrapPending: false,
-      registerSourceFailure: () => {},
+      registerSourceFailure: (source) => replayOrder.push(source),
       registerMalformedPersistedInput: () => {},
     }).finally(() => {
       settled = true;
@@ -377,26 +373,30 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
 
     await Promise.resolve();
 
-    expect(started).toEqual(expect.arrayContaining([
-      "dex-liquidity",
-      "dex-prices",
-      "dex-liquidity-history",
-      "blacklist-events",
-      "cache:dews:published-generation",
-      "mint-burn-24h",
-      "yield-warnings",
-      "cache:yield-rankings",
-      "latest-psi-score",
-    ]));
-
+    const failedReads = /^(dex-liquidity(?:-history)?|dex-prices|blacklist-events|previous-stress-latest|mint-burn-24h|yield-warnings|cache:yield-rankings|latest-psi-score)$/;
     for (let guard = 0; !settled && guard < 10; guard++) {
       const batch = pending.splice(0);
-      for (const call of batch) {
-        call.resolve(resultFor(call));
+      for (const call of batch.reverse()) {
+        if (failedReads.test(call.label)) {
+          call.reject(new Error(call.label));
+        } else {
+          call.resolve(call.kind === "first" ? null : { results: [] });
+        }
       }
       await Promise.resolve();
     }
 
-    await loadPromise;
+    const sourceState = await loadPromise;
+    expect({
+      replayOrder: replayOrder.join(","),
+      coverageKeys: Object.keys(sourceState.sourceCoverage).join(","),
+      stateKeys: Object.keys(sourceState).join(","),
+    }).toMatchInlineSnapshot(`
+      {
+        "coverageKeys": "dexLiquidity,dexLiquidityFreshRows,dexLiquidityStaleRows,dexPrices,dexLiquidityHistory,blacklistEvents,previousStressSignals,previousStressSignalsFreshRows,previousStressSignalsStaleRows,mintBurnHourly,mintBurnHourlyFreshRows,mintBurnHourlyStaleRows,yieldWarnings,yieldStructuredRows",
+        "replayOrder": "dex-liquidity,dex-prices,dex-liquidity-history,blacklist-events,stress-signals-latest,mint-burn-hourly,yield-data,yield-rankings,stability-index-samples",
+        "stateKeys": "dexLiqRows,dexLiqMap,dexLiqAgeSecById,dexLiqStaleIds,dexPriceMap,dexPriceAgeSecById,dexPriceStaleIds,liqHist7dMap,liqHistRowsRead,blacklistCounts,prevSignals,prevSignalStaleIds,mintBurnMap,mintBurnAgeSecById,mintBurnStaleIds,yieldWarnings,yieldSourceRisk,yieldRankChangeAttribution,latestPsiScore,sourceCoverage,dependencyDiagnostics",
+      }
+    `);
   });
 });

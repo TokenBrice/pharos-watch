@@ -47,7 +47,7 @@
       "pct": 7.4,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "mechanism",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether and Aave GHO Stability Module",
       "riskFactors": [

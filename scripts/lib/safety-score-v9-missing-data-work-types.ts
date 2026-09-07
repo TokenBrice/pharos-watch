@@ -13,11 +13,13 @@ export type WorkType =
   | "EXIT_DEX_COVERAGE"
   | "EXIT_OUTPUT"
   | "EXIT_RUNTIME_ROUTE"
+  | "EXIT_SETTLEMENT_BOUND"
   | "IMPLEMENTATION_DATE"
   | "MECHANISM_REVIEW"
   | "MINT_AUTHORITY"
   | "ORACLE_BRANCH"
   | "ORACLE_PROFILE"
+  | "PARENT_RATEABILITY"
   | "PEG_INPUT"
   | "RESERVE_COMPOSITION"
   | "RESERVE_SLICE";
@@ -85,7 +87,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Transfer and freeze access review", stream: "CTRL",
     instructions: "Research the current transfer-restriction and freeze/blacklist posture, including reach, controlling authority, inherited upstream exposure, and failure-domain identity. Add a dated, sourced blacklistabilityReview in the risk-review sidecar or base coin record.",
     completionCriteria: "A fresh exact replay reports known transfer and freeze access facts and the listed access gapId is absent.",
-    recommendedSkill: "stablecoin-info-fetch", likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"],
+    recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"],
     cautions: ["Review every material deployment and inherited wrapper exposure; a token-level boolean alone is insufficient."],
     ownerDomain: "control", defaultResolutionMode: "agent-curation",
     reasonCodes: [
@@ -117,8 +119,8 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   BRIDGE_MATERIALITY: {
     title: "Bridge deployment materiality", stream: "BRDG",
     instructions: "Reconcile current chain-level circulating USD to reviewed deployment routes so selected, unknown, and unreviewed bridge supply shares are explicit. This usually needs both complete route metadata and a fresh chain-supply producer capture.",
-    completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "contract-enrich",
-    likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
+    completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "stablecoin-identity-contracts",
+    likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
     cautions: ["Do not add a manual supply override or multiply DefiLlama list-endpoint circulating USD by price."], ownerDomain: "control", defaultResolutionMode: "mixed-curation-and-runtime",
     reasonCodes: [
       "runtime-bridge-materiality-unavailable",
@@ -131,12 +133,12 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       controls: asset.controls,
     }),
     touchpoints: (source) =>
-      unique([risk(source), base(source), "worker/src/lib/safety-score-v9-extension-supply.ts"]),
+      unique([risk(source), base(source), "worker/src/lib/safety-score-v9/extension-supply.ts"]),
   },
   BRIDGE_ROUTE_REVIEW: {
     title: "Bridge route control review", stream: "BRDG",
     instructions: "Populate the material bridgeRouteRisk route rows with route identity, scope, issuance model, verification/control model, risk tier, sources, reviewer, and review date. Explicitly rule native-only deployments not applicable when supported.",
-    completionCriteria: "A fresh exact replay resolves the bridge economic-control review and removes the listed bridge gapId.", recommendedSkill: "stablecoin-info-fetch",
+    completionCriteria: "A fresh exact replay resolves the bridge economic-control review and removes the listed bridge gapId.", recommendedSkill: "stablecoin-addition-orchestrator",
     likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Only reviewed, runtime-selected material routes should influence the score."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
@@ -157,7 +159,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Current chain supply evidence", stream: "SUPPLY",
     instructions: "Restore a current, score-eligible circulating-USD observation for the asset. Verify provider identity, price path, contracts, and chain coverage; enrich missing deployments or repair producer mapping when needed.",
     completionCriteria: "The exact fixed input contains current chain supply, the compiled supply status is known, and the chain-supply gapId is absent.", recommendedSkill: "stablecoin-runtime-price-marketcap-gate",
-    likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9-extension-supply.ts"],
+    likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9/extension-supply.ts"],
     cautions: ["Use getCirculatingRaw(); DefiLlama list circulating values are already USD-denominated.", "Do not add manual, on-chain, CMC, DEX, or other supply overrides."],
     ownerDomain: "evidence",
     defaultResolutionMode: "mixed-curation-and-runtime",
@@ -167,7 +169,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       unique([
         base(source),
         "worker/src/cron/snapshot-chain-supply.ts",
-        "worker/src/lib/safety-score-v9-extension-supply.ts",
+        "worker/src/lib/safety-score-v9/extension-supply.ts",
       ]),
   },
   DEPENDENCY_REVIEW: {
@@ -211,7 +213,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Exact DEX route coverage", stream: "EXIT",
     instructions: "Make every retained material DEX pool carry a score-eligible exact route observation: supported pool math, explicit output valuation, request/capacity curve, settlement facts, resource identity, and failure domains. Unsupported pool archetypes require producer capability, not a hand-entered estimate.",
     completionCriteria: "A fresh exact capture marks the retained DEX portfolio exact-complete and removes the incomplete-dex-route-coverage gapId.", recommendedSkill: null,
-    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9-extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
+    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
     reasonCodes: [
@@ -219,27 +221,27 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "unsupported-same-notional-route",
     ],
     context: exitContext,
-    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/lib/safety-score-v9-extension.ts"],
+    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/lib/safety-score-v9/extension.ts"],
   },
   EXIT_OUTPUT: {
     title: "Exit route output valuation", stream: "EXIT",
     instructions: "Identify the actual asset or basket delivered by the route and provide same-notional USD valuation. For documented redemption rails, add outputAssets to the matching redemption config; for DEX routes, repair producer token/output resolution.",
     completionCriteria: "The route output is explicit and valued in a fresh exact capture, and the route-specific unresolved-exit-output gapId is absent.", recommendedSkill: null,
-    likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/lib/safety-score-v9-extension.ts"], cautions: ["Only name an output that the route documentation or on-chain execution actually establishes."],
+    likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["Only name an output that the route documentation or on-chain execution actually establishes."],
     ownerDomain: "exit",
     defaultResolutionMode: "agent-curation",
     reasonCodes: ["unresolved-exit-output"],
     context: exitContext,
     touchpoints: (_source, context) =>
       typeof context === "object" && context !== null && "lane" in context && context.lane === "dex"
-        ? ["worker/src/lib/safety-score-v9-extension.ts"]
+        ? ["worker/src/lib/safety-score-v9/extension.ts"]
         : ["shared/lib/redemption-backstop-configs/"],
   },
   EXIT_RUNTIME_ROUTE: {
     title: "Runtime exit route evidence", stream: "EXIT",
     instructions: "Produce at least one current exact DEX, redemption, or retained route observation with comparable notional, capacity, cost, access, settlement, output valuation, and failure-domain evidence.",
     completionCriteria: "The exact fixed input contains a score-eligible route and a fresh replay removes the missing-runtime-route-evidence gapId.", recommendedSkill: null,
-    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9-extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
+    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
     reasonCodes: [
@@ -248,12 +250,24 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "missing-same-notional-route",
     ],
     context: exitContext,
-    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9-extension.ts"],
+    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
+  },
+  EXIT_SETTLEMENT_BOUND: {
+    title: "Exit route settlement-bound proof", stream: "EXIT",
+    instructions: "Resolve the flagged route's settlement bound: obtain or document a contract-verified or issuer-published bound proving completion within the same-notional settlement horizon (e.g. a redemption SLA), or, when the rail is genuinely an operator-batched queue with no bound, record that disposition in the redemption-backstop config rather than leaving the route silently excluded. Do not synthesize a capacity curve or settlement bound that the rail does not actually prove.",
+    completionCriteria: "A fresh exact replay resolves the route's settlement bound as proven, or confirms the route is no longer score-eligible, and the unproven-settlement-bound gapId is absent.",
+    recommendedSkill: null, likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/cron/reserve-adapters/"],
+    cautions: ["A measured-adverse pause is a different fact from an unproven bound; do not conflate the two or invent a bound the rail does not document."],
+    ownerDomain: "exit",
+    defaultResolutionMode: "agent-curation",
+    reasonCodes: ["unproven-settlement-bound"],
+    context: exitContext,
+    touchpoints: () => ["shared/lib/redemption-backstop-configs/"],
   },
   IMPLEMENTATION_DATE: {
     title: "Current mechanism implementation date", stream: "EVID",
     instructions: "Research the launch date of the currently scored mechanism boundary and populate implementationLaunchDate. Use the conservative range end for fuzzy dates and cite the source in the surrounding reviewed metadata or batch report.",
-    completionCriteria: "The compiled launchedAtSec is known and a fresh exact replay removes the missing-implementation-date gapId.", recommendedSkill: "stablecoin-info-fetch", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Do not use an earlier predecessor launch if the current mechanism was materially replaced."],
+    completionCriteria: "The compiled launchedAtSec is known and a fresh exact replay removes the missing-implementation-date gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Do not use an earlier predecessor launch if the current mechanism was materially replaced."],
     ownerDomain: "evidence",
     defaultResolutionMode: "agent-curation",
     reasonCodes: ["missing-implementation-date"],
@@ -264,7 +278,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Mechanism risk component review", stream: "MECH",
     instructions: "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash, T-bill, and commodity-claim components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
     completionCriteria: "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.", recommendedSkill: "reserve-research",
-    likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9-extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric."],
+    likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric.", "Before curating fiat-cash assuranceAndReconciliation, commodity-claim assuranceAndReconciliation, or tbill lossRecoveryDesign as unavailable, check the asset's proofOfReserves.latestReport: when it is set, the compiler already grades that component known and a curated unavailable row silently overrides it to bounded-unknown. shared/types/__tests__/safety-score-v9-overlays.test.ts fails the build if this happens."],
     ownerDomain: "backing",
     defaultResolutionMode: "issuer-or-onchain-evidence",
     reasonCodes: ["bounded-mechanism-review"],
@@ -313,10 +327,22 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     context: (asset) => asset.economicControlReview.oracle,
     touchpoints: (source) => unique([risk(source)]),
   },
+  PARENT_RATEABILITY: {
+    title: "Required upstream parent rateability", stream: "methodology",
+    instructions: "This gap is not curatable on the asset itself: a required upstream parent (serial dependency) has no score yet, so the child is unrateable until the parent rates. Resolve the parent's own missing-data work items — its evidence gaps are what actually need to close — and this asset rates transitively once the parent does.",
+    completionCriteria: "A fresh exact replay reports the required upstream parent as rateable and removes the missing-parent-score gapId/nrReason for this asset.",
+    recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/coins/"],
+    cautions: ["Do not fabricate or bypass a parent score; work the parent's own missing-data items instead of editing this asset."],
+    ownerDomain: "methodology",
+    defaultResolutionMode: "agent-curation",
+    reasonCodes: ["missing-parent-score"],
+    context: (asset) => asset.dependencies,
+    touchpoints: (source) => [base(source)],
+  },
   PEG_INPUT: {
     title: "Current peg input", stream: "PEG",
     instructions: "Provide a resolvable peg reference and current peg observation with score, deviation, active-depeg state, tracking span, and failure-domain identity. Repair metadata/reference mapping or producer coverage as required; pure NAV assets need an explicit NAV disposition.",
-    completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-info-fetch", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9-extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
+    completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
     ownerDomain: "peg",
     defaultResolutionMode: "mixed-curation-and-runtime",
     reasonCodes: [
@@ -326,12 +352,12 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "missing-applicable-peg",
     ],
     context: (asset) => asset.peg,
-    touchpoints: (source) => unique([base(source), "worker/src/lib/safety-score-v9-extension.ts"]),
+    touchpoints: (source) => unique([base(source), "worker/src/lib/safety-score-v9/extension.ts"]),
   },
   RESERVE_COMPOSITION: {
     title: "Reserve composition envelope", stream: "RESV",
     instructions: "Author the current structured reserve envelope with slice names and weights, asset classes, issuer/obligor identity, risk factors, liquidity horizon, maturity where applicable, dependency links, reserveReview, custodyProfile, and latest assurance scope.",
-    completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
+    completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId, or, for stale-audited-reserve-composition, refreshes reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
     ownerDomain: "backing",
     defaultResolutionMode: "agent-curation",
     reasonCodes: [
@@ -340,6 +366,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "missing-latest-assurance-report",
       "missing-reserve-composition",
       "partial-reserve-review",
+      "stale-audited-reserve-composition",
       "unreviewed-reserve-envelope",
     ],
     context: (asset) => ({

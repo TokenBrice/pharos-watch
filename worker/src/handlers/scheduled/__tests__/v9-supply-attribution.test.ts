@@ -4,6 +4,7 @@ import {
   makeScheduledRuntime,
   mockSuccessfulCronLease,
 } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
   syncSafetyScoreV9SupplyAttribution: vi.fn(),
@@ -25,7 +26,7 @@ import { runV9SupplyAttributionSlot } from "../v9-supply-attribution";
 const SCHEDULED_TIME_MS = 1_800_000;
 
 function dbWithReadyCoreSlot(): D1Database {
-  return {
+  return makeNoopD1({
     prepare: vi.fn((sql: string) => {
       const first = vi.fn(async () =>
         sql.includes("FROM cron_slot_executions") &&
@@ -41,7 +42,7 @@ function dbWithReadyCoreSlot(): D1Database {
         bind: vi.fn(() => ({ first })),
       };
     }),
-  } as unknown as D1Database;
+  });
 }
 
 function runtime(): ScheduledRuntimeContext {

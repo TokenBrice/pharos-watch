@@ -1,10 +1,6 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
-import {
-  buildMeasuredLedgerCohortKey,
-  type MeasuredLedgerAdmissionCohort,
-} from "@shared/lib/measured-execution-ledger";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { LiquidityFallbackCounters, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -42,19 +38,6 @@ interface ProtocolCapDiagnostics {
   reducedTvlUsd: number;
 }
 
-/**
- * Report-only shadow admission-opportunity capture from the daily 06:16
- * scoring run (Liquidity Score v6 Phases 0.1/0.4). Cohorts key on a stable
- * per-policy identity via `buildMeasuredLedgerCohortKey`; this run records
- * what it can decide (eligible/rejected/published) and the retrieval-time
- * join with the 08:10 quote record derives the full tri-state.
- */
-export interface DexShadowAdmissionDiagnostics {
-  /** Route-observation epoch of the emitting run (seconds). */
-  cycle: number;
-  targetGenerationId: string | null;
-  cohorts: Record<string, MeasuredLedgerAdmissionCohort>;
-}
 
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
@@ -71,12 +54,50 @@ interface ScoreDiagnostics {
     shadowTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
-    /** Populated only on the daily shadow-publication run; null otherwise. */
-    shadowAdmission: DexShadowAdmissionDiagnostics | null;
   };
 }
 
 export type MeasuredTargetPublicationMode = "none" | "active" | "active-and-shadow";
+
+interface MeasuredTargetInventory {
+  mode: MeasuredTargetPublicationMode;
+  active: DexMeasuredExecutionTarget[];
+  shadow: DexMeasuredExecutionTarget[];
+}
+
+/** Publish only after the owning liquidity candidate has passed its guards and persisted. */
+export async function publishStablecoinScoreTargets(
+  db: D1Database,
+  inventory: MeasuredTargetInventory,
+  diagnostics: ScoreDiagnostics,
+  capturedAt: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    if (inventory.mode !== "none" && inventory.active.length > 0) {
+      try {
+        const publication = await publishDexMeasuredTargetInventory({ db, targets: inventory.active, capturedAt, signal });
+        diagnostics.measuredExecution.targetPublication = { status: "published", ...publication };
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        diagnostics.measuredExecution.targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+      }
+    }
+    inventory.active.length = 0;
+    if (inventory.mode === "active-and-shadow" && inventory.shadow.length > 0) {
+      try {
+        const publication = await publishDexShadowMeasuredTargetInventory({ db, targets: inventory.shadow, capturedAt, signal });
+        diagnostics.measuredExecution.shadowTargetPublication = { status: "published", ...publication };
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        diagnostics.measuredExecution.shadowTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+      }
+    }
+  } finally {
+    inventory.active.length = 0;
+    inventory.shadow.length = 0;
+  }
+}
 
 type P4aFullScoreResult = FullScoreResult & {
   exitRouteObservations: ExitRouteObservation[];
@@ -104,6 +125,7 @@ export async function computeStablecoinScores(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   tvlStabilityMap: Map<string, number>;
   diagnostics: ScoreDiagnostics;
+  measuredTargetInventory: MeasuredTargetInventory;
 }> {
   const { tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db);
 
@@ -129,7 +151,10 @@ export async function computeStablecoinScores(
   const preparedRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
 
-  for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
+  // Nothing mutates metrics' key set across either pass (value-level updates
+  // only), so direct iteration visits identical entries in insertion order.
+  for (const [id, m] of metrics) {
+    if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
     p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
     m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)), fallbackCounters);
@@ -257,89 +282,24 @@ export async function computeStablecoinScores(
   );
   const inventoryTargetCount = activeTargetInventory.length;
   const shadowInventoryTargetCount = shadowTargetInventory.length;
-  let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
-  if (measuredTargetPublicationMode === "none") {
-    targetPublication = { status: "skipped", reason: "publication-not-due" };
-  } else if (inventoryTargetCount === 0) {
-    targetPublication = { status: "skipped", reason: "no-score-eligible-targets" };
-  } else {
-    try {
-      const publication = await publishDexMeasuredTargetInventory({
-        db,
-        targets: activeTargetInventory,
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      targetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    } finally {
-      targetInventoryById.clear();
-    }
-  }
-  let shadowTargetPublication: ScoreDiagnostics["measuredExecution"]["shadowTargetPublication"];
-  if (measuredTargetPublicationMode !== "active-and-shadow") {
-    shadowTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
-  } else if (shadowInventoryTargetCount === 0) {
-    shadowTargetPublication = { status: "skipped", reason: "no-shadow-targets" };
-  } else {
-    try {
-      const publication = await publishDexShadowMeasuredTargetInventory({
-        db,
-        targets: shadowTargetInventory,
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      shadowTargetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      shadowTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    }
-  }
+  const targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"] = {
+    status: "skipped",
+    reason: measuredTargetPublicationMode === "none"
+      ? "publication-not-due"
+      : inventoryTargetCount === 0 ? "no-score-eligible-targets" : "liquidity-candidate-not-published",
+  };
+  const shadowTargetPublication: ScoreDiagnostics["measuredExecution"]["shadowTargetPublication"] = {
+    status: "skipped",
+    reason: measuredTargetPublicationMode !== "active-and-shadow"
+      ? "daily-shadow-publication-not-due"
+      : shadowInventoryTargetCount === 0 ? "no-shadow-targets" : "liquidity-candidate-not-published",
+  };
+  const measuredTargetInventory: MeasuredTargetInventory = {
+    mode: measuredTargetPublicationMode,
+    active: measuredTargetPublicationMode === "none" ? [] : activeTargetInventory,
+    shadow: measuredTargetPublicationMode === "active-and-shadow" ? shadowTargetInventory : [],
+  };
   targetInventoryById.clear();
-
-  // Shadow admission-opportunity capture (Phases 0.1/0.4). This is the only
-  // place pre-target rejections are visible: a retained pool that failed target
-  // admission carries its `executionCapabilityGate`, while every produced
-  // shadow target sits in `shadowTargetInventory`. Emitted per policy cohort —
-  // never aggregated by adapter+chain — so a healthy policy cannot mask a
-  // broken sibling sharing the same adapter profile.
-  let shadowAdmission: DexShadowAdmissionDiagnostics | null = null;
-  if (measuredTargetPublicationMode === "active-and-shadow") {
-    const cohorts: Record<string, MeasuredLedgerAdmissionCohort> = {};
-    const cohortFor = (key: string) =>
-      (cohorts[key] ??= { eligible: 0, rejected: 0, published: 0, gateReason: null });
-    const shadowPublished = shadowTargetPublication.status === "published";
-    const shadowPublicationFailed = shadowTargetPublication.status === "failed";
-    for (const target of shadowTargetInventory) {
-      const cohort = cohortFor(buildMeasuredLedgerCohortKey(target));
-      cohort.eligible += 1;
-      if (shadowPublished) cohort.published += 1;
-      else if (shadowPublicationFailed && cohort.gateReason == null) {
-        cohort.gateReason = "shadow-target-publication-failed";
-      }
-    }
-    for (const [id, pools] of preparedRetainedPools) {
-      for (const pool of pools) {
-        const gate = pool.extra?.executionCapabilityGate;
-        if (!gate) continue;
-        const cohort = cohortFor(
-          buildMeasuredLedgerCohortKey({ chain: pool.chain, poolId: pool.poolId, stablecoinId: id }),
-        );
-        cohort.eligible += 1;
-        cohort.rejected += 1;
-        if (cohort.gateReason == null) cohort.gateReason = `${gate.family}:${gate.reason}`;
-      }
-    }
-    shadowAdmission = {
-      cycle: routeObservedAt,
-      targetGenerationId: shadowTargetPublication.status === "published"
-        ? shadowTargetPublication.generationId
-        : null,
-      cohorts,
-    };
-  }
 
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
@@ -360,7 +320,8 @@ export async function computeStablecoinScores(
   }
   joinEvidence?.byTargetId.clear();
 
-  for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
+  for (const [id, m] of metrics) {
+    if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
     const rebuilt = rebuildMetricsFromPools(retainedPools, fallbackCounters);
@@ -494,6 +455,7 @@ export async function computeStablecoinScores(
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,
+    measuredTargetInventory,
     diagnostics: {
       protocolCapReductions: {
         cappedPoolCount: protocolCapDiagnostics.cappedPoolCount,
@@ -508,7 +470,6 @@ export async function computeStablecoinScores(
         shadowInventoryTargetCount,
         targetPublication,
         shadowTargetPublication,
-        shadowAdmission,
       },
     },
   };

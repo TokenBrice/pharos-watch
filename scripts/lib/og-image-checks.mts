@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- helpers operate on explicit caller-selected generated asset paths. */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";

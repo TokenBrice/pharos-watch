@@ -1,14 +1,14 @@
 import { vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../handlers/scheduled/context";
 import { createWorkerEnv } from "./__shared/worker-env";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeNoopD1 } from "./noop-d1";
 
 /** Build the common environment used by scheduled-handler tests. */
 export function makeScheduledEnv(
   overrides: Parameters<typeof createWorkerEnv>[0] = {},
 ): ReturnType<typeof createWorkerEnv> {
   return createWorkerEnv({
-    DB: {} as D1Database,
+    DB: makeNoopD1(),
     CORS_ORIGIN: "https://pharos.watch",
     ...overrides,
   });
@@ -41,7 +41,7 @@ export function makeScheduledRuntime(
   );
 
   return {
-    db: mockD1([], { allowUnmatched: true }),
+    db: makeNoopD1(),
     env: createWorkerEnv(),
     ctx: {} as ExecutionContext,
     cron: "0 * * * *",

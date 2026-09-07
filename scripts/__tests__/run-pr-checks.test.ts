@@ -37,6 +37,41 @@ describe("local PR check orchestration", () => {
     ]);
   });
 
+  it("hands doc-sync ownership to the docs lane for mixed plans", () => {
+    const changedFiles = ["docs/testing.md", "shared/lib/classification.ts"];
+    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+
+    expect(plan).toContain("doc-sync");
+    expect(plan).toContain("pr-static");
+    const context = {
+      base: "origin/main",
+      env: { NODE_ENV: "test" as const },
+      forwardedTestArgs: [],
+      head: "HEAD",
+      resolvedBaseSha: "91c2702677808b4380fe5dfde1bf5c09b570d2f0",
+      skipDocSync: true,
+    };
+    expect(createLaneCommand("pr-static", context).cmd).toContain("--skip-doc-sync");
+    // The docs lane keeps its own complete command; ownership only removes the
+    // static lane's duplicate execution.
+    expect(createLaneCommand("doc-sync", context).cmd).not.toContain("--skip-doc-sync");
+  });
+
+  it("keeps the static lane's own doc-sync when the docs lane is not in the plan", () => {
+    const changedFiles = ["shared/lib/classification.ts"];
+    const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });
+
+    expect(plan).not.toContain("doc-sync");
+    const staticCommand = createLaneCommand("pr-static", {
+      base: "origin/main",
+      env: { NODE_ENV: "test" as const },
+      forwardedTestArgs: [],
+      head: "HEAD",
+      resolvedBaseSha: "91c2702677808b4380fe5dfde1bf5c09b570d2f0",
+    });
+    expect(staticCommand.cmd).not.toContain("--skip-doc-sync");
+  });
+
   it("runs touched critical coverage when the classifier requests it", () => {
     const changedFiles = ["scripts/lib/critical-coverage.mjs"];
     const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), { skipCoverage: false });

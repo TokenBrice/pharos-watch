@@ -1,35 +1,69 @@
 # Testing & Linting
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Commands · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · Coverage · Adding a New Test · ESLint Configuration.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · Coverage · Adding a New Test · ESLint Configuration.
 
 ## Overview
 
-The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite runs on pull requests to protected `main`. Post-merge production workflows consume the classifier result and rerun only mutation-adjacent migration or artifact checks.
+The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite runs on pull requests; the [release snapshot state machine](./deployment-process.md#release-snapshot-state-machine) owns protected-`main` and post-merge behavior.
 
 ## Commands
 
+Use the [validation command index](./scripts.md#validation-command-index) for the discoverable command roster; this section owns what those validation lanes do.
+
+`check:pr` is the adaptive local PR contract. It refreshes `origin/main` before classification by default (`--no-fetch` or `PHAROS_PR_NO_FETCH=1` skips the fetch), warns when the resolved base commit is more than 24 hours old, runs the pinned Gitleaks scanner over `base..head`, and executes the deploy classifier with bare Node exactly as CI does. `scripts/lib/pr-lanes.mts` is the single lane, command, shard-count, selector, and timeout manifest consumed by both this runner and the generated GitHub Actions matrix; local critical coverage is the manifest's unsharded form. The docs lane runs for any PR that touches verified docs; docs-only PRs skip the static and test jobs. Other diffs run changed-file ESLint, source typing (including generated Next route types), baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. The static runner also selects `check:doc-sync` whenever a changed source matches a `docs/doc-ownership.json` mapping with owned docs, even if no Markdown changed. In a composed plan that also runs the docs lane (mixed docs/source PR), that lane owns `check:doc-sync` and the static lane receives `--skip-doc-sync`, so doc-sync executes exactly once per plan; standalone `check:pr:static` never receives the flag and keeps its own doc-sync selection. When an enrolled critical source changes, `check:pr` also runs `coverage:critical` against the base SHA; `--skip-coverage` suppresses only that local rehearsal and does not affect the [protected PR gate](./deployment-process.md#release-snapshot-state-machine). Pages-surface changes print a reminder to consider `SEO_PREVIOUS_SITEMAP_URL=https://stablecoin-dashboard.pages.dev/sitemap.xml npm run check:release` before a release batch. `check:bootstrap` rehearses a clean CI bootstrap from committed state, verifies every `@/generated/*` import resolves, and always restores the set-aside bootstrap-owned outputs afterwards, so the rehearsal leaves the working tree unchanged. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; it does not replace the [protected release path](./deployment-process.md#release-snapshot-state-machine). Pass `--json` to `check:pr` or `check:pr:static` for the stable lane envelope; progress goes to stderr and the JSON report goes to stdout.
+
+Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-ownership.mts` derives critical source-to-test ownership, while `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` consume it for critical-suite membership.
+
+`check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
+
+`check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. Ownership references must name a section when the target has at least 400 lines or 50 KiB.
+
+Changed-file classification retains deletions and both sides of cross-area renames. Ordinary Git selection failures stop the check instead of producing an empty plan. Test selection uses that same change set and removes nonexistent test files only before execution. Parallel command failures, including thrown callbacks or spawn errors, cancel and settle siblings before the runner returns; explicit continue-on-error mode retains independent results.
+
+`check:doc-sync` also verifies generated contract blocks: `scripts/lib/doc-sync/contract-blocks.ts` renders every source-backed literal (thresholds, weights, TTLs, methodology versions) between `<!-- GENERATED-START: <id> -->`/`<!-- GENERATED-END: <id> -->` markers, and the check fails with the expected block when a doc's marker content drifts from the source constant. Edit the source constant, then paste the reported expected block; never hand-edit the value inside the markers.
+
+### Smallest adequate check per area
+
+Use `npm run check:focused -- --file <path>` to route one path through the change contract and run the checks selected by its ownership mappings, preferring specific-tier mappings over fallback-tier mappings for each path; add `--plan-only` to inspect the plan without executing it.
+
+Explicit paths use the same normalization as `agent:route`, including repository-relative, `./`, and absolute paths within the repository or current worktree. Paths outside those roots or without an ownership mapping fail before checks run. A mapped area can intentionally select no focused checks; use the matrix below for its local verification recipe.
+
+For generic frontend modules, the focused runner replaces directory-wide test commands with `vitest related --run --passWithNoTests=false` for the selected files. This uses Vitest's import graph; a zero-test selection fails and requires choosing an explicit suite when coverage relies on runtime-loaded files. Non-module changes retain directory coverage. Scripts retain their directory suite because source-reading and CLI contract tests are invisible to the import graph. Sensitive mappings retain their explicit suites and guardrails, including broader CI/release checks when those paths are selected. Generic script artifact checks select only affected checkable outputs and their dependents through the existing artifact registry. `--plan-only` shows these narrowed commands; the protected PR gate is unchanged.
+
+| Area | Smallest adequate local recipe | Conditional additions |
+| --- | --- | --- |
+| Shared `shared/lib` change | `npm run lint:changed`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib` | Add `npm run check:stablecoin-data` for catalog/data semantics; run `npm run test:pr -- --base=<ref>` when the change touches critical consumers. |
+| Worker cron change | `npm run lint:changed`; `npm run typecheck:worker`; `npm run check:cron-sync`; `npm run check:cron-connections`; `npx vitest run worker/src/cron worker/src/handlers/scheduled` | Add `npm run validate:worker-scheduled-smoke` for dispatch wiring and the focused cron test when a specific source mapping supplies one. |
+| `src/components` change | `npm run check:focused -- --file <component-path>` selects lint, source typing, and related tests | Add `npm run check:table-primitives` for table markup/primitives; route/public-surface changes need the page-specific registry/CSP/SEO checks. |
+| API route (`worker/src/api` or `functions/`) change | `npm run lint:changed`; `npm run typecheck`; `npm run typecheck:worker`; `npm run test:critical-contracts` | Add `npm run test:pr -- --base=<ref>` when dependency-selected or multi-mode contract coverage is needed. |
+| D1 migration | `npm run lint:changed`; `npm run typecheck:worker`; `npm run check:migrations`; `npx vitest run worker/src` | Add the affected API test under `worker/src/api/<relevant>.test.ts` when runtime behavior changes; run `npm run test:pr -- --base=<ref>` for critical consumers. |
+| Stablecoin JSON (`shared/data/stablecoins/**`) | `npm run lint:changed`; `npm run check:stablecoin-data`; `npm run check:generated-artifacts -- --only=stablecoin-client-projections`; `npm run typecheck`; `npm run typecheck:worker`; `npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts` | Add the focused catalog/registry test; `check:pr:static` also selects page and Worker checks because stablecoin data is a deploy-impact shared path. |
+| Docs-only change | `npm run check:verified-doc-links`; `npm run check:doc-source-paths`; `npm run check:doc-sync`; `npm run check:generated-artifacts -- --only=agents-doc` | This is the exact CI docs lane and applies to internal docs as classified by the deploy-impact rules. |
+
+### Generated-artifact failure playbook
+
+A `check:generated-artifacts` failure naming a `checkable: false` artifact is not ordinary freshness drift: the registry intentionally excludes that build-time projection from check-mode selection. `sitemap-dates` and `docs-metadata` have `inputState: "build-time"` and `reproducibility: "git-history-derived"`; their dates require full Git history.
+A shallow checkout or missing history therefore fails fast instead of using unsafe filesystem timestamps.
+
+For ordinary offline bootstrap-safe artifacts (including valid empty detail-snapshot envelopes):
+
 ```bash
-npm test
-npm run test:all
-npm run test:pr -- --base=origin/main
-npm run test:watch
-npm run lint
-npm run lint:changed -- --base=origin/main
-npm run lint:typed
-npm run typecheck
-npm run typecheck:tests
-npm run typecheck:worker
-npm run check:pr -- --base=origin/main
-npm run check:bootstrap
-npm run check:structural
-npm run check:release
-npm run test:a11y
-npm run test:a11y:hydrated
+npm run bootstrap:generated
 ```
 
-`check:pr` is the adaptive local PR contract. It refreshes `origin/main` before classification by default (`--no-fetch` or `PHAROS_PR_NO_FETCH=1` skips the fetch), warns when the resolved base commit is more than 24 hours old, runs the pinned Gitleaks scanner over `base..head`, and executes the deploy classifier with bare Node exactly as CI does. Docs-only diffs run the CI docs lane instead of static checks and tests; mixed diffs that touch `docs/` add that lane. Other diffs run changed-file ESLint, source typing (including generated Next route types), baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. When an enrolled critical source changes, `check:pr` also runs `coverage:critical` against the base SHA; `--skip-coverage` suppresses only that local rehearsal and prints a reminder that the remote gate still applies. Pages-surface changes print a reminder to consider `SEO_PREVIOUS_SITEMAP_URL=https://stablecoin-dashboard.pages.dev/sitemap.xml npm run check:release` before a release batch. GitHub Actions still invokes `check:pr:static` and `test:pr` directly rather than the local orchestrator. `check:bootstrap` rehearses a clean CI bootstrap from committed state, verifies every `@/generated/*` import resolves, and always restores the set-aside bootstrap-owned outputs afterwards, so the rehearsal leaves the working tree unchanged. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
+For the history-derived projections, obtain full history first, then:
 
-Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` own critical-suite membership.
+```bash
+npm run bootstrap:generated:history
+```
+
+For one checkable artifact:
+
+```bash
+npm run check:generated-artifacts -- --only=<id>
+```
+
+The former `check:commit-derived-artifacts` path is retired; do not retry it. Do not retry a history-derived `--check` in a shallow or incomplete checkout; fix the checkout and run the history bootstrap first.
 
 Common targeted runners:
 
@@ -68,19 +102,19 @@ Pharos intentionally has no canonical source formatter. The repository is agent-
 
 ## CI Pipeline
 
-Workflow YAML is the source of truth. The main validation and deploy files are `.github/workflows/pull-request-checks.yml`, `.github/workflows/nightly-validation.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`.
+Workflow YAML is the source of truth. The main validation files are `.github/workflows/pull-request-checks.yml` and `.github/workflows/nightly-validation.yml`; the [CI deploy sequence](./deployment-process.md#ci-deploy-sequence) owns the production workflow inventory and ordering.
 
 For deployment/worktree operating procedure, secrets, and rollback, see [Deployment Process](./deployment-process.md).
 
 CI shape:
 
-1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and the generated `AGENTS.md` mirror check.
-2. A dependency-free `preflight` checkout runs the deploy-impact classifier and pinned Gitleaks range scan without `npm ci`. It normally fetches 50 commits and deepens or unshallows only when the exact PR merge base is unavailable. Other PRs then run `check:pr:static` plus four shards of `test:pr`; jobs that require complete history use a blobless full-history checkout, retaining exact history-derived projections and merge-base coverage while avoiding transfer of unneeded historical file contents. The static runner always checks changed-file lint, table-primitive usage, generated Next route types plus source types, environment/import contracts, and high-stakes coverage-waiver completeness; root `package.json` or `package-lock.json` changes also run the production-scope dependency audit. Independent TypeScript, structural, and generated-artifact checks run in a bounded parallel lane while the inexpensive checks stay ordered. Firefox is restored and installed only when the selected generated artifacts include a Firefox-rendered OG family. The runner adds data and Worker/Telegram checks only for relevant paths. Generated-artifact freshness is selected from the changed sources themselves through `scripts/ci/select-generated-artifacts.mts`, in every lane rather than only when a Pages surface moved, so a Worker-only or shared-only commit that leaves a manifest-pinned artifact such as the Safety Score V9 evaluation-build manifest stale fails the PR gate rather than the release discovery gate. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. When an enrolled critical source or the critical-coverage plumbing changes, four blobless full-history coverage shards preserve history-generated test inputs and upload Vitest blob reports even when a shard fails, while also printing failures in the job log; a blobless full-history merge job reconstructs one `lcov.info` and runs the unchanged PR-base touched-file no-regression ratchet. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
-3. PRs do not build the static site. The production Pages workflow performs the one authoritative build after merge.
-4. Nightly/manual validation runs full lint, typed lint, all TypeScript projects, `check:structural`, the complete two-shard Vitest suite, and the non-blocking Node 26 proof. CodeQL runs after relevant `main` changes and weekly; Zizmor additionally analyzes relevant pull requests. The weekly/manual all-critical coverage ratchet is blocking. The separate weekly Cloudflare account-state workflow compares the committed secret-free manifest through read-only API requests and fails clearly if `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` is not configured.
-5. A successful protected merge triggers the dependency-free production deploy classifier after Node setup; it does not install the workspace. Worker mutation retains migration checks and activation proof, then records a best-effort write-once D1 activation marker keyed by the verified Cloudflare version ID and timestamped from the matched Cloudflare deployment's `created_on`; Pages publication retains artifact checks and the release-marker proof. Static, Next compiler, and Playwright caches are separate so a job restores only the state it can consume.
+1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and the generated `AGENTS.md` mirror check. `docs/editorial-style.md` is excluded from this lane so its registered generated module is checked by the full static artifact selection.
+2. A dependency-free `preflight` checkout runs the deploy-impact classifier and strict pinned Gitleaks range scan without `npm ci`, then generates the selected matrix from `scripts/lib/pr-lanes.mts`. One `prepare` job performs `npm ci` and both generated-artifact bootstraps; its SHA-keyed cache of `node_modules` and bootstrap outputs is restored by every matrix and coverage-merge job. Setup checks registered tracked, checkable bootstrap outputs against the checkout’s `HEAD` after both fresh generation and restore-only setup, and rejects nonignored registered outputs recreated as untracked files after a committed deletion. A bootstrap/cache repair fails before the success-only workspace cache save; commit the regenerated output with its sources. Ignored compile projections remain materialized, and ordinary detail-snapshot bootstrap performs no network requests. Live snapshot lanes are generated during compile/release preparation. Other PRs then run `check:pr:static` plus four shards of `test:pr`; docs-only PRs generate only the docs matrix entry. When the docs lane is also selected (mixed docs/source PR), it owns `check:doc-sync`; the static job then receives `--skip-doc-sync` through the generated matrix so doc-sync executes once per PR. Jobs that require complete history use a blobless full-history checkout, retaining exact history-derived projections and merge-base coverage while avoiding transfer of unneeded historical file contents. The static runner always checks changed-file lint, table-primitive usage, generated Next route types plus source types, environment/import contracts, high-stakes coverage-waiver completeness, and documentation ownership obligations. Root `package.json` or `package-lock.json` changes also run the production-scope dependency audit. Independent TypeScript, structural, and generated-artifact checks run in a bounded parallel lane while the inexpensive checks stay ordered. Firefox is restored and installed only when the selected generated artifacts include a Firefox-rendered OG family. The runner adds data and Worker/Telegram checks only for relevant paths. Generated-artifact freshness is selected from the changed sources themselves through `scripts/ci/select-generated-artifacts.mts`, in every lane rather than only when a Pages surface moved, so a Worker-only or shared-only commit that leaves a manifest-pinned artifact such as the Safety Score V9 evaluation-build manifest stale fails the PR gate rather than the release discovery gate. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. When an enrolled critical source or the critical-coverage plumbing changes, up to four blobless full-history coverage shards upload Vitest blob reports even when a shard fails; preflight caps that matrix at the number of selected owner test files. The merge job reconstructs one `lcov.info` and runs the unchanged PR-base touched-file no-regression ratchet. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
+3. Nightly/manual validation runs full lint, typed lint, all TypeScript projects, `check:structural`, the complete two-shard Vitest suite, and the non-blocking Node 26 proof. CodeQL runs after relevant `main` changes and weekly; Zizmor analyzes relevant pull requests, relevant `main` changes, and its weekly backstop. The weekly/manual all-critical coverage ratchet is blocking. The separate weekly Cloudflare account-state workflow compares the committed secret-free manifest through read-only API requests and fails clearly if `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` is not configured.
 
-Every generated-artifact registry entry declares a build lifecycle: `compile-input` for files the static export needs before compilation, `post-refresh` for projections rebuilt after release data refresh, or `maintenance-only` for explicitly maintained outputs. Plain `prebuild` selects only compile inputs; the Pages workflow materializes `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it. The separate `inputState: "build-time"` artifacts (`sitemap-dates` and `docs-metadata`) still derive timestamps from commit history, remain gitignored and `checkable: false`, and are materialized by `npm run bootstrap:generated:history` for non-build consumers. Committed outputs marked `autoStage` are still regenerated and staged by `.githooks/pre-commit`, while `npm run check:generated-artifacts` retains full-registry freshness semantics for every checkable artifact.
+Broad UI, accessibility, ops, analytics, asset-coherence, and transport checks remain PR, scheduled-monitor, or explicit operator commands; they do not control production mutation or automatic rollback. The [CI deploy sequence](./deployment-process.md#ci-deploy-sequence) owns the post-merge build, deploy classifier, migration, activation-marker, release-marker, and cache-separation facts.
+
+The [generated-artifact registry mechanics](./scripts.md#build-and-generated-artifacts) own lifecycle and automatic-staging facts; the failure playbook above owns checkability and history-input behavior, while the [CI deploy sequence](./deployment-process.md#ci-deploy-sequence) owns build and release ordering.
 
 Telegram load protection is selected into `check:pr:static` by `scripts/lib/telegram-load-guard.mts` and also runs weekly/manual. `npm run test:critical-contracts` remains a focused local runner; the PR runner always includes those files.
 
@@ -88,11 +122,13 @@ Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
 - Worker deployment configuration: `npm run check:worker-config` verifies that production custom domains remain root-owned and asset rules fall through.
-- Structural guardrails: `npm run check:structural` runs the Worker raw-console usage, clone-ratchet, provider resilience, fetch-body timeouts, script entrypoints, CLI argument policy, stale feature-flag, hook polling-window, dependency review-gap, unused-code, and sensitive-page-copy checks. It is enforced for affected production and validation paths in PR static validation and for every nightly/manual validation run. The individual commands remain available for focused local diagnosis.
+- Structural guardrails: `npm run check:structural` runs the Worker raw-console usage, clone-ratchet, provider resilience, fetch-body timeouts, runtime reachability, script entrypoints, CLI argument policy, stale feature-flag, hook polling-window, dependency review-gap, unused-code, sensitive-page-copy, and agent-skills checks. It is enforced for affected production and validation paths in PR static validation and for every nightly/manual validation run. The runtime reachability checker owns the bundle-graph policies, including the memory-sensitive mint/burn and Telegram lanes whose entrypoints it bundles so the evidence-rich full stablecoin registry cannot re-enter their runtime module graphs. The individual commands remain available for focused local diagnosis.
+
+For test-only changes, structural validation runs only `check:clone-ratchet` and `check:cron-console-usage`.
 - Table primitives: `npm run check:table-primitives` rejects raw `<table>` markup and direct shadcn table imports under `src/`, allowing them only in the shared primitives under `src/components/table/`, the chart data table, and test fixtures. It is listed unconditionally in `check:pr:static` rather than inside `check:structural`, so a table change is gated even when no structural path moved. `npm run check:table-primitives -- --inventory` reports every table call site with its chrome, density, accessible name, and mobile-hint state and never fails; [design-language.md](./design-language.md) owns the rule itself.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; this includes unique sitemap-location enforcement, built-anchor rejection for reviewed legacy aliases, and one-hop/permanent checks for internal `_redirects` rules. Its per-page HTML extraction uses bounded worker threads while all global graph, sitemap, header, and continuity assertions remain consolidated in the parent process. Releases additionally set `SEO_PREVIOUS_SITEMAP_URL` so the same command rejects disappearance of deployed digest/depeg URLs unless an explicit direct 301 preserves the route. Live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch` and enforces sitemap uniqueness against production.
-- Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data. Both run route-per-test with 3 Playwright workers (`fullyParallel: true` in `playwright.config.ts`); the scans are independent per route, so parallelism changes no coverage.
+- Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data. Both block Google Analytics collection before navigation while retaining analytics script loading; the intentional GA smoke acceptance is unchanged. Both run route-per-test with 3 Playwright workers (`fullyParallel: true` in `playwright.config.ts`); the scans are independent per route, so parallelism changes no coverage.
 - Operator workspace browser checks: `npm run test:ops-browser` runs `tests/visual/ops/ops-routes.spec.ts` under the second Playwright config, `playwright.ops.config.ts`. It serves the static export on `OPS_PLAYWRIGHT_PORT` (default `4174`) and resolves `ops.pharos.watch` to `127.0.0.1` inside Chromium, so no hosts-file entry is needed; set `PLAYWRIGHT_REUSE_OPS_SERVER=1` to attach to an already-running `npm run serve:static-export`. The suite runs a six-viewport matrix from 320px to 1440px, but `@phase6`-tagged tests (200% text zoom, `prefers-color-scheme`, forced colors, reduced motion) are excluded from every project except 390px, so those assertions are proven at one viewport only. Workspace routes are driven by fixture API responses and a fixed clock, which means it covers operator route, layout, and a11y behavior and proves nothing about live operator data or the Cloudflare Access posture in [Operator Origin Access Setup](./operator-origin-access.md).
 - GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.
 - Optional render-budget probe: `node scripts/maintenance/audit-seo-render-budget.mjs --url https://pharos.watch`.
@@ -120,6 +156,8 @@ CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical -- --pool=threads
 ## Test Setup
 
 **Config:** `vitest.config.ts`
+
+Vitest bootstraps the catalog and client projections through `scripts/test/ensure-fresh-stablecoin-artifacts.ts`, using registry-owned input and output paths. Successful builds cache recursive filename, size, modification-time, and change-time fingerprints under ignored `.cache/vitest-stablecoin-artifacts/`. Unchanged runs skip regeneration; source additions/deletions and missing or edited outputs invalidate the cache. This is a local metadata shortcut: content checks and clean CI generation remain authoritative for changes that preserve all recorded metadata. Removing this cache safely forces a rebuild.
 
 ```ts
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
@@ -360,14 +398,16 @@ Keep this section focused on how the suite is organized and which surfaces are g
 | Worker API tests                | `worker/src/api/__tests__/`                                          | Handler contracts, response shapes, auth/method behavior, and admin backfill surfaces           |
 | Worker library tests            | `worker/src/lib/__tests__/`                                          | Auth, cache, rate limit, pricing, status, mint/burn, reserves, report cards, and helper modules |
 | Cron tests                      | `worker/src/cron/**/__tests__/` and colocated cron `*.test.ts` files | Scheduled ingestion, scoring, persistence, degradation, and adapter behavior                    |
-| Script tests                    | `scripts/__tests__/`                                                 | CI guardrail and operational-script behavior                                                    |
-
 Critical gate coverage is intentionally smaller than the full suite:
 
-- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mts` with line/branch coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. The weekly/manual all-critical workflow blocks on it, while the PR workflow runs it only when an enrolled critical source or critical-coverage plumbing changes. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
-- `npm run test:critical-contracts` is the explicit API contract set and is always included by `test:pr`.
+- `scripts/lib/critical-coverage.mjs` discovers high-stakes source candidates from the repository roots and path rules. It does not contain a second source-path enrollment list.
+- `scripts/lib/critical-ownership.mts` scans every test file's static imports, quoted dynamic `import(...)` calls, and `vi.mock` specifiers, resolves relative and repository aliases, and derives a sorted `source → importing tests` map. A candidate is enrolled only when that map has an owner, while the 35 no-owner candidates known at the 2026-09-03 cutover are recorded as dated ownership waivers. New unowned candidates fail `check:critical-coverage-completeness`.
+- `npm run test:critical-contracts` remains the explicit runner for the 19 existing contract entries (including the 2 global invariant paths). `test:pr` adds 11 additional unique user-facing response, auth, scheduled-dispatch, supply, freshness, and cron-sync contracts for an exact 30-file always-on set.
+- `npm run test:pr` runs that always-on set, Vitest's changed tests, and every test that owns a changed enrolled source. A source change therefore pays only for its importing contracts instead of all 232 formerly hand-maintained critical tests.
+- `npm run coverage:critical` runs the full derived owner set for the weekly/manual ratchet. PR coverage shards pass their changed paths to `buildCriticalCoverageArgs`, include only touched enrolled sources, and run only the owners of those sources; critical-coverage plumbing changes use the full derived source and test set.
+- Real-SQL migration, crash-resume, rollback, and external-effect failure suites remain preferred wherever the runtime owns durable state; authenticated axe coverage and broad UI checks stay outside this gate.
 
-Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep the full runner in `scripts/maintenance/run-all-tests.ts`; and keep contract membership in `scripts/lib/critical-test-files.mts`.
+The checked-in baseline remains valid because generated enrollment is a subset of the existing baseline; no baseline regeneration is required for this cutover.
 
 When adding tests, prefer colocating them near the module under test unless an existing `__tests__/` directory is already the local pattern. If the new test protects a production gate, add it to the relevant npm script rather than only documenting it here.
 
@@ -402,8 +442,8 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 ### Registry Guardrails
 
 - `npm run check:clone-ratchet` checks exact duplicate significant-line windows against `scripts/lib/clone-ratchet-baseline.json`; `check:structural` enforces it for affected PR paths and nightly/manual validation. `npm run check:clone-ratchet:update-baseline` is reserved for an intentional, reviewed extraction or deletion effect, not for ratcheting new duplication into the baseline.
-- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline. `check:structural` enforces it for affected PR paths and nightly/manual validation; it can also be run directly when CI/operator scripts change.
-- `npm run audit:coverage -- --domain=oracle-risk --enforce` remains the direct content audit for CDP oracle profiles and required branch evidence. It is a manual curation audit, not a merge gate; its reviewed applicability queue is advisory for current v8 scoring, while explicit unresolved dispositions remain v9 blockers rather than silently passing as profile-only evidence.
+- The [Operator CLI Contract](./scripts.md#operator-cli-contract) owns what `npm run check:cli-args-policy` verifies; `check:structural` enforces it for affected PR paths and nightly/manual validation, and it can also be run directly when CI/operator scripts change.
+- `npm run audit:coverage -- --domain=oracle-risk --enforce` remains the direct content audit for CDP oracle profiles and required branch evidence. It is a manual curation audit, not a merge gate; its reviewed applicability queue is advisory for current Safety Score V9 (`9.461`) scoring, while explicit unresolved dispositions remain V9 blockers rather than silently passing as profile-only evidence.
 - `src/lib/__tests__/term-markup.test.ts` owns AI-summary glossary-marker integrity as an ordinary noncritical runtime-parser test, including known slugs, balanced markers, and the current corpus totals.
 - Mechanism explainer completeness is split across ordinary noncritical domain tests: `src/app/learn/mechanisms/__tests__/content.test.ts` owns labels, one-liners, editorial content, and representative coin IDs; the existing dynamic-route test owns exact static params; `src/app/__tests__/sitemap-frozen.test.ts` owns sitemap membership. OG images remain generated-artifact-owned.
 - `shared/lib/selector/__tests__/editorial-policy.test.ts` owns the Selector banned-phrase rule matrix and complete editorial corpus as an ordinary noncritical domain test, including Picker route/component copy and checked-in worked examples.
@@ -427,25 +467,25 @@ Full-suite coverage threshold is not enforced. The critical gate applies a 40% d
 
 ### Critical Coverage Gate
 
-CI does **not** run a full-suite coverage gate. The PR workflow runs `coverage:critical` only when an enrolled critical source or critical-coverage plumbing changes; its compare ref scopes the no-regression ratchet to the touched file(s). The weekly/manual Critical Coverage Ratchet workflow blocks on the all-critical gate via `npm run coverage:critical`:
+CI **does not** run a full-suite coverage gate. The PR workflow runs `coverage:critical` when an enrolled source or critical-coverage plumbing changes; the compare ref scopes the no-regression ratchet to touched sources. PR shards and the weekly/manual Critical Coverage Ratchet workflow execute the same full derived critical-owner test set so their measurements remain comparable to the checked-in baseline. Tests owning other critical sources can exercise a touched source indirectly:
 
-- Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
-- Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
-- Parses `coverage/lcov.info`
-- Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
-- Applies explicit per-file minimums for selected reliability paths (`auth`, `evm-rpc`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.ts`)
-- Applies 40% branch/error-path floors to the `evm-rpc` provider, `auth`, `safety-scores`, and `price-publication-state` boundaries
-- For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
-- Fails non-doc PR static validation when a high-stakes candidate is missing enrollment, a waiver is invalid, or a waiver no longer maps to a candidate file; a passed `reviewAfter` date is reported as an advisory review queue and does not fail the gate
-- Fails closed when an explicit `CRITICAL_COVERAGE_COMPARE_REF` cannot be diffed, so a bad ref cannot silently disable the touched-file ratchet
-- The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly, while PRs pay the coverage cost only for touched enrolled source.
-- `npm run check:pr -- --base=<ref>` runs this lane automatically when the diff touches an enrolled critical source, setting `CRITICAL_COVERAGE_COMPARE_REF` to the resolved base SHA. Use `npm run coverage:critical` directly only for custom `CRITICAL_COVERAGE_*` controls; `--skip-coverage` skips the local lane but not the remote gate.
+- `critical-coverage.mjs` scans high-stakes source roots and applies the existing candidate path rules. `CRITICAL_FILES` is the generated intersection of those candidates and sources imported by tests; there is no hand-maintained source enrollment list.
+- `critical-ownership.mts` resolves static imports, quoted dynamic `import(...)` calls, and `vi.mock` specifiers (including `@/`, `@shared/`, and relative paths) to repository files and records every importing test. `CRITICAL_OWNERSHIP_WAIVERS` documents the 35 no-owner candidates present at the 2026-09-03 cutover; `check:critical-coverage-completeness` fails for any new unowned candidate or any explicitly enrolled source without an owner.
+- PR coverage preflight caps the matrix at the smaller of four shards or the full owner-test count. Each shard passes the changed file set to `buildCriticalCoverageArgs`; it includes only touched enrolled sources for V8 remapping but retains the full critical-owner suite. The merge checker applies line/branch floors and `MISSING` checks to that same touched source scope; plumbing-only changes fall back to the full derived source set, while `CRITICAL_COVERAGE_RATCHET_ALL=1` checks every enrolled source.
+- The full derived source and owner set is capped at four Vitest workers. v8 remapping is limited with per-file `--coverage.include` flags, so unrelated loaded modules do not inflate the report.
+- Parses `coverage/lcov.info` and fails if any enrolled source falls below `CRITICAL_COVERAGE_THRESHOLD` (default 40%).
+- Applies explicit per-file line minimums and 40% branch/error-path floors at provider, authentication, scoring, and publication boundaries.
+- Applies the touched-source no-regression ratchet using `.ci/critical-coverage-baseline.json`; the generated enrolled set is already represented in that baseline, so no regeneration is required for this cutover.
+- Reports due or overdue ordinary coverage-waiver reviews without failing solely because the advisory date passed, but fails invalid or stale coverage waivers.
+
+`npm run check:pr -- --base=<ref>` runs this lane automatically when the diff touches an enrolled source or critical-coverage plumbing. Use `npm run coverage:critical` directly for custom `CRITICAL_COVERAGE_*` controls; `--skip-coverage` skips the local lane but not the remote gate.
 
 Gate scripts and ownership:
 
-- `scripts/lib/critical-test-files.mts` owns critical test-file membership.
-- `scripts/lib/critical-coverage.mjs` owns critical source-file ratchet membership.
-- `scripts/ci/check-critical-coverage.ts` owns threshold parsing, explicit per-file override handling, and touched-file ratchet enforcement.
+- `scripts/lib/critical-ownership.mts` owns generated source-to-test ownership and the dated cutover gap waivers.
+- `scripts/lib/critical-test-files.mts` owns the 30-file always-on contract set and builds full/touched Vitest arguments from ownership.
+- `scripts/lib/critical-coverage.mjs` owns candidate discovery and the generated enrolled source set.
+- `scripts/ci/check-critical-coverage.ts` owns threshold parsing, completeness enforcement, explicit per-file overrides, and touched-source ratchets.
 
 Useful env controls:
 
@@ -462,7 +502,7 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 
 ### Critical Test Suites
 
-- `npm run test:critical-contracts` is a targeted local runner for the explicitly enumerated contract suites owned by `scripts/lib/critical-test-files.mts`; keep the npm script as a runner only instead of duplicating suite membership in prose or `package.json`.
+- `npm run test:critical-contracts` runs the 19 existing contract entries; `npm run test:pr` composes those with the additional user-facing contracts into the exact 30-file always-on set, then adds changed tests and touched-source owners.
 - `npm run check:pr -- --base=<ref>` runs the adaptive local PR contract against a committed diff.
 - `npm run check:release` performs the optional full Pages build/static checks and credential-free Worker bundle proof.
 - `npm run test:all` runs the complete suite; `npm run test:pr -- --base=<ref>` runs critical plus dependency-selected tests.
@@ -558,6 +598,8 @@ describe("syncFxRates", () => {
 | `react-hooks/purity`                      | error | `Date.now()` in render is intentional for timestamp-based UIs                                |
 | `react-hooks/incompatible-library`        | error | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
+**Security plugin** — `eslint-plugin-security` keeps its regex and timing rules (`detect-unsafe-regex`, `detect-non-literal-regexp`, `detect-possible-timing-attacks`) enabled; suppress them only with a scoped `eslint-disable` plus justification. `detect-object-injection` and `detect-non-literal-fs-filename` are off globally in `eslint.config.mjs` — both flag routine dynamic-property and dynamic-filesystem-path access that repo scripts and tests use intentionally. The fs rule previously required ~101 inline suppressions; an owner review replaced them (and the `scripts/**` carve-out) with the global off.
+
 **Import boundaries** — `no-restricted-imports` blocks carry the lint-shaped architectural rules so they run on every changed file through `lint:changed` instead of a separate scanner:
 
 | Scope | Restriction |
@@ -573,16 +615,16 @@ Because flat config *replaces* a rule's options when several config objects matc
 
 ### Zod Runtime Validation
 
-Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQueryWithMeta(..., { schema })`. Use `rg "schema:" src/hooks src/lib` for the live callsite and schema set before adding or auditing endpoint validation; do not maintain a second response-schema inventory here.
+Schema validation in hooks flows from each endpoint descriptor's `schema` through `useRegisteredApiQuery`; in `src/hooks/api-hooks.ts`, meta responses use `createApiPollingQueryOptionsWithMeta` and are normalized with `unwrapApiQueryWithMetaResult`. Use `rg "schema:" src/hooks src/lib` for the live callsite and schema set before adding or auditing endpoint validation; do not maintain a second response-schema inventory here.
 
 When a schema is provided, frontend API helpers now validate in `strict` mode by default and throw on schema mismatch. Use `contractMode: "warn"` only for explicitly degraded surfaces where returning raw data is acceptable.
 
 When adding a new API endpoint:
 
 1. Define the response schema in `shared/types/index.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
-2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
+2. Attach the response schema to the descriptor consumed by `useRegisteredApiQuery`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
-**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
+**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
 
 **Worker CI note:** `shared/types/index.ts` imports `zod`, and the worker type-checks shared modules via the `@shared/*` path alias in the PR static gate (`npm run typecheck:worker`, selected when the diff touches worker paths) and in nightly validation, before a merge can reach the production deploy workflow. Root deps are installed first (`npm ci`) through the npm workspace so shared imports resolve from root `node_modules/`. If you add new npm packages imported at the top level of shared files, they do not need duplication in `worker/package.json` unless the worker uses a worker-local runtime/deploy path that genuinely requires it.

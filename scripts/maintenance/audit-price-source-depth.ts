@@ -18,12 +18,12 @@ import {
   numberValue,
   PROD_ORIGIN,
   PROD_STABLECOINS_URL,
-  parseReportCliArgs,
+  parseCoverageAuditCliArgs,
   readJsonFile,
-  runReportCli,
+  runCoverageAuditCli,
   stringValue,
   type UnknownRecord,
-} from "../lib/report-cli";
+} from "../lib/coverage-audit-cli";
 
 const PROD_PEG_SUMMARY_URL = `${PROD_ORIGIN}/_site-data/peg-summary`;
 const PROD_REFERER = `${PROD_ORIGIN}/coverage/`;
@@ -750,7 +750,7 @@ export function renderPriceSourceDepthAuditMarkdown(audit: PriceSourceDepthAudit
 }
 
 export function parseArgs(argv: string[]): CliOptions {
-  return parseReportCliArgs(argv, {
+  return parseCoverageAuditCliArgs(argv, {
     createOptions: (): CliOptions => ({
       source: null,
       inputDir: null,
@@ -837,7 +837,7 @@ export async function runCli(
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
-  return runReportCli(argv, {
+  return runCoverageAuditCli(argv, {
     parse: parseArgs,
     cwd,
     build: async (options) => {

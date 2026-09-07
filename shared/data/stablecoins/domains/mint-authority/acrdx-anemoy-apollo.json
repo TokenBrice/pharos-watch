@@ -66,6 +66,31 @@
         ]
       },
       {
+        "label": "ACRDX Centrifuge BalanceSheet ward (direct mint path — Ethereum)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "0x12a110ce5f0fc871cc72bc7ecaf35cf39dd0f43e",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
+        "canRaiseCap": false,
+        "capDescription": "The ShareToken exposes no separate cap for this ward; issuance is bounded only by auth-gated mint/burn calls and Root ward administration.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25769985,
+        "evidence": "At Ethereum block 25769985, wards(0x12a110ce5f0fc871cc72bc7ecaf35cf39dd0f43e) on the canonical ACRDX ShareToken returned 1. The Centrifuge BalanceSheet is an active contract ward with auth-gated mint() and burn() authority for issuer-side, KYC-gated NAV subscriptions and redemptions.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout ACRDX ShareToken",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+          },
+          {
+            "label": "Ethereum JSON-RPC wards() read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
         "label": "ACRDX Ethereum Root ward (canonical protocol admin)",
         "role": "minter-admin",
         "authorityType": "contract",

@@ -20,6 +20,7 @@ import {
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { getPegReference } from "@shared/lib/peg-rates";
+import { projectTopDriver } from "@shared/lib/safety-score-v9/public";
 import {
   getCirculatingRaw,
   getPrevDayRawOrNull,
@@ -27,10 +28,11 @@ import {
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
 import {
-  MatrixTable,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -160,13 +162,13 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           },
         },
         { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.currentDeviationBps) },
-        { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegScore) },
+        { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegDetails?.pegScore) },
         { key: "market-cap", label: "Market cap", numeric: true, render: (coin) => formatCurrency(getCirculatingRaw(coin.data)) },
         { key: "supply-24h", label: "Supply change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
         { key: "supply-7d", label: "Supply change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevWeekRawOrNull(coin.data)) },
         { key: "supply-30d", label: "Supply change · 30d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevMonthRawOrNull(coin.data)) },
         { key: "safety", label: <MethodologyLabel topic="safetyScore">Safety</MethodologyLabel>, numeric: true, render: safetyGradeLabel },
-        { key: "liquidity", label: <MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.liquidityScore) },
+        { key: "liquidity", label: <MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.liquidity?.liquidityScore) },
         {
           key: "mechanism",
           label: "Mechanism",
@@ -202,6 +204,17 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "weakest-pillar", label: "Weakest pillar", render: (coin) => coin.safetyCard?.weakestPillar ? `${humanizeSafetyScoreV9Value(coin.safetyCard.weakestPillar.pillar)} · ${formatScore(coin.safetyCard.weakestPillar.score, { trimInteger: true })}` : NULL_VALUE },
         { key: "binding-cap", label: "Binding cap", render: (coin) => coin.safetyCard ? (coin.safetyCard.bindingCap ? `${humanizeSafetyScoreV9Value(coin.safetyCard.bindingCap.kind)} · ${coin.safetyCard.bindingCap.limit}` : "None") : NULL_VALUE },
         { key: "evidence", label: "Evidence", render: (coin) => coin.safetyCard ? `${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.level)} · ${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.freshness)}` : NULL_VALUE },
+        {
+          key: "top-driver",
+          label: "Top driver",
+          render: (coin) => {
+            if (!coin.safetyCard) return NULL_VALUE;
+            const driver = projectTopDriver(coin.safetyCard);
+            return driver ? (
+              <SafetyScoreTopDriver driver={driver} coinId={coin.id} subjectLabel={coin.symbol} />
+            ) : NULL_VALUE;
+          },
+        },
         { key: "primary-exit", label: "Primary exit access", render: (coin) => humanize(coin.safetyCard?.accessPosture.primaryExit) },
         { key: "freeze-exposure", label: "Freeze exposure", render: (coin) => humanize(coin.safetyCard?.accessPosture.freezeExposure) },
         { key: "dependencies", label: "Scored dependencies", render: dependencySummary },
@@ -297,13 +310,15 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
         </div>
       </div>
 
-      <MatrixTable
+      <TableFrame
         tableId="live-comparison-matrix"
         testId="live-comparison-matrix-table"
         role="region"
         aria-label="Stablecoin comparison matrix"
         tabIndex={0}
         tableAriaLabel="Stablecoin comparison matrix"
+        chrome="default"
+        density="compact"
       >
         <TableHeader>
           <TableRow>
@@ -331,7 +346,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
             <SectionRows key={section.key} section={section} coins={coins} />
           ))}
         </TableBody>
-      </MatrixTable>
+      </TableFrame>
     </div>
   );
 });

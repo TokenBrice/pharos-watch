@@ -121,7 +121,7 @@
             "url": "https://etherscan.io/address/0xffffffaEff0B96Ea8e4f94b2253f31abdD875847"
           }
         ],
-        "evidence": "At Ethereum block 25,771,200, owner() = 0xeb3107117fead7de89cd14d463d340a2e6917769 — the same 4-of-7 Safe that controls the native sUSD proxy. This is a separate native Synthetix issuance control, not a bridge administrator."
+        "evidence": "At Ethereum block 25,771,200, owner() = 0xeb3107117fead7de89cd14d463d340a2e6917769, the same 4-of-7 Safe that controls the native sUSD proxy. This is a separate native Synthetix issuance control, not a bridge administrator."
       },
       {
         "chain": "ethereum",

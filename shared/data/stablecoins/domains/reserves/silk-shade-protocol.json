@@ -48,7 +48,7 @@
         "url": "https://app.shadeprotocol.io"
       }
     ],
-    "rationale": "Write-time re-open 2026-08-08 of Shade SILK overcollateralized minting docs and the Shade Lend announcement: SILK is minted by locking 120–150%+ accepted collateral in ShadeLend isolated vault markets with stability-pool liquidations; vaults span three documented categories (stablecoins, staking derivatives, normal crypto tokens) with examples including stkd-SCRT, stATOM, stOSMO, stLUNA, IST, DAI, FRAX, and USDC. Secret Network privacy still prevents a public constituent reconciliation and the live whitelist is not published, so the envelope remains 100% DAO-whitelisted vault collateral basket with ku=100.",
+    "rationale": "Write-time re-open 2026-08-08 of Shade SILK overcollateralized minting docs and the Shade Lend announcement: SILK is minted by locking 120 to 150%+ accepted collateral in ShadeLend isolated vault markets with stability-pool liquidations; vaults span three documented categories (stablecoins, staking derivatives, normal crypto tokens) with examples including stkd-SCRT, stATOM, stOSMO, stLUNA, IST, DAI, FRAX, and USDC. Secret Network privacy still prevents a public constituent reconciliation and the live whitelist is not published, so the envelope remains 100% DAO-whitelisted vault collateral basket with ku=100.",
     "compositionBasis": "Shade documentation of overcollateralized vault backing, Stability Pool liquidations, and collateral redemptions; current private collateral mix undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",

@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "BRLA is an issuer-native multichain token: on all four tracked chains mint() is gated solely by Avenia's OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929), held only by the BRLA Digital deployer EOA, Avenia operator EOAs, and Avenia-owned mint-executor/backend contracts — re-verified on-chain 2026-07-20 with functional mint() calls and full RoleGranted event histories. No public or third-party bridge holds mint rights on any deployment; cross-chain supply moves through issuer-run mint/redeem.",
+    "summary": "BRLA is an issuer-native multichain token: on all four tracked chains mint() is gated solely by Avenia's OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929), held only by the BRLA Digital deployer EOA, Avenia operator EOAs, and Avenia-owned mint-executor/backend contracts, re-verified on-chain 2026-07-20 with functional mint() calls and full RoleGranted event histories. No public or third-party bridge holds mint rights on any deployment; cross-chain supply moves through issuer-run mint/redeem.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
@@ -54,7 +54,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (block 90539985): issuer-direct native deployment. mint() is gated solely by OPERATOR_ROLE (0x97667070…; functional eth_call test). Its 12 current holders are the BRLA Digital deployer EOA 0x08abf5f6, operator EOA 0xb35fdcb2, and 10 issuer-owned mint-executor/backend contracts (all owned by 0x08abf5f6 or Avenia backend proxies) — enumerated from the complete RoleGranted history with no outstanding revocations. No bridge or third-party contract holds mint rights; cross-chain BRLA movement is issuer-run mint/redeem, not a public bridge.",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 90539985): issuer-direct native deployment. mint() is gated solely by OPERATOR_ROLE (0x97667070…; functional eth_call test). Its 12 current holders are the BRLA Digital deployer EOA 0x08abf5f6, operator EOA 0xb35fdcb2, and 10 issuer-owned mint-executor/backend contracts (all owned by 0x08abf5f6 or Avenia backend proxies), enumerated from the complete RoleGranted history with no outstanding revocations. No bridge or third-party contract holds mint rights; cross-chain BRLA movement is issuer-run mint/redeem, not a public bridge.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -76,7 +76,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (block 47292620): issuer-direct native deployment. mint() is gated solely by OPERATOR_ROLE (0x97667070…; functional eth_call test from 0x19df6878). Its 5 current holders are the deployer EOA 0x08abf5f6, operator EOAs 0x19df6878 and 0xbb6878b9, and Avenia backend proxies 0xca0402fb and 0xa5e1a817 — enumerated from the complete RoleGranted history with no revocations. No bridge or third-party contract holds mint rights.",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 47292620): issuer-direct native deployment. mint() is gated solely by OPERATOR_ROLE (0x97667070…; functional eth_call test from 0x19df6878). Its 5 current holders are the deployer EOA 0x08abf5f6, operator EOAs 0x19df6878 and 0xbb6878b9, and Avenia backend proxies 0xca0402fb and 0xa5e1a817, enumerated from the complete RoleGranted history with no revocations. No bridge or third-party contract holds mint rights.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -120,7 +120,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (block 16514336): issuer-direct native deployment (~2.7k BRLA supply). mint() is gated solely by OPERATOR_ROLE (0x97667070…; functional eth_call test from 0x08abf5f6). Its 5 current holders are the deployer EOA 0x08abf5f6, operator EOAs 0x19df6878 and 0xbb6878b9, and Avenia backend proxies 0x5b6ee295 and 0xa5e1a817 — enumerated from the complete RoleGranted history with no revocations. No bridge or third-party contract holds mint rights.",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 16514336): issuer-direct native deployment (~2.7k BRLA supply). mint() is gated solely by OPERATOR_ROLE (0x97667070…; functional eth_call test from 0x08abf5f6). Its 5 current holders are the deployer EOA 0x08abf5f6, operator EOAs 0x19df6878 and 0xbb6878b9, and Avenia backend proxies 0x5b6ee295 and 0xa5e1a817, enumerated from the complete RoleGranted history with no revocations. No bridge or third-party contract holds mint rights.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

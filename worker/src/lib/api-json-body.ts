@@ -1,3 +1,4 @@
+import { BoundedStreamOverflowError, bufferReadableStream } from "@shared/lib/bounded-stream";
 import type { ZodIssue, ZodType } from "zod";
 import { errorResponse, type JsonResponseOptions } from "./api-response";
 
@@ -32,36 +33,22 @@ export async function readRequestTextBounded(
 
   if (!request.body) return "";
 
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-
-      totalBytes += value.byteLength;
-      if (totalBytes > maxBytes) {
-        // A cloned request body is a tee. Awaiting cancellation can block until
-        // the other branch is consumed, but the caller still needs that branch.
-        void reader.cancel().catch(() => undefined);
-        return errorResponse(413, options.bodyTooLargeMessage ?? "Request body too large", options.responseOptions);
-      }
-      chunks.push(value);
-    }
-  } catch {
-    return errorResponse(400, options.invalidJsonMessage ?? "Invalid JSON body", options.responseOptions);
+    // Decouple cancellation so an overflowing cloned request does not wait for
+    // the caller's other tee branch to be consumed.
+    const stream = request.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>());
+    const { bytes } = await bufferReadableStream(stream, { maxBytes });
+    return new TextDecoder().decode(bytes);
+  } catch (error) {
+    const overflow = error instanceof BoundedStreamOverflowError;
+    return errorResponse(
+      overflow ? 413 : 400,
+      overflow
+        ? options.bodyTooLargeMessage ?? "Request body too large"
+        : options.invalidJsonMessage ?? "Invalid JSON body",
+      options.responseOptions,
+    );
   }
-
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(bytes);
 }
 
 export async function parseRequestJsonWithSchema<T>(

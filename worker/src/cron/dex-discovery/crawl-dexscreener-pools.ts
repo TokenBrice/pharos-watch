@@ -6,11 +6,11 @@ import { DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { dsRateLimit, fetchDsTokenPairsWithStatus } from "../../lib/dexscreener";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
+import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { getChainAwareDsTrackedTokenPriceUsd } from "../dex-liquidity/crawl-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
-import type { DexDeploymentProviderCheck } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
 
 type DexScreenerTarget = readonly [string, string];
 const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
@@ -121,13 +121,12 @@ export async function crawlDexScreenerPoolsStage({
         0,
       );
       if (!result.ok) {
-        providerChecks.push({
-          chain,
-          address,
-          provider: "dexscreener",
-          status: "failure",
-          retryable: true,
-        });
+        providerChecks.push(makeDexDeploymentProviderCheck(
+          { chain, address },
+          "dexscreener",
+          "failure",
+          { retryable: true },
+        ));
         if (result.hardRefusal) {
           runState.hardRefusal = {
             status: result.status ?? null,
@@ -241,23 +240,21 @@ export async function crawlDexScreenerPoolsStage({
           });
         }
       }
-      providerChecks.push({
-        chain,
-        address,
-        provider: "dexscreener",
-        status: "success",
-        observedPoolCount,
-      });
+      providerChecks.push(makeDexDeploymentProviderCheck(
+        { chain, address },
+        "dexscreener",
+        "success",
+        { observedPoolCount },
+      ));
     } catch (err) {
       if (context.signal?.aborted) throw err;
       logWorkerEventArgs("handler", "warn", `[dex-discovery] dexscreener error for ${chain}:${address}`, err);
-      providerChecks.push({
-        chain,
-        address,
-        provider: "dexscreener",
-        status: "failure",
-        retryable: true,
-      });
+      providerChecks.push(makeDexDeploymentProviderCheck(
+        { chain, address },
+        "dexscreener",
+        "failure",
+        { retryable: true },
+      ));
     }
   }
 

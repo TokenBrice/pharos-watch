@@ -3,6 +3,11 @@ import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchWithRetryMock, testChainRpcs } from "./helpers/rpc-mock";
+import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
+
+const MULTICALL3_ABI = parseAbi([
+  "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[] returnData)",
+]);
 
 type Erc4626Call = { to?: string; data: string };
 
@@ -22,6 +27,7 @@ type Erc4626RpcFixture = {
   idleBalance?: bigint | number;
   decimals?: bigint | number;
   paused?: bigint | number;
+  shutdown?: bigint | number;
   extraHandlers?: Erc4626RpcHandler[];
 };
 
@@ -37,42 +43,80 @@ export function mockErc4626Rpc({
   idleBalance = 25_000_000n,
   decimals = 6,
   paused,
+  shutdown,
   extraHandlers = [],
 }: Erc4626RpcFixture = {}): void {
   fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
     const params = body.params as Array<Erc4626Call> | undefined;
     const call = params?.[0];
-    const context = { url, call, body };
+    if (!call) {
+      const context = { url, body };
+      for (const handler of extraHandlers) {
+        const response = handler(context);
+        if (response !== undefined) return response;
+      }
+      return null;
+    }
 
-    for (const handler of extraHandlers) {
-      const response = handler(context);
-      if (response !== undefined) return response;
-    }
-    if (!call) return null;
+    const resolveCall = async (nestedCall: Erc4626Call): Promise<Response | null> => {
+      const context = { url, call: nestedCall, body };
+      for (const handler of extraHandlers) {
+        const response = handler(context);
+        if (response !== undefined) return response;
+      }
 
-    if (call.data === "0x38d52e0f") {
-      return asset == null ? jsonResponse({ result: "0x" }) : jsonResponse({ result: `0x${asset.replace(/^0x/i, "").padStart(64, "0")}` });
-    }
-    if (call.data === "0x01e1d114" && totalAssets !== undefined) {
-      return jsonResponse({ result: uint256Result(totalAssets) });
-    }
-    if (call.data === "0x18160ddd" && totalSupply !== undefined) {
-      return jsonResponse({ result: uint256Result(totalSupply) });
-    }
-    if (call.data.startsWith("0x07a2d13a") && convertedAssets !== undefined) {
-      return jsonResponse({ result: uint256Result(convertedAssets) });
-    }
-    if (call.data.startsWith("0x70a08231") && idleBalance !== undefined) {
-      return jsonResponse({ result: uint256Result(idleBalance) });
-    }
-    if (call.data === "0x313ce567" && decimals !== undefined) {
-      return jsonResponse({ result: uint256Result(decimals) });
-    }
-    if (call.data === "0x5c975abb" && paused !== undefined) {
-      return jsonResponse({ result: uint256Result(paused) });
-    }
-    return null;
+      if (nestedCall.data === "0x38d52e0f") {
+        return asset == null ? jsonResponse({ result: "0x" }) : jsonResponse({ result: `0x${asset.replace(/^0x/i, "").padStart(64, "0")}` });
+      }
+      if (nestedCall.data === "0x01e1d114" && totalAssets !== undefined) {
+        return jsonResponse({ result: uint256Result(totalAssets) });
+      }
+      if (nestedCall.data === "0x18160ddd" && totalSupply !== undefined) {
+        return jsonResponse({ result: uint256Result(totalSupply) });
+      }
+      if (nestedCall.data.startsWith("0x07a2d13a") && convertedAssets !== undefined) {
+        return jsonResponse({ result: uint256Result(convertedAssets) });
+      }
+      if (nestedCall.data.startsWith("0x70a08231") && idleBalance !== undefined) {
+        return jsonResponse({ result: uint256Result(idleBalance) });
+      }
+      if (nestedCall.data === "0x313ce567" && decimals !== undefined) {
+        return jsonResponse({ result: uint256Result(decimals) });
+      }
+      if (nestedCall.data === "0x5c975abb" && paused !== undefined) {
+        return jsonResponse({ result: uint256Result(paused) });
+      }
+      if (nestedCall.data === "0xbf86d690" && shutdown !== undefined) {
+        return jsonResponse({ result: uint256Result(shutdown) });
+      }
+      return null;
+    };
+
+    if (!call.data.startsWith("0x82ad56cb")) return resolveCall(call);
+
+    const decoded = decodeFunctionData({
+      abi: MULTICALL3_ABI,
+      data: call.data as `0x${string}`,
+    });
+    const calls = decoded.args[0];
+    const results = await Promise.all(calls.map(async (nestedCall) => {
+      const response = await resolveCall({
+        to: nestedCall.target,
+        data: nestedCall.callData,
+      });
+      const payload = response ? await response.json() as { result?: string } : null;
+      return payload?.result != null
+        ? { success: true, returnData: payload.result as `0x${string}` }
+        : { success: false, returnData: "0x" as `0x${string}` };
+    }));
+    return jsonResponse({
+      result: encodeFunctionResult({
+        abi: MULTICALL3_ABI,
+        functionName: "aggregate3",
+        result: results,
+      }),
+    });
   });
 }
 

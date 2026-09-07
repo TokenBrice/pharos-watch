@@ -239,7 +239,10 @@ export const DATA_SURFACE_DESCRIPTORS = {
     queryKey: ["report-cards", "v9"],
     producerJob: "compute-safety-score-v9",
     producerIntervalSec: CRON_INTERVALS["compute-safety-score-v9"],
-    endpointMaxAgeSec: 900,
+    // 2x the publication cadence: the endpoint budget tolerates one missed
+    // 30-minute publication, matching the V9 consumer fail-close basis
+    // (worker/src/lib/safety-score-v9/consumer-freshness.ts).
+    endpointMaxAgeSec: 2 * CRON_INTERVALS["compute-safety-score-v9"],
     dependencyCriticality: "critical",
     uiLabel: "Report Cards",
     pharosVilleSchemaKey: "reportCards",
@@ -252,7 +255,8 @@ export const DATA_SURFACE_DESCRIPTORS = {
     key: "publicHealth",
     apiPath: API_PATHS.health(),
     queryKey: ["health"],
-    producerIntervalSec: 60,
+    // The status self-check publishes this projection every 15 minutes.
+    producerIntervalSec: 900,
     frontendQueryBaseKey: "health",
   },
 } as const satisfies Record<DataSurfaceDescriptorKey, DataSurfaceDescriptor>;

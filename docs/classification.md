@@ -84,7 +84,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
 - `status?: "pre-launch" | "active" | "quarantined" | "delisted" | "frozen"` — lifecycle state; omitted rows are active
-- `listingStatusReview?: ListingStatusReview` — dated reason and review provenance required for quarantined and delisted records; quarantined reviews also require `reviewBy`
+- `listingStatusReview?: StablecoinListingStatusReview` — dated reason and review provenance required for quarantined and delisted records; quarantined reviews also require `reviewBy`
 - `priceBasis?: StablecoinPriceBasis` / `exitMechanism?: StablecoinExitMechanism` — enums owned by `STABLECOIN_PRICE_BASIS_VALUES` and `STABLECOIN_EXIT_MECHANISM_VALUES` in `shared/types/stablecoin-taxonomy.ts`; sourced delisting evidence only; CI forbids these fields on non-delisted rows
 - `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
 - `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets
@@ -93,6 +93,8 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `tags?: string[]` — freeform tag array for filtering and categorization
 
 Cross-domain reviewed incidents are not a `StablecoinMeta` classification field. `shared/data/safety-score-v9/incident-reviews-v1.json` owns events that need explicit control, wrapper-local, operational, or peg routing plus root-claim, deployment, integration-only, or holder-exit scope. Each event changes the existing component that owns its risk; it does not create another Safety Score pillar. Domain-native evidence such as `mintAuthority.mintIncidents` remains in its existing sidecar and must not be duplicated into the cross-domain registry.
+
+Bridge, custody, mint-authority, and reserve-quality summaries share `RESEARCH_REVIEW_CONFIDENCE_LABELS` from `shared/lib/classification.ts`. Each summary retains its own missing/unknown-value fallback; oracle confidence keeps its separate vocabulary, including `limited`.
 
 ### Implementation Age Policy
 

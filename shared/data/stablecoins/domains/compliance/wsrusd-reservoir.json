@@ -4,11 +4,11 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Reservoir savings documentation — wsrUSD is a yield-bearing token minted via rUSD",
+        "label": "Reservoir savings documentation: wsrUSD is a yield-bearing token minted via rUSD",
         "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
       },
       {
-        "label": "Reservoir Terms of Service — EEA offer restriction for the listed protocol tokens; wsrUSD is separately documented as a savings wrapper",
+        "label": "Reservoir Terms of Service: EEA offer restriction for the listed protocol tokens; wsrUSD is separately documented as a savings wrapper",
         "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
       },
       {

@@ -3,7 +3,7 @@ import type { ChangelogEntry } from "./types";
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-08-24", to: "2026-08-30" },
   headline:
-    "Safety Score V9 reaches 9.45, the orbital Safety Map ships, and four new swap census providers close chain gaps.",
+    "The orbital Safety Map ships as Safety Score V9 reaches 9.45; four new swap census providers close chain gaps.",
   fieldNotes:
     "Two threads ran side by side. Scoring kept correcting itself where evidence and measurement had been conflated. A stale attestation is not an absent one, and an unproven settlement bound is not a measured zero. Meanwhile production spent the week healing: retired price feeds, latched circuit breakers, four broken reserve lanes, and a NAV gap that quietly degraded every dependent cron. The map became the front door.",
   summary: [

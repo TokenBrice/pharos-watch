@@ -5,19 +5,27 @@
     "sources": [
       {
         "label": "Makina deposits and whitelisting",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/deposits"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
       },
       {
         "label": "Makina redemptions and whitelisting",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/redemptions"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
       },
       {
         "label": "DUSD Machine Terms",
         "url": "https://makina.finance/MeccanicoToS.pdf"
       },
       {
-        "label": "DUSD AsyncRedeemer verified source",
-        "url": "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract"
+        "label": "DUSD AsyncRedeemer proxy",
+        "url": "https://eth.blockscout.com/address/0x1303c26cFE06bac5bfEE29907f37919643DEF75c?tab=contract"
+      },
+      {
+        "label": "DUSD AsyncRedeemer sanctions-check implementation",
+        "url": "https://eth.blockscout.com/address/0x49C4762Ab838F2E5d8252b69b90a1e8587A74511?tab=contract"
+      },
+      {
+        "label": "Risk Manager transaction disabling the depositor and redeemer whitelists",
+        "url": "https://etherscan.io/tx/0xce35aa978654e799969076baf9025e6dff67b5d2467a1603bfe9acb16902c286"
       },
       {
         "label": "Makina Recovery Mode",
@@ -25,9 +33,9 @@
       }
     ],
     "sourceFreeRationale": "The MachineShare ERC-20 itself has no reviewed local freeze, blacklist, pause, seizure, or arbitrary holder-burn function.",
-    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, Caliber-held USDC, and downstream venues. The Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk and issuer-discretionary eligibility, not as a DUSD transfer blacklist. If USDC is frozen at the Machine, a Caliber, the AsyncRedeemer, or a downstream venue, Recovery Mode can contain additional exposure and unwind supported positions toward USDC, but it cannot move Circle-frozen USDC, replace the settlement asset, or create a migration, in-kind distribution, or holder-recovery right. If a holder cannot receive USDC, Machine Terms Section 2.f permits transferring DUSD before a request to a newly verified wallet, which may then request a buyback. For an existing request, ERC-721 request-NFT transferability and post-transfer claim behavior are separately established by the deployed contract and events: the active NFT owner may claim only while satisfying the current whitelist. The request has no observed contract-level expiry and persists through NFT transfer, but verification, finalization, and fill remain discretionary; there is no guaranteed remediation or alternate settlement asset.",
-    "reviewer": "OpenAI Codex DUSD redemption backstop implementation",
-    "reviewedAt": "2026-07-30"
+    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, Caliber-held USDC, and downstream venues. At Ethereum block 25899375, DirectDepositor 0x94b1828f91c150c5e6776198e170aca4304903d7 and AsyncRedeemer 0x1303c26cfe06bac5bfee29907f37919643def75c both returned isWhitelistEnabled() = false and isSanctionsCheckEnabled() = true. The Risk Manager transaction at block 25826076 emitted WhitelistStatusChanged(false) from both contracts. Deposits, redemption requests, and claims are therefore open at contract level to addresses that pass the sanctions checks. The Risk Manager retains authority to re-enable the whitelists, and the published Machine Terms still define Verified-User eligibility and discretionary buybacks, so the listing records permissionless current on-chain access separately from issuer-discretionary legal eligibility. If USDC is frozen at the Machine, a Caliber, the AsyncRedeemer, or a downstream venue, Recovery Mode can contain additional exposure and unwind supported positions toward USDC, but it cannot move Circle-frozen USDC, replace the settlement asset, or create a migration, in-kind distribution, or holder-recovery right. An ERC-721 redemption request has no observed contract-level expiry and persists through NFT transfer. The current implementation applies sanctions screening to the active NFT owner's claim and would apply a whitelist check if governance re-enabled that control. Finalization and fill remain discretionary; there is no guaranteed remediation or alternate settlement asset.",
+    "reviewer": "OpenAI Codex DUSD listing correction",
+    "reviewedAt": "2026-09-03"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

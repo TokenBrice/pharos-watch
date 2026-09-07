@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RejectionSchema } from "../safety-score-v9-fact-set-schema";
+import { RejectionSchema } from "../safety-score-v9/fact-set-schema";
 
 describe("Safety Score V9 fact-set input primitives", () => {
   it("rejects surrounding whitespace instead of normalizing identity-bearing text", () => {

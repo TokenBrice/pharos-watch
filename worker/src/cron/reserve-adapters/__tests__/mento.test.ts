@@ -25,8 +25,7 @@ import {
   fetchOnchainRawCall,
   fetchOnchainUint256,
 } from "../helpers";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
 vi.mock("../helpers", async (importOriginal) => {
@@ -575,12 +574,12 @@ describe("mento adapter", () => {
 
   it("produces reserve output that passes adapter validation", () => {
     const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("mento", result);
   });
 
   it("produces CDP reserve output that passes adapter validation", () => {
     const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
+    expectValidAdapterOutput("mento", result);
   });
 });
 

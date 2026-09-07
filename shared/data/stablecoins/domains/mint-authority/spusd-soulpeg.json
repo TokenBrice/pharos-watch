@@ -22,7 +22,7 @@
             "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6"
           }
         ],
-        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0x0e8fb2e774b827711e0f86069931c1321113238e) returned true; hasRole(BURNER_ROLE, same) returned true. Wrapper is a contract (4417-byte code). BscScan contract source confirms mint() checks total supply < MAX_SUPPLY; MAX_SUPPLY is a Solidity constant, not a mutable variable — no setMaxSupply function exists."
+        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0x0e8fb2e774b827711e0f86069931c1321113238e) returned true; hasRole(BURNER_ROLE, same) returned true. Wrapper is a contract (4417-byte code). BscScan contract source confirms mint() checks total supply < MAX_SUPPLY; MAX_SUPPLY is a Solidity constant, not a mutable variable. No setMaxSupply function exists."
       },
       {
         "label": "SoulPeg DEFAULT_ADMIN_ROLE (EOA)",

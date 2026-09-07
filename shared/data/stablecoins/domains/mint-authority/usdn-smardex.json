@@ -117,7 +117,7 @@
       "sources": [
         {
           "label": "Sourcify Usdn.sol",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+          "url": "https://sourcify.dev/server/v2/contract/1/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2?fields=sources"
         },
         {
           "label": "USDN vault on Etherscan",

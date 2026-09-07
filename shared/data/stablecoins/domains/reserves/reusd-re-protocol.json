@@ -136,7 +136,7 @@
         "reserveName": "Off-chain insurance / reinsurance capital",
         "pct": 81.5,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The live source measures off-chain capital in aggregate but does not publish a current split by trust asset, reinsurer, bank, or surplus note; it is therefore treated as an exogenous private-credit envelope rather than a splittable stablecoin basket."
+        "rationale": "The live source measures off-chain capital in aggregate but does not publish a current split by trust asset, reinsurer, bank, or surplus note. It is therefore treated as an exogenous private-credit envelope rather than a splittable stablecoin basket."
       },
       {
         "reserveIndex": 3,

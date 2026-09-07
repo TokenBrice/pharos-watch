@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalizeChainCirculating,
-  findCanonicalChainData,
   type RawChainCirculating,
 } from "../chains/circulating";
 
@@ -41,7 +40,7 @@ describe("chain-circulating", () => {
       },
     };
 
-    expect(findCanonicalChainData(chainCirculating, "ethereum")).toEqual({
+    expect(canonicalizeChainCirculating(chainCirculating).get("ethereum") ?? null).toEqual({
       current: 120,
       circulatingPrevDay: 110,
       circulatingPrevWeek: 100,
@@ -49,7 +48,7 @@ describe("chain-circulating", () => {
     });
 
     expect(
-      findCanonicalChainData(
+      canonicalizeChainCirculating(
         {
           "Citrea Mainnet": {
             current: 42,
@@ -58,8 +57,7 @@ describe("chain-circulating", () => {
             circulatingPrevMonth: 39,
           },
         },
-        "citrea",
-      ),
+      ).get("citrea") ?? null,
     ).toEqual({
       current: 42,
       circulatingPrevDay: 41,
@@ -67,7 +65,32 @@ describe("chain-circulating", () => {
       circulatingPrevMonth: 39,
     });
   });
+  it("prefers explicit canonical ids over compatibility labels", () => {
+    const canonical = canonicalizeChainCirculating({
+      "upstream-renamed-chain": {
+        chainId: "ethereum",
+        current: 10,
+        circulatingPrevDay: 9,
+        circulatingPrevWeek: 8,
+        circulatingPrevMonth: 7,
+      },
+      Base: {
+        chainId: "ethereum",
+        current: 5,
+        circulatingPrevDay: 4,
+        circulatingPrevWeek: 3,
+        circulatingPrevMonth: 2,
+      },
+    });
 
+    expect(canonical.get("ethereum")).toEqual({
+      current: 15,
+      circulatingPrevDay: 13,
+      circulatingPrevWeek: 11,
+      circulatingPrevMonth: 9,
+    });
+    expect(canonical.get("base")).toBeUndefined();
+  });
   it("keeps DefiLlama casing variants in canonical chain buckets", () => {
     const canonical = canonicalizeChainCirculating({
       XDC: {
@@ -113,7 +136,7 @@ describe("chain-circulating", () => {
     };
 
     expect(canonicalizeChainCirculating(chainCirculating).size).toBe(0);
-    expect(findCanonicalChainData(chainCirculating, "ethereum")).toBeNull();
+    expect(canonicalizeChainCirculating(chainCirculating).get("ethereum") ?? null).toBeNull();
   });
 
   it("does not propagate invalid supply values from loose callers", () => {

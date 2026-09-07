@@ -18,6 +18,7 @@ import {
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_MINI_APP_CATALOG } from "@shared/lib/telegram-mini-app-catalog";
+import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import type { ZodType } from "zod";
 import { isMiniAppErrorCode, MiniAppRequestError, type MiniAppErrorCode } from "./error-messages";
 
@@ -26,10 +27,6 @@ export const TelegramMiniAppStateSchema = SharedTelegramMiniAppStateSchema;
 export interface TelegramMiniAppClientSnapshot {
   state: TelegramMiniAppState;
   stateRevision: string;
-}
-
-function formatZodIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
-  return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
 }
 
 function parseRetryAfterSec(value: unknown): number | null {
@@ -104,7 +101,7 @@ export async function postMiniAppJson<T>(path: string, body: unknown, schema: Zo
   const payload: unknown = await response.json();
   const result = schema.safeParse(payload);
   if (!result.success) {
-    throw new SchemaValidationError(path, formatZodIssues(result.error.issues));
+    throw new SchemaValidationError(path, formatSchemaLikeIssues(result.error.issues));
   }
   return result.data;
 }

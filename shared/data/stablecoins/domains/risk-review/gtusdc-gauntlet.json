@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "gtUSDC has one tracked Ethereum vault contract. The Across/World candidate signal did not resolve to a durable gtUSDC bridge route, so this is reviewed as a native single-chain vault token.",
+    "summary": "gtUSDC has one tracked Ethereum vault contract. The Across/World candidate signal did not resolve to a durable gtUSDC bridge route; the review treats this as a native single-chain vault token.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",

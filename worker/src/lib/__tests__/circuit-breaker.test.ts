@@ -124,6 +124,26 @@ describe("circuit-breaker", () => {
       expect(record.consecutiveFailures).toBe(0);
     });
 
+    it.each(["consecutiveFailures", "lastFailureAt", "lastSuccessAt", "openedAt"])(
+      "rejects persisted JSON overflow in %s",
+      async (field) => {
+        const stored = JSON.stringify({ ...makeRecord({ state: "open", consecutiveFailures: 3 }), [field]: "overflow" })
+          .replace('"overflow"', "1e999");
+        const db = mockD1([{
+          match: "cache",
+          rows: [{ key: "circuit:overflow", value: stored, updated_at: 100 }],
+        }]);
+        expect(await getCircuitRecord(db, "overflow")).toEqual(makeRecord());
+        expect(await getCircuitStates(db)).toEqual({});
+      },
+    );
+
+    it("preserves additive persisted fields on valid circuit records", async () => {
+      const stored = { ...makeRecord({ state: "open", consecutiveFailures: 3 }), futureField: "kept" };
+      const db = mockDbWithCircuit("additive", stored);
+      expect(await getCircuitRecord(db, "additive")).toEqual(stored);
+    });
+
     it("memoizes repeated reads briefly and returns defensive copies", async () => {
       const db = mockDbWithCircuit("memo-source", makeRecord({ state: "closed" }));
       const first = await getCircuitRecord(db, "memo-source");

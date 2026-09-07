@@ -1,4 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
+import type { ContractDeployment } from "@shared/types/core";
 
 /** Raw pool entry written to dex_pool_staging by the discovery cron. */
 export interface StagedPool {
@@ -13,7 +15,9 @@ export interface StagedPool {
     | "aquarius"
     | "tezos"
     | "icon-balanced"
-    | "kava-swap";
+    | "kava-swap"
+    | "osmosis-sqs"
+    | "noble-swap";
   chain: string;
   protocol: string;
   dexId: string | null;
@@ -48,20 +52,27 @@ export type DexDeploymentProviderCheckStatus = "success" | "failure" | "degraded
 export interface DexDeploymentProviderCheck {
   chain: string;
   address: string;
-  provider:
-    | "coingecko"
-    | "geckoterminal"
-    | "dexscreener"
-    | "curve"
-    | "horizon"
-    | "aquarius"
-    | "tezos"
-    | "icon-balanced"
-    | "kava-swap";
+  provider: DexDiscoveryProvider;
   status: DexDeploymentProviderCheckStatus;
   observedPoolCount?: number;
   /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */
   retryable?: boolean;
+}
+
+export function makeDexDeploymentProviderCheck(
+  target: Pick<ContractDeployment, "chain" | "address">,
+  provider: DexDeploymentProviderCheck["provider"],
+  status: DexDeploymentProviderCheck["status"],
+  extras?: Pick<DexDeploymentProviderCheck, "observedPoolCount" | "retryable">,
+): DexDeploymentProviderCheck {
+  return {
+    chain: target.chain,
+    address: target.address,
+    provider,
+    status,
+    ...(extras?.observedPoolCount !== undefined ? { observedPoolCount: extras.observedPoolCount } : {}),
+    ...(extras?.retryable === true ? { retryable: true } : {}),
+  };
 }
 
 /**
@@ -103,8 +114,9 @@ export const DISCOVERY_TIERS = {
   // Sentinel: coins with zero discovered pools get the highest crawl cadence (t1).
   T1_ZERO_POOL_SENTINEL: 0,
   T2_MAX_POOLS: 4,
-  T2_MODULO: 3,
-  T3_MODULO: 10,
+  // The discovery cron runs every two hours, so 84 runs is one week.
+  T2_MODULO: 84,
+  T3_MODULO: 84,
   BACKOFF_T2_MISSES: 3,
   BACKOFF_T3_MISSES: 6,
   BACKOFF_DORMANT_MISSES: 10,

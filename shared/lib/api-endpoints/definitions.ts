@@ -26,12 +26,14 @@ export type StatusPageActionRisk = "read-only" | "low" | "moderate" | "high";
 export type StatusPageActionResultMode = "immediate" | "queued" | "continuation";
 export type StatusPageActionAuditMode = "canonical" | "handler";
 export type StatusPageActionRunbookPath =
-  | "docs/data-pipeline.md"
+  | "docs/blacklist-tracker.md"
+  | "docs/data-flow-map.md"
   | "docs/depeg-detection.md"
   | "docs/dews.md"
   | "docs/mint-burn-flows.md"
   | "docs/pricing-pipeline.md"
   | "docs/stability-index.md"
+  | "docs/supply-snapshot.md"
   | "docs/yield-intelligence.md";
 
 export type StatusPageActionScope =
@@ -98,6 +100,12 @@ export interface EndpointDefinition {
   strictContract?: boolean;
   probeGroup?: EndpointProbeGroup;
   probePath?: string;
+  /**
+   * True when the edge-cache identity may ignore URL query parameters because
+   * the route handler does not consume them. Query-bearing routes must leave
+   * this unset so meaningful dimensions stay in the cache key.
+   */
+  cacheKeyIgnoresQuery?: boolean;
   /** Optional Pages ops-admin proxy timeout override for slow admin endpoints. */
   opsProxyTimeoutMs?: number;
   /** Optional semantic parser kind for status-page probes. */
@@ -335,6 +343,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "stablecoins",
     path: API_PATHS.stablecoins(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
@@ -364,17 +373,20 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "stablecoin-charts",
     path: API_PATHS.stablecoinCharts(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "peg-summary",
     path: API_PATHS.pegSummary(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "health",
     path: API_PATHS.health(),
+    cacheKeyIgnoresQuery: true,
     publicApiAccess: "exempt",
     probeGroup: "public",
     probeSemanticKind: "health",
@@ -393,6 +405,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "blacklist-summary",
     path: API_PATHS.blacklistSummary(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
@@ -411,16 +424,19 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "usds-status",
     path: API_PATHS.usdsStatus(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "bluechip-ratings",
     path: API_PATHS.bluechipRatings(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "dex-liquidity",
     path: API_PATHS.dexLiquidity(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
@@ -439,11 +455,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "daily-digest",
     path: API_PATHS.dailyDigest(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "digest-archive",
     path: API_PATHS.digestArchive(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
@@ -454,6 +472,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "snapshots-index",
     path: API_PATHS.snapshotsIndex(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
@@ -476,6 +495,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "yield-adapter-manifest",
     path: API_PATHS.yieldAdapterManifest(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({
@@ -505,6 +525,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "report-cards-v9",
     path: API_PATHS.reportCardsV9(),
+    cacheKeyIgnoresQuery: true,
     cacheBypass: true,
     strictContract: true,
     probeGroup: "public",
@@ -512,18 +533,21 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "depeg-resolver",
     path: API_PATHS.depegResolver(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "depeg-resolver-review",
     path: API_PATHS.depegResolverReview(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
   publicGet({
     key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
+    cacheKeyIgnoresQuery: true,
     strictContract: true,
     probeGroup: "public",
   }),
@@ -559,6 +583,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "telegram-pulse",
     path: API_PATHS.telegramPulse(),
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicPostExempt({
@@ -672,7 +697,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds; replay continues on scheduled syncs",
       preconditions: ["Use only when blacklist cursors require a controlled replay."],
       rollback: "No direct rollback; later syncs advance the rewound cursors.",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
   }),
   adminGet({
     key: "debug-sync-state",
@@ -691,7 +716,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       preconditions: [],
       blockedBy: [],
       resultMode: "immediate",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
     },
   }),
   adminAction({
@@ -713,7 +738,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes; bounded to 200 rows",
       preconditions: ["Review the dry-run candidate and resolution counts before live remediation."],
       blockedBy: ["Live mode requires configured chain RPCs."],
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
   }),
   adminAction({
     key: "backfill-blacklist-current-balances",
@@ -734,7 +759,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes; bounded per configuration",
       preconditions: ["Review the dry-run candidate totals before writing balance cache rows."],
       blockedBy: ["At least one active matching blacklist configuration is required."],
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/blacklist-tracker.md",
   }),
   adminAction({
     key: "backfill-depegs",
@@ -766,7 +791,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       preconditions: ["Prefer a single asset for targeted repair; batch mode processes a bounded registry slice."],
       blockedBy: ["Unknown targets, invalid windows, and malformed continuation cursors are rejected."],
       resultMode: "continuation",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/supply-snapshot.md",
   }),
   adminAction({
     key: "backfill-cg-prices",
@@ -872,7 +897,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes, depending on projector backlog",
       preconditions: ["Review per-class dry-run counts before advancing projector watermarks."],
       rollback: "Projector writes are idempotent; rerun the corrected scope when needed.",
-      runbookPath: "docs/data-pipeline.md",
+      runbookPath: "docs/data-flow-map.md",
   }),
   adminAction({
     key: "reclassify-atomic-roundtrips",
@@ -999,6 +1024,9 @@ const MUTATING_ADMIN_PATHS = new Set<string>(
 const CACHE_BYPASS_PATHS = new Set<string>(
   ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.cacheBypass).map((endpoint) => endpoint.path),
 );
+const QUERY_FREE_CACHE_KEY_PATHS = new Set<string>(
+  ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.cacheKeyIgnoresQuery).map((endpoint) => endpoint.path),
+);
 
 const STRICT_CONTRACT_PATHS = ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.strictContract).map(
   (endpoint) => endpoint.path,
@@ -1010,6 +1038,10 @@ export function isMutatingAdminPath(path: string): boolean {
 
 export function isCacheBypassPath(path: string): boolean {
   return CACHE_BYPASS_PATHS.has(path);
+}
+
+export function isCacheKeyQueryFreePath(path: string): boolean {
+  return QUERY_FREE_CACHE_KEY_PATHS.has(path);
 }
 
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {

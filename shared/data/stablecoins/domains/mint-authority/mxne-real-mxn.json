@@ -73,7 +73,7 @@
           "stellar:MXNe-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
         ],
         "canRaiseCap": true,
-        "evidence": "Stellar Horizon: issuer GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR has 1 signer (self, weight=1), all thresholds=0, auth_revocable and auth_clawback_enabled set — standard single-key issuer account."
+        "evidence": "Stellar Horizon: issuer GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR has 1 signer (self, weight=1), all thresholds=0, auth_revocable and auth_clawback_enabled set, standard single-key issuer account."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -93,7 +93,7 @@
           "url": "https://brale.xyz/blog/introducing-mxne"
         },
         {
-          "label": "Base Blockscout — MXNe BraleToken proxy",
+          "label": "Base Blockscout: MXNe BraleToken proxy",
           "url": "https://base.blockscout.com/address/0x269cae7dc59803e5c596c95756faeebb6030e0af"
         },
         {

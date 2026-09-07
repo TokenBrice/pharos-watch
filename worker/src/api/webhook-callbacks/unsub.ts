@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { logTelegramEvent } from "../../lib/telegram-log";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { logTelegramEvent } from "../../lib/telegram/log";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { loadSubscriptionRowsByChat, removeSubscriptions } from "../telegram-webhook-store";
 import { isGroupChatType } from "../telegram-webhook-auth";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";

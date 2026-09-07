@@ -9,7 +9,7 @@ import {
   isSubscribableStablecoinId,
 } from "./webhook-callbacks/_shared";
 import type { SubscriberRow } from "./telegram-webhook-shared";
-import { isDepegStepValue } from "../lib/telegram-constants";
+import { isDepegStepValue } from "../lib/telegram/constants";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import {
   TELEGRAM_ALERT_TYPES,

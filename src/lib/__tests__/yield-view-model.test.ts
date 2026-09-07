@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { YIELD_FILTER_AXIS_REGISTRY, buildYieldViewModel } from "@/lib/yield-view-model";
+import { YIELD_FILTER_AXIS_REGISTRY, buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
 
 const rows = [
   makeYieldRanking({
@@ -78,7 +78,7 @@ const rows = [
 
 describe("buildYieldViewModel", () => {
   it("normalizes invalid URL params back to defaults without breaking the view", () => {
-    const model = buildYieldViewModel(rows, {
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       peg: "DOGE",
       yieldType: "rebasing",
       warnings: "bad",
@@ -119,7 +119,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("applies every supported current-payload filter from one model", () => {
-    const model = buildYieldViewModel(rows, {
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       peg: "non-usd",
       yieldType: "lending-vault",
       q: "eur",
@@ -148,7 +148,7 @@ describe("buildYieldViewModel", () => {
       makeYieldRanking({ id: "fixed", symbol: "FIXED", yieldType: "fixed-yield" }),
       makeYieldRanking({ id: "tranche", symbol: "TRANCHE", yieldType: "structured-tranche" }),
     ];
-    const model = buildYieldViewModel(opportunityRows, { opportunity: "lending-opportunity" });
+    const model = buildYieldViewModel(prepareYieldUniverse(opportunityRows, null), { opportunity: "lending-opportunity" });
 
     expect(model.visibleRows.map((row) => row.id).sort()).toEqual(["fixed", "lend", "tranche"]);
     expect(model.comparisonLabel).toBe("External opportunities");
@@ -159,7 +159,7 @@ describe("buildYieldViewModel", () => {
       { value: "lending-opportunity", label: "External opportunities", count: 3 },
     ]);
 
-    const trancheModel = buildYieldViewModel(opportunityRows, { yieldType: "structured-tranche" });
+    const trancheModel = buildYieldViewModel(prepareYieldUniverse(opportunityRows, null), { yieldType: "structured-tranche" });
     expect(trancheModel.filters.yieldType).toBe("structured-tranche");
     expect(trancheModel.visibleRows.map((row) => row.id)).toEqual(["tranche"]);
     expect(trancheModel.comparisonLabel).toBe("Structured Tranche");
@@ -172,8 +172,9 @@ describe("buildYieldViewModel", () => {
 
   it("keeps expanded benchmark registry values valid when matching rows exist", () => {
     const model = buildYieldViewModel(
-      [
-        makeYieldRanking({
+      prepareYieldUniverse(
+        [
+          makeYieldRanking({
           id: "mxn-yield-row",
           symbol: "MXNY",
           name: "MXN Yield",
@@ -186,7 +187,9 @@ describe("buildYieldViewModel", () => {
             benchmarkRate: 10.5,
           }),
         }),
-      ],
+        ],
+        null,
+      ),
       { benchmark: "MXN" },
     );
 
@@ -197,23 +200,23 @@ describe("buildYieldViewModel", () => {
   });
 
   it("excludes null safety and TVL only when minimum filters are set", () => {
-    expect(buildYieldViewModel(rows, {}).visibleRows.map((row) => row.id)).toContain("eurc-circle");
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), {}).visibleRows.map((row) => row.id)).toContain("eurc-circle");
 
-    const safetyFiltered = buildYieldViewModel(rows, { minSafety: "70" });
+    const safetyFiltered = buildYieldViewModel(prepareYieldUniverse(rows, null), { minSafety: "70" });
     expect(safetyFiltered.visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
 
-    const tvlFiltered = buildYieldViewModel(rows, { minTvl: "10000000" });
+    const tvlFiltered = buildYieldViewModel(prepareYieldUniverse(rows, null), { minTvl: "10000000" });
     expect(tvlFiltered.visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
   });
 
   it("filters source confidence by the selected source, not alternate sources", () => {
-    const model = buildYieldViewModel(rows, { sourceConfidence: "curated" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { sourceConfidence: "curated" });
 
     expect(model.visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
   });
 
   it("derives view-rank labels inside the filtered comparable set", () => {
-    const model = buildYieldViewModel(rows, { peg: "non-usd" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { peg: "non-usd" });
 
     expect(model.visibleRows).toHaveLength(1);
     expect(model.visibleRows[0]).toMatchObject({
@@ -224,7 +227,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("returns a useful filtered empty state", () => {
-    const model = buildYieldViewModel(rows, { q: "zzzz" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { q: "zzzz" });
 
     expect(model.visibleRows).toEqual([]);
     expect(model.emptyState).toMatchObject({
@@ -237,7 +240,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("keeps empty payload median APY at zero", () => {
-    const model = buildYieldViewModel([], {});
+    const model = buildYieldViewModel(prepareYieldUniverse([], null), {});
 
     expect(model.visibleRows).toEqual([]);
     expect(model.stats.avgApy).toBe(0);
@@ -245,14 +248,14 @@ describe("buildYieldViewModel", () => {
   });
 
   it("filters by URL-backed source depth lens", () => {
-    expect(buildYieldViewModel(rows, { depth: "thin" }).visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
-    expect(buildYieldViewModel(rows, { depth: "moderate" }).visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
-    expect(buildYieldViewModel(rows, { depth: "hide-thin" }).visibleRows.map((row) => row.id)).toEqual([
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { depth: "thin" }).visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { depth: "moderate" }).visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { depth: "hide-thin" }).visibleRows.map((row) => row.id)).toEqual([
       "eurc-circle",
       "usdt-tether",
     ]);
 
-    expect(buildYieldViewModel(rows, {}).options.depth.find((option) => option.value === "hide-thin")).toEqual({
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), {}).options.depth.find((option) => option.value === "hide-thin")).toEqual({
       value: "hide-thin",
       label: "Hide thin venues",
       count: 2,
@@ -260,10 +263,10 @@ describe("buildYieldViewModel", () => {
   });
 
   it("filters rows with changed sources from URL state", () => {
-    expect(buildYieldViewModel(rows, { sourceChanged: "only" }).visibleRows.map((row) => row.id)).toEqual([
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { sourceChanged: "only" }).visibleRows.map((row) => row.id)).toEqual([
       "usdc-circle",
     ]);
-    expect(buildYieldViewModel(rows, { sourceChanged: "none" }).visibleRows.map((row) => row.id)).toEqual([
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { sourceChanged: "none" }).visibleRows.map((row) => row.id)).toEqual([
       "eurc-circle",
       "usdt-tether",
     ]);
@@ -312,19 +315,19 @@ describe("buildYieldViewModel", () => {
       }),
     ];
 
-    const clean = buildYieldViewModel(postureRows, { sourcePosture: "clean" });
+    const clean = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "clean" });
     expect(clean.visibleRows.map((row) => row.id)).toEqual(["clean-row"]);
     expect(clean.comparisonLabel).toBe("Clean source posture");
 
-    const watch = buildYieldViewModel(postureRows, { sourcePosture: "watch" });
+    const watch = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "watch" });
     expect(watch.visibleRows.map((row) => row.id)).toEqual(["clean-row", "watch-row"]);
     expect(watch.comparisonLabel).toBe("Clean/watch source posture");
 
-    const watchOnly = buildYieldViewModel(postureRows, { sourcePosture: "watch-only" });
+    const watchOnly = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "watch-only" });
     expect(watchOnly.visibleRows.map((row) => row.id)).toEqual(["watch-row"]);
     expect(watchOnly.comparisonLabel).toBe("Watch source posture");
 
-    const speculative = buildYieldViewModel(postureRows, { sourcePosture: "speculative" });
+    const speculative = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "speculative" });
     expect(speculative.visibleRows.map((row) => row.id)).toEqual(["spec-row"]);
     expect(speculative.options.sourcePosture).toEqual([
       { value: "all", label: "All postures", count: 3 },
@@ -364,30 +367,30 @@ describe("buildYieldViewModel", () => {
       }),
     ];
 
-    const model = buildYieldViewModel(trendingRows, { trending: "rising" });
+    const model = buildYieldViewModel(prepareYieldUniverse(trendingRows, null), { trending: "rising" });
     expect(model.visibleRows.map((row) => row.id)).toEqual(["rising-row"]);
   });
 
   it("marks the active preset and counts its matching rows", () => {
-    const warningsModel = buildYieldViewModel(rows, { attention: "watchlist" }, {
-      watchlistIds: new Set(["usdc-circle", "eurc-circle", "usdt-tether"]),
+    const warningsModel = buildYieldViewModel(prepareYieldUniverse(rows, new Set(["usdc-circle", "eurc-circle", "usdt-tether"])), {
+      attention: "watchlist",
     });
     expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
     const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
     expect(watchlist?.active).toBe(true);
     expect(watchlist?.count).toBe(3);
 
-    const defaultModel = buildYieldViewModel(rows, {});
+    const defaultModel = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
     expect(defaultModel.matchingPreset).toBeNull();
   });
 
   it("deactivates the preset when an additional filter is toggled", () => {
-    const model = buildYieldViewModel(rows, { warnings: "only", minSafety: "70" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { warnings: "only", minSafety: "70" });
     expect(model.matchingPreset).toBeNull();
   });
 
   it("builds currency tab options conditional on row presence", () => {
-    const model = buildYieldViewModel(rows, {});
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
     const tabValues = model.options.currencyTabs.map((option) => option.value);
 
     // USD + EUR present in rows; AUD/CAD/Other absent → no tabs for those.
@@ -405,7 +408,7 @@ describe("buildYieldViewModel", () => {
       makeYieldRanking({ id: "paxg-paxos", symbol: "PAXG", name: "PAXG" }),
     ];
 
-    const model = buildYieldViewModel(audCadOtherRows, {});
+    const model = buildYieldViewModel(prepareYieldUniverse(audCadOtherRows, null), {});
     const tabValues = model.options.currencyTabs.map((option) => option.value);
 
     expect(tabValues).toEqual(["all", "aud-cad", "other"]);
@@ -421,11 +424,11 @@ describe("buildYieldViewModel", () => {
       makeYieldRanking({ id: "usdc-circle", symbol: "USDC" }),
     ];
 
-    const audCadModel = buildYieldViewModel(audCadOtherRows, { peg: "aud-cad" });
+    const audCadModel = buildYieldViewModel(prepareYieldUniverse(audCadOtherRows, null), { peg: "aud-cad" });
     expect(audCadModel.visibleRows.map((row) => row.id)).toEqual(["audd-novatti", "cadm-mento"]);
     expect(audCadModel.comparisonLabel).toBe("AUD/CAD set");
 
-    const otherModel = buildYieldViewModel(audCadOtherRows, { peg: "other" });
+    const otherModel = buildYieldViewModel(prepareYieldUniverse(audCadOtherRows, null), { peg: "other" });
     expect(otherModel.visibleRows.map((row) => row.id)).toEqual(["zarp-zarp"]);
     expect(otherModel.comparisonLabel).toBe("Other currencies set");
   });
@@ -435,13 +438,13 @@ describe("buildYieldViewModel", () => {
       makeYieldRanking({ id: "audd-novatti", symbol: "AUDD" }),
     ];
 
-    const model = buildYieldViewModel(audCadRows, { peg: "aud-cad" });
+    const model = buildYieldViewModel(prepareYieldUniverse(audCadRows, null), { peg: "aud-cad" });
     expect(model.filters.peg).toBe("aud-cad");
     expect(model.invalidParamKeys).not.toContain("peg");
   });
 
   it("defaults to all when watchlistIds is not provided", () => {
-    const model = buildYieldViewModel(rows, {});
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
 
     expect(model.filters.watchlist).toBe("all");
     expect(model.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "eurc-circle", "usdt-tether"]);
@@ -451,21 +454,21 @@ describe("buildYieldViewModel", () => {
   it("counts watchlist matches and filters to only watchlist rows", () => {
     const watchlistIds = new Set(["usdc-circle", "usdt-tether"]);
 
-    const allModel = buildYieldViewModel(rows, {}, { watchlistIds });
+    const allModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), {});
     expect(allModel.options.watchlist.find((option) => option.value === "only")?.count).toBe(2);
     expect(allModel.visibleRows).toHaveLength(3);
 
-    const onlyModel = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds });
+    const onlyModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { watchlist: "only" });
     expect(onlyModel.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
   });
 
   it("filters watched rows that need attention without forcing warnings/source-changed AND semantics", () => {
     const watchlistIds = new Set(["usdc-circle", "eurc-circle", "usdt-tether"]);
 
-    const allModel = buildYieldViewModel(rows, {}, { watchlistIds });
+    const allModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), {});
     expect(allModel.options.attention.find((option) => option.value === "watchlist")?.count).toBe(3);
 
-    const attentionModel = buildYieldViewModel(rows, { attention: "watchlist" }, { watchlistIds });
+    const attentionModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { attention: "watchlist" });
     expect(attentionModel.visibleRows.map((row) => row.id)).toEqual([
       "usdc-circle",
       "eurc-circle",
@@ -473,23 +476,23 @@ describe("buildYieldViewModel", () => {
     ]);
     expect(attentionModel.comparisonLabel).toBe("Watched rows needing attention");
 
-    const warningAndChangedOnly = buildYieldViewModel(rows, {
+    const warningAndChangedOnly = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), {
       watchlist: "only",
       warnings: "only",
       sourceChanged: "only",
-    }, { watchlistIds });
+    });
     expect(warningAndChangedOnly.visibleRows.map((row) => row.id)).toEqual([]);
   });
 
   it("normalizes invalid watchlist URL params back to default", () => {
-    const model = buildYieldViewModel(rows, { watchlist: "bogus" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { watchlist: "bogus" });
 
     expect(model.filters.watchlist).toBe("all");
     expect(model.invalidParamKeys).toContain("watchlist");
   });
 
   it("yields empty visible rows when watchlist=only and no ids are provided", () => {
-    const model = buildYieldViewModel(rows, { watchlist: "only" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { watchlist: "only" });
 
     expect(model.visibleRows).toEqual([]);
   });
@@ -499,7 +502,7 @@ describe("buildYieldViewModel", () => {
     // best-dollar overrides: { peg: "USD", minSafety: 80 }
     // treasury-grade overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" }
     // Merge result (last-applied wins on conflict) should preserve all keys.
-    const merged = buildYieldViewModel(rows, {
+    const merged = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       peg: "USD",
       minSafety: "80",
       depth: "hide-thin",
@@ -517,7 +520,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("matches each risk-budget stop's filter overrides to its matching key", () => {
-    const conservative = buildYieldViewModel(rows, {
+    const conservative = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       minSafety: "80",
       depth: "hide-thin",
       sourcePosture: "clean",
@@ -525,7 +528,7 @@ describe("buildYieldViewModel", () => {
     });
     expect(conservative.riskBudget.matching).toBe("conservative");
 
-    const balanced = buildYieldViewModel(rows, {
+    const balanced = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       minSafety: "70",
       depth: "hide-thin",
       sourcePosture: "watch",
@@ -533,13 +536,13 @@ describe("buildYieldViewModel", () => {
     });
     expect(balanced.riskBudget.matching).toBe("balanced");
 
-    const opportunistic = buildYieldViewModel(rows, {
+    const opportunistic = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       minSafety: "50",
       warnings: "hide",
     });
     expect(opportunistic.riskBudget.matching).toBe("opportunistic");
 
-    const all = buildYieldViewModel(rows, {});
+    const all = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
     expect(all.riskBudget.matching).toBe("all");
 
     const stops = all.riskBudget.stops.map((stop) => stop.key);
@@ -548,7 +551,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("returns null matchingRiskBudget when filters don't match any stop", () => {
-    const model = buildYieldViewModel(rows, { minSafety: "65" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { minSafety: "65" });
     expect(model.riskBudget.matching).toBeNull();
     expect(model.riskBudget.stops.every((stop) => stop.active === false)).toBe(true);
   });
@@ -558,7 +561,7 @@ describe("buildYieldViewModel", () => {
     //   peg=USD ∧ warnings=only ∧ benchmark=EUR
     // Drop peg → EURC matches (warnings+EUR). Drop benchmark → USDT matches.
     // Drop warnings → still empty (USDC/USDT are USD-not-EUR). Top 3 by gain.
-    const model = buildYieldViewModel(rows, {
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       peg: "USD",
       warnings: "only",
       benchmark: "EUR",
@@ -576,7 +579,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("emits no empty-state suggestions when the payload itself is empty", () => {
-    const model = buildYieldViewModel([], {});
+    const model = buildYieldViewModel(prepareYieldUniverse([], null), {});
     expect(model.emptyState.isEmpty).toBe(true);
     expect(model.emptyState.suggestions).toEqual([]);
   });
@@ -585,7 +588,7 @@ describe("buildYieldViewModel", () => {
     // WHY: regression guard — getActiveFilterSummaries and listFilterRelaxations
     // used to drift; watchlist used to surface as an active chip but not as a relax
     // candidate. The registry now drives both.
-    const model = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds: new Set<string>() });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, new Set<string>()), { watchlist: "only" });
     expect(model.visibleRows).toEqual([]);
     const keys = model.emptyState.suggestions.map((s) => s.filterKey);
     expect(keys).toContain("watchlist");
@@ -612,7 +615,7 @@ describe("buildYieldViewModel", () => {
       }),
     );
 
-    const model = buildYieldViewModel([...cohortRows, ...smallCohort], {});
+    const model = buildYieldViewModel(prepareYieldUniverse([...cohortRows, ...smallCohort], null), {});
     const top = model.visibleRows.find((row) => row.id === "lend-11");
     const bottom = model.visibleRows.find((row) => row.id === "lend-0");
     const smallCohortRow = model.visibleRows.find((row) => row.id === "vault-2");
@@ -629,7 +632,7 @@ describe("buildYieldViewModel", () => {
     // Guards the invariant that every filter key has a registry entry, or the
     // row predicates, active-summary chips, and empty-state suggestion ranker
     // can drift silently.
-    const defaultFilterKeys = Object.keys(buildYieldViewModel([], {}).filters).sort();
+    const defaultFilterKeys = Object.keys(buildYieldViewModel(prepareYieldUniverse([], null), {}).filters).sort();
     const registryKeys = YIELD_FILTER_AXIS_REGISTRY.map((axis) => axis.key as string).sort();
 
     expect(registryKeys).toEqual(defaultFilterKeys);

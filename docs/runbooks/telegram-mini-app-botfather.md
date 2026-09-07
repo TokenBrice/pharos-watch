@@ -9,7 +9,7 @@ Verify quarterly or after a BotFather UI change.
 | Item | Value | Notes |
 |---|---|---|
 | Bot username | `@PharosWatchBot` | — |
-| Main Mini App URL | `https://pharos.watch/pharoswatchbot/app/` | Mirrors `TELEGRAM_MINI_APP_URL` in `worker/src/lib/telegram-webhook-registration.ts`. |
+| Main Mini App URL | `https://pharos.watch/pharoswatchbot/app/` | Mirrors `TELEGRAM_MINI_APP_URL` in `worker/src/lib/telegram/webhook-registration.ts`. |
 | Profile launch ("Launch app") | enabled | Operator toggles this in BotFather; no code path. |
 | Default menu button | `Manage Alerts` → `https://pharos.watch/pharoswatchbot/app/` | Reconciled by the Worker (`setChatMenuButton`); listed here for completeness. |
 | Mini App preview screenshots | _operator-captured outside repo_ | Record current filenames and SHAs during quarterly BotFather review; update when the Mini App UI ships a material change. |

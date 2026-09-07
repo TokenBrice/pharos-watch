@@ -1,19 +1,19 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   isDewsAlertable,
   isDewsDeescalation,
   type ConsolidatedAlerts,
   type DepegWorsening,
   type SafetyChange,
-} from "../lib/telegram-alerts";
+} from "../lib/telegram/alerts";
 import { isSafetyDeescalation } from "./telegram-alert-snapshots";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 
 const GLOBAL_SAFETY_MIN_SCORE_DROP = 3;
 
 export function getSymbol(stablecoinId: string, fallback?: string): string {
-  return TRACKED_META_BY_ID.get(stablecoinId)?.symbol ?? fallback ?? stablecoinId;
+  return WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol ?? fallback ?? stablecoinId;
 }
 
 export function hasEscalation(alerts: ConsolidatedAlerts): boolean {

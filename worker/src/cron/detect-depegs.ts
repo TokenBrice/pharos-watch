@@ -1,11 +1,13 @@
-import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import { throwIfAborted } from "../lib/abort";
 import type { NativePegQuoteSession } from "../lib/native-peg-quotes";
 import { decideDepegAsset, emitDepegDiagnostics } from "./depeg-detection/decision-engine";
-import { hydrateDepegDetection, MAX_OPEN_DEPEG_EVENTS } from "./depeg-detection/hydration";
+import { hydrateDepegDetection } from "./depeg-detection/hydration";
+import { MAX_OPEN_DEPEG_EVENTS } from "../lib/constants";
 import { persistDepegCommands } from "./depeg-detection/persistence";
+import { logOpenDepegEventLimitReached } from "../lib/depeg-helpers";
 import {
   buildDuplicateOpenEventRepair,
   buildOrphanCloseRepair,
@@ -93,14 +95,7 @@ export async function detectDepegEvents(
     .all<OrphanDepegRow>();
   const orphanRows = orphanResult.results ?? [];
   if (orphanRows.length >= MAX_OPEN_DEPEG_EVENTS) {
-    logWorkerEvent({
-      scope: "handler",
-      level: "warn",
-      event: "depeg_open_event_limit_reached",
-      message: "Skipped depeg orphan cleanup because the open-event query reached its limit",
-      status: "degraded",
-      metadata: { pass: "orphan-cleanup", maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
-    });
+    logOpenDepegEventLimitReached("orphan-cleanup");
     return;
   }
 

@@ -6,7 +6,11 @@ import {
 import type { V9CapTrace, V9NRReason } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9PublicCardProjectionInput } from "../safety-score-v9/public";
-import { buildSafetyScoreV9Response, projectSafetyScoreV9Card } from "../safety-score-v9/public";
+import {
+  buildSafetyScoreV9Response,
+  projectSafetyScoreV9Card,
+  projectTopDriver,
+} from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
 import {
   SafetyScoreV9AccessPostureSchema,
@@ -252,6 +256,53 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("projects cap-bound, pillar-bound, and withheld top drivers from the card", () => {
+    const capBound = projectSafetyScoreV9Card(fixture("cap-bound", {
+      score: 64,
+      grade: "C+",
+      caps: [cap({
+        kind: "signal:material-bridge:high",
+        limit: 64,
+        source: "structural",
+        reason: "A material bridge binds.",
+        binding: true,
+      })],
+    }));
+    expect(projectTopDriver(capBound)).toEqual({
+      kind: "cap-bound",
+      label: "signal:material-bridge:high",
+      value: 64,
+      reason: "A material bridge binds.",
+      evidenceFreshness: "current",
+    });
+
+    const pillarBound = projectSafetyScoreV9Card(fixture("pillar-bound", {
+      score: 91.8,
+      grade: "A+",
+    }));
+    expect(projectTopDriver(pillarBound)).toEqual({
+      kind: "pillar-bound",
+      label: "exit",
+      value: 90,
+      reason: null,
+      evidenceFreshness: "current",
+    });
+
+    const withheld = projectSafetyScoreV9Card(fixture("withheld", {
+      score: null,
+      grade: "NR",
+      pillars: { backing: null, exit: 90, control: 94 },
+      nrReasons: [{ code: "missing-pillar", field: "pillars.backing", message: "Backing is missing." }],
+    }));
+    expect(projectTopDriver(withheld)).toEqual({
+      kind: "withheld",
+      label: null,
+      value: null,
+      reason: "Backing is missing.",
+      evidenceFreshness: "current",
+    });
+  });
+
   it("publishes complete, capped, dependency-bound, and NR V9 fixtures", () => {
     const complete = fixture("complete", { score: 91.8, grade: "A+" });
     const capped = fixture("capped", {

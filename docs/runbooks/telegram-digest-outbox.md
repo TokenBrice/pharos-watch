@@ -12,6 +12,16 @@ with an explicitly unavailable safety section may still deliver its unrelated
 content only when deterministic copy checks find no Safety Score, report-card,
 grade/rating, V9-pillar, or binding-cap claim.
 
+Newly enqueued editions render the separate map photo first, followed by the
+four-line map summary as the first text section. A chronic `Standing:` line is
+an expandable context blockquote, and `New Cemetery Entries` / `Tracking
+Changes` remain expandable blockquotes in that same text payload. The optional
+recap CTA is authored only when the resolved rollout is `public` and links to
+the bot's private chat; a missing policy intentionally suppresses the CTA.
+These are payload changes, not in-place migrations:
+accepted photos and text chunks from an existing edition are never re-rendered
+or resent.
+
 | State | Meaning | Automatic action |
 |---|---|---|
 | `pending` | The next chunk is known not to have been accepted yet | Retried by the `*/5` digest-trigger slot after `next_attempt_at` |

@@ -2,6 +2,7 @@
 
 # worktrees
 .worktrees/
+/.claude/worktrees/
 
 # dependencies
 /node_modules
@@ -23,16 +24,20 @@
 
 # generated build artifacts
 /src/generated/*
+# Build-time API snapshots consumed only while exporting stablecoin detail pages.
+/src/generated/stablecoin-detail-snapshots/
 
 # deterministic source-tree projections materialized by `npm run bootstrap:generated`
 /public/maps/world-countries.svg
 /public/openapi.json
 /public/postman/pharos-api.postman_collection.json
 /public/postman/pharos-api.postman_environment.json
-/shared/data/stablecoins/coins.client.generated.json
 /shared/data/stablecoins/coins.compliance.generated.json
+/shared/data/stablecoins/coins.client.list.generated.json
+/shared/data/stablecoins/coins.client.detail/
 /shared/data/stablecoins/coins.generated.json
 /shared/data/stablecoins/coins.telegram-mini-app.generated.json
+/shared/data/stablecoins/coins.worker-runtime.generated.json
 /shared/data/stablecoins/legacy-llama-redirects.generated.json
 /shared/data/stablecoins/report-card-registry-fingerprint.generated.ts
 /src/app/learn/case-studies/content/client-index.ts
@@ -65,10 +70,6 @@ yarn-error.log*
 
 # vercel
 .vercel
-
-# worktrees
-.worktrees/
-worktrees
 
 # claude/codex local agent config
 .claude/settings.local.json
@@ -147,5 +148,4 @@ output/playwright/
 /*-screenshot.png
 .superpowers/
 
-/agents/
 __pycache__/

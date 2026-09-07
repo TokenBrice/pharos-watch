@@ -112,7 +112,7 @@
         },
         "sources": [
           {
-            "label": "Safe Global API — USD0 RegistryAccess admin",
+            "label": "Safe Global API: USD0 RegistryAccess admin",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6e9d65eC80D69b1f508560Bc7aeA5003db1f7FB7"
           }
         ],
@@ -159,7 +159,7 @@
         },
         "sources": [
           {
-            "label": "Safe Global API — USD0 ProxyAdmin owner",
+            "label": "Safe Global API: USD0 ProxyAdmin owner",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xaaDa24358620d4638a2eE8788244c6F4b197Ca16"
           }
         ],
@@ -192,7 +192,7 @@
           "url": "https://etherscan.io/address/0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5#readContract"
         },
         {
-          "label": "Usual analytics — real-time collateral and four-chain USD0 supply verification",
+          "label": "Usual analytics: real-time collateral and four-chain USD0 supply verification",
           "url": "https://docs.usual.money/resources-and-ecosystem/analytics"
         }
       ],

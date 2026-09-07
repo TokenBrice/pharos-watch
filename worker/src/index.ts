@@ -1,5 +1,7 @@
 import type { Env } from "./lib/env";
 
+export { SafetyScoreV9PublicationWorkflow } from "./workflows/safety-score-v9-publication.entry";
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const { handleHttpRequestImpl } = await import("./handlers/http/request-dispatch");

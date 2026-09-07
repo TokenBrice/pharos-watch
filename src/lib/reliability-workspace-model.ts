@@ -19,6 +19,14 @@ export type ReliabilityMode = (typeof RELIABILITY_MODES)[number]["id"];
 export type ReliabilitySeverity = WorkspaceSeverity;
 export type ReliabilityIssueKind = "critical" | "warning" | "maintenance" | "informational" | "unknown";
 
+export const RELIABILITY_ISSUE_KIND_RANK: Readonly<Record<ReliabilityIssueKind, number>> = {
+  informational: 0,
+  maintenance: 1,
+  warning: 2,
+  unknown: 3,
+  critical: 4,
+};
+
 export interface ReliabilityIssue {
   id: string;
   mode: ReliabilityMode;

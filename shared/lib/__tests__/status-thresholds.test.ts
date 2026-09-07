@@ -7,8 +7,15 @@ import {
   isReserveDriftThresholdExceeded,
   STATUS_CACHE_RATIO_OVERRIDES,
   STATUS_CACHE_RATIO_THRESHOLDS,
+  STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_RESERVE_DRIFT_THRESHOLD_POINTS,
 } from "../status-thresholds";
+import { CRON_INTERVALS } from "../cron-jobs";
+
+it("keeps on-chain supply freshness at two Kinesis producer cycles", () => {
+  expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(8 * 3600);
+  expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(2 * CRON_INTERVALS["sync-kinesis-supply"]);
+});
 
 describe("getBlacklistGapStatus", () => {
   it("returns healthy for historical low-ratio blacklist gaps", () => {

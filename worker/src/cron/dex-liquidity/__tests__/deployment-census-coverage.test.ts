@@ -226,17 +226,18 @@ describe("DEX placeholder deployment-census coverage", () => {
       reason: "deploymentCensusMissingOutcome",
     },
     {
-      name: "unsupported provider method",
+      name: "pre-coverage empty provider set contradicted by the live registry",
       deployments: [deployment()],
       rows: [
         outcome({
           outcome: "provider_inaccessible",
           observed_pool_count: 0,
           provider_set_json: "[]",
+          reason: "No registered token-pool provider supports this chain",
         }),
       ],
-      state: "unsupported-method",
-      reason: "deploymentCensusUnsupportedMethod",
+      state: "discovery-deferral",
+      reason: "deploymentCensusSupersededOutcome",
     },
     {
       name: "observed pool lost before scoring",
@@ -410,6 +411,38 @@ describe("DEX placeholder deployment-census coverage", () => {
     });
   });
 
+  it("never reports an unsupported method for a deployment the registry now covers", () => {
+    // The exact Spiko shape: the Soroban row was written by the static
+    // inaccessible pass minutes before Aquarius coverage shipped, and the
+    // windowed crawl has not rotated back to Stellar since.
+    const address = "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX";
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment(), deployment("stellar", address)],
+      outcomeRows: [
+        outcome(),
+        outcome({
+          chain: "stellar",
+          contract_address: address,
+          outcome: "provider_inaccessible",
+          provider_set_json: "[]",
+          reason: "No registered token-pool provider supports this chain",
+        }),
+      ],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.coverage.status).toBe("unknown");
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusSupersededOutcome: 1,
+    });
+    expect(
+      classification.coverage.unsupportedReasons.deploymentCensusUnsupportedMethod ?? 0,
+    ).toBe(0);
+    expect(classification.census.supersededOutcomeCount).toBe(1);
+    expect(classification.census.unsupportedChainDeploymentCount).toBe(0);
+  });
+
   it("keeps an entirely unsupported footprint poisoned under the same reason key", () => {
     const classification = classifyDexPlaceholderCoverage({
       deployments: [deployment("secret", "secret1unsupported")],
@@ -499,6 +532,61 @@ describe("DEX placeholder deployment-census coverage", () => {
     expect(singleRun.census).toMatchObject({
       staleOutcomeCount: 1,
       maxAgeSec: DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+    });
+  });
+
+  it("attributes a rotating attempt only to the deployment in that window", () => {
+    const latestFence = NOW_SEC - 60;
+    const rows = OVERSIZED_FOOTPRINT.map((deployed, index) =>
+      outcome({
+        chain: deployed.chain,
+        contract_address: deployed.address,
+        observed_at: latestFence - 1,
+        discovery_last_crawl_at: latestFence,
+        deployment_last_attempt_at: index === 0 ? latestFence : latestFence - 1,
+        deployment_fence_attribution_at: latestFence,
+      }),
+    );
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: OVERSIZED_FOOTPRINT,
+      outcomeRows: rows,
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.census).toMatchObject({
+      expectedDeploymentCount: OVERSIZED_FOOTPRINT.length,
+      reviewedDeploymentCount: OVERSIZED_FOOTPRINT.length - 1,
+      supersededOutcomeCount: 1,
+      staleOutcomeCount: 0,
+    });
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusSupersededOutcome: 1,
+    });
+  });
+
+  it("falls back to the coin fence when a legacy writer advances it", () => {
+    const legacyFence = NOW_SEC - 30;
+    const rows = OVERSIZED_FOOTPRINT.map((deployed) =>
+      outcome({
+        chain: deployed.chain,
+        contract_address: deployed.address,
+        observed_at: legacyFence - 1,
+        discovery_last_crawl_at: legacyFence,
+        deployment_last_attempt_at: legacyFence - 1,
+        deployment_fence_attribution_at: legacyFence - 60,
+      }),
+    );
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: OVERSIZED_FOOTPRINT,
+      outcomeRows: rows,
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.census).toMatchObject({
+      reviewedDeploymentCount: 0,
+      supersededOutcomeCount: OVERSIZED_FOOTPRINT.length,
     });
   });
 

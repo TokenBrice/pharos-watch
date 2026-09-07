@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 
@@ -36,7 +37,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     // strand committed rows behind stale caches with no retry path: the wrapper records
     // EXECUTION_UNKNOWN and answers same-key retries from it. The write set must therefore
     // fit a single transaction, and an oversized request is refused before any write.
-    const db = mockD1([], { allowUnmatched: true });
+    const db = makeNoopD1();
     const batchSizes: number[] = [];
     const originalBatch = db.batch.bind(db);
     db.batch = async (statements: D1PreparedStatement[]) => {
@@ -77,7 +78,11 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       contract_address: null,
       config_key: null,
     }));
-    const db = mockD1([{ match: "FROM blacklist_events", rows }], { allowUnmatched: true });
+    const db = mockD1([
+      { match: "FROM blacklist_events", rows },
+      { match: "UPDATE blacklist_events", rows: [] },
+      { match: "DELETE FROM cache", rows: [] },
+    ]);
     const batchSizes: number[] = [];
     const originalBatch = db.batch.bind(db);
     db.batch = async (statements: D1PreparedStatement[]) => {
@@ -103,7 +108,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
   });
 
   it("rejects malformed JSON bodies", async () => {
-    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",
         adminKey: "secret-key",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +120,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
   });
 
   it("rejects non-object JSON bodies", async () => {
-    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",
         adminKey: "secret-key",
         headers: { "Content-Type": "application/json" },

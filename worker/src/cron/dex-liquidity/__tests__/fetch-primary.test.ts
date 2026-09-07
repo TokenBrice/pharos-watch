@@ -30,19 +30,23 @@ import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
 import type { CurvePool, LlamaPool } from "../types";
-import { buildCurveLookups, fetchDataSources } from "../fetch-primary";
+import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "../fetch-primary";
 import { buildPoolFingerprint } from "../pool-helpers";
+import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
 import { CURVE_CHAINS } from "../constants";
 import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
+  CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
   CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
   CURVE_R3_METAPOOL_POOL_IDENTITIES,
   CURVE_USD1_COMPOSITE_POOL_ADDRESS,
   shouldRetainCurveCompositePoolIdentity,
 } from "../../measured-execution/curve-composite-identities";
+import { buildCurveCompositeMeasuredExecutionTarget } from "../../measured-execution/curve-composite";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 function createMockDb(): D1Database {
-  return {
+  return makeNoopD1({
     prepare: () => ({
       bind: () => ({
         all: async () => ({ results: [] }),
@@ -56,7 +60,7 @@ function createMockDb(): D1Database {
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  });
 }
 
 // Generate 1000+ minimal pool entries to pass the DL threshold
@@ -328,6 +332,42 @@ describe("fetchDataSources", () => {
     ]);
   });
 
+  it.each([true, false])("keeps list measurements and yield UUIDs when V4 identity enrichment succeeds=%s", async (succeeds) => {
+    const token0 = "0x6c3ea9036406852006290770bedfcaba0e23a0e8";
+    const token1 = "0xdc035d45d973e3ec169d2276ddab16f1e407384f";
+    const uuid = "0899ff3d-adc8-4dae-a516-a94998db3332";
+    const physicalId = "0xe63e32b2ae40601662f760d6bf5d771057324fbd97784fe1d3717069f7b75d45";
+    const row = { ...FAKE_DL_POOLS[0], pool: uuid, chain: "Ethereum", project: "uniswap-v4",
+      exposure: "multi", underlyingTokens: [token0, token1], poolMeta: "0.00%" };
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      const key = String(url);
+      if (key.includes("poolsPro?")) return succeeds
+        ? { response: new Response(""), body: { data: [{ ...row, pool_old: `${physicalId}-ethereum-uniswap-v4`, tvlUsd: 1 }] } }
+        : null;
+      if (key.includes("yields.llama.fi")) return { response: new Response(""), body: { data: [row, ...FAKE_DL_POOLS] } };
+      if (key.includes("api.llama.fi/protocols")) return { response: new Response(""), body: [] };
+      return { response: new Response(""), body: { data: { poolData: [] } } };
+    });
+    const result = await fetchDataSources(null, createMockDb(), {
+      chainAddressToId: new Map([[`ethereum:${token0}`, "pyusd-paypal"]]),
+      symbolToChainScopedIds: new Map(),
+    });
+    expect(result?.pools).toEqual([expect.objectContaining({ pool: succeeds ? physicalId : uuid, tvlUsd: 100000 })]);
+    expect(vi.mocked(buildDlStablecoinPoolsCache)).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ pool: "pool-0" }),
+    ]));
+    if (succeeds) {
+      const known = buildKnownPoolAddresses(result!.pools, new Set(["uniswap-v4"]), new Map(), new Map(), new Map());
+      const incoming = buildPoolIdentity({ chain: "ethereum", protocol: "uniswap-v4",
+        poolAddressOrId: physicalId, tokenAddresses: [token0, token1] });
+      expect(getIdentityDedupReason(incoming, known, { derived: 2, wildcard: 2 })).toBe("exact");
+    }
+    expect(vi.mocked(fetchJsonWithRetry)).toHaveBeenCalledWith(
+      expect.stringContaining("poolsPro?project=uniswap-v4"),
+      expect.anything(), 0, { timeoutMs: 10_000, maxResponseBytes: 4 * 1024 * 1024 },
+    );
+  });
+
   it("fails the yields source closed when a malformed row prevents compaction", async () => {
     const malformedPool = {
       ...FAKE_DL_POOLS[0],
@@ -459,7 +499,7 @@ describe("buildCurveLookups", () => {
   });
 
   it("retains every owner-ratified metapool physical identity and no address variants", () => {
-    expect(CURVE_R3_METAPOOL_POOL_IDENTITIES).toHaveLength(9);
+    expect(CURVE_R3_METAPOOL_POOL_IDENTITIES).toHaveLength(10);
     for (const [chain, poolAddress] of CURVE_R3_METAPOOL_POOL_IDENTITIES) {
       expect(shouldRetainCurveCompositePoolIdentity(chain, poolAddress)).toBe(true);
       expect(
@@ -844,6 +884,83 @@ describe("buildCurveLookups", () => {
     expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x4444444444444444444444444444444444444444")).toBe(true);
+  });
+
+  it("keeps one exact fingerprint when Curve exposes the same physical pool through two registries", async () => {
+    const LUSD = "0x5f98805a4e8be255a32880fdec7f6728c6568ba0";
+    const THREE_CRV = "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490";
+    const makeRegistryView = (registryId: "main" | "factory") => ({
+      address: CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+      name: "LUSD/3Crv",
+      amplificationCoefficient: "500",
+      coins: [
+        {
+          symbol: "LUSD",
+          address: LUSD,
+          poolBalance: "1683708673575847743884936",
+          usdPrice: 1,
+          decimals: "18",
+          isBasePoolLpToken: false,
+        },
+        {
+          symbol: "3Crv",
+          address: THREE_CRV,
+          poolBalance: "9827744887275855307610500",
+          usdPrice: 1,
+          decimals: "18",
+          isBasePoolLpToken: true,
+        },
+      ],
+      underlyingCoins: [],
+      usdTotal: 11_900_000,
+      isMetaPool: true,
+      assetTypeName: "USD",
+      totalSupply: 0,
+      registryId,
+      isBroken: false,
+      virtualPrice: "1",
+      usdTotalExcludingBasePool: 1_700_000,
+      creationTs: 123,
+      basePoolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+      gaugeCrvApy: null,
+    });
+
+    const { curvePoolMap, curvePoolCandidatesByFingerprint } = await buildCurveLookups(
+      [{ data: { poolData: [makeRegistryView("main"), makeRegistryView("factory")] } }],
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    const fingerprint = buildPoolFingerprint("ethereum", "curve", [LUSD, THREE_CRV]);
+    if (!fingerprint) throw new Error("expected a complete LUSD/3Crv fingerprint");
+    const addressEntry = curvePoolMap.get(`ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`);
+    expect(addressEntry?.registryId).toBe("factory");
+    expect(curvePoolMap.get(fingerprint)).toBe(addressEntry);
+    expect(curvePoolCandidatesByFingerprint.get(fingerprint)).toEqual([addressEntry]);
+    expect(buildCurveCompositeMeasuredExecutionTarget({
+      curveData: addressEntry,
+      chain: "ethereum",
+      stablecoinId: "lusd-liquity",
+      chainAddressToId: new Map([
+        [`ethereum:${LUSD}`, "lusd-liquity"],
+        ["ethereum:0x6b175474e89094c44da98b954eedeac495271d0f", "dai-makerdao"],
+        ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"],
+        ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt-tether"],
+      ]),
+      stablecoinPriceById: new Map([
+        ["lusd-liquity", 1],
+        ["dai-makerdao", 1],
+        ["usdc-circle", 1],
+        ["usdt-tether", 1],
+      ]),
+      retainedTvlUsd: 1_700_000,
+      capturedAt: 1_788_220_800,
+    })).toMatchObject({
+      stablecoinId: "lusd-liquity",
+      adapterProfileId: "curve-stableswap-ng-metapool-underlying-v1",
+      poolId: `ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`,
+    });
   });
 
   it("keeps the appended Curve API chains at the tail of the fetch order", () => {

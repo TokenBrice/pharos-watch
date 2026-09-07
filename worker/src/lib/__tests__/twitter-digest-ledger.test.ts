@@ -29,6 +29,7 @@ afterEach(() => {
 describe("Twitter digest delivery ledger", () => {
   it("retains execution_unknown after a throw-after-send error and never reposts automatically", async () => {
     const { sqlite, db } = createHarness();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const post = vi.fn(async () => {
       throw new Error("connection closed after request transmission");
     });
@@ -43,10 +44,47 @@ describe("Twitter digest delivery ledger", () => {
       reason: "execution-unknown",
     });
     expect(post).toHaveBeenCalledTimes(1);
+    const executionUnknownLog = errorSpy.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as { level?: string; event?: string })
+      .find((line) => line.event === "twitter_digest_execution_unknown");
+    expect(executionUnknownLog).toMatchObject({ level: "error" });
+  });
+
+  it("logs an error when a stale sending claim is reconciled as execution_unknown", async () => {
+    const { sqlite, db } = createHarness();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    sqlite
+      .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(
+        KEY,
+        JSON.stringify({
+          schemaVersion: 1,
+          state: "sending",
+          editionNumber: 17,
+          attempts: 1,
+          createdAt: NOW_SEC - 200,
+          updatedAt: NOW_SEC - 121,
+          sendingAt: NOW_SEC - 121,
+        }),
+        NOW_SEC - 121,
+      );
+
+    await expect(deliverTwitterDigestWithLedger(db, KEY, 17, NOW_SEC, vi.fn())).resolves.toEqual({
+      status: "skipped",
+      reason: "execution-unknown",
+    });
+    const staleLog = errorSpy.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as { level?: string; event?: string; metadata?: Record<string, unknown> })
+      .find((line) => line.event === "twitter_digest_execution_unknown");
+    expect(staleLog).toMatchObject({
+      level: "error",
+      metadata: { error: "delivery_owner_lost" },
+    });
   });
 
   it("allows bounded retries after definitive rejection", async () => {
     const { sqlite, db } = createHarness();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const rejection = Object.assign(new Error("Twitter API 403: denied"), {
       twitterDeliveryFailureKind: "definitive_failure",
     });
@@ -64,6 +102,13 @@ describe("Twitter digest delivery ledger", () => {
       reason: "attempt-limit",
     });
     expect(post).toHaveBeenCalledTimes(3);
+    const attemptsExhaustedLog = errorSpy.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as { level?: string; event?: string; metadata?: Record<string, unknown> })
+      .find((line) => line.event === "twitter_digest_attempts_exhausted");
+    expect(attemptsExhaustedLog).toMatchObject({
+      level: "error",
+      metadata: { attempts: 3, maxAttempts: 3 },
+    });
   });
 
   it("records sent state and the returned tweet id", async () => {

@@ -1,5 +1,5 @@
-import { parseTargetArgs, resolveTicker } from "../../lib/telegram-alerts";
-import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { parseTargetArgs, resolveTicker } from "../../lib/telegram/alerts";
+import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   buildNotFoundMessage,
 } from "../telegram-webhook-messages";

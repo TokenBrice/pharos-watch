@@ -16,8 +16,10 @@ import { LazySection } from "@/components/lazy-section";
 import { McapChart } from "@/components/mcap-chart";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
+import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import { STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { cn } from "@/lib/utils";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -53,14 +55,24 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
   // 90d default: recent structure is the read this page optimizes for; "all"
   // compresses a decade of supply into an unreadable first paint.
   const [range, setRange] = useState<TimeRangeOption>("90d");
+  const needsFullHistory = range === "1y" || range === "all";
+  const fullHistoryQuery = useSupplyHistory(stablecoinId, STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS, {
+    enabled: needsFullHistory,
+  });
+  const activeHistory = needsFullHistory && fullHistoryQuery.data.length > 0
+    ? fullHistoryQuery.data
+    : supplyHistory;
+  const activeUpdatedAtMs = needsFullHistory && fullHistoryQuery.data.length > 0
+    ? fullHistoryQuery.dataUpdatedAt
+    : updatedAtMs;
 
   return (
     <MarketDataChartSyncProvider>
       <MarketDataSectionBody
         stablecoinId={stablecoinId}
-        supplyHistory={supplyHistory}
+        supplyHistory={activeHistory}
         pegCurrency={pegCurrency}
-        updatedAtMs={updatedAtMs}
+        updatedAtMs={activeUpdatedAtMs}
         frozenNote={frozenNote}
         range={range}
         setRange={setRange}

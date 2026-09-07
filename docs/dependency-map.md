@@ -36,6 +36,20 @@ The page combines:
 
 A held V9 publication is shown with the shared status notice. Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The graph takes its edge set only from `dependencyGraph.edges`; it has no static fallback source.
 
+## Dependency Coverage Audit
+
+Run `npm run audit:coverage -- --domain=dependency-coverage` for the authored registry view, or add `--prod` to compare it with the current public V9 cards, live dependency graph, and stablecoin market-cap ordering. The production lane consumes the current report-v5 contract: cards publish `score`, while graph edges publish `kind` (`serial` or `basket`) and use a null weight for serial claims.
+
+The report separates graph invariants from curation queues. Self-edges, duplicate edges, cycles, invalid targets, stale reviews, and malformed dependency provenance remain structural failures. Unlinked reserve slices, unique symbol-delimited active-target matches, sub-1% named exposures, and candidate IDs remain review leads: they can identify missing coverage, but never create an edge automatically. A curator must still establish current claim identity and either a measured basket weight or reviewed serial/mechanism semantics. Eligible assets, zero-balance routes, transformed strategy inputs, LP constituents, and same-symbol collisions are not dependencies by themselves.
+
+When live inputs are supplied, compare three layers before calling a link missing:
+
+1. authored reserve, variant, and manual relationships;
+2. dependency IDs emitted by the admitted live reserve snapshot;
+3. serial and basket edges in the accepted V9 publication.
+
+This distinction matters because a live adapter can legitimately supersede stale authored percentages, while a uniquely named active target that remains unlinked or is still described as untracked is a targeted review lead. Role-specific dependencies (`exit-dependency`, `control-operator`, and `oracle-nav`) are scored on cards but are not part of the serial/basket map projection described below.
+
 ## Dependency Semantics
 
 V9 dependency edges are serial or basket, and each carries a four-value `materiality` that also records whether the upstream score resolved (`serial-blocked`, `basket-bounded-unknown`).

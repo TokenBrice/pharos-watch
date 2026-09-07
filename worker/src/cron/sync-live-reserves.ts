@@ -8,8 +8,14 @@ import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
   type ReserveSyncStateRecord,
-} from "../lib/live-reserves-store";
-import { syncReserveCoin } from "./sync-live-reserves-core";
+} from "../lib/live-reserves/store";
+import {
+  createAdapterLatencyCollector,
+  syncReserveCoin,
+  type AdapterLatencyCollector,
+  type AdapterLatencyStage,
+  type AdapterTelemetryProgress,
+} from "./sync-live-reserves-core";
 import {
   buildSharedSourceCacheKey,
   buildReserveAdapterAttemptChainError,
@@ -17,18 +23,18 @@ import {
   CONFIGURED_COINS,
   SYNC_ORDERED_CONFIGURED_COINS,
   type ConfiguredCoin,
+  type LiveReserveBreakerOutcome,
   type LiveReserveConfig,
+  type LiveReserveDeferredTailOutcome,
+  type LiveReservePhaseTimings,
+  type LiveReserveQueueCounts,
   LIVE_RESERVE_QUEUE_HASH,
 } from "./sync-live-reserves-shared";
 import { finalizeReserveSyncRun, type ReserveSyncAttemptFailureGroup } from "./sync-live-reserves-finalize";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
 import {
-  loadLiveReserveCursorState,
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
-  type LiveReserveGlobalCursorOwner,
-  type LiveReserveCursorTailState,
-  type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import {
   resolveLiveReserveSyncBudgetConfig,
@@ -43,31 +49,17 @@ import {
 import {
   didReserveSyncAttemptBecomeAuthoritative,
   repairAuthoritativeReserveSyncHistory,
-} from "../lib/live-reserves-store";
+} from "../lib/live-reserves/store";
 
 interface ReserveCoinQueueResult {
-  synced: number;
-  failed: number;
-  skipped: number;
-  circuitSkipped: number;
-  deferredSkipped: number;
+  counts: LiveReserveQueueCounts;
   warningMessages: string[];
   coinsWithErrors: string[];
   coinsWithWarnings: string[];
-  breakerKeys: Set<string>;
-  breakerOutcomes: Map<string, boolean>;
-  deferredCoins: number;
-  nextCursorStablecoinId: string | null;
-  cursorTailState: LiveReserveCursorTailState | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  cursorTailError: string | null;
-  runBudgetTruncationCount: number;
+  breaker: LiveReserveBreakerOutcome;
+  deferredTail: LiveReserveDeferredTailOutcome;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
-  attemptedCoins: number;
-  adapterPhaseMs: number;
-  d1PhaseMs: number;
+  phaseTimings: Pick<LiveReservePhaseTimings, "adapter" | "d1CoinPersistence">;
 }
 
 function createAbortableAttemptSignal(
@@ -125,6 +117,7 @@ async function reportLiveReserveProgress(
     currentCoinId?: string;
     currentAdapter?: string;
     currentBreakerKey?: string;
+    adapterTelemetryProgress: AdapterTelemetryProgress;
   },
 ): Promise<void> {
   await reportCronProgress(reportProgress, {
@@ -136,11 +129,125 @@ async function reportLiveReserveProgress(
       synced: update.synced,
       failed: update.failed,
       skipped: update.skipped,
+      adapterTelemetryProgress: update.adapterTelemetryProgress,
       ...(update.currentCoinId ? { currentCoinId: update.currentCoinId } : {}),
       ...(update.currentAdapter ? { currentAdapter: update.currentAdapter } : {}),
       ...(update.currentBreakerKey ? { currentBreakerKey: update.currentBreakerKey } : {}),
     },
   });
+}
+
+interface RequestCachePromiseState {
+  unsettledReorders: number;
+  settled: boolean;
+}
+
+/**
+ * Observes the existing request-cache Map protocol without changing request
+ * labels or adding work to adapters. A miss is a newly inserted promise. A
+ * hit is the delete/reinsert LRU move performed for an existing promise; the
+ * one success-settlement reorder is excluded from the hit total.
+ */
+class InstrumentedRequestCache extends Map<string, Promise<unknown>> {
+  private readonly backing: Map<string, Promise<unknown>>;
+  private readonly collector: AdapterLatencyCollector;
+  private readonly promiseStates = new WeakMap<Promise<unknown>, RequestCachePromiseState>();
+  private readonly lastDeleted = new Map<string, Promise<unknown>>();
+
+  constructor(backing: Map<string, Promise<unknown>>, collector: AdapterLatencyCollector) {
+    super();
+    this.backing = backing;
+    this.collector = collector;
+    for (const [key, promise] of backing) {
+      super.set(key, promise);
+      this.observePromise(promise, false);
+    }
+  }
+
+  private observePromise(promise: Promise<unknown>, countMiss: boolean): RequestCachePromiseState {
+    const existing = this.promiseStates.get(promise);
+    if (existing) return existing;
+
+    const state: RequestCachePromiseState = { unsettledReorders: 0, settled: false };
+    this.promiseStates.set(promise, state);
+    if (countMiss) this.collector.recordRequestCacheMiss();
+    void promise.then(
+      () => {
+        state.settled = true;
+        for (let index = 1; index < state.unsettledReorders; index++) {
+          this.collector.recordRequestCacheHit();
+        }
+      },
+      () => {
+        state.settled = true;
+        for (let index = 0; index < state.unsettledReorders; index++) {
+          this.collector.recordRequestCacheHit();
+        }
+      },
+    );
+    return state;
+  }
+
+  override set(key: string, promise: Promise<unknown>): this {
+    const state = this.observePromise(promise, !this.promiseStates.has(promise));
+    if (this.lastDeleted.get(key) === promise) {
+      if (state.settled) {
+        this.collector.recordRequestCacheHit();
+      } else {
+        state.unsettledReorders += 1;
+      }
+      this.lastDeleted.delete(key);
+    }
+    super.set(key, promise);
+    this.backing.set(key, promise);
+    return this;
+  }
+
+  override delete(key: string): boolean {
+    const promise = super.get(key);
+    const deleted = super.delete(key);
+    this.backing.delete(key);
+    if (deleted && promise) this.lastDeleted.set(key, promise);
+    return deleted;
+  }
+
+  override clear(): void {
+    super.clear();
+    this.backing.clear();
+    this.lastDeleted.clear();
+  }
+}
+
+function classifyAdapterAttemptChain(config: LiveReserveConfig): string {
+  const chains = new Set<string>();
+  const input = config.inputs.primary;
+  if (input.kind === "onchain-evm") chains.add(input.chain);
+  if (input.kind === "onchain-solana") chains.add("solana");
+
+  const visit = (value: unknown, key?: string, depth = 0): void => {
+    if (depth > 8 || value == null) return;
+    if (key === "chain" && typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (/^[a-z0-9._-]+$/.test(normalized)) chains.add(normalized.slice(0, 80));
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const nested of value) visit(nested, undefined, depth + 1);
+      return;
+    }
+    if (typeof value === "object") {
+      for (const [nestedKey, nested] of Object.entries(value as Record<string, unknown>)) {
+        visit(nested, nestedKey, depth + 1);
+      }
+    }
+  };
+  visit(config.params);
+
+  if (chains.size > 1) return "multi";
+  if (chains.size === 1) return chains.values().next().value!;
+  return input.kind === "http-json" || input.kind === "http-html" || input.kind === "indexer"
+    ? "offchain"
+    : "multi";
 }
 
 async function runAdapterAttempt(
@@ -149,27 +256,109 @@ async function runAdapterAttempt(
   adapter: ReserveAdapterDefinition,
   signal: AbortSignal,
   adapterTimeoutMs: number,
+  stage: AdapterLatencyStage,
+  cacheHit: boolean,
+  telemetry: AdapterLatencyCollector,
   adapterCtx?: AdapterContext,
 ): Promise<AdapterResult> {
   const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, adapterTimeoutMs);
+  const startedMs = Date.now();
+  let ioCallCount = 0;
+  let waveCount = 0;
+  let activeIo = 0;
+  let attemptErrored = true;
+  const limiter = createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO);
+  const instrumentedLimiter = {
+    run<T>(label: string, factory: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T> {
+      ioCallCount += 1;
+      return limiter.run(label, () => {
+        if (activeIo === 0) waveCount += 1;
+        activeIo += 1;
+        try {
+          const operation = factory();
+          void operation.then(
+            () => { activeIo -= 1; },
+            () => { activeIo -= 1; },
+          );
+          return operation;
+        } catch (error) {
+          activeIo -= 1;
+          throw error;
+        }
+      }, options);
+    },
+  };
   try {
-    return await raceWithAbortSignal(
+    const result = await raceWithAbortSignal(
       adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, {
+        nowSec: Math.floor(startedMs / 1_000),
         abortSignal: attemptSignal,
-        ioLimiter: createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO),
+        ioLimiter: instrumentedLimiter,
       })),
       attemptSignal,
       "adapter-timeout",
     );
+    attemptErrored = false;
+    return result;
   } finally {
+    telemetry.recordAttempt({
+      adapterKey: adapter.key,
+      chain: classifyAdapterAttemptChain(config),
+      stage,
+      cacheHit,
+      ioCallCount,
+      waveCount,
+      elapsedMs: Date.now() - startedMs,
+      error: attemptErrored,
+    });
     cleanup();
   }
+}
+
+function observeSharedAdapterResult(
+  promise: Promise<AdapterResult>,
+  input: {
+    adapterKey: string;
+    chain: string;
+    telemetry: AdapterLatencyCollector;
+  },
+): Promise<AdapterResult> {
+  const startedMs = Date.now();
+  return promise.then(
+    (result) => {
+      input.telemetry.recordAttempt({
+        adapterKey: input.adapterKey,
+        chain: input.chain,
+        stage: "primary",
+        cacheHit: true,
+        ioCallCount: 0,
+        waveCount: 0,
+        elapsedMs: Date.now() - startedMs,
+        error: false,
+      });
+      return result;
+    },
+    (error) => {
+      input.telemetry.recordAttempt({
+        adapterKey: input.adapterKey,
+        chain: input.chain,
+        stage: "primary",
+        cacheHit: true,
+        ioCallCount: 0,
+        waveCount: 0,
+        elapsedMs: Date.now() - startedMs,
+        error: true,
+      });
+      throw error;
+    },
+  );
 }
 
 function createReserveAdapterRunner(args: {
   signal: AbortSignal;
   adapterCtx: AdapterContext;
   adapterTimeoutMs: number;
+  telemetry: AdapterLatencyCollector;
 }): (
   coin: ConfiguredCoin,
   config: LiveReserveConfig,
@@ -184,16 +373,42 @@ function createReserveAdapterRunner(args: {
   ): Promise<AdapterResult> => {
     const cacheKey = buildSharedSourceCacheKey(config, adapter);
     if (!cacheKey) {
-      return runAdapterAttempt(coin, config, adapter, args.signal, args.adapterTimeoutMs, args.adapterCtx);
+      return runAdapterAttempt(
+        coin,
+        config,
+        adapter,
+        args.signal,
+        args.adapterTimeoutMs,
+        "primary",
+        false,
+        args.telemetry,
+        args.adapterCtx,
+      );
     }
 
     const cached = sharedSourceResults.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      return observeSharedAdapterResult(cached, {
+        adapterKey: adapter.key,
+        chain: classifyAdapterAttemptChain(config),
+        telemetry: args.telemetry,
+      });
+    }
 
     // Retain the promise (including rejections) for the remainder of the run
     // so every coin sharing this source sees a single fetch outcome. The
     // circuit breaker handles cross-run retry suppression.
-    const resultPromise = runAdapterAttempt(coin, config, adapter, args.signal, args.adapterTimeoutMs, args.adapterCtx);
+    const resultPromise = runAdapterAttempt(
+      coin,
+      config,
+      adapter,
+      args.signal,
+      args.adapterTimeoutMs,
+      "primary",
+      false,
+      args.telemetry,
+      args.adapterCtx,
+    );
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
   };
@@ -221,6 +436,9 @@ function createReserveAdapterRunner(args: {
             adapter,
             args.signal,
             args.adapterTimeoutMs,
+            "fallback",
+            false,
+            args.telemetry,
             args.adapterCtx,
           );
           const primaryMessage = toErrorMessage(primaryError);
@@ -263,22 +481,26 @@ async function runReserveCoinQueue(args: {
   checkpoint?: ScheduledCheckpointIdentity;
   startIndex: number;
   fullQueue: readonly ConfiguredCoin[];
-  manageGlobalCursor: boolean;
-  globalCursorOwner: LiveReserveGlobalCursorOwner | null;
+  telemetry: AdapterLatencyCollector;
 }): Promise<ReserveCoinQueueResult> {
-  let synced = 0;
-  let failed = 0;
-  let skipped = 0;
-  let circuitSkipped = 0;
-  let deferredSkipped = 0;
-  let deferredCoins = 0;
-  let nextCursorStablecoinId: string | null = null;
-  let cursorTailState: LiveReserveCursorTailState | null = null;
-  let cursorRecordedAt: number | null = null;
-  let cursorTailCompletedAt: number | null = null;
-  let cursorTailFailedAt: number | null = null;
-  let cursorTailError: string | null = null;
-  let runBudgetTruncationCount = 0;
+  const counts: LiveReserveQueueCounts = {
+    synced: 0,
+    failed: 0,
+    skipped: 0,
+    circuitSkipped: 0,
+    deferredSkipped: 0,
+    deferredCoins: 0,
+    attemptedCoins: 0,
+  };
+  let deferredTail: LiveReserveDeferredTailOutcome = {
+    nextCursorStablecoinId: null,
+    cursorTailState: null,
+    cursorRecordedAt: null,
+    cursorTailCompletedAt: null,
+    cursorTailFailedAt: null,
+    cursorTailError: null,
+    runBudgetTruncationCount: 0,
+  };
   const warningMessages: string[] = [];
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
@@ -287,9 +509,7 @@ async function runReserveCoinQueue(args: {
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
   const total = args.orderedCoins.length;
-  let attemptedCoins = 0;
-  let adapterPhaseMs = 0;
-  let d1PhaseMs = 0;
+  const phaseTimings = { adapter: 0, d1CoinPersistence: 0 };
   let lastProgressAtMs = 0;
   let lastProgressItemsDone = -1;
   let checkpointBoundaryAdvanced = false;
@@ -317,24 +537,14 @@ async function runReserveCoinQueue(args: {
         args.orderedCoins.slice(index),
         Math.floor(Date.now() / 1000),
         args.signal,
-        {
-          manageGlobalCursor: args.manageGlobalCursor,
-          globalCursorOwner: args.globalCursorOwner,
-        },
       );
       for (const key of deferred.additionalBreakerKeys) {
         breakerKeys.add(key);
       }
-      deferredCoins = deferred.deferredCoins;
-      nextCursorStablecoinId = deferred.nextCursorStablecoinId;
-      cursorTailState = deferred.cursorTailState;
-      cursorRecordedAt = deferred.cursorRecordedAt;
-      cursorTailCompletedAt = deferred.cursorTailCompletedAt;
-      cursorTailFailedAt = deferred.cursorTailFailedAt;
-      cursorTailError = deferred.cursorTailError;
-      runBudgetTruncationCount = deferred.runBudgetTruncationCount;
-      skipped += deferredCoins;
-      deferredSkipped += deferredCoins;
+      counts.deferredCoins = deferred.counts.deferredCoins;
+      deferredTail = deferred.deferredTail;
+      counts.skipped += counts.deferredCoins;
+      counts.deferredSkipped += counts.deferredCoins;
       break;
     }
 
@@ -352,12 +562,13 @@ async function runReserveCoinQueue(args: {
         message: `Syncing ${coin.id}`,
         itemsDone: globalIndex,
         itemsTotal: args.fullQueue.length,
-        synced,
-        failed,
-        skipped,
+        synced: counts.synced,
+        failed: counts.failed,
+        skipped: counts.skipped,
         currentCoinId: coin.id,
         currentAdapter: config.adapter,
         currentBreakerKey: breakerKey,
+        adapterTelemetryProgress: args.telemetry.progress(),
       });
       lastProgressAtMs = Date.now();
       lastProgressItemsDone = globalIndex;
@@ -387,17 +598,17 @@ async function runReserveCoinQueue(args: {
           }
         : {}),
     });
-    attemptedCoins++;
-    adapterPhaseMs += result.adapterDurationMs;
-    d1PhaseMs += result.d1DurationMs;
+    counts.attemptedCoins++;
+    phaseTimings.adapter += result.adapterDurationMs;
+    phaseTimings.d1CoinPersistence += result.d1DurationMs;
 
     if (result.status === "synced") {
-      synced++;
+      counts.synced++;
     } else if (result.status === "skipped") {
-      skipped++;
-      circuitSkipped++;
+      counts.skipped++;
+      counts.circuitSkipped++;
     } else {
-      failed++;
+      counts.failed++;
       coinsWithErrors.push(coin.id);
       if (result.attemptFailureSummaries) {
         attemptFailureSummaries.push({
@@ -433,28 +644,14 @@ async function runReserveCoinQueue(args: {
   }
 
   return {
-    synced,
-    failed,
-    skipped,
-    circuitSkipped,
-    deferredSkipped,
+    counts,
     warningMessages,
     coinsWithErrors,
     coinsWithWarnings,
-    breakerKeys,
-    breakerOutcomes,
-    deferredCoins,
-    nextCursorStablecoinId,
-    cursorTailState,
-    cursorRecordedAt,
-    cursorTailCompletedAt,
-    cursorTailFailedAt,
-    cursorTailError,
-    runBudgetTruncationCount,
+    breaker: { breakerKeys, breakerOutcomes },
+    deferredTail,
     attemptFailureSummaries,
-    attemptedCoins,
-    adapterPhaseMs,
-    d1PhaseMs,
+    phaseTimings,
   };
 }
 
@@ -480,21 +677,6 @@ export async function syncLiveReserves(
       `live reserve queue hash changed (${checkpoint.queueHash} -> ${LIVE_RESERVE_QUEUE_HASH}); refusing unsafe suffix replay`,
     );
   }
-  const recoveryCheckpointOwned = checkpoint?.state === "recovering" || checkpoint?.sourceAttemptNo != null;
-  const manageGlobalCursor = !recoveryCheckpointOwned;
-  const checkpointCursorOwner: LiveReserveGlobalCursorOwner | null = checkpoint
-    ? {
-        scheduleKey: checkpoint.scheduleKey,
-        slotStartedAt: checkpoint.slotStartedAt,
-        attemptNo: checkpoint.attemptNo,
-        executionGeneration: checkpoint.executionGeneration,
-        invocationId: checkpoint.invocationId,
-        queueHash: checkpoint.queueHash,
-      }
-    : null;
-  const cursorState: LoadedLiveReserveCursorState | null = manageGlobalCursor
-    ? await loadLiveReserveCursorState(db)
-    : null;
   let checkpointResumeId = checkpoint?.nextItemKey ?? null;
   if (checkpoint && checkpointResumeId && checkpoint.currentDomainAttemptId) {
     const authoritative = await didReserveSyncAttemptBecomeAuthoritative(
@@ -528,15 +710,10 @@ export async function syncLiveReserves(
       checkpoint = { ...checkpoint, nextItemKey: checkpointResumeId, currentDomainAttemptId: null, itemsDone: completedIndex + 1 };
     }
   }
-  // Cursor semantics over the evidence-class-ordered queue: a cursored run
-  // resumes at the first coin deferred by the previous run and processes only
-  // that deferred suffix. It deliberately does not wrap back to the
-  // high-priority head in the same run; otherwise a slow weak-probe tail could
-  // exhaust the resumed budget and rewrite independent head feeds as skipped.
-  // Once the deferred suffix completes, finalization clears the cursor and the
-  // next scheduled run starts again from the top of the priority queue. If the
-  // cursor coin is no longer in the queue (order or coverage changed between
-  // deploys), fall back to starting from the top of the ordered queue.
+  // A checkpoint's next-item pointer is the sole run-level resume mechanism.
+  // A resumed run processes only the deferred suffix and does not wrap back to
+  // the high-priority head; once the suffix completes, checkpoint finalization
+  // clears the pointer and the next scheduled run starts from the queue head.
   const fullQueueTotal = SYNC_ORDERED_CONFIGURED_COINS.length;
   const checkpointResumeIndex = checkpointResumeId
     ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === checkpointResumeId)
@@ -546,37 +723,24 @@ export async function syncLiveReserves(
   if (checkpointResumeId && checkpointResumeIndex < 0) {
     throw new Error(`live reserve checkpoint item ${checkpointResumeId} no longer exists in the queue`);
   }
-  const globalResumeId = cursorState?.nextStablecoinId ?? null;
-  const globalResumeIndex = globalResumeId
-    ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === globalResumeId)
-    : -1;
-  const checkpointHasUnfinishedAttempt = checkpoint?.currentDomainAttemptId != null;
-  const startIndex = recoveryCheckpointOwned || checkpointHasUnfinishedAttempt
-    ? checkpointResumeIndex
-    : Math.max(checkpointResumeIndex, Math.max(0, globalResumeIndex));
-  const frontierItemId = SYNC_ORDERED_CONFIGURED_COINS[startIndex]?.id ?? null;
-  if (
-    checkpoint
-    && manageGlobalCursor
-    && (checkpoint.nextItemKey !== frontierItemId || checkpoint.itemsDone !== startIndex)
-  ) {
-    await advanceLiveReserveCheckpoint(db, checkpointIdentity!, {
-      nextItemKey: frontierItemId,
-      itemsDone: startIndex,
-    });
-    checkpoint = { ...checkpoint, nextItemKey: frontierItemId, itemsDone: startIndex };
-  }
-  const effectiveResumeId = startIndex > 0 ? frontierItemId : null;
+  const startIndex = checkpointResumeIndex;
+  const effectiveResumeId = startIndex > 0
+    ? SYNC_ORDERED_CONFIGURED_COINS[startIndex]?.id ?? null
+    : null;
   const orderedCoins = startIndex >= fullQueueTotal
     ? []
     : selectConfiguredCoinRunQueue(SYNC_ORDERED_CONFIGURED_COINS, effectiveResumeId);
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const setupPhaseMs = Date.now() - runStartedMs;
+  const telemetry = createAdapterLatencyCollector();
+  const requestCache = new InstrumentedRequestCache(
+    adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
+    telemetry,
+  );
   const effectiveAdapterCtx: AdapterContext = {
     db,
     ...(adapterCtx ?? {}),
-    nowSec: runStartedAt,
-    requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
+    requestCache,
   };
   const cohortTotal = orderedCoins.length;
 
@@ -590,12 +754,14 @@ export async function syncLiveReserves(
     synced: 0,
     failed: 0,
     skipped: 0,
+    adapterTelemetryProgress: telemetry.progress(),
   });
 
   const runAdapter = createReserveAdapterRunner({
     signal,
     adapterCtx: effectiveAdapterCtx,
     adapterTimeoutMs: budgetConfig.adapterTimeoutMs,
+    telemetry,
   });
   const queueResult = await runReserveCoinQueue({
     db,
@@ -609,8 +775,7 @@ export async function syncLiveReserves(
     checkpoint: checkpointIdentity,
     startIndex: Math.max(0, startIndex),
     fullQueue: SYNC_ORDERED_CONFIGURED_COINS,
-    manageGlobalCursor,
-    globalCursorOwner: manageGlobalCursor ? checkpointCursorOwner : null,
+    telemetry,
   });
 
   return finalizeReserveSyncRun({
@@ -621,13 +786,15 @@ export async function syncLiveReserves(
     runStartedMs,
     reportProgress,
     budgetConfig,
-    loadedCursorState: cursorState,
-    manageGlobalCursor,
-    checkpointOwned: checkpoint != null,
-    recoveryCursorOwner: recoveryCheckpointOwned ? checkpointCursorOwner : null,
-    setupPhaseMs,
-    queuePhaseMs: Date.now() - runStartedMs - setupPhaseMs,
-    cohortItemsDoneBeforeRun: Math.max(0, startIndex),
     ...queueResult,
+    phaseTimings: {
+      setup: setupPhaseMs,
+      queue: Date.now() - runStartedMs - setupPhaseMs,
+      ...queueResult.phaseTimings,
+    },
+    cohortItemsDoneBeforeRun: Math.max(0, startIndex),
+    checkpointOwned: checkpointIdentity != null,
+    adapterLatency: telemetry.finalize(),
+    adapterTelemetryProgress: telemetry.progress(),
   });
 }

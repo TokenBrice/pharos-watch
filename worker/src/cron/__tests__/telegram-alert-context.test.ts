@@ -1,29 +1,45 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildAlertContextLines } from "../telegram-alert-context";
-import {
-  makeWorkerReportCardsV9Response,
-  makeWorkerV9Card,
-} from "../../test-helpers/report-cards-v9";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const mocks = vi.hoisted(() => ({
-  loadActiveSafetyScoreSource: vi.fn(),
+  loadActiveAlertSafetySourceAssessment: vi.fn(),
   loadStablecoinsCache: vi.fn(),
   logTelegramEvent: vi.fn(),
   getCache: vi.fn(),
   getMintBurnConfigsForStablecoin: vi.fn(),
 }));
 
-vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
+vi.mock("../../lib/alert-safety-source-cache", () => ({
+  loadActiveAlertSafetySourceAssessment: mocks.loadActiveAlertSafetySourceAssessment,
 }));
+
+function safetyAssessment(
+  snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
+  state: "ok" | "stale" = "ok",
+) {
+  return {
+    state,
+    ageSeconds: 60,
+    generation: "safety-v9-alert-source-v1",
+    envelope: {
+      generation: "safety-v9-alert-source-v1",
+      safetyScoreIdentity: { model: "v9", schemaVersion: 1, methodologyVersion: "9.0" },
+      publicationGenerationId: "report-cards:v9:v1:test",
+      methodologyVersion: "9.0",
+      publishedAt: 1,
+      snapshot,
+    },
+  };
+}
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: mocks.loadStablecoinsCache,
 }));
 
-vi.mock("../../lib/telegram-log", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/telegram-log")>()),
+vi.mock("../../lib/telegram/log", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/telegram/log")>()),
   logTelegramEvent: mocks.logTelegramEvent,
 }));
 
@@ -37,11 +53,7 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 
 describe("buildAlertContextLines", () => {
   beforeEach(() => {
-    const snapshot = makeWorkerReportCardsV9Response({ cards: [] });
-    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue({
-      kind: "v9",
-      snapshot,
-    });
+    mocks.loadActiveAlertSafetySourceAssessment.mockReset().mockResolvedValue(safetyAssessment({}));
     mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
     mocks.logTelegramEvent.mockReset();
     mocks.getMintBurnConfigsForStablecoin.mockReset().mockReturnValue([]);
@@ -58,9 +70,9 @@ describe("buildAlertContextLines", () => {
         ? { value: JSON.stringify({ netFlowUsd: 12_300_000, updatedAt: nowSec }), updatedAt: nowSec }
         : null,
     );
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle", "dai-makerdao"]);
 
@@ -70,28 +82,37 @@ describe("buildAlertContextLines", () => {
     expect(mocks.getCache).toHaveBeenCalledTimes(1);
   });
 
-  it("omits safety context when the canonical identity is unavailable", async () => {
-    mocks.loadActiveSafetyScoreSource.mockRejectedValueOnce(new Error("identity mismatch"));
-    const db = {
+  it("omits safety context when the alert source assessment fails", async () => {
+    mocks.loadActiveAlertSafetySourceAssessment.mockRejectedValueOnce(new Error("identity mismatch"));
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
     expect(context.get("usdc-circle") ?? "").not.toContain("Safety");
   });
 
-  it("includes V9 model provenance in canonical safety context", async () => {
-    const snapshot = makeWorkerReportCardsV9Response({
-      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
-    });
-    mocks.loadActiveSafetyScoreSource.mockResolvedValueOnce({
-      kind: "v9",
-      snapshot,
-    });
-    const db = {
+  it("omits safety context when the alert source is not ok", async () => {
+    mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValueOnce(
+      safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }, "stale"),
+    );
+    const db = makeNoopD1({
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
-    } as unknown as D1Database;
+    });
+
+    const context = await buildAlertContextLines(db, ["usdc-circle"]);
+
+    expect(context.get("usdc-circle") ?? "").not.toContain("Safety");
+  });
+
+  it("includes V9 model provenance from the thin alert envelope", async () => {
+    mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValueOnce(
+      safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }),
+    );
+    const db = makeNoopD1({
+      prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
+    });
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
@@ -101,7 +122,7 @@ describe("buildAlertContextLines", () => {
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {
     const bindCounts: number[] = [];
     let nextRowOffset = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => {
         let currentBindCount = 0;
         const statement = {
@@ -129,7 +150,7 @@ describe("buildAlertContextLines", () => {
         };
         return statement;
       }),
-    } as unknown as D1Database;
+    });
 
     const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
     const context = await buildAlertContextLines(db, ids);
@@ -141,7 +162,7 @@ describe("buildAlertContextLines", () => {
 
   it("logs a warning and keeps successful liquidity chunks when one chunk fails", async () => {
     let call = 0;
-    const db = {
+    const db = makeNoopD1({
       prepare: vi.fn(() => {
         const statement = {
           bind: (..._binds: string[]) => statement,
@@ -161,7 +182,7 @@ describe("buildAlertContextLines", () => {
         };
         return statement;
       }),
-    } as unknown as D1Database;
+    });
 
     const ids = Array.from({ length: 91 }, (_, index) => `coin-${index}`);
     const context = await buildAlertContextLines(db, ids);

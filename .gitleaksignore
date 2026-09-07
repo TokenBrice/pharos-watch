@@ -114,6 +114,7 @@
 688aa4125e02f2b260839f4e49f376366c86bb15:docs/plans/implemented/CCIP-mint-burn-processing.md:generic-api-key:36
 69519d679c69096cca4386cec834bbbf9eb89d50:shared/data/stablecoins/coins.generated.json:generic-api-key:66373
 6d0cc50a02bf6966aed87319aaaa064cbe82d9ce:worker/wrangler.toml:generic-api-key:55
+709ffa5ca190d80f4c39331923d0bc828a9e4265:worker/src/cron/dex-liquidity/process-pool-execution-capability.ts:generic-api-key:877
 74c034a3d8c6ea084a6c2e61338e1846e25666b1:shared/data/stablecoins/coins/ggbr-goldfish-gold.json:generic-api-key:59
 75000268fb411124118a66f5420b92d485f2a238:docs/api-reference.md:generic-api-key:2617
 80167254da7dcb282114ecbdf3d4d4436dfa6938:agents/plans/historical/2026-04-03-api-key-gating-implementation-plan.md:curl-auth-header:918
@@ -129,6 +130,13 @@ ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/data-coverage-wa
 ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:71
 ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:75
 ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:83
+6b9a7c03571d63fff891f277f55078e00b73f1f2:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:3285
+9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1177
+9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1178
+9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1200
+9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1201
+9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1248
+9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1249
 831812bb0006ec24d09b56d7bca7ae3a721b2e8b:worker/src/lib/mint-burn-contracts-helpers.ts:generic-api-key:42
 870dd2552c52ac369a4e104e09ec4c892cb2be9a:worker/src/cron/reserve-adapters/__tests__/chainlink-nav.test.ts:generic-api-key:20
 8a3a3cd6611be19ee5fbdd3c2b3947361702d0f6:shared/data/stablecoins/coins.generated.json:generic-api-key:14920
@@ -315,3 +323,4 @@ bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__
 74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:211
 5738f03812cba4324cb3ab97ae815e62d7dc9109:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:632
 5738f03812cba4324cb3ab97ae815e62d7dc9109:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:634
+63185e73c0aeee25574d9df2a087f48719a404a4:scripts/maintenance/publish-safety-score-map.ts:generic-api-key:38

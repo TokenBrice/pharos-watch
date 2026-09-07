@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "../../../types";
 import { findCollateralProseReserveDriftFindings } from "../collateral-prose-reserve-drift";
-import { makeStablecoinMeta } from "./test-support";
+import { makeCatalogCoin, NON_RWA_STABLECOIN_FLAGS } from "./test-support";
 
 interface CoinOverrides extends Partial<StablecoinMeta> {
   id: string;
@@ -9,16 +9,8 @@ interface CoinOverrides extends Partial<StablecoinMeta> {
 }
 
 function makeCoin(overrides: CoinOverrides): StablecoinMeta {
-  return makeStablecoinMeta({
-    name: overrides.id,
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
+  return makeCatalogCoin({
+    flags: NON_RWA_STABLECOIN_FLAGS,
     ...overrides,
   });
 }

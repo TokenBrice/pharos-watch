@@ -23,7 +23,7 @@ Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated i
 
 #### Live Analytical Data (check when refreshing or writing high-profile coins)
 
-The detail page at `pharos.watch/stablecoin/{id}` shows live scoring and analytical data. Use the browser tool (claude-in-chrome or Playwright in Claude Code; `agent-browser` in Codex) to check:
+The detail page at `pharos.watch/stablecoin/{id}` shows live scoring and analytical data. Use available browser-inspection capability (mapped in `docs/process/agent-artifacts.md#harness-configuration`) to check:
 
 - **Report card (Safety Score V9)**: Overall grade (A+ to F, or NR when evidence is insufficient) and the three pillars — backing, exit, economic control — with per-mechanism breakdown bars, binding caps ("why not higher"), and the mechanism review panel. Look for the interesting story: a strong overall grade with one weak pillar, a cap-held score, or an NR on a well-known coin
 - **Peg score**: 0-100 score, active depeg status, depeg event count, worst historical deviation

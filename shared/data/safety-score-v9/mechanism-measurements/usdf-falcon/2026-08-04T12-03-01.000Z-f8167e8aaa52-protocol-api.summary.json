@@ -1,0 +1,17 @@
+{
+  "mechanism": "usdf-falcon",
+  "date": "2026-08-04T12-03-01.000Z-f8167e8aaa52-protocol-api",
+  "sha256": "f8694d31599db7c99ee6c184a87b27359bda12b9f8bfa8293aabbe91a5090618",
+  "bytes": 70444,
+  "r2Key": "captures/usdf-falcon/2026-08-04T12-03-01.000Z-f8167e8aaa52-protocol-api.json.gz",
+  "summary": {
+    "schemaVersion": 2,
+    "kind": "protocol-api-mechanism-measurement",
+    "assetId": "usdf-falcon",
+    "archetype": "synthetic-delta-neutral",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-08-04T12-03-01.000Z-f8167e8aaa52-protocol-api.json",
+    "capturedAt": "2026-08-05T06:41:19.098Z",
+    "snapshotId": "f8167e8aaa52d812367247df1f29729b88eea500f1580ad534aa3c612f69026a",
+    "snapshotObservedAt": "2026-08-04T12:03:01.000Z"
+  }
+}

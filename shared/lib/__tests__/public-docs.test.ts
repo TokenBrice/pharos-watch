@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- tests read checked-in public docs from the repository root only. */
 
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -10,7 +9,7 @@ const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..",
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(21);
+    expect(PUBLIC_DOCS.length).toBe(19);
   });
 
   it("points every entry at an existing single-file markdown source", () => {

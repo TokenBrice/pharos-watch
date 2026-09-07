@@ -50,7 +50,7 @@ function usage() {
     "  --checkpoint-jsonl <path>    Atomic resumable sample log (default: agents/night-watch-evidence.jsonl)",
     "  --no-resume                  Ignore matching samples in an existing checkpoint",
     "  --fixture <path>             Render/analyze an existing evidence JSON instead of collecting",
-    "  --dry-run                   Build the schedule matrix and empty report without network/D1 reads",
+    "  --dry-run                   Print preview (or fixture report) without writes or network/D1 reads",
     "  --local                     Use local D1 for --include-d1",
     "  --cf-access-client-id <v>    Cloudflare Access service token client id (or CF_ACCESS_CLIENT_ID)",
     "  --cf-access-client-secret <v> Cloudflare Access service token secret (or CF_ACCESS_CLIENT_SECRET)",
@@ -853,14 +853,12 @@ export function renderNightWatchMarkdown(evidence) {
   ].join("\n");
 }
 
-function writeOutputs(evidence, args) {
+function prepareOutputs(evidence) {
   const redactedEvidence = redactEvidence(evidence);
   const analysis = summarizeAnalysis(redactedEvidence);
   const withAnalysis = { ...redactedEvidence, analysis };
   const markdown = renderNightWatchMarkdown(withAnalysis);
-  writeTextAtomic(args.evidenceJsonPath, `${JSON.stringify(withAnalysis, null, 2)}\n`);
-  writeTextAtomic(args.outputPath, `${markdown.trimEnd()}\n`);
-  return withAnalysis;
+  return { withAnalysis, markdown: `${markdown.trimEnd()}\n` };
 }
 
 function sleep(ms) {
@@ -928,9 +926,15 @@ async function collectEvidence(args) {
 export async function runCli(argv, stdout = process.stdout) {
   const args = parseArgs(argv);
   const evidence = await collectEvidence(args);
-  const withAnalysis = writeOutputs(evidence, args);
+  const { withAnalysis, markdown } = prepareOutputs(evidence);
+  if (!args.dryRun) {
+    writeTextAtomic(args.evidenceJsonPath, `${JSON.stringify(withAnalysis, null, 2)}\n`);
+    writeTextAtomic(args.outputPath, markdown);
+  }
   if (args.json) {
     stdout.write(`${JSON.stringify(withAnalysis, null, 2)}\n`);
+  } else if (args.dryRun) {
+    stdout.write(markdown);
   } else {
     stdout.write(`Night-watch report written to ${args.outputPath}\nEvidence JSON written to ${args.evidenceJsonPath}\n`);
   }

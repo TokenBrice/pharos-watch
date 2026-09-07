@@ -34,7 +34,6 @@ import {
   buildDdrResponse,
   buildDiagnosticSnapshot,
 } from "./depeg-resolver/public-projection";
-import { reapRecoveredPreLockIncidents } from "./depeg-resolver/pre-lock-incident-reaper";
 import { DDR_SNAPSHOT_TTL_SEC } from "./depeg-resolver/constants";
 import type { ComputeDepegResolverV2Options, DdrLineage } from "./depeg-resolver/types";
 import { abortIf } from "./depeg-resolver/utils";
@@ -175,11 +174,9 @@ export async function computeDepegResolver(
   abortIf(options.signal, "compute-depeg-resolver");
   const nowSec = options.runAt;
 
-  const v2PreLockIncidentsClosed = await reapRecoveredPreLockIncidents({
-    stores: storeContracts,
-    db,
-    nowSec,
-  });
+  const v2PreLockIncidentsClosed = await (
+    storeContracts.closeRecoveredPreLockIncidents?.(db, { nowSec }) ?? 0
+  );
   const policyUniverseRows = await loadPolicyUniverseEvents(db);
   const loadedActiveRows = await loadActiveConfirmedEvents(db);
   const incidentRows = policyUniverseRows.length > 0 ? policyUniverseRows : loadedActiveRows;

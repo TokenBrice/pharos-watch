@@ -14,6 +14,20 @@ export interface CuratedOnchainSupplyContractConfig {
   allowZeroSupply?: boolean;
 }
 
+export const CURATED_SUPPLY_RPC_DEFAULTS = {
+  plume: { rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" }, plasma: { rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+  monad: { rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" }, etherlink: { rpcUrl: "https://node.mainnet.etherlink.com" },
+  berachain: { rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" }, linea: { rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
+  katana: { rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" }, fraxtal: { rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" }, hyperevm: { rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
+} as const satisfies Readonly<Record<string, Omit<CuratedOnchainSupplyContractConfig, "chain">>>;
+
+function supplyProbeChain(
+  chain: keyof typeof CURATED_SUPPLY_RPC_DEFAULTS,
+  overrides: Omit<CuratedOnchainSupplyContractConfig, "chain"> = {},
+): CuratedOnchainSupplyContractConfig {
+  return { chain, ...CURATED_SUPPLY_RPC_DEFAULTS[chain], ...overrides };
+}
+
 export interface CuratedAggregateOnchainSupplyContract {
   config: CuratedOnchainSupplyContractConfig;
   contract: OnchainSupplyContract;
@@ -97,8 +111,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // currently read exactly zero.
   "acrdx-anemoy-apollo": [
     { chain: "ethereum" },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
-    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
+    supplyProbeChain("plume"),
+    supplyProbeChain("monad"),
     { chain: "optimism" },
     { chain: "base", allowZeroSupply: true },
     { chain: "solana", allowZeroSupply: true },
@@ -129,7 +143,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // publishes at 13.00% rather than its true 12.05%.
   "mre7yield-midas": [
     { chain: "ethereum" },
-    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    supplyProbeChain("etherlink"),
     { chain: "starknet" },
   ],
   // sUSN is Ethereum-native with Noon-operated Hyperlane warp representations on
@@ -169,10 +183,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "susde-ethena": [
     { chain: "ethereum" },
     { chain: "plasma", rpcUrl: "https://rpc.plasma.to" },
-    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
-    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+    supplyProbeChain("linea"),
+    supplyProbeChain("fraxtal"),
     { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm" },
-    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
+    supplyProbeChain("berachain"),
     { chain: "zircuit", rpcUrl: "https://mainnet.zircuit.com" },
     { chain: "metis", rpcUrl: "https://andromeda.metis.io/?owner=1088", fallbackRpcUrl: "https://metis-rpc.publicnode.com" },
     // The X Layer OFT is deployed and reviewed but currently holds no supply.
@@ -235,10 +249,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "optimism" },
     { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
     { chain: "plume", rpcUrl: "https://rpc.plume.org" },
-    { chain: "katana", rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" },
+    supplyProbeChain("katana"),
     { chain: "bsc" },
     { chain: "avalanche" },
-    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    supplyProbeChain("plasma"),
   ],
   // savUSD is Avant's Avalanche-native staking vault mirrored by Chainlink CCIP
   // BurnMint pools. Verified 2026-07-29: the Avalanche CCIP LockRelease pool
@@ -250,12 +264,12 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "savusd-avant": [
     { chain: "avalanche" },
     { chain: "ethereum" },
-    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
-    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
-    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
+    supplyProbeChain("linea"),
+    supplyProbeChain("plasma"),
+    supplyProbeChain("berachain"),
     { chain: "bsc", allowZeroSupply: true },
     { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://monad.drpc.org" },
-    { chain: "katana", rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com", allowZeroSupply: true },
+    supplyProbeChain("katana", { allowZeroSupply: true }),
     { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org", allowZeroSupply: true },
     { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
   ],
@@ -275,7 +289,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "arbitrum" },
     { chain: "ethereum" },
     { chain: "base" },
-    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    supplyProbeChain("plasma"),
   ],
   // sYUSD stakes each chain's own YUSD in a local ERC-4626 vault. Verified
   // 2026-07-29: the BSC vault's asset() is BSC YUSD and its totalAssets()
@@ -298,13 +312,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "bsc" },
     { chain: "solana" },
-    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io", allowZeroSupply: true },
+    supplyProbeChain("hyperevm", { allowZeroSupply: true }),
   ],
   "slvon-ondo": [
     { chain: "ethereum" },
     { chain: "bsc" },
     { chain: "solana" },
-    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io", allowZeroSupply: true },
+    supplyProbeChain("hyperevm", { allowZeroSupply: true }),
   ],
   // mHYPER's four deployments are independent EIP-1967 proxies with different
   // implementations and no shared adapter. Verified 2026-07-29: the only
@@ -313,9 +327,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // than a bridge lockbox, so the reviewed deployments sum. Katana holds dust.
   "mhyper-midas": [
     { chain: "ethereum" },
-    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
-    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
-    { chain: "katana", rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com", allowZeroSupply: true },
+    supplyProbeChain("monad"),
+    supplyProbeChain("plasma"),
+    supplyProbeChain("katana", { allowZeroSupply: true }),
   ],
   // sDOLA's four remote deployments share byte-identical owner-minted ERC-20
   // bytecode with no token()/l1Token()/bridge() surface and no Ethereum escrow,
@@ -326,7 +340,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base", allowZeroSupply: true },
     { chain: "optimism", allowZeroSupply: true },
     { chain: "arbitrum", allowZeroSupply: true },
-    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com", allowZeroSupply: true },
+    supplyProbeChain("berachain", { allowZeroSupply: true }),
   ],
   // thBILL is a LayerZero OFT mesh whose Ethereum leg is the MyOFTAdapter
   // lockbox 0xfDD22Ce6D1F66bc0Ec89b20BF16CcB6670F55A5a. Verified 2026-07-29:
@@ -340,7 +354,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "arbitrum" },
     { chain: "base", allowZeroSupply: true },
-    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
+    supplyProbeChain("hyperevm"),
     { chain: "stable", rpcUrl: "https://rpc.stable.xyz", fallbackRpcUrl: "https://stable.drpc.org" },
   ],
   // wiTRY's Ethereum escrow 0x698b7518711bDe4832fDc19F5262DF705c713006 holds
@@ -362,7 +376,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "base" },
     { chain: "polygon" },
-    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+    supplyProbeChain("fraxtal"),
     { chain: "codex", rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com", allowZeroSupply: true },
     { chain: "morph-l2", rpcUrl: "https://rpc.morphl2.io", fallbackRpcUrl: "https://morph.drpc.org" },
   ],
@@ -374,7 +388,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // the canonical total is reallocated rather than summed.
   "syrupusdt-maple": [
     { chain: "ethereum" },
-    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    supplyProbeChain("plasma"),
     { chain: "bsc" },
     { chain: "mantle", rpcUrl: "https://rpc.mantle.xyz", fallbackRpcUrl: "https://mantle-rpc.publicnode.com" },
     { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org" },
@@ -393,7 +407,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "arbitrum" },
     { chain: "solana" },
     { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org", allowZeroSupply: true },
-    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
+    supplyProbeChain("monad"),
     { chain: "robinhood", rpcUrl: "https://rpc.mainnet.chain.robinhood.com", allowZeroSupply: true },
     { chain: "tempo", rpcUrl: "https://rpc.tempo.xyz", allowZeroSupply: true },
   ],
@@ -403,7 +417,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // totalSupply(), so Ethereum is the conserved total and is reallocated.
   "srusd-reservoir": [
     { chain: "ethereum" },
-    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
+    supplyProbeChain("berachain"),
   ],
   // PGOLD is issuer-native on Arbitrum, which is the conserved global total:
   // its Chainlink CCIP LockRelease pool 0x5b5CE779709360A6B6906b79CAc5029A5B7CCdc4
@@ -439,7 +453,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "polygon" },
     { chain: "base" },
-    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    supplyProbeChain("etherlink"),
     { chain: "solana" },
   ],
   // USTB is native on Ethereum and Solana; Plume is Superstate issuer-native
@@ -451,7 +465,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // from buildChainRpcs(), so pin the reviewed public endpoint.
   "ustb-superstate": [
     { chain: "ethereum" },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    supplyProbeChain("plume"),
     { chain: "solana" },
   ],
   // VBILL is Securitize-native on Avalanche, Ethereum, BSC and Solana (no
@@ -502,7 +516,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "polygon" },
     { chain: "ethereum" },
     { chain: "optimism", allowZeroSupply: true },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    supplyProbeChain("plume"),
   ],
   // mMEV is Ethereum-native with independent Midas burn/mint deployments on
   // Plume and Etherlink. Verified 2026-08-18: Ethereum 2,195,114.48626855
@@ -510,8 +524,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // matching CoinGecko circulating 2,954,577.425036322. Etherlink is 25.59%.
   "mmev-midas": [
     { chain: "ethereum" },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
-    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    supplyProbeChain("plume"),
+    supplyProbeChain("etherlink"),
   ],
   // mTBILL's five Pharos deployments are independent Midas EIP-1967 proxies.
   // Verified 2026-08-18: Ethereum 60,728,248.53125032 + Base 342,458.83707271
@@ -523,8 +537,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "mtbill-midas": [
     { chain: "ethereum" },
     { chain: "base" },
-    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org", allowZeroSupply: true },
+    supplyProbeChain("etherlink"),
+    supplyProbeChain("plume", { allowZeroSupply: true }),
     { chain: "rootstock", rpcUrl: "https://public-node.rsk.co", allowZeroSupply: true },
   ],
   // spUSDC is a per-chain Spark ERC-4626 over local USDC. The reviewed
@@ -553,7 +567,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // = 515,951.6646808991, exact CoinGecko totalSupply; Fraxtal needs a public RPC.
   "sdusd-dtrinity": [
     { chain: "ethereum" },
-    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+    supplyProbeChain("fraxtal"),
   ],
   // sUSDD is an independent SavingsUsdd ERC-4626 on Ethereum and BSC over local USDD.
   // No Tron sUSDD token in issuer deployment/collateral pages or CoinGecko platforms.
@@ -589,7 +603,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "gbpe-monerium": [
     { chain: "ethereum", allowZeroSupply: true },
     { chain: "gnosis" },
-    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
+    supplyProbeChain("linea"),
     { chain: "arbitrum" },
     { chain: "base" },
     { chain: "polygon" },
@@ -619,6 +633,115 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // Verified 2026-08-19: Optimism 6,641,129.778467 + Base 992,314.925958 =
   // 7,633,444.704425, exact CoinGecko circulating. Base is 13.00% of the total.
   "jpyt-dephaser": [{ chain: "optimism" }, { chain: "base" }],
+  // BRLV is Crown's Base-native token. The Base BRLVCanonicalGateway's outbound
+  // path calls BRLV burnAssets (and its inbound path mintAssets) rather than
+  // escrowing, and the Ethereum bridgedBRLV is a relayer-minted representation,
+  // so the two reviewed deployments sum. Verified 2026-09-01: Base
+  // 373,483,803.832830 (block 50734266) + Ethereum 24.500000 (block 25881782)
+  // = 373,483,828.332830, bit-for-bit CoinGecko's total supply
+  // 373,483,828.3328299. The Ethereum leg is 0.0000066% of the total and can be
+  // burned to nothing, so allow it to read zero.
+  "brlv-crown": [{ chain: "base" }, { chain: "ethereum", allowZeroSupply: true }],
+  // syzUSD is natively issued on Plasma and carried to Ethereum and Monad by
+  // Chainlink CCIP BurnMintTokenPool 1.6.1 spokes whose Plasma counterparty is
+  // LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. Verified
+  // 2026-09-01: that pool escrows 23,243,788.814824 syzUSD at Plasma block
+  // 31317318 against an Ethereum 809,744.184523 (block 25881782) + Monad
+  // 10,153,703.107279 (block 101016246) spoke total of 10,963,447.291802, so the
+  // Plasma totalSupply 53,725,933.522240 already contains the remote float and is
+  // reallocated rather than summed. CoinGecko's total supply 63,879,636.629519 is
+  // its Plasma+Monad platform sum to the wei (it does not index Ethereum) and
+  // therefore double counts Monad; conserving the canonical total restates the
+  // published supply by -15.82% (krwq-iq double-count precedent). Monad is
+  // absent from buildChainRpcs() and Plasma only entered it for the reviewed
+  // Curve factory capture, so both legs pin reviewed public endpoints here and
+  // stay independent of that registry.
+  "syzusd-yuzu": [
+    supplyProbeChain("plasma"),
+    { chain: "ethereum" },
+    supplyProbeChain("monad"),
+  ],
+  // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
+  // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token
+  // Indonesia 4-of-6 Safe, so no leg escrows another and the deployments sum.
+  // Harmony is a dormant legacy lock-mint representation frozen at 1,201,000 IDRT
+  // (0.0013% of the total, unchanged across the last ~25M Harmony blocks); it is
+  // configured so the route publishes a share, and may read zero if the issuer
+  // ever retires it. Verified 2026-09-01: Ethereum 44,876,696,516.00 (block
+  // 25881782) + BSC 31,739,108,295.00 (block 119325993) + Polygon
+  // 14,040,000,000.000000 (block 93035233) + Harmony 1,201,000.00 (block 93230607)
+  // = 90,657,005,811.00. RESTATEMENT: CoinGecko's 173,856,905,811 reconciles to
+  // the unit as (live Ethereum+BSC+Polygon totalSupply sum + a flat
+  // 40,000,000,000 issuer-declared addend) - bit-exact against history through
+  // 2025-08-30, when the series froze (the issuer's own supply API at
+  // api-client.rupiahtoken.com/v1/supply is dead) - so 43,201,101,000 of
+  // subsequent on-chain burns were never applied, and the Harmony 1,201,000 CG
+  // never counted closes the 83,199,900,000 delta exactly. Known gap: the
+  // issuer's own site names two further ledgers this aggregate cannot read -
+  // IDRTB (BEP-2 IDRTB-178, chain sunset Jun 2024, ~90B with 98.98% parked in
+  // one post-migration address) and IDRTL (permissioned Luniverse, no public
+  // explorer); the flat 40B addend is issuer-declared supply on those unreadable
+  // ledgers and stays outside this aggregate, like the mRe7YIELD TAC leg.
+  // Publishing the pinned reads restates supply by -47.86%; even crediting
+  // IDRTB/IDRTL at face value, CoinGecko's own basis would give ~130.7B today,
+  // never the frozen 173.9B (owner-ratified 2026-09-01).
+  // Harmony is in CHAIN_META but absent from buildChainRpcs(); both official
+  // shard-0 endpoints were verified 2026-09-01 (eth_chainId 1666600000).
+  "idrt-rupiah-token": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "polygon" },
+    {
+      chain: "harmony",
+      rpcUrl: "https://api.harmony.one",
+      fallbackRpcUrl: "https://api.s0.t.hmny.io",
+      allowZeroSupply: true,
+    },
+  ],
+  // nTBILL is issuer-native Nest BoringVault issuance on Ethereum, Plume,
+  // Arbitrum and BNB Chain; the Solana leg is a LayerZero OFT representation that
+  // burns/debits on the source instead of escrowing. Verified 2026-09-01: the
+  // Plume composer 0x719e01497ed0e4e917fd0482355b9a64ddbad873 and the Plume
+  // NestCCTPRelayer 0x7de01896d36bea9cf072ac64e41685418941d8be both hold 0 nTBILL
+  // at block 90785605, so nothing escrows and the five legs sum: Ethereum
+  // 2,955.015774 (block 25881782) + Plume 2,488,459.187098 (block 90785605) +
+  // Arbitrum 7.923304 (block 500602971) + BSC 83.632247 (block 119325999, 18
+  // decimals) + Solana 3,273.899133 (slot 443398872) = 2,494,779.657556, -0.0008%
+  // against CoinGecko's 2,494,800.266208 (which indexes only Ethereum, Plume and
+  // Arbitrum). Arbitrum and BSC hold seed dust, so allow them to read zero. Plume
+  // is absent from buildChainRpcs().
+  "ntbill-nest": [
+    { chain: "ethereum" },
+    supplyProbeChain("plume"),
+    { chain: "arbitrum", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "solana" },
+  ],
+  // cNGN is canonically issued on Bantu, which locks Bantu cNGN and mints each
+  // destination representation. Bantu is not a tracked chain and has no probe
+  // family, so there is no readable canonical total to reallocate out of; the six
+  // reviewed representations are minted against Bantu locks and never against one
+  // another, so summing them cannot double count and yields the tracked bridged
+  // float. Verified 2026-09-01: Base 2,078,532,783.999372 (block 50734268) + BSC
+  // 954,400,390.667190 (block 119326002) + Celo 133,788,554.003925 (block
+  // 76357127) + Solana 60,250,023.000000 (slot 443398878) + Ethereum
+  // 137,326.400001 (block 25881783) + Polygon 12,575.400000 (block 93035235) =
+  // 3,227,121,653.470488, -3.09% against CoinGecko's live (not frozen)
+  // 3,329,961,223.913752. Known gaps that stay outside this aggregate rather than
+  // failing it closed (mRe7YIELD/TAC precedent): the unreadable Bantu-native
+  // float, a Lisk representation (0xc7ab2c35ea37236e644c24a4e4a1911c082887c0,
+  // 5,023 cNGN; Lisk has no chain registry entry) and a second Base cNGN
+  // (0xc930784d6e14e2fc2a1f49be1068dc40f24762d3, 1,000,370) that CoinGecko indexes
+  // in place of the reviewed 0x46c85152 deployment. Ethereum and Polygon are each
+  // under 0.005% of supply, so allow them to read zero.
+  "cngn-compliant-naira": [
+    { chain: "base" },
+    { chain: "bsc" },
+    { chain: "celo" },
+    { chain: "solana" },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+  ],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
@@ -639,6 +762,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "syrupusdc-maple": "ethereum",
   "srusd-reservoir": "ethereum",
   "pgold-pleasing": "arbitrum",
+  "syzusd-yuzu": "plasma",
 };
 
 export interface CuratedAggregateEscrowResidualConfig {

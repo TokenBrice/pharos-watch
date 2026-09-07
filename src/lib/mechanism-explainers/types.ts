@@ -1,6 +1,8 @@
 import type { MechanismArchetype } from "@shared/types";
 
 export interface ArchetypeStep {
+  /** Kebab-case, unique within its array, and immutable after publication (editorial-selector identity). */
+  readonly id: string;
   readonly title: string;
   readonly body: string;
 }
@@ -16,6 +18,8 @@ export interface ArchetypeCoin {
 }
 
 export interface ArchetypeVariation {
+  /** Kebab-case, unique within its array, and immutable after publication (editorial-selector identity). */
+  readonly id: string;
   readonly title: string;
   readonly body: string;
 }

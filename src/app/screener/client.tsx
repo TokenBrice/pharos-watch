@@ -23,7 +23,6 @@ import {
   hasActiveFilters,
   normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
-  projectMintAuthority,
   sortScreenerRows,
   type ScreenerRow,
   type ScreenerSortKey,
@@ -44,6 +43,7 @@ import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -88,6 +88,8 @@ function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<num
   return prevMonth == null ? undefined : [prevMonth, current];
 }
 
+// The two endpoints are the all-time worst tracked deviation and the current
+// published deviation; this is a range, not a 30-day history window.
 function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
   if (pegCoin?.currentDeviationBps == null) return undefined;
   return [pegCoin.worstDeviationBps ?? pegCoin.currentDeviationBps, pegCoin.currentDeviationBps];
@@ -173,22 +175,11 @@ export function ScreenerClient() {
       const supplySeries = buildSupplySeries(asset);
       if (supplySeries) supplySeriesById.set(asset.id, supplySeries);
     }
-    const pegById = new Map<string, PegSummaryCoin>();
-    for (const coin of pegData?.coins ?? []) {
-      pegById.set(coin.id, coin);
-    }
+    const pegById = buildPegSummaryCoinMap(pegData?.coins);
     const projectedSafety = reportData
       ? buildV9SafetyTableMap(reportData, reportData.safetyScoreIdentity)
       : null;
     const safetyById = projectedSafety?.status === "available" ? projectedSafety.value : {};
-    const dewsById = new Map<string, number>();
-    for (const [id, entry] of Object.entries(stressData?.signals ?? {})) {
-      dewsById.set(id, entry.score);
-    }
-    const liquidityById = new Map<string, number | null>();
-    for (const [id, entry] of Object.entries(dexData ?? {})) {
-      liquidityById.set(id, entry.liquidityScore);
-    }
 
     const rows: ScreenerRow[] = [];
     for (const meta of CLIENT_TRACKED_STABLECOINS) {
@@ -207,8 +198,8 @@ export function ScreenerClient() {
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? 0,
         pegScore: pegCoin?.pegScore ?? null,
-        dewsScore: dewsById.get(meta.id) ?? null,
-        liquidityScore: liquidityById.get(meta.id) ?? null,
+        dewsScore: stressData?.signals[meta.id]?.score ?? null,
+        liquidityScore: dexData?.[meta.id]?.liquidityScore ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
         safetyBackingScore: safety?.pillars.backing.score ?? null,
@@ -225,7 +216,7 @@ export function ScreenerClient() {
         safetyBindingCapReason: safety?.bindingCapReason ?? null,
         custodyModel: resolveCustodyModel(meta),
         blacklistable: projectBlacklistable(meta.blacklistStatus),
-        mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
+        mintAuthority: meta.mintAuthorityStatus ?? "unknown",
         mintAuthorityScore: mintAuthorityScore.score,
         mintAuthorityScoreBand: mintAuthorityScore.bandKey,
         mintAuthorityScoreLabel: mintAuthorityScore.scoreLabel,

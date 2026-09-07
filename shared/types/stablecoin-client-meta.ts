@@ -92,33 +92,36 @@ export type GeniusClientProfile = Pick<GeniusSourceProfile, (typeof GENIUS_CLIEN
 
 export type GeniusComplianceProfile = Pick<GeniusSourceProfile, (typeof GENIUS_COMPLIANCE_PROFILE_FIELDS)[number]>;
 
-/** Canonical ordered list of source fields copied into the client projection. */
-export const STABLECOIN_CLIENT_META_FIELDS = [
+/** Canonical source fields in the cross-coin list projection. */
+export const STABLECOIN_CLIENT_LIST_FIELDS = [
   "id",
   "name",
   "symbol",
-  "oneLiner",
-  "marketAvailability",
-  "flags",
-  "mechanismArchetype",
-  "mechanismArchetypeReview",
-  "implementationLaunchDate",
-  "archetypeOverride",
-  "geckoId",
   "protocolSlug",
+  "flags",
+  "infrastructures",
+  "mechanismArchetype",
   "variantOf",
   "variantKind",
+  "expectedLaunchDate",
+  "commodityOunces",
   "status",
-  "listingStatusReview",
-  "tags",
   "frozenAt",
   "launchDate",
-  "announcedDate",
-  "expectedLaunchDate",
   "launchPhase",
+] as const satisfies ReadonlyArray<keyof StablecoinMeta>;
+
+/** Canonical source fields in each on-demand detail projection. */
+export const STABLECOIN_CLIENT_DETAIL_FIELDS = [
+  "oneLiner",
+  "marketAvailability",
+  "implementationLaunchDate",
+  "geckoId",
+  "protocolSlug",
+  "listingStatusReview",
+  "tags",
   "milestones",
   "dateHistory",
-  "commodityOunces",
   "infrastructures",
   "mica",
   "genius",
@@ -126,21 +129,50 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "reserves",
   "collateralQuality",
   "custodyModel",
+  "mechanismArchetypeReview",
+  "variantOf",
+  "variantKind",
+  "archetypeOverride",
 ] as const satisfies ReadonlyArray<keyof StablecoinMeta>;
 
-type StablecoinClientSourceField = Exclude<(typeof STABLECOIN_CLIENT_META_FIELDS)[number], "genius">;
+/** Backwards-compatible name for the canonical list field contract. */
+export const STABLECOIN_CLIENT_META_FIELDS = STABLECOIN_CLIENT_LIST_FIELDS;
+
+type StablecoinClientSourceField = Exclude<(typeof STABLECOIN_CLIENT_DETAIL_FIELDS)[number], "genius">;
+
+export type ClientMintAuthorityStatus =
+  | "no-privileged-mint"
+  | "governed-mint"
+  | "multisig-mint"
+  | "issuer-or-backend-mint"
+  | "bridge-mint"
+  | "inherited-authority"
+  | "unknown";
+
+export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_CLIENT_LIST_FIELDS)[number]> & {
+  /** Chain IDs are derived from contracts and tradedContracts at build time. */
+  chainIds?: string[];
+  listingClass: ListingClass;
+  /** Compact cross-coin badges; detail evidence remains on the loaded projection. */
+  custodyModel?: StablecoinMeta["custodyModel"];
+  blacklistStatus?: BlacklistClientStatus;
+  mintAuthorityStatus?: ClientMintAuthorityStatus;
+  mintAuthoritySummary?: MintAuthorityCoverageSummary;
+  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+  /** Compact yield taxonomy badge; source-specific yield configuration stays in detail. */
+  yieldType?: NonNullable<StablecoinMeta["yieldConfig"]>["yieldType"];
+};
+
+export type StablecoinClientDetailMeta = StablecoinClientListMeta &
+  Pick<StablecoinMeta, StablecoinClientSourceField> & {
+    genius?: GeniusComplianceProfile;
+    blacklistStatus?: BlacklistClientStatus;
+    mintAuthoritySummary?: MintAuthorityCoverageSummary;
+    liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+  };
 
 /**
- * Slim projection of `StablecoinMeta` for client-side consumers. The runtime
- * projection tuple above is authoritative; this type is derived from it so a
- * generator field cannot drift from the promised client contract.
+ * Client-side metadata contract. The eagerly loaded shape is the compact list;
+ * detail fields are optional because they arrive through loadClientStablecoinDetail.
  */
-export type StablecoinClientMeta = Pick<StablecoinMeta, StablecoinClientSourceField> & {
-  /** Compact decision-ledger projection used by client aggregate filters. */
-  listingClass: ListingClass;
-  blacklistStatus?: BlacklistClientStatus;
-  genius?: GeniusClientProfile;
-  mintAuthoritySummary?: MintAuthorityCoverageSummary;
-  /** Adapter key derived from the server-only `liveReservesConfig`. */
-  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
-};
+export type StablecoinClientMeta = StablecoinClientDetailMeta;

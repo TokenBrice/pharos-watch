@@ -79,7 +79,19 @@ export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 
 export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlags;
 
-export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
+/**
+ * Engagement class of the proof-of-reserves artefact. `agreed-upon-procedures`
+ * is a third-party engagement that expresses no assurance opinion, while
+ * `attestation` is an independent verification-agent report distinct from
+ * both audit-grade assurance and issuer self-reporting.
+ */
+export const PROOF_OF_RESERVES_TYPE_VALUES = [
+  "independent-audit",
+  "agreed-upon-procedures",
+  "attestation",
+  "real-time",
+  "self-reported",
+] as const;
 
 /**
  * Attestor quality ladder. `none` is a *reviewed* negative — a reviewer
@@ -227,6 +239,16 @@ export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
   "unknown",
 ] as const;
 
+/**
+ * AUTHORITY-LADDER 9.46 (2026-09-01): `validator-quorum` names an external
+ * message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN, a
+ * Bantu AMTP validator group, an IBC light-client validator set — whose members
+ * are a rotating, protocol-scoped population rather than a named key holder.
+ * It is a KNOWN-BUT-WEAK authority: it grades at or below `issuer-backend` and
+ * never above a named multisig, because an anonymous rotating quorum is not
+ * stronger than a 3-of-5 Safe. Use it only where the controlling party genuinely
+ * is the validation domain; a named operator behind it is still that operator.
+ */
 export const MINT_AUTHORITY_TYPE_VALUES = [
   "safe",
   "multisig",
@@ -235,6 +257,7 @@ export const MINT_AUTHORITY_TYPE_VALUES = [
   "dao-governor",
   "contract",
   "issuer-backend",
+  "validator-quorum",
   "bridge",
   "custodian",
   "none",

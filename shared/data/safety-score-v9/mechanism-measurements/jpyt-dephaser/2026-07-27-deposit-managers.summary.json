@@ -1,0 +1,15 @@
+{
+  "mechanism": "jpyt-dephaser",
+  "date": "2026-07-27-deposit-managers",
+  "sha256": "a17a0973226fd300c90b57660d04283cefd24ceaa8d1c59dd5c02c048909c0e8",
+  "bytes": 6328,
+  "r2Key": "captures/jpyt-dephaser/2026-07-27-deposit-managers.json.gz",
+  "summary": {
+    "schemaVersion": 1,
+    "kind": "onchain-mechanism-measurement",
+    "assetId": "jpyt-dephaser",
+    "archetype": "cdp",
+    "journalPath": "shared/data/safety-score-v9/mechanism-measurements/jpyt-dephaser/2026-07-27-deposit-managers.json",
+    "capturedAt": "2026-07-27T23:17:42Z"
+  }
+}

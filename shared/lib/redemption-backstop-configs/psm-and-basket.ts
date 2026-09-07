@@ -8,6 +8,10 @@ import {
   fixedFee,
   psmSwapBase,
   sourceRef,
+  sourceRefFull,
+  sourceRefRouteCapacity,
+  sourceRefRouteCapacityAccess,
+  sourceRefRouteCapacityFees,
 } from "./shared";
 import {
   REVIEWED_EXIT_CREDIT_WAVE_AT,
@@ -38,9 +42,9 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "formula",
     ),
     docs: [
-      sourceRef("Cap introduction", "https://docs.cap.app/", ["route", "capacity"]),
-      sourceRef("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics", ["route", "capacity"]),
-      sourceRef("Cap vault", "https://docs.cap.app/concepts/vault", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacity("Cap introduction", "https://docs.cap.app/"),
+      sourceRefRouteCapacity("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics"),
+      sourceRefRouteCapacityFees("Cap vault", "https://docs.cap.app/concepts/vault"),
       sourceRef("Cap risks", "https://docs.cap.app/risks", ["capacity", "settlement"]),
       sourceRef("Cap vault Minter", "https://docs.cap.app/concepts/vault/minter", ["fees"]),
       sourceRef("Cap Minter contract reference", "https://docs.cap.app/developers/contracts/minter.md", ["fees"]),
@@ -60,15 +64,10 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
     ),
     docs: [
-      sourceRef("Berachain Honey docs", "https://docs.berachain.com/general/tokens/honey", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
-      sourceRef(
+      sourceRefRouteCapacityFees("Berachain Honey docs", "https://docs.berachain.com/general/tokens/honey"),
+      sourceRefRouteCapacityFees(
         "Berachain HoneyFactory source",
         "https://github.com/berachain/contracts/blob/main/src/honey/HoneyFactory.sol",
-        ["route", "capacity", "fees"],
       ),
     ],
     notes: [
@@ -115,10 +114,9 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol",
         ["route", "access", "settlement"],
       ),
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "Mento BiPoolManager contract (pinned)",
         "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol",
-        ["route", "capacity", "fees"],
       ),
       sourceRef("Mento stable assets on Celo", "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo", [
         "route",
@@ -139,7 +137,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     costModel: fixedFee(0, "Mynt materials state redemption fees are currently disabled"),
     reviewedAt: "2026-07-27",
     docs: [
-      sourceRef("Sovryn Dollar", "https://sovryn.com/sovryn-dollar", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Sovryn Dollar", "https://sovryn.com/sovryn-dollar"),
       sourceRef("Launching the Sovryn Dollar", "https://sovryn.com/all-things-sovryn/launching-the-sovryn-dollar", [
         "route",
         "settlement",
@@ -160,7 +158,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
     ),
     reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
-    docs: [sourceRef("BabelFish", "https://babelfish.money/", ["route", "capacity", "fees", "access", "settlement"])],
+    docs: [sourceRefFull("BabelFish", "https://babelfish.money/")],
     notes: [
       "Fresh reserve sync reads the BabelFish holder's accepted bAsset balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
     ],
@@ -175,7 +173,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Usual documents a 3 bps fee for the permissioned direct EUR0 redemption into euTBL",
     ),
     docs: [
-      sourceRef("Usual EUR0 docs", "https://tech.usual.money/overview/features/eur0", ["route", "capacity", "access"]),
+      sourceRefRouteCapacityAccess("Usual EUR0 docs", "https://tech.usual.money/overview/features/eur0"),
       sourceRef("Usual EUR0 contract docs", "https://tech.usual.money/smart-contracts/token-contracts/eur0", [
         "route",
         "access",
@@ -220,7 +218,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ),
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     docs: [
-      sourceRef("USDD documentation", "https://docs.usdd.io", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("USDD documentation", "https://docs.usdd.io"),
       sourceRef("USDD website", "https://usdd.io/", ["capacity"]),
     ],
     notes: [
@@ -237,10 +235,9 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     routeStatus: "unknown",
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
     docs: [
-      sourceRef(
+      sourceRefFull(
         "Inter Protocol Parity Stability Module",
         "https://docs.inter.trade/inter-protocol-system-documentation/parity-stability-module",
-        ["route", "capacity", "fees", "access", "settlement"],
       ),
       sourceRef(
         "Sunset Inter Protocol and Begin Wind-Down Process",
@@ -257,8 +254,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "fxd-fathom": {
     ...psmSwapBase,
     accessModel: "whitelisted-onchain",
-    unresolvedOutputAssetKeys: ["asset:xusdt"],
-    unresolvedOutputDisposition: "reviewed-external",
+    outputAssets: ["usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(
       25,
@@ -278,11 +274,14 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         ["route", "settlement"],
       ),
       sourceRef("FXD XDC deployments", "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network", ["route"]),
+      sourceRef("Fathom StableSwapModule on XDC", "https://xdcscan.io/address/0x42c06188B8C03769A1F73B3f31b259271ee3B981", [
+        "route",
+      ]),
     ],
     notes: [
       "Configured 2026-08-12 as the StableSwap Module rail, not CDP repayment: the whitepaper describes trading FXD at a fixed 1 FXD = 1 counter-stablecoin rate inside a pool, which is a holder-exercisable swap rather than the position-specific debt repayment that previously kept this coin unconfigured.",
       "Access is whitelisted because the same whitepaper states Stable Swap keeps a private list of possible participants to protect the pegging mechanism, and that the FXD Stable Swap arbitrager group is private and not publicly open.",
-      "Output is the deployed counter-stablecoin: the whitepaper names abUSDs and the smart-contract architecture page names the deployed pair FXD<->xUSDT. xUSDT has no tracked Pharos stablecoin id, so the reviewed identity is preserved as an unresolved external output rather than published as a scoreable asset.",
+      "Output resolved 2026-09-01: the smart-contract architecture page names the deployed pair FXD<->xUSDT, and the documented XDC StableSwapModule 0x42c06188B8C03769A1F73B3f31b259271ee3B981 was read at XDC mainnet block 106731562 (chainId 50): stablecoin() = 0x49d3f7543335cf38fa10889ccff10207e22110b5 (the tracked FXD deployment) and token() = 0xd4b5f10d61916bd6e0860144a91ac658de8a1437, whose symbol() is xUSDT, name() is USDT@xinfin, and decimals() is 6. That is the exact XDC deployment Pharos already tracks under usdt-tether, so the counter-stablecoin is a tracked output rather than an untracked external identity.",
       "The 10% ratio is a reviewed heuristic for StableSwap pool depth, not a published Fathom figure: no current public source exposes the module's counter-asset balance, per-account limits, or pause state on XDC, and Pharos does not model XDC contracts.",
     ],
   },
@@ -296,11 +295,8 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ),
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     docs: [
-      sourceRef("Hydration HOLLAR", "https://docs.hydration.net/products/hollar/", ["route", "capacity", "access"]),
-      sourceRef("Hydration HOLLAR quick start", "https://docs.hydration.net/quick_start/hollar/", [
-        "route",
-        "capacity",
-      ]),
+      sourceRefRouteCapacityAccess("Hydration HOLLAR", "https://docs.hydration.net/products/hollar/"),
+      sourceRefRouteCapacity("Hydration HOLLAR quick start", "https://docs.hydration.net/quick_start/hollar/"),
       sourceRef(
         "Hydration HSM pallet types",
         "https://raw.githubusercontent.com/galacticcouncil/hydration-node/master/pallets/hsm/src/types.rs",
@@ -311,10 +307,9 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         "https://raw.githubusercontent.com/galacticcouncil/hydration-node/master/pallets/hsm/src/lib.rs",
         ["route", "access", "fees", "settlement"],
       ),
-      sourceRef(
+      sourceRefRouteCapacity(
         "Hydration referendum 367: consolidate HSM collateral",
         "https://hydration.subsquare.io/referenda/367",
-        ["route", "capacity"],
       ),
     ],
     notes: [
@@ -340,7 +335,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module",
         ["route", "fees", "settlement"],
       ),
-      sourceRef("Why use Hubble", "https://docs.hubbleprotocol.io/why-use-hubble", ["route", "capacity"]),
+      sourceRefRouteCapacity("Why use Hubble", "https://docs.hubbleprotocol.io/why-use-hubble"),
       sourceRef("Hubble technical resources", "https://docs.hubbleprotocol.io/resources/technical-resources", [
         "route",
       ]),
@@ -359,7 +354,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     reviewedAt: "2026-05-02",
     docs: [
       sourceRef("RAAC PSM overview", "https://docs.raac.io/psm-vault/", ["route", "fees"]),
-      sourceRef("RAAC PSM parameters", "https://docs.raac.io/parameters-psm/", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("RAAC PSM parameters", "https://docs.raac.io/parameters-psm/"),
     ],
     notes: [
       "PSM is one-directional: pmUSD → sUSDS swaps only; swaps pause automatically when sUSDS reserves fall below 20% of total PSM assets",
@@ -377,10 +372,9 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ),
     reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityFees(
         "Inverse Peg Stability Module",
         "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module",
-        ["route", "capacity", "fees"],
       ),
       sourceRef("Inverse Finance transparency", "https://www.inverse.finance/transparency", ["capacity"]),
     ],
@@ -398,11 +392,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
     reviewedAt: "2026-07-14",
     docs: [
-      sourceRef("Bucket Protocol PSM", "https://docs.bucketprotocol.io/mechanisms/peg-stability-module", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacityFees("Bucket Protocol PSM", "https://docs.bucketprotocol.io/mechanisms/peg-stability-module"),
     ],
     notes: [
       "The reviewed 25% bound matches the tracked USDC/USDT PSM reserve share rather than assuming the full BUCK supply is instantly redeemable through the stablecoin module",
@@ -419,7 +409,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ),
     reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
     docs: [
-      sourceRef("Lista docs", "https://docs.bsc.lista.org", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Lista docs", "https://docs.bsc.lista.org"),
       sourceRef("Lista website", "https://lista.org/", ["route"]),
     ],
     notes: [
@@ -436,11 +426,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Alto docs describe a 0.20% (20 bps) fee on both PSM swap directions; PSM capacity is capped at 5M USDC which currently exceeds total DUSD supply",
     ),
     docs: [
-      sourceRef("Alto DUSD Peg Stability Module", "https://docs.alto.money/alto-protocol/psm", [
-        "route",
-        "capacity",
-        "fees",
-      ]),
+      sourceRefRouteCapacityFees("Alto DUSD Peg Stability Module", "https://docs.alto.money/alto-protocol/psm"),
     ],
   },
   "silk-shade-protocol": {
@@ -453,7 +439,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
     ),
     docs: [
-      sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"]),
+      sourceRefRouteCapacity("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk"),
       sourceRef(
         "Shade Lend stability mechanisms",
         "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/lend/stability-mechanisms",
@@ -479,10 +465,9 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       feeBpsMax: 0,
     },
     docs: [
-      sourceRef(
+      sourceRefRouteCapacityAccess(
         "Reserve DTF minting & redeeming",
         "https://docs.reserve.org/core-components/index-dtfs/minting-and-redeeming",
-        ["route", "capacity", "access"],
       ),
       sourceRef("Reserve DTF fees", "https://docs.reserve.org/core-components/index-dtfs/fees", ["fees"]),
       sourceRef("Reserve DTF mint fee", "https://docs.reserve.org/core-components/index-dtfs/fees/mint-fee", ["fees"]),
@@ -519,13 +504,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Fee bound declared 2026-08-12: the Yield DTF overview states holders can mint by depositing the complete collateral basket and that a DTF is \"redeemed for the entire basket as well\", with protocol revenue coming from \"yield from lending collateral tokens onchain, revenue shares with collateral token issuers, or any other source of onchain yield\" — no redemption charge. Throttles still bound redemption size, which the documented-bound capacity model already carries, not its cost.",
     ],
     docs: [
-      sourceRef("Reserve Yield DTF overview", "https://docs.reserve.org/core-components/yield-dtfs/overview", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRefFull("Reserve Yield DTF overview", "https://docs.reserve.org/core-components/yield-dtfs/overview"),
       sourceRef("Reserve DTF API", "https://api.reserve.org/discover/dtfs", ["capacity"]),
       sourceRef(
         "Reserve USD3 app",
@@ -547,60 +526,23 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     holderEligibility: "whitelisted-primary",
     routeExitCorrelation: "same-stablecoin-pool-backing",
     docs: [
-      sourceRef("Metal Dollar product page", "https://www.metallicus.com/metal-dollar", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRefRouteCapacityAccess("Metal Dollar product page", "https://www.metallicus.com/metal-dollar"),
       sourceRef(
         "XPR Network XMD redeem guide",
         "https://help.xprnetwork.org/hc/en-us/articles/11560190160151-How-do-I-redeem-Metal-Dollar-XMD",
         ["route", "fees", "access", "settlement"],
       ),
-      sourceRef("Metal Dollar site", "https://metaldollar.com/", ["route", "capacity"]),
+      sourceRefRouteCapacity("Metal Dollar site", "https://metaldollar.com/"),
     ],
     notes: [
       "Holder must complete the XPR/Metal account-verification path and use WebAuth Wallet, so access is modeled as whitelisted onchain rather than permissionless.",
       "Pharos does not currently model XPR Network contracts, so this remains a static documented-bound route unless a supported-chain capacity adapter is added later.",
     ],
   },
-  "mai-qidao": {
-    ...psmSwapBase,
-    settlementModel: "queued",
-    outputAssetType: "stable-basket",
-    unresolvedOutputAssetKeys: [
-      "approved stablecoin collateral set (exact members are not enumerated by the current PSM documentation)",
-    ],
-    unresolvedOutputDisposition: "issuer-undisclosed",
-    capacityModel: { kind: "supply-full", confidence: "heuristic", basis: "full-system-eventual" },
-    costModel: documentedVariableFee(
-      "QiDao documents a fixed 1:1 PSM rate and a redemption fee on the collateral asset, but does not publish a numeric PSM fee on the current PSM page",
-    ),
-    routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-08-13",
-    docs: [
-      sourceRef("QiDao Peg Stability Module", "https://docs.mai.finance/docs/peg-stability-module", [
-        "route",
-        "access",
-        "settlement",
-        "fees",
-        "capacity",
-      ]),
-      sourceRef("QiDao stablecoin economics", "https://docs.mai.finance/docs/stablecoin-economics", ["route"]),
-      sourceRef("QiDao fees", "https://docs.mai.finance/docs/fees", ["fees"]),
-      sourceRef("QiDao current protocol site", "https://www.mai.finance/", ["route"]),
-    ],
-    notes: [
-      "The permissionless PSM sends MAI into a public three-day withdrawal queue before paying 1:1 approved stablecoin collateral; the exact collateral set remains undisclosed, so outputAssets is intentionally unset.",
-      "supply-full is eventual-only: reviewed materials do not publish a current hot-buffer balance, withdrawal cap, or other immediate-capacity bound.",
-      "The PSM collateral is placed into QiDao-approved yield strategies, so the route remains correlated with QiDao's own collateral and strategy liquidity rather than ordinary CDP repayment.",
-    ],
-  },
   "iusd-indigo-protocol": {
     ...psmSwapBase,
     outputAssetType: "stable-basket",
-    unresolvedOutputAssetKeys: ["usdm-moneta", "usda-anzens", "USDCx (Cardano)"],
-    unresolvedOutputDisposition: "reviewed-external",
+    outputAssets: ["usdm-moneta", "usda-anzens", "usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.15577082, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(100, "Indigo's current iUSD PSM data and app quote show a 1% redemption fee"),
     routeExitCorrelation: "same-protocol-liquidity",
@@ -619,13 +561,18 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         ["route", "fees"],
       ),
       sourceRef("Current Indigo protocol parameters API", "https://analytics.indigoprotocol.io/api/v3/protocol-params", ["access"]),
-      sourceRef("Current Indigo assets API", "https://analytics.indigoprotocol.io/api/v3/assets", ["route", "capacity", "fees"]),
+      sourceRefRouteCapacityFees("Current Indigo assets API", "https://analytics.indigoprotocol.io/api/v3/assets"),
       sourceRef("Current Indigo asset analytics API", "https://analytics.indigoprotocol.io/api/v3/analytics/assets", ["capacity"]),
       sourceRef("Current Indigo swap application", "https://app.indigoprotocol.io/", ["route", "access", "fees"]),
+      sourceRef(
+        "Circle xReserve supported chains",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        ["route", "settlement"],
+      ),
     ],
     notes: [
       "The modeled holder-facing route is Indigo's funded PSM swap: iUSD exits to USDM, USDA, or USDCx at a 1% redemption fee; the separate CDP redemption signer path is not included.",
-      "USDM and USDA are verified tracked Pharos identities (`usdm-moneta` and `usda-anzens`); USDCx on Cardano is not tracked. Because the complete basket must remain unresolved when one member is untracked, all three reviewed identities are preserved in unresolvedOutputAssetKeys.",
+      "Output resolved 2026-09-01: USDM and USDA are the exact tracked Cardano deployments under `usdm-moneta` and `usda-anzens`; Circle's xReserve registry identifies Cardano USDCx policy `1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378`, the six-decimal deployment tracked under `usdc-circle`. The complete three-member PSM output set therefore has canonical price identities without treating UI symbols as evidence.",
       "The 0.15577082 ratio is iUSD PSM supply divided by iUSD total supply from the reviewed Indigo analytics snapshot, representing a funded-PSM share rather than an immediate promise that all iUSD can exit.",
       "The current PSM assets data reports redemption enabled for all three pools, a 1% fee, and a 10,000-unit minimum order; wallet connection is normal permissionless onchain access rather than an allowlist.",
     ],
@@ -640,5 +587,4 @@ const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
   ],
 );
 
-export const PSM_AND_BASKET_BACKSTOP_CONFIGS = FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.configs;
 export const PSM_AND_BASKET_BACKSTOP_ENTRIES = FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY.entries;

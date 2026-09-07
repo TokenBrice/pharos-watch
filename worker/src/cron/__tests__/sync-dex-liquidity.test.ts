@@ -4,6 +4,7 @@ import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const phaseFixtures = vi.hoisted(() => {
   function create(overrides: Record<string, unknown> = {}) {
@@ -53,6 +54,7 @@ const phaseFixtures = vi.hoisted(() => {
         priceObservations: new Map(),
       },
       scores: {
+        measuredTargetInventory: { mode: "active", active: [], shadow: [] },
         scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
         globalAgg: { totalTvl: 0 },
         retainedPoolsByStablecoin: new Map(),
@@ -122,6 +124,7 @@ vi.mock("../dex-liquidity/staging-merge", () => ({
 vi.mock("../dex-liquidity/scoring", () => ({
   loadCurrentDexScoringGenerationId: vi.fn(async () => null),
   computeStablecoinScores: vi.fn(async () => phaseFixtures.current.scores),
+  publishStablecoinScoreTargets: vi.fn(async () => {}),
   computeDepthStability: vi.fn(async () => {}),
   computeDexPrices: vi.fn(async () => {}),
 }));
@@ -197,9 +200,9 @@ vi.mock("../dex-liquidity/scoring-stage", async () => {
   };
 });
 
-vi.mock("../dex-liquidity/challenger-persistence", async () => {
-  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-persistence")>(
-    "../dex-liquidity/challenger-persistence",
+vi.mock("../dex-liquidity/challenger-publish", async () => {
+  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-publish")>(
+    "../dex-liquidity/challenger-publish",
   );
   return {
     ...actual,
@@ -266,6 +269,7 @@ import {
   computeDepthStability,
   computeDexPrices,
   computeStablecoinScores,
+  publishStablecoinScoreTargets,
   loadCurrentDexScoringGenerationId,
 } from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
@@ -274,7 +278,7 @@ import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 
-const db = {
+const db = makeNoopD1({
   prepare: () => ({
     bind: () => ({
       all: async () => ({ results: [] }),
@@ -288,7 +292,7 @@ const db = {
   batch: async () => [],
   exec: async () => ({ count: 0, duration: 0 }),
   dump: async () => new ArrayBuffer(0),
-} as unknown as D1Database;
+});
 
 /** Drive the scheduled composition: the stage producer followed by its consumer. */
 async function runDexLiquidityScoringCycle(
@@ -396,6 +400,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.persistence?.skipped).toBe(true);
     expect(metadata.persistence?.skippedReason).toBe("defillama-protocols-unavailable");
     expect(persistScores).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
     expect(computeDexPrices).not.toHaveBeenCalled();
     expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
     expect(computeDepthStability).not.toHaveBeenCalled();
@@ -421,6 +426,7 @@ describe("dex liquidity scoring stage cycle", () => {
     };
     expect(metadata.failedSources).toContain("defillama-yields");
     expect(persistScores).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
   });
 
   it("degrades and skips persistence instead of tripping hard value guard when DL yields is unavailable", async () => {
@@ -435,6 +441,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dlProtocolsAvailable: true,
     });
     vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
+      measuredTargetInventory: { mode: "active", active: [], shadow: [] },
       scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 2_000_000_000 }]]),
       globalAgg: { totalTvl: 2_000_000_000 },
       retainedPoolsByStablecoin: new Map(),
@@ -442,8 +449,8 @@ describe("dex liquidity scoring stage cycle", () => {
       diagnostics: {
         protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
       },
-    } as Awaited<ReturnType<typeof computeStablecoinScores>>);
-    const guardDb = {
+    } as unknown as Awaited<ReturnType<typeof computeStablecoinScores>>);
+    const guardDb = makeNoopD1({
       prepare(sql: string) {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
           return { first: async () => ({ cnt: 165 }) };
@@ -477,7 +484,7 @@ describe("dex liquidity scoring stage cycle", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const result = await runDexLiquidityScoringCycle(guardDb, "graph-key");
 
@@ -495,8 +502,47 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.currentGlobalTvl).toBe(2_000_000_000);
     expect(metadata.sourceCoverage?.nearValueGuard).toBe(true);
     expect(persistScores).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
     expect(computeDexPrices).not.toHaveBeenCalled();
   });
+
+  it.each(["critical-source", "coverage", "value", "persistence"] as const)(
+    "retains the measured target catalog after %s rejection and publishes only after accepted liquidity",
+    async (rejection) => {
+      let catalog = "accepted-targets";
+      vi.mocked(publishStablecoinScoreTargets).mockImplementationOnce(async () => { catalog = "candidate-targets"; });
+      if (rejection === "critical-source") phaseFixtures.current.primary.dlYieldsAvailable = false;
+      if (rejection === "persistence") vi.mocked(persistScores).mockRejectedValueOnce(new Error("liquidity publication failed"));
+      const guardDb = makeNoopD1({
+        prepare(sql: string) {
+          if (rejection === "coverage" && sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
+            return { first: async () => ({ cnt: 100 }) };
+          }
+          if (rejection === "value" && sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity")) {
+            return { first: async () => ({ total_tvl_usd: 1_000_000_000, updated_at: 1_777_556_412 }) };
+          }
+          return db.prepare(sql);
+        },
+      });
+      if (rejection === "critical-source") {
+        expect((await runDexLiquidityScoringCycle(guardDb, "graph-key")).status).toBe("degraded");
+      } else {
+        await expect(runDexLiquidityScoringCycle(guardDb, "graph-key")).rejects.toThrow(
+          rejection === "persistence" ? "liquidity publication failed" : "coverage guard tripped",
+        );
+      }
+      expect(catalog).toBe("accepted-targets");
+      expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+
+      phaseFixtures.reset();
+      expect((await runDexLiquidityScoringCycle(db, "graph-key")).status).toBe("ok");
+      expect(catalog).toBe("candidate-targets");
+      expect(publishStablecoinScoreTargets).toHaveBeenCalledOnce();
+      expect(vi.mocked(publishStablecoinScoreTargets).mock.invocationCallOrder[0]).toBeGreaterThan(
+        vi.mocked(persistScores).mock.invocationCallOrder[vi.mocked(persistScores).mock.invocationCallOrder.length - 1]!,
+      );
+    },
+  );
 
   it("returns ok when required source families succeed", async () => {
     const result = await runDexLiquidityScoringCycle(db, "graph-key");
@@ -580,6 +626,7 @@ describe("dex liquidity scoring stage cycle", () => {
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
     expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("none");
     expect(persistScores).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
     expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
     expect(computeDepthStability).not.toHaveBeenCalled();
     expect(computeDexPrices).toHaveBeenCalledOnce();
@@ -1189,6 +1236,7 @@ describe("dex liquidity scoring stage cycle", () => {
       ]),
     );
     vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
+      measuredTargetInventory: { mode: "active", active: [], shadow: [] },
       scores: new Map([
         [
           "usdc-circle",
@@ -1219,9 +1267,9 @@ describe("dex liquidity scoring stage cycle", () => {
       diagnostics: {
         protocolCapReductions: { cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50 },
       },
-    } as Awaited<ReturnType<typeof computeStablecoinScores>>);
+    } as unknown as Awaited<ReturnType<typeof computeStablecoinScores>>);
 
-    const driftDb = {
+    const driftDb = makeNoopD1({
       prepare(sql: string) {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__'")) {
           return { first: async () => ({ cnt: 5 }) };
@@ -1290,7 +1338,7 @@ describe("dex liquidity scoring stage cycle", () => {
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
       dump: async () => new ArrayBuffer(0),
-    } as unknown as D1Database;
+    });
 
     const result = await runDexLiquidityScoringCycle(driftDb, "graph-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {

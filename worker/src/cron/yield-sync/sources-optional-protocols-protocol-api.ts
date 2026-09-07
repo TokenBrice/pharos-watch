@@ -45,6 +45,15 @@ interface RePriceResponse {
   };
 }
 
+interface YdaemonVault {
+  address?: string;
+  /** ydaemon exposes the vault's underlying deposit token as `token`. */
+  token?: { address?: string };
+  tvl?: { tvl?: number };
+  apr?: { netAPR?: number };
+  info?: { isRetired?: boolean };
+}
+
 const BIMA_SUSBD_SOURCE_KEY = "protocol-api:bima-susbd";
 const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
 const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
@@ -73,6 +82,89 @@ const RE_REUSD_CONTRACT = "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72";
 const RE_REUSD_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
 const RE_REUSD_MIN_APY_PERCENT = -100;
 const RE_REUSD_MAX_APY_PERCENT = 500;
+const YEARN_YBOLD_SOURCE_KEY = "protocol-api:yearn:ybold";
+const YEARN_YBOLD_SOURCE_LABEL = "Yearn yBOLD Stability Pool vault";
+const YEARN_YBOLD_SOURCE_TYPE = "lending-vault";
+const YEARN_YBOLD_VAULT = "0x9f4330700a36b29952869fac9b33f45eedd8a3d8";
+const YEARN_YSYBOLD_VAULT = "0x23346b04a7f55b8760e5860aa5a77383d63491cd";
+const LIQUITY_BOLD_TOKEN = "0x6440f144b7e50d6a8439336510312d2f54beb01d";
+const YDAEMON_ETHEREUM_VAULT_URL = "https://ydaemon.yearn.fi/1/vaults/";
+const YEARN_YBOLD_MIN_TVL_USD = 100_000;
+const YEARN_YBOLD_MAX_APY_PERCENT = 100;
+
+/**
+ * Yearn's first-party yBOLD numbers, read from ydaemon.
+ *
+ * yBOLD itself holds a flat 1.0 price-per-share: Yearn routes the Liquity V2
+ * Stability Pool return to holders who stake yBOLD into `ysyBOLD`, so the
+ * advertised yBOLD yield is the staked vault's net APR. TVL stays the yBOLD
+ * vault's own TVL. The adapter fails closed unless yBOLD still wraps BOLD and
+ * ysyBOLD still wraps the tracked yBOLD vault, so a Yearn restructure cannot
+ * silently publish an unrelated vault's return under yBOLD.
+ */
+export async function fetchYearnYboldSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  try {
+    const yboldResult = await fetchJsonWithRetry<YdaemonVault>(
+      `${YDAEMON_ETHEREUM_VAULT_URL}${YEARN_YBOLD_VAULT}`,
+      { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+      0,
+      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+    );
+    if (!yboldResult?.response.ok) return null;
+    if (yboldResult.body.info?.isRetired) return null;
+    if (yboldResult.body.token?.address?.toLowerCase() !== LIQUITY_BOLD_TOKEN) return null;
+
+    const sourceTvlUsd = getFiniteNumber(yboldResult.body.tvl?.tvl);
+    if (sourceTvlUsd == null || sourceTvlUsd < YEARN_YBOLD_MIN_TVL_USD) return null;
+
+    const stakedResult = await fetchJsonWithRetry<YdaemonVault>(
+      `${YDAEMON_ETHEREUM_VAULT_URL}${YEARN_YSYBOLD_VAULT}`,
+      { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+      0,
+      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+    );
+    if (!stakedResult?.response.ok) return null;
+    if (stakedResult.body.info?.isRetired) return null;
+    if (stakedResult.body.token?.address?.toLowerCase() !== YEARN_YBOLD_VAULT) return null;
+
+    const netApr = getFiniteNumber(stakedResult.body.apr?.netAPR);
+    if (netApr == null) return null;
+
+    const apy = netApr * 100;
+    if (apy <= 0 || apy > YEARN_YBOLD_MAX_APY_PERCENT) return null;
+
+    return {
+      currentApy: apy,
+      apyBase: apy,
+      apyReward: null,
+      sourcePool: YEARN_YBOLD_VAULT,
+      sourceTvlUsd,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey: YEARN_YBOLD_SOURCE_KEY,
+      yieldSource: YEARN_YBOLD_SOURCE_LABEL,
+      yieldType: YEARN_YBOLD_SOURCE_TYPE,
+      sourceObservedAt: Math.floor(Date.now() / 1000),
+      comparisonAnchorObservedAt: null,
+    };
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "optional_yield_source_failed",
+      job: "sync-yield-data",
+      provider: "yearn",
+      source: "yBOLD",
+      message: "Optional yield source failed",
+      error,
+    });
+    return null;
+  }
+}
+
 export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
     const result = await fetchJsonWithRetry<{ success?: boolean; data?: unknown }>(

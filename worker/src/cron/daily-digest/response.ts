@@ -1,18 +1,33 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DigestResponseSchema } from "../../lib/schemas";
 import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
-import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
+import {
+  findRepeatedStructuralNgrams,
+  hasForwardLook,
+  leadFamily,
+  openingFingerprint,
+  type LeadFamily,
+} from "./voice-guards";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
 import { findDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
+import { findQuarantinedDigestSignalClaims } from "@shared/lib/digest-signal-quarantine";
+import {
+  EDITORIAL_STYLE_HASH,
+  EDITORIAL_STYLE_VERSION,
+  scanEditorialText,
+  type EditorialFinding,
+} from "@shared/lib/editorial-style";
+import {
+  DEFAULT_DIGEST_STYLE_GATE_MODE,
+  type DigestStyleGateMode,
+} from "../../lib/digest-style-gate";
 
-const FORBIDDEN_PHRASES = [
-  "Meanwhile, ",
-  "Meanwhile ",
-  "In other news, ",
-  "It's worth noting ",
-  "It remains to be seen ",
-];
+export type { DigestStyleGateMode } from "../../lib/digest-style-gate";
+const STYLE_GATE_MODE = DEFAULT_DIGEST_STYLE_GATE_MODE;
+
+const OPENING_FINGERPRINT_WINDOW = 7;
+const STRUCTURAL_REPETITION_WINDOW = 7;
 
 export interface ParsedDigestResponse {
   digestTitle: string;
@@ -20,7 +35,11 @@ export interface ParsedDigestResponse {
   digestExtended: string;
   digestMeta: string | null;
   strippedDashCount: number;
-  forbiddenPhraseHits: string[];
+  /**
+   * Captured from model-owned fields before trimming or legacy punctuation
+   * repair. Optional keeps hand-built validation fixtures source-compatible.
+   */
+  editorialFindings?: readonly EditorialFinding[];
   usedRawTextFallback: boolean;
 }
 
@@ -28,14 +47,26 @@ export interface DigestValidationIssue {
   code: string;
   severity: "hard" | "soft";
   message: string;
+  ruleId?: string;
+  field?: string;
+  excerpt?: string;
+  index?: number;
 }
 
 export interface DigestValidationProfile {
   kind: "daily" | "weekly";
+  styleGateMode?: DigestStyleGateMode;
   recentMeta?: Array<{
     meta: Record<string, unknown> | null;
     title: string | null;
     rawText?: string | null;
+    /**
+     * Previous editions' `digest_extended`. Required for the opening-fingerprint
+     * and structural-repetition checks: `rawText` is null once an edition carries
+     * structured `meta`, so without this both checks would silently degrade to
+     * titles for every modern edition.
+     */
+    extended?: string | null;
   }>;
   leadRequirements?: DigestLeadRequirement[];
   /** Per-coin depeg truth for the price/bps consistency lint. */
@@ -64,20 +95,18 @@ export interface DigestDepegFact {
 }
 
 export interface DigestModelResponseParseOptions {
+  register?: "daily" | "weekly";
+  styleGateMode?: DigestStyleGateMode;
   metaFactory?: (options: {
     parsedMeta: Record<string, unknown> | null;
     usedRawTextFallback: boolean;
   }) => Record<string, unknown> | null;
 }
 
-// Detection only — silently deleting phrases left capitalization and grammar
-// fragments mid-sentence. Hits become a soft quality issue instead.
-function detectForbiddenPhrases(value: string): string[] {
-  return FORBIDDEN_PHRASES.filter((phrase) => value.includes(phrase));
-}
-
+// Legacy shadow-mode repair. Enforce mode preserves the original copy so hard
+// findings retry or block rather than being silently rewritten.
 function stripForbiddenDashes(value: string): string {
-  return value.replace(/[\u2013\u2014]/g, ",");
+  return value.replace(/[\u2012-\u2015]/g, ",");
 }
 
 function stripRepeatedTitlePrefix(title: string, text: string): string {
@@ -123,12 +152,9 @@ const ALLOWED_LEADS = new Set([
   "other",
 ]);
 
-const ALLOWED_TONES = new Set([
+export const ALLOWED_TONES = [
   "bemused",
-  "foreboding",
   "clinical",
-  "wistful",
-  "darkly-amused",
   "urgent",
   "dry",
   "analytical",
@@ -138,11 +164,13 @@ const ALLOWED_TONES = new Set([
   "observant",
   "forensic",
   "resigned",
-  "ironic",
   "other",
-]);
+] as const;
 
-function normalizeToken(value: unknown, allowed: Set<string>): string | undefined {
+const ALLOWED_TONE_SET = new Set<string>(ALLOWED_TONES);
+
+
+function normalizeToken(value: unknown, allowed: ReadonlySet<string>): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toLowerCase().replace(/[_\s]+/g, "-");
   if (!normalized) return undefined;
@@ -164,7 +192,7 @@ function normalizeParsedMeta(meta: Record<string, unknown> | null): Record<strin
   if (leadSignalId) out.leadSignalId = leadSignalId;
   const lead = normalizeToken(meta.lead, ALLOWED_LEADS);
   if (lead) out.lead = lead;
-  const tone = normalizeToken(meta.tone, ALLOWED_TONES);
+  const tone = normalizeToken(meta.tone, ALLOWED_TONE_SET);
   if (tone) out.tone = tone;
   const coins = normalizeCoins(meta.coins);
   if (coins) out.coins = coins;
@@ -207,18 +235,27 @@ export function parseDigestModelResponse(
   options: DigestModelResponseParseOptions = {},
 ): ParsedDigestResponse {
   const parsedJson = extractDigestJson(rawText);
+  const register = options.register ?? "daily";
+  const styleGateMode = options.styleGateMode ?? STYLE_GATE_MODE;
 
   let digestTitle: string;
   let digestText: string;
   let digestExtended: string;
   let usedRawTextFallback = false;
   let parsedMeta: Record<string, unknown> | null = null;
+  let editorialFindings: EditorialFinding[] = [];
 
   try {
     if (!parsedJson) {
       throw new Error("no valid JSON found");
     }
     const parsed = DigestResponseSchema.parse(parsedJson);
+    // Scan the exact model-owned strings before trimming or any legacy repair.
+    editorialFindings = [
+      ...scanEditorialText(parsed.title, { register, field: "title" }),
+      ...scanEditorialText(parsed.text, { register, field: "text" }),
+      ...scanEditorialText(parsed.extended, { register, field: "extended" }),
+    ];
     digestTitle = parsed.title.trim();
     digestText = parsed.text.trim();
     digestExtended = parsed.extended.trim();
@@ -231,23 +268,29 @@ export function parseDigestModelResponse(
     digestTitle = "";
     digestText = rawText.trim();
     digestExtended = "";
+    editorialFindings = scanEditorialText(digestText, { register, field: "text" });
     usedRawTextFallback = true;
   }
 
   const resolvedMeta = options.metaFactory
     ? options.metaFactory({ parsedMeta, usedRawTextFallback })
     : parsedMeta;
-  const digestMeta = resolvedMeta ? JSON.stringify(resolvedMeta) : null;
+  const digestMeta = JSON.stringify({
+    ...(resolvedMeta ?? {}),
+    editorialStyleVersion: EDITORIAL_STYLE_VERSION,
+    editorialStyleHash: EDITORIAL_STYLE_HASH,
+    styleGateMode,
+  });
 
-  const strippedDashCount = [digestTitle, digestText, digestExtended].join("").match(/[\u2013\u2014]/g)?.length ?? 0;
-  digestTitle = stripForbiddenDashes(digestTitle);
-  digestText = stripForbiddenDashes(digestText);
-  digestExtended = stripForbiddenDashes(digestExtended);
+  const strippedDashCount = styleGateMode === "shadow"
+    ? [digestTitle, digestText, digestExtended].join("").match(/[\u2012-\u2015]/g)?.length ?? 0
+    : 0;
+  if (styleGateMode === "shadow") {
+    digestTitle = stripForbiddenDashes(digestTitle);
+    digestText = stripForbiddenDashes(digestText);
+    digestExtended = stripForbiddenDashes(digestExtended);
+  }
   digestText = stripRepeatedTitlePrefix(digestTitle, digestText);
-
-  const forbiddenPhraseHits = [
-    ...new Set([...detectForbiddenPhrases(digestText), ...detectForbiddenPhrases(digestExtended)]),
-  ];
 
   return {
     digestTitle,
@@ -255,7 +298,7 @@ export function parseDigestModelResponse(
     digestExtended,
     digestMeta,
     strippedDashCount,
-    forbiddenPhraseHits,
+    editorialFindings,
     usedRawTextFallback,
   };
 }
@@ -278,6 +321,15 @@ function getMetaCoins(meta: Record<string, unknown> | null): string[] {
   return value.filter((coin): coin is string => typeof coin === "string").map((coin) => coin.toUpperCase());
 }
 
+function weeklyPeriodFromMeta(meta: Record<string, unknown> | null): { startAt: number; endAt: number } | null {
+  const weekStart = getMetaString(meta, "weekStart");
+  const weekEnd = getMetaString(meta, "weekEnd");
+  if (!weekStart || !weekEnd) return null;
+  const startAt = Math.floor(Date.parse(`${weekStart}T00:00:00Z`) / 1000);
+  const endAt = Math.floor(Date.parse(`${weekEnd}T23:59:59Z`) / 1000);
+  return Number.isFinite(startAt) && Number.isFinite(endAt) ? { startAt, endAt } : null;
+}
+
 export function validateDigestModelOutput(
   parsed: ParsedDigestResponse,
   profile: DigestValidationProfile,
@@ -292,16 +344,28 @@ export function validateDigestModelOutput(
   const maxWords = isDaily ? 280 : 400;
   const minParagraphs = isDaily ? 3 : 4;
   const maxParagraphs = isDaily ? 4 : 6;
+  const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
+  const editorialFindings = parsed.editorialFindings ?? [
+    ...scanEditorialText(parsed.digestTitle, { register: profile.kind, field: "title" }),
+    ...scanEditorialText(parsed.digestText, { register: profile.kind, field: "text" }),
+    ...scanEditorialText(parsed.digestExtended, { register: profile.kind, field: "extended" }),
+  ];
+  const styleGateMode = profile.styleGateMode ?? STYLE_GATE_MODE;
+  for (const finding of editorialFindings) {
+    const severity = styleGateMode === "enforce" && finding.severity === "hard" ? "hard" : "soft";
+    issues.push({
+      code: "editorial-style",
+      severity,
+      ruleId: finding.ruleId,
+      field: finding.field,
+      excerpt: finding.excerpt,
+      index: finding.index,
+      message: `Editorial style rule ${finding.ruleId} in ${finding.field ?? "copy"} found "${finding.excerpt}".${finding.advice ? ` ${finding.advice}` : ""}`,
+    });
+  }
 
   if (parsed.usedRawTextFallback) {
     issues.push({ code: "raw-text-fallback", severity: "hard", message: "Model response was not valid digest JSON." });
-  }
-  if (parsed.forbiddenPhraseHits.length > 0) {
-    issues.push({
-      code: "forbidden-phrase",
-      severity: "soft",
-      message: `Copy contains forbidden throat-clearing phrase(s): ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}.`,
-    });
   }
   if (!parsed.digestTitle.trim()) {
     issues.push({ code: "missing-title", severity: "hard", message: "Title is missing." });
@@ -329,6 +393,17 @@ export function validateDigestModelOutput(
       message: "Copy references an unavailable canonical input; omit that topic entirely.",
     });
   }
+  if (profile.kind === "weekly") {
+    const copy = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`;
+    const weeklyPeriod = weeklyPeriodFromMeta(parsedMeta);
+    for (const quarantine of weeklyPeriod ? findQuarantinedDigestSignalClaims(copy, "liquidity", weeklyPeriod) : []) {
+      issues.push({
+        code: "quarantined-signal-claim",
+        severity: "hard",
+        message: `Copy repeats a retracted ${quarantine.family} claim for ${quarantine.stablecoinId} (${quarantine.incidentReference}).`,
+      });
+    }
+  }
   if (combinedLength > 270) {
     issues.push({ code: "tweet-too-long", severity: "hard", message: `Title + text is ${combinedLength} characters, above 270.` });
   }
@@ -350,14 +425,6 @@ export function validateDigestModelOutput(
     });
   }
 
-  const tics = findForbiddenTics(parsed.digestText, parsed.digestExtended);
-  if (tics.length > 0) {
-    issues.push({
-      code: "forbidden-tic",
-      severity: "soft",
-      message: `Output contains house-style tic(s): ${tics.join(", ")}. Rewrite without them.`,
-    });
-  }
 
   if (!hasForwardLook(`${parsed.digestText}\n${parsed.digestExtended}`)) {
     issues.push({
@@ -367,7 +434,6 @@ export function validateDigestModelOutput(
     });
   }
 
-  const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
   const recent = profile.recentMeta ?? [];
 
   issues.push(...validateDigestLeadRequirements({
@@ -390,9 +456,9 @@ export function validateDigestModelOutput(
   const currentFingerprint = openingFingerprint(parsed.digestExtended);
   if (currentFingerprint) {
     const recentFingerprints = recent
-      .slice(0, 3)
+      .slice(0, OPENING_FINGERPRINT_WINDOW)
       .map((entry) => {
-        const source = entry.rawText ?? entry.title ?? "";
+        const source = entry.extended ?? entry.rawText ?? entry.title ?? "";
         return openingFingerprint(source);
       })
       .filter((fp): fp is string => !!fp);
@@ -401,7 +467,7 @@ export function validateDigestModelOutput(
       issues.push({
         code: "opening-pattern-repetition",
         severity: "soft",
-        message: `Opening fingerprint '${currentFingerprint}' matches ${matchCount} of last 3 digests; open differently.`,
+        message: `Opening fingerprint '${currentFingerprint}' matches ${matchCount} of the last ${OPENING_FINGERPRINT_WINDOW} digests; open differently.`,
       });
     } else if (currentFingerprint === "psi-verb" && matchCount >= 1) {
       issues.push({
@@ -410,6 +476,20 @@ export function validateDigestModelOutput(
         message: "PSI-verb opening repeats; the lead should surface a candidate fact first.",
       });
     }
+  }
+  const repeatedStructuralNgrams = findRepeatedStructuralNgrams(
+    `${parsed.digestText}\n${parsed.digestExtended}`,
+    recent
+      .slice(0, STRUCTURAL_REPETITION_WINDOW)
+      .map((entry) => entry.extended ?? entry.rawText)
+      .filter((text): text is string => Boolean(text)),
+  );
+  if (repeatedStructuralNgrams.length > 0) {
+    issues.push({
+      code: "structural-repetition",
+      severity: "soft",
+      message: `Copy repeats a five-word sentence shape from at least two recent editions: ${repeatedStructuralNgrams.map((ngram) => `'${ngram}'`).join(", ")}.`,
+    });
   }
   const titleFingerprint = normalizeTitleFingerprint(parsed.digestTitle);
   const dedupeTitles = [
@@ -466,7 +546,14 @@ export function validateDigestModelOutput(
       });
     }
   }
-  if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
+  const previousTone = getMetaString(recentThree[0]?.meta ?? null, "tone");
+  if (tone === "sardonic" && previousTone === "sardonic") {
+    issues.push({
+      code: "consecutive-sardonic-tone",
+      severity: "hard",
+      message: "Sardonic tone cannot run in consecutive editions; select another allowed tone.",
+    });
+  } else if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
     issues.push({ code: "repeated-tone", severity: "soft", message: `Tone repeats recent tone '${tone}'.` });
   }
   const recentFive = recent.slice(0, 5);
@@ -503,7 +590,7 @@ export function validateDigestModelOutput(
   if (profile.depegFacts && profile.depegFacts.length > 0) {
     issues.push(...lintPriceBpsConsistency(fullCopy, profile.depegFacts));
   }
-  if (profile.prevDepegFacts && profile.prevDepegFacts.length > 0) {
+  if (profile.prevDepegFacts) {
     issues.push(...lintMovementClaims(fullCopy, profile.prevDepegFacts));
   }
 
@@ -520,10 +607,11 @@ function sentenceMentionsSymbol(sentence: string, symbol: string): boolean {
 }
 
 /**
- * Price/bps consistency lint. The July 2026 corpus shipped "5,783 bps below
- * peg" beside "$0.997" in one sentence — the peak and the live price from two
- * different fields, laundered into a contradiction. Any sentence that quotes a
- * coin's dollar price AND a bps figure must have the two agree.
+ * Price/bps consistency lint. A candidate-model trial repeatedly paired prices
+ * with bps values from different fields. Any sentence that quotes a coin's
+ * dollar price AND a bps figure must have the two agree. This stays soft at the
+ * measured tolerance because making routine rounding mismatches hard would add
+ * a corrective LLM call; the prompt carries the preventative constraint.
  */
 function lintPriceBpsConsistency(
   copy: string,
@@ -569,7 +657,6 @@ function lintMovementClaims(
   copy: string,
   prevFacts: readonly DigestDepegFact[],
 ): DigestValidationIssue[] {
-  if (prevFacts.length === 0) return [];
   const issues: DigestValidationIssue[] = [];
   const knownPrevBps = prevFacts
     .flatMap((fact) => [fact.currentBps, fact.bps, fact.peakBps])
@@ -582,7 +669,10 @@ function lintMovementClaims(
     if (!supported) {
       issues.push({
         code: "unverifiable-movement-claim",
-        severity: "soft",
+        // This is a factual provenance failure, not a style defect. A hard
+        // issue spends one corrective retry rather than publishing an armed
+        // threshold as though it were yesterday's observation.
+        severity: "hard",
         message: `Copy claims movement "from ${claimedOrigin} bps" but no previous-edition depeg fact is near that value.`,
       });
     }

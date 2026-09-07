@@ -9,12 +9,10 @@ import {
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
-import {
-  encodeMeasuredLedgerRecord,
-} from "@shared/lib/measured-execution-ledger";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
 import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
@@ -38,6 +36,7 @@ import {
 } from "./profiles";
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
 import {
+  DEX_EXACT_QUOTE_ADAPTER_REGISTRY,
   verifyDexMeasuredExecutionDeployment,
 } from "./registry";
 import {
@@ -68,7 +67,6 @@ import {
   type CurveCompositeRuntimeEvidence,
 } from "./curve-composite";
 import {
-  UNISWAP_V4_ADAPTER_PROFILE_ID,
   quoteUniswapV4Requests,
   resolveUniswapV4PoolBindings,
   validateUniswapV4ProfileProof,
@@ -80,8 +78,9 @@ import {
   MAX_ADMISSION_ROTATION_CYCLES, MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
   MEASURED_EXECUTION_RPC_REQUEST_LIMIT, SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
-  admitTargetsWithinBudget, buildMeasuredShadowQuoteLedgerRecord, estimateAdmissionRotationCycles,
-  hasCompleteDexMeasuredQuoteProgress, loadExpiringScoreBearingPriorityPacket,
+  admitTargetsWithinBudget, estimateAdmissionRotationCycles,
+  hasCompleteDexMeasuredQuoteProgress, selectExpiringScoreBearingPriorityPacket,
+  loadPublishedScoreBearingDexRoutes,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
   type TargetDeployment,
 } from "./admission";
@@ -126,7 +125,8 @@ function applyQuoteOutcome(
   outcome: { point?: DexMeasuredRawQuotePoint; failureReason?: string },
 ): void {
   if (!outcome.point) {
-    state.failedReason = outcome.failureReason ?? "quote-failed";
+    const failureReason = outcome.failureReason?.trim();
+    state.failedReason = failureReason || "quote-failed";
     return;
   }
   state.points.push(outcome.point);
@@ -157,7 +157,9 @@ function applyQuoteOutcomes(
   requests: readonly MeasuredQuoteAdapterRequest[],
   outcomes: readonly { point?: DexMeasuredRawQuotePoint; failureReason?: string }[],
 ): void {
-  outcomes.forEach((outcome, index) => applyQuoteOutcome(requests[index]!.state, outcome));
+  for (let index = 0; index < requests.length; index += 1) {
+    applyQuoteOutcome(requests[index]!.state, outcomes[index] ?? { failureReason: "quote-failed" });
+  }
 }
 
 /**
@@ -165,7 +167,7 @@ function applyQuoteOutcomes(
  * request/proof shape; the stage keeps chain lanes and adapter groups
  * serialized exactly as before.
  */
-const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
+const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
   Record<
     TargetDeployment["kind"],
     {
@@ -176,7 +178,7 @@ const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
   >
 > = {
   "quoter-v2": {
-    profileIds: ["uniswap-v3-quoter-v2", "pancakeswap-v3-quoter-v2", "aerodrome-slipstream-quoter-v2"],
+    profileIds: DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "evm-quoter-v2")!.profileIds,
     validate: validateQuoterV2ProfileProof,
     quote: async (input) => {
       const outcomes = await quoteQuoterV2Requests({
@@ -194,7 +196,7 @@ const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
     },
   },
   "uniswap-v4": {
-    profileIds: [UNISWAP_V4_ADAPTER_PROFILE_ID],
+    profileIds: DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "evm-uniswap-v4")!.profileIds,
     validate: validateUniswapV4ProfileProof,
     quote: async (input) => {
       const outcomes = await quoteUniswapV4Requests({
@@ -312,33 +314,34 @@ async function syncDexMeasuredExecutionLane(
     ? await loadLatestPublishedDexShadowMeasuredTargets(db, signal)
     : await loadLatestPublishedDexMeasuredTargets(db, signal);
   if (!targetGeneration || targetGeneration.targets.length === 0) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         reason: "target-generation-missing",
-        // A shadow run with no generation still writes an empty durable
-        // Record B so the ledger distinguishes "no generation" from "no row".
-        ...(lane === "shadow"
-          ? encodeMeasuredLedgerRecord(
-              buildMeasuredShadowQuoteLedgerRecord({
-                cycle: startedAt,
-                targetGenerationId: targetGeneration?.generationId ?? null,
-                quoteGenerationId: null,
-                outcomes: [],
-              }),
-            )
-          : {}),
-      }),
+      },
       productivity: { productive: false, reason: "target-generation-missing" },
-    };
+    });
   }
 
+  const scoreBearingRoutes = lane === "active"
+    ? await loadPublishedScoreBearingDexRoutes(db, signal)
+    : null;
+  if (lane === "active" && scoreBearingRoutes === null) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "score-bearing-route-load-failed",
+      },
+      productivity: { productive: false, reason: "score-bearing-route-load-failed" },
+    });
+  }
   const quoteGenerationId = lane === "shadow"
     ? buildDexShadowMeasuredQuoteGenerationId(startedAt)
     : buildDexMeasuredQuoteGenerationId(startedAt);
-  const expiringPriority = lane === "active"
-    ? await loadExpiringScoreBearingPriorityPacket(db, targetGeneration.targets, signal)
+  const expiringPriority = lane === "active" && scoreBearingRoutes
+    ? selectExpiringScoreBearingPriorityPacket(targetGeneration.targets, scoreBearingRoutes)
     : null;
   const priorityTargetIds = new Set(expiringPriority?.targetIds ?? []);
   const admissionState = await readDexSourcePaginationState(
@@ -706,7 +709,7 @@ async function syncDexMeasuredExecutionLane(
       }
       for (const [kind, adapterRequests] of byAdapter) {
         throwIfAborted(signal);
-        await MEASURED_QUOTE_ADAPTER_REGISTRY[kind].quote({
+        await DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS[kind].quote({
           requests: adapterRequests,
           chainRpcs,
           signal,
@@ -804,7 +807,7 @@ async function syncDexMeasuredExecutionLane(
         expectedQuoteGenerationId: quoteGenerationId,
         nowSec: publishedAt,
       });
-      const adapterIssues = MEASURED_QUOTE_ADAPTER_REGISTRY[state.deployment.kind].validate(profile);
+      const adapterIssues = DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS[state.deployment.kind].validate(profile);
       if (genericIssues.length > 0 || adapterIssues.length > 0) {
         throw new Error([...genericIssues, ...adapterIssues].join(","));
       }
@@ -933,24 +936,6 @@ async function syncDexMeasuredExecutionLane(
       }
       return counts;
     }, {}),
-    // Durable Record B (Phase 0.4): flat scalar chunks that survive the merged
-    // handler metadata and the producer-history scalar filter even when the
-    // run is nonproductive.
-    ...(lane === "shadow"
-      ? encodeMeasuredLedgerRecord(
-          buildMeasuredShadowQuoteLedgerRecord({
-            cycle: startedAt,
-            targetGenerationId: targetGeneration.generationId,
-            quoteGenerationId: publication.generationId,
-            outcomes: outcomes.map((outcome, index) => ({
-              target: outcome.target,
-              status: outcome.status,
-              ...(outcome.failureReason != null ? { failureReason: outcome.failureReason } : {}),
-              points: states[index]!.points,
-            })),
-          }),
-        )
-      : {}),
   };
   return {
     status: retention.error

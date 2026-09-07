@@ -69,7 +69,7 @@
           "observedBlock": 25295025,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295025, GoldfishToken DEFAULT_ADMIN_ROLE is held by 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 (Blockscout: SafeProxy). getOwners() = 3 owners; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; fallbackHandler slot = 0xfd0732dc... (CompatibilityFallbackHandler); Safe VERSION() = 1.4.1. DEFAULT_ADMIN controls setMinterContract() and _authorizeUpgrade() on the token. Follow-up 2026-07-20: the 2-of-3 Safe address is 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 — getThreshold()=2 and getOwners() returns exactly the three recorded owner EOAs on Ethereum.",
+        "evidence": "At Ethereum block 25295025, GoldfishToken DEFAULT_ADMIN_ROLE is held by 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 (Blockscout: SafeProxy). getOwners() = 3 owners; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; fallbackHandler slot = 0xfd0732dc... (CompatibilityFallbackHandler); Safe VERSION() = 1.4.1. DEFAULT_ADMIN controls setMinterContract() and _authorizeUpgrade() on the token. Follow-up 2026-07-20: the 2-of-3 Safe address is 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4, getThreshold()=2 and getOwners() returns exactly the three recorded owner EOAs on Ethereum.",
         "sources": [
           {
             "label": "GoldfishToken admin Safe (Etherscan)",

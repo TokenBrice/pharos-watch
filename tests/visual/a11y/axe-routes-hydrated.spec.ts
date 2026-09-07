@@ -3,6 +3,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { TAGS, summarizeViolations } from "./axe-shared";
 import { installHydratedApiFixtures } from "./hydrated-api-fixtures";
 
+test.beforeEach(async ({ page }) => {
+  const { blockAnalyticsCollection } = await import("../../../scripts/maintenance/audit-seo-render-budget.mjs");
+  await blockAnalyticsCollection(page, { blockedAnalyticsRequests: 0 });
+});
+
 /**
  * Mythos P1-14 (second half): hydrated-state axe scans.
  *

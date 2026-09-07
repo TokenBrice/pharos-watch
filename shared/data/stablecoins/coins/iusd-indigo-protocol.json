@@ -29,7 +29,7 @@
     ]
   },
   "implementationLaunchDate": "2022-11",
-  "protocolSlug": "indigo-protocol",
+  "protocolSlug": "indigo",
   "links": [
     {
       "label": "Website",
@@ -51,5 +51,6 @@
       "decimals": 6
     }
   ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance"
 }

@@ -4,10 +4,9 @@
     "lib": ["ES2021"],
     "types": ["@cloudflare/workers-types", "node"],
     "paths": {
-      "@shared/*": ["../shared/*"],
-      "@shared/data/*": ["../shared/data/*"]
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "../shared/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts"],
   "exclude": ["node_modules"]
 }

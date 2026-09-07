@@ -6,6 +6,7 @@ import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stabil
 import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { getPriceCache } from "../lib/db-cache";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
@@ -22,15 +23,15 @@ const DEWS_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         fallbackMode: "stablecoins-cache-unavailable",
         stablecoinsCacheReason: stablecoinsCache.reason,
         dewsUnavailable: true,
-      }),
-    };
+      },
+    });
   }
 
   const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => CORE_PSI_ELIGIBLE_IDS.has(coin.id));
@@ -68,17 +69,17 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   } catch (err) {
     logWorkerEventArgs("handler", "warn", "[stability-index] depeg query failed:", err);
     const depegEventsFailureReason = String(err);
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         fallbackMode: "depeg-events-unavailable",
         depegEventsUnavailable: true,
         depegEventsFailureReason,
         totalMcapUsd,
         mcap7dChangePct,
-      }),
-    };
+      },
+    });
   }
   const now = Math.floor(Date.now() / 1000);
 
@@ -152,10 +153,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   if (dewsUnavailable) {
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         fallbackMode: "dews-unavailable",
         dewsUnavailable,
         dewsFailureReason,
@@ -165,8 +166,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         totalMcapUsd,
         mcap7dChangePct,
         preservedCurrentSample: true,
-      }),
-    };
+      },
+    });
   }
 
   // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start
@@ -231,10 +232,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     logWorkerEventArgs("handler", "warn",
       `[stability-index] skipped sample due to insufficient market-cap input (totalMcapUsd=${totalMcapUsd})`,
     );
-    return {
+    return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({
+      metadata: {
         fallbackMode: "insufficient-market-cap",
         totalMcapUsd,
         depegCount: depegs.length,
@@ -244,8 +245,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsLatestComputedAt,
         dewsRowsRead,
         dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
-      }),
-    };
+      },
+    });
   }
 
   await db
@@ -284,7 +285,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     .run();
 
   logWorkerEventArgs("handler", "info", `[stability-index] score=${result.score} band=${result.band}`);
-  return {
+  return createCronResult({
     itemCount: 1,
     productivity: {
       productive: true,
@@ -301,7 +302,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         },
       ],
     },
-    metadata: JSON.stringify({
+    metadata: {
       aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
       score: result.score,
       band: result.band,
@@ -312,6 +313,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsRowsRead,
       dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
       replayPriceFallbackCount,
-    }),
-  };
+    },
+  });
 }

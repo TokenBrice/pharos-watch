@@ -117,15 +117,15 @@ export default function AboutBluechipPage() {
         <BluechipSection eyebrow="Section 3" title="What Bluechip refuses to grant">
           <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
             These are the calls Pharos refuses to make under the Bluechip label, regardless of how the
-            other dimensions read. The refusals are part of the rating — they are not gaps waiting to
-            be filled.
+            other dimensions read. The refusals are part of the rating. They record limits that the
+            other dimensions cannot override.
           </p>
           <div className="space-y-6">
             {BLUECHIP_REFUSALS.map((entry) => (
               <article key={entry.title} className="space-y-2">
                 <h3 className="text-sm font-semibold tracking-tight text-foreground">
                   <span className="font-mono uppercase tracking-[0.06em] text-muted-foreground">
-                    Refuses —
+                    Refuses:
                   </span>{" "}
                   {entry.title}
                 </h3>
@@ -205,7 +205,7 @@ export default function AboutBluechipPage() {
 
         <aside className="border-t border-border/60 pt-5 text-xs leading-relaxed text-muted-foreground">
           <p>
-            <span className="font-semibold text-foreground">A note on naming</span> — Pharos
+            <span className="font-semibold text-foreground">A note on naming</span>: Pharos
             Bluechip is an editorial designation Pharos issues against published methodology, not a
             substitute for the underlying Bluechip rating sync that informs it. The per-coin badge
             still links to the external Bluechip report; this page is the Pharos framing of why the

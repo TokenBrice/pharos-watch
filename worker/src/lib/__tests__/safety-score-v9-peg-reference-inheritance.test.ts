@@ -1,11 +1,11 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
-} from "../safety-score-v9-extension";
+} from "../safety-score-v9/extension";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
 const CHILD_ID = "apyusd-apyx";

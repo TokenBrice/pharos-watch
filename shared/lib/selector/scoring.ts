@@ -53,9 +53,14 @@ export interface ScoreRowResult {
   degenerate: boolean;
 }
 
-type MissingPolicy = "penalty" | "ignore";
-
-const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
+/**
+ * Current-generation critical-signal sets, shared with the snapshot read path
+ * (`snapshot-normalize.ts`): a missing critical slot caps the score at 78 and
+ * adds a `missing-critical-*` confidence reason, so a drift between the write
+ * and read copies would republish stored snapshots with different numbers.
+ * Pre-`selector-v2.0` snapshots keep their own versioned sets there.
+ */
+export const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
   treasury: new Set(["safetyOverall", "pegStabilityHistory", "dewsInverted"]),
   yield: new Set([
     "pharosYieldScore",
@@ -67,6 +72,19 @@ const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlyS
   ]),
   trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "safetyOverall"]),
 };
+
+/**
+ * Whether a missing `key` slot redistributes its weight to the present
+ * signals (`true` → penalty) or is silently ignored. Shared with the snapshot
+ * read path so stored snapshots replay with the same redistribution flags.
+ * Only `bluechip` is ignorable, and only outside the treasury profile.
+ */
+export function missingSlotRedistributes(
+  profile: SelectorProfile,
+  key: WeightKey,
+): boolean {
+  return !(key === "bluechip" && profile !== "treasury");
+}
 
 function rawValueFor(
   key: WeightKey,
@@ -158,14 +176,6 @@ function normalizeRow(
   return slots;
 }
 
-function missingPolicy(
-  key: WeightKey,
-  profile: SelectorProfile,
-): MissingPolicy {
-  if (key === "bluechip" && profile !== "treasury") return "ignore";
-  return "penalty";
-}
-
 export function scoreRow(
   row: MergedRow,
   profile: SelectorProfile,
@@ -184,8 +194,7 @@ export function scoreRow(
       present.push(slot);
       continue;
     }
-    const policy = missingPolicy(slot.key, profile);
-    if (policy === "penalty") {
+    if (missingSlotRedistributes(profile, slot.key)) {
       redistributedSlots += 1;
     }
     if (criticalSignals.has(slot.key)) {
@@ -245,7 +254,7 @@ export function scoreRow(
       rawValue: slot.rawValue,
       normalizedValue: slot.normalizedValue,
       contribution: 0,
-      redistributed: missingPolicy(slot.key, profile) === "penalty",
+      redistributed: missingSlotRedistributes(profile, slot.key),
     });
   }
 

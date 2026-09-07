@@ -8,7 +8,7 @@
     "pegCurrency": "EUR",
     "governance": "centralized"
   },
-  "collateral": "Planned 100% reserve backing — at least 40% in bank deposits with the remainder in short-term euro-area sovereign bonds diversified across EU countries, with 24/7 redemption; Qivalis states that no stablecoins or tokens have been issued yet",
+  "collateral": "Planned 100% reserve backing: at least 40% in bank deposits with the remainder in short-term euro-area sovereign bonds diversified across EU countries, with 24/7 redemption; Qivalis states that no stablecoins or tokens have been issued yet",
   "pegMechanism": "Pre-launch MiCA-oriented euro stablecoin design: Qivalis describes a regulated 1:1-backed euro token with safeguarded reserves and reliable on-demand access once official issuance begins",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
@@ -31,7 +31,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "announced",
-  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license application with De Nederlandsche Bank pending — Qivalis says it will launch immediately on approval; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis; H2 2026 on track",
+  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license application with De Nederlandsche Bank pending. Qivalis says it will launch immediately on approval; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis; H2 2026 on track",
   "featuredContent": [
     {
       "type": "article",
@@ -45,7 +45,7 @@
       "type": "article",
       "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin",
       "title": "BNP Paribas joins European consortium to launch euro-backed stablecoin",
-      "description": "12 European banks — including ING, UniCredit, BNP Paribas, CaixaBank, and BBVA — unite under Qivalis for a MiCA-compliant euro stablecoin targeting H2 2026.",
+      "description": "12 European banks, including ING, UniCredit, BNP Paribas, CaixaBank, and BBVA, unite under Qivalis for a MiCA-compliant euro stablecoin targeting H2 2026.",
       "source": "BNP Paribas"
     },
     {
@@ -88,14 +88,14 @@
       "date": "2026-03-31",
       "type": "milestone",
       "title": "CEO warns of 'digital dollarization' without euro stablecoin infrastructure",
-      "description": "Jan-Oliver Sell highlights euro's 0.2% on-chain share; EMI license described as in final stages; positions Qivalis as euro infrastructure layer, not just a token.",
+      "description": "Jan-Oliver Sell highlights euro's 0.2% on-chain share; EMI license described as in final stages; positions Qivalis as a euro infrastructure layer rather than a token.",
       "sourceUrl": "https://www.coindesk.com/business/2026/03/31/europe-faces-digital-dollarization-without-a-euro-stablecoin-of-its-own-warns-qivalis-ceo"
     },
     {
       "date": "2026-04-17",
       "type": "regulatory",
       "title": "French Finance Minister Lescure publicly endorses Qivalis and euro stablecoins",
-      "description": "At a Paris crypto conference, Lescure called current euro stablecoin volumes 'not satisfactory' and urged EU banks to accelerate tokenized deposits — a sharp reversal from predecessor Bruno Le Maire's stance that private stablecoins had 'no place on European soil'.",
+      "description": "At a Paris crypto conference, Lescure called current euro stablecoin volumes 'not satisfactory' and urged EU banks to accelerate tokenized deposits, a sharp reversal from predecessor Bruno Le Maire's stance that private stablecoins had 'no place on European soil'.",
       "sourceUrl": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them"
     },
     {
@@ -108,7 +108,7 @@
     {
       "date": "2026-05-05",
       "type": "partnership",
-      "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank — consortium now 17 members",
+      "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank: consortium now 17 members",
       "description": "Five Spanish and European banks expand the consortium beyond the original 12 founding members.",
       "sourceUrl": "https://www.banklesstimes.com/articles/2026/05/05/sabadell-bankinter-join-qivalis-euro-stablecoin-push-in-2026/"
     },
@@ -116,7 +116,7 @@
       "date": "2026-05-20",
       "type": "milestone",
       "title": "Consortium expands to 37 banks across 15 countries",
-      "description": "Roughly 20 additional institutions join — including ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, and Raiffeisen Bank International — up from 17 members.",
+      "description": "Roughly 20 additional institutions join, including ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, and Raiffeisen Bank International, up from 17 members.",
       "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
     },
     {

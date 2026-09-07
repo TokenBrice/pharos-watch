@@ -1,4 +1,5 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { cloneResponse } from "@shared/lib/http-response";
 
 const DEFAULT_CORS_ORIGIN = SITE_ORIGIN;
 
@@ -45,14 +46,12 @@ function corsHeaders(origin: string | null): Record<string, string> {
 }
 
 export function addCorsHeaders(response: Response, origin: string | null): Response {
-  const headers = new Headers(response.headers);
-  for (const [key, value] of Object.entries(corsHeaders(origin))) {
-    headers.set(key, value);
-  }
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+  return cloneResponse(response, {
+    mutateHeaders: (headers) => {
+      for (const [key, value] of Object.entries(corsHeaders(origin))) {
+        headers.set(key, value);
+      }
+    },
   });
 }
 

@@ -249,6 +249,28 @@ describe("Safety Score v9 access posture", () => {
     expect(result.signals).not.toContain("authority:issuance:concentrated");
   });
 
+  it("reports a validator quorum as a concentrated administrator set, never better than a named multisig", () => {
+    // AUTHORITY-LADDER 9.46. This axis reports how CONCENTRATED the acting party
+    // is, not how strong it is: an external validation quorum is a bounded
+    // operator set, so `single-entity` would publish a false fact. It lands on
+    // the same rung as a multisig or a contract, and never on `immutable` or
+    // `distributed`. The ruling that it never GRADES above a named multisig
+    // binds on the control-quality ladder, not here.
+    const quorum = control("validation-domain", "bridge", ["parameter-change"], {
+      authority: {
+        authorityKey: "bridge-route:protocol:layerzero-dvns",
+        model: "validator-quorum",
+        threshold: null,
+      },
+      failureDomains: [{ kind: "bridge-route", key: "protocol:layerzero-dvns" }],
+    });
+    const result = evaluateV9AccessPosture(args({ facts: facts([quorum]) }));
+
+    expect(result.governance).toBe("concentrated");
+    expect(result.signals).toContain("authority:governance:concentrated");
+    expect(result.signals).not.toContain("authority:governance:unknown");
+  });
+
   it("uses issuance, governance, pause, and upgrade controls deterministically", () => {
     const issuance = control("issuer", "mint", ["mint"], {
       authority: {

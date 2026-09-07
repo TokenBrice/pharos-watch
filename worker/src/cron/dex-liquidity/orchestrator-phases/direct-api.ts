@@ -42,24 +42,79 @@ import {
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
-import { mergeDexPriceObservationMap } from "./price-obs";
+import { mergeDexPriceObservationMap } from "../subgraph-helpers";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";
+import {
+  applyRegisteredExecutionTargetOutput,
+  buildRegisteredDirectApiExecutionTarget,
+  type DirectApiExecutionTargetContext,
+} from "../process-pool-execution-capability";
 
-export interface DirectApiFetcher {
+/**
+ * Whether a provider's response is an exhaustive census of its protocol on the
+ * chains it declares, or only a bounded sample of it. Only an exhaustive census
+ * may veto an independently staged pool (see
+ * `buildAuthoritativeStagedPoolConfirmationIndex`): a sample that misses a pool
+ * proves nothing about that pool's existence.
+ */
+export type DirectApiCensusScope = "exhaustive" | "bounded-sample";
+
+export interface DexPoolSourceAdapter {
+  /** Registry identity; optional only for injected focused-test adapters. */
+  slotId?: DexPoolSourceRegistrationSlot["slotId"];
   name: string;
   circuitKey: string;
   normalizedProtocol: string;
   supportedChains: string[];
+  /** Defaults to "exhaustive"; declare "bounded-sample" to withhold veto authority. */
+  censusScope?: DirectApiCensusScope;
   fn: (signal?: AbortSignal) => Promise<DexApiFetchResult>;
 }
+export type DirectApiFetcher = DexPoolSourceAdapter;
+
+export interface DexPoolSourceRegistrationSlot {
+  slotId:
+    | "fluid"
+    | "balancer"
+    | "pancakeswap"
+    | "meteora"
+    | "raydium-clmm"
+    | "orca-clmm"
+    | "aerodrome-slipstream"
+    | "uniswap-v3-bsc-shadow"
+    | "velodrome-slipstream"
+    | "evm-v4"
+    | "soroban-exhaustive"
+    | "btcusd-provider-investigation";
+  platform: "evm" | "solana" | "soroban" | "offchain";
+  lifecycle: "active" | "shadow" | "disabled";
+  implementationModule: string;
+}
+
+/** Source slots are frozen here so downstream units only fill their leaves. */
+export const DEX_POOL_SOURCE_REGISTRY: readonly DexPoolSourceRegistrationSlot[] = [
+  { slotId: "fluid", platform: "evm", lifecycle: "active", implementationModule: "../fetch-fluid" },
+  { slotId: "balancer", platform: "evm", lifecycle: "active", implementationModule: "../fetch-balancer" },
+  { slotId: "pancakeswap", platform: "evm", lifecycle: "active", implementationModule: "../fetch-pancakeswap" },
+  { slotId: "meteora", platform: "solana", lifecycle: "active", implementationModule: "../fetch-meteora" },
+  { slotId: "raydium-clmm", platform: "solana", lifecycle: "active", implementationModule: "../fetch-raydium" },
+  { slotId: "orca-clmm", platform: "solana", lifecycle: "active", implementationModule: "../fetch-orca" },
+  { slotId: "aerodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
+  { slotId: "uniswap-v3-bsc-shadow", platform: "evm", lifecycle: "shadow", implementationModule: "../fetch-uniswap-v3-bsc" },
+  { slotId: "velodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
+  { slotId: "evm-v4", platform: "evm", lifecycle: "disabled", implementationModule: "../subgraph-source-families" },
+  { slotId: "soroban-exhaustive", platform: "soroban", lifecycle: "disabled", implementationModule: "@shared/lib/dex-deployment-coverage" },
+  { slotId: "btcusd-provider-investigation", platform: "offchain", lifecycle: "disabled", implementationModule: "@shared/lib/dex-deployment-coverage" },
+] as const;
 
 export interface DirectApiFetchPhaseEntry {
   name: string;
   circuitKey: string;
   normalizedProtocol: string;
   supportedChains: string[];
+  censusScope?: DirectApiCensusScope;
   result: DexApiFetchResult;
   /** Exact raw-source identities retained without keeping discarded pool objects alive. */
   authoritativeExactPoolKeys?: Set<string>;
@@ -204,9 +259,14 @@ function compactDirectApiProviderEntry(
   if (entry.poolCompaction) return entry;
 
   const rawPools = entry.result.pools;
+  // Warnings (a handful of malformed rows on one page) do not invalidate the
+  // census, but they must not switch the confirmation set over to the compacted
+  // `entry.result.pools` either: that list is filtered down to tracked tokens
+  // below, so reading it back as "what the provider knows" vetoes every staged
+  // pool the compaction dropped. Collect the raw keys whenever the fetch itself
+  // succeeded and let the index decide whether the census may enforce.
   const authoritativeExactPoolKeys =
-    entry.normalizedProtocol !== "uniswap-v3-shadow" &&
-    entry.result.ok && !entry.result.degraded && (entry.result.warnings?.length ?? 0) === 0
+    entry.normalizedProtocol !== "uniswap-v3-shadow" && entry.result.ok && !entry.result.degraded
       ? new Set<string>()
       : undefined;
   const measuredExecutionPools: DexApiPool[] = [];
@@ -280,15 +340,20 @@ export function buildDexDirectApiFetchers(params: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   fallbackCounters?: LiquidityFallbackCounters;
 }): DirectApiFetcher[] {
-  return [
+  const adapters: DexPoolSourceAdapter[] = [
     {
+      slotId: "fluid",
       name: "Fluid",
       circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API,
       normalizedProtocol: "fluid",
       supportedChains: ["ethereum", "arbitrum", "base", "polygon", "bsc", "plasma"],
+      // Emits only pools whose tokens resolve to a tracked stablecoin, so an
+      // absent pool means "not resolved here", not "does not exist".
+      censusScope: "bounded-sample",
       fn: (signal) => fetchFluidPools(signal, params.chainRpcs, params.fallbackCounters),
     },
     {
+      slotId: "balancer",
       name: "Balancer",
       circuitKey: CIRCUIT_SOURCE.BALANCER_API,
       normalizedProtocol: "balancer",
@@ -313,6 +378,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: fetchBalancerPools,
     },
     {
+      slotId: "pancakeswap",
       name: "PancakeSwap",
       circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API,
       normalizedProtocol: "pancakeswap",
@@ -320,13 +386,21 @@ export function buildDexDirectApiFetchers(params: {
       fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal, params.db),
     },
     {
+      slotId: "meteora",
       name: "Meteora",
       circuitKey: CIRCUIT_SOURCE.METEORA_API,
       normalizedProtocol: "meteora",
       supportedChains: ["solana"],
+      // `dlmm.datapi.meteora.ag/pools` ignores the `limit` query parameter and
+      // answers with its own 10-row pages while advertising `total: 123268`.
+      // The paginated helper stops as soon as a page is shorter than the
+      // requested size, so this provider returns ~10 of ~123k pools and cannot
+      // speak for the pools it never saw.
+      censusScope: "bounded-sample",
       fn: fetchMeteoraPools,
     },
     {
+      slotId: "raydium-clmm",
       name: "Raydium",
       circuitKey: CIRCUIT_SOURCE.RAYDIUM_API,
       normalizedProtocol: "raydium",
@@ -334,6 +408,7 @@ export function buildDexDirectApiFetchers(params: {
       fn: fetchRaydiumPools,
     },
     {
+      slotId: "orca-clmm",
       name: "Orca",
       circuitKey: CIRCUIT_SOURCE.ORCA_API,
       normalizedProtocol: "orca",
@@ -341,10 +416,17 @@ export function buildDexDirectApiFetchers(params: {
       fn: (signal) => fetchOrcaPools(signal, params.db),
     },
     {
+      slotId: "aerodrome-slipstream",
       name: "Aerodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
       normalizedProtocol: "aerodrome",
       supportedChains: ["base"],
+      // `fetchSugarPools` keeps only pools holding a tracked token, and
+      // `fetchSlipstreamPools` then drops any pool with a one-sided reserve or
+      // an underivable USD price. A tick-spacing-1 CL pool sitting entirely on
+      // one side of its range is normal, so an omission is a coverage hole in
+      // this extract rather than evidence that the pool does not exist.
+      censusScope: "bounded-sample",
       fn: (signal) =>
         fetchSlipstreamPools(
           "aerodrome-slipstream",
@@ -357,6 +439,7 @@ export function buildDexDirectApiFetchers(params: {
         ),
     },
     {
+      slotId: "uniswap-v3-bsc-shadow",
       name: "Uniswap V3 BSC shadow",
       circuitKey: CIRCUIT_SOURCE.UNISWAP_V3_BSC_SHADOW,
       normalizedProtocol: "uniswap-v3-shadow",
@@ -370,10 +453,13 @@ export function buildDexDirectApiFetchers(params: {
       }),
     },
     {
+      slotId: "velodrome-slipstream",
       name: "Velodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
       normalizedProtocol: "velodrome",
       supportedChains: ["optimism"],
+      // Same Sugar extract as Aerodrome Slipstream above.
+      censusScope: "bounded-sample",
       fn: (signal) =>
         fetchSlipstreamPools(
           "velodrome-slipstream",
@@ -386,6 +472,13 @@ export function buildDexDirectApiFetchers(params: {
         ),
     },
   ];
+  const bySlot = new Map(adapters.map((adapter) => [adapter.slotId, adapter]));
+  return DEX_POOL_SOURCE_REGISTRY
+    .filter((registration) => registration.lifecycle !== "disabled")
+    .flatMap((registration) => {
+      const adapter = bySlot.get(registration.slotId);
+      return adapter ? [adapter] : [];
+    });
 }
 
 export async function runDirectApiFetchPhase(
@@ -397,7 +490,7 @@ export async function runDirectApiFetchPhase(
   const entries = await mapWithConcurrency(
     fetchers,
     DIRECT_API_FETCH_PHASE_CONCURRENCY,
-    async ({ name, circuitKey, normalizedProtocol, supportedChains, fn }) => {
+    async ({ name, circuitKey, normalizedProtocol, supportedChains, censusScope, fn }) => {
       const failedSources: string[] = [];
       const fallbackSignals: string[] = [];
       const sourceWarnings: string[] = [];
@@ -425,6 +518,7 @@ export async function runDirectApiFetchPhase(
           circuitKey,
           normalizedProtocol,
           supportedChains,
+          ...(censusScope ? { censusScope } : {}),
           result,
         };
         return {
@@ -522,6 +616,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
   symbolToIds: SymbolLookups["symbolToIds"];
   validationReferences: PriceValidationReferences;
   stablecoinPriceById: Map<string, number>;
+  executionTargetContext?: DirectApiExecutionTargetContext;
   preprocessedPoolCounts?: DirectApiPoolCompactionCounts;
   fallbackCounters?: LiquidityFallbackCounters;
 }): Promise<DirectApiIntegrationResult> {
@@ -698,8 +793,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
     );
   }
 
+  let directApiGtPools = new Map<string, GtNewPool[]>();
   if (retainedDirectApiPools.length > 0) {
-    const directApiGtPools = convertToGtNewPools(
+    directApiGtPools = convertToGtNewPools(
       retainedDirectApiPools,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
@@ -712,8 +808,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
     }
   }
 
+  let exactDuplicateGtPools = new Map<string, GtNewPool[]>();
   if (exactDuplicatePoolsForEvidence.length > 0) {
-    const exactDuplicateGtPools = convertToGtNewPools(
+    exactDuplicateGtPools = convertToGtNewPools(
       exactDuplicatePoolsForEvidence,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
@@ -721,6 +818,22 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
     );
     retainExactDuplicatePoolEvidence(params.metrics, exactDuplicateGtPools);
+  }
+
+  if (params.executionTargetContext) {
+    const executionTargetContext = params.executionTargetContext;
+    attachRegisteredDirectApiExecutionTargets(
+      params,
+      executionTargetContext,
+      retainedDirectApiPools,
+      directApiGtPools,
+    );
+    attachRegisteredDirectApiExecutionTargets(
+      params,
+      executionTargetContext,
+      exactDuplicatePoolsForEvidence,
+      exactDuplicateGtPools,
+    );
   }
 
   const directApiPoolsForPriceObservation = [...retainedDirectApiPools, ...exactDuplicatePoolsForEvidence];
@@ -746,6 +859,43 @@ export async function integrateDirectApiLiquidityPhase(params: {
     acceptedByProtocolChain,
     excludedByReason,
   };
+}
+
+function attachRegisteredDirectApiExecutionTargets(
+  params: Parameters<typeof integrateDirectApiLiquidityPhase>[0],
+  executionTargetContext: DirectApiExecutionTargetContext,
+  exactPools: readonly DexApiPool[],
+  shapedPools: ReadonlyMap<string, readonly GtNewPool[]>,
+): void {
+  const exactPoolByKey = new Map(
+    exactPools.map((pool) => [canonicalExitRouteAssetKey(pool.chain, pool.poolAddress), pool]),
+  );
+  for (const [stablecoinId, pools] of shapedPools) {
+    const metric = params.metrics.get(stablecoinId);
+    if (!metric) continue;
+    for (const shapedPool of pools) {
+      const poolId = canonicalExitRouteAssetKey(shapedPool.chain, shapedPool.address);
+      const exactPool = exactPoolByKey.get(poolId);
+      const retainedPool = metric.topPools.find((pool) => pool.poolId === poolId);
+      if (
+        !exactPool ||
+        !retainedPool ||
+        !isCompatibleExactDuplicateEvidence(retainedPool, shapedPool)
+      ) continue;
+      const output = buildRegisteredDirectApiExecutionTarget({
+        pool: exactPool,
+        stablecoinId,
+        chainAddressToId: params.chainAddressToId,
+        symbolToChainScopedIds: params.symbolToChainScopedIds,
+        stablecoinPriceById: params.stablecoinPriceById,
+        validationReferences: params.validationReferences,
+        executionTargetContext,
+      });
+      if (!output) continue;
+      retainedPool.extra ??= {};
+      applyRegisteredExecutionTargetOutput(retainedPool.extra, output);
+    }
+  }
 }
 
 function retainExactDuplicatePoolEvidence(

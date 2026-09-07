@@ -13,7 +13,7 @@
     "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "WSPN is a BVI-domiciled entity with a stated FinCEN MSB registration and pending BVI VASP application. WUSD terms restrict U.S. persons. The GENIUS Act foreign-exception comparability framework remains in proposed-rulemaking (Treasury FR 2026-06489; comment deadline June 2, 2026) — no foreign registration can yet be granted. No PPSI approval or US authorization of any kind found.",
+    "notes": "WSPN is a BVI-domiciled entity with a stated FinCEN MSB registration and pending BVI VASP application. WUSD terms restrict U.S. persons. The GENIUS Act foreign-exception comparability framework remains in proposed-rulemaking (Treasury FR 2026-06489; comment deadline June 2, 2026): no foreign registration can yet be granted. No PPSI approval or US authorization of any kind found.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -37,15 +37,15 @@
       },
       {
         "label": "WSPN terms of service",
-        "url": "https://www.wspn.io/pdf/WSPN_Terms_of_Service.pdf",
+        "url": "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
         "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "FinCEN/OFAC AML NPRM (FR 2026-06963) — no PPSI approvals issued",
-        "Treasury state-regime comparability NPRM (FR 2026-06489) — foreign exception framework not yet final",
+        "FinCEN/OFAC AML NPRM (FR 2026-06963): no PPSI approvals issued",
+        "Treasury state-regime comparability NPRM (FR 2026-06489): foreign exception framework not yet final",
         "FinCEN MSB registrant search (msb.fincen.gov)",
         "WSPN issuer disclosures, reserve documentation, and terms of service",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
@@ -62,6 +62,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-05"
   }
 }

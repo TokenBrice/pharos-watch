@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
 import { makePsiDailyDb, makePsiSnapshotDb, type MockD1Database } from "./snapshot-cron.test-support";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { snapshotPsiDaily } from "../snapshot-psi";
@@ -11,12 +12,7 @@ function yesterdayMidnightFrom(nowMs: number): number {
   return todayMidnight - 86_400;
 }
 
-function getInsertBinds(db: MockD1Database): unknown[] | undefined {
-  const write = db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT INTO stability_index"));
-  return write?.binds;
-}
+const getInsertBinds = (db: MockD1Database) => findD1HistoryEntry(db, "INSERT INTO stability_index")?.binds;
 
 describe("snapshotPsiDaily", () => {
   beforeEach(() => {
@@ -99,9 +95,7 @@ describe("snapshotPsiDaily", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.metadata).toBe(JSON.stringify({ reason: "no-samples-for-yesterday", sampleCount: 0 }));
-    const insert = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("INSERT INTO stability_index"));
+    const insert = findD1HistoryEntry(db, "INSERT INTO stability_index");
     expect(insert).toBeUndefined();
   });
 

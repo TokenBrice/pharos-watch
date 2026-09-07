@@ -1,17 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { flattenScheduledSlotGroupTasks, runScheduledSlotGroups } from "../slot-groups";
 
 function buildRuntime(
   runLeasedCron: ScheduledRuntimeContext["runLeasedCron"],
 ): ScheduledRuntimeContext {
   return makeScheduledRuntime({
-    db: {
+    db: makeNoopD1({
       prepare: () => ({
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
-    } as unknown as D1Database,
+    }),
     cron: "0 8 * * *",
     scheduleKey: "daily0800Utc",
     scheduledTimeMs: null,

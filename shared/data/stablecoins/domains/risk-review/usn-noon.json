@@ -252,10 +252,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Ethereum block 25771119, USN remoteTokens(324) and remoteTokens(50104) returned the zkSync and Sophon representations. The owner-only configureHyperlane, configureISM, registerHyperlaneRemoteToken, and setPeer methods can change the reviewed route configuration; the Ethereum mailbox is 0xc005dc82818d67af737725bd4bf75435d065d239 and its effective default ISM is 0x10cf42691db303ff44f35c9ced2cd1283a93e046.",
+          "caps": "At Ethereum block 25881932 on 2026-09-01, USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), maxLimit(address), limit(), limit(address), rateLimit(), and dailyLimit() all reverted. mailbox() returned 0xc005dc82818d67af737725bd4bf75435d065d239, interchainSecurityModule() returned zero, token() returned the contract itself, and the EIP-1967 implementation was 0x961e78b26f6984a2ddac42e4ce5b8014a311608e, so the Safe-administered proxy can also replace the mint logic. Nothing caps an accepted Hyperlane delivery. The reviewed zkSync (block 71804657) and Sophon (block 29658925) representations returned the same twelve reverts.",
           "pausersAdminsUpgraders": "The Noon 3-of-6 Safe owns the Ethereum USN implementation and can change its Hyperlane mailbox, ISM, remote-token mapping, and peer configuration. The mailbox owner 0x562dfaac27a84be6c96273f5c9594da1681c0da7 is a separate Hyperlane administration domain.",
           "attestorQuorum": "The Ethereum default ISM address is known, but its current validator/member set and quorum semantics were not independently decoded."
         },
         "capDescription": "This Safe controls Ethereum USN Hyperlane bridge configuration for the canonical route and the reviewed zkSync, Sophon, and Starknet representations; it is separate from the Safe's native MinterHandler controls.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "The Hyperlane mailbox owner and default ISM validator administration are separate protocol failure domains."
         ],
@@ -314,10 +316,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Ethereum block 25771119, Endpoint V2 peers(30165) returned the zkSync USN representation and peers(30334) returned the Sophon USN representation. peer(30500) for Starknet was zero; no LayerZero Starknet route is asserted.",
+          "caps": "At Ethereum block 25881932 on 2026-09-01, the LayerZero leg carried no mint ceiling either: on USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed, endpoint() returned Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, token() returned the contract itself, approvalRequired() returned false, and cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), maxLimit(address), limit(), limit(address), rateLimit(), and dailyLimit() all reverted. The zkSync (block 71804657, endpoint 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf) and Sophon (block 29658925, endpoint 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7) representations returned the same reverts, so no per-lane token cap bounds an accepted OFT credit.",
           "pausersAdminsUpgraders": "The Noon Safe controls the Ethereum USN owner-only LayerZero peer configuration through the current implementation; the Endpoint V2 address is 0x1a44076050125825900e736c501f859c50fe728c and permissionless() returned true.",
           "unsupportedReason": "The active per-channel DVN sets, receive/send libraries, executor configuration, and enforced options were not independently decoded."
         },
         "capDescription": "This Safe controls the Ethereum USN LayerZero peer configuration for the verified zkSync and Sophon routes; the absent Starknet peer is retained as negative evidence.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "LayerZero Endpoint V2, DVN, message-library, and Executor governance is external to the Noon Safe."
         ],
@@ -426,7 +430,7 @@
             "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/ethereum/addresses.yaml"
           }
         ],
-        "evidence": "At Ethereum block 25783942–25784000, Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 owner()=0x562dfaac27a84be6c96273f5c9594da1681c0da7, defaultIsm()=0x10cf42691db303ff44f35c9ced2cd1283a93e046, localDomain()=1, EIP-1967 impl=0x7b4d881c122a5e61adcffb56a2e3ce9927d53455 / admin=0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659. The owner is a GnosisSafeProxy (VERSION 1.3.0) whose getOwners()+getThreshold() and Safe API return 6-of-10, modules=[], guard=0, fallback=0xf48f2B2d..., nonce=44. ProxyAdmin.owner() is the same Safe. Default ISM bytecode is an EIP-1167 clone of StaticAggregationISM 0xc2ccfc65... with threshold 2 and modules [DomainRoutingISM 0x713afc60... owned by the Safe, PausableISM 0x9c34257b... owned by 0xa7eccdb9..., paused=false]. Per-origin Multisig ISM validator sets were read from clone immutable args / modulesAndThreshold and match the published zkSync and Starknet default-ISM tables; Sophon is live on-chain as 2-of-3 but is registry-deprecated and unpublished. USN token ISM is zero."
+        "evidence": "At Ethereum block 25783942 to 25784000, Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 owner()=0x562dfaac27a84be6c96273f5c9594da1681c0da7, defaultIsm()=0x10cf42691db303ff44f35c9ced2cd1283a93e046, localDomain()=1, EIP-1967 impl=0x7b4d881c122a5e61adcffb56a2e3ce9927d53455 / admin=0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659. The owner is a GnosisSafeProxy (VERSION 1.3.0) whose getOwners()+getThreshold() and Safe API return 6-of-10, modules=[], guard=0, fallback=0xf48f2B2d..., nonce=44. ProxyAdmin.owner() is the same Safe. Default ISM bytecode is an EIP-1167 clone of StaticAggregationISM 0xc2ccfc65... with threshold 2 and modules [DomainRoutingISM 0x713afc60... owned by the Safe, PausableISM 0x9c34257b... owned by 0xa7eccdb9..., paused=false]. Per-origin Multisig ISM validator sets were read from clone immutable args / modulesAndThreshold and match the published zkSync and Starknet default-ISM tables; Sophon is live on-chain as 2-of-3 but is registry-deprecated and unpublished. USN token ISM is zero."
       },
       {
         "id": "ethereum-usn-bridge-proxy-upgrade",
@@ -506,10 +510,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At zkSync block 71576774, the representation mailbox was 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, its default ISM was 0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2, and its LayerZero peer for EID 30101 returned Ethereum USN.",
+          "caps": "At zkSync block 71804657 on 2026-09-01, representation 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), limit(), rateLimit(), and dailyLimit() all reverted, so it is a plain Hyperlane/LayerZero synthetic rather than an xERC20 with configured minting limits. owner() returned the Safe above, mailbox() returned 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, interchainSecurityModule() returned zero, token() returned the contract itself, and the EIP-1967 implementation was 0xa5b228237bef9bc804d8d6e7c76d0853a406bf34, so the Safe-administered proxy can also replace the mint logic. Nothing caps an accepted delivery.",
           "pausersAdminsUpgraders": "The token owner is the 3-of-4 Safe above. The token implementation/admin slots were 0xa5b228237bef9bc804d8d6e7c76d0853a406bf34 / 0x5a82384a042cce41f9ac6f0c110773e5b3266f11; the mailbox implementation/admin were 0x1b4e7fd3052fc6d84dab69eef6a156c7d7909a78 / 0xd01274dc164d32f8595be707f221375e68ce300c, and mailbox owner was 0xcd81ccfe7d9306849136fa96397113345a32ecf3.",
           "attestorQuorum": "The current default ISM address is known, but its validator/member set and quorum semantics were not independently decoded."
         },
         "capDescription": "This Safe governs the zkSync burn-mint representation's owner/configuration surface; the destination mint is intended to execute only through authenticated Hyperlane message delivery.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Representation proxy source/ABI provenance and exact destination mint/burn authorization and pause behavior were not fully verified."
         ],
@@ -662,7 +668,7 @@
         "canRaiseCap": false,
         "capDescription": "This Hyperlane zkSync Safe cannot mint USN. It owns Mailbox 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e and Mailbox ProxyAdmin 0xd01274dc164d32f8595be707f221375e68ce300c. zkSync USN has no maxLimit/limit/rateLimits surface; destination mint is intended only via authenticated Hyperlane delivery under the mailbox default ISM.",
         "routeChecks": {
-          "trustedPeerOrRemote": "At zkSync block 71595685–71595702, Mailbox owner()=this 6-of-10 Safe, defaultIsm()=0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2 (DomainRoutingISM, moduleType=1, owner=this Safe). USN.interchainSecurityModule()=0. Mailbox EIP-1967 admin=0xd01274dc164d32f8595be707f221375e68ce300c.",
+          "trustedPeerOrRemote": "At zkSync block 71595685 to 71595702, Mailbox owner()=this 6-of-10 Safe, defaultIsm()=0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2 (DomainRoutingISM, moduleType=1, owner=this Safe). USN.interchainSecurityModule()=0. Mailbox EIP-1967 admin=0xd01274dc164d32f8595be707f221375e68ce300c.",
           "attestorQuorum": "Default ISM module(1/Ethereum)=MessageIdMultisig 0x9a97e31b77edf3041c3084de43f8c9561db95f07 (moduleType=5) with validatorsAndThreshold origin=1 = 6-of-9 [Abacus Works 0x03c842db86a6a3e524d4a6615390c1ea8e2b9541, DSRV 0x94438a7de38d4548ae54df5c6010c4ebc5239eae, Zee Prime 0x5450447aee7b544c462c9352bef7cad049b0c2dc, Staked 0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b, AVS Luganodes 0xb683b742b378632a5f73a2a5a45801b3489bba44, Imperator 0x3786083ca59dc806d894104e65a13a70c2b39276, Mitosis 0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36, Substance Labs 0x29d783efb698f9a2d3045ef4314af1f5674f52c5, Enigma 0x36a669703ad0e11a0382b098574903d2084be22c]. Published docs list a 10th Citrea validator 0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae that is not in this live set. module(50104)=2-of-3 zkSync-origin set; module(358974494)=2-of-3 Starknet-origin set.",
           "pausersAdminsUpgraders": "Mailbox ProxyAdmin.owner()=this Safe. Safe nonce=4, modules=[], guard=0. Nine of ten signers match the Ethereum Hyperlane Safe; the sixth owner is 0x97a1b7D1B6D52CACf4B6754f144fd6E404790346 instead of Ethereum's 0x29fF839F1e3322f8408A25Ad29F5092D3A734779.",
           "rateLimits": "zkSync USN 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6 maxLimit/limit/rateLimits revert."
@@ -727,10 +733,12 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Sophon block 29641979, the representation mailbox was 0x9bbdf86b272d224323136e15594fdce487f40ce7, its default ISM was 0x309d19dc1adaacd7ff8baae9737e7d2314a4651e, and its LayerZero peer for EID 30101 returned Ethereum USN.",
+          "caps": "At Sophon block 29658925 on 2026-09-01, representation 0xc1aa99c3881b26901af70738a7c217dc32536d36 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), totalSupplyCap(), mintingMaxLimitOf(address), mintingCurrentLimitOf(address), maxLimit(), limit(), rateLimit(), and dailyLimit() all reverted, so it is a plain Hyperlane/LayerZero synthetic rather than an xERC20 with configured minting limits. owner() returned the Safe above, mailbox() returned 0x9bbdf86b272d224323136e15594fdce487f40ce7, interchainSecurityModule() returned zero, token() returned the contract itself, and the EIP-1967 implementation was 0xf90d5784e175b6142958ec32b77b7aa63582d957, so the Safe-administered proxy can also replace the mint logic. Nothing caps an accepted delivery.",
           "pausersAdminsUpgraders": "The token owner is the 3-of-4 Safe above. The token implementation/admin slots were 0xf90d5784e175b6142958ec32b77b7aa63582d957 / 0xad871a241d1fe8dd6293d6746d1898d211cf5890; the mailbox implementation/admin were 0xa3949b37109d64b10de93252eefebbb2e6b8944f / 0x038f9f4e93e88af2c688da265222fde80e455aa4, and mailbox owner was 0x113d3a19031fe5db58884d6aa54545dd4de499c0.",
           "attestorQuorum": "The current default ISM address is known, but its validator/member set and quorum semantics were not independently decoded."
         },
         "capDescription": "This Safe governs the Sophon burn-mint representation's owner/configuration surface; the destination mint is intended to execute only through authenticated Hyperlane message delivery.",
+        "canRaiseCap": true,
         "bypassSurfaces": [
           "Representation proxy source/ABI provenance and exact destination mint/burn authorization and pause behavior were not fully verified."
         ],
@@ -883,7 +891,7 @@
         "canRaiseCap": false,
         "capDescription": "This Hyperlane Sophon Safe cannot mint USN. It owns Mailbox 0x9bbdf86b272d224323136e15594fdce487f40ce7 and Mailbox ProxyAdmin 0x038f9f4e93e88af2c688da265222fde80e455aa4. Sophon USN has no maxLimit/limit/rateLimits surface. The Hyperlane registry marks chain sophon availability.status=disabled / reasons=[deprecated]; the mailbox and USN representation remain live.",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Sophon block 29644095–29644098, Mailbox owner()=this 6-of-10 Safe, defaultIsm()=0x309d19dc1adaacd7ff8baae9737e7d2314a4651e (DomainRoutingISM, moduleType=1, owner=this Safe). USN.interchainSecurityModule()=0.",
+          "trustedPeerOrRemote": "At Sophon block 29644095 to 29644098, Mailbox owner()=this 6-of-10 Safe, defaultIsm()=0x309d19dc1adaacd7ff8baae9737e7d2314a4651e (DomainRoutingISM, moduleType=1, owner=this Safe). USN.interchainSecurityModule()=0.",
           "attestorQuorum": "Default ISM module(1/Ethereum)=MessageIdMultisig 0x44b55ff09087ab0188d95d9c3f564259a6cea155 (type 5) validatorsAndThreshold origin=1 = the same 6-of-9 Ethereum-origin set read on zkSync. module(324)=2-of-3 [Abacus Works 0xadd1d39c..., Merkly 0xcf0211fa..., Mitosis 0x4f977a59...]. module(358974494)=2-of-3 [Abacus Works 0x61204c98..., Zee Prime 0x5450447a..., Staked 0xb3ac35d3...].",
           "pausersAdminsUpgraders": "Mailbox ProxyAdmin.owner()=this Safe. Safe nonce=12, modules=[], guard=0. Signer set equals the zkSync Hyperlane Safe (not the Ethereum sixth owner).",
           "rateLimits": "Sophon USN 0xc1aa99c3881b26901af70738a7c217dc32536d36 maxLimit/limit revert."
@@ -936,10 +944,11 @@
         "threshold": 1,
         "signerCount": 1,
         "modulesOrGuardsStatus": "not-applicable",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "At Starknet block 13501913, token owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module()=0. Prior 2026-08-16 router-table reads (Ethereum/zkSync/Sophon/TAC) are not re-litigated here.",
-          "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
+          "caps": "Re-adjudicated 2026-09-01 under the ODR-D2 rule at Starknet block 14197601 (rpc.starknet.lava.build). The representation's class hash is 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d, unchanged, and the deployed class ABI declares 35 functions with no ceiling entrypoint of any kind; cap, max_supply, get_cap and mint_limit each return \"Requested entrypoint does not exist in the contract\". owner=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module=0, total_supply=0x61983eab91df84e59000. No numeric mint ceiling exists, and the owner additionally holds the class upgrade entrypoint, so the fail-closed value is raiseable rather than bounded.",
+        "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
           "attestorQuorum": "Token-level ISM is zero; Hyperlane mailbox default ISM (decoded on starknet-hyperlane-mailbox-owner) is effective."
         },
         "capDescription": "The Starknet owner account governs the upgradeable Hyperlane representation and its router table; this is bridge representation authority, not an independent native USN issuance route. Signer quorum is 1-of-1.",
@@ -984,7 +993,7 @@
         "canRaiseCap": false,
         "capDescription": "This ArgentMultisig cannot mint USN. It is Mailbox.owner() and can administer get_default_ism(). Destination mint is intended only via authenticated Hyperlane delivery under that default ISM. No EVM-style token rate-limit ABI exists on the Starknet representation.",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Starknet block 13501913–13502090, Mailbox owner()=0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7, get_default_ism()=0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a, get_local_domain()=0x1565841e (358974494). Token interchain_security_module()=0.",
+          "trustedPeerOrRemote": "At Starknet block 13501913 to 13502090, Mailbox owner()=0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7, get_default_ism()=0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a, get_local_domain()=0x1565841e (358974494). Token interchain_security_module()=0.",
           "attestorQuorum": "Default ISM is Aggregation module_type=2, get_modules()=[DomainRoutingISM 0x6c343546eb1573cab30a111276c9475a600c38bdb5f7d679de34da007fde4f, Pausable/NULL 0x6832fc0e5527abdd293c9f31ceb283946aee598223e35dabba91da259ee79e9], get_threshold()=2 (both required). Pausable is_paused()=0; its owner is ArgentAccount 0x6ae465e0c05735820a75500c40cb4dabbe46ebf1f1665f9ba3f9a7dcc78a6d1. Routing module(1/Ethereum)=MessageIdMultisig 0x24058f4116f708c56c4fd3e512e83a1f54c9101e28d7d9aaa4a9da03a06e86 with get_threshold()=6 and get_validators()= the same 9 Ethereum-origin keys as zkSync/Sophon. module(0x144/zkSync)=2-of-3 [0xadd1d39c..., 0xcf0211fa..., 0x4f977a59...].",
           "pausersAdminsUpgraders": "Mailbox owner account get_name()=ArgentMultisig, get_version()=(0,1,1), get_threshold()=4, get_signers() count=7 public keys [0x223389400494bd3c9f6c13e224b4fab92953002b98b5647241a860937e4a051, 0x7f1c510d10c2a299da1eb1675c967d359a9d80463295d5396a166efe8adf190, 0x3fc27ab30ea9aa0e52ab2e606af5676576e936b554a8a4f2354c16d50ab995b, 0x200b7f37fd30d1f2126b8a5985e1745e3e12b04ec19f775bd3ca00f50a0a152, 0x406c38713702a726fea3ade7cc435069d08e51c9a8e41828b396647ea021a7, 0x47b0cfe4d1cb99197a3c8b9c2f906249e8cdc91f223b7c2cb8573c27fe6e2f5, 0x183fe7958154b91c8e1c9fdde5fdfdfb5179ecff56bc8c7ad2d52d2d1dea036]. Class hash 0x6e150953b26271a740bf2b6e9bca17cc52c68d765f761295de51ceb8526ee72."
         },
@@ -1004,7 +1013,7 @@
             "url": "https://docs.hyperlane.xyz/docs/reference/addresses/validators/mainnet-default-ism-validators"
           }
         ],
-        "evidence": "starknet_call at blocks 13501913–13502090: Mailbox.owner matches the authored controller. That account returns get_name=ArgentMultisig, threshold 4, seven signer public keys, class 0x6e150953.... Default ISM aggregation children, Pausable unpaused, and Ethereum-origin 6-of-9 validators were read from the live contracts. This is not a Gnosis Safe; signer values are Stark public keys, so no Safe API/threshold object is asserted."
+        "evidence": "starknet_call at blocks 13501913 to 13502090: Mailbox.owner matches the authored controller. That account returns get_name=ArgentMultisig, threshold 4, seven signer public keys, class 0x6e150953.... Default ISM aggregation children, Pausable unpaused, and Ethereum-origin 6-of-9 validators were read from the live contracts. This is not a Gnosis Safe; signer values are Stark public keys, so no Safe API/threshold object is asserted."
       }
     ],
     "scopedQuestions": [

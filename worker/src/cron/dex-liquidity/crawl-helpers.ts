@@ -1,16 +1,16 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
 import type { DsPair, DsTrackedTokenPrice } from "../../lib/dexscreener";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, GtNewPool } from "./types";
-import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
+import { buildPoolFingerprint, normalizeProtocol } from "./pool-normalization";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { buildChainAddressKey } from "./token-resolution";
-import { CURVE_CHAINS } from "./constants";
 
 export type CrawlStats = {
   requests: number;
@@ -82,7 +82,7 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
 
 export type CrawlTokenPoolsResult = { stoppedEarly: boolean };
 
-const NATIVE_CURVE_API_CHAINS = new Set<string>(CURVE_CHAINS);
+const NATIVE_CURVE_API_CHAINS = new Set<string>(CURVE_NATIVE_DISCOVERY_CHAINS);
 
 export function shouldSkipFallbackCurvePool(chain: string, dexId: string): boolean {
   return dexId.startsWith("curve") && NATIVE_CURVE_API_CHAINS.has(chain);

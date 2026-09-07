@@ -9,6 +9,7 @@ import {
   makePendingDepegRow,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), notOkAsNull: true, passthroughNonResponse: true }));
 
@@ -69,13 +70,13 @@ function makePromotionAsset(stablecoinId: string) {
 function instrumentBatches(sqlite: DatabaseSync): { db: D1Database; batchSizes: number[] } {
   const base = createSqliteD1(sqlite);
   const batchSizes: number[] = [];
-  const db = {
+  const db = makeNoopD1({
     ...base,
     batch: async <T>(statements: D1PreparedStatement[]) => {
       batchSizes.push(statements.length);
       return base.batch<T>(statements);
     },
-  } as unknown as D1Database;
+  });
   return { db, batchSizes };
 }
 

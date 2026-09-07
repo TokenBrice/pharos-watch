@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { mockRegistry } from "../../../test-helpers/cron";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 // A mega-multichain footprint: a cheap CoinGecko head plus a GeckoTerminal-only
 // tail whose 2s pacing floor cannot fit in the same per-coin budget.
@@ -19,13 +20,15 @@ const { GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [{ id: "mega-coin", contracts: FOOTPRINT }],
-}));
-
-vi.mock("../../dex-liquidity/pool-helpers", () => ({
-  getTrackedContracts: vi.fn((coin: { contracts?: ContractDeployment[] }) => coin.contracts ?? []),
-}));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
+  const registry = mockRegistry({
+    stablecoins: [{ id: "mega-coin", contracts: FOOTPRINT }],
+  });
+  return {
+    WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
+    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+  };
+});
 
 vi.mock("../../../lib/price-validation", () => ({
   loadPriceValidationReferences: vi.fn(async () => undefined),
@@ -53,6 +56,7 @@ vi.mock("../deployment-outcomes", () => ({
 vi.mock("../persistence", () => ({
   cleanupStaging: vi.fn(async () => {}),
   incrementRunSeq: vi.fn(async () => 1),
+  readDiscoveryCensusSummaries: vi.fn(async () => new Map()),
   readDiscoveryMeta: vi.fn(async () => new Map()),
   readDiscoveryTargetCursors: vi.fn(async () => new Map(cursorStore)),
   recordDiscoveryAttemptFence: vi.fn(async () => {}),
@@ -67,12 +71,13 @@ vi.mock("../persistence", () => ({
 import { syncDexDiscovery } from "../orchestrator";
 import { crawlCoin } from "../crawl-sources";
 import { discoveryTargetCursorKey, estimateDeploymentCrawlCostMs } from "../target-window";
+import { recordDiscoveryAttemptFence } from "../persistence";
 
-const db = {
+const db = makeNoopD1({
   prepare: () => ({
     all: async () => ({ results: [{ stablecoin_id: "mega-coin", pool_count: 0, chain_count: 0 }] }),
   }),
-} as unknown as D1Database;
+});
 
 function totalFootprintCostMs(): number {
   return FOOTPRINT.reduce((sum, target) => sum + estimateDeploymentCrawlCostMs(target.chain), 0);
@@ -108,6 +113,11 @@ describe("dex discovery deployment-window rotation", () => {
       const result = await syncDexDiscovery(db, null);
       expect(result.status).toBe("ok");
       runWindows.push(lastCrawlWindow());
+      const fenceCalls = vi.mocked(recordDiscoveryAttemptFence).mock.calls;
+      expect(
+        fenceCalls[fenceCalls.length - 1]?.[2]
+          .map(discoveryTargetCursorKey),
+      ).toEqual(runWindows[runWindows.length - 1]);
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ windowedCoins: 1 });
     }
 

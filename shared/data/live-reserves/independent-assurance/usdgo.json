@@ -3,34 +3,53 @@
   "product": "USDGO",
   "profile": "usdgo-v1",
   "officialIndexUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-  "reportUrl": "https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf",
-  "reportSha256": "5b2b26b92345ba87f12aa2405cfa9d619adf593ca18dbbb6180ef23ee9dc2eb0",
-  "reportByteLength": 425848,
-  "reportDate": "2026-06-30",
-  "reportAsOf": "2026-06-30T23:59:59Z",
+  "reportUrl": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf",
+  "reportSha256": "27a8c25bd1d269892c8a58bb24c040042e51f5f6932796de3ecf6469870718fa",
+  "reportByteLength": 406396,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T23:59:59Z",
   "reportTimeZone": "UTC",
-  "reportIssuedAt": "2026-07-28T23:59:00Z",
+  "reportIssuedAt": "2026-08-28T23:59:00Z",
   "attestor": "Deloitte & Touche LLP",
   "engagement": "Independent accountant's examination under AICPA attestation standards",
   "conclusion": "unmodified",
   "unit": "USD",
   "assets": [
-    { "code": "cash", "label": "Cash", "amount": "9410255" },
-    { "code": "buidl", "label": "BUIDL at fair value", "amount": "170977843" },
-    { "code": "stbxx", "label": "STBXX money market fund (CUSIP 38151N205)", "amount": "99111018" },
-    { "code": "jltxx", "label": "JLTXX money market fund (CUSIP 46655R119)", "amount": "581573407" }
+    {
+      "code": "cash",
+      "label": "Cash",
+      "amount": "11061357"
+    },
+    {
+      "code": "buidl",
+      "label": "BUIDL at fair value",
+      "amount": "312429373"
+    },
+    {
+      "code": "stbxx",
+      "label": "STBXX money market fund (CUSIP 38151N205)",
+      "amount": "99400695"
+    },
+    {
+      "code": "jltxx",
+      "label": "JLTXX money market fund (CUSIP 46655R119)",
+      "amount": "693409879"
+    }
   ],
   "liabilities": [
-    { "code": "solana", "label": "Solana USDGO redeemable tokens", "amount": "859224936" },
-    { "code": "morph", "label": "Morph USDGO redeemable tokens", "amount": "7" }
+    {
+      "code": "solana",
+      "label": "Solana USDGO redeemable tokens",
+      "amount": "1112640495"
+    }
   ],
-  "reportedAssetTotal": "861072523",
-  "computedAssetTotal": "861072523",
-  "reportedLiabilityTotal": "859224943",
+  "reportedAssetTotal": "1116301304",
+  "computedAssetTotal": "1116301304",
+  "reportedLiabilityTotal": "1112640495",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "ed69623b9649a90e8c36ec2890b62a991c71485b53da9fccdac89ee484de398f",
+    "normalizedTextSha256": "67189de8b2c6d2b7b7bc37aeea06d6ff6949f3daf6e9e67666043b408275c1fe",
     "pageCount": 7
   }
 }

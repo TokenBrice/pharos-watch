@@ -1,14 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import {
   EMPTY_WATCHLIST_IDS,
   getWatchlistServerSnapshot,
   getWatchlistSnapshot,
   mutateWatchlist,
   subscribeWatchlist,
-  syncWatchlistFromStorage,
-  WATCHLIST_STORAGE_KEY,
 } from "@/lib/watchlist-storage";
 
 export { WATCHLIST_STORAGE_KEY } from "@/lib/watchlist-storage";
@@ -37,16 +35,6 @@ export function useWatchlist(): WatchlistState {
   // empty list. We expose that as `isHydrated` for consumers that gate UI on
   // browser-only state.
   const isHydrated = typeof window !== "undefined";
-
-  useEffect(() => {
-    syncWatchlistFromStorage();
-    function onStorage(event: StorageEvent) {
-      if (event.key !== WATCHLIST_STORAGE_KEY) return;
-      syncWatchlistFromStorage();
-    }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
 
   const idSet = useMemo(() => new Set(ids), [ids]);
 

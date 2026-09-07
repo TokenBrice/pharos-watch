@@ -92,6 +92,32 @@ function toAuditedEvent(
   return { ...auditedEvent, verdict };
 }
 
+function buildAuditEventOutcome(
+  event: DepegRow,
+  verdict: Verdict,
+  options: {
+    cgDeviation?: Parameters<typeof toAuditedEvent>[2];
+    attemptedCgFetch?: boolean;
+    upstreamError?: boolean;
+    rejectedByValidationCount?: number;
+    falsePositiveFound?: boolean;
+  } = {},
+): AuditEventOutcome {
+  return {
+    event,
+    auditedEvent: toAuditedEvent(event, verdict, options.cgDeviation ?? { cgMaxBps: null }),
+    attemptedCgFetch: options.attemptedCgFetch ?? verdict !== "skipped",
+    upstreamError: options.upstreamError ?? false,
+    rejectedByValidationCount: options.rejectedByValidationCount ?? 0,
+    falsePositiveFound: options.falsePositiveFound ?? false,
+    provenanceVerdict:
+      verdict === "no_data" || verdict === "confirmed" || verdict === "disputed" || verdict === "false_positive"
+        ? verdict
+        : null,
+    invalidatesProvenance: verdict === "no_data" || verdict === "disputed" || verdict === "false_positive",
+  };
+}
+
 async function auditSingleEventWithCoinGecko(
   event: DepegRow,
   validationReferences: PriceValidationReferences | undefined,
@@ -101,16 +127,7 @@ async function auditSingleEventWithCoinGecko(
   const geckoId = meta?.geckoId;
 
   if (!geckoId) {
-    return {
-      event,
-      auditedEvent: toAuditedEvent(event, "skipped", { cgMaxBps: null }),
-      attemptedCgFetch: false,
-      upstreamError: false,
-      rejectedByValidationCount: 0,
-      falsePositiveFound: false,
-      provenanceVerdict: null,
-      invalidatesProvenance: false,
-    };
+    return buildAuditEventOutcome(event, "skipped", { attemptedCgFetch: false });
   }
 
   const threshold = getDepegThresholdBps(event.peg_type);
@@ -148,16 +165,10 @@ async function auditSingleEventWithCoinGecko(
         status: cgResult?.response.status ?? "no-response",
         metadata: { stablecoinId: event.stablecoin_id, symbol: event.symbol, geckoId },
       });
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
-        attemptedCgFetch: true,
+      return buildAuditEventOutcome(event, "error", {
         upstreamError: true,
         rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: null,
-        invalidatesProvenance: false,
-      };
+      });
     }
 
     const cgData = cgResult.body;
@@ -181,16 +192,9 @@ async function auditSingleEventWithCoinGecko(
     });
 
     if (validatedPrices.length === 0) {
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "no_data", { cgMaxBps: null }),
-        attemptedCgFetch: true,
-        upstreamError: false,
+      return buildAuditEventOutcome(event, "no_data", {
         rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: "no_data",
-        invalidatesProvenance: true,
-      };
+      });
     }
 
     let maxCgBps = 0;
@@ -209,53 +213,36 @@ async function auditSingleEventWithCoinGecko(
     }
 
     if (maxSameDirectionBps >= falsePositiveBar) {
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "confirmed", {
+      return buildAuditEventOutcome(event, "confirmed", {
+        cgDeviation: {
           cgMaxBps: maxCgBps,
           cgMaxSameDirectionBps: maxSameDirectionBps,
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }),
-        attemptedCgFetch: true,
-        upstreamError: false,
+        },
         rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: "confirmed",
-        invalidatesProvenance: false,
-      };
+      });
     }
 
     if (maxOppositeDirectionBps >= falsePositiveBar) {
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "disputed", {
+      return buildAuditEventOutcome(event, "disputed", {
+        cgDeviation: {
           cgMaxBps: maxCgBps,
           cgMaxSameDirectionBps: maxSameDirectionBps,
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }),
-        attemptedCgFetch: true,
-        upstreamError: false,
+        },
         rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: "disputed",
-        invalidatesProvenance: true,
-      };
+      });
     }
 
-    return {
-      event,
-      auditedEvent: toAuditedEvent(event, "false_positive", {
+    return buildAuditEventOutcome(event, "false_positive", {
+      cgDeviation: {
         cgMaxBps: maxCgBps,
         cgMaxSameDirectionBps: maxSameDirectionBps,
         cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-      }),
-      attemptedCgFetch: true,
-      upstreamError: false,
+      },
       rejectedByValidationCount,
       falsePositiveFound: true,
-      provenanceVerdict: "false_positive",
-      invalidatesProvenance: true,
-    };
+    });
   } catch (err) {
     logWorkerEvent({
       scope: "admin",
@@ -267,16 +254,10 @@ async function auditSingleEventWithCoinGecko(
       error: err,
       metadata: { stablecoinId: event.stablecoin_id, symbol: event.symbol, geckoId },
     });
-    return {
-      event,
-      auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
-      attemptedCgFetch: true,
+    return buildAuditEventOutcome(event, "error", {
       upstreamError: true,
       rejectedByValidationCount,
-      falsePositiveFound: false,
-      provenanceVerdict: null,
-      invalidatesProvenance: false,
-    };
+    });
   }
 }
 

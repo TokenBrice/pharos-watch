@@ -57,9 +57,14 @@ function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
           return { meta: { changes: 0 } };
         },
         all: async () => {
-          if (sql.startsWith("SELECT job, MAX(started_at)")) {
+          if (sql.includes("ROW_NUMBER() OVER")) {
             const started_at = Math.floor(Date.now() / 1000);
-            return { results: (args as string[]).map((job) => ({ job, started_at })) };
+            return { results: (args as string[]).map((job) => ({
+              job,
+              last_success_at: started_at,
+              last_run_at: started_at,
+              last_status: "ok",
+            })) };
           }
           if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
             const keys = args as string[];
@@ -159,17 +164,34 @@ describe("cron staleness watchdog", () => {
     vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
     const db = fakeDb();
     mockCacheStatus({ stablecoins: 2_000 });
-    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
-    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } });
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
     mockCacheStatus({ stablecoins: 0 });
-    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
-    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } });
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Recovered producers");
     vi.useRealTimers();
+  });
+
+  it("sends the alert to the operator chat and suppresses it when unconfigured", async () => {
+    mockCacheStatus({ stablecoins: 2_000 });
+    await runCronStalenessWatchdog(fakeDb(), undefined, {
+      operatorTelegramCreds: { botToken: "bot", chatId: "-1009999" },
+    });
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[0]).toBe("-1009999");
+
+    const unconfigured = await runCronStalenessWatchdog(fakeDb(), undefined, {});
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(unconfigured.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["sync-stablecoins"],
+      sent: false,
+      cooldown: false,
+    });
   });
 
   it("suppresses a flapping transition during the alert cooldown", async () => {
@@ -177,11 +199,11 @@ describe("cron staleness watchdog", () => {
     vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
     const db = fakeDb();
     mockCacheStatus({ stablecoins: 2_000 });
-    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } });
 
     vi.setSystemTime(new Date((Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000 - 1_000)));
     mockCacheStatus({ stablecoins: 0 });
-    const recovery = await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    const recovery = await runCronStalenessWatchdog(db, undefined, { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } });
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions).toMatchObject({
       recovered: ["sync-stablecoins"],

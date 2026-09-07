@@ -28,16 +28,17 @@ function isPathOrChild(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root}/`);
 }
 
+function getResolvedEndpointProperty<Key extends "publicApiAccess" | "siteDataAccess">(
+  path: string,
+  key: Key,
+): EndpointDefinition[Key] | null {
+  const descriptor: Pick<EndpointDefinition, "publicApiAccess" | "siteDataAccess"> | null =
+    getEndpointDefinition(path) ?? getResolvedDynamicEndpointDescriptor(path);
+  return descriptor?.[key] ?? null;
+}
+
 export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null {
-  const endpoint = getEndpointDefinition(path);
-  if (endpoint) {
-    return endpoint.publicApiAccess;
-  }
-  const dynamicDescriptor = getResolvedDynamicEndpointDescriptor(path);
-  if (dynamicDescriptor) {
-    return dynamicDescriptor.publicApiAccess;
-  }
-  return null;
+  return getResolvedEndpointProperty(path, "publicApiAccess");
 }
 
 export function isProtectedPublicApiPath(path: string): boolean {
@@ -45,15 +46,7 @@ export function isProtectedPublicApiPath(path: string): boolean {
 }
 
 export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {
-  const endpoint = getEndpointDefinition(path);
-  if (endpoint) {
-    return endpoint.siteDataAccess;
-  }
-  const dynamicDescriptor = getResolvedDynamicEndpointDescriptor(path);
-  if (dynamicDescriptor) {
-    return dynamicDescriptor.siteDataAccess;
-  }
-  return null;
+  return getResolvedEndpointProperty(path, "siteDataAccess");
 }
 
 export function isSiteDataAllowedPath(path: string): boolean {

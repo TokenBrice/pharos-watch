@@ -16,6 +16,7 @@ import {
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
 import type { CronResult } from "../lib/cron-logger";
+import { createCronResult } from "../lib/cron-result";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 import type {
   DdrCanonicalIncident,
@@ -32,10 +33,9 @@ import {
   coverageRowForIncident,
   failedPublicationCoverageRow,
 } from "./depeg-resolver-review/coverage-rows";
-import { buildDdrrResponseEnvelope } from "../lib/depeg-resolver-review-response";
+import { buildDdrrResponseEnvelope, DDRR_V2_INCIDENT_ROW_CAP } from "../lib/depeg-resolver-review-response";
 import { loadActualEventsByEventIds } from "./depeg-resolver-review/terminal-evidence";
 
-const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
 const DDRR_AUTO_REPAIR_CREATED_BY = [
   "ddr-worker:auto-sealed-tail",
   "ddr-worker:repair-task-runner-v1",
@@ -365,7 +365,6 @@ async function buildDurableDdrV2ReviewSnapshot(
     summary,
     rows,
     assessedEventCount: source.incidents.length,
-    assessmentRowsTruncated: false,
     incidentRowLimit: source.incidentRowLimit,
     incidentRowsTruncated: source.incidentRowsTruncated,
     methodologyVersions,
@@ -449,9 +448,9 @@ export async function computeAndStoreDepegResolverReview(
   const snapshot = await buildDepegResolverReviewSnapshot(db, Math.floor(Date.now() / 1000), signal, options);
   await writeDepegResolverReviewSnapshot(db, snapshot);
 
-  return {
+  return createCronResult({
     itemCount: snapshot._meta.reviewedEventCount,
-    metadata: JSON.stringify({
+    metadata: {
       assessedEvents: snapshot._meta.assessedEventCount,
       reviewedRows: snapshot._meta.reviewedEventCount,
       publicRows: snapshot.rows.length,
@@ -462,6 +461,6 @@ export async function computeAndStoreDepegResolverReview(
       assessmentRowsTruncated: snapshot._meta.assessmentRowsTruncated,
       incidentRowsTruncated: snapshot._meta.incidentRowsTruncated,
       publicRowsTruncated: snapshot._meta.publicRowsTruncated,
-    }),
-  };
+    },
+  });
 }

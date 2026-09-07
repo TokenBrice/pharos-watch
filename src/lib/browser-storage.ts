@@ -137,3 +137,71 @@ export function createBrowserStorageStore<T>({
 
   return { read, write, remove, notify, subscribe };
 }
+
+export function createCachedJsonStorageStore<T>({
+  key,
+  fallback,
+  decode,
+  migrate,
+  isEqual = Object.is,
+}: {
+  key: string;
+  fallback: T;
+  decode: (value: unknown) => T | null;
+  migrate?: (storage: Storage) => T | null;
+  isEqual?: (a: T, b: T) => boolean;
+}) {
+  let cachedRaw: string | null | undefined;
+  let cachedSnapshot = fallback;
+
+  function cache(raw: string | null, snapshot: T): T {
+    cachedRaw = raw;
+    return (cachedSnapshot = isEqual(snapshot, fallback) ? fallback : snapshot);
+  }
+
+  function decodeRaw(raw: string | null): T {
+    if (raw === null && migrate) {
+      const storage = getWindowStorage("local");
+      const migrated = storage ? migrate(storage) : null;
+      const canonicalRaw = safeStorageGetItem(storage, key);
+      if (canonicalRaw !== null) raw = canonicalRaw;
+      else if (migrated !== null) {
+        return cachedRaw === null && isEqual(cachedSnapshot, migrated)
+          ? cachedSnapshot
+          : cache(null, migrated);
+      }
+    }
+
+    if (raw === cachedRaw) return cachedSnapshot;
+    if (!raw) return cache(null, fallback);
+    try {
+      return cache(raw, decode(JSON.parse(raw)) ?? fallback);
+    } catch {
+      return cache(raw, fallback);
+    }
+  }
+
+  function encodeSnapshot(value: T): string {
+    const raw = JSON.stringify(value);
+    cache(raw, value);
+    return raw;
+  }
+
+  const storageStore = createBrowserStorageStore({
+    key,
+    fallback,
+    decode: decodeRaw,
+    encode: encodeSnapshot,
+  });
+
+  function remove(): boolean {
+    cache(null, fallback);
+    return storageStore.remove();
+  }
+
+  return {
+    getSnapshot: storageStore.read,
+    getServerSnapshot: () => fallback,
+    write: storageStore.write, remove, subscribe: storageStore.subscribe,
+  };
+}

@@ -66,7 +66,6 @@ describe("RedemptionBackstopCard", () => {
 
     expect(html).toContain("Redemption Fee");
     expect(html).toContain("5 bps (0.05%)");
-    expect(html).toContain("Protocol docs list a 5 bps redemption fee");
   });
 
   it("renders documented variable fee logic when the route is not a single fixed bps value", () => {
@@ -146,14 +145,12 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("Daily Capacity");
     expect(html).toContain("Current modeled capacity is daily-limited");
     expect(html).toContain("Exit correlation:");
-    expect(html).toContain("independent issuer rail");
     expect(html).toContain("Scoring capacity:");
     expect(html).toContain("Modeled exit:");
     expect(html).toContain("Eventual score:");
     expect(html).toContain("Retail cost:");
     expect(html).toContain("Institutional cost:");
     expect(html).toContain("Confidence Detail");
-    expect(html).toContain("live telemetry reviewed");
   });
 
   it("renders configured-but-unrated state when the route has no usable score", () => {
