@@ -15,6 +15,7 @@ import {
   type StablecoinsCacheLoadResult,
 } from "./stablecoins-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
@@ -58,7 +59,7 @@ const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
   latestUpdatedAt: null,
 };
 
-const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
+const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC;
 const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
 const HAS_APPLICABLE_LIVE_RESERVE_CONFIG = ACTIVE_STABLECOINS.some(
   (coin) => coin.liveReservesConfig !== undefined,

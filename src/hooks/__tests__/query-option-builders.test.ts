@@ -102,9 +102,9 @@ describe("query option builders", () => {
     const dexOptions = dexLiquidityHistoryQueryOptions("usdc-circle", 90);
 
     expect(dexOptions.queryKey).toEqual(["dex-liquidity-history", "usdc-circle", 90]);
-    // Same producer as the `dexLiquidity` sibling: `sync-dex-liquidity`, 2h.
-    expect(dexOptions.staleTime).toBe(2 * 60 * 60 * 1000);
-    expect(dexOptions.refetchInterval).toBe(4 * 60 * 60 * 1000);
+    // Same producer as the `dexLiquidity` sibling: hourly `sync-dex-liquidity`.
+    expect(dexOptions.staleTime).toBe(60 * 60 * 1000);
+    expect(dexOptions.refetchInterval).toBe(2 * 60 * 60 * 1000);
   });
 
   it("passes TanStack Query cancellation signals to API fetches", async () => {

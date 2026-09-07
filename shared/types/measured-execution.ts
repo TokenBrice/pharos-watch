@@ -11,20 +11,12 @@ export const DEX_MEASURED_MAX_COST_BPS = 200;
 export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
-// Both bounds must cover the two-hour score-bearing Liquidity Score publication
-// cadence (even-hour :16): the half-hourly V9 input preparation sees the current
-// published measured window at up to ~96 minutes old, so a tighter bound derates
-// confidence on alternate score runs even though the evidence is on schedule.
-//
-// The bound is deliberately one publication cycle WIDER than that cadence. At a
-// two-hour bound the expiry ceiling equalled the republication period, so a
-// single delayed, skipped, or degraded even-hour `:16` publication aged every
-// measured profile past expiry at once; each expired route then left the exit
-// capacity denominator outright (see `routeExclusionReason`), which is what made
-// anchor grades oscillate for producer-schedule reasons rather than market ones.
-// Three hours keeps one whole cycle of slack so a single missed publication is
-// survivable, and `GENERATION_RETENTION_SEC` stays an hour above this bound so a
-// profile can never read fresh after its backing rows were pruned.
+// Keep the reviewed three-hour measured-history bound while score-bearing
+// liquidity publishes hourly at :16. Healthy :46 captures see the :05 quote
+// cohort at roughly 41 minutes old; one missed hourly publication adds an hour.
+// The former two-hour publication cadence delayed recovery after quote outages
+// and did not guarantee survival of one missed full publication within 3h.
+// Faster publication admits recovered evidence without extending its validity.
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;

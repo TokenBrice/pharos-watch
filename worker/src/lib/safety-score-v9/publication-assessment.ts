@@ -9,6 +9,50 @@ import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
 import { z } from "zod";
+import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
+import {
+  getDexMeasuredExecutionFreshnessMaxSec,
+  isDexMeasuredExecutionObservationHistoryMature,
+} from "@shared/types/measured-execution";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
+
+/** Snapshot publication time cannot refresh the measured history embedded in it. */
+export function expiredMeasuredExitAssetIds(
+  fixedInput: Pick<SafetyScoreV9CompilerInput, "clockSec" | "dexGenerationId" | "dexLiqMap">,
+  candidate: SafetyScoreV9CurrentResponse,
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
+): string[] {
+  const acceptedById = new Map(acceptedPublication?.cards.map((card) => [card.id, card]));
+  return candidate.cards.flatMap((card) => {
+    const exit = card.breakdowns?.exit;
+    const contributingRoutes = new Set([
+      exit?.primaryRoute?.key,
+      ...(exit?.diversification && exit.diversification.bonus > 0
+        ? [exit.diversification.routeKey]
+        : []),
+    ]);
+    const accepted = acceptedById.get(card.id);
+    // Once a stale route leaves selection (or makes the card NR), its former
+    // contribution must not disappear from the freshness gate as well.
+    const previousRoutes = accepted && cardDeteriorated(card, accepted)
+      ? [accepted.primaryRouteKey, accepted.diversificationRouteKey]
+      : [];
+    const expired = fixedInput.dexLiqMap[card.id]?.exitRouteObservations?.some((observation) => {
+      const history = observation.observationHistory;
+      return observation.evidenceKind === "measured-executable-depth" &&
+        observation.confidence === "high" &&
+        isDexMeasuredExecutionObservationHistoryMature(history) &&
+        history != null &&
+        fixedInput.clockSec - history.observationWindowEndedAt >
+          getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "") &&
+        (contributingRoutes.has(canonicalV9RouteKey("dex", fixedInput.dexGenerationId, observation.routeId)) ||
+          (acceptedPublication?.dexGenerationId != null && previousRoutes.includes(
+            canonicalV9RouteKey("dex", acceptedPublication.dexGenerationId, observation.routeId),
+          )));
+    });
+    return expired ? [card.id] : [];
+  }).sort(compareText);
+}
 
 export interface V9PublicationCoverageFloor {
   id: string;
@@ -89,6 +133,7 @@ export interface SafetyScoreV9AcceptedCardBaseline {
   score: number | null;
   producerFailedBindings: ProducerFailedBinding[];
   primaryRouteKey: string | null;
+  diversificationRouteKey: string | null;
   primaryRouteCapacityUsd: number | null;
   pillarScores: {
     backing: number;
@@ -110,6 +155,7 @@ export interface SafetyScoreV9AcceptedPublicationBaseline {
   policyId: string;
   policyDigest: string;
   evaluationBuildDigest: string;
+  dexGenerationId: string | null;
   cards: SafetyScoreV9AcceptedCardBaseline[];
 }
 
@@ -123,6 +169,7 @@ export function buildSafetyScoreV9AcceptedPublicationBaseline(
     policyId: publication.policy.id,
     policyDigest: publication.policy.semanticDigest,
     evaluationBuildDigest: publication.evaluationBuildDigest,
+    dexGenerationId: publication.sourceGenerations.dex ?? null,
     cards: publication.cards.map((card) => {
       const breakdowns =
         "breakdowns" in card && card.breakdowns !== null
@@ -141,6 +188,8 @@ export function buildSafetyScoreV9AcceptedPublicationBaseline(
         ),
         primaryRouteKey:
           breakdowns?.exit.primaryRoute?.key ?? null,
+        diversificationRouteKey:
+          breakdowns?.exit.diversification?.routeKey ?? null,
         primaryRouteCapacityUsd:
           breakdowns?.exit.primaryRoute?.capacity?.executableUsd ?? null,
         pillarScores: breakdowns === null
@@ -240,10 +289,23 @@ export function assessV9Publication(input: {
   coverageFloors: readonly V9PublicationCoverageFloor[];
   quarantinedAssetIds?: readonly string[];
   quarantineAffectedAssetIds?: readonly string[];
+  expiredMeasuredExitAssetIds?: readonly string[];
 }): V9PublicationAssessment {
   const reasons = inputHealthReasons(
     V9PublicationInputHealthSchema.parse(input.inputHealth),
   );
+  // This is a stale score-bearing input, not an issuer change or an asset-local
+  // coverage gap. Hold even below the 10% partial-publication allowance and
+  // across build changes; the global hold also protects dependent wrappers.
+  const expiredMeasuredAssets = new Set(input.expiredMeasuredExitAssetIds ?? []);
+  for (const assetId of expiredMeasuredAssets) {
+    if (!input.candidate.cards.some((card) => card.id === assetId)) {
+      throw new Error(`Expired measured-exit asset ${assetId} is absent from the candidate`);
+    }
+  }
+  if (expiredMeasuredAssets.size > 0 && !reasons.some((reason) => reason.code === "dex-stale")) {
+    reasons.push({ code: "dex-stale" });
+  }
   const producerFailureReasons: Extract<
     V9PublicationHoldReason,
     { code: "producer-failed-downgrade" | "producer-failed-nr" }
@@ -341,13 +403,14 @@ export function assessV9Publication(input: {
       }
     }
   }
-  const affectedAssetIds = new Set([
+  const producerAffectedAssetIds = new Set([
     ...quarantineAffectedAssetIds,
     ...producerFailureReasons.map((reason) => reason.assetId),
   ]);
+  const affectedAssetIds = new Set([...expiredMeasuredAssets, ...producerAffectedAssetIds]);
   if (
     affectedAssetsRequireGlobalHold(
-      affectedAssetIds,
+      producerAffectedAssetIds,
       input.candidate.cards.length,
     )
   ) {
@@ -357,7 +420,7 @@ export function assessV9Publication(input: {
         reason,
       ]),
     );
-    for (const assetId of [...affectedAssetIds].sort()) {
+    for (const assetId of [...producerAffectedAssetIds].sort()) {
       const existing = reasonByAssetId.get(assetId);
       if (existing) {
         reasons.push(existing);

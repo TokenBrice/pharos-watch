@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CRON_SCHEDULE_CADENCES,
+  DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   V9_EVIDENCE_PRODUCER_INTERVAL_SEC,
   isDailyDexShadowTargetPublicationSlot,
   isDexLiquidityPublicationSlot,
@@ -24,20 +25,27 @@ describe("cron cadence split", () => {
     }
   });
 
-  it("pins the Safety Score v9 evidence-freshness producers to their live cron cadence", () => {
+  it("preserves reviewed DEX freshness while other evidence producers follow their cron cadence", () => {
     for (const [job, intervalSec] of Object.entries(V9_EVIDENCE_PRODUCER_INTERVAL_SEC)) {
+      if (job === "sync-dex-liquidity") {
+        expect(intervalSec).toBe(7200);
+        expect(DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC).toBe(14_400);
+        expect(CRON_INTERVALS[job]).toBe(3600);
+        continue;
+      }
       expect(CRON_INTERVALS[job], `producer cadence drifted for ${job}`).toBe(intervalSec);
     }
   });
 
-  it("runs DEX sources and prices hourly, full scoring every two hours, and shadow targets daily", () => {
+  it("runs DEX sources, prices and full scoring hourly, and shadow targets daily", () => {
     const sec = (iso: string) => Date.parse(iso) / 1_000;
 
     expect(CRON_SCHEDULE_CADENCES.halfHourlyOffset).toEqual({ intervalSec: 3600, offsetSec: 10 * 60 });
     expect(isHourlyDexPriceSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
     expect(isHourlyDexPriceSlot(sec("2026-08-10T06:46:00Z"))).toBe(false);
     expect(isDexLiquidityPublicationSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
-    expect(isDexLiquidityPublicationSlot(sec("2026-08-10T07:16:00Z"))).toBe(false);
+    expect(isDexLiquidityPublicationSlot(sec("2026-08-10T07:16:00Z"))).toBe(true);
+    expect(isDexLiquidityPublicationSlot(sec("2026-08-10T07:46:00Z"))).toBe(false);
     expect(isDailyDexShadowTargetPublicationSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
     expect(isDailyDexShadowTargetPublicationSlot(sec("2026-08-10T08:16:00Z"))).toBe(false);
   });
