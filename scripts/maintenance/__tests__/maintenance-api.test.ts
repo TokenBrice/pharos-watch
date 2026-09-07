@@ -173,6 +173,11 @@ describe("AI summary V9 current-value projection", () => {
     ).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: "holder-address-scope" }),
     ]));
+    expect(
+      extractFindings("The ERC-20 holder's claim runs through KMS Labs first.", current),
+    ).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "holder-address-scope" }),
+    ]));
   });
 
   it("auto-closes tokenised value drift but queues source-registration changes", () => {
