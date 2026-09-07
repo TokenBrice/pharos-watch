@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
+import { PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
@@ -39,6 +40,25 @@ function issuedResponse(suffix: string, token: string) {
 }
 
 describe("ApiKeyRequestForm", () => {
+  it("retains a verification response delivered after soft navigation", async () => {
+    const token = "ph_test_late_verification";
+    let resolveVerification!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveVerification = resolve; })));
+    window.history.replaceState(null, "", "/api/#akv_delayed");
+    const view = render(<><ApiKeyRequestForm issuanceOpen={false} /><PendingApiKeyRecovery /></>);
+    await waitFor(() => expect(screen.getByText("Verifying email and issuing the API key.")).toBeTruthy());
+    view.rerender(<PendingApiKeyRecovery />);
+    const pendingUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(pendingUnload);
+    expect(pendingUnload.defaultPrevented).toBe(true);
+    await act(async () => resolveVerification(new Response(JSON.stringify(issuedResponse("delayed", token)), {
+      status: 201, headers: { "Content-Type": "application/json" },
+    })));
+    expect(screen.getByText(token)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "I Saved This Key" }));
+    expect(screen.queryByText(token)).toBeNull();
+  });
+
   it("enables submission for a concise completed request", () => {
     const suffix = randomUUID().slice(0, 8);
     render(<ApiKeyRequestForm />);

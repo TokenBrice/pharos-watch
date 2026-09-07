@@ -724,17 +724,25 @@ Send `expiresAt: null` only for a deliberate non-expiring exception. Existing ke
 
 Admin-only hard deactivation for an existing API key. This sets `isActive=false`; the secret cannot be used afterward.
 
+Deactivation does not erase the row, wallet-bearing name, or usage metadata. For a donor privacy request, verify control of the wallet and resolve the exact donor key ID and claim prefix through the private operator lane. Deactivate that key first. Then use an operator-reviewed D1 transaction/batch restricted to that ID to delete its rows from `api_key_rate_limit`, `api_key_request_stats`, and `api_key_audit_log`, followed by its `api_keys` row. Read back that these rows are absent and that the original `api_key_donor_claims` row remains unchanged. Do not put the address or tokens in command output, audit detail, or a public feedback issue. There is no public deletion endpoint.
+
+Keep `api_key_donor_claims` as the one-claim fence: it retains the address, prefix, and claim time even after key deletion, and another claim returns `409` when the key row is missing. Tell the requester exactly what remains; this is partial erasure. Removing the claim row is a separate, explicitly authorized reissuance decision, because an eligible wallet can then obtain a new key. The public donation ledger and any separately retained provider backups are outside this key-row deletion procedure; do not promise they have been erased.
+
 **Response shape:** `ApiKeyMutationResponse`
 
 ### `POST /api/api-keys/:id/rotate`
 
 Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once. Rotation does not accept expiry input and preserves the current `expiresAt`.
 
+For donor keys, rotation updates the claim prefix and key material in one atomic D1 batch: both writes commit or neither does. Concurrent rotations keep the claim mapped to the surviving key prefix.
+
+Donor eligibility uses Safety Score grades at claim time, not donation time. Later grade changes alone do not revoke or change an issued key; rotation also preserves its tier, quota, and expiry.
+
 **Response shape:** `ApiKeyRotateResponse`
 
 Supporter keys never rotate by self-service: re-signing the claim message returns `409`, so a donor who lost a key asks through the feedback form and an operator rotates it here. The key is named `donor <full lowercase address>`, so the admin list is searchable by the full address.
 
-Correcting the ledger is a two-step operator action. When a donation row is removed from `shared/data/funding/donations.json` as spam or a correction, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
+Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with $10 or less in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
 
 ### `GET /api/api-key-requests-admin`
 

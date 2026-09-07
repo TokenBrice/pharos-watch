@@ -50,7 +50,7 @@ const ACCESS_FACTS = [
   {
     title: "Supporter Key",
     description:
-      `Wallets with at least $${DONOR_API_KEY_MIN_USD} in the public donation ledger can claim one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, with no scheduled expiry.`,
+      `Wallets with more than $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A or B (including +/−) can claim one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, with no scheduled expiry.`,
     icon: KeyRound,
   },
 ] as const;
@@ -311,7 +311,7 @@ export default function ApiAccessPage() {
           <p className="pharos-kicker">Supporter Key</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">A thank-you perk for donors</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Any externally-owned EVM wallet that has sent at least ${DONOR_API_KEY_MIN_USD} in total to the{" "}
+            Any externally-owned EVM wallet with more than ${DONOR_API_KEY_MIN_USD} in qualifying stablecoin donations in the{" "}
             <Link href="/funding/" className="pharos-prose-link">
               public donation ledger
             </Link>{" "}
@@ -321,6 +321,8 @@ export default function ApiAccessPage() {
         </div>
         <ul className="mt-4 space-y-2 text-sm leading-relaxed text-muted-foreground">
           <li>{DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no scheduled expiry, revocable, and no SLA.</li>
+          <li>Only donations of stablecoins currently graded A+, A, A−, B+, B, or B− count at claim time. Later grade changes do not revoke an issued key.</li>
+          <li>Claims pause while the current Safety Score publication is held or unavailable.</li>
           <li>
             One key per wallet. A lost key is rotated by hand through the{" "}
             <Link href="/feedback/" className="pharos-prose-link">
@@ -340,9 +342,8 @@ export default function ApiAccessPage() {
         )}
       </section>
 
-      {SELF_SERVE_ISSUANCE_OPEN ? (
-        <ApiKeyRequestForm />
-      ) : (
+      <ApiKeyRequestForm issuanceOpen={SELF_SERVE_ISSUANCE_OPEN} />
+      {!SELF_SERVE_ISSUANCE_OPEN ? (
         <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
           <div className="space-y-2">
             <p className="pharos-kicker">Keyed Access</p>
@@ -366,7 +367,7 @@ export default function ApiAccessPage() {
             </p>
           </div>
         </section>
-      )}
+      ) : null}
       </div>
     </FeaturePageShell>
   );

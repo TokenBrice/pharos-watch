@@ -1,11 +1,15 @@
-import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeJsonRequest, readJsonResponse } from "../../test-helpers/__shared/auth";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { handleDonorKeyClaim } from "../donor-key-claims";
 
+vi.mock("@shared/lib/public-api-contract", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/lib/public-api-contract")>()),
+  DONOR_KEY_CLAIMS_OPEN: false,
+}));
+
 describe("donor key claim switch", () => {
-  it.skipIf(DONOR_KEY_CLAIMS_OPEN)("rejects claims before touching the limiter or the body while paused", async () => {
+  it("rejects claims before touching the limiter or the body while paused", async () => {
     const response = await handleDonorKeyClaim(
       makeNoopD1() as unknown as D1Database,
       makeJsonRequest("https://api.pharos.watch/api/donor-key-claims", { message: "x", signature: "0x" }),

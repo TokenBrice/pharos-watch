@@ -24,13 +24,14 @@ export const SELF_SERVE_ISSUANCE_OPEN: boolean = false;
 /**
  * Donor (supporter) key claim switch. `false` makes `POST /api/donor-key-claims`
  * answer 403 before reading the body and replaces the `/api/` claim button with
- * a "claims are paused" notice. Keys already issued keep working. Ships closed;
- * flip after the post-deploy claim check with an eligible wallet.
+ * a "claims are paused" notice. Keys already issued keep working. Apply the
+ * migration before deploying this enabled release; verify a live claim before
+ * announcing availability. Pause with this switch, not a pre-donor Worker rollback.
  */
-export const DONOR_KEY_CLAIMS_OPEN: boolean = false;
+export const DONOR_KEY_CLAIMS_OPEN: boolean = true;
 
 export const DONOR_API_KEY_SUMMARY =
-  `one key per wallet that has donated at least $${DONOR_API_KEY_MIN_USD}, no expiry, ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute`;
+  `one key per wallet with more than $${DONOR_API_KEY_MIN_USD} in donations of stablecoins graded A or B (including +/−) at claim time, no expiry, ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute`;
 
 export const SELF_SERVE_API_KEY_RATE_LIMIT_RPM = SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE;
 export const SELF_SERVE_API_KEY_EXPIRY_DAYS = Math.round(SELF_SERVE_API_KEY_EXPIRY_SEC / DAY_SECONDS);

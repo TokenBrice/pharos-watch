@@ -201,11 +201,17 @@ export default function PrivacyPage() {
             asks a wallet to sign a short text message so the key can be tied to a donating wallet. Pharos stores the
             wallet address, the issued key prefix, and the claim time, plus the key record itself, which is named after
             the address and carries the last-used timestamp and route that every API key records. Those records are
-            retained until the key is deactivated and the claim record is deleted; you can request deletion through the{" "}
+            retained without an automatic expiry. Deactivation stops access but does not delete these records. You
+            can request removal of the key record and its usage metadata through the{" "}
             <Link href="/feedback/" className="pharos-prose-link">
               feedback form
             </Link>
-            . Signatures and API tokens are never stored or logged.
+            . We retain the wallet address, key prefix, and claim time to prevent a second claim, unless an operator
+            explicitly approves removing that restriction. The public donation ledger is a separate record.
+            Signatures and plaintext API tokens are never persistently stored or logged; only a keyed hash verifies
+            the token. An unsaved token remains in browser memory across internal navigation so you can recover it,
+            until you copy or acknowledge it or leave or reload the site. It is never written to localStorage or
+            sessionStorage.
           </p>
         </section>
 

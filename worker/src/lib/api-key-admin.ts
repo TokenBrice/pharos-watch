@@ -289,7 +289,7 @@ export async function deactivateApiKey(
 }
 
 export async function rotateApiKey(
-  db: ApiKeyDb,
+  db: ApiKeyDb & { batch(statements: MinimalD1Statement[]): Promise<unknown> },
   pepper: string | undefined,
   id: number,
   nowSec = getNowSec(),
@@ -305,7 +305,7 @@ export async function rotateApiKey(
   }
 
   const material = await buildApiKeyMaterial(effectivePepper);
-  await db
+  const keyUpdate = db
     .prepare(
       `UPDATE api_keys
      SET
@@ -316,14 +316,13 @@ export async function rotateApiKey(
        updated_at = ?
      WHERE id = ?`,
     )
-    .bind(material.keyPrefix, material.secretHash, nowSec, id)
-    .run();
-  // A donor claim is joined on key_prefix; carry it over so the wallet stays
-  // mapped to its rotated key instead of orphaning into a 409 on re-claim.
-  await db
-    .prepare("UPDATE api_key_donor_claims SET key_prefix = ? WHERE key_prefix = ?")
-    .bind(material.keyPrefix, existing.key_prefix)
-    .run();
+    .bind(material.keyPrefix, material.secretHash, nowSec, id);
+  // Resolve the current prefix inside the batch so concurrent rotations carry
+  // the donor mapping forward too. Either both writes commit or neither does.
+  const claimUpdate = db
+    .prepare("UPDATE api_key_donor_claims SET key_prefix = ? WHERE key_prefix = (SELECT key_prefix FROM api_keys WHERE id = ?)")
+    .bind(material.keyPrefix, id);
+  await db.batch([claimUpdate, keyUpdate]);
 
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);

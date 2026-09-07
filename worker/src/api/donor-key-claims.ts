@@ -8,7 +8,7 @@ import {
   DONOR_KEY_CLAIM_MAX_AGE_SEC,
 } from "@shared/lib/ops-limits";
 import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
-import { DonorKeyClaimRequestSchema, type DonorKeyClaimResponse } from "@shared/types";
+import { DonorKeyClaimRequestSchema, type DonorKeyClaimResponse } from "@shared/types/api-keys";
 import { parseSiweMessage, validateSiweMessage } from "viem/siwe";
 import { verifyMessage } from "viem/utils";
 import { buildTrustedApiKeyInsertStatement } from "../lib/api-key-admin";
@@ -23,6 +23,7 @@ import {
 import { parseRequestJsonWithSchema } from "../lib/api-json-body";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { logWorkerEvent } from "../lib/structured-log";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
 const ROUTE = "donor-key-claims";
 const CLAIM_BODY_MAX_BYTES = 4096;
@@ -31,15 +32,14 @@ const RATE_LIMIT_RETRY_AFTER_SEC = 60;
 const SIWE_INVALID_MESSAGE = "Claim message or signature is invalid";
 const UNAVAILABLE_MESSAGE = "Supporter key claims are temporarily unavailable";
 const INELIGIBLE_MESSAGE =
-  `This wallet has not reached the $${DONOR_API_KEY_MIN_USD} supporter threshold in the public ledger. `
+  `This wallet needs more than $${DONOR_API_KEY_MIN_USD} in stablecoin donations in the public ledger whose current Safety Score is in the A or B grade band. `
   + "Donations are reconciled weekly and go live with the next release; see https://pharos.watch/funding/";
 const ALREADY_CLAIMED_MESSAGE =
   "This wallet already claimed its supporter key; to rotate a lost key use the feedback form at https://pharos.watch/feedback/";
 const REVOKED_MESSAGE = "The supporter key for this wallet was revoked; see https://pharos.watch/feedback/";
 
-// Eligibility is repo data: parse and total the ledger once per isolate.
+// The ledger is repo data; qualifying grades are loaded at claim time.
 const donationsLedger = DonationsFileSchema.parse(donationsAsset);
-const eligibleTotalsByAddress = sumEligibleDonationsByAddress(donationsLedger.donations);
 
 interface DonorClaimDeps {
   rateLimiter: RateLimit | undefined;
@@ -163,17 +163,23 @@ export async function handleDonorKeyClaim(
   }
 
   const address = parsedMessage.address.toLowerCase();
+  const existing = await selectDonorClaim(db, address);
+  if (existing) {
+    return existingClaimResponse(existing);
+  }
+
+  const activeScores = await loadActiveSafetyScoreSource(db);
+  if (activeScores.kind !== "v9") {
+    return claimError(503, UNAVAILABLE_MESSAGE, "safety_scores_unavailable");
+  }
+  const grades = new Map(activeScores.snapshot.cards.map((card) => [card.id, card.grade]));
+  const eligibleTotalsByAddress = sumEligibleDonationsByAddress(donationsLedger.donations, grades);
   if (!isEligibleDonor(address, eligibleTotalsByAddress, DONOR_API_KEY_MIN_USD)) {
     claimOutcome("ineligible", 403);
     return jsonResponse(
       { error: INELIGIBLE_MESSAGE, ledgerUpdatedAt: donationsLedger.last_updated_at },
       { status: 403, noStore: true },
     );
-  }
-
-  const existing = await selectDonorClaim(db, address);
-  if (existing) {
-    return existingClaimResponse(existing);
   }
 
   const pepper = requireApiKeyPepper(deps.pepper);

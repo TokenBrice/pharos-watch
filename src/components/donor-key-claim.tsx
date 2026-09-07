@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { IssuedTokenPanel } from "@/components/issued-token-panel";
 import { copyText as writeClipboardText } from "@/lib/clipboard";
 import { DonorKeyClaimError, claimDonorKey, hexUtf8 } from "@/lib/donor-key-claim-client";
+import { useUnsavedTokenGuard } from "@/hooks/use-unsaved-token-guard";
+import { beginPendingApiKeyIssuance, clearPendingApiKey } from "@/components/pending-api-key-recovery";
 
 type ClaimStatus = "idle" | "no-provider" | "connecting" | "signing" | "submitting" | "issued" | "error";
 
@@ -61,7 +63,7 @@ function describeClaimFailure(error: unknown): ClaimFailure {
       if (error.ledgerUpdatedAt != null) {
         return {
           status: 403,
-          text: `This wallet has not reached $${DONOR_API_KEY_MIN_USD} in the donation ledger reconciled on ${formatIsoDate(error.ledgerUpdatedAt)}. New donations count after the weekly reconciliation and the next release.`,
+          text: `This wallet needs more than $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A+, A, A−, B+, B, or B−, using the ledger reconciled on ${formatIsoDate(error.ledgerUpdatedAt)}. New donations count after the weekly reconciliation and the next release.`,
         };
       }
       if (/revok/i.test(error.message)) {
@@ -76,14 +78,14 @@ function describeClaimFailure(error: unknown): ClaimFailure {
     case 429:
       return { status: 429, text: "Too many attempts, wait a minute." };
     case 503:
-      return { status: 503, text: "Supporter key claims are unavailable right now. Try again later." };
+      return { status: 503, text: "Supporter key claims are unavailable right now. Claims pause while the current Safety Score publication is held or unavailable. Try again later." };
     default:
       return { status: error.status, text: error.message };
   }
 }
 
 /** Copy, focus, and unsaved-token handling for the one-time reveal. */
-function useIssuedTokenControls(token: string | null) {
+function useIssuedTokenControls(token: string | null, issuing: boolean) {
   const [copied, setCopied] = useState<"token" | "curl" | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
   const [tokenSecured, setTokenSecured] = useState(false);
@@ -95,16 +97,7 @@ function useIssuedTokenControls(token: string | null) {
     copyTokenButtonRef.current?.focus();
   }, [token]);
 
-  useEffect(() => {
-    if (!token || tokenSecured) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-      return "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [token, tokenSecured]);
+  const retainIssuedToken = useUnsavedTokenGuard(token, tokenSecured, issuing);
 
   const copyText = useCallback((kind: "token" | "curl", value: string) => {
     void writeClipboardText(value).then((result) => {
@@ -115,7 +108,10 @@ function useIssuedTokenControls(token: string | null) {
       }
       setCopied(kind);
       setCopyError(null);
-      if (kind === "token") setTokenSecured(true);
+      if (kind === "token") {
+        clearPendingApiKey(value);
+        setTokenSecured(true);
+      }
       window.setTimeout(() => setCopied(null), 1800);
     });
   }, []);
@@ -145,6 +141,7 @@ function useIssuedTokenControls(token: string | null) {
     selectTokenText,
     tokenCodeRef,
     tokenSecured,
+    retainIssuedToken,
   };
 }
 
@@ -154,7 +151,8 @@ export function DonorKeyClaim() {
   const [failure, setFailure] = useState<ClaimFailure | null>(null);
   const [siweMessage, setSiweMessage] = useState<string | null>(null);
   const [issued, setIssued] = useState<DonorKeyClaimResponse | null>(null);
-  const controls = useIssuedTokenControls(issued?.token ?? null);
+  const controls = useIssuedTokenControls(issued?.token ?? null, status === "submitting");
+  const { retainIssuedToken } = controls;
 
   const handleClaim = useCallback(async () => {
     const provider = readProvider();
@@ -215,8 +213,15 @@ export function DonorKeyClaim() {
       }
 
       setStatus("submitting");
-      setIssued(await claimDonorKey({ message, signature }));
-      setStatus("issued");
+      const finishIssuance = beginPendingApiKeyIssuance();
+      try {
+        const result = await claimDonorKey({ message, signature });
+        retainIssuedToken(result.token);
+        setIssued(result);
+        setStatus("issued");
+      } finally {
+        finishIssuance();
+      }
     } catch (error) {
       if (isUserRejection(error)) {
         setStatus("idle");
@@ -226,7 +231,7 @@ export function DonorKeyClaim() {
       setFailure(describeClaimFailure(error));
       setStatus("error");
     }
-  }, []);
+  }, [retainIssuedToken]);
 
   if (status === "issued" && issued) {
     return (

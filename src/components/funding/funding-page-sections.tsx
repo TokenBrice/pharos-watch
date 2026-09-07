@@ -447,15 +447,15 @@ function SupporterKeyNote() {
       <div className="space-y-1">
         <p className="text-sm font-semibold text-foreground">Supporter API key</p>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Any wallet with at least ${DONOR_API_KEY_MIN_USD} on this ledger can claim one API key for the full Pharos
+          Any externally-owned EVM wallet with more than ${DONOR_API_KEY_MIN_USD} in stablecoin donations on this ledger, graded A or B (including +/−) when claiming, can claim one API key for the full Pharos
           API: {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no expiry, one per wallet, by signing a
           message on{" "}
           <Link href="/api/" className="pharos-prose-link">
             the API page
           </Link>
           . {DONOR_KEY_CLAIMS_OPEN
-            ? "New donations count after the weekly reconciliation and the next release."
-            : "Claims open with the next release; donations made now already count toward the threshold."}
+            ? "New donations count after the weekly reconciliation and the next release. Grades are checked at claim time; later grade changes do not affect issued keys."
+            : "Claims are paused. Eligibility will use Safety Score grades at claim time."}
         </p>
       </div>
     </div>
@@ -593,7 +593,7 @@ export function FundingFaq() {
     },
     {
       q: "What do supporters get?",
-      a: `Public recognition on the wall unless you ask for a custom label, and a supporter API key once your wallet reaches $${DONOR_API_KEY_MIN_USD}: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute on the full API, no expiry, claimed by signing a message on the API page. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.`,
+      a: `Public recognition on the wall unless you ask for a custom label, and a supporter API key once your externally-owned EVM wallet exceeds $${DONOR_API_KEY_MIN_USD} in stablecoin donations graded A or B (including +/−) when claimed: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute on the full API, no expiry, claimed by signing a message on the API page. Donation values use receipt-time USD. Grades are checked at claim time, not donation time; later grade changes do not affect issued keys. ETH, other non-stablecoins, lower or missing grades, and pooled payouts do not count. Claims pause if the Safety Score publication is unavailable or held. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.`,
     },
     {
       q: "Can I help without donating?",

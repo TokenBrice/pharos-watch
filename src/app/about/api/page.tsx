@@ -80,7 +80,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
     question: "How do I get a Pharos API key?",
     answer: SELF_SERVE_ISSUANCE_OPEN
       ? "Use the self-serve request form at https://pharos.watch/api/. It sends an email verification link and reveals the API key once after verification."
-      : `Safety Score grades are free at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()} without a key. Self-serve key issuance is closed while a paid tier is prepared. Donors can claim a supporter key at https://pharos.watch/api/: any externally-owned EVM wallet with at least $${DONOR_API_KEY_MIN_USD} in the public donation ledger gets one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute with no scheduled expiry. Integrations that deliver a freely available, non-profit service on top of Pharos data receive keys at no cost on request, and any other request is reviewed by hand through the feedback form.`,
+      : `Safety Score grades are free at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()} without a key. Self-serve key issuance is closed while a paid tier is prepared. Donors can claim a supporter key at https://pharos.watch/api/: any externally-owned EVM wallet with more than $${DONOR_API_KEY_MIN_USD} in stablecoin donations in the public ledger, graded A or B (including +/−) at claim time, gets one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute with no scheduled expiry. Integrations that deliver a freely available, non-profit service on top of Pharos data receive keys at no cost on request, and any other request is reviewed by hand through the feedback form.`,
   },
   {
     question: "Do I need an API key for every endpoint?",
@@ -482,8 +482,8 @@ export default async function AboutApiPage() {
             <Link href="/api/" className="pharos-prose-link">
               the access page
             </Link>
-            : an externally-owned EVM wallet with at least ${DONOR_API_KEY_MIN_USD} in the public donation ledger gets
-            one key at {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute with no scheduled expiry. Integrations
+            : an externally-owned EVM wallet with more than ${DONOR_API_KEY_MIN_USD} in stablecoin donations in the public ledger, graded A or B (including +/−) at claim time, gets
+            one key at {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute with no scheduled expiry. Grades are checked when you claim; later grade changes do not affect an issued key. Integrations
             that deliver a freely available, non-profit service on top of Pharos data receive keys at no cost on
             request through the feedback form.
           </p>
