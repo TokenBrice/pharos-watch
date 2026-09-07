@@ -593,31 +593,43 @@ function projectResolvedUpstreamReserveExposure(params: {
     upstream.score === null
       ? upstreamReasons.filter((reason) => !AVAILABILITY_REASON_CODES.has(reason.code))
       : upstreamReasons;
-  const projected = projectedSources.map((reason) => {
+  // One projected reason per upstream code and owner. An upstream raises one
+  // gap per reserve slice its stale composition covers; this exposure holds
+  // one unresolved claim on that upstream, not one per slice, so the paths
+  // fold into a single reason (9.47) and survive only in its causal key.
+  const projectedByCause = new Map<
+    string,
+    { reason: UpstreamBackingReason; code: V9ReasonCode; paths: string[] }
+  >();
+  for (const reason of projectedSources) {
     const code: V9ReasonCode =
       upstream.score !== null &&
       resolveV9ReasonPolicy(policy, reason.code).reason.defaultTreatment === "ceiling"
         ? "bounded-unknown-reserve-exposure"
         : reason.code;
-    return { ...reason, sourceCode: reason.code, code };
-  });
+    const key = `${code}\u0000${reason.code}\u0000${reason.responsibility ?? ""}`;
+    const path = reason.path ?? "unattributed";
+    const entry = projectedByCause.get(key);
+    if (entry) entry.paths.push(path);
+    else projectedByCause.set(key, { reason, code, paths: [path] });
+  }
+  const projected = [...projectedByCause.values()];
   const projectedCodeCounts = new Map<V9ReasonCode, number>();
-  for (const reason of projected) {
-    projectedCodeCounts.set(
-      reason.code,
-      (projectedCodeCounts.get(reason.code) ?? 0) + 1,
-    );
+  for (const { code } of projected) {
+    projectedCodeCounts.set(code, (projectedCodeCounts.get(code) ?? 0) + 1);
   }
 
-  const unresolved: V9BackingUnresolvedReason[] = projected.map((reason) => ({
-    code: reason.code,
+  const unresolved: V9BackingUnresolvedReason[] = projected.map(({ reason, code, paths }) => ({
+    code,
     pathKey,
     gapIds: [],
-    treatment: resolveV9ReasonPolicy(policy, reason.code).reason.defaultTreatment,
+    treatment: resolveV9ReasonPolicy(policy, code).reason.defaultTreatment,
     ...(reason.responsibility === undefined ? {} : { responsibility: reason.responsibility }),
-    ...((projectedCodeCounts.get(reason.code) ?? 0) > 1
+    ...((projectedCodeCounts.get(code) ?? 0) > 1
       ? {
-          causalKey: `upstream:${upstream.upstreamAssetId}:${reason.sourceCode}:${reason.path ?? "unattributed"}`,
+          causalKey: `upstream:${upstream.upstreamAssetId}:${reason.code}:${[...new Set(paths)]
+            .sort(compareText)
+            .join("+")}`,
         }
       : {}),
   }));
