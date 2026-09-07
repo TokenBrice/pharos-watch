@@ -78,7 +78,10 @@ regexTarget = "secret"
 regexes = [
   '''^(?:54e9714e-c65f-4b0c-8bcf-c7869956dd20|3cad87ae-7846-4bfe-ba2e-411fbf166f60|cad709b6-47f1-427d-ad14-443fa5cd76e1|df75631f-9b3c-4524-81e4-f69b6baaf1e5|55e4e094-d2e5-4847-a47d-4277fc8e70c3|b41923ad-1f3b-42af-9ef3-625a1a029e21|7dce3beb-cc89-406f-a2df-a83b3737a021|fbbfb1d4-ca86-4186-93d9-400fe5a36be7)$''',
 ]
-paths = ['''(?:^|/)shared/data/(?:stablecoins|safety-score-v9)/.*\.json$''']
+paths = [
+  '''(?:^|/)shared/data/(?:stablecoins|safety-score-v9)/.*\.json$''',
+  '''(?:^|/)data/ai-summaries\.json$''',
+]
 
 # Falcon publishes asset labels such as `ARIA_B71VABWJ_T8GB`. Artifact V2
 # records those labels as allocation `key` values, and the default
