@@ -217,7 +217,7 @@ describe("syncLiveReserves", () => {
     });
   });
 
-  it("fails closed for scoring after parser or validation failure even when prior detail remains visible", async () => {
+  it("keeps the fresh prior snapshot scoring after a parser or validation failure", async () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 30 * 60;
@@ -268,7 +268,11 @@ describe("syncLiveReserves", () => {
 
     expect(resolved?.mode).toBe("live");
     expect(resolved?.sync?.status).toBe("error");
-    expect(scoringMap.has(coin.id)).toBe(false);
+    // The failed attempt wrote no snapshot. The prior one was validated when it
+    // was observed and is still inside the freshness bound, so it keeps scoring;
+    // only the bound retires it.
+    expect(resolved?.provenance?.scoringEligible).toBe(true);
+    expect(scoringMap.has(coin.id)).toBe(true);
   });
 
   it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
@@ -581,7 +585,7 @@ describe("syncLiveReserves", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(false);
   });
 
-  it("preserves prior reserve detail and skips scoring when the circuit is open", async () => {
+  it("preserves prior reserve detail and keeps it scoring when the circuit is open", async () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 45 * 60;
@@ -637,7 +641,7 @@ describe("syncLiveReserves", () => {
       stale: false,
       lastSuccessAt,
     });
-    expect(scoringMap.has(coin.id)).toBe(false);
+    expect(scoringMap.has(coin.id)).toBe(true);
   });
 
 });

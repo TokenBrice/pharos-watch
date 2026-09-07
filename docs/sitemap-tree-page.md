@@ -18,7 +18,7 @@ The route is static, indexable, and fetches nothing. It is linked from the foote
 
 ## Information Architecture
 
-The page authors no navigation tree of its own. Three of its six tier columns are looked up from `NAV_GROUPS` by key (`markets`, `risk`, `tools`); the other three are the labeled columns of the `more` group (`research`, `watch`, `pharos`), and the closing quick-access section renders `QUICK_NAV_ITEMS` and `BOTTOM_NAV_ITEMS`. Adding, removing, or reordering a nav item therefore reshapes this public page in the same change.
+The page authors no navigation tree of its own. Three of its seven tier columns are looked up from `NAV_GROUPS` by key (`markets`, `risk`, `tools`); the other four are the labeled columns of the `more` group (`research`, `watch`, `methods`, `pharos`), and the closing quick-access section renders `QUICK_NAV_ITEMS` only. `Start Here` needs no hand-curated row because it arrives with the `pharos` column. Adding, removing, or reordering a nav item therefore reshapes this public page in the same change.
 
 Three lookups are deliberately tolerant and fail silently rather than at build time:
 
@@ -28,7 +28,7 @@ Three lookups are deliberately tolerant and fail silently rather than at build t
 
 Renaming a nav group key, a `more` column key, or an extra-page href drops content from the page without failing a check, so verify the rendered tiers after any of those changes. Methodology changelog rows behave the opposite way: they resolve `publicPath` through `getMethodologyChangelogEntry()` in `shared/lib/methodology-versions/registry.ts`, which throws on an unknown key, and the route-local copy table is `satisfies`-bound to `MethodologyChangelogRegistryKey`.
 
-The hand-curated sub-clusters (taxonomy browse, stablecoin profiles, About, methodology changelogs, more reference) are the exception to the derive-everything rule: they exist to surface a tier's children next to their parent. Stablecoin profile rows come from `TRACKED_STABLECOINS` in `shared/lib/stablecoins/registry.ts` with `buildStablecoinUrl()` from `shared/lib/urls.ts`, and their description is chosen from the coin's lifecycle status. `/coverage/` and `/funding/` are footer-only routes and reach this page through the indexed-archive backstop rather than a tier.
+The hand-curated sub-clusters (taxonomy browse, stablecoin profiles, About, methodology changelogs, more reference) are the exception to the derive-everything rule: they exist to surface a tier's children next to their parent. Stablecoin profile rows come from `TRACKED_STABLECOINS` in `shared/lib/stablecoins/registry.ts` with `buildStablecoinUrl()` from `shared/lib/urls.ts`, and their description is chosen from the coin's lifecycle status. `/coverage/` and `/funding/` are reachable through the `more` group's `Transparency` and `About Pharos` columns, so they no longer need the indexed-archive backstop.
 
 ## Indexed Archive
 

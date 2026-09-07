@@ -8,6 +8,7 @@ import {
   LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
+  selectScoringDegradedWarnings,
   type AuthoritativeReserveSnapshot,
   type LiveReserveScoringMap,
   type ReserveCompositionRow,
@@ -338,7 +339,7 @@ async function loadFreshAuthoritativeReserveSnapshots(
     minSlices?: number;
     sourceModels?: readonly ReserveCompositionRecord["adapterSourceModel"][];
     evidenceClasses?: readonly ReserveCompositionRecord["adapterEvidenceClass"][];
-    requireOkStatus?: boolean;
+    excludeDegradedSnapshots?: boolean;
   },
 ): Promise<Map<string, AuthoritativeReserveSnapshot>> {
   const configuredCoins = getConfiguredLiveReserveCoins();
@@ -364,7 +365,12 @@ async function loadFreshAuthoritativeReserveSnapshots(
 
     const parsed = parseReserveCompositionRow(compositionRow, syncState);
     if (!parsed.record) continue;
-    if (options?.requireOkStatus && syncState?.lastStatus !== "ok") continue;
+    if (
+      options?.excludeDegradedSnapshots
+      && selectScoringDegradedWarnings(parsed.record.warnings, coin.liveReservesConfig).length > 0
+    ) {
+      continue;
+    }
     if (isReserveSnapshotStale(parsed.record, coin, now, freshnessSec)) continue;
     if (parsed.record.slices.length < minSlices) continue;
 
@@ -400,7 +406,7 @@ export async function loadFreshIndependentLiveReserveMap(
   const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, {
     minSlices,
     evidenceClasses: SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
-    requireOkStatus: true,
+    excludeDegradedSnapshots: true,
   });
   const eligibleSnapshots = Array.from(snapshots.entries())
     .filter(([, snapshot]) => hasScoringEligibleLiveReserveFreshness(snapshot.metadata));

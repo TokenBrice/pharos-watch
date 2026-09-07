@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FileText, Coins, Clock, Trash2, Search, X } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 import { logosById } from "@/lib/logos";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
@@ -30,6 +31,13 @@ interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const EMPTY_STATE_CHIPS: { label: string; href: string }[] = [
+  { label: "Stablecoin Directory", href: "/stablecoins/" },
+  { label: "Chains", href: "/chains/" },
+  { label: "Learn", href: "/learn/" },
+  { label: "Screener", href: "/screener/" },
+];
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
@@ -162,6 +170,46 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     setSelectedIndex((current) => clampCommandPaletteSelectedIndex(current, flatResults.length));
   }, [flatResults.length]);
 
+  // Single selection path for keyboard Enter and pointer clicks: fires the
+  // bounded `palette_selected` payload, then dispatches. Raw query text is
+  // never sent — only its length and the item's kind/section/rank.
+  const selectResult = (index: number) => {
+    const item = flatResults[index];
+    if (!item) return;
+    trackEvent("palette_selected", {
+      query_length: query.trim().length,
+      selected_kind: item.kind ?? "unknown",
+      selected_section: item.section,
+      selected_rank: index,
+    });
+    item.onSelect();
+  };
+
+  // Debounced zero-results signal, mirroring `trackSearch`: fires once the
+  // user has stopped typing on an empty result set; cancelled on close, on
+  // new results, and on unmount.
+  const zeroResultsTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!open || !query.trim() || flatResults.length > 0) {
+      if (zeroResultsTimerRef.current != null) {
+        window.clearTimeout(zeroResultsTimerRef.current);
+        zeroResultsTimerRef.current = null;
+      }
+      return;
+    }
+    const queryLength = query.trim().length;
+    zeroResultsTimerRef.current = window.setTimeout(() => {
+      zeroResultsTimerRef.current = null;
+      trackEvent("palette_zero_results", { query_length: queryLength });
+    }, 1000);
+    return () => {
+      if (zeroResultsTimerRef.current != null) {
+        window.clearTimeout(zeroResultsTimerRef.current);
+        zeroResultsTimerRef.current = null;
+      }
+    };
+  }, [open, query, flatResults.length]);
+
   // ── Scroll selected item into view ─────────────────────────────────────
 
   useEffect(() => {
@@ -190,9 +238,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         prev > 0 ? prev - 1 : flatResults.length - 1
       );
     } else if (e.key === "Enter") {
-      e.preventDefault();
       if (flatResults[selectedIndex]) {
-        flatResults[selectedIndex].onSelect();
+        e.preventDefault();
+        selectResult(selectedIndex);
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -258,14 +306,27 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           ref={listRef}
           id="command-palette-results"
           role="listbox"
+          aria-label="Search results"
           className="min-h-0 flex-1 overflow-y-auto py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:max-h-[60vh] sm:flex-initial sm:pb-2"
         >
           {query.trim() && flatResults.length === 0 && (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-muted-foreground">Nothing found for &ldquo;{query}&rdquo;. Try a ticker or chain name.</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Try searching by symbol (e.g., USDT) or browse by category
-              </p>
+              <p className="text-sm text-muted-foreground">Nothing found for &ldquo;{query}&rdquo;. Try a ticker, chain name, or one of these:</p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                {EMPTY_STATE_CHIPS.map((chip) => (
+                  <button
+                    key={chip.href}
+                    type="button"
+                    onClick={() => {
+                      router.push(chip.href);
+                      closePalette();
+                    }}
+                    className="pharos-focus-ring min-h-11 rounded-full border border-border/70 px-3 py-1.5 text-xs text-foreground transition-colors hover:border-border hover:bg-muted/45 sm:min-h-0"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -308,7 +369,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         : "border-transparent hover:border-border/55 hover:bg-muted/45"
                     }`}
                     style={{ width: "calc(100% - 16px)" }}
-                    onClick={() => item.onSelect()}
+                    onClick={() => selectResult(currentIndex)}
                     onMouseEnter={() => setSelectedIndex(currentIndex)}
                   >
                     {/* Icon or logo */}

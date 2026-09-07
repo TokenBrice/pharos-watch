@@ -6,6 +6,7 @@ import {
 import { inferReserveDisplayBadgeKindFromEvidenceClass } from "@shared/lib/live-reserve-adapter-descriptors";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/core";
 import type {
   LiveReserveSnapshotMetadata,
   ReserveDisplayBadgeView,
@@ -16,6 +17,7 @@ import { getReserveCompositionRow, getReserveSyncState } from "./store-read";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import {
   LIVE_RESERVE_FRESHNESS_SEC,
+  selectScoringDegradedWarnings,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
   type ReserveSyncStatus,
@@ -28,8 +30,8 @@ import {
 } from "./store-snapshot-state";
 
 function buildReserveProvenanceView(
-  record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,
-  syncState: ReserveSyncStateRecord | null,
+  record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata" | "warnings">,
+  config: StablecoinMeta["liveReservesConfig"] | undefined,
   stale: boolean,
 ): ReserveProvenanceView {
   const freshnessMode = record.metadata.freshnessMode;
@@ -39,7 +41,7 @@ function buildReserveProvenanceView(
     ...(freshnessMode ? { freshnessMode } : {}),
     scoringEligible: record.adapterEvidenceClass === "independent"
       && !stale
-      && syncState?.lastStatus === "ok"
+      && selectScoringDegradedWarnings(record.warnings, config).length === 0
       && hasScoringEligibleLiveReserveFreshness(record.metadata),
   };
 }
@@ -163,12 +165,12 @@ export async function resolveReserveResult(
     || (liveSnapshot != null && isReserveSnapshotStale(liveSnapshot, meta, now, freshnessSec));
 
   // Prior live detail deliberately stays visible when the *current* sync attempt
-  // failed: the earlier snapshot was validly observed, and scoring already
-  // excludes it separately by requiring `lastStatus === "ok"`. Only genuine
+  // failed: the earlier snapshot was validly observed, and scoring judges it on
+  // its own warnings, not on the later attempt's status. Only genuine
   // staleness (Worker fetch age or effective upstream observation age, computed
   // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
   if (liveSnapshot) {
-    const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
+    const provenance = buildReserveProvenanceView(liveSnapshot, meta.liveReservesConfig, stale);
     const adapterBadge = buildReserveDisplayBadgeView(liveSnapshot);
     const displayBadge = meta.liveReservesConfig?.semantics === "attestation-mix" && adapterBadge.kind === "live"
       ? { ...buildReserveDisplayBadge("proof"), label: "Attestation" }

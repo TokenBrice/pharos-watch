@@ -387,7 +387,8 @@ export function extractFindings(text: string, cur: Current): Finding[] {
     });
   }
 
-  const holderScopeRe = /\b(\d[\d,]*)\s+(holders?|users?)\b/gi;
+  // Token-standard names ("ERC-20 holder") are not holder counts.
+  const holderScopeRe = /(?<![\w-])(\d[\d,]*)\s+(holders?|users?)\b/gi;
   for (const match of t.matchAll(holderScopeRe)) {
     push({
       kind: "holder-address-scope",

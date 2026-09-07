@@ -23,6 +23,7 @@ describe("command palette action helpers", () => {
       coinSymbols: ["usdc", "bad"],
       resolvedCoinIds: ["usdc-circle"],
       unresolved: ["bad"],
+      href: "/compare/?coins=usdc-circle",
     });
 
     expect(preview).toEqual({
@@ -40,12 +41,13 @@ describe("command palette action helpers", () => {
         coinSymbols: ["usdc", "usdt"],
         resolvedCoinIds: ["usdc-circle", "usdt-tether"],
         unresolved: [],
+        href: "/compare/usdt-tether-vs-usdc-circle/",
       },
       compareExecutor,
     );
 
     expect(didCompare).toBe(true);
-    expect(compareExecutor.push).toHaveBeenCalledWith("/compare/?coins=usdc-circle,usdt-tether");
+    expect(compareExecutor.push).toHaveBeenCalledWith("/compare/usdt-tether-vs-usdc-circle/");
     expect(compareExecutor.closePalette).toHaveBeenCalledTimes(1);
 
     const pinExecutor = makeExecutor();

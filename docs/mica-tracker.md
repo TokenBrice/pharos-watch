@@ -156,7 +156,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
-**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
+**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA and GENIUS status, coin by coin". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
 
 **Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field, and `RegulatoryStandingCard` renders the per-regime facts it links to (`#jurisdiction`), now including GENIUS facts and the researched GENIUS obligations checklist on detail pages. Coins without a curated regime profile render nothing — no passport field and no Regulatory standing card; nothing is faked on-page. The GENIUS passport chip still links off-page to `/compliance/?regime=genius` rather than `#jurisdiction`.
 

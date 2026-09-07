@@ -31,6 +31,26 @@ describe("compareMethodologyVersions", () => {
 });
 
 describe("createMethodologyVersion", () => {
+  it("rejects a third decimal digit on versions activated from 2026-09-07 on", () => {
+    const entry = (version: string, effectiveAt: number) => ({
+      version, title: "t", date: "2026-09-07", effectiveAt, summary: "s", impact: [], commits: [], reconstructed: false,
+    });
+    expect(() =>
+      createMethodologyVersion({
+        currentVersion: "9.461",
+        changelogPath: "/methodology/x",
+        changelog: [entry("9.461", 1_788_739_200)],
+      }),
+    ).toThrow(/at most two decimal digits/i);
+    expect(
+      createMethodologyVersion({
+        currentVersion: "9.47",
+        changelogPath: "/methodology/x",
+        changelog: [entry("9.47", 1_788_739_200), entry("9.461", 1_788_509_806)],
+      }).currentVersion,
+    ).toBe("9.47");
+  });
+
   it("resolves to the higher version when two entries share effectiveAt", () => {
     // Regression guard: v3.9 and v3.8 shared effectiveAt=1776211200 and the
     // loop was silently resolving to 3.8. The sort tiebreak must prefer the

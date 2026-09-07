@@ -13,6 +13,16 @@ export interface CaseStudyClientSummary {
   readonly outcome: CaseStudyOutcome;
 }
 
+/** Palette/search row for one case study: light metadata only, no article prose. */
+export interface CaseStudyClientListEntry {
+  readonly slug: string;
+  readonly title: string;
+  readonly outcome: CaseStudyOutcome;
+  readonly coinSymbols: readonly string[];
+  readonly year: string | null;
+  readonly keywords: string;
+}
+
 export const CASE_STUDY_CLIENT_BY_COIN_ID: Record<string, CaseStudyClientSummary> = {
   "usdc-circle": {
     "slug": "usdc-svb-2023",
@@ -398,6 +408,309 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
     ],
     "startISO": "2026-06-02",
     "endISO": "2026-06-18"
+  }
+];
+
+/**
+ * Command-palette corpus for /learn/case-studies/: title, coin symbols, year,
+ * and search keywords per study. Generated from the same registries; do not
+ * extend by hand.
+ */
+export const CASE_STUDY_CLIENT_LIST: readonly CaseStudyClientListEntry[] = [
+  {
+    "slug": "usdc-svb-2023",
+    "title": "USDC and the Silicon Valley Bank weekend",
+    "outcome": "survived",
+    "coinSymbols": [
+      "USDC",
+      "DAI",
+      "FRAX",
+      "alUSD"
+    ],
+    "year": "2023",
+    "keywords": "usd coin usdc dai legacy frax dollar frax alchemix usd alusd svb 2023"
+  },
+  {
+    "slug": "lusd-flight-to-safety-2023",
+    "title": "LUSD: the peg that held during the SVB weekend",
+    "outcome": "survived",
+    "coinSymbols": [
+      "LUSD",
+      "USDC",
+      "DAI",
+      "FRAX"
+    ],
+    "year": "2023",
+    "keywords": "liquity usd lusd usd coin usdc dai legacy frax dollar frax flight to safety 2023"
+  },
+  {
+    "slug": "terra-ust-2022",
+    "title": "TerraUSD: the death spiral that erased $18 billion",
+    "outcome": "died",
+    "coinSymbols": [
+      "UST",
+      "USDT",
+      "MIM"
+    ],
+    "year": "2022",
+    "keywords": "terrausd ust tether usdt magic internet money mim terra 2022"
+  },
+  {
+    "slug": "dai-black-thursday",
+    "title": "Dai: Black Thursday and the PSM dependency",
+    "outcome": "survived",
+    "coinSymbols": [
+      "DAI",
+      "USDC"
+    ],
+    "year": "2020",
+    "keywords": "dai usd coin usdc black thursday"
+  },
+  {
+    "slug": "usde-oracle-2025",
+    "title": "USDe and the October 2025 Binance oracle print",
+    "outcome": "survived",
+    "coinSymbols": [
+      "USDe"
+    ],
+    "year": "2025",
+    "keywords": "ethena usde usde oracle 2025"
+  },
+  {
+    "slug": "buidl-tokenized-tbill-2025",
+    "title": "BUIDL: the tokenized T-bill that held",
+    "outcome": "survived",
+    "coinSymbols": [
+      "BUIDL",
+      "USYC"
+    ],
+    "year": "2024",
+    "keywords": "blackrock usd institutional digital liquidity fund buidl circle usyc usyc tokenized tbill 2025"
+  },
+  {
+    "slug": "usyc-nav-pricing-2025",
+    "title": "USYC: when a T-bill fund became DeFi collateral",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "USYC",
+      "USD0"
+    ],
+    "year": "2025",
+    "keywords": "circle usyc usyc usual usd usd0 nav pricing 2025"
+  },
+  {
+    "slug": "usd0pp-usual-2025",
+    "title": "USD0++ depeg: when Usual changed the redemption floor",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "USD0"
+    ],
+    "year": "2025",
+    "keywords": "usual usd usd0 usd0pp usual 2025"
+  },
+  {
+    "slug": "crvusd-exploit-trilogy",
+    "title": "crvUSD's exploit trilogy: three shocks, no collapse",
+    "outcome": "survived",
+    "coinSymbols": [
+      "crvUSD",
+      "REUSD"
+    ],
+    "year": "2023",
+    "keywords": "crvusd resupply usd reusd exploit trilogy"
+  },
+  {
+    "slug": "susd-sip420-2025",
+    "title": "sUSD and SIP-420: the depeg a governance vote chose",
+    "outcome": "died",
+    "coinSymbols": [
+      "sUSD"
+    ],
+    "year": "2025",
+    "keywords": "susd sip420 2025"
+  },
+  {
+    "slug": "iron-titan-2021",
+    "title": "IRON Finance & TITAN: the algorithmic prequel to Terra",
+    "outcome": "died",
+    "coinSymbols": [
+      "IRON"
+    ],
+    "year": "2021",
+    "keywords": "iron titan 2021"
+  },
+  {
+    "slug": "usdn-neutrino-2022",
+    "title": "Neutrino USD: the stablecoin collapse before Terra",
+    "outcome": "died",
+    "coinSymbols": [
+      "USDN"
+    ],
+    "year": "2022",
+    "keywords": "neutrino usd usdn neutrino 2022"
+  },
+  {
+    "slug": "fei-protocol",
+    "title": "Fei Protocol: the peg that broke at birth",
+    "outcome": "died",
+    "coinSymbols": [
+      "FEI"
+    ],
+    "year": "2021",
+    "keywords": "fei usd fei protocol"
+  },
+  {
+    "slug": "usr-resolv-2026",
+    "title": "Resolv USD: when one key minted eighty million",
+    "outcome": "died",
+    "coinSymbols": [
+      "USR"
+    ],
+    "year": "2026",
+    "keywords": "resolv usd usr resolv 2026"
+  },
+  {
+    "slug": "stream-elixir-contagion-2025",
+    "title": "Stream Finance: loss broke three stablecoins",
+    "outcome": "died",
+    "coinSymbols": [
+      "xUSD"
+    ],
+    "year": "2025",
+    "keywords": "stream finance xusd xusd stream elixir contagion 2025"
+  },
+  {
+    "slug": "usdf-falcon-2025",
+    "title": "USDf and the opacity discount",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "USDf",
+      "USDe",
+      "USR"
+    ],
+    "year": "2025",
+    "keywords": "falcon usd usdf ethena usde usde resolv usd usr falcon 2025"
+  },
+  {
+    "slug": "fdusd-sun-fdt-2025",
+    "title": "FDUSD and the insolvency tweet",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "FDUSD",
+      "TUSD",
+      "USDC"
+    ],
+    "year": "2025",
+    "keywords": "first digital usd fdusd trueusd tusd usd coin usdc sun fdt 2025"
+  },
+  {
+    "slug": "busd-paxos-2023",
+    "title": "BUSD: the regulator's off-switch",
+    "outcome": "died",
+    "coinSymbols": [
+      "BUSD",
+      "USDP",
+      "FDUSD"
+    ],
+    "year": "2023",
+    "keywords": "binance usd busd pax dollar usdp first digital usd fdusd paxos 2023"
+  },
+  {
+    "slug": "multichain-usdc-2023",
+    "title": "Multichain USDC: the bridge died, not the dollar",
+    "outcome": "died",
+    "coinSymbols": [
+      "USDC.m",
+      "USDC"
+    ],
+    "year": "2023",
+    "keywords": "multichain usdc usdc.m usd coin usdc multichain 2023"
+  },
+  {
+    "slug": "ftx-contagion-2022",
+    "title": "The FTX weekend: which pegs broke",
+    "outcome": "died",
+    "coinSymbols": [
+      "HUSD",
+      "USDT",
+      "USDD"
+    ],
+    "year": "2022",
+    "keywords": "husd tether usdt usdd ftx contagion 2022"
+  },
+  {
+    "slug": "usdr-real-usd-2023",
+    "title": "USDR: tokenized houses cannot sell at 3 AM",
+    "outcome": "died",
+    "coinSymbols": [
+      "USDR"
+    ],
+    "year": "2023",
+    "keywords": "real usd usdr real usd 2023"
+  },
+  {
+    "slug": "eurt-mica-exit-2024",
+    "title": "Euro Tether: the stablecoin that died by jurisdiction",
+    "outcome": "died",
+    "coinSymbols": [
+      "EURT",
+      "EURC",
+      "EURE"
+    ],
+    "year": "2024",
+    "keywords": "euro tether eurt eurc monerium eur emoney eure mica exit 2024"
+  },
+  {
+    "slug": "usdd-tron-reserve-2024",
+    "title": "USDD: when the issuer pulled the Bitcoin",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "USDD",
+      "DAI"
+    ],
+    "year": "2024",
+    "keywords": "usdd dai tron reserve 2024"
+  },
+  {
+    "slug": "usdx-kava-2022",
+    "title": "Kava USDX: one toxic collateral leg",
+    "outcome": "died",
+    "coinSymbols": [
+      "USDX"
+    ],
+    "year": "2022",
+    "keywords": "usdx kava 2022"
+  },
+  {
+    "slug": "mai-qidao-bridge-2023",
+    "title": "MAI: the bridge that broke the peg",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "MAI"
+    ],
+    "year": "2023",
+    "keywords": "mai qidao bridge 2023"
+  },
+  {
+    "slug": "pmusd-precious-metals",
+    "title": "pmUSD and the in-situ gold collateral chain",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "pmUSD"
+    ],
+    "year": "2026",
+    "keywords": "pmusd precious metals"
+  },
+  {
+    "slug": "apxusd-dat-collateral",
+    "title": "apxUSD and the Bitcoin-treasury collateral chain",
+    "outcome": "wounded",
+    "coinSymbols": [
+      "apxUSD",
+      "apyUSD"
+    ],
+    "year": "2026",
+    "keywords": "apxusd apyusd dat collateral"
   }
 ];
 

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.47",
+    title: "Inherited upstream reserve gaps count once per upstream cause",
+    date: "2026-09-07",
+    effectiveAt: 1788772631,
+    summary:
+      "A dependent's exposure to an upstream with an open reserve gap is one unresolved claim, not one per upstream reserve slice. The backing projection now folds every slice-level reason an upstream raises into a single reason per projected code, source code, and owner on each dependent exposure; the slice paths survive in the causal key. No evidence was added and no score or grade moves: the open data-point count stops multiplying one stale Tether attestation across every USDT holder.",
+    impact: [
+      "`projectResolvedUpstreamReserveExposure` (`shared/lib/safety-score-v9/backing.ts`) groups the projected upstream reasons by projected code, source code, and responsibility before emitting them. Previously each upstream reason path became its own `bounded-unknown-reserve-exposure` fact on the dependent, so an upstream on the audited fallback with nine stale reserve slices, reported on both its slice and reserve-envelope paths, put 18 open data points on every direct holder and 36 on a holder reaching it twice.",
+      "On replay of `agents/v9-captures/capture-20260907-0917.json` at clock `1788772631`, open data points fell from 1,280 to 733: `published-evidence-expired` 602 -> 58 and `issuer-undisclosed` 354 -> 351, with `measured-adverse`, `method-unsupported`, `producer-failed`, and `integration-missing` unchanged. 30 assets changed fact counts (the Mento family, cUSD/cEUR, GHO, rUSD, FRAX/FPI, USDD, USDX, ftUSD, reUSD, bnUSD, EURO3, and others), 0 scores moved, 0 grades flipped.",
+      "The trigger was producer-side: on 2026-09-07 one `HTTP 502` from Tether's transparency feed dropped a fresh USDT snapshot from the scoring reserve map because the loader required the latest sync status to be `ok`, sending USDT onto the audited fallback whose Q2 composition is outside the 38-day window. The loader now judges a snapshot on its own warnings (`selectScoringDegradedWarnings`), so a failed attempt that wrote nothing cannot demote the snapshot on disk. That repair cannot manifest in a frozen replay; it needs a real producer cycle.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.461",
     title: "Bridge joins and commodity outputs are resolved without synthetic coverage",
     date: "2026-09-04",

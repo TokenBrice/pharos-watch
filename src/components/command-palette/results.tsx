@@ -4,8 +4,10 @@ import {
   Moon,
   Sun,
   FileText,
-  Copy,
+  BookA,
+  BookMarked,
   BookOpen,
+  Copy,
   Newspaper,
   KeyRound,
   GitCompare,
@@ -22,7 +24,8 @@ import {
   type CommandPaletteActionIcon,
   type CommandPaletteActionId,
   type CommandPaletteResultDescriptor,
-  type CommandPaletteSection,
+  type CommandPaletteResultKind,
+  type CommandPaletteSectionedItem,
   type CommandPaletteStablecoinHealth,
   type CommandPaletteStablecoinLiveMetadata,
   type CommandPaletteHistoryItem,
@@ -31,11 +34,12 @@ import { buildCompareHrefFromCoinIds } from "@/lib/command-palette-verbs";
 import { copyText } from "@/lib/clipboard";
 import type { CommandPaletteVerbPreview } from "@/components/command-palette-actions";
 
-export interface CommandPaletteSearchResult {
+export interface CommandPaletteSearchResult extends CommandPaletteSectionedItem {
   id: string;
   label: string;
   sublabel?: string;
-  section: CommandPaletteSection;
+  /** Result kind from the descriptor; drives the `palette_selected` analytics payload. */
+  kind?: CommandPaletteResultKind;
   logoUrl?: string;
   imagePath?: string;
   imageSquare?: boolean;
@@ -109,6 +113,16 @@ function getKindIcon(kind: CommandPaletteResultDescriptor["kind"]): ReactNode {
       return <Layers className="h-4 w-4" />;
     case "depeg-event":
       return <Activity className="h-4 w-4" />;
+    case "comparison":
+      return <GitCompare className="h-4 w-4" />;
+    case "case-study":
+      return <BookMarked className="h-4 w-4" />;
+    case "glossary-term":
+      return <BookA className="h-4 w-4" />;
+    case "doc":
+      return <BookOpen className="h-4 w-4" />;
+    case "blog-post":
+      return <Newspaper className="h-4 w-4" />;
     case "verb-hint":
       return <Terminal className="h-4 w-4" />;
     case "verb-run":
@@ -200,6 +214,8 @@ function buildSearchResult(
     label: descriptor.label,
     sublabel: descriptor.sublabel,
     section: descriptor.section,
+    lead: descriptor.lead,
+    kind: descriptor.kind,
     logoUrl: descriptor.logoId ? logos?.[descriptor.logoId] : undefined,
     imagePath: descriptor.imagePath,
     imageSquare: descriptor.imageSquare,
@@ -216,7 +232,7 @@ function buildSearchResult(
     frozen: descriptor.frozen,
     marketCap: descriptor.kind === "stablecoin" ? descriptor.marketCapUsd : undefined,
     stablecoinHealth: descriptor.kind === "stablecoin" ? descriptor.stablecoinHealth : undefined,
-    mono: descriptor.kind === "stablecoin" || descriptor.kind === "depeg-event",
+    mono: descriptor.kind === "stablecoin" || descriptor.kind === "stablecoin-yield" || descriptor.kind === "depeg-event",
     onSelect,
   };
 }
@@ -268,6 +284,7 @@ export function buildCommandPaletteSearchResults({
       label: verbPreview.label,
       sublabel: verbPreview.sublabel,
       section: "Run command",
+      kind: "verb-run",
       icon: <PlayCircle className="h-4 w-4" />,
       onSelect: () => {
         if (verbPreview.runnable) runVerb();

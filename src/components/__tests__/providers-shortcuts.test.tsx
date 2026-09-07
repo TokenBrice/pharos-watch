@@ -8,7 +8,7 @@ import {
   SORT_COLUMN_EVENT,
   type SortColumnEventDetail,
 } from "@/components/providers";
-import { setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
+import { setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
 let pathname = "/";
 
@@ -113,7 +113,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
   });
 
   it("ignores numeric column sort when single-key shortcuts are disabled", async () => {
-    setSidebarShortcutDisabled(true);
+    setSingleKeyShortcutDisabled(true);
     const onSort = vi.fn();
     window.addEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
     try {
@@ -150,7 +150,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
   });
 
   it("ignores ? when single-key shortcuts are disabled", async () => {
-    setSidebarShortcutDisabled(true);
+    setSingleKeyShortcutDisabled(true);
     render(
       <Providers>
         <div />

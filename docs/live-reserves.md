@@ -161,7 +161,7 @@ Warnings now carry both a display `severity` and an execution `effect`:
 | Effect     | Meaning                                                                                                                          |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `info`     | Informational only; the snapshot can still be stored and remain `ok`                                                             |
-| `degraded` | Snapshot is stored, but the per-coin sync state becomes `degraded` and the feed is excluded from independent scoring passthrough |
+| `degraded` | Snapshot is stored, but the per-coin sync state becomes `degraded` and that snapshot is excluded from independent scoring passthrough (judged on the snapshot's own warnings via `selectScoringDegradedWarnings`, so a later failed attempt never demotes a clean prior snapshot) |
 | `fatal`    | Snapshot is rejected and the attempt is recorded as an `error`                                                                   |
 
 ---
@@ -283,7 +283,7 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 - `resolveReserveResult()` is the canonical detail/API resolver used by `GET /api/stablecoin-reserves/:id`
 - `computeReserveCompositionOverview()` is the status-summary resolver used by `/api/status` and `/admin/`
 - `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent`, `reserve_sync_state.last_status = "ok"`, **and** scoring-eligible freshness evidence for V9 fact-set consumers. In practice that means the snapshot must either carry a verified `sourceTimestamp` path or explicitly mark freshness as `not-applicable`; `freshnessMode = "unverified"` does not qualify for V9 Backing/dependency compilation, even if legacy metadata carries `scoringAllowsUnverifiedFreshness`.
-- transient network/upstream failures retain the last successful composition for reserve detail/status views while the current sync state records `error` / `skipped`; scoring still fails closed because it requires the latest sync state to be `ok`
+- transient network/upstream failures retain the last successful composition for reserve detail/status views while the current sync state records `error` / `skipped`; that composition keeps scoring until the freshness bound retires it, because the failed attempt wrote no snapshot and says nothing about the one on disk (before 2026-09-07 a single failed attempt dropped the coin onto the audited fallback, and one Tether `502` fanned out into ~580 inherited open data points)
 - `getLatestSuccessfulReserveSnapshotMetadata()` is the canonical accessor for downstream consumers that need snapshot telemetry such as redeemable capacity or live redemption fees
 - failed `reserve_sync_state` / `reserve_sync_attempt_history` rows now also retain `metadata.failureCategory` so parser drift, network issues, upstream HTTP failures, validation failures, and storage write failures are distinguishable without log grep
 - authoritative `live` / `live-stale` API responses now also carry a `provenance` envelope plus a separate `displayBadge` so the frontend can distinguish true live feeds from curated-validated and proof-style reserve views

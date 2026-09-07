@@ -603,6 +603,54 @@ describe("live-reserves-store", () => {
     expect(scoringMap.get("lusd-liquity")).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
   });
 
+  it("judges scoring on the snapshot's own warnings, not the latest attempt's status", async () => {
+    const now = 10_000;
+    const degradedThenErrored = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          // Latest attempt failed; the stored snapshot came from an earlier degraded run.
+          reserveSyncRow({ last_attempted_at: now, last_success_at: now - 100, last_status: "error", last_error: "HTTP 502" }),
+          reserveSyncRow({
+            stablecoin_id: "lusd-liquity",
+            adapter_key: "liquity-v1",
+            breaker_key: "live-reserves:lusd-liquity",
+            last_attempted_at: now,
+            last_success_at: now - 100,
+            last_status: "error",
+            last_error: "HTTP 502",
+          }),
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          reserveCompositionRow({
+            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
+            fetched_at: now - 100,
+            warnings: JSON.stringify([{ code: "stale-source-data", message: "old", severity: "warning", effect: "degraded" }]),
+            metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now - 100 }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          }),
+          reserveCompositionRow({
+            stablecoin_id: "lusd-liquity",
+            slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
+            fetched_at: now - 100,
+            source: "liquity-v1",
+            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+            adapter_source_model: "single-bucket",
+            adapter_evidence_class: "independent",
+          }),
+        ],
+      },
+    ]);
+
+    const scoringMap = await loadFreshIndependentLiveReserveMap(degradedThenErrored, now);
+    expect(scoringMap.has("iusd-infinifi")).toBe(false);
+    expect(scoringMap.has("lusd-liquity")).toBe(true);
+  });
+
   it("requires timestamp-backed or explicitly on-chain freshness metadata for scoring passthrough", async () => {
     const now = 10_000;
     const db = mockD1([
