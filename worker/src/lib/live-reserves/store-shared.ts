@@ -183,6 +183,28 @@ export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
   return ACTIVE_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
 }
 
+const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([
+  "stale-source-data",
+  "material-unknown-exposure",
+]);
+
+/**
+ * Degrading warnings the coin's scoring allowlist does not excuse. A snapshot
+ * carrying one is stored and displayed but never enters V9 scoring. Judged on
+ * the snapshot's own warnings, not the sync row's latest status: a later
+ * attempt that failed wrote no snapshot, so it says nothing about this one.
+ */
+export function selectScoringDegradedWarnings(
+  warnings: readonly LiveReserveWarning[],
+  config: StablecoinMeta["liveReservesConfig"] | null | undefined,
+): LiveReserveWarning[] {
+  const allowed = new Set(config?.scoring?.allowedDegradedWarningCodes ?? []);
+  return warnings.filter((warning) => (
+    warning.effect === "degraded"
+    && (UNALLOWLISTABLE_DEGRADED_WARNING_CODES.has(warning.code) || !allowed.has(warning.code))
+  ));
+}
+
 export function createReserveSyncAttemptId(stablecoinId: string): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cryptoObj?.randomUUID) {

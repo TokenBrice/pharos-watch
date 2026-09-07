@@ -23,14 +23,10 @@ import {
   finalizeReserveSyncSuccess,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
+  selectScoringDegradedWarnings,
 } from "../lib/live-reserves/store";
 
 const TRACKED_STABLECOIN_IDS = new Set(TRACKED_META_BY_ID.keys());
-const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([
-  "stale-source-data",
-  "material-unknown-exposure",
-]);
-
 export const ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS = [
   1, 5, 10, 25, 50, 100, 250, 500, 1_000, 2_000, 5_000, 10_000, 20_000,
 ] as const;
@@ -462,14 +458,7 @@ export async function syncReserveCoin(args: {
       return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
-    const allowedDegradedWarningCodes = new Set(config.scoring?.allowedDegradedWarningCodes ?? []);
-    const degradedWarningsOutsideAllowlist = warnings.filter((warning) => (
-      warning.effect === "degraded"
-      && (
-        UNALLOWLISTABLE_DEGRADED_WARNING_CODES.has(warning.code)
-        || !allowedDegradedWarningCodes.has(warning.code)
-      )
-    ));
+    const degradedWarningsOutsideAllowlist = selectScoringDegradedWarnings(warnings, config);
 
     const snapshotMetadata = {
       ...(result.metadata ?? {}),
