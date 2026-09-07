@@ -107,7 +107,7 @@ export type ApiKeyAuthenticationResult =
   | { kind: "valid"; key: AuthenticatedApiKey };
 
 type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
-type ApiKeyAuditActor = "admin" | "self-serve";
+export type ApiKeyAuditActor = "admin" | "self-serve" | "donor-claim";
 
 const API_KEY_PUBLIC_PROJECTION = `
        id,
@@ -344,7 +344,7 @@ export async function buildApiKeyMaterial(pepper: string): Promise<{
   };
 }
 
-function maskApiKeyToken(keyPrefix: string): string {
+export function maskApiKeyToken(keyPrefix: string): string {
   return `${API_KEY_TOKEN_PREFIX}_${keyPrefix}_********`;
 }
 

@@ -141,6 +141,14 @@ namespace_id = "2026090603"
   limit = 4800
   period = 60
 
+[[ratelimits]]
+name = "DONOR_KEY_CLAIM_RATE_LIMIT"
+namespace_id = "2026090701"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

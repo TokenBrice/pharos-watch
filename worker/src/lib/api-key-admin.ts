@@ -22,10 +22,12 @@ import {
   requireApiKeyPepper,
   selectApiKeyById,
   selectPublicApiKeyById,
+  type ApiKeyAuditActor,
   type ApiKeyDb,
   type ApiKeyPublicRow,
 } from "./api-key-core";
 import { errorResponse } from "./api-response";
+import type { MinimalD1Statement } from "./minimal-d1";
 
 function apiKeyPostWriteReadbackFailure(action: "create" | "activate" | "update" | "deactivate" | "rotate"): Response {
   const recovery =
@@ -109,20 +111,23 @@ export interface TrustedApiKeyCreateInput {
 }
 
 export interface TrustedApiKeyAuditInput {
-  actor: "admin" | "self-serve";
+  actor: ApiKeyAuditActor;
   action: "created";
   detail?: Record<string, unknown>;
 }
 
-export async function createTrustedApiKey(
-  db: ApiKeyDb,
-  pepper: string,
+/**
+ * Prepared `INSERT ... RETURNING` for one issued key, not yet executed, so the
+ * donor claim can put it in a `db.batch()` alongside its claim row. Generic over
+ * the statement type: a real `D1Database` yields a batchable `D1PreparedStatement`.
+ */
+export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1Statement>(
+  db: { prepare(query: string): TStatement },
+  material: { keyPrefix: string; secretHash: string },
   input: TrustedApiKeyCreateInput,
-  nowSec = getNowSec(),
-  audit: TrustedApiKeyAuditInput | null = null,
-): Promise<ApiKeyCreateResponse | Response> {
-  const material = await buildApiKeyMaterial(pepper);
-  const createdRow = await db
+  nowSec: number,
+): TStatement {
+  return db
     .prepare(
       `INSERT INTO api_keys (
        key_prefix,
@@ -154,8 +159,20 @@ export async function createTrustedApiKey(
       input.expiresAt,
       nowSec,
       nowSec,
-    )
-    .first<ApiKeyPublicRow>();
+      // `bind` is declared to return the minimal shape; the runtime object is
+      // whatever `prepare` produced.
+    ) as TStatement;
+}
+
+export async function createTrustedApiKey(
+  db: ApiKeyDb,
+  pepper: string,
+  input: TrustedApiKeyCreateInput,
+  nowSec = getNowSec(),
+  audit: TrustedApiKeyAuditInput | null = null,
+): Promise<ApiKeyCreateResponse | Response> {
+  const material = await buildApiKeyMaterial(pepper);
+  const createdRow = await buildTrustedApiKeyInsertStatement(db, material, input, nowSec).first<ApiKeyPublicRow>();
 
   if (!createdRow) {
     return apiKeyPostWriteReadbackFailure("create");
@@ -300,6 +317,12 @@ export async function rotateApiKey(
      WHERE id = ?`,
     )
     .bind(material.keyPrefix, material.secretHash, nowSec, id)
+    .run();
+  // A donor claim is joined on key_prefix; carry it over so the wallet stays
+  // mapped to its rotated key instead of orphaning into a 409 on re-claim.
+  await db
+    .prepare("UPDATE api_key_donor_claims SET key_prefix = ? WHERE key_prefix = ?")
+    .bind(material.keyPrefix, existing.key_prefix)
     .run();
 
   clearApiKeyCache(existing.key_prefix);

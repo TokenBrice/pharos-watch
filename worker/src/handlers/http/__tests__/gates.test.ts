@@ -313,6 +313,32 @@ describe("evaluateAccessGate", () => {
     warn.mockRestore();
   });
 
+  it("fails closed for donor keys while the rate-limit circuit is open instead of degrading per isolate", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({
+      kind: "valid",
+      key: { ...validKey, id: 9, tier: "donor", rateLimitPerMinute: 10 },
+    });
+    apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValueOnce(true);
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: {} as D1Database,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response?.status).toBe(503);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).not.toHaveBeenCalled();
+    expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
+    expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({
+      event: "api_key_rate_limit_circuit_open_fail_closed",
+    }));
+    warn.mockRestore();
+  });
+
   it("fails closed for non-cacheable public API requests while the rate-limit circuit is open", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });

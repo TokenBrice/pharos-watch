@@ -23,6 +23,7 @@ import {
   rotateApiKey,
   updateApiKey,
 } from "../api-keys";
+import { authenticateApiKeyFromFreshCache } from "../api-key-auth";
 import { getApiKeyRuntimeState, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
 
 describe("api key helpers", () => {
@@ -229,7 +230,7 @@ describe("api key helpers", () => {
     expect(invalidTier).toBeInstanceOf(Response);
     expect((invalidTier as Response).status).toBe(400);
     await expect((invalidTier as Response).json()).resolves.toEqual({
-      error: "tier must be one of: standard, self-serve",
+      error: "tier must be one of: standard, self-serve, donor",
     });
   });
 
@@ -630,6 +631,82 @@ describe("api key helpers", () => {
           matchBinds: [prefix],
           rows: [],
           first: null,
+        },
+      ],
+      { requireMatch: true },
+    );
+    const dbUnavailable = mockD1(
+      [
+        {
+          match: "FROM api_keys",
+          matchBinds: [prefix],
+          rows: [],
+          throwError: new Error("lookup failed"),
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    await expect(authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper)).resolves.toMatchObject({
+      kind: "valid",
+    });
+
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
+
+    await expect(authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper)).resolves.toEqual({
+      kind: "unavailable",
+    });
+  });
+
+  it("never serves donor keys from the isolate fresh cache, even while the row is fresh", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const rows = {
+      donor: makeApiKeyRow({ id: 31, key_prefix: "aabbccddeeff0011", secret_hash: secretHash, tier: "donor", rate_limit_per_minute: 10 }),
+      standard: makeApiKeyRow({ id: 32, key_prefix: "aabbccddeeff0022", secret_hash: secretHash, tier: "standard" }),
+    };
+    for (const row of Object.values(rows)) {
+      const dbHit = mockD1([{ match: "FROM api_keys", matchBinds: [row.key_prefix], rows: [row] }], { requireMatch: true });
+      await expect(authenticateApiKey(dbHit, `ph_live_${row.key_prefix}_${secret}`, pepper)).resolves.toMatchObject({ kind: "valid" });
+    }
+
+    // Both rows are now cached and fresh; only the standard key may use the cache path.
+    await expect(authenticateApiKeyFromFreshCache(`ph_live_${rows.donor.key_prefix}_${secret}`, pepper)).resolves.toEqual({
+      kind: "unavailable",
+    });
+    await expect(authenticateApiKeyFromFreshCache(`ph_live_${rows.standard.key_prefix}_${secret}`, pepper)).resolves.toMatchObject({
+      kind: "valid",
+    });
+  });
+
+  it("fails closed instead of using stale cache for donor keys when D1 is unavailable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const prefix = "2233445566778899";
+    const cachedRow = makeApiKeyRow({
+      id: 23,
+      key_prefix: prefix,
+      secret_hash: secretHash,
+      name: "donor 0xaa7a…7d66",
+      owner_email: null,
+      tier: "donor",
+      rate_limit_per_minute: 10,
+      expires_at: null,
+    });
+    const dbHit = mockD1(
+      [
+        {
+          match: "FROM api_keys",
+          matchBinds: [prefix],
+          rows: [cachedRow],
         },
       ],
       { requireMatch: true },

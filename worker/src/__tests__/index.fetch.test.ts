@@ -7,7 +7,7 @@ import { makeRequestAttributionTables } from "../test-helpers/api-key-test-suppo
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { SELF_SERVE_ISSUANCE_OPEN } from "@shared/lib/public-api-contract";
+import { DONOR_KEY_CLAIMS_OPEN, SELF_SERVE_ISSUANCE_OPEN } from "@shared/lib/public-api-contract";
 import {
   matchesHttpResponseObservation,
   observeHttpResponse,
@@ -1016,6 +1016,31 @@ describe("worker.fetch", () => {
     } else {
       expect(res.status).toBe(403);
       await expect(res.json()).resolves.toMatchObject({ error: expect.stringContaining("issuance is closed") });
+    }
+  });
+
+  it("does not require a key on supporter key claims", async () => {
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/donor-key-claims", {
+        method: "POST",
+        body: "not-json",
+      }),
+      env,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    // The public-API key gate never runs (no 401). While claims are paused the
+    // handler answers 403 before the limiter and the body.
+    expect(res.status).not.toBe(401);
+    if (DONOR_KEY_CLAIMS_OPEN) {
+      expect(res.status).toBe(400);
+    } else {
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toMatchObject({ error: expect.stringContaining("claims are paused") });
     }
   });
 

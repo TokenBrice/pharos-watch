@@ -86,6 +86,12 @@ export function makeApiKeyMutationTables(
       rows: [],
     },
     {
+      // Rotation carries a donor claim's prefix; standard keys match no claim row.
+      match: "UPDATE api_key_donor_claims",
+      rows: [],
+      runMeta: { changes: 0 },
+    },
+    {
       match: "UPDATE api_keys",
       rows: [],
       runMeta: { changes: 1 },

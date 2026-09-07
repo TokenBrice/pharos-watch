@@ -149,8 +149,10 @@ const workerRestrictedImportPatterns = [
   {
     // Worker only needs viem's pure ABI codecs from viem/utils. Any other viem
     // subpath (clients/transports/actions) would pull the websocket transport
-    // surface (and its `ws` advisory) into the bundle. Keep viem/utils allowed.
-    group: ["viem/*", "!viem/utils"],
+    // surface (and its `ws` advisory) into the bundle. Keep viem/utils allowed,
+    // plus viem/siwe: the donor key claim needs the EIP-4361 parser/validator,
+    // which are pure string helpers (viem is `sideEffects: false`).
+    group: ["viem/*", "!viem/utils", "!viem/siwe"],
     message: "Worker code may only import pure ABI codecs from viem/utils, not viem clients/transports.",
   },
 ];
@@ -251,6 +253,24 @@ const eslintConfig = defineConfig([
         {
           paths: [...workerRestrictedImportPaths, ...supplyHelperRestrictedImportPaths],
           patterns: workerRestrictedImportPatterns,
+        },
+      ],
+    },
+  },
+  {
+    // Worker tests additionally sign fixtures with throwaway private keys.
+    // viem/accounts is pure signing and never reaches the deployed bundle.
+    files: ["worker/src/**/__tests__/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: workerRestrictedImportPaths,
+          patterns: workerRestrictedImportPatterns.map((pattern) =>
+            pattern.group.includes("viem/*")
+              ? { ...pattern, group: [...pattern.group, "!viem/accounts"] }
+              : pattern,
+          ),
         },
       ],
     },

@@ -36,7 +36,8 @@ export const DonationSchema = z.object({
   chain: FundingChainSchema,
   tx_hash: z.string().min(1),
   block_timestamp: UnixSecondsSchema,
-  from_address: z.string().min(1),
+  // Lowercase is the ledger invariant; donor-key eligibility compares on it.
+  from_address: z.string().regex(/^0x[0-9a-f]{40}$/, "from_address must be a lowercase 0x address"),
   display: z.string().min(1),
   kind: z.enum(["founder", "pool", "community"]),
   asset_symbol: z.string().min(1),
@@ -47,7 +48,16 @@ export const DonationSchema = z.object({
 
 export const DonationsFileSchema = z.object({
   last_updated_at: UnixSecondsSchema,
-  donations: z.array(DonationSchema),
+  donations: z.array(DonationSchema).superRefine((rows, ctx) => {
+    const seen = new Set<string>();
+    rows.forEach((row, index) => {
+      const key = `${row.chain}:${row.tx_hash.toLowerCase()}`;
+      if (seen.has(key)) {
+        ctx.addIssue({ code: "custom", path: [index, "tx_hash"], message: `duplicate donation ${key}` });
+      }
+      seen.add(key);
+    });
+  }),
 }).strict();
 
 export type FundingChain = z.infer<typeof FundingChainSchema>;

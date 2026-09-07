@@ -22,6 +22,7 @@ const FORBIDDEN_ARTIFACT_PATHS = [
   "/api/api-key-requests",
   "/api/api-key-requests/verify",
   "/api/api-key-requests-admin",
+  "/api/donor-key-claims",
 ];
 
 function isPostmanRequestConfig(

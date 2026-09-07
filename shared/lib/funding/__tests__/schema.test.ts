@@ -5,7 +5,7 @@ const DONATION = {
   chain: "ethereum",
   tx_hash: "0xabc",
   block_timestamp: 1_774_000_000,
-  from_address: "0xsender",
+  from_address: "0x00000000000000000000000000000000000000aa",
   display: "sender.eth",
   kind: "community",
   asset_symbol: "USDC",

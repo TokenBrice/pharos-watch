@@ -65,6 +65,7 @@ describe("api endpoint registry", () => {
       "/api/dex-liquidity-history?stablecoin=usdt-tether",
       "/api/digest-archive",
       "/api/digest-snapshot",
+      "/api/donor-key-claims",
       "/api/events",
       "/api/feedback",
       "/api/health",
@@ -460,6 +461,7 @@ describe("api endpoint registry", () => {
     expect(getPublicApiAccess("/api/report-cards/v9")).toBe("protected");
     expect(getPublicApiAccess("/api/api-key-requests")).toBe("exempt");
     expect(getPublicApiAccess("/api/api-key-requests/verify")).toBe("exempt");
+    expect(getPublicApiAccess("/api/donor-key-claims")).toBe("exempt");
     expect(getPublicApiAccess("/api/telegram-mini-app/session")).toBe("exempt");
     expect(getPublicApiAccess("/api/telegram-mini-app/mutate")).toBe("exempt");
     expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");

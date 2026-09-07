@@ -172,8 +172,8 @@ describe("router contract: strict frontend paths are routable", () => {
         });
         const expectedPublicStatuses = endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
-            : endpoint.path === "/api/api-key-requests"
-              // 403 while SELF_SERVE_ISSUANCE_OPEN is false (closed before body parsing).
+            : endpoint.path === "/api/api-key-requests" || endpoint.path === "/api/donor-key-claims"
+              // 403 while the self-serve / donor claim switch is false (closed before body parsing).
               ? [200, 400, 403, 502, 503]
               : [200, 400, 502, 503];
 

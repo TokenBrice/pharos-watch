@@ -4,11 +4,40 @@ export const ApiKeyTrafficClassSchema = z.enum(["external", "site"]);
 export type ApiKeyTrafficClass = z.infer<typeof ApiKeyTrafficClassSchema>;
 
 /**
- * Issuance tiers. Only these two are writable: `standard` for operator-created
- * keys and `self-serve` for the verified public issuance path.
+ * Issuance tiers: `standard` for operator-created keys, `self-serve` for the
+ * verified public issuance path, `donor` for wallet-signed supporter claims.
  */
-export const API_KEY_TIER_VALUES = ["standard", "self-serve"] as const;
+export const API_KEY_TIER_VALUES = ["standard", "self-serve", "donor"] as const;
 export type ApiKeyTier = (typeof API_KEY_TIER_VALUES)[number];
+
+/** `POST /api/donor-key-claims` request body. */
+export const DonorKeyClaimRequestSchema = z
+  .object({
+    /** Full EIP-4361 (SIWE) message text exactly as signed. */
+    message: z.string().min(1).max(4096),
+    /** 65-byte hex signature from `personal_sign`. */
+    signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/),
+  })
+  .strict();
+export type DonorKeyClaimRequest = z.infer<typeof DonorKeyClaimRequestSchema>;
+
+/** `POST /api/donor-key-claims` 201 body. The token is shown once. */
+export const DonorKeyClaimResponseSchema = z
+  .object({
+    status: z.literal("issued"),
+    key: z
+      .object({
+        keyPrefix: z.string().min(1),
+        maskedToken: z.string().min(1),
+        tier: z.literal("donor"),
+        rateLimitPerMinute: z.number().int().positive(),
+        expiresAt: z.null(),
+      })
+      .strict(),
+    token: z.string().min(1),
+  })
+  .strict();
+export type DonorKeyClaimResponse = z.infer<typeof DonorKeyClaimResponseSchema>;
 
 const ApiKeySummarySchema = z.object({
   id: z.number(),

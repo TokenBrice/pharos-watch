@@ -24,6 +24,7 @@
 | 0235     | `0235_telegram_digest_media_state.sql`                        | Add typed Safety Score map attachment identity and retry-safe media delivery progress to Telegram digest editions. |
 | 0236     | `0236_dex_deployment_attempt_attribution.sql`                 | Add rollout-safe per-deployment DEX census attempt fences while retaining the legacy coin fence as a compatibility fallback. |
 | 0237     | `0237_reserve_composition_history_payload_hash.sql`       | Add nullable payload SHA-256 digest to reserve composition history while retaining payload columns for backward compatibility. |
+| 0238     | `0238_api_key_donor_claims.sql`                           | Add the one-claim-per-wallet supporter API key ledger backing `POST /api/donor-key-claims`. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -312,6 +313,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0234_mint_burn_price_repair_backlog_index.sql`: additive IF NOT EXISTS index backfill; production already carries the index, so both apply and rollback are no-ops for existing databases.
 - `0235_telegram_digest_media_state.sql`: roll back media delivery by restoring the prior Worker. Keep the nullable map identity columns and defaulted media state; the prior Worker ignores them and continues inserting and draining digest rows unchanged.
 - `0236_dex_deployment_attempt_attribution.sql`: roll back by restoring the prior Worker. Keep both nullable attribution columns and the conservative backfill; the prior Worker ignores them, while a forward Worker detects any later legacy `last_crawl_at` write by marker mismatch and fails closed. Removing either column requires a separate coordinated cleanup rollout.
+- `0238_api_key_donor_claims.sql`: do not roll back the Worker to stop claims; set `DONOR_KEY_CLAIMS_OPEN = false` and redeploy, which keeps the donor-tier auth protections (global limiter, no isolate fallback) for keys already issued. Keep the additive table; issued `donor` keys keep authenticating, and dropping it would strand the one-claim-per-wallet fence. Removing it requires a separate coordinated cleanup rollout after every donor key is deactivated.
 
 ## Rollback Procedure
 
