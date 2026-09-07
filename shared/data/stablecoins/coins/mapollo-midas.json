@@ -59,6 +59,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mapollo-midas",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://midas.app/mapollo",
       "label": "Midas mAPOLLO NAV"

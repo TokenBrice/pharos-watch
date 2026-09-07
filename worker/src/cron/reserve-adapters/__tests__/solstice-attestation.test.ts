@@ -93,4 +93,22 @@ describe("adaptSolsticeAttestation", () => {
     const report = validateAdapterOutput(result, { adapter });
     expect(report.valid).toBe(false);
   });
+
+  it("accepts the weekly reporting window but degrades a proof past its grace", () => {
+    const sourceTimestamp = 1_788_341_462;
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        ts: String(sourceTimestamp * 1000),
+        reserves: { timeline: [{ reserves: 1000, supply: 900 }] },
+      },
+    });
+    const adapter = getReserveAdapter("solstice-attestation")!;
+    expect(adapter.evidenceClass).toBe("weak-live-probe");
+    const fresh = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 700_000 });
+    const stale = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 700_001 });
+    expect(fresh.valid).toBe(true);
+    expect(fresh.warnings).not.toContainEqual(expect.objectContaining({ code: "stale-source-data" }));
+    expect(stale.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+  });
 });

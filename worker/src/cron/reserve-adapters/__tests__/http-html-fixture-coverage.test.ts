@@ -39,6 +39,7 @@ function inspectFixtureFreshness(file: string, content: string, now = new Date()
 const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "attestation-pdf-index": "Upstream is a gated PDF index; HTML page is not the parsed surface.",
   "audx-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "paxos-independent-assurance": "Inline tests cover the sole parsed HTML surface (main-module script reference); exact reviewed main/product-module hashes bind report selection, and the manifest binds PDF bytes.",
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "ripple-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
 };

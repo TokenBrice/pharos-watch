@@ -38,6 +38,7 @@ export interface IndependentAssuranceProfile {
   reconciliation?: IndependentAssuranceReconciliationOptions;
   isReportCandidate: (href: string, text: string) => boolean;
   reportDateFromCandidate?: (href: string, text: string) => string | null;
+  prepareIndexHtml?: (html: string, signal: AbortSignal, ctx?: AdapterContext) => Promise<string>;
 }
 
 const formatDate = (year: number, month: number, day: number): string | null =>
@@ -298,7 +299,10 @@ export async function verifyIndependentAssuranceReport(args: {
   }
   assertAllowedHost(args.manifest.reportUrl, args.reportHosts, "reviewed PDF");
   const html = await fetchIndexHtml(args.indexUrl, args.indexHost, args.signal, args.ctx);
-  const candidates = collectReportCandidates(html, args.indexUrl, args.profile);
+  const discoveryHtml = args.profile.prepareIndexHtml
+    ? await args.profile.prepareIndexHtml(html, args.signal, args.ctx)
+    : html;
+  const candidates = collectReportCandidates(discoveryHtml, args.indexUrl, args.profile);
   const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
   const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
   const datedCandidates = candidates.map((candidate) => {

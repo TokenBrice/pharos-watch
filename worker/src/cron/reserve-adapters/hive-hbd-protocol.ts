@@ -14,7 +14,8 @@ const MAX_FUTURE_HEAD_SKEW_SEC = 60;
 
 // These values are pinned to the reviewed HF26+ mainnet consensus regime. The
 // runtime DGP start/stop fields are still checked against the pin; get_config
-// is deliberately not called because the reviewed v1 budget is eight methods.
+// is deliberately not called: each two-node sample uses eight methods, with
+// at most one whole-pair retry inside the same 19-second attempt budget.
 const PINNED = {
   chain: "hive-mainnet",
   hardfork: "hf26-plus",
@@ -27,6 +28,8 @@ const PINNED = {
 } as const;
 
 type HiveHbdProtocolParams = LiveReserveAdapterParamsByKey["hive-hbd-protocol"];
+
+class HiveSnapshotCoherenceError extends Error {}
 
 interface HiveAsset {
   raw: string;
@@ -384,7 +387,7 @@ async function fetchNodeSnapshot(
   validateHeadRecency(dgpAfter, nowSec);
   validatePinnedDgp(dgpAfter, params);
   if (dgpMaterialKey(dgpBefore) !== dgpMaterialKey(dgpAfter)) {
-    throw new Error(`${ADAPTER_KEY}: material reads crossed a changing Hive head`);
+    throw new HiveSnapshotCoherenceError(`${ADAPTER_KEY}: material reads crossed a changing Hive head`);
   }
 
   return {
@@ -430,7 +433,7 @@ function adaptHiveHbdProtocolSnapshots(
 ): AdapterResult {
   const [primary, fallback] = snapshots;
   if (materialKey(primary) !== materialKey(fallback)) {
-    throw new Error(`${ADAPTER_KEY}: primary and fallback nodes disagree on material Hive state`);
+    throw new HiveSnapshotCoherenceError(`${ADAPTER_KEY}: primary and fallback nodes disagree on material Hive state`);
   }
 
   const ratio = primary.ratio;
@@ -504,6 +507,9 @@ export async function fetchHiveHbdProtocolReserves(
   if (fallbacks.length !== 1 || fallbacks[0]?.kind !== "http-json") {
     throw new Error(`${ADAPTER_KEY} adapter requires exactly one http-json fallback node`);
   }
+  if (new URL(primary.url).hostname.replace(/\.$/, "") === new URL(fallbacks[0].url).hostname.replace(/\.$/, "")) {
+    throw new Error(`${ADAPTER_KEY}: corroboration requires two distinct Hive node hosts`);
+  }
 
   const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
   const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1_000);
@@ -512,13 +518,33 @@ export async function fetchHiveHbdProtocolReserves(
   }
 
   const attempt = makeAttemptSignal(signal);
-  const requestContext = { ...ctx, abortSignal: attempt.signal };
+  // Repeated RPC bodies must observe new state, not replay the run's cached
+  // bracket. Keep the shared I/O limiter while bypassing only request caching.
+  const requestContext = { ...ctx, requestCache: undefined, abortSignal: attempt.signal };
   try {
-    const [primarySnapshot, fallbackSnapshot] = await Promise.all([
-      fetchNodeSnapshot(primary.url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
-      fetchNodeSnapshot(fallbacks[0].url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
-    ]);
-    return adaptHiveHbdProtocolSnapshots([primarySnapshot, fallbackSnapshot]);
+    for (let sample = 0; ; sample += 1) {
+      attempt.signal.throwIfAborted();
+      try {
+        // Drain both nodes before retrying so an unfinished bracket cannot
+        // overlap the next pair or consume its two-connection allowance.
+        const snapshots = await Promise.allSettled([
+          fetchNodeSnapshot(primary.url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
+          fetchNodeSnapshot(fallbacks[0].url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
+        ]);
+        attempt.signal.throwIfAborted();
+        for (const snapshot of snapshots) {
+          if (snapshot.status === "rejected" && !(snapshot.reason instanceof HiveSnapshotCoherenceError)) {
+            throw snapshot.reason;
+          }
+        }
+        const [primarySnapshot, fallbackSnapshot] = snapshots;
+        if (primarySnapshot.status === "rejected") throw primarySnapshot.reason;
+        if (fallbackSnapshot.status === "rejected") throw fallbackSnapshot.reason;
+        return adaptHiveHbdProtocolSnapshots([primarySnapshot.value, fallbackSnapshot.value]);
+      } catch (error) {
+        if (sample >= 1 || !(error instanceof HiveSnapshotCoherenceError)) throw error;
+      }
+    }
   } finally {
     attempt.dispose();
   }

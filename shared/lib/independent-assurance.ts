@@ -1,4 +1,5 @@
 import { z } from "zod";
+import paxgManifest from "../data/live-reserves/independent-assurance/paxg.json";
 import audxManifest from "../data/live-reserves/independent-assurance/audx.json";
 import europManifest from "../data/live-reserves/independent-assurance/europ.json";
 import usdgoManifest from "../data/live-reserves/independent-assurance/usdgo.json";
@@ -80,6 +81,7 @@ export const IndependentAssuranceManifestSchema = z
 export type IndependentAssuranceManifest = z.infer<typeof IndependentAssuranceManifestSchema>;
 
 const MANIFESTS: Partial<Record<IndependentAssuranceProduct, IndependentAssuranceManifest>> = {
+  PAXG: IndependentAssuranceManifestSchema.parse(paxgManifest),
   AUDX: IndependentAssuranceManifestSchema.parse(audxManifest),
   EUROP: IndependentAssuranceManifestSchema.parse(europManifest),
   USDGO: IndependentAssuranceManifestSchema.parse(usdgoManifest),

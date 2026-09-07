@@ -92,6 +92,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "ousg-ondo",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://ondo.finance/ousg",
       "label": "Ondo NAV Oracle"

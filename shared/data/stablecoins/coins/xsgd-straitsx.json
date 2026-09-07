@@ -23,17 +23,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered public accountants",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-29",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
+      "reviewer": "Pharos reserve research (July report PDF and composition reviewed together 2026-09-07)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KK Yap & Associates XSGD SCS Reserve Account Report, 30 June 2026",
-          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c78f17a4f92b635508f81_XSGD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
+          "label": "KK Yap & Associates XSGD SCS Reserve Account Report, 31 July 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e13a54059e618ca8c06e3_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf"
         }
       ]
     }
@@ -120,7 +120,9 @@
       "product": "XSGD",
       "profile": "straitsx-v1",
       "indexHost": "www.straitsx.com",
-      "reportHosts": ["cdn.prod.website-files.com"]
+      "reportHosts": [
+        "cdn.prod.website-files.com"
+      ]
     }
   },
   "launchDate": "2020-03-25"

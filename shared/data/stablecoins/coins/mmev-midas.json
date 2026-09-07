@@ -73,6 +73,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mmev-midas",
+    "scoring": {
+      "maxSourceAgeSec": 432000
+    },
     "display": {
       "url": "https://midas.app/mmev",
       "label": "Midas mMEV NAV"

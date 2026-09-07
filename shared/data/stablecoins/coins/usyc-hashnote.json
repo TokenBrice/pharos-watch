@@ -67,6 +67,9 @@
     "version": 2,
     "semantics": "single-asset",
     "breakerScope": "usyc-hashnote",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://usyc.hashnote.com/",
       "label": "Hashnote"

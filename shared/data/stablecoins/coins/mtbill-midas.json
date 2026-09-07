@@ -77,6 +77,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mtbill-midas",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://midas.app/transparency",
       "label": "Ankura Trust Oracle"

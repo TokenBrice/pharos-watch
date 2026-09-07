@@ -1192,6 +1192,26 @@ describe("syncLiveReserves", () => {
     expect(sharedFetchCalls.length).toBe(1);
   });
 
+  it("does not repurpose Hive's corroborating node as a substitute primary", async () => {
+    const adapterFetch = mockAdapterRegistry(async (coin) => {
+      if (coin?.id === "hbd-hive") throw new Error("material reads crossed a changing Hive head");
+      return { slices: [{ name: "Tracked vaults", pct: 100, risk: "low" as const }] };
+    });
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const hiveCalls = adapterFetch.mock.calls.filter(([coin]) => coin.id === "hbd-hive");
+    expect(hiveCalls).toHaveLength(1);
+    expect(hiveCalls[0]![1].inputs).toMatchObject({
+      primary: { url: "https://api.hive.blog" },
+      fallbacks: [{ url: "https://api.openhive.network" }],
+    });
+    expect(db.getHistory().some((entry) => (
+      entry.sql.includes("INSERT INTO reserve_composition") && entry.binds[0] === "hbd-hive"
+    ))).toBe(false);
+  });
+
   it("emits a primary-fallback-used info warning when the fallback succeeds", async () => {
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0

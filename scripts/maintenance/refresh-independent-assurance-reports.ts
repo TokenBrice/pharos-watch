@@ -11,7 +11,7 @@ import {
 } from "@shared/lib/independent-assurance";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
-const PRODUCTS = ["AUDX", "EUROP", "USDGO", "XSGD", "XUSD"] as const satisfies readonly IndependentAssuranceProduct[];
+const PRODUCTS = ["AUDX", "EUROP", "USDGO", "XSGD", "XUSD", "PAXG"] as const satisfies readonly IndependentAssuranceProduct[];
 const AMOUNT = "([0-9][0-9,]*(?:\\.[0-9]+)?)";
 
 interface CompilerProfile {
@@ -191,10 +191,47 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
         computedAssetTotal: "1116301304",
         reportedLiabilityTotal: "1112640495",
       };
+    case "PAXG":
+      return {
+        product,
+        profile: "paxg-v1",
+        officialIndexUrl: "https://www.paxos.com/paxg-transparency",
+        reportUrl: "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf",
+        reportDate: "2026-07-31",
+        reportAsOf: "2026-07-31T17:00:00-04:00",
+        reportTimeZone: "Eastern Daylight Time (UTC-4)",
+        reportIssuedAt: "2026-08-25T23:59:00-04:00",
+        attestor: "KPMG LLP",
+        engagement: "Independent accountants' examination under AICPA attestation standards",
+        conclusion: "unmodified",
+        unit: "fine-troy-ounce",
+        assetRows: [
+          { code: "allocated-gold", label: "London Good Delivery gold in fine troy ounces", pattern: linePattern("London Good Delivery gold in fine troy ounces of gold") },
+        ],
+        liabilityRows: [
+          { code: "ethereum", label: "PAXG redeemable Ethereum tokens", pattern: /^\s*d\. Total PAXG redeemable tokens outstanding\s+(\d[\d,]*)\s+\d[\d,]*\s+\d[\d,]*\s*$/m },
+          { code: "solana", label: "PAXG redeemable Solana tokens", pattern: /^\s*d\. Total PAXG redeemable tokens outstanding\s+\d[\d,]*\s+(\d[\d,]*)\s+\d[\d,]*\s*$/m },
+        ],
+        requiredText: [
+          { label: "KPMG LLP", pattern: /KPMG LLP/ },
+          { label: "July 31, 2026 report date", pattern: /July 31, 2026 at 5:00 PM Eastern Time/ },
+          { label: "AICPA examination", pattern: /attestation standards established by the American Institute/ },
+          { label: "favorable opinion", pattern: /In our opinion, Management.s Assertion is fairly stated, in all material respects/ },
+          { label: "no nonredeemable tokens", pattern: /All PAXG tokens are redeemable\. There are no temporary or permanent PAXG nonredeemable tokens/ },
+        ],
+        rejectedText: [{ label: "qualified/adverse/disclaimed opinion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i }],
+        reportedTotals: [
+          { label: "PAXG gold assets", expected: "442217", pattern: linePattern("Total redemption assets in fine troy ounces of gold \\(Exhibit B\\)") },
+          { label: "PAXG redeemable tokens", expected: "442217", pattern: linePattern("Total PAXG redeemable tokens outstanding \\(Exhibit A line d\\)") },
+        ],
+        reportedAssetTotal: "442217",
+        computedAssetTotal: "442217",
+        reportedLiabilityTotal: "442217",
+      };
     case "XSGD":
-      return straitsxProfile(product, "SGD", "23,674,708", "23,661,169");
+      return straitsxProfile(product, "SGD", "21,294,294", "21,283,486");
     case "XUSD":
-      return straitsxProfile(product, "USD", "46,694,407", "46,615,142");
+      return straitsxProfile(product, "USD", "45,269,767", "45,182,310");
     default:
       throw new Error(`No offline compiler profile for ${product}`);
   }
@@ -212,10 +249,10 @@ function straitsxProfile(
     profile: "straitsx-v1",
     officialIndexUrl: `https://www.straitsx.com/${product.toLowerCase()}`,
     reportUrl: xsgd
-      ? "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c78f17a4f92b635508f81_XSGD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
-      : "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf",
-    reportDate: "2026-06-30",
-    reportAsOf: "2026-06-30T23:59:00+08:00",
+      ? "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e13a54059e618ca8c06e3_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf"
+      : "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e145187f4227fbe226ec2_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf",
+    reportDate: "2026-07-31",
+    reportAsOf: "2026-07-31T23:59:00+08:00",
     reportTimeZone: "Singapore Time (GMT+8)",
     attestor: "KK Yap & Associates",
     engagement: "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
@@ -243,6 +280,7 @@ function straitsxProfile(
           { code: "lat", label: "XSGD LAT circulation", pattern: linePattern("XSGD \\(LAT\\)") },
           { code: "base", label: "XSGD BASE circulation", pattern: linePattern("XSGD \\(BASE\\)") },
           { code: "sol", label: "XSGD SOL circulation", pattern: linePattern("XSGD \\(SOL\\)") },
+          { code: "xlayer", label: "XSGD XLAYER circulation", pattern: linePattern("XSGD \\(XLAYER\\)") },
         ]
       : [
           { code: "erc20", label: "XUSD ERC20 circulation", pattern: linePattern("XUSD \\(ERC20\\)") },
@@ -254,7 +292,7 @@ function straitsxProfile(
       { label: "KK Yap & Associates", pattern: /KK YAP & ASSOCIATES/i },
       { label: "SSAE 3000", pattern: /SSAE\)?\s*3000/i },
       { label: "reasonable assurance", pattern: /reasonable assurance/i },
-      { label: `${product} report date`, pattern: /30 June 2026/i },
+      { label: `${product} report date`, pattern: /31 July 2026/i },
       { label: "favorable StraitsX conclusion", pattern: /in our opinion[\s\S]*fairly stated/i },
     ],
     rejectedText: [
