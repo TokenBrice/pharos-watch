@@ -47,7 +47,7 @@ describe("hasWorkerDeployImpact", () => {
       "shared/lib/pharosville-api-contract.ts",
       "shared/types/pharosville.ts",
       "shared/lib/selector/engine.ts",
-      "shared/data/funding/donations.json",
+      "shared/data/funding/costs.json",
     ];
 
     for (const file of pagesOnlySharedFiles) {
@@ -145,7 +145,16 @@ describe("hasWorkerReleaseImpact", () => {
     expect(hasWorkerReleaseImpact(["shared/lib/pharosville-api-contract.ts"])).toBe(false);
     expect(hasWorkerReleaseImpact(["shared/types/pharosville.ts"])).toBe(false);
     expect(hasWorkerReleaseImpact(["shared/lib/selector/engine.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/data/funding/donations.json"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/data/funding/costs.json"])).toBe(false);
+  });
+
+  it("releases both surfaces for the donation ledger consumed by supporter claims", () => {
+    expect(classifyChangedFiles(["shared/data/funding/donations.json"])).toMatchObject({
+      workerChanged: true,
+      workerDeployRequired: true,
+      pagesChanged: true,
+      pagesDeployRequired: true,
+    });
   });
 });
 
