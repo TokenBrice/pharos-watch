@@ -35,6 +35,8 @@ export const CRITICAL_CONTRACT_TEST_FILES: string[] = [
 
 // Always-on contracts protect the public response and schema boundary.
 const USER_FACING_CONTRACT_TEST_FILES: string[] = [
+  // Real workerd PNG rendering catches dependency failures hidden by Node mocks.
+  "scripts/__tests__/og-worker-runtime.test.ts",
   // Public API response serialization must not drift between endpoint modes.
   "worker/src/lib/__tests__/api-response.test.ts",
   // Public API schemas are the compatibility contract for generated clients.

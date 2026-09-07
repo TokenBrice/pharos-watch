@@ -3,6 +3,7 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { findDuplicateSitemapLocs, parseSitemapLocs } from "../lib/seo-sitemap.mjs";
+import { getCanonical, getMetaContents } from "../lib/seo-html-parse.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
 
 const SITEMAP_CONCURRENCY = 8;
@@ -52,18 +53,6 @@ function resolveRoute(baseUrl, route) {
   return new URL(route.startsWith("/") ? route : `/${route}`, baseUrl).toString();
 }
 
-function extractRobots(html) {
-  const tags = html.match(/<meta\b[^>]*>/gi) ?? [];
-  return tags
-    .map((tag) => {
-      const name = tag.match(/\bname=["']robots["']/i);
-      const content = tag.match(/\bcontent=(?:"([^"]*)"|'([^']*)')/i);
-      return name ? (content?.[1] ?? content?.[2] ?? "") : "";
-    })
-    .filter(Boolean)
-    .join(",");
-}
-
 function hasImmutableCache(headers) {
   return /\bimmutable\b/i.test(headers.get("cache-control") ?? "");
 }
@@ -71,6 +60,7 @@ function hasImmutableCache(headers) {
 async function fetchManual(url, init = {}) {
   return fetch(url, {
     redirect: "manual",
+    signal: AbortSignal.timeout(30_000),
     headers: {
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "User-Agent": "PharosSeoLiveSmoke/1.0",
@@ -105,6 +95,7 @@ export async function checkSitemap(baseUrl, errors) {
   });
   if (sitemapResponse.status !== 200) {
     errors.push(`sitemap.xml returned ${sitemapResponse.status}`);
+    await cancelResponseBody(sitemapResponse);
     return [];
   }
 
@@ -134,16 +125,28 @@ export async function checkSitemapUrls(locs, limit, errors) {
         errors.push(`${loc}: sitemap URL returns 404`);
         return;
       }
-      if (response.status >= 400) {
+      if (response.status !== 200) {
         errors.push(`${loc}: sitemap URL returns ${response.status}`);
         return;
       }
 
+      const headerRobots = response.headers.get("x-robots-tag") ?? "";
+      if (/\b(?:noindex|none)\b/i.test(headerRobots)) {
+        errors.push(`${loc}: sitemap URL is noindexed by X-Robots-Tag (${headerRobots})`);
+      }
       const contentType = response.headers.get("content-type") ?? "";
       if (contentType.includes("text/html")) {
-        const robots = extractRobots(await response.text());
-        if (/\bnoindex\b/i.test(robots)) {
+        const html = await response.text();
+        const robots = [
+          ...getMetaContents(html, "name", "robots"),
+          ...getMetaContents(html, "name", "googlebot"),
+        ].join(",");
+        if (/\b(?:noindex|none)\b/i.test(robots)) {
           errors.push(`${loc}: sitemap URL is noindexed (${robots})`);
+        }
+        const canonical = getCanonical(html);
+        if (canonical !== loc) {
+          errors.push(`${loc}: sitemap URL canonical must match itself (got ${canonical || "missing"})`);
         }
       }
     } finally {
@@ -161,6 +164,7 @@ async function checkHeaders(baseUrl, errors) {
     if (hasImmutableCache(response.headers)) {
       errors.push(`${route}: HTML response has immutable cache-control`);
     }
+    await cancelResponseBody(response);
   }
 
   for (const route of ["/stablecoin/usdt-tether/index.md", "/methodology/index.md"]) {
@@ -169,6 +173,7 @@ async function checkHeaders(baseUrl, errors) {
     });
     if (response.status !== 200) {
       errors.push(`${route}: expected direct markdown asset 200, got ${response.status}`);
+      await cancelResponseBody(response);
       continue;
     }
     const robots = response.headers.get("x-robots-tag") ?? "";
@@ -179,6 +184,7 @@ async function checkHeaders(baseUrl, errors) {
     if (!/\brel="?canonical"?/i.test(link)) {
       errors.push(`${route}: missing canonical Link header`);
     }
+    await cancelResponseBody(response);
   }
 }
 
