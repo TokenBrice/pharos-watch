@@ -31,11 +31,11 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     slug: "api-access-free-grades-supporter-keys",
     title: "API Access: Free Grades, Supporter Keys",
     description:
-      "Safety Score grades are free without a key, self-serve keys are closed, and donors get a supporter key with the next release. What the API covers and why.",
+      "Free Safety Score grades, restricted API access, and supporter keys for wallets donating more than $10 in stablecoins graded A or B at claim time.",
     datePublished: "2026-09-07",
     coverImage: "/blog/api-access-free-grades-supporter-keys-cover.png",
     coverAlt:
-      "The Pharos lighthouse casting two beams across the headline “Free grades. Supporter keys.” beneath the label “API Access”, with a key at the end of the second beam.",
+      "The current circular Pharos mark beside the headline “Free grades. Supporter keys.” beneath the label “API Access”, with a key icon on a dark navy background.",
   },
   {
     slug: "safety-score-v9",
