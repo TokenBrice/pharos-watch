@@ -68,6 +68,7 @@ describe("agent engine integration", () => {
   });
 
   it("reads only the actual tool-cwd SQL file, including safe, missing and unreadable targets", () => {
+    mkdirSync(resolve("agents"), { recursive: true });
     const dir = mkdtempSync(resolve("agents/hook-cwd-"));
     try {
       const path = relative(process.cwd(), join(dir, "query.sql"));

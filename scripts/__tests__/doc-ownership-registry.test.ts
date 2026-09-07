@@ -93,18 +93,23 @@ describe("doc-ownership registry integrity", () => {
       ]),
     ];
 
+    const contents = new Map<string, string>();
+    const anchors = new Map<string, Set<string>>();
     for (const reference of references) {
       expect(reference.path).not.toMatch(/\s/);
       expect(existsSync(resolve(REPO_ROOT, reference.path)), reference.path).toBe(true);
+      if (!contents.has(reference.path)) contents.set(reference.path, readFileSync(resolve(REPO_ROOT, reference.path), "utf8"));
+      const content = contents.get(reference.path)!;
       if (reference.anchor) {
+        if (!anchors.has(reference.path)) anchors.set(reference.path, collectMarkdownReferences(content).anchors);
         expect(
-          collectMarkdownReferences(readFileSync(resolve(REPO_ROOT, reference.path), "utf8")).anchors.has(reference.anchor),
+          anchors.get(reference.path)!.has(reference.anchor),
           `${reference.path}#${reference.anchor}`,
         ).toBe(true);
       }
 
       if (reference.path.endsWith(".md")) {
-        if (requiresDocNavigation(readFileSync(resolve(REPO_ROOT, reference.path), "utf8"))) {
+        if (requiresDocNavigation(content)) {
           expect(reference.anchor, `${reference.path} requires a bounded anchor`).toBeTruthy();
         }
       }
