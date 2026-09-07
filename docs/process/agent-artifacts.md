@@ -25,6 +25,8 @@ Do not create new committed planning-archive or calibration-snapshot material. T
 
 ## Campaign Index And Handoff
 
+Use campaign ledgers, dispatch packets, retention records, and task-ID commit bodies only for substantial work spanning sessions or requiring coordinated agent handoffs. A bounded fix or review, including a focused delegated check, needs implementation when authorized, focused validation, and a concise closeout with changes or findings, checks, and unresolved work. Do not create a scratch directory, plan, or ledger just to satisfy the campaign template.
+
 Name new campaign directories `agents/<YYYY-MM-DD>-<slug>/`. Each campaign README is its closure index and carries one row per top-level artifact or task output with these fields:
 
 | Field | Meaning |
@@ -89,26 +91,26 @@ Skill bodies must not hard-code snapshots of current repo state (counts, methodo
 
 Release and CI skills summarize the operating path, but `docs/deployment-process.md`, `docs/testing.md`, the workflow YAML, and the automation registries remain authoritative. Keep protected-main authorization wording, validation targets, generated-artifact staging behavior, and deployment-versus-operational proof aligned across both skills instead of allowing separate agent-specific release procedures.
 
-Symlinks pointing outside this repository are unsupported.
+Symlinks pointing outside this repository are unsupported. `check:agent-skills` also validates nested canonical companions and rejects broken or external symlink targets.
 
 ## Harness Configuration
 
-Repo-local omp settings live in `.omp/config.yml` (tracked). It sets `task.isolation.mode: none`, `tools.approvalMode: yolo`, and the Pharos task/smol/review/security/research/designer model roles; every other role falls through to the user's global `~/.omp/agent/config.yml`. Verify with `omp config get task.isolation.mode` from the repo root.
+Repo-local omp settings live in `.omp/config.yml` (tracked). It sets `task.isolation.enabled: false` and `tools.approvalMode: yolo`. Model roles are delegated to global configuration; the repository does not pin a model fleet. Read the tracked overlay for repository policy and discover effective capabilities in the current session without copying personal configuration into the repository.
 
 | Capability | omp | Claude Code | Codex CLI |
 | --- | --- | --- | --- |
 | Context/config | `.omp/config.yml`; root/scoped `AGENTS.md`/`CLAUDE.md` | Tracked `.claude/settings.json`; root/scoped `CLAUDE.md`/`AGENTS.md` | Root/scoped `AGENTS.md`; no project `config.toml` |
 | Hooks | Supported; none configured | Tracked SessionStart + PreToolUse hooks | Ignored `.codex/hooks.json` (opt-in install; enable in Codex) |
 | Skills | Discovers `.agents/skills` → `.codex/skills` | `.claude/skills` symlink facade | Canonical `.codex/skills` |
-| MCP | None configured (harness-managed `node_repl` only) | None configured | `node_repl` enabled |
-| Subagents | Native typed agents (`task`) | Agents/workflows + `codex-agent` wrapper | Standalone `codex exec` sessions via wrapper |
-| Isolation/approval | Overlay: no worktree isolation, yolo | Permission prompts/rules | Workspace-write sandbox rooted at `-C` |
+| MCP | Discover session-provided tools | Discover session-provided tools | Discover session-provided tools |
+| Subagents | Native `task` when exposed | Native agents when exposed | Native delegation when exposed |
+| Isolation/approval | Overlay: isolation disabled, yolo | Effective session permissions | Effective session sandbox and approval policy |
 | Web search | Use the available web-search capability | `WebSearch` when enabled | Built-in web search when enabled |
 | Primary-source fetch | Native fetch/HTTP capability; shell client fallback | `WebFetch`; shell client fallback | Built-in fetch or shell client fallback |
 | Browser inspection | Browser capability when configured | Browser/Playwright integration when configured | Browser MCP/automation when configured |
-| Read-only reviewer | Spawn `task` with an explicit no-write contract | Read-only agent/`Explore` contract | Isolated `codex exec` reviewer via wrapper |
+| Read-only reviewer | Native reviewer with an explicit no-write contract, when available | Native reviewer with an explicit no-write contract, when available | Native reviewer with an explicit no-write contract, when available |
 
-Skills describe these operations by capability and link here instead of embedding harness-specific branches. If a capability is unavailable, use the next safe read-only option; never move credentials into URLs or process arguments, and never infer write/delegation authority from tool availability.
+Skills describe these operations by capability and link here instead of embedding harness-specific branches. When delegation is unavailable, perform the bounded discovery and skeptical verification passes sequentially and disclose that review was not independent. Prior explicit authorization remains valid for its stated cohort and action; request a new decision only for uncovered scope or a required row-specific approval. If a capability is unavailable, use the next safe read-only option; never move credentials into URLs or process arguments, and never infer write/delegation authority from tool availability.
 
 ## Claude Workflow Orchestrators
 
@@ -118,7 +120,9 @@ Retired adapters are not preserved; durable guidance belongs in `docs/`, and scr
 
 ## Recurring Maintenance
 
-`.github/workflows/agent-maintenance-candidates.yml` runs the deterministic annotation queue, AI-summary staleness queue, and curation digest each Monday. It opens or updates one review issue with bounded excerpts. The workflow is advisory: it does not edit stablecoin data, summaries, annotations, funding records, or review provenance.
+`.github/workflows/agent-maintenance-candidates.yml` runs the deterministic annotation queue, AI-summary staleness queue, and curation digest each Monday. It opens or updates one review issue with bounded excerpts and links to the full per-run artifacts and run history. Immutable per-run artifacts retain the full annotation/AI-summary Markdown and JSON, curation digest, and command logs for 90 days, covering monthly review plus a missed month. The workflow is advisory: it does not edit stablecoin data, summaries, annotations, funding records, or review provenance.
+
+Annotation collection overlaps 14 days and follows cursors serially, bounded to 25 pages and 30 seconds per source with a six-second body deadline per page. It records complete/incomplete source windows without declaring editorial coverage. Download retained artifacts and run `npm run candidates:annotations -- --replay agents/annotation-history` for offline oldest-first review. `annotations-refresh` owns explicit candidate-ID decisions in ignored `agents/annotation-review.json` (`promote`, `drop`, or `defer`, with review time and reason); generation/replay never writes decisions. Legacy date-only `last_swept_at` is preserved but neither suppresses events nor advances. Retain the review file, queues, and required history together at handoff; an incomplete source window cannot establish completed review coverage.
 
 Pre-launch and funding research remain deliberate operator workflows because they require current external-source verification and explicit approval. Candidate producers should automate discovery and triage, not editorial or financial decisions.
 
@@ -136,7 +140,11 @@ PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 
 The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is now reviewed by hand, and `AGENTS.md` cannot drift from `CLAUDE.md` because it is generated (`npm run check:generated-artifacts -- --only=agents-doc`).
 
-Codex hook matchers are narrowed to shell/write tools. `npm run agent:setup` reports whether the generated hooks are installed/current and whether each hook is enabled in Codex. Enabling is a one-time Codex-side step (`/hooks` or `enabled = true`); disabled or unrecorded state does not change setup's installation exit status. Codex hooks are per-checkout, so rerun the opt-in command in each worktree.
+Canonical Codex matchers include `Bash` and `apply_patch`, retaining captured `exec_command` compatibility. `npm run agent:setup` reports installed/current configuration and recorded per-hook enablement only. Feature or managed-policy overrides and actual invocation remain unverified until a safe call in the active harness; use `/hooks` to review disabled hooks. Disabled or unrecorded state does not change setup's installation exit status. Hooks remain a per-checkout opt-in; rerun the opt-in command in each worktree.
+
+Hook paths resolve from tool workdir (relative to session cwd), then session cwd, then repository root. Policy checks use normalized paths and symlink ancestors and include patch move destinations. Remote SQL `--file` inspection reads the exact effective cwd; Single-operand `cd` in an all-`&&` chain and Wrangler `--cwd` are supported. Ambiguous grouped, branching, semicolon-separated, or environment-dependent cwd writes must use a direct invocation with explicit workdir. Ordinary groups, `if`, and `while` commands are inspected; quoted examples and comments are inert. These hooks are bounded policy checks, not exhaustive shell enforcement.
+
+Shell hook payloads accept both `command` and `cmd` fields and pass them through the same pre-tool and permission-request policy checks.
 
 Set `PHAROS_HOOK_DIAGNOSTICS=1` or pass `--diagnostics` to append one safe JSONL record per hook invocation.
 The default diagnostic file is `agents/hook-diagnostics.jsonl`; set `PHAROS_HOOK_DIAGNOSTICS_FILE` for another local path.

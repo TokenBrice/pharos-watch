@@ -1,9 +1,11 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { GENERATED_ARTIFACT_REGISTRY, selectAutoStageArtifactIds } from "../lib/automation-registry.mjs";
 import { syncStagedGeneratedArtifacts } from "../ci/sync-staged-generated-artifacts.mts";
+import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";
 
 function execReturning(value: string) {
   return vi.fn(() => value) as never;
@@ -35,6 +37,128 @@ describe("auto-stage partition", () => {
 });
 
 describe("staged artifact sync", () => {
+  it("removes newly generated glob members after failure, restores tracked bytes, and allows retry", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "staged-logo-rollback-"));
+    const git = (...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" });
+    const compact = join(cwd, "public/logos/compact");
+    const oldOutput = join(compact, "old.webp");
+    const newOutput = join(compact, "nested/new.webp");
+    try {
+      git("init");
+      git("config", "user.email", "fixture@example.invalid");
+      git("config", "user.name", "Fixture");
+      git("config", "core.hooksPath", "/dev/null");
+      mkdirSync(compact, { recursive: true });
+      mkdirSync(join(cwd, "src/lib"), { recursive: true });
+      writeFileSync(oldOutput, "original compact bytes");
+      writeFileSync(join(cwd, "src/lib/logo-variants.generated.json"), "{}");
+      git("add", ".");
+      git("commit", "-qm", "Tracked compact outputs");
+      writeFileSync(join(cwd, "public/logos/new.png"), "staged input");
+      git("add", "public/logos/new.png");
+      expect(() => syncStagedGeneratedArtifacts({
+        cwd, log: vi.fn(), runCommand: () => {
+          writeFileSync(oldOutput, "changed compact bytes");
+          mkdirSync(join(compact, "nested"), { recursive: true });
+          writeFileSync(newOutput, "new output bytes");
+          return 3;
+        },
+      })).toThrow(/exit code 3/);
+      expect(readFileSync(oldOutput, "utf8")).toBe("original compact bytes");
+      expect(existsSync(newOutput)).toBe(false);
+      expect(git("diff", "--cached", "--name-only").trim()).toBe("public/logos/new.png");
+      expect(git("diff", "--name-only")).toBe("");
+      expect(syncStagedGeneratedArtifacts({ cwd, log: vi.fn(), runCommand: () => 0 }).regenerated)
+        .toEqual(["compact-logos"]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks every unstaged fixed manifest input and dynamic summaries", () => {
+    const runCommand = vi.fn(() => 0);
+    for (const source of [...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "shared/data/safety-score-v9/mechanism-measurements/new/nested.summary.json",
+    ]) {
+      expect(() => syncStagedGeneratedArtifacts({
+        stagedFiles: ["shared/lib/safety-score-v9/formula.ts"],
+        execFile: execReturning(`${source}\0`),
+        runCommand,
+        log: vi.fn(),
+      }), source).toThrow(/unstaged/);
+    }
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it("runs cemetery prerequisites in order but only stages authorized outputs", () => {
+    const execFile = execReturning("");
+    const runCommand = vi.fn((_command: string) => 0);
+    const result = syncStagedGeneratedArtifacts({
+      stagedFiles: ["data/logos.json"],
+      execFile,
+      runCommand,
+      log: vi.fn(),
+    });
+    expect(result.regenerated).toEqual(["stablecoin-catalog", "report-card-registry-fingerprint", "cemetery-dataset"]);
+    expect(runCommand.mock.calls.map(([command]) => command)).toEqual(
+      result.regenerated.map((id) => GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === id)!.command),
+    );
+    expect(execFile).toHaveBeenCalledWith("git", ["add", "--",
+      "public/datasets/stablecoin-cemetery.csv", "public/datasets/stablecoin-cemetery.json",
+    ], expect.anything());
+    expect(runCommand.mock.calls.some(([command]) => command.includes("detail-snapshots"))).toBe(false);
+  });
+
+  it("rejects unstaged dependency sources before cemetery generation", () => {
+    const runCommand = vi.fn(() => 0);
+    expect(() => syncStagedGeneratedArtifacts({
+      stagedFiles: ["data/logos.json"],
+      execFile: execReturning("shared/data/stablecoins/coins/frozen.json\0"),
+      runCommand,
+      log: vi.fn(),
+    })).toThrow(/stablecoin-catalog.*unstaged/);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it("restores existing ignored prerequisite bytes when its generator fails and stages nothing", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "staged-prerequisite-"));
+    const catalog = "shared/data/stablecoins/coins.generated.json";
+    mkdirSync(join(cwd, "shared/data/stablecoins"), { recursive: true });
+    writeFileSync(join(cwd, catalog), "original ignored catalog");
+    const execFile = vi.fn((_file: string, args: readonly string[]) => {
+      if (args[0] === "ls-files" && args.includes("--error-unmatch") && args.at(-1) === catalog) {
+        throw new Error("ignored");
+      }
+      return "";
+    });
+    const runCommand = vi.fn(() => { writeFileSync(join(cwd, catalog), "partial output"); return 3; });
+    try {
+      expect(() => syncStagedGeneratedArtifacts({
+        cwd, stagedFiles: ["data/logos.json"], execFile: execFile as never, runCommand, log: vi.fn(),
+      })).toThrow(/stablecoin-catalog generator failed/);
+      expect(runCommand).toHaveBeenCalledTimes(1);
+      expect(readFileSync(join(cwd, catalog), "utf8")).toBe("original ignored catalog");
+      expect(execFile.mock.calls.some(([, args]) => args[0] === "add")).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a network dependency even when reached from an offline artifact", () => {
+    const catalog = GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "stablecoin-catalog")!;
+    const original = catalog.reproducibility;
+    const runCommand = vi.fn(() => 0);
+    try {
+      catalog.reproducibility = "network-derived";
+      expect(() => syncStagedGeneratedArtifacts({
+        stagedFiles: ["data/logos.json"], execFile: execReturning(""), runCommand, log: vi.fn(),
+      })).toThrow(/network-derived prerequisite stablecoin-catalog/);
+      expect(runCommand).not.toHaveBeenCalled();
+    } finally {
+      catalog.reproducibility = original;
+    }
+  });
+
   it("selects an artifact when a registered source is staged for deletion", () => {
     const execFile = vi.fn((_file: string, args: readonly string[]) =>
       args.includes("--cached")
@@ -51,7 +175,7 @@ describe("staged artifact sync", () => {
     expect(result.regenerated).toEqual(["safety-score-v9-evaluation-build"]);
     expect(execFile).toHaveBeenCalledWith(
       "git",
-      ["diff", "--cached", "--name-only", "--diff-filter=ACMRD", "-z"],
+      ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD", "-z"],
       { cwd: "/repo", encoding: "utf8" },
     );
   });
@@ -98,7 +222,7 @@ describe("staged artifact sync", () => {
   });
 
   it("refuses to regenerate when an untracked source matches a registered glob", () => {
-    const untrackedSource = "shared/lib/safety-score-v9/new-source.ts";
+    const untrackedSource = "shared/data/safety-score-v9/mechanism-measurements/new/nested.summary.json";
     const execFile = vi.fn((_file: string, args: readonly string[]) =>
       args[0] === "ls-files" ? `${untrackedSource}\0` : "",
     );
@@ -198,7 +322,7 @@ describe("staged artifact sync", () => {
     expect(execFile.mock.calls.some(([, args]) => args[0] === "add")).toBe(false);
   });
 
-  it("restores clean outputs and leaves pre-dirty outputs after a later failure", () => {
+  it("rejects dirty outputs before a generator can overwrite their bytes", () => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-staged-artifacts-"));
     const firstOutput = "shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
     const secondOutput = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
@@ -238,17 +362,12 @@ describe("staged artifact sync", () => {
           runCommand,
           log,
         }),
-      ).toThrow(/exit code 3/);
+      ).toThrow(/refusing to overwrite dirty outputs/);
 
       expect(readFileSync(firstOutputPath, "utf8")).toBe(originalFirstOutput);
       expect(readFileSync(secondOutputPath, "utf8")).toBe(preDirtySecondOutput);
-      expect(log).toHaveBeenCalledWith(expect.stringContaining(secondOutput));
-      expect(execFile).toHaveBeenCalledWith(
-        "git",
-        ["checkout", "--", firstOutput],
-        { cwd, encoding: "utf8" },
-      );
-      expect(execFile.mock.calls.some(([, args]) => args[0] === "checkout" && args.at(-1) === secondOutput)).toBe(false);
+      expect(runCommand).not.toHaveBeenCalled();
+      expect(execFile.mock.calls.some(([, args]) => args[0] === "checkout")).toBe(false);
       expect(execFile.mock.calls.some(([, args]) => args[0] === "add")).toBe(false);
     } finally {
       rmSync(cwd, { recursive: true, force: true });

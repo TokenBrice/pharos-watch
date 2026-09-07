@@ -99,7 +99,7 @@ describe("adaptive PR checks", () => {
     ]);
     expect(execFile).toHaveBeenCalledWith(
       "git",
-      ["diff", "--name-only", "--diff-filter=ACMR", "-z", "a...b"],
+      ["diff", "--name-only", "--no-renames", "-z", "a...b"],
       expect.objectContaining({ encoding: "utf8" }),
     );
   });

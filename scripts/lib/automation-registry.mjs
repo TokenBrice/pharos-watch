@@ -1,3 +1,4 @@
+import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "./safety-score-v9-evaluation-inputs.mts";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
 import { createRequire } from "node:module";
 
@@ -105,7 +106,14 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
-    sourcePaths: ["shared/data/stablecoins/coins/**", "shared/data/stablecoins/domains/**"],
+    sourcePaths: [
+      "shared/data/stablecoins/coins/**",
+      "shared/data/stablecoins/domains/**",
+      "shared/data/stablecoins/canonical-order.json",
+      "shared/lib/stablecoins/**",
+      "shared/types/**",
+      "scripts/lib/stablecoin-catalog-sources.ts",
+    ],
   }),
   generatedArtifact({
     id: "agents-doc",
@@ -244,9 +252,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     sourcePaths: [
-      "shared/lib/safety-score-v9/**",
-      "shared/types/safety-score-v9*.ts",
-      "worker/src/lib/safety-score-v9/**/*.ts",
+      ...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "scripts/lib/safety-score-v9-evaluation-inputs.mts",
+      "scripts/lib/mechanism-measurement/capture-summary.ts",
+      "scripts/lib/mechanism-measurement/shock-schema.ts",
+      "shared/data/safety-score-v9/mechanism-measurements/**/*.summary.json",
     ],
   }),
   generatedArtifact({
@@ -305,6 +315,9 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: [
       "shared/data/stablecoins/canonical-order.json",
       "shared/data/stablecoins/coins.generated.json",
+      "shared/data/stablecoins/listing-decisions.json",
+      "shared/types/stablecoin-client-meta.ts",
+      "scripts/lib/ts-ast.mts",
     ],
   }),
   generatedArtifact({
@@ -339,8 +352,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     buildLifecycle: "compile-input",
     checkCommand: "PHAROS_DETAIL_SNAPSHOT_CHECK=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
     command: "node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    bootstrapCommand: "PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
     bootstrap: true,
-    outputPaths: ["src/generated/stablecoin-detail-snapshots/**"],
+    dependsOn: ["stablecoin-catalog"],
+    outputPaths: ["src/generated/stablecoin-detail-snapshots"],
     phase: 1,
     reproducibility: "network-derived",
     script: "scripts/build-data/build-stablecoin-detail-snapshots.ts",
@@ -365,7 +380,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-cemetery-dataset.ts",
-    sourcePaths: ["shared/data/dead-stablecoins.json", "shared/lib/cemetery*.ts"],
+    sourcePaths: ["shared/data/dead-stablecoins.json", "shared/lib/cemetery*.ts", "data/logos.json"],
   }),
   generatedArtifact({
     id: "public-datasets",
@@ -649,7 +664,9 @@ export function buildGeneratedArtifactPhases({
   const phaseGroups = new Map();
 
   for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, only, phases: phaseFilters })) {
-    const command = check && artifact.checkCommand ? artifact.checkCommand : artifact.command;
+    const command = check && artifact.checkCommand
+      ? artifact.checkCommand
+      : (bootstrap ? artifact.bootstrapCommand ?? artifact.command : artifact.command);
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });
     phaseGroups.set(artifact.phase, phaseArtifacts);

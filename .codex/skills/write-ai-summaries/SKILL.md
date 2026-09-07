@@ -24,6 +24,6 @@ Write `StablecoinAiSummary` entries in `data/ai-summaries.json`; `shared/types/e
 1. Run `npm run candidates:ai-summaries` for queue work; prioritize `high`, then `medium`.
 2. For each coin, inventory current prose claims against static metadata and current live analytics. Preserve sound text/title; correct stale facts and de-brittle volatile wording rather than rewriting for variety.
 3. Draft the schema-valid entry and present it for review when approval is requested. Keep one main claim per sentence and close on the durable constraint.
-4. After edits, run `npm run typecheck`. For queue work, rerun `npm run candidates:ai-summaries` and confirm refreshed entries leave the selected severity bands.
+4. After edits, run `npm run typecheck` and `npx vitest run shared/lib/__tests__/ai-summary-claims.test.ts`; the latter validates the actual edited data file, including claim tokens and calendar dates. Run the existing term-markup tests when changing markup behavior. For queue work, rerun `npm run candidates:ai-summaries` and confirm refreshed entries leave the selected severity bands.
 
 Report changed IDs, evidence dates/sources, review state, remaining candidates, and validation.

@@ -1,4 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import type { SpawnCommand } from "../lib/command-runner.mts";
 
 import {
   buildFocusedCheckPlan,
@@ -15,13 +18,112 @@ function writer() {
 }
 
 describe("focused checks", () => {
+  it("retains source-reading and CLI script contracts without unrelated generated artifacts", () => {
+    const plan = buildFocusedCheckPlan(["scripts/maintenance/screenshot-og.mjs", "scripts/maintenance/run-focused-checks.ts"]);
+    expect(plan.checks).toEqual([{
+      command: "npx vitest run scripts/__tests__",
+      source: "scripts-tooling",
+    }]);
+  });
+
+  it("keeps explicit CI checks and avoids redundant generic runs", () => {
+    const plan = buildFocusedCheckPlan(["scripts/ci/classify-deploy-changes.ts", "scripts/maintenance/run-focused-checks.ts"]);
+    expect(plan.checks).toEqual([
+      { command: "npx vitest run scripts/__tests__", source: "validation-ci-policy" },
+      { command: "npm run check:generated-artifacts", source: "validation-ci-policy" },
+    ]);
+  });
+
+  it("selects affected checkable artifacts through the existing dependency registry", () => {
+    const plan = buildFocusedCheckPlan(["scripts/maintenance/generate-openapi-spec.ts"]);
+    const generated = plan.checks.filter((check) => check.command.startsWith("npm run check:generated-artifacts"));
+    expect(generated).toEqual([{
+      command: "npm run check:generated-artifacts -- --only=openapi,api-reference",
+      source: "scripts-tooling",
+    }]);
+    expect(buildFocusedCheckPlan(["scripts/maintenance/generate-docs-metadata.ts"]).checks.some((check) =>
+      check.command.startsWith("npm run check:generated-artifacts"),
+    )).toBe(false);
+  });
+
+  it("keeps directory test coverage for non-module and deleted files", () => {
+    expect(buildFocusedCheckPlan(["src/deleted-module.ts"]).checks.map((check) => check.command)).toContain("npx vitest run src");
+    expect(buildFocusedCheckPlan(["src/app/globals.css"]).checks.map((check) => check.command)).toContain("npx vitest run src");
+  });
+
+  it("passes paths containing spaces as single related-test arguments", async () => {
+    const dir = mkdtempSync(resolve("src/components/agent-check-"));
+    const file = relative(process.cwd(), join(dir, "planned widget.tsx"));
+    writeFileSync(file, "export const fixture = true;\n");
+    const runCommandImpl = vi.fn<(command: SpawnCommand) => Promise<number>>(async () => 0);
+    const warning = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await runFocusedChecks({ argv: ["--file", file], runCommandImpl, stdout: writer(), stderr: writer() });
+      expect(runCommandImpl.mock.calls.at(-1)?.[0]).toMatchObject({
+        executable: "npx",
+        args: ["vitest", "related", "--run", "--passWithNoTests=false", file],
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      warning.mockRestore();
+    }
+  });
+
+  it.each([
+    "worker/src/cron/sync-yield-data.ts",
+    "./worker/src/cron/sync-yield-data.ts",
+    resolve(process.cwd(), "worker/src/cron/sync-yield-data.ts"),
+  ])("runs the same cron checks for explicit path %s", async (file) => {
+    const stdout = writer();
+    const runCommandImpl = vi.fn(async () => 0);
+    await expect(runFocusedChecks({
+      argv: ["--file", file, "--json"],
+      runCommandImpl,
+      stdout,
+      stderr: writer(),
+    })).resolves.toBe(0);
+
+    const report = JSON.parse(stdout.output());
+    expect(report.changedFiles).toEqual(["worker/src/cron/sync-yield-data.ts"]);
+    expect(report.checks).toEqual(buildFocusedCheckPlan(["worker/src/cron/sync-yield-data.ts"]).checks);
+    expect(runCommandImpl).toHaveBeenCalledTimes(6);
+    expect(report.status).toBe("passed");
+  });
+
+  it("rejects explicit paths outside the repository before running checks", async () => {
+    const runCommandImpl = vi.fn();
+    await expect(runFocusedChecks({
+      argv: ["--file", resolve(process.cwd(), "..", "outside.ts")],
+      runCommandImpl,
+      stdout: writer(),
+      stderr: writer(),
+    })).rejects.toThrow("explicit path resolves outside repository");
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unmatched explicit path even when another path has checks", async () => {
+    const runCommandImpl = vi.fn();
+    const warning = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await expect(runFocusedChecks({
+        argv: ["--file", "src/app/page.tsx", "--file", "__unmapped__/planned.ts"],
+        runCommandImpl,
+        stdout: writer(),
+        stderr: writer(),
+      })).rejects.toThrow("No ownership mapping for explicit path(s): __unmapped__/planned.ts");
+      expect(runCommandImpl).not.toHaveBeenCalled();
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
   it("uses the collapsed frontend route checks without selecting Worker checks", () => {
     const plan = buildFocusedCheckPlan(["src/components/query-error-notice.tsx"]);
 
-    expect(plan.checks).toEqual([
+    expect(plan.checks).toMatchObject([
       { command: "npm run lint:changed", source: "frontend-routes" },
       { command: "npm run typecheck", source: "frontend-routes" },
-      { command: "npx vitest run src", source: "frontend-routes" },
+      { command: "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx", source: "frontend-routes" },
     ]);
     expect(plan.fallbackOnlyPaths).toBe(0);
   });
@@ -29,7 +131,7 @@ describe("focused checks", () => {
   it("uses the collapsed frontend defaults for an unclassified source path", () => {
     const plan = buildFocusedCheckPlan(["src/unclassified.ts"]);
 
-    expect(plan.checks).toEqual([
+    expect(plan.checks).toMatchObject([
       { command: "npm run lint:changed", source: "frontend-routes" },
       { command: "npm run typecheck", source: "frontend-routes" },
       { command: "npx vitest run src", source: "frontend-routes" },
@@ -60,7 +162,7 @@ describe("focused checks", () => {
     expect(plan.checks.map((check) => check.command)).toEqual([
       "npm run lint:changed -- --base=origin/main",
       "npm run typecheck",
-      "npx vitest run src",
+      "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx",
     ]);
   });
 
@@ -111,10 +213,10 @@ describe("focused checks", () => {
       planOnly: true,
       status: "planned",
     });
-    expect(report.checks).toEqual([
+    expect(report.checks).toMatchObject([
       { command: "npm run lint:changed", source: "frontend-routes" },
       { command: "npm run typecheck", source: "frontend-routes" },
-      { command: "npx vitest run src", source: "frontend-routes" },
+      { command: "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx", source: "frontend-routes" },
     ]);
     expect(report.lanes).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -166,12 +268,13 @@ describe("smallest-adequate matrix routing", () => {
         "npm run check:cron-sync",
         "npm run check:cron-connections",
         "npx vitest run worker/src/cron worker/src/handlers/scheduled",
+        "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts",
       ],
     },
     {
       area: "src/components",
       file: "src/components/query-error-notice.tsx",
-      checks: ["npm run lint:changed", "npm run typecheck", "npx vitest run src"],
+      checks: ["npm run lint:changed", "npm run typecheck", "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx"],
     },
     {
       area: "API route",

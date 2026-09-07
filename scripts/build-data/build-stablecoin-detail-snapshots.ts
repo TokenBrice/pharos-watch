@@ -130,7 +130,7 @@ function hasGeneratorCredential(): boolean {
 }
 
 /**
- * Credentialed runs read the authoritative API; CI bootstraps and Pages
+ * Credentialed runs read the authoritative API; Pages
  * release builds carry no API secret and read the public GET-only
  * `/_site-data` lane the release refresh already uses.
  */
@@ -217,7 +217,18 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-async function generateSnapshots(): Promise<StablecoinDetailSnapshot[]> {
+export async function generateSnapshots(
+  bootstrap = process.env.PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP === "1",
+): Promise<StablecoinDetailSnapshot[]> {
+  if (bootstrap) {
+    // Bootstrap needs valid importable envelopes, not live data or credentials.
+    return buildStablecoinDetailSnapshots({
+      generatedAt: 0,
+      liveSummariesById: new Map(),
+      supplyHistoryById: new Map(),
+      updatedAtById: new Map(),
+    });
+  }
   loadBuildAuthentication();
   const apiBase = resolveSnapshotApiBase();
   const liveIds = TRACKED_STABLECOINS
@@ -257,22 +268,25 @@ function reportSizes(snapshots: readonly StablecoinDetailSnapshot[]): Record<str
   ]));
 }
 
-export function writeSnapshots(snapshots: readonly StablecoinDetailSnapshot[]): void {
-  mkdirSync(DETAIL_SNAPSHOT_OUTPUT_DIR, { recursive: true });
+export function writeSnapshots(snapshots: readonly StablecoinDetailSnapshot[], outputDir = DETAIL_SNAPSHOT_OUTPUT_DIR): void {
+  mkdirSync(outputDir, { recursive: true });
   const expectedFiles = new Set(snapshots.map((snapshot) => `${snapshot.stablecoinId}.json`));
-  for (const file of readdirSync(DETAIL_SNAPSHOT_OUTPUT_DIR)) {
-    if (file.endsWith(".json") && !expectedFiles.has(file)) unlinkSync(resolve(DETAIL_SNAPSHOT_OUTPUT_DIR, file));
+  for (const file of readdirSync(outputDir)) {
+    if (file.endsWith(".json") && !expectedFiles.has(file)) unlinkSync(resolve(outputDir, file));
   }
   for (const snapshot of snapshots) {
     validateStablecoinDetailSnapshot(snapshot);
-    writeFileSync(resolve(DETAIL_SNAPSHOT_OUTPUT_DIR, `${snapshot.stablecoinId}.json`), `${JSON.stringify(snapshot)}\n`);
+    writeFileSync(resolve(outputDir, `${snapshot.stablecoinId}.json`), `${JSON.stringify(snapshot)}\n`);
   }
 }
 
-function checkSnapshots(): StablecoinDetailSnapshot[] {
-  if (!existsSync(DETAIL_SNAPSHOT_OUTPUT_DIR)) throw new Error("Stablecoin detail snapshots are not generated");
+export function checkSnapshots(outputDir = DETAIL_SNAPSHOT_OUTPUT_DIR): StablecoinDetailSnapshot[] {
+  if (!existsSync(outputDir)) throw new Error("Stablecoin detail snapshots are not generated");
+  const expectedFiles = new Set(TRACKED_STABLECOINS.map((coin) => `${coin.id}.json`));
+  const obsolete = readdirSync(outputDir).filter((file) => file.endsWith(".json") && !expectedFiles.has(file));
+  if (obsolete.length > 0) throw new Error(`Obsolete stablecoin detail snapshots: ${obsolete.join(", ")}`);
   return TRACKED_STABLECOINS.map((coin) => {
-    const path = resolve(DETAIL_SNAPSHOT_OUTPUT_DIR, `${coin.id}.json`);
+    const path = resolve(outputDir, `${coin.id}.json`);
     if (!existsSync(path)) throw new Error(`Missing stablecoin detail snapshot: ${coin.id}`);
     const snapshot = validateStablecoinDetailSnapshot(JSON.parse(readFileSync(path, "utf8")));
     if (snapshot.stablecoinId !== coin.id) throw new Error(`Snapshot ID mismatch for ${coin.id}`);

@@ -71,7 +71,7 @@
         { "path": "docs/pricing-pipeline.md", "anchor": "primary-consensus" },
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
-      "background": ["docs/about-page.md", "docs/data-flow-map.md"],
+      "background": ["docs/about-page.md", { "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
       "rules": [
         "Consume or cancel failed fetch bodies before opening more Worker fetches.",
@@ -108,7 +108,7 @@
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" },
         { "path": "docs/api-reference-admin.md", "anchor": "admin-endpoints" }
       ],
-      "background": ["docs/data-flow-map.md"],
+      "background": [{ "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
@@ -120,17 +120,22 @@
         "shared/lib/cron-jobs.ts",
         "shared/lib/scheduled-runner-registry.ts",
         "worker/wrangler.toml",
+        "worker/src/handlers/scheduled.ts",
         "worker/src/handlers/scheduled/**",
+        "worker/src/lib/scheduled-slot-*.ts",
+        "worker/src/lib/cron-lease-primitives.ts",
+        "worker/src/lib/cron-timeouts.ts",
+        "worker/src/lib/v9-slot-window.ts",
         "worker/src/cron/**"
       ],
       "docs": ["docs/process/cron-trigger-policy.md"],
       "background": [
-        "docs/worker-and-api-limits.md",
-        "docs/data-flow-map.md",
+        { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" },
+        { "path": "docs/data-flow-map.md", "anchor": "core-flows" },
         { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" }
       ],
       "alsoRead": ["worker/AGENTS.md"],
-      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
       "rules": [
         "Pick the trigger slot before adding fetch-heavy work.",
         "Cron jobs use Pharos's conservative six-connection trigger budget; consume response bodies before opening more fetches."
@@ -180,7 +185,7 @@
         "docs/deployment-process.md",
         { "path": "docs/worker-infrastructure.md", "anchor": "shared-database-helpers" }
       ],
-      "background": ["worker/migrations/MANIFEST.md", "docs/process/d1-baseline-squash-plan.md"],
+      "background": [{ "path": "worker/migrations/MANIFEST.md", "anchor": "individual-migrations-current-active-files" }, "docs/process/d1-baseline-squash-plan.md"],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:migrations", "npx vitest run worker/src"],
       "rules": [
         "Migrations must be backward-compatible because CI applies D1 migrations before the new Worker is live.",
@@ -316,7 +321,24 @@
       "label": "Deployment, CI, and repository policy",
       "risk": "high",
       "sources": [
-        "scripts/**",
+        "scripts/ci/**",
+        "scripts/lib/automation-registry.mjs",
+        "scripts/lib/command-runner.mts",
+        "scripts/lib/deploy-impact.mts",
+        "scripts/lib/generated-artifacts.ts",
+        "scripts/lib/post-deploy-acceptance.mts",
+        "scripts/lib/pr-*.mts",
+        "scripts/lib/critical-*.m*",
+        "scripts/lib/vitest-ci-args.mts",
+        "scripts/maintenance/run-pr-*.ts",
+        "scripts/maintenance/*pages-release*.ts",
+        "scripts/maintenance/run-critical-*.ts",
+        "scripts/maintenance/merge-critical-coverage.ts",
+        "scripts/maintenance/run-all-tests.ts",
+        "scripts/maintenance/run-generated-artifacts.ts",
+        "scripts/maintenance/run-bootstrap-rehearsal.ts",
+        "scripts/maintenance/prepare-workspace.ts",
+        "scripts/maintenance/generate-pr-workflow-matrix.ts",
         ".github/**",
         ".githooks/**",
         "package.json",
@@ -334,17 +356,32 @@
         "vitest.config.ts"
       ],
       "docs": [
-        { "path": "docs/testing.md", "anchor": "commands" },
-        "docs/deployment-process.md",
-        "docs/scripts.md",
-        "docs/process/feature-flags.md"
+        { "path": "docs/testing.md", "anchor": "ci-pipeline" },
+        { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" },
+        { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],
-      "background": ["docs/architecture.md"],
+      "background": [{ "path": "docs/architecture.md", "anchor": "file-tree-guide" }, "docs/process/feature-flags.md"],
       "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
       "rules": [
         "Keep deploy-surface classification aligned with GitHub deploy behavior.",
         "Commit relevant sources before generating git-history-derived artifacts."
       ]
+    },
+    {
+      "id": "scripts-tooling",
+      "label": "Script implementation and local tooling",
+      "risk": "medium",
+      "sources": ["scripts/**"],
+      "docs": [
+        { "path": "docs/scripts.md", "anchor": "operator-cli-contract" },
+        { "path": "docs/testing.md", "anchor": "smallest-adequate-check-per-area" }
+      ],
+      "background": [
+        { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
+        { "path": "docs/scripts.md", "anchor": "operational-notes" }
+      ],
+      "checks": ["npx vitest run scripts/__tests__", "npm run check:generated-artifacts"],
+      "hints": ["Read generated-artifact or operational guidance only when the script touches those contracts.", "Use check:focused -- --file <path> to select affected generated artifacts; script tests retain source-reading and CLI contracts."]
     },
     {
       "id": "agent-hooks-process",
@@ -363,10 +400,10 @@
         "scripts/maintenance/generate-agents-doc.ts",
         "scripts/maintenance/setup-agent-hooks.ts"
       ],
-      "docs": ["docs/process/agent-start-here.md", "docs/process/agent-artifacts.md", "CLAUDE.md"],
+      "docs": ["docs/process/agent-start-here.md", "docs/process/agent-artifacts.md"],
       "checks": ["npm run check:generated-artifacts -- --only=agents-doc", "npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
       "rules": [
-        "Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync.",
+        "Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync; an already-loaded AGENTS.md supplies the root rules, and CLAUDE.md is the edit target only for root guidance changes.",
         "Temporary agent output belongs in ignored scratch locations, not committed docs."
       ]
     },
@@ -400,10 +437,11 @@
       "label": "Frontend page or route behavior",
       "risk": "medium",
       "sources": ["src/**", "shared/lib/public-docs.ts", "next.config.ts"],
-      "docs": ["docs/architecture.md"],
+      "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "background": [{ "path": "docs/design-language.md", "anchor": "context" }],
       "alsoRead": ["src/AGENTS.md"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
+      "hints": ["Use check:focused -- --file <path> for related tests on frontend modules; non-module changes retain directory coverage."],
       "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src"]
     },
     {
@@ -412,7 +450,7 @@
       "risk": "medium",
       "sources": ["worker/src/**", "worker/scripts/**", "worker/*.ts", "worker/AGENTS.md", "worker/tsconfig.json", "worker/wrangler.toml"],
       "docs": [{ "path": "docs/worker-infrastructure.md", "anchor": "module-initialization" }],
-      "background": ["docs/worker-and-api-limits.md"],
+      "background": [{ "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }],
       "alsoRead": ["worker/AGENTS.md"],
       "rules": ["Consume Worker response bodies before opening more fetches."]
     },
@@ -421,8 +459,8 @@
       "label": "Shared runtime contracts",
       "risk": "medium",
       "sources": ["shared/**"],
-      "docs": ["docs/architecture.md"],
-      "background": ["docs/data-flow-map.md"],
+      "docs": [{ "path": "docs/architecture.md", "anchor": "file-tree-guide" }],
+      "background": [{ "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
       "alsoRead": ["shared/AGENTS.md"],
       "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports; avoid relative cross-boundary imports."]
     },

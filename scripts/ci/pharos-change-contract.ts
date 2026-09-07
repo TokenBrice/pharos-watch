@@ -19,7 +19,7 @@ import {
   matchesOwnershipGlob,
   type DocReference,
 } from "../lib/doc-ownership-registry.mts";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 
 type UnknownRecord = Record<string, unknown>;
 type GitExec = (
@@ -136,7 +136,7 @@ const PROTECTED_WRITE_RULES: ReadonlyArray<{ label: string; test: (file: string)
   },
   {
     label: "Git internals",
-    test: (file) => file === ".git" || file.startsWith(".git/"),
+    test: (file) => /(^|\/)\.git(?:\/|$)/.test(file),
   },
   {
     label: "build outputs",
@@ -183,6 +183,28 @@ function normalizeLocalPath(value: unknown): string {
     : withoutFilePrefix;
 
   return normalized.replace(/^\.\//, "");
+}
+
+function getHookWorkingDirectory(hookInput: UnknownRecord): string {
+  const input = getToolInput(hookInput);
+  const sessionCwd = typeof hookInput.cwd === "string" ? resolve(REPO_ROOT, hookInput.cwd) : REPO_ROOT;
+  const toolCwd = input.workdir ?? input.cwd;
+  return typeof toolCwd === "string" ? resolve(sessionCwd, toolCwd) : sessionCwd;
+}
+
+function policyPaths(value: unknown, cwd: string): string[] {
+  const raw = shellValue(String(value ?? "").trim()).replace(/^file:\/\//, "");
+  if (!raw) return [];
+  const absolute = resolve(cwd, raw);
+  let ancestor = absolute;
+  while (!existsSync(ancestor) && dirname(ancestor) !== ancestor) ancestor = dirname(ancestor);
+  let canonical = absolute;
+  try {
+    canonical = resolve(realpathSync(ancestor), relative(ancestor, absolute));
+  } catch {
+    // A missing/inaccessible target still has a lexical identity to check.
+  }
+  return unique([normalizeLocalPath(absolute), normalizeLocalPath(canonical)]);
 }
 
 function fileMatchesRule(file: string, rule: PathFamilyRule): boolean {
@@ -326,7 +348,7 @@ function resolveExplicitPath(
   };
 }
 
-function normalizeExplicitFiles(
+export function normalizeExplicitFiles(
   files: readonly string[],
   { allowMissing = false, execFile = execFileSync as GitExec }: { allowMissing?: boolean; execFile?: GitExec } = {},
 ): string[] {
@@ -417,7 +439,7 @@ function getToolInput(hookInput: UnknownRecord = {}): UnknownRecord {
 
 function getCommandFromHookInput(hookInput: UnknownRecord = {}): string {
   const toolInput = getToolInput(hookInput);
-  return String(toolInput.command ?? hookInput.command ?? "");
+  return String(toolInput.command ?? toolInput.cmd ?? hookInput.command ?? hookInput.cmd ?? "");
 }
 
 function collectArrayPaths(value: unknown): unknown[] {
@@ -430,10 +452,13 @@ function collectArrayPaths(value: unknown): unknown[] {
 }
 
 function extractPatchPaths(patchText: unknown): string[] {
-  return [...String(patchText ?? "").matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)].map((match) => match[1]);
+  return [...String(patchText ?? "").matchAll(/^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$/gm)].map((match) => match[1]);
 }
 
-const SHELL_CONTROL_TOKENS = new Set([";", "&&", "||", "|", "&", "\n"]);
+const SHELL_CONTROL_TOKENS = new Set([";", "&&", "||", "|", "&", "\n", "(", ")"]);
+const SHELL_PREFIX_TOKENS = new Set(["if", "then", "elif", "else", "do", "while", "until", "!", "{", "}"]);
+const SHELL_LITERAL_PREFIX = "\0";
+const shellValue = (value: string) => value.startsWith(SHELL_LITERAL_PREFIX) ? value.slice(1) : value;
 const ENV_VALUE_OPTIONS = new Set(["-C", "--chdir", "-S", "--split-string", "-u", "--unset"]);
 const NPX_VALUE_OPTIONS = new Set(["-c", "--call", "-p", "--package", "--cache", "--shell", "--userconfig"]);
 const PACKAGE_MANAGER_NAMES = new Set(["bun", "npm", "pnpm", "yarn"]);
@@ -555,12 +580,15 @@ function tokenizeShell(command: unknown): string[] {
   let token = "";
   let quote = "";
   let escaping = false;
+  let literalToken = false;
   const text = String(command ?? "");
 
   const pushToken = () => {
     if (token) {
-      tokens.push(token);
+      tokens.push(literalToken && (SHELL_PREFIX_TOKENS.has(token) || SHELL_CONTROL_TOKENS.has(token) || token.startsWith(">"))
+        ? SHELL_LITERAL_PREFIX + token : token);
       token = "";
+      literalToken = false;
     }
   };
 
@@ -574,6 +602,7 @@ function tokenizeShell(command: unknown): string[] {
     }
 
     if (char === "\\" && quote !== "'") {
+      literalToken = true;
       escaping = true;
       continue;
     }
@@ -589,6 +618,7 @@ function tokenizeShell(command: unknown): string[] {
 
     if (char === "'" || char === '"') {
       quote = char;
+      literalToken = true;
       continue;
     }
 
@@ -610,7 +640,14 @@ function tokenizeShell(command: unknown): string[] {
       continue;
     }
 
-    if (char === "&" || char === "|" || char === ";") {
+    if (char === "#" && !token) {
+      while (i < text.length && text[i] !== "\n") i += 1;
+      pushToken();
+      tokens.push("\n");
+      continue;
+    }
+
+    if (char === "&" || char === "|" || char === ";" || char === "(" || char === ")") {
       pushToken();
       tokens.push(char);
       continue;
@@ -618,7 +655,10 @@ function tokenizeShell(command: unknown): string[] {
 
     if (char === ">") {
       pushToken();
-      if (text[i + 1] === ">") {
+      if (text[i + 1] === "|") {
+        tokens.push(">|");
+        i += 1;
+      } else if (text[i + 1] === ">") {
         tokens.push(">>");
         i += 1;
       } else {
@@ -654,9 +694,6 @@ function commandHasXargsShell(command: unknown): boolean {
   });
 }
 
-function splitShellTokens(command: unknown): string[] {
-  return tokenizeShell(getExecutableShellText(command)).filter((token) => !SHELL_CONTROL_TOKENS.has(token));
-}
 
 function shellCommandName(token: unknown): string {
   return (
@@ -887,6 +924,10 @@ function getNestedShellCommands(command: unknown): string[] {
       continue;
     }
 
+    if (char === "#" && (index === 0 || /\s/.test(text[index - 1]))) {
+      while (index < text.length && text[index] !== "\n") index += 1;
+      continue;
+    }
     if (char === "'") {
       quote = "'";
       continue;
@@ -1011,6 +1052,7 @@ function getShellCommandInvocations(command: unknown, depth = 0): ShellInvocatio
 
     if (!atCommandStart) continue;
     if (isEnvAssignment(token)) continue;
+    if (SHELL_PREFIX_TOKENS.has(token)) continue;
 
     const resolvedIndex = resolveExecutableIndex(tokens, index);
     if (resolvedIndex !== null) {
@@ -1134,25 +1176,12 @@ function invocationHasDryRunFlag(tokens: readonly string[]): boolean {
   return tokens.includes("--dry-run");
 }
 
-function extractBashWritePaths(command: unknown): string[] {
+function extractBashWritePaths(tokens: readonly string[]): string[] {
   const paths: string[] = [];
-  const tokens = splitShellTokens(command);
   for (let i = 0; i < tokens.length; i += 1) {
-    const token = tokens[i];
-    if (token === ">" || token === ">>") {
-      paths.push(tokens[i + 1] ?? "");
-    } else if (token.startsWith(">>") && token.length > 2) {
-      paths.push(token.slice(2));
-    } else if (token.startsWith(">") && token.length > 1) {
-      paths.push(token.slice(1));
-    } else if (token.startsWith("tee") && token.length === 3) {
-      let nextIndex = i + 1;
-      while (tokens[nextIndex]?.startsWith("-")) {
-        nextIndex += 1;
-      }
-      paths.push(tokens[nextIndex] ?? "");
-    }
+    if (tokens[i] === ">" || tokens[i] === ">>" || tokens[i] === ">|") paths.push(shellValue(tokens[i + 1] ?? ""));
   }
+  if (shellCommandName(tokens[0]) === "tee") paths.push(...getCommandOperands(tokens));
   return paths;
 }
 
@@ -1195,7 +1224,7 @@ function getCommandOperands(
       }
       continue;
     }
-    operands.push(token);
+    operands.push(shellValue(token));
   }
 
   return operands;
@@ -1207,22 +1236,20 @@ function hasInPlaceFlag(tokens: readonly string[]): boolean {
   );
 }
 
-function extractCommandWritePaths(command: unknown): string[] {
+function extractCommandWritePaths(invocation: ShellInvocation): string[] {
   const paths: string[] = [];
   const truncateValueOptions = new Set(["-s", "--size"]);
 
-  for (const invocation of getShellCommandInvocations(command)) {
-    const { name, tokens } = invocation;
-    if (name === "rm" || name === "mv" || name === "touch") {
-      paths.push(...getCommandOperands(tokens));
-    } else if (name === "cp") {
-      const operands = getCommandOperands(tokens);
-      if (operands.length > 0) paths.push(operands[operands.length - 1]!);
-    } else if ((name === "sed" || name === "perl") && hasInPlaceFlag(tokens)) {
-      paths.push(...getCommandOperands(tokens));
-    } else if (name === "truncate") {
-      paths.push(...getCommandOperands(tokens, truncateValueOptions));
-    }
+  const { name, tokens } = invocation;
+  if (name === "rm" || name === "mv" || name === "touch") {
+    paths.push(...getCommandOperands(tokens));
+  } else if (name === "cp") {
+    const operands = getCommandOperands(tokens);
+    if (operands.length > 0) paths.push(operands[operands.length - 1]!);
+  } else if ((name === "sed" || name === "perl") && hasInPlaceFlag(tokens)) {
+    paths.push(...getCommandOperands(tokens));
+  } else if (name === "truncate") {
+    paths.push(...getCommandOperands(tokens, truncateValueOptions));
   }
 
   return paths;
@@ -1248,9 +1275,9 @@ function isInlineScriptInvocation(invocation: ShellInvocation): boolean {
   );
 }
 
-function extractInlineScriptWritePaths(command: unknown): string[] {
-  const text = String(command ?? "");
-  if (!getShellCommandInvocations(command).some(isInlineScriptInvocation)) return [];
+function extractInlineScriptWritePaths(invocation: ShellInvocation): string[] {
+  const text = invocation.tokens.slice(1).join(" ");
+  if (!isInlineScriptInvocation(invocation)) return [];
 
   const hasPythonOpenWrite = /\bopen\s*\([^)]*(?:,\s*|\bmode\s*=\s*)["'][^"']*w[^"']*["']/i.test(text);
   const hasNodeWrite = /\bwriteFile(?:Sync)?\s*\(/.test(text);
@@ -1264,9 +1291,29 @@ function withHookRule(rule: HookRuleId, reason: string): string {
   return `[rule:${rule}] ${reason}`;
 }
 
+function collectShellWritePaths(command: unknown, cwd: string): { paths: string[]; unresolved: boolean } {
+  const invocations = getShellCommandInvocations(command);
+  const paths: string[] = [];
+  let unresolved = false;
+  invocations.forEach((invocation, index) => {
+    const targets = [
+      ...extractBashWritePaths(invocation.tokens),
+      ...extractCommandWritePaths(invocation),
+      ...extractInlineScriptWritePaths(invocation),
+      ...(invocation.name === "apply_patch" ? extractPatchPaths(command) : []),
+    ].filter(Boolean);
+    if (targets.length === 0) return;
+    const directory = getShellWorkingDirectory(invocations, index, cwd, command);
+    if (directory === null) unresolved = true;
+    else paths.push(...targets.map((path) => resolve(directory, shellValue(path))));
+  });
+  return { paths, unresolved };
+}
+
 function collectToolPaths(hookInput: UnknownRecord = {}): string[] {
   const toolInput = getToolInput(hookInput);
   const command = getCommandFromHookInput(hookInput);
+  const cwd = getHookWorkingDirectory(hookInput);
   return normalizeChangedFiles(
     [
       toolInput.file_path,
@@ -1277,13 +1324,11 @@ function collectToolPaths(hookInput: UnknownRecord = {}): string[] {
       ...collectArrayPaths(toolInput.edits),
       ...extractPatchPaths(toolInput.patch),
       ...extractPatchPaths(String(toolInput.input ?? "")),
-      ...extractPatchPaths(command),
-      ...extractBashWritePaths(command),
-      ...extractCommandWritePaths(command),
-      ...extractInlineScriptWritePaths(command),
+      ...(commandIsRawPatchPayload(command) ? extractPatchPaths(command) : []),
+      ...collectShellWritePaths(command, cwd).paths,
     ]
       .filter(Boolean)
-      .map(normalizeLocalPath),
+      .flatMap((path) => policyPaths(path, cwd)),
   );
 }
 
@@ -1520,44 +1565,40 @@ function isReadOnlySql(sql: string): boolean {
   });
 }
 
-function readReferencedSqlFile(filePath: string, additionalRoots: readonly string[] = []): string | null {
-  const rawPath = filePath.startsWith("file://") ? filePath.slice("file://".length) : filePath;
-  const candidatePaths = isAbsolute(rawPath)
-    ? [resolve(rawPath)]
-    : unique([
-        ...additionalRoots.map((root) => resolve(root, rawPath)),
-        resolve(REPO_ROOT, rawPath),
-        resolve(process.cwd(), rawPath),
-      ]);
-
-  for (const candidatePath of candidatePaths) {
-    if (!existsSync(candidatePath)) continue;
-    try {
-      return readFileSync(candidatePath, "utf8");
-    } catch {
-      return null;
-    }
+function readReferencedSqlFile(filePath: string, cwd: string): string | null {
+  const rawPath = shellValue(filePath).replace(/^file:\/\//, "");
+  try {
+    return readFileSync(resolve(cwd, rawPath), "utf8");
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
-function getShellWorkingDirectory(invocations: readonly ShellInvocation[], targetIndex: number): string {
-  let workingDirectory = process.cwd();
+function getShellWorkingDirectory(invocations: readonly ShellInvocation[], targetIndex: number, cwd: string, command: unknown): string | null {
+  const tokens = tokenizeShell(getExecutableShellText(command));
+  // ponytail: resolve single-operand cd in all-&& chains only. Other cwd changes
+  // require a direct invocation before inspecting relative write/SQL targets.
+  if ((invocations.slice(0, targetIndex).some((item) => item.name === "cd")
+    && (tokens.some((token) => ["(", ")", "{", "}", ";", "\n", "||", "|", "&", "if", "then", "else", "do"].includes(token))
+      || invocations.some((item) => getInvocationNestedShellCommands(item).length > 0)
+      || getNestedShellCommands(getExecutableShellText(command)).length > 0))
+    || (tokens.some((token) => shellCommandName(token) === "env")
+      && tokens.some((token) => token.startsWith("-C") || token.startsWith("--chdir")))) return null;
+  let workingDirectory = cwd;
   for (let index = 0; index < targetIndex; index += 1) {
     const invocation = invocations[index];
     if (invocation?.name !== "cd") continue;
-    const destination = invocation.tokens[1];
-    if (!destination || destination.startsWith("-")) continue;
+    const destination = shellValue(invocation.tokens[1] ?? "");
+    if (invocation.tokens.length !== 2 || !destination || destination.startsWith("-") || /[$~`]/.test(destination)) return null;
     workingDirectory = resolve(workingDirectory, destination);
   }
   return workingDirectory;
 }
 
-function inspectRemoteD1ExecuteSql(tokens: readonly string[], additionalRoots: readonly string[] = []): boolean {
+function inspectRemoteD1ExecuteSql(tokens: readonly string[], cwd: string | null): boolean {
   const fileOption = findCommandOptionValue(tokens, "--file");
   if (fileOption.found) {
-    return fileOption.value === null || !isReadOnlySql(readReferencedSqlFile(fileOption.value, additionalRoots) ?? "");
+    return cwd === null || fileOption.value === null || !isReadOnlySql(readReferencedSqlFile(fileOption.value, cwd) ?? "");
   }
 
   const commandOption = findCommandOptionValue(tokens, "--command");
@@ -1565,7 +1606,7 @@ function inspectRemoteD1ExecuteSql(tokens: readonly string[], additionalRoots: r
   return !isReadOnlySql(commandOption.value);
 }
 
-function commandInvokesRemoteD1Mutation(command: unknown): boolean {
+function commandInvokesRemoteD1Mutation(command: unknown, cwd: string): boolean {
   const invocations = getShellCommandInvocations(command);
   return invocations.some((invocation, invocationIndex) => {
     if (invocation.name !== "wrangler" || invocationHasHelpFlag(invocation.tokens)) return false;
@@ -1583,7 +1624,13 @@ function commandInvokesRemoteD1Mutation(command: unknown): boolean {
       return false;
     }
 
-    return inspectRemoteD1ExecuteSql(invocation.tokens, [getShellWorkingDirectory(invocations, invocationIndex)]);
+    let directory = getShellWorkingDirectory(invocations, invocationIndex, cwd, command);
+    const wranglerCwd = findCommandOptionValue(invocation.tokens, "--cwd");
+    if (wranglerCwd.found) {
+      directory = directory && wranglerCwd.value && !/[$~`]/.test(wranglerCwd.value)
+        ? resolve(directory, shellValue(wranglerCwd.value)) : null;
+    }
+    return inspectRemoteD1ExecuteSql(invocation.tokens, directory);
   });
 }
 
@@ -1628,8 +1675,12 @@ function findUnsafeMigrationSql(paths: readonly string[], hookInput: UnknownReco
   };
 }
 
-function findCommandViolation(command: unknown): HookViolation | null {
+function findCommandViolation(command: unknown, cwd: string): HookViolation | null {
   if (!command) return null;
+
+  if (collectShellWritePaths(command, cwd).unresolved) {
+    return { reason: withHookRule("opaque-shell", "Cannot resolve a shell write directory; use a direct invocation with an explicit working directory."), rule: "opaque-shell" };
+  }
 
   if (commandHasUnresolvedShellIndirection(command)) {
     return {
@@ -1675,7 +1726,7 @@ function findCommandViolation(command: unknown): HookViolation | null {
     };
   }
 
-  if (commandInvokesRemoteD1Mutation(command)) {
+  if (commandInvokesRemoteD1Mutation(command, cwd)) {
     return {
       reason: withHookRule(
         "d1-remote-mutation",
@@ -1690,7 +1741,7 @@ function findCommandViolation(command: unknown): HookViolation | null {
 
 export function findPreToolUseViolation(hookInput: UnknownRecord = {}): HookViolation | null {
   const command = getCommandFromHookInput(hookInput);
-  const commandViolation = findCommandViolation(command);
+  const commandViolation = findCommandViolation(command, getHookWorkingDirectory(hookInput));
   if (commandViolation) {
     return commandViolation;
   }
@@ -1723,7 +1774,7 @@ export function findPermissionRequestViolation(hookInput: UnknownRecord = {}): H
       rule: "deploy",
     };
   }
-  if (!commandHasOpaqueGuardedConstruct(command) && commandInvokesRemoteD1Mutation(command)) {
+  if (!commandHasOpaqueGuardedConstruct(command) && commandInvokesRemoteD1Mutation(command, getHookWorkingDirectory(hookInput))) {
     return {
       reason: withHookRule(
         "d1-remote-mutation",
@@ -1759,11 +1810,11 @@ export function readChangedFiles({
   staged = false,
 }: ChangedFileOptions = {}): string[] {
   const mode = staged
-    ? { kind: "staged" as const }
+    ? { kind: "staged" as const, noRenames: true }
     : baseRef || headRef
-      ? { kind: "range" as const, base: baseRef || "origin/main", head: headRef || "HEAD" }
-      : { kind: "working" as const, includeUntracked: true };
-  return normalizeChangedFiles(collectGitPaths(mode, { cwd: REPO_ROOT, failure: "empty", execFile }));
+      ? { kind: "range" as const, base: baseRef || "origin/main", head: headRef || "HEAD", noRenames: true }
+      : { kind: "working" as const, includeUntracked: true, noRenames: true };
+  return normalizeChangedFiles(collectGitPaths(mode, { cwd: REPO_ROOT, execFile }));
 }
 
 function formatBullets(values: readonly string[], { limit = 8 }: { limit?: number } = {}): string {
@@ -1792,7 +1843,7 @@ export function formatContract(
 ): string {
   const changedSummary =
     contract.changedFiles.length > 0
-      ? formatBullets(contract.changedFiles, { limit: mode === "stop" ? 6 : 12 })
+      ? formatBullets(contract.changedFiles, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY })
       : "- No current changed files detected.";
   const sections = [
     "Pharos change contract:",
@@ -1805,34 +1856,34 @@ export function formatContract(
     changedSummary,
     "",
     "Read first:",
-    formatBullets(contract.docs.map(formatDocReference), { limit: mode === "stop" ? 8 : 12 }),
+    formatBullets(contract.docs.map(formatDocReference), { limit: mode === "stop" ? 8 : Number.POSITIVE_INFINITY }),
   ];
 
   if (contract.scopedContext.length > 0) {
-    sections.push("", "Scoped context:", formatBullets(contract.scopedContext, { limit: mode === "stop" ? 6 : 12 }));
+    sections.push("", "Scoped context:", formatBullets(contract.scopedContext, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
   if (contract.background.length > 0) {
-    sections.push("", "Also relevant:", formatBullets(contract.background.map(formatDocReference), { limit: mode === "stop" ? 6 : 12 }));
+    sections.push("", "Also relevant:", formatBullets(contract.background.map(formatDocReference), { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
   if (contract.hints.length > 0) {
-    sections.push("", "Hints:", formatBullets(contract.hints, { limit: mode === "stop" ? 4 : 8 }));
+    sections.push("", "Hints:", formatBullets(contract.hints, { limit: mode === "stop" ? 4 : Number.POSITIVE_INFINITY }));
   }
 
   if (contract.checks.length > 0) {
     sections.push(
       "",
       "Checks to consider before finalizing:",
-      formatBullets(contract.checks, { limit: mode === "stop" ? 8 : 12 }),
+      formatBullets(contract.checks, { limit: mode === "stop" ? 8 : Number.POSITIVE_INFINITY }),
     );
   }
 
   if (contract.warnings.length > 0) {
-    sections.push("", "Warnings:", formatBullets(contract.warnings, { limit: 6 }));
+    sections.push("", "Warnings:", formatBullets(contract.warnings, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
   }
 
-  sections.push("", "Core rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : 10 }));
+  sections.push("", "Core rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : Number.POSITIVE_INFINITY }));
 
   if (contract.deploy.deployImpact) {
     sections.push(
@@ -1890,6 +1941,8 @@ function hookEventName(hookMode: HookMode): "PreToolUse" | "PermissionRequest" |
 }
 
 export function getHookHarness(hookInput: UnknownRecord): "claude" | "codex" | "unknown" {
+  // Codex also uses the shared PascalCase event/tool envelope.
+  if ("model" in hookInput || "turn_id" in hookInput) return "codex";
   const claudeEvent = hookInput.hook_event_name;
   if (
     typeof claudeEvent === "string" &&
@@ -2022,50 +2075,33 @@ export function buildPermissionRequestHookOutput(hookInput: UnknownRecord = {}) 
 }
 
 function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options: CliOptions } {
-  const options: CliOptions = {
-    allowMissing: false,
-    baseRef: process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
-    diagnostics: false,
-    format: "text",
-    headRef: process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
-    help: false,
-    hook: null,
-    staged: false,
-  };
-  const explicitFiles: string[] = [];
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--json") {
-      options.format = "json";
-    } else if (arg === "--diagnostics") {
-      options.diagnostics = true;
-    } else if (arg === "--new-file") {
-      options.allowMissing = true;
-    } else if (arg === "--staged") {
-      options.staged = true;
-    } else if (arg === "--hook") {
-      options.hook = argv[++i] ?? null;
-    } else if (arg.startsWith("--hook=")) {
-      options.hook = arg.slice("--hook=".length);
-    } else if (arg === "--base-ref") {
-      options.baseRef = argv[++i];
-    } else if (arg.startsWith("--base-ref=")) {
-      options.baseRef = arg.slice("--base-ref=".length);
-    } else if (arg === "--head-ref") {
-      options.headRef = argv[++i];
-    } else if (arg.startsWith("--head-ref=")) {
-      options.headRef = arg.slice("--head-ref=".length);
-    } else if (arg === "--file") {
-      explicitFiles.push(argv[++i] ?? "");
-    } else if (arg.startsWith("--file=")) {
-      explicitFiles.push(arg.slice("--file=".length));
-    } else if (arg === "--help" || arg === "-h") {
-      options.help = true;
-    }
+  const { values } = parseStrictCliArgs(argv, { options: {
+    json: { type: "boolean" },
+    diagnostics: { type: "boolean" },
+    "new-file": { type: "boolean", multiple: true },
+    staged: { type: "boolean" },
+    hook: { type: "string" },
+    "base-ref": { type: "string" },
+    "head-ref": { type: "string" },
+    file: { type: "string", multiple: true },
+  } });
+  const hook = normalizeHookMode(typeof values.hook === "string" ? values.hook : null);
+  if (hook && !["session-start", "pre-tool-use", "permission-request"].includes(hook)) {
+    throw new CliUsageError(`Unknown hook mode: ${hook}`);
   }
-
-  return { explicitFiles, options };
+  return {
+    explicitFiles: (values.file ?? []) as string[],
+    options: {
+      allowMissing: Array.isArray(values["new-file"]) && values["new-file"].some(Boolean),
+      baseRef: values["base-ref"] as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
+      headRef: values["head-ref"] as string | undefined ?? process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
+      diagnostics: values.diagnostics === true,
+      format: values.json === true ? "json" : "text",
+      help: values.help === true,
+      hook,
+      staged: values.staged === true,
+    },
+  };
 }
 
 function normalizeHookMode(hook: string | null): string | null {
@@ -2160,6 +2196,12 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
       changedFiles = readChangedFiles({ staged: false });
     }
   } catch (error) {
+    if (hookMode === "session-start" && !(error instanceof ExplicitPathError)) {
+      const message = "Pharos change selection unavailable; run agent:route with explicit files before editing.";
+      console.error(message);
+      console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: message } }));
+      return;
+    }
     if (error instanceof ExplicitPathError) {
       console.error(`error: ${error.message}`);
       process.exitCode = 2;
@@ -2186,6 +2228,4 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   console.log(formatContract(contract));
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCli();
-}
+runDirectCli(import.meta.url, () => runCli(), { label: "pharos-change-contract" });

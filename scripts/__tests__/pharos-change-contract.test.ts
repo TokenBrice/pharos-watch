@@ -111,7 +111,7 @@ describe("classifyChangedFiles", () => {
     const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
 
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
 
   });
   it("routes Telegram delivery changes to the unified Telegram contract", () => {
@@ -140,6 +140,7 @@ describe("classifyChangedFiles", () => {
     expect(contract.checks).toContain("npm run check:generated-artifacts -- --only=agents-doc");
     expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("agent-hooks-process");
     expect(docKeys(contract)).toContain("docs/process/agent-artifacts.md");
+    expect(docKeys(contract)).not.toContain("CLAUDE.md");
   });
   it("includes docs, warnings, and deploy impact in text output", () => {
     const contract = classifyChangedFiles(["worker/migrations/0123_example.sql"]);
@@ -173,7 +174,7 @@ describe("representative --file routing", () => {
   it("routes a screener component through the shared frontend route contract", () => {
     const contract = route("src/components/screener/screener-table.tsx");
     expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
     expect(docKeys(contract).length).toBeLessThanOrEqual(3);
     expect(contract.checks).toContain("npm run typecheck");
   });
@@ -215,7 +216,7 @@ describe("representative --file routing", () => {
   it("routes the homepage entrypoint through the shared frontend route contract", () => {
     const contract = route("src/app/page.tsx");
     expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md");
+    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
     expect(docKeys(contract).length).toBeLessThanOrEqual(3);
     expect(contract.checks).toContain("npm run typecheck");
   });
@@ -243,7 +244,42 @@ describe("representative --file routing", () => {
     expect(contract.mappings.map((mapping) => mapping.id)).toEqual(
       expect.arrayContaining(["frontend-routes", "validation-ci-policy"]),
     );
-    expect(docKeys(contract)).toContain("docs/deployment-process.md");
+    expect(docKeys(contract)).toContain("docs/deployment-process.md#ci-deploy-sequence");
+  });
+
+  it.each([
+    "scripts/maintenance/run-focused-checks.ts",
+    "scripts/maintenance/build-annotation-candidates.ts",
+    "scripts/__tests__/pharos-change-contract.test.ts",
+  ])("keeps ordinary script reads bounded for %s", (file) => {
+    const contract = route(file);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["scripts-tooling"]);
+    expect(docKeys(contract)).toEqual([
+      "docs/scripts.md#operator-cli-contract",
+      "docs/testing.md#smallest-adequate-check-per-area",
+      "docs/process/agent-start-here.md",
+    ]);
+    expect(contract.scopedContext).toContain("scripts/AGENTS.md");
+  });
+
+  it.each([
+    ".github/workflows/pages-release.yml",
+    "scripts/ci/classify-deploy-changes.ts",
+    "scripts/lib/automation-registry.mjs",
+    "scripts/lib/deploy-impact.mts",
+    "scripts/lib/pr-lanes.mts",
+    "scripts/maintenance/run-pr-static-checks.ts",
+    "scripts/maintenance/refresh-pages-release-data.ts",
+    "scripts/maintenance/run-generated-artifacts.ts",
+    "scripts/maintenance/prepare-workspace.ts",
+  ])("preserves CI and deployment ownership for %s", (file) => {
+    const contract = route(file);
+    expect(contract.mappings.find((mapping) => mapping.id === "validation-ci-policy")?.risk).toBe("high");
+    expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
+    expect(docKeys(contract)).toContain("docs/deployment-process.md#ci-deploy-sequence");
+    expect(contract.background.map((doc) => doc.path)).toContain("docs/process/feature-flags.md");
+    expect(contract.checks).toContain("npx vitest run scripts/__tests__");
+    expect(contract.checks).toContain("npm run check:generated-artifacts");
   });
 
   it("routes Telegram API ingress to the unified Telegram contract", () => {
@@ -455,7 +491,7 @@ describe("Codex hook outputs", () => {
 
     expect(context.split("\n")).toEqual([
       "Pharos change contract — explicit files (1 files) — deploy: pages=y, worker=n",
-      "Read first: docs/architecture.md, docs/process/agent-start-here.md",
+      "Read first: docs/architecture.md#frontend-runtime-and-seo-surface, docs/process/agent-start-here.md",
       "Scoped context: src/app/AGENTS.md, src/AGENTS.md",
       "Focused checks: npm run lint:changed, npm run typecheck, npx vitest run src",
       "Route a planned path: npm run agent:route -- --file <path>",
@@ -525,6 +561,27 @@ describe("hook harness classification", () => {
 });
 
 describe("hard-block hook outputs", () => {
+  it.each([
+    { tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } },
+    { tool_name: "exec_command", tool_input: { cmd: "git reset --hard HEAD" } },
+    { toolName: "exec_command", toolInput: { cmd: "git reset --hard HEAD" } },
+    { tool: "exec_command", arguments: { cmd: "git reset --hard HEAD" } },
+    { cmd: "git reset --hard HEAD" },
+  ])("inspects shell command fields across supported hook payloads: %j", (input) => {
+    expect(buildPreToolUseHookOutput(input)).toMatchObject({
+      hookSpecificOutput: { permissionDecision: "deny" },
+    });
+    expect(buildPermissionRequestHookOutput(input)).toMatchObject({
+      hookSpecificOutput: { decision: { behavior: "deny" } },
+    });
+  });
+
+  it("allows a read-only exec_command cmd payload", () => {
+    const input = { tool_name: "exec_command", tool_input: { cmd: "git status --short" } };
+    expect(buildPreToolUseHookOutput(input)).toEqual({});
+    expect(buildPermissionRequestHookOutput(input)).toEqual({});
+  });
+
   it("blocks destructive git reset commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {

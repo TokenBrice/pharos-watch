@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
 import {
@@ -7,10 +10,13 @@ import {
 } from "../../../src/lib/api-query-descriptors";
 import {
   buildStablecoinDetailSnapshots,
+  checkSnapshots,
   fetchOptionalDetailSnapshotLane,
+  generateSnapshots,
   resolveSnapshotApiBase,
   serializedSnapshotBytes,
   validateStablecoinDetailSnapshot,
+  writeSnapshots,
 } from "../build-stablecoin-detail-snapshots";
 
 function liveSummary(overrides: Partial<StablecoinLiveSummary> = {}): StablecoinLiveSummary {
@@ -30,6 +36,34 @@ function liveSummary(overrides: Partial<StablecoinLiveSummary> = {}): Stablecoin
 }
 
 describe("stablecoin detail snapshot generator", () => {
+  it("bootstraps checkable empty envelopes without credentials or network and reconciles catalog membership", async () => {
+    const fetch = vi.fn(() => { throw new Error("Network forbidden during bootstrap"); });
+    const loadEnv = vi.spyOn(process, "loadEnvFile").mockImplementation(() => { throw new Error("No credential loading"); });
+    vi.stubGlobal("fetch", fetch);
+    vi.stubEnv("PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP", "1");
+    const outputDir = mkdtempSync(join(tmpdir(), "detail-bootstrap-"));
+    try {
+      const snapshots = await generateSnapshots();
+      expect(snapshots).toHaveLength(TRACKED_STABLECOINS.length);
+      expect(snapshots.every((snapshot) => snapshot.generatedAt === 0 && Object.keys(snapshot.lanes).length === 0)).toBe(true);
+      writeSnapshots(snapshots, outputDir);
+      expect(checkSnapshots(outputDir)).toEqual(snapshots);
+      const firstPath = join(outputDir, `${TRACKED_STABLECOINS[0].id}.json`);
+      rmSync(firstPath);
+      expect(() => checkSnapshots(outputDir)).toThrow(/Missing stablecoin detail snapshot/);
+      writeSnapshots(snapshots, outputDir);
+      writeFileSync(join(outputDir, "removed-coin.json"), "{}");
+      expect(() => checkSnapshots(outputDir)).toThrow(/Obsolete/);
+      writeSnapshots(snapshots, outputDir);
+      expect(existsSync(join(outputDir, "removed-coin.json"))).toBe(false);
+      expect(checkSnapshots(outputDir)).toEqual(snapshots);
+      expect(fetch).not.toHaveBeenCalled();
+      expect(loadEnv).not.toHaveBeenCalled();
+    } finally {
+      rmSync(outputDir, { recursive: true, force: true });
+    }
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();

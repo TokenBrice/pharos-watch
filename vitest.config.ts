@@ -58,8 +58,8 @@ export default defineConfig({
     exclude: baseTestExcludes,
     // The gitignored stablecoin catalog artifacts are static imports in many
     // suites; a stale local copy fails them with misleading validation errors.
-    // The setup regenerates them when sources or schema code are newer (cheap
-    // mtime sweep on the fast path; inherited by every project via extends).
+    // The setup regenerates them when cached input/output metadata changes
+    // (inherited by every project via extends).
     // Absolute path: vitest resolves relative setup paths against the
     // invocation cwd, which may be worker/.
     globalSetup: [path.resolve(__dirname, "scripts/test/ensure-fresh-stablecoin-artifacts.ts")],
