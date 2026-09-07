@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { isSidebarShortcutDisabled, setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
+import { isSingleKeyShortcutDisabled, setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
 type KeyJoin = "+" | "then" | "or";
 
@@ -55,11 +55,11 @@ export function KeyboardShortcuts({
 }) {
   const categories = [...new Set(SHORTCUTS.map((s) => s.category))];
   // This dialog is the only writer of the flag, so a lazy read stays accurate.
-  const [sidebarShortcutEnabled, setSidebarShortcutEnabled] = useState(() => !isSidebarShortcutDisabled());
+  const [singleKeyShortcutsEnabled, setSingleKeyShortcutsEnabled] = useState(() => !isSingleKeyShortcutDisabled());
 
-  const toggleSidebarShortcut = (enabled: boolean) => {
-    setSidebarShortcutEnabled(enabled);
-    setSidebarShortcutDisabled(!enabled);
+  const toggleSingleKeyShortcuts = (enabled: boolean) => {
+    setSingleKeyShortcutsEnabled(enabled);
+    setSingleKeyShortcutDisabled(!enabled);
   };
 
   return (
@@ -96,8 +96,8 @@ export function KeyboardShortcuts({
           </span>
           <input
             type="checkbox"
-            checked={sidebarShortcutEnabled}
-            onChange={(e) => toggleSidebarShortcut(e.target.checked)}
+            checked={singleKeyShortcutsEnabled}
+            onChange={(e) => toggleSingleKeyShortcuts(e.target.checked)}
             className="h-4 w-4 shrink-0 accent-primary"
           />
         </label>
