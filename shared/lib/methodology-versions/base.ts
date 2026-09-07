@@ -64,6 +64,9 @@ export interface MethodologyVersion {
   getVersionAt: (unixSeconds: number) => string;
 }
 
+/** 2026-09-07T00:00:00Z: versions activated from here on carry at most two decimal digits. */
+const TWO_DECIMAL_DIGIT_RULE_EFFECTIVE_AT = 1_788_739_200;
+
 function parseMethodologyVersionSegment(segment: string): number {
   const value = Number.parseInt(segment, 10);
   return Number.isFinite(value) ? value : 0;
@@ -108,6 +111,16 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
     const versionDiff = compareMethodologyVersions(b.version, a.version);
     return versionDiff !== 0 ? versionDiff : b.effectiveAt - a.effectiveAt;
   });
+  // ADR-3: at most two decimal digits from 2026-09-07 on. A third digit
+  // (9.461) reads as a sub-patch and invites 9.4610-style drift; the step
+  // after 9.46 is 9.47. Versions activated before the rule stay as history.
+  for (const entry of sortedChangelog) {
+    if (entry.effectiveAt >= TWO_DECIMAL_DIGIT_RULE_EFFECTIVE_AT && !/^\d+\.\d{1,2}$/u.test(entry.version)) {
+      throw new Error(
+        `Invalid methodology version "${entry.version}" (${changelogPath}): at most two decimal digits are allowed; bump the second digit instead.`,
+      );
+    }
+  }
 
   // Drift guard: the hand-maintained currentVersion must match the latest
   // changelog entry. Without this, adding a changelog entry but forgetting to
