@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { ExternalLink, Heart, Star, Wallet, Wrench } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Heart, KeyRound, Star, Wallet, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
@@ -11,6 +12,8 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
+import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
+import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
 import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
 
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
@@ -417,6 +420,7 @@ export function SupportCtas() {
             works on every supported chain; Base and Gnosis are usually the cheapest gas paths. Giveth donations
             arrive at the wallet and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
           </p>
+          <SupporterKeyNote />
           <div className="space-y-2">
             <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
             <div className="flex flex-wrap gap-2">
@@ -433,6 +437,28 @@ export function SupportCtas() {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function SupporterKeyNote() {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/40 p-4 sm:flex-row sm:items-start sm:gap-3">
+      <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-foreground">Supporter API key</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Any wallet with at least ${DONOR_API_KEY_MIN_USD} on this ledger can claim one API key for the full Pharos
+          API: {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no expiry, one per wallet, by signing a
+          message on{" "}
+          <Link href="/api/" className="pharos-prose-link">
+            the API page
+          </Link>
+          . {DONOR_KEY_CLAIMS_OPEN
+            ? "New donations count after the weekly reconciliation and the next release."
+            : "Claims open with the next release; donations made now already count toward the threshold."}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -567,7 +593,7 @@ export function FundingFaq() {
     },
     {
       q: "What do supporters get?",
-      a: "Public recognition on the wall unless you ask for a custom label. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.",
+      a: `Public recognition on the wall unless you ask for a custom label, and a supporter API key once your wallet reaches $${DONOR_API_KEY_MIN_USD}: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute on the full API, no expiry, claimed by signing a message on the API page. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.`,
     },
     {
       q: "Can I help without donating?",

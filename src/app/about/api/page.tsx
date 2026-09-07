@@ -26,6 +26,7 @@ import { PUBLIC_DATASET_JSON_LD_DESCRIPTORS } from "@/lib/analytics-dataset-json
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import {
   PUBLIC_API_ARTIFACTS,
   PUBLIC_API_HOST,
@@ -79,12 +80,12 @@ const ABOUT_API_FAQ: FaqItem[] = [
     question: "How do I get a Pharos API key?",
     answer: SELF_SERVE_ISSUANCE_OPEN
       ? "Use the self-serve request form at https://pharos.watch/api/. It sends an email verification link and reveals the API key once after verification."
-      : `Safety Score grades are free at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()} without a key. Self-serve key issuance is closed while a paid tier is prepared; https://pharos.watch/api/ lists the current options for keyed access.`,
+      : `Safety Score grades are free at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()} without a key. Self-serve key issuance is closed while a paid tier is prepared. Donors can claim a supporter key at https://pharos.watch/api/: any externally-owned EVM wallet with at least $${DONOR_API_KEY_MIN_USD} in the public donation ledger gets one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute with no scheduled expiry. Integrations that deliver a freely available, non-profit service on top of Pharos data receive keys at no cost on request, and any other request is reviewed by hand through the feedback form.`,
   },
   {
     question: "Do I need an API key for every endpoint?",
     answer:
-      `Almost every public data endpoint on ${PUBLIC_API_HOST} requires ${PUBLIC_API_KEY_HEADER}. The no-key exceptions are the safety-grades feed, health checks, OG images, feedback submission, the Telegram webhook, Telegram Mini App session/mutation, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret or signed Mini App initData. Admin routes use Cloudflare Access instead of public API keys.`,
+      `Almost every public data endpoint on ${PUBLIC_API_HOST} requires ${PUBLIC_API_KEY_HEADER}. The no-key exceptions are the safety-grades feed, health checks, OG images, feedback submission, the Telegram webhook, Telegram Mini App session/mutation, the supporter key claim, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret or signed Mini App initData. Admin routes use Cloudflare Access instead of public API keys.`,
   },
   {
     question: "What is the difference between the public API lane and the website lane?",
@@ -433,7 +434,7 @@ export default async function AboutApiPage() {
               <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
             </li>
             <li>
-              <span className="font-semibold text-foreground">No-key public routes:</span> safety grades, health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)
+              <span className="font-semibold text-foreground">No-key public routes:</span> safety grades, health, OG images, feedback, supporter key claim, self-serve key request, Telegram webhook (Telegram secret)
             </li>
             <li>
               <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
@@ -476,6 +477,16 @@ export default async function AboutApiPage() {
               for the current options.
             </p>
           )}
+          <p>
+            Donors can claim a supporter key on{" "}
+            <Link href="/api/" className="pharos-prose-link">
+              the access page
+            </Link>
+            : an externally-owned EVM wallet with at least ${DONOR_API_KEY_MIN_USD} in the public donation ledger gets
+            one key at {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute with no scheduled expiry. Integrations
+            that deliver a freely available, non-profit service on top of Pharos data receive keys at no cost on
+            request through the feedback form.
+          </p>
         </div>
       </section>
 

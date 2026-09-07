@@ -1,11 +1,16 @@
 import Link from "next/link";
-import { Activity, ArrowUpRight, BookOpen, Database, LineChart, ShieldCheck } from "lucide-react";
+import { Activity, ArrowUpRight, BookOpen, Database, KeyRound, LineChart, ShieldCheck } from "lucide-react";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
 import { CopyButton } from "@/components/copy-button";
+import { DonorKeyClaim } from "@/components/donor-key-claim";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import donationsData from "@shared/data/funding/donations.json";
+import { formatIsoDate } from "@shared/lib/format";
+import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import {
+  DONOR_KEY_CLAIMS_OPEN,
   PUBLIC_API_ARTIFACTS,
   PUBLIC_API_HOST,
   PUBLIC_API_KEY_HEADER,
@@ -24,6 +29,11 @@ export const metadata = buildPageMetadata({
 
 const FREE_GRADES_URL = `${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}`;
 
+// Eligibility follows the committed donation ledger, so the reconciliation date
+// is the honest "as of" for the perk: a donation sent after it counts only once
+// the funding skill appends the row and a release ships.
+const LEDGER_RECONCILED_DATE = formatIsoDate(donationsData.last_updated_at);
+
 const ACCESS_FACTS = [
   {
     title: "Free Grades",
@@ -38,10 +48,10 @@ const ACCESS_FACTS = [
     icon: ArrowUpRight,
   },
   {
-    title: "Reference Ready",
+    title: "Supporter Key",
     description:
-      "Endpoint contracts, OpenAPI, and Postman artifacts stay on the reference page for implementation work.",
-    icon: BookOpen,
+      `Wallets with at least $${DONOR_API_KEY_MIN_USD} in the public donation ledger can claim one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, with no scheduled expiry.`,
+    icon: KeyRound,
   },
 ] as const;
 
@@ -296,6 +306,40 @@ export default function ApiAccessPage() {
         </div>
       </section>
 
+      <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Supporter Key</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">A thank-you perk for donors</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Any externally-owned EVM wallet that has sent at least ${DONOR_API_KEY_MIN_USD} in total to the{" "}
+            <Link href="/funding/" className="pharos-prose-link">
+              public donation ledger
+            </Link>{" "}
+            can claim one API key. The wallet proves it is yours by signing a short text message: no transaction, no
+            email address, and no payment processor.
+          </p>
+        </div>
+        <ul className="mt-4 space-y-2 text-sm leading-relaxed text-muted-foreground">
+          <li>{DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no scheduled expiry, revocable, and no SLA.</li>
+          <li>
+            One key per wallet. A lost key is rotated by hand through the{" "}
+            <Link href="/feedback/" className="pharos-prose-link">
+              feedback form
+            </Link>
+            .
+          </li>
+          <li>The donating wallet has to be able to sign: exchange withdrawals and contract wallets do not qualify.</li>
+          <li>Ledger reconciled {LEDGER_RECONCILED_DATE} UTC; new donations go live with the next release.</li>
+        </ul>
+        {DONOR_KEY_CLAIMS_OPEN ? (
+          <DonorKeyClaim />
+        ) : (
+          <p className="mt-4 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            Supporter key claims are paused for now.
+          </p>
+        )}
+      </section>
+
       {SELF_SERVE_ISSUANCE_OPEN ? (
         <ApiKeyRequestForm />
       ) : (
@@ -315,6 +359,10 @@ export default function ApiAccessPage() {
                 feedback form
               </Link>{" "}
               and it will be reviewed by hand.
+            </p>
+            <p>
+              Integrations that deliver a freely available, non-profit service on top of Pharos data - FrankenCoin and
+              Octav are examples - receive keys at no cost on request through the same form.
             </p>
           </div>
         </section>

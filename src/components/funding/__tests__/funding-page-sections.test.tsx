@@ -174,6 +174,14 @@ describe("SupportCtas", () => {
     expect(screen.getByText(/Recurring streams run on Optimism or Base only/)).toBeTruthy();
     expect(screen.getByText(/recurring Giveth stream on Optimism or Base/)).toBeTruthy();
   });
+
+  it("advertises the supporter API key perk with its threshold and rate limit", () => {
+    render(<SupportCtas />);
+    expect(screen.getByText("Supporter API key")).toBeTruthy();
+    expect(screen.getByText(/at least \$10 on this ledger/)).toBeTruthy();
+    expect(screen.getByText(/10 requests per minute, no expiry, one per wallet/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "the API page" }).getAttribute("href")).toMatch(/^\/api\/?$/);
+  });
 });
 
 describe("YearEndHorizon", () => {
