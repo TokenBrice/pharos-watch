@@ -221,6 +221,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "anzen-usdz": declareAdapter("none", ONCHAIN_SINGLE_ASSET_V2, {
     sourceOriginClass: "onchain-observation",
   }),
+  "moc-doc": declareAdapter("mocDoc", ONCHAIN_SINGLE_ASSET_V1, {
+    sourceOriginClass: "onchain-observation",
+  }),
   "moc-v3-buckets": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "mocV3Buckets",
@@ -799,7 +802,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   },
   "sgho-wrapper": declareAdapter("erc4626SingleAsset", ONCHAIN_SINGLE_ASSET_V1),
-  "solstice-attestation": declareAdapter("none", HTTP_PROTOCOL_V1),
+  "solstice-attestation": declareAdapter("none", HTTP_PROTOCOL_V1, {
+    validation: {
+      // Weekly attestations plus the reviewed USX reporting grace.
+      maxSourceAgeSec: 700_000,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  }),
   "single-asset": {
     primaryInputKinds: ["http-json", "onchain-evm"],
     paramsSchema: "singleAsset",
@@ -880,6 +889,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "paxos-independent-assurance": declareAdapter("none", HTTP_DISCLOSURE_ATTESTATION_V2),
   "straitsx-independent-assurance": declareAdapter(
     "straitsxAssurance",
     HTTP_DISCLOSURE_ATTESTATION_V2,

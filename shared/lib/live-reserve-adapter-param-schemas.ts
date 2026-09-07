@@ -1422,6 +1422,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   straitsxAssurance: straitsxAssuranceParamsSchema,
   usdgoAssurance: usdgoAssuranceParamsSchema,
   mocV3Buckets: mocV3BucketsParamsSchema,
+  mocDoc: z.object({ rpcUrl: AbsoluteUrlSchema }).strict(),
   tetherTransparency: tetherTransparencyParamsSchema,
   unitedPor: unitedPorParamsSchema,
   usd1BundleOracle: usd1BundleOracleParamsSchema,

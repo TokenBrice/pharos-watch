@@ -3,34 +3,62 @@
   "product": "XUSD",
   "profile": "straitsx-v1",
   "officialIndexUrl": "https://www.straitsx.com/xusd",
-  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf",
-  "reportSha256": "58d80b9af0f6d7702d3d5d4dc26fc7d816fda814a8518032ac92f9195c3e810f",
-  "reportByteLength": 704203,
-  "reportDate": "2026-06-30",
-  "reportAsOf": "2026-06-30T23:59:00+08:00",
+  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e145187f4227fbe226ec2_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf",
+  "reportSha256": "16af9b75bd128d4a641ee7b05fde7e1ba36ae2c0038e9fbe62da8c034346aedf",
+  "reportByteLength": 704764,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T23:59:00+08:00",
   "reportTimeZone": "Singapore Time (GMT+8)",
   "attestor": "KK Yap & Associates",
   "engagement": "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
   "conclusion": "unqualified",
   "unit": "USD",
   "assets": [
-    { "code": "cash", "label": "Cash", "amount": "46694407" },
-    { "code": "fixed-deposits", "label": "Fixed Deposits", "amount": "0" },
-    { "code": "short-dated-government-or-repo", "label": "U.S. Treasury or eligible overnight reverse-repo instruments", "amount": "0" }
+    {
+      "code": "cash",
+      "label": "Cash",
+      "amount": "45269767"
+    },
+    {
+      "code": "fixed-deposits",
+      "label": "Fixed Deposits",
+      "amount": "0"
+    },
+    {
+      "code": "short-dated-government-or-repo",
+      "label": "U.S. Treasury or eligible overnight reverse-repo instruments",
+      "amount": "0"
+    }
   ],
   "liabilities": [
-    { "code": "erc20", "label": "XUSD ERC20 circulation", "amount": "5779046" },
-    { "code": "bep20", "label": "XUSD BEP20 circulation", "amount": "40785590" },
-    { "code": "pol", "label": "XUSD POL circulation", "amount": "1" },
-    { "code": "sol", "label": "XUSD SOL circulation", "amount": "50505" }
+    {
+      "code": "erc20",
+      "label": "XUSD ERC20 circulation",
+      "amount": "6147961"
+    },
+    {
+      "code": "bep20",
+      "label": "XUSD BEP20 circulation",
+      "amount": "38983843"
+    },
+    {
+      "code": "pol",
+      "label": "XUSD POL circulation",
+      "amount": "1"
+    },
+    {
+      "code": "sol",
+      "label": "XUSD SOL circulation",
+      "amount": "50505"
+    }
   ],
-  "reportedAssetTotal": "46694407",
-  "computedAssetTotal": "46694407",
-  "reportedLiabilityTotal": "46615142",
+  "reportedAssetTotal": "45269767",
+  "computedAssetTotal": "45269767",
+  "reportedLiabilityTotal": "45182310",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "21ec1235878c797e1e65121ed67a13dc5ec190b1321513f3387bde5158052f07",
+    "normalizedTextSha256": "fc0b61471052953e2ecf121224bb8576daec4ebb28bf944d767466149255b1ec",
     "pageCount": 6
   }
 }

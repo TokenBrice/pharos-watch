@@ -60,6 +60,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mf-one-midas",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://midas.app/mfone",
       "label": "Midas mF-ONE NAV"

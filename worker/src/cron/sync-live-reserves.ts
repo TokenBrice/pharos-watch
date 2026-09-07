@@ -426,7 +426,10 @@ function createReserveAdapterRunner(args: {
         error: unknown;
         index: number;
       }> = [];
-      for (const fb of config.inputs.fallbacks ?? []) {
+      // Hive's second node corroborates the first; substituting it as primary
+      // would falsely turn a failed two-node proof into a one-node success.
+      const fallbackInputs = adapter.key === "hive-hbd-protocol" ? [] : config.inputs.fallbacks ?? [];
+      for (const fb of fallbackInputs) {
         throwIfAborted(args.signal);
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };

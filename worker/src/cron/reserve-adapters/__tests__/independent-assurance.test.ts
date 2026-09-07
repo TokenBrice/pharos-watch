@@ -256,14 +256,14 @@ describe("independent-assurance manifest framework", () => {
     await expect(verifyRealIndexFixture(product, profile, fixture)).rejects.toThrow("PDF byte length");
   });
 
-  it("ignores a newer unrelated StraitsX whitepaper but fails closed on a newer XSGD report", async () => {
+  it("ignores an unrelated StraitsX whitepaper but fails closed on a newer XSGD report", async () => {
     const fixture = "straitsx-independent-assurance-xsgd.html";
     await expect(
       verifyRealIndexFixture("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture),
     ).rejects.toThrow("PDF byte length");
 
     const withNewReport = readIndexFixture(fixture) +
-      '<button data-gated-asset="XSGD Attestation Report July 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(31_July_2026).pdf"></button>';
+      '<button data-gated-asset="XSGD Attestation Report August 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(31_August_2026).pdf"></button>';
     await expect(
       verifyRealIndexFixture("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport),
     ).rejects.toThrow("newer unreviewed report");
@@ -366,6 +366,23 @@ describe("independent-assurance manifest framework", () => {
 
     expect(result.valid).toBe(true);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+  });
+
+  it("reconciles July StraitsX reports including the new XSGD XLAYER liability", () => {
+    for (const product of ["XUSD", "XSGD"] as const) {
+      const reviewed = getIndependentAssuranceManifest(product);
+      expect(reviewed.reportDate).toBe("2026-07-31");
+      expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({
+        reportedAssetDifference: "0",
+        reportedLiabilityDifference: "0",
+      });
+    }
+    const xsgd = getIndependentAssuranceManifest("XSGD");
+    expect(xsgd.liabilities).toContainEqual({ code: "xlayer", label: "XSGD XLAYER circulation", amount: "5" });
+    expect(() => reconcileIndependentAssuranceManifest({
+      ...xsgd,
+      liabilities: xsgd.liabilities.filter((row) => row.code !== "xlayer"),
+    })).toThrow("liability total 21283481 does not match manifest 21283486");
   });
 
   it("allows EUROP's reviewed sub-unit headline rounding difference", () => {

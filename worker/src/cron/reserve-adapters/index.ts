@@ -6,6 +6,7 @@ import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
+import { fetchPaxosIndependentAssuranceReserves } from "./paxos-independent-assurance";
 import { fetchIndependentAssuranceAdapter } from "./independent-assurance";
 import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
 import { fetchBtcfiReserves } from "./btcfi";
@@ -39,6 +40,7 @@ import { fetchM0Reserves } from "./m0";
 import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
 import { fetchMakinaStrategyReserves } from "./makina-strategy";
 import { fetchMentoReserves } from "./mento";
+import { fetchMocDocReserves } from "./moc-doc";
 import { fetchUsdrifRifReserves } from "./usdrif-rif";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
@@ -126,6 +128,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
   "makina-strategy": fetchMakinaStrategyReserves,
   mento: fetchMentoReserves,
+  "moc-doc": fetchMocDocReserves,
   "moc-v3-buckets": fetchUsdrifRifReserves,
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
@@ -149,6 +152,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "spiko-api": fetchSpikoApiReserves,
   "stoneyield-router-pool": fetchStoneyieldRouterPoolReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
+  "paxos-independent-assurance": fetchPaxosIndependentAssuranceReserves,
   "straitsx-independent-assurance": fetchIndependentAssuranceAdapter,
   "tether-transparency": fetchTetherTransparencyReserves,
   "united-por": fetchUnitedPorReserves,

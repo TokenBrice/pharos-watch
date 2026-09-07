@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchHiveHbdProtocolReserves } from "../hive-hbd-protocol";
+import { createAdapterIoLimiter } from "../concurrency";
 
 const rpc = vi.hoisted(() => ({
   fetchJsonPostWithRetry: vi.fn(),
@@ -127,6 +128,11 @@ describe("hive-hbd-protocol adapter", () => {
     installRpcFixtures();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
   it("accepts a bracketed two-node agreement and emits the reviewed protocol slice", async () => {
     const output = await fetchFixture();
 
@@ -170,6 +176,7 @@ describe("hive-hbd-protocol adapter", () => {
     });
 
     await expect(fetchFixture()).rejects.toThrow("nodes disagree on material Hive state");
+    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(12);
   });
 
   it("rejects a changing head across the material read bracket", async () => {
@@ -178,6 +185,94 @@ describe("hive-hbd-protocol adapter", () => {
     });
 
     await expect(fetchFixture()).rejects.toThrow("crossed a changing Hive head");
+    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(12);
+  });
+
+  it.each([PRIMARY_URL, `${PRIMARY_URL}/`, "https://API.HIVE.BLOG./other-rpc"])(
+    "rejects duplicate node hosts before fetching: %s",
+    async (url) => {
+      const config = baseConfig();
+      config.inputs.fallbacks = [{ kind: "http-json", url }];
+      await expect(fetchFixture(config)).rejects.toThrow("two distinct Hive node hosts");
+      expect(rpc.fetchJsonPostWithRetry).not.toHaveBeenCalled();
+    },
+  );
+
+  it("resamples the whole pair through real request caching and I/O limiting after head progression", async () => {
+    const { fetchJsonPostWithRetry } = await vi.importActual<typeof import("../request")>("../request");
+    const transport = await import("../../../lib/fetch-retry");
+    const fixtureRpc = rpc.fetchJsonPostWithRetry.getMockImplementation()!;
+    let requests = 0;
+    let active = 0;
+    let maxActive = 0;
+    const completedBrackets: string[] = [];
+    const fetchText = vi.spyOn(transport, "fetchTextWithRetry").mockImplementation(async (url, init) => {
+      const body = JSON.parse(String(init?.body));
+      requests += 1;
+      if (requests === 7) expect(completedBrackets).toHaveLength(2);
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      let payload = await fixtureRpc(url, body);
+      if (!Array.isArray(body) && body.id === 4) {
+        if (url === PRIMARY_URL && completedBrackets.length < 2) {
+          payload = rpcResult(4, baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+        }
+        completedBrackets.push(String(url));
+      }
+      active -= 1;
+      return { body: JSON.stringify(payload), response: new Response() };
+    });
+    rpc.fetchJsonPostWithRetry.mockImplementation(fetchJsonPostWithRetry);
+    const requestCache = new Map<string, Promise<unknown>>();
+    const result = await fetchHiveHbdProtocolReserves({} as never, baseConfig(), new AbortController().signal, {
+      nowSec: NOW_SEC,
+      requestCache,
+      ioLimiter: createAdapterIoLimiter(2),
+    });
+
+    expect(result.metadata?.details).toMatchObject({ sourceNodes: [PRIMARY_URL, FALLBACK_URL] });
+    expect(fetchText).toHaveBeenCalledTimes(12);
+    expect(maxActive).toBe(2);
+    expect(active).toBe(0);
+    expect(requestCache.size).toBe(0);
+  });
+
+  it("resamples transient cross-node head skew without accepting different heads", async () => {
+    const fixtureRpc = rpc.fetchJsonPostWithRetry.getMockImplementation()!;
+    let reads = 0;
+    rpc.fetchJsonPostWithRetry.mockImplementation(async (url, body) => {
+      reads += 1;
+      if (reads <= 6 && url === FALLBACK_URL && !Array.isArray(body)) {
+        return rpcResult(body.id, baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+      }
+      return fixtureRpc(url, body);
+    });
+    const result = await fetchFixture();
+    expect(result.metadata?.details).toMatchObject({ headBlockId: PRIMARY_HEAD_ID });
+    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(12);
+  });
+
+  it("does not reset the 19-second budget when resampling", async () => {
+    vi.useFakeTimers();
+    const fixtureRpc = rpc.fetchJsonPostWithRetry.getMockImplementation()!;
+    let reads = 0;
+    rpc.fetchJsonPostWithRetry.mockImplementation(async (url, body, signal: AbortSignal) => {
+      reads += 1;
+      if (reads > 6) {
+        return new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+      }
+      if (!Array.isArray(body) && body.id === 4) {
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+        return rpcResult(4, baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+      }
+      return fixtureRpc(url, body);
+    });
+    const pending = expect(fetchFixture()).rejects.toThrow("attempt budget exceeded");
+    await vi.advanceTimersByTimeAsync(19_000);
+    await pending;
+    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(8);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("rejects malformed feed payloads", async () => {

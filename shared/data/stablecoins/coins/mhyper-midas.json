@@ -73,6 +73,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mhyper-midas",
+    "scoring": {
+      "maxSourceAgeSec": 604800
+    },
     "display": {
       "url": "https://midas.app/mhyper",
       "label": "Midas mHYPER NAV"

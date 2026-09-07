@@ -71,6 +71,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "iauon-ondo",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://app.ondo.finance/assets/iauon",
       "label": "Ondo IAUon"

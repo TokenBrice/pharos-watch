@@ -24,17 +24,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-29",
-      "publishedAt": "2026-06-25",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-25",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "GPT SOL-BIND wave6",
+      "reviewer": "Pharos reserve research 2026-09-07",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG PAXG Redemption Assets Report - May 29, 2026",
-          "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+          "label": "KPMG PAXG Redemption Assets Report - July 31, 2026",
+          "url": "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf"
         },
         {
           "label": "Paxos PAXG transparency reports",
@@ -81,24 +81,22 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
+    "adapter": "paxos-independent-assurance",
+    "version": 2,
+    "semantics": "attestation-mix",
     "breakerScope": "paxg-paxos",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://www.paxos.com/paxg-transparency",
-      "label": "Paxos Transparency"
+      "label": "Paxos / KPMG gold examination"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.paxos.com/paxg-transparency"
       }
-    },
-    "params": {
-      "label": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
-      "risk": "very-low"
     }
   },
   "launchDate": "2019-09-05",

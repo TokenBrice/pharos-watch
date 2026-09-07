@@ -77,6 +77,7 @@
       "wrapperAddress": "0x8D82c4E3c936C7B5724A382a9c5a4E6Eb7aB6d5D",
       "expectedMTokenAddress": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
       "expectedSwapFacilityAddress": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+      "swapperAddress": "0x4743A4e199E3d5a86fDd2d3E3A1653b9BE9d4c7a",
       "slice": {
         "name": "M token held by Citrea USD",
         "risk": "low",
@@ -85,7 +86,8 @@
       },
       "sourceUrls": [
         "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd",
-        "https://docs.m0.org/protocol/extensions"
+        "https://docs.m0.org/protocol/extensions",
+        "https://explorer.mainnet.citrea.xyz/tx/0xc118b7e5fc92d0835123fed959346775b041192f7dec47040cd3636a87f93c06"
       ],
       "rpcUrl": "https://rpc.mainnet.citrea.xyz"
     }
