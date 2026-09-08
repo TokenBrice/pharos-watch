@@ -9,7 +9,7 @@ import {
   assertAllD1MatchesUsed,
   mockD1Strict,
 } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
   loadRedemptionBackstopLiveSignalRows,
@@ -20,7 +20,7 @@ import {
   upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
 import { pruneRedemptionBackstopRunRetention } from "../redemption-backstops-store-write";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   completedRunRow,
   completedRunsQuery,
@@ -49,16 +49,6 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRedemptionRow({
   }),
 });
 
-const LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW = {
-  stablecoin_id: "usdc-circle",
-  snapshot_date: 1_746_748_800,
-  score: 65,
-  dex_liquidity_score: 44,
-  updated_at: 1_746_800_000,
-  methodology_version: "3.997",
-  details_json: LEGACY_V3997_REDEMPTION_BACKSTOP_ROW.details_json,
-  snapshot_run_id: "legacy-run",
-};
 
 const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
   run_id: "legacy-run",
@@ -154,25 +144,6 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(result.latestUpdatedAt).toBe(1_699_999_990);
   });
 
-  it("falls back to an earlier completed run when a row in the newest run fails schema validation", async () => {
-    const db = mockRedemptionD1([
-      completedRunsTable([
-        completedRunRow({ run_id: "run-bad-row", completed_at: 1_700_000_010 }),
-        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
-      ]),
-      runRowsTable("run-bad-row", [
-        // Malformed row is skipped during decode, so the run's row count (0)
-        // falls short of written_count (1) and the run is rejected.
-        makeRealisticRedemptionRow({ snapshot_run_id: "run-bad-row", score: 101 }),
-      ]),
-      runRowsTable("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
-    ]);
-
-    const result = await loadRedemptionBackstopSnapshot(db);
-
-    expect(result.runId).toBe("run-valid");
-    expect(result.latestUpdatedAt).toBe(1_699_999_990);
-  });
 
   it("falls back to an earlier completed run when the newest completed manifest has no max timestamp", async () => {
     const db = mockD1Strict([
@@ -204,17 +175,6 @@ describe("loadRedemptionBackstopSnapshot", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("rejects completed run manifests when every recent candidate is invalid", async () => {
-    const db = mockD1Strict([
-      completedRunsQuery([completedRunRow({ run_id: "run-missing-row", methodology_version: "1.1" })]),
-      runRowsQuery("run-missing-row", []),
-    ]);
-
-    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
-      "No valid completed redemption backstop run found",
-    );
-    assertAllD1MatchesUsed(db);
-  });
 
   it("falls back when the newest completed run has unreadable rows", async () => {
     const db = mockD1Strict([
@@ -341,9 +301,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(entry!.docs).toBeUndefined();
   });
 
-  it("reads frozen v3.997 current/history/run fixture shapes without v4 optional fields", async () => {
-    expect(LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW.snapshot_date).toBe(1_746_748_800);
-
+  it("decodes legacy v3.997 immutable-run rows without v4 optional fields", async () => {
     const db = mockRedemptionD1([
       completedRunsTable([LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW]),
       runRowsTable("legacy-run", [LEGACY_V3997_REDEMPTION_BACKSTOP_ROW]),

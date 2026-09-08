@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { afterEach, describe, expect, it } from "vitest";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import {
   safetyScorePublicationIdentitiesAreComparable,
@@ -63,8 +63,14 @@ function createLegacySchema(sqlite: DatabaseSync): void {
   `);
 }
 
+const databases: DatabaseSync[] = [];
+afterEach(() => {
+  for (const sqlite of databases.splice(0)) sqlite.close();
+});
+
 function createHistoryDatabase(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
+  databases.push(sqlite);
   createLegacySchema(sqlite);
   sqlite.exec(HISTORY_V2_MIGRATION);
   sqlite.exec(HISTORY_V2_IDENTITY_SCHEMA_MIGRATION);

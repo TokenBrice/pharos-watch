@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEndpointDefinitionByKey, type EndpointDefinition, type EndpointKey } from "@shared/lib/api-endpoints";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   auditCatalogActionResponse,
   auditCatalogActionResponseSafely,

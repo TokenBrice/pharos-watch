@@ -13,6 +13,7 @@ import {
   boundedStatus,
   cappedMinterMeta,
   immutableMintMeta,
+  internalPriceMeta,
   localControl,
   materialityFixture,
   metaMap,
@@ -47,9 +48,7 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
 
   it("compiles a reviewed top-level internal price without liquidation branches", () => {
     const fixed = exactFixedInput();
-    const meta = alphaMeta({ mechanismArchetype: "synthetic-delta-neutral", oracleRisk: {
-      tier: "privileged-internal-pricing", summary: "A privileged backend constructs the quote.", branchModel: "single-path", branchApplicability: { disposition: "top-level-only", reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", rationale: "No borrower liquidation branches.", sources: [{ label: "Pricing docs", url: "https://example.com/pricing" }] }, reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", confidence: "verified", sources: [{ label: "Pricing docs", url: "https://example.com/pricing" }],
-    } });
+    const meta = internalPriceMeta();
     const oracle = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) })).assets[0]!.economicControlReview.oracle;
     expect(oracle).toMatchObject({ tier: "privileged-internal-pricing", liquidationBranchesApplicable: false, branches: [], status: { observationState: "known" } });
   });
@@ -142,10 +141,11 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
   it("keeps a reviewed upgrade control known inside a partial inventory", () => {
     const fixed = exactFixedInput();
     const reviewed = reviewedUpgradeExtension();
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const compiled = factSet.assets[0]!;
     expect(compiled.controls.find((control) => control.controlKey === "upgrade:reviewed")?.status).toMatchObject({ observationState: "known", gapIds: [] });
     for (const key of ["bridge:unresolved", "mint:unresolved"]) expect(compiled.controls.find((control) => control.controlKey === key)?.status).toMatchObject({ observationState: "bounded-unknown" });
-    const evaluated = evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed), V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const evaluated = evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.control.reasons.map((reason) => reason.code)).not.toContain("missing-upgradeability-review");
     expect(evaluated.control.reasons.some((reason) => reason.path.includes("bridge:unresolved"))).toBe(true);
   });

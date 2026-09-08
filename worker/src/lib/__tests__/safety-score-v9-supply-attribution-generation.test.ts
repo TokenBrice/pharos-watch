@@ -30,21 +30,15 @@ import {
   serializeSafetyScoreV9SupplyAttributionGeneration,
 } from "../safety-score-v9/supply-attribution-generation";
 import {
-  createSafetyScoreV9FullRegistryInput,
-  FULL_REGISTRY_CLOCK_SEC,
-} from "./fixtures/safety-score-v9-full-registry-input";
-import {
+  makeV9FixedInput,
+  v9TestClockSec,
   makeWmDeploymentObservations,
   makeXautObservation,
   patchXautObservation,
 } from "../../test-helpers/v9-fixed-input";
+import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
 
-// Mirrors the full-registry input fixture's own clock: this suite re-clocks that
-// input, so a source clock behind the fixture's own DEX observation would
-// re-derive a negative `inputFreshness.dexLiquidity.ageSeconds`. Both now derive
-// from `v9TestClockSec()`, so they advance together. Every offset below is
-// relative, so the timeline shifts intact.
-const SOURCE_CLOCK_SEC = FULL_REGISTRY_CLOCK_SEC;
+const SOURCE_CLOCK_SEC = v9TestClockSec();
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
 const TARGET_AGGREGATE_USD = 3_000_000_000;
 
@@ -310,9 +304,19 @@ type FixtureCache = {
 let fixtures: FixtureCache;
 
 function buildFixtureCache(): FixtureCache {
-  const fullRegistryInput = createSafetyScoreV9FullRegistryInput();
+  const { baseInputGenerationId: _baseInputGenerationId, ...wmInput } =
+    makeV9FixedInput({ assetId: "wm-m0", clockSec: SOURCE_CLOCK_SEC });
+  const input = normalizeFixedInput({
+    ...wmInput,
+    activeAssetIds: ["wm-m0", "xaut-tether"],
+    resolvedBlacklistStatuses: { "wm-m0": false, "xaut-tether": false },
+    dexLiqMap: {
+      ...wmInput.dexLiqMap,
+      "xaut-tether": makeV9FixedInput({ assetId: "xaut-tether", clockSec: SOURCE_CLOCK_SEC }).dexLiqMap["xaut-tether"]!,
+    },
+  });
   const source = withClockAndAggregate(
-    fullRegistryInput,
+    input,
     SOURCE_CLOCK_SEC,
     SOURCE_AGGREGATE_USD,
   );
@@ -542,29 +546,25 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   // stored observation against the live route inventory and identity pins, so
   // a stale global fingerprint is not by itself evidence that a packet is wrong.
   it("applies the verified subset when the expectation set drifts between capture and consume", () => {
-    const generation = {
-      ...fixtures.acceptedGeneration,
-      // The producer captured under a smaller expectation set (co-tenants had
-      // upstream chain rows then); by consume time they lost them and joined
-      // the expectation. The stored XAUT packet must still apply.
-      expectedAssetIds: ["xaut-tether"],
-      observedAssetIds: ["xaut-tether"],
-    };
+    const generation = fixtures.acceptedGeneration;
+    const target = withWmAggregate(fixtures.target, WM_TARGET_AGGREGATE_USD);
+    expect(generation.expectedAssetIds).toEqual(["xaut-tether"]);
+    expect(safetyScoreV9SupplyAttributionExpectedAssetIds(target)).toEqual(["wm-m0", "xaut-tether"]);
 
     expect(
       diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
-        fixtures.target,
+        target,
         generation,
       ),
     ).toBeNull();
-    expect(
-      applySafetyScoreV9SupplyAttributionGeneration(fixtures.target, generation),
-    ).toMatchObject({
+    const applied = applySafetyScoreV9SupplyAttributionGeneration(target, generation);
+    expect(applied).toMatchObject({
       status: "applied",
       acceptedAssetIds: ["xaut-tether"],
       supersededAssetIds: [],
       invalidAssetIds: [],
     });
+    expect(Object.keys(applied.fixedInput.safetyScoreV9SupplyAttributionById)).toEqual(["xaut-tether"]);
   });
 
   it("applies a generation captured under an earlier registry fingerprint", () => {

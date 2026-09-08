@@ -3,7 +3,7 @@ import {
   computeSupplyAttributionJournalIdV1,
   type SupplyAttributionJournalV1Payload,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import type { ChainRpcConfig } from "../chain-registry";
+import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
@@ -86,20 +86,6 @@ function xautFixedInput(
   } as unknown as ReportCardsFixedInput;
 }
 
-function chainRpcs(): Map<string, ChainRpcConfig> {
-  return new Map([
-    [
-      "ethereum",
-      {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://ethereum.example",
-        explorerUrl: "https://etherscan.io",
-      },
-    ],
-  ]);
-}
 
 describe("Safety Score V9 lock/mint supply attribution", () => {
   beforeEach(() => {

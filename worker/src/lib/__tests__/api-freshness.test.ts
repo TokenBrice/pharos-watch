@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { freshnessDb } from "./api-freshness.test-support";
 import {

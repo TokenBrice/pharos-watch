@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { loadCronHealth } from "../cron-health";
 
 interface SeedRun {

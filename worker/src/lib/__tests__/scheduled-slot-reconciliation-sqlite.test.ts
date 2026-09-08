@@ -1,13 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { logCronRun } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 
-function createMigratedDb(): { sqlite: DatabaseSync; db: D1Database } {
-  return createLatestSchemaSqlite();
-}
+const fixtures = createLatestSchemaFixtureTracker();
+const createMigratedDb = fixtures.open;
 
 function seedZeroDurationDeployInterruptedCase(
   sqlite: DatabaseSync,
@@ -51,6 +50,7 @@ function seedZeroDurationDeployInterruptedCase(
 describe("scheduled slot reconciliation against the current D1 schema", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    fixtures.closeAll();
   });
 
   it("leaves existing producer history intact when a stale slot already has a terminal cron run", async () => {
@@ -169,7 +169,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         slotKey: "halfHourlyOffset",
       }),
     ).toMatchObject({ candidateSlots: 0, slotsReconciled: 0 });
-    sqlite.close();
   });
 
   it("repairs producer telemetry when a synthetic cron row was the only completed write", async () => {
@@ -258,7 +257,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         invocation_count: 1,
       },
     ]);
-    sqlite.close();
   });
 
   it("persists a producer cron exception through the partial idempotency index", async () => {
@@ -314,7 +312,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         error: "Error: sweep failed",
       },
     ]);
-    sqlite.close();
   });
 
   it("orders synthetic no-progress evidence at the original slot time without replacing a newer success", async () => {
@@ -395,7 +392,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       last_outcome: "ok",
       last_invoked_at: newerStartedAt,
     });
-    sqlite.close();
   });
 
   it("does not invent daily-digest failures for idle polls but reconciles durable started progress", async () => {
@@ -465,7 +461,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       completed_at: progressUpdatedAt,
       outcome: "abandoned",
     });
-    sqlite.close();
   });
 
   it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
@@ -501,7 +496,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       reconciledByWorkerVersionFirstSeenAt: slotStartedAt + 5,
       reconciledByWorkerVersionActivatedAt: slotStartedAt - 60,
     });
-    sqlite.close();
   });
 
   it.each([
@@ -548,6 +542,5 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       reconciledByWorkerVersionActivatedAt:
         activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
     });
-    sqlite.close();
   });
 });

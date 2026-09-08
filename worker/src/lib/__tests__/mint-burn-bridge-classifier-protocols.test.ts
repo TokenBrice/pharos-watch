@@ -12,13 +12,13 @@ import {
   classifyPoolBridge,
 } from "../mint-burn-bridge-classifier-protocols";
 import type {
-  MintBurnBridgeClassifiableRow,
   MintBurnTxContext,
 } from "../mint-burn-bridge-classifier";
 import type {
   MintBurnCcipBridgeDetectionConfig,
   MintBurnLayerZeroOftBridgeDetectionConfig,
 } from "../mint-burn-contracts";
+import { makeBridgeRow } from "./mint-burn-bridge-classifier.test-support";
 
 const OFT_ADAPTER = "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5";
 const LZ_ENDPOINT = "0x1a44076050125825900e736c501f859c50fe728c";
@@ -33,18 +33,6 @@ const CCIP_POOL = "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79";
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 const CCIP_SEND_SELECTOR = "0x96f4e9f9";
 
-function makeRow(overrides: Partial<MintBurnBridgeClassifiableRow> = {}): MintBurnBridgeClassifiableRow {
-  return {
-    id: "id-1",
-    tx_hash: "0xtx1",
-    direction: "burn",
-    flow_type: "standard",
-    counterparty: null,
-    burn_type: null,
-    burn_review_reason: null,
-    ...overrides,
-  };
-}
 
 function layerZeroDetection(): MintBurnLayerZeroOftBridgeDetectionConfig {
   return {
@@ -68,7 +56,7 @@ function ccipDetection(): MintBurnCcipBridgeDetectionConfig {
 
 describe("classifyLayerZeroOft", () => {
   it("fingerprintA fires when adapter is touched and endpoint emits signal topic", () => {
-    const row = makeRow({ direction: "mint", tx_hash: "0xa" });
+    const row = makeBridgeRow({ direction: "mint", tx_hash: "0xa" });
     const ctx = new Map<string, MintBurnTxContext | null>([
       ["0xa", {
         to: OFT_ADAPTER,
@@ -84,7 +72,7 @@ describe("classifyLayerZeroOft", () => {
   });
 
   it("fingerprintB fires when adapter is touched with a known signal selector (no topic)", () => {
-    const row = makeRow({ direction: "burn", tx_hash: "0xb" });
+    const row = makeBridgeRow({ direction: "burn", tx_hash: "0xb" });
     const ctx = new Map<string, MintBurnTxContext | null>([
       ["0xb", {
         to: OFT_ADAPTER,
@@ -101,7 +89,7 @@ describe("classifyLayerZeroOft", () => {
   });
 
   it("fingerprintC fires when endpoint emits signal topic without adapter being touched (Executor-only)", () => {
-    const row = makeRow({ direction: "mint", tx_hash: "0xc" });
+    const row = makeBridgeRow({ direction: "mint", tx_hash: "0xc" });
     const ctx = new Map<string, MintBurnTxContext | null>([
       ["0xc", {
         to: LZ_EXECUTOR,
@@ -117,7 +105,7 @@ describe("classifyLayerZeroOft", () => {
   });
 
   it("no fingerprint fires when topic emitter does not match the expected endpoint", () => {
-    const row = makeRow({ direction: "mint", tx_hash: "0xd" });
+    const row = makeBridgeRow({ direction: "mint", tx_hash: "0xd" });
     const ctx = new Map<string, MintBurnTxContext | null>([
       ["0xd", {
         to: "0x9999999999999999999999999999999999999999",
@@ -136,7 +124,7 @@ describe("classifyLayerZeroOft", () => {
 describe("classifyPoolBridge", () => {
   it("tags every row in a tx as bridge_transfer when a bridge signal is present", () => {
     // Mint row has no pool counterparty; the tx-level signal still tags it.
-    const mintRow = makeRow({ direction: "mint", tx_hash: "0xmint" });
+    const mintRow = makeBridgeRow({ direction: "mint", tx_hash: "0xmint" });
     const ctx = new Map<string, MintBurnTxContext | null>([
       ["0xmint", {
         to: CCIP_ROUTER,
@@ -152,7 +140,7 @@ describe("classifyPoolBridge", () => {
   });
 
   it("marks known-pool burn as review_required when tx has no bridge signal", () => {
-    const burnRow = makeRow({
+    const burnRow = makeBridgeRow({
       direction: "burn",
       tx_hash: "0xnosig",
       counterparty: CCIP_POOL,
@@ -175,7 +163,7 @@ describe("classifyPoolBridge", () => {
   });
 
   it("marks known-pool burn as tx-context-unavailable when tx context is missing", () => {
-    const burnRow = makeRow({
+    const burnRow = makeBridgeRow({
       direction: "burn",
       tx_hash: "0xnull",
       counterparty: CCIP_POOL,

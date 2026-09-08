@@ -15,7 +15,7 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 

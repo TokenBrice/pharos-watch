@@ -11,6 +11,17 @@ vi.mock("../abort", () => ({
 import { fetchWithRetry } from "../fetch-retry";
 import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../dexscreener";
 
+function validPair(chainId = "base", dexId = "aerodrome") {
+  return {
+    chainId, dexId, pairAddress: "0xpair",
+    baseToken: { address: "0xabc", name: "USD Test", symbol: "USDTST" },
+    quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+    priceUsd: "1.0001",
+    liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+    volume: { h24: 1_000, h6: 100, h1: 10, m5: 1 },
+    pairCreatedAt: 1_700_000_000_000,
+  };
+}
 describe("dexscreener", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -43,24 +54,14 @@ describe("dexscreener", () => {
   });
 
   it("uses the all-pairs endpoint and normalizes mixed rows for single-token discovery", async () => {
-    const validPair = {
-      chainId: "blast",
-      dexId: "thruster",
-      pairAddress: "0xpair",
-      baseToken: { address: "0xabc", name: "USD Blast", symbol: "USDB" },
-      quoteToken: { address: "0xdef", name: "Wrapped Ether", symbol: "WETH" },
-      priceUsd: "1.0001",
-      liquidity: { usd: 100_000, base: 50_000, quote: 25 },
-      volume: { h24: 1_000, h6: 100, h1: 10, m5: 1 },
-      pairCreatedAt: Date.now(),
-    };
+    const pair = validPair("blast", "thruster");
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify([validPair, { pairAddress: "0xbroken" }]), { status: 200 }),
+      new Response(JSON.stringify([pair, { pairAddress: "0xbroken" }]), { status: 200 }),
     );
 
     await expect(fetchDsTokenPairsWithStatus("blast", "0xabc", undefined, 8_000, 0)).resolves.toEqual({
       ok: true,
-      pairs: [validPair],
+      pairs: [pair],
     });
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.dexscreener.com/token-pairs/v1/blast/0xabc",
@@ -141,46 +142,26 @@ describe("dexscreener", () => {
   });
 
   it("keeps valid token-pool rows and drops malformed rows from mixed payloads", async () => {
-    const validPair = {
-      chainId: "base",
-      dexId: "aerodrome",
-      pairAddress: "0xpair",
-      baseToken: { address: "0xabc", name: "USD Test", symbol: "USDTST" },
-      quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-      priceUsd: "1.0001",
-      liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-      volume: { h24: 1_000, h6: 100, h1: 10, m5: 1 },
-      pairCreatedAt: Date.now(),
-    };
+    const pair = validPair();
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify([validPair, { pairAddress: "0xbroken" }]), { status: 200 }),
+      new Response(JSON.stringify([pair, { pairAddress: "0xbroken" }]), { status: 200 }),
     );
 
     await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
       ok: true,
-      pairs: [validPair],
+      pairs: [pair],
     });
   });
 
   it("accepts object-style payloads that wrap pools under pairs[]", async () => {
-    const validPair = {
-      chainId: "base",
-      dexId: "aerodrome",
-      pairAddress: "0xpair",
-      baseToken: { address: "0xabc", name: "USD Test", symbol: "USDTST" },
-      quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-      priceUsd: "1.0001",
-      liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-      volume: { h24: 1_000, h6: 100, h1: 10, m5: 1 },
-      pairCreatedAt: Date.now(),
-    };
+    const pair = validPair();
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ schemaVersion: "1.0.0", pairs: [validPair] }), { status: 200 }),
+      new Response(JSON.stringify({ schemaVersion: "1.0.0", pairs: [pair] }), { status: 200 }),
     );
 
     await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
       ok: true,
-      pairs: [validPair],
+      pairs: [pair],
     });
   });
 });

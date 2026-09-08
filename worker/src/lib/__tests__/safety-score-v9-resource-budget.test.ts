@@ -13,9 +13,6 @@ import {
   expect,
   it,
 } from "vitest";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
@@ -37,12 +34,23 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
           import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
+          import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+          import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
 
           const input = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input);
+          const fixtureMetrics = {
+            extensionAssets: extension.assets.length,
+            extensionBytes: stableJsonStringifyV1(extension).length,
+            researchEvidenceCount: extension.assets.reduce((count, asset) => count + asset.researchEvidence.length, 0),
+            componentEvidenceCount: extension.assets.reduce((count, asset) => count + asset.componentEvidence.length, 0),
+          };
           let prior = buildSafetyScoreV9PublicationFromNormalizedInput({
             fixedInput: input,
+            extension,
             publishedAtSec: input.clockSec,
           });
+          extension = null;
           let acceptedStored = await serializeSafetyScoreV9Publication(prior.candidate);
           prior = null;
           await new Promise((resolve) => setImmediate(resolve));
@@ -60,6 +68,7 @@ describe("Safety Score V9 canonical publication resource budget", {
           const stored = await serializeSafetyScoreV9Publication(result.candidate);
           const metadata = JSON.parse(stored);
           process.stdout.write(JSON.stringify({
+            ...fixtureMetrics,
             expected: input.activeAssetIds.length,
             cards: result.candidate.cards.length,
             rated: result.candidate.completeness.ratedCount,
@@ -95,24 +104,6 @@ describe("Safety Score V9 canonical publication resource budget", {
     }
   });
 
-  it("keeps the deterministic fixture materially representative", () => {
-    const fixedInput = createSafetyScoreV9FullRegistryInput();
-    const extension =
-      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
-    const researchEvidenceCount = extension.assets.reduce(
-      (count, asset) => count + asset.researchEvidence.length,
-      0,
-    );
-    const componentEvidenceCount = extension.assets.reduce(
-      (count, asset) => count + asset.componentEvidence.length,
-      0,
-    );
-
-    expect(extension.assets.length).toBeGreaterThan(300);
-    expect(stableJsonStringifyV1(extension).length).toBeGreaterThan(6_500_000);
-    expect(researchEvidenceCount).toBeGreaterThan(5_000);
-    expect(componentEvidenceCount).toBeGreaterThan(3_000);
-  });
 
   it(`publishes the full registry within ${HEAP_LIMIT_MIB} MiB of old-space`, () => {
     const result = spawnSync(
@@ -141,7 +132,15 @@ describe("Safety Score V9 canonical publication resource budget", {
       candidateBytes: number;
       compressedBytes: number;
       storedBytes: number;
+      extensionAssets: number;
+      extensionBytes: number;
+      researchEvidenceCount: number;
+      componentEvidenceCount: number;
     };
+    expect(output.extensionAssets).toBeGreaterThan(300);
+    expect(output.extensionBytes).toBeGreaterThan(6_500_000);
+    expect(output.researchEvidenceCount).toBeGreaterThan(5_000);
+    expect(output.componentEvidenceCount).toBeGreaterThan(3_000);
     expect(output.expected).toBeGreaterThan(300);
     expect(output.cards).toBe(output.expected);
     expect(output.rated).toBeGreaterThan(output.expected / 3);

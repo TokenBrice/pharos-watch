@@ -638,6 +638,35 @@ describe("runIdempotentAdminAction", () => {
     expect(second.headers.get("X-Idempotency-Conflict")).toBe("request-mismatch");
   });
 
+  it.each([
+    ["body", "POST", "/api/backfill-depegs", '{"batch":2}'],
+    ["method", "PUT", "/api/backfill-depegs", '{"batch":1}'],
+    ["pathname", "POST", "/api/other-action", '{"batch":1}'],
+  ])("rejects reuse after changing only the %s", async (_component, method, pathname, body) => {
+    const db = makeIdempotencyDb();
+    let effects = 0;
+    const execute = async () => Response.json({ effects: ++effects });
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("component"), execute);
+    const changed = new Request(`https://x${pathname}?batch=1`, {
+      method, body, headers: { "Idempotency-Key": "component" },
+    });
+    const second = await runIdempotentAdminAction(db, "backfill-depegs", changed, execute);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(409);
+    expect(second.headers.get("X-Idempotency-Conflict")).toBe("request-mismatch");
+    expect(effects).toBe(1);
+  });
+
+  it("leaves the original request body readable by execution after fingerprinting", async () => {
+    const db = makeIdempotencyDb();
+    const original = request("read-body");
+    const response = await runIdempotentAdminAction(db, "backfill-depegs", original, async () =>
+      Response.json({ received: await original.json() }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: { batch: 1 } });
+  });
+
   it("canonicalizes query ordering in the request fingerprint", async () => {
     const db = makeIdempotencyDb();
     let calls = 0;

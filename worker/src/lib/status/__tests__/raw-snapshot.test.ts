@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   loadStatusRawSnapshot,
@@ -30,24 +34,17 @@ function minimalRawStatus() {
 }
 
 describe("writeStatusRawSnapshot", () => {
-  it("does not overwrite newer cache rows", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO cache",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-    ], { requireMatch: true });
-    const raw = { rawOverallStatus: "healthy" } as Parameters<typeof writeStatusRawSnapshot>[2];
-
-    const written = await writeStatusRawSnapshot(db, NOW, raw);
-
-    expect(written).toBe(false);
-    const write = db.getHistory()[0];
-    expect(write.sql).toContain("ON CONFLICT(key) DO UPDATE");
-    expect(write.sql).toContain("WHERE cache.updated_at <= excluded.updated_at");
-    expect(write.binds[0]).toBe(STATUS_RAW_SNAPSHOT_CACHE_KEY);
-    expect(write.binds[2]).toBe(NOW);
+  it("fences stale writes while accepting equal and newer snapshots", async () => {
+    const { db, sqlite } = fixtures.open();
+    const raw = minimalRawStatus() as unknown as Parameters<typeof writeStatusRawSnapshot>[2];
+    await expect(writeStatusRawSnapshot(db, NOW, raw)).resolves.toBe(true);
+    const original = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(STATUS_RAW_SNAPSHOT_CACHE_KEY);
+    await expect(writeStatusRawSnapshot(db, NOW - 1, { ...raw, confidence: 0.5 })).resolves.toBe(false);
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(STATUS_RAW_SNAPSHOT_CACHE_KEY)).toEqual(original);
+    await expect(writeStatusRawSnapshot(db, NOW, { ...raw, confidence: 0.75 })).resolves.toBe(true);
+    await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({ kind: "fresh", raw: { confidence: 0.75 } });
+    await expect(writeStatusRawSnapshot(db, NOW + 1, { ...raw, confidence: 0.9 })).resolves.toBe(true);
+    await expect(loadStatusRawSnapshot(db, NOW + 1)).resolves.toMatchObject({ kind: "fresh", updatedAt: NOW + 1, raw: { confidence: 0.9 } });
   });
 
   it("serves a cached payload that is within the freshness budget", async () => {
@@ -69,16 +66,26 @@ describe("writeStatusRawSnapshot", () => {
     });
   });
 
+  it("distinguishes missing, unreadable, stale and failed reads without dropping valid raw supplements", async () => {
+    const { db, sqlite } = fixtures.open();
+    await expect(loadStatusRawSnapshot(db, NOW, 60)).resolves.toMatchObject({ kind: "missing", updatedAt: null });
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(STATUS_RAW_SNAPSHOT_CACHE_KEY, "{", NOW);
+    await expect(loadStatusRawSnapshot(db, NOW, 60)).resolves.toMatchObject({ kind: "unreadable", updatedAt: NOW });
+    sqlite.prepare("UPDATE cache SET value = ?").run(JSON.stringify({
+      version: 1, producedAt: NOW, raw: minimalRawStatus(), supplements: "invalid", publicHealth: [],
+    }));
+    await expect(loadStatusRawSnapshot(db, NOW + 60, 60)).resolves.toMatchObject({
+      kind: "fresh", ageSec: 60, raw: minimalRawStatus(), supplements: undefined, publicHealth: undefined,
+    });
+    await expect(loadStatusRawSnapshot(db, NOW + 61, 60)).resolves.toMatchObject({ kind: "stale", updatedAt: NOW, ageSec: 61 });
+    sqlite.exec("DROP TABLE cache");
+    await expect(loadStatusRawSnapshot(db, NOW, 60)).resolves.toMatchObject({ kind: "read-error", updatedAt: null });
+  });
+
   it("compacts cron run metadata before writing the raw snapshot", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO cache",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ], { requireMatch: true });
+    const { db } = fixtures.open();
     const raw = {
-      rawOverallStatus: "healthy",
+      ...minimalRawStatus(),
       crons: {
         "status-self-check": {
           healthy: false,
@@ -109,7 +116,10 @@ describe("writeStatusRawSnapshot", () => {
     const written = await writeStatusRawSnapshot(db, NOW, raw);
 
     expect(written).toBe(true);
-    const payload = JSON.parse(String(db.getHistory()[0].binds[1])) as {
+    const snapshot = await loadStatusRawSnapshot(db, NOW);
+    expect(snapshot.kind).toBe("fresh");
+    if (snapshot.kind !== "fresh") throw new Error("Expected compacted snapshot");
+    const payload = snapshot as unknown as {
       raw: {
         crons: {
           "status-self-check": {
@@ -134,11 +144,7 @@ describe("writeStatusRawSnapshot", () => {
   });
 
   it("persists the public-health projection and status supplements alongside raw data", async () => {
-    const db = mockD1([{
-      match: "INSERT INTO cache",
-      rows: [],
-      runMeta: { changes: 1 },
-    }], { requireMatch: true });
+    const { db } = fixtures.open();
     const publicHealth = {
       status: "healthy",
       timestamp: NOW,
@@ -161,11 +167,8 @@ describe("writeStatusRawSnapshot", () => {
     );
 
     expect(written).toBe(true);
-    const payload = JSON.parse(String(db.getHistory()[0].binds[1])) as {
-      publicHealth: typeof publicHealth;
-      supplements: typeof supplements;
-    };
-    expect(payload.publicHealth).toEqual(publicHealth);
-    expect(payload.supplements).toEqual(supplements);
+    await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
+      kind: "fresh", publicHealth, supplements,
+    });
   });
 });

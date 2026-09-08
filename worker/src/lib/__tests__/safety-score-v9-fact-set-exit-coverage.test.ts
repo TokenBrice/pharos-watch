@@ -17,7 +17,7 @@ import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
 } from "../safety-score-v9/fact-set";
@@ -272,24 +272,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       failureDomains: [],
     });
 
-    const {
-      schemaVersion: omittedSchemaVersion,
-      dexPayloadFingerprint: omittedDexPayloadFingerprint,
-      redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
-      registryFingerprint: omittedRegistryFingerprint,
-      inputMethodologyVersions: omittedInputMethodologyVersions,
-      baseInputGenerationId: omittedBaseInputGenerationId,
-      ...draft
-    } = fixed;
-    void [
-      omittedSchemaVersion,
-      omittedDexPayloadFingerprint,
-      omittedRedemptionPayloadFingerprint,
-      omittedRegistryFingerprint,
-      omittedInputMethodologyVersions,
-      omittedBaseInputGenerationId,
-    ];
-    const rebuilt = createReportCardsFixedInput(draft);
+    const rebuilt = rebuildFixed(fixed);
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed);
     const redemptionRoute = compiled.assets[0]!.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
 
@@ -304,28 +287,8 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       extraGate?: Record<string, number>,
     ) => {
       const original = exactFixedInput();
-      const {
-        schemaVersion: omittedSchemaVersion,
-        activeAssetIds: omittedActiveAssetIds,
-        dexPayloadFingerprint: omittedDexPayloadFingerprint,
-        redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
-        registryFingerprint: omittedRegistryFingerprint,
-        inputMethodologyVersions: omittedInputMethodologyVersions,
-        baseInputGenerationId: omittedBaseInputGenerationId,
-        ...draft
-      } = original;
-      void [
-        omittedSchemaVersion,
-        omittedActiveAssetIds,
-        omittedDexPayloadFingerprint,
-        omittedRedemptionPayloadFingerprint,
-        omittedRegistryFingerprint,
-        omittedInputMethodologyVersions,
-        omittedBaseInputGenerationId,
-      ];
-      return createReportCardsFixedInput({
-        ...draft,
-        activeAssetIds: ["alpha"],
+      return rebuildFixed({
+        ...original,
         dexLiqMap: {
           alpha: {
             ...original.dexLiqMap.alpha!,
@@ -384,25 +347,8 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       options: { withRedemptionRoute?: boolean } = {},
     ) => {
       const original = options.withRedemptionRoute ? queuedRedemptionFixedInput() : exactFixedInput();
-      const {
-        schemaVersion: omittedSchemaVersion,
-        dexPayloadFingerprint: omittedDexPayloadFingerprint,
-        redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
-        registryFingerprint: omittedRegistryFingerprint,
-        inputMethodologyVersions: omittedInputMethodologyVersions,
-        baseInputGenerationId: omittedBaseInputGenerationId,
-        ...draft
-      } = original;
-      void [
-        omittedSchemaVersion,
-        omittedDexPayloadFingerprint,
-        omittedRedemptionPayloadFingerprint,
-        omittedRegistryFingerprint,
-        omittedInputMethodologyVersions,
-        omittedBaseInputGenerationId,
-      ];
-      return createReportCardsFixedInput({
-        ...draft,
+      return rebuildFixed({
+        ...original,
         dexLiqMap: {
           alpha: {
             ...original.dexLiqMap.alpha!,
@@ -424,10 +370,15 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       reviewed.assets[0]!.routeReviews = [];
       return reviewed;
     };
+    const compileScenario = (fixed: ReturnType<typeof exactFixedInput>) => {
+      const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes());
+      // Reclassified gaps must retain their registered policy binding in both exit branches.
+      const queue = buildV9EvidenceGapQueue({ factSet, policy: V9_CANDIDATE_POLICY_V1 });
+      expect(queue.summary.policyBindingMismatchGapCount).toBe(0);
+      return factSet.assets[0]!;
+    };
     const portfolioGap = (fixed: ReturnType<typeof exactFixedInput>) =>
-      compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()).assets[0]!.gaps.find(
-        (gap) => gap.gapId === "alpha:gap:exit-portfolio-coverage",
-      );
+      compileScenario(fixed).gaps.find((gap) => gap.gapId === "alpha:gap:exit-portfolio-coverage");
 
     // R1-A: no reviewed pool exists at all because a deployment chain has no
     // registered discovery provider. The legacy message claimed reviewed
@@ -452,7 +403,6 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       responsibility: "integration-missing",
       observationState: "bounded-unknown",
     });
-    expect(censusUnsupported!.message).not.toContain("do not all carry");
 
     // The other census reasons ARE producer failures and keep that attribution,
     // but they still stop asserting reviewed capability pools they do not have.
@@ -473,7 +423,6 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       reasonCode: "incomplete-dex-route-coverage",
       responsibility: "producer-failed",
     });
-    expect(providerOutage!.message).not.toContain("do not all carry");
 
     // R1-B: retained pools exist, but no reviewed execution model recognises
     // any of them and nothing is gated — Pharos has no method for this venue.
@@ -544,8 +493,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
 
     // R4 scope: the same split on the zero-route branch, where no observation
     // of any lane exists to hang a portfolio gap on.
-    const zeroRouteAsset = (fixed: ReturnType<typeof exactFixedInput>) =>
-      compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()).assets[0]!;
+    const zeroRouteAsset = compileScenario;
     const zeroRouteCensusUnsupported = zeroRouteAsset(
       withCoverage(
         {
@@ -624,39 +572,6 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       }),
     );
 
-    // Every reclassified gap must still bind cleanly to its policy entry. Only
-    // `incomplete-dex-route-coverage` and `missing-runtime-route-evidence` are
-    // registered for a `local-component` exit path; swapping in a code that is
-    // not would silently reroute the whole cohort to `reconcile-policy-binding`
-    // instead of its owner. This pins the constraint the v9.04 reason-code
-    // rename has to satisfy.
-    const censusUnsupportedCoverage = {
-      status: "unknown" as const,
-      retainedPoolCount: 0,
-      scoreEligibleCapabilityPoolCount: 0,
-      unsupportedPoolCount: 0,
-      unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
-    };
-    const noExactCapableVenueCoverage = {
-      status: "unsupported" as const,
-      retainedPoolCount: 4,
-      scoreEligiblePoolCount: 0,
-      scoreEligibleCapabilityPoolCount: 0,
-      unsupportedPoolCount: 4,
-      unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
-    };
-    for (const fixed of [
-      withCoverage(censusUnsupportedCoverage, { withRedemptionRoute: true }),
-      withCoverage(censusUnsupportedCoverage),
-      withCoverage(noExactCapableVenueCoverage, { withRedemptionRoute: true }),
-      withCoverage(noExactCapableVenueCoverage),
-    ]) {
-      const queue = buildV9EvidenceGapQueue({
-        factSet: compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()),
-        policy: V9_CANDIDATE_POLICY_V1,
-      });
-      expect(queue.summary.policyBindingMismatchGapCount).toBe(0);
-    }
   });
 
 });

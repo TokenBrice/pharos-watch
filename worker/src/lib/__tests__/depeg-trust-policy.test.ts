@@ -99,7 +99,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
     }, nowSec)).toBe(false);
   });
 
-  it("rejects stale or low-confidence clusters", () => {
+  it("rejects low-confidence clusters", () => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
@@ -107,14 +107,16 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
       priceObservedAt: nowSec - 60,
       agreeSources: ["coingecko", "defillama-list"],
     }, nowSec)).toBe(false);
+  });
 
+  it.each([[1800, true], [1801, false]] as const)("checks corroborated agreement age at %s seconds", (age, accepted) => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - (31 * 60),
+      priceConfidence: "high",
+      priceObservedAt: nowSec - age,
       agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(false);
+    }, nowSec)).toBe(accepted);
   });
 });
 

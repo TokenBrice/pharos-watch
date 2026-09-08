@@ -558,14 +558,19 @@ describe("buildReviewedReserveClassifications", () => {
       reviewed,
       CLOCK_SEC,
     );
-    expect(drifted.every((row) => !row.classificationKey.startsWith("source-native:"))).toBe(true);
+    expect(drifted).toMatchObject([
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit" },
+    ]);
 
     const grosslyDifferent = buildReviewedReserveClassifications(
       [{ name: "<3-Month U.S. Treasuries", pct: 62, risk: "very-low" }],
       reviewed,
       CLOCK_SEC,
     );
-    expect(grosslyDifferent.every((row) => row.classificationKey.startsWith("registry-reviewed:"))).toBe(true);
+    expect(grosslyDifferent).toMatchObject([
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
+    ]);
   });
 
   it("uses explicit source keys across label and weight changes and fails closed on key mismatch", () => {
@@ -619,8 +624,11 @@ describe("buildReviewedReserveClassifications", () => {
       { sourceKey, name: "Cash A", pct: 50, risk: "very-low" as const },
       { sourceKey, name: "Cash B", pct: 50, risk: "very-low" as const },
     ];
-    expect(buildReviewedReserveClassifications(duplicateLive, reviewed, CLOCK_SEC)
-      .every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+    // Both source-key rows share one exposure identity, but ambiguity must
+    // prevent the reviewed bank-deposit classification from being attached.
+    expect(buildReviewedReserveClassifications(duplicateLive, reviewed, CLOCK_SEC)).toMatchObject([
+      { classificationKey: "source-native:reserve:8450f631d74b8b6ac00b13cd", assetClass: null },
+    ]);
 
     const duplicateReviewed = reviewedMeta([
       ...reviewed.reserves!,
@@ -725,7 +733,12 @@ describe("buildReviewedReserveClassifications", () => {
     ]);
 
     expect(buildReviewedReserveClassifications(live, reviewed, CLOCK_SEC)
-      .every((row) => row.classificationKey.startsWith("registry-reviewed:"))).toBe(true);
+      .sort((left, right) => left.issuerOrObligorKey!.localeCompare(right.issuerOrObligorKey!))).toMatchObject([
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "repo", issuerOrObligorKey: "Leading global banks" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit", issuerOrObligorKey: "Other regulated financial institutions" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit", issuerOrObligorKey: "Systemically important financial institutions" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill", issuerOrObligorKey: "United States Treasury" },
+    ]);
   });
 
   it("rejects the current USDC repartition and USD1 aggregate basket as non-identical", () => {
@@ -761,7 +774,12 @@ describe("buildReviewedReserveClassifications", () => {
       ]),
       CLOCK_SEC,
     );
-    expect(usdc.every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+    expect(usdc).toMatchObject([
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+    ]);
 
     const usd1 = buildReviewedReserveClassifications(
       [{ name: "U.S. Treasury Bills, Money Market Funds & Cash", pct: 100, risk: "very-low" }],

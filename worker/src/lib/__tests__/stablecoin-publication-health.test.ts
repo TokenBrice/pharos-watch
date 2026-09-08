@@ -1,48 +1,34 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { loadStablecoinCoverageHealth } from "../stablecoin-publication-health";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 describe("stablecoin publication health", () => {
-  it("queries only runs that carry exact publication evidence", async () => {
+  it("selects exact publication evidence over wrappers, other jobs, partial evidence and timestamp ties", async () => {
+    const { sqlite, db } = fixtures.open();
     const activeIds = [...ACTIVE_IDS];
-    let queriedSql = "";
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        queriedSql = sql;
-        return {
-          first: async () => ({
-            started_at: 1_700_000_000,
-            metadata: JSON.stringify({
-              activePublicationCoverage: {
-                complete: true,
-                expectedActiveCount: activeIds.length,
-                presentActiveCount: activeIds.length,
-                waivedActiveCount: 0,
-                missingActiveIds: [],
-                waivedActiveIds: [],
-                expiredWaiverIds: [],
-              },
-              activePriceCoverage: {
-                complete: true,
-                expectedActiveCount: activeIds.length,
-                presentActiveCount: activeIds.length,
-                pricedActiveCount: activeIds.length,
-                pricedActiveIds: activeIds,
-                missingPriceCount: 0,
-                missingActiveIds: [],
-              },
-            }),
-          }),
-        };
-      },
-    });
+    const coverage = {
+      complete: true, expectedActiveCount: activeIds.length, presentActiveCount: activeIds.length,
+      waivedActiveCount: 0, missingActiveIds: [], waivedActiveIds: [], expiredWaiverIds: [],
+    };
+    const price = {
+      complete: true, expectedActiveCount: activeIds.length, presentActiveCount: activeIds.length,
+      pricedActiveCount: activeIds.length, pricedActiveIds: activeIds, missingPriceCount: 0, missingActiveIds: [],
+    };
+    const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, 0, 'ok', ?)");
+    insert.run("sync-stablecoins", 100, JSON.stringify({ activePublicationCoverage: coverage, activePriceCoverage: price }));
+    insert.run("sync-stablecoins", 200, JSON.stringify({ activePublicationCoverage: { ...coverage, complete: false }, activePriceCoverage: price }));
+    insert.run("sync-stablecoins", 200, JSON.stringify({ activePublicationCoverage: coverage, activePriceCoverage: price }));
+    insert.run("sync-stablecoins", 300, JSON.stringify({ childDisposition: "abandoned" }));
+    insert.run("other-job", 400, JSON.stringify({ activePublicationCoverage: coverage, activePriceCoverage: price }));
+    insert.run("sync-stablecoins", 500, JSON.stringify({ activePublicationCoverage: coverage }));
+    insert.run("sync-stablecoins", 600, JSON.stringify({ activePriceCoverage: price }));
 
     const result = await loadStablecoinCoverageHealth(db);
-
-    expect(queriedSql).toContain(`metadata LIKE '%"activePublicationCoverage"%'`);
-    expect(queriedSql).toContain(`metadata LIKE '%"activePriceCoverage"%'`);
-    expect(result.publication.status).toBe("complete");
-    expect(result.activePriceCoverage.status).toBe("complete");
+    expect(result.publication).toMatchObject({ status: "complete", observedAt: 200 });
+    expect(result.activePriceCoverage).toMatchObject({ status: "complete", observedAt: 200 });
   });
 });

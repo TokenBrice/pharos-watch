@@ -9,7 +9,7 @@ import {
 } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
 let fetchMock: ReturnType<typeof mockFetch>;
 

@@ -9,12 +9,16 @@ import {
   mergeNewestStressSignalRows,
   type StressSignalCurrentRow,
 } from "../stress-signals-current-rows";
-import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { publishedPointer } from "./stress-signals-current-rows.test-support";
 
 const nowSec = 1_778_400_000;
 const signalsJson = JSON.stringify({ supply: { value: 10, available: true } });
 
-function row(stablecoinId: string, computedAt: number, score = 10): StressSignalCurrentRow {
+function row(
+  stablecoinId: string,
+  computedAt: number,
+  score = 10,
+): StressSignalCurrentRow & Record<string, unknown> {
   return {
     stablecoin_id: stablecoinId,
     score,
@@ -40,18 +44,7 @@ describe("stress-signal current-row helpers", () => {
   it("loads one exact canonical generation from the publication pointer", async () => {
     const completedAt = nowSec - 60;
     const rows = [row("usdt-tether", completedAt), row("usdc-circle", completedAt)];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: rows.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((entry) => entry.stablecoin_id)),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, rows.map((entry) => entry.stablecoin_id));
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -78,18 +71,7 @@ describe("stress-signal current-row helpers", () => {
   it("rejects a partial canonical generation instead of mixing staged rows", async () => {
     const completedAt = nowSec - 60;
     const publishedIds = ["usdt-tether", "usdc-circle"];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: publishedIds.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, publishedIds);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -137,27 +119,11 @@ describe("stress-signal current-row helpers", () => {
 
   it("skips canonical history when the scoped latest generation is complete and fresh", async () => {
     const completedAt = nowSec - 60;
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-      }),
-      updated_at: completedAt,
-    };
     const latestRows = [
       row("usdt-tether", completedAt, 12),
       row("usdc-circle", completedAt, 30),
     ];
-    pointer.value = JSON.stringify({
-      updatedAt: completedAt,
-      source: "compute-dews",
-      publishStatus: "published",
-      coverageVersion: 2,
-      expectedRowCount: latestRows.length,
-      stablecoinIdsDigest: buildDewsStablecoinIdsDigest(latestRows.map((latestRow) => latestRow.stablecoin_id)),
-    });
+    const pointer = publishedPointer(completedAt, latestRows.map((latestRow) => latestRow.stablecoin_id));
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -182,18 +148,7 @@ describe("stress-signal current-row helpers", () => {
   it("loads the exact canonical generation when chunked staging hides part of the published latest set", async () => {
     const completedAt = nowSec - 60;
     const publishedIds = ["usdt-tether", "usdc-circle"];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: publishedIds.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, publishedIds);
     const untouchedOldSubset = row("usdc-circle", completedAt, 30);
     const canonicalRows = [
       row("usdt-tether", completedAt, 12),
@@ -227,18 +182,7 @@ describe("stress-signal current-row helpers", () => {
   it("fails closed when the exact published generation has lost a row", async () => {
     const completedAt = nowSec - 60;
     const publishedIds = ["usdt-tether", "usdc-circle"];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: publishedIds.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, publishedIds);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -267,15 +211,7 @@ describe("stress-signal current-row helpers", () => {
 
   it("keeps the canonical merge for legacy pointers without exact-set proof", async () => {
     const completedAt = nowSec - 60;
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt);
     const latest = row("usdt-tether", completedAt, 20);
     const canonical = row("usdt-tether", completedAt, 22);
     const db = mockD1([
@@ -305,15 +241,7 @@ describe("stress-signal current-row helpers", () => {
 
   it("keeps the canonical merge when latest rows do not all match the published generation", async () => {
     const completedAt = nowSec - 60;
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt);
     const latest = row("usdt-tether", completedAt - 60, 20);
     const canonical = row("usdt-tether", completedAt, 22);
     const db = mockD1([
@@ -388,18 +316,7 @@ describe("stress-signal current-row helpers", () => {
       signals_json: signalsJson,
       computed_at: completedAt - 60,
     };
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: 2,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether", "usdc-circle"]),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, ["usdt-tether", "usdc-circle"]);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -490,18 +407,7 @@ describe("stress-signal current-row helpers", () => {
 
   it("fails closed when the exact published generation reads zero rows", async () => {
     const completedAt = nowSec - 60;
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: 2,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether", "usdc-circle"]),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, ["usdt-tether", "usdc-circle"]);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -526,15 +432,7 @@ describe("stress-signal current-row helpers", () => {
   it("returns rows without exact-coverage proof for a legacy pointer", async () => {
     const completedAt = nowSec - 60;
     const rows = [row("usdt-tether", completedAt)];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -561,18 +459,7 @@ describe("stress-signal current-row helpers", () => {
   it("serves the telegram lane through its own exact published query set", async () => {
     const completedAt = nowSec - 60;
     const rows = [row("usdt-tether", completedAt)];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: rows.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((entry) => entry.stablecoin_id)),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, rows.map((entry) => entry.stablecoin_id));
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -596,18 +483,7 @@ describe("stress-signal current-row helpers", () => {
   it("serves previous stress rows through their own exact published query set", async () => {
     const completedAt = nowSec - 60;
     const rows = [row("usdt-tether", completedAt)];
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: rows.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((entry) => entry.stablecoin_id)),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, rows.map((entry) => entry.stablecoin_id));
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -646,18 +522,7 @@ describe("stress-signal current-row helpers", () => {
 
   it("reports a bounded reason when the exact generation read throws", async () => {
     const completedAt = nowSec - 60;
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: completedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: 1,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether"]),
-      }),
-      updated_at: completedAt,
-    };
+    const pointer = publishedPointer(completedAt, ["usdt-tether"]);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -678,5 +543,30 @@ describe("stress-signal current-row helpers", () => {
       reason: "generation-read-failed:D1 exhausted",
     });
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("rejects a same-count substituted identity in the exact canonical generation", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = publishedPointer(completedAt, ["usdt-tether", "usdc-circle"]);
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [pointer] },
+      { match: "pharos:stress-signals:published-exact", matchBinds: [completedAt],
+        rows: [row("usdt-tether", completedAt), row("substituted", completedAt)] },
+    ], { requireMatch: true });
+    await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toMatchObject({ status: "unavailable" });
+  });
+
+  it("fails closed on same-count wrong identities in both latest and canonical fallback", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = publishedPointer(completedAt, ["usdt-tether", "usdc-circle"]);
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [pointer] },
+      { match: "pharos:stress-signals:latest-all", matchBinds: [completedAt],
+        rows: [row("usdt-tether", completedAt), row("wrong-latest", completedAt)] },
+      { match: "pharos:stress-signals:published-exact-all", matchBinds: [completedAt],
+        rows: [row("usdt-tether", completedAt), row("wrong-canonical", completedAt)] },
+    ], { requireMatch: true });
+    expect((await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 })).results).toEqual([]);
+    db.assertAllMatchesUsed();
   });
 });

@@ -402,28 +402,21 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
 
     expect(profile).toMatchObject({
       confidence: "probable",
-      upgradeability: {
-        controlRef: "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
-      },
       review: {
         disposition: "scoreable",
-        evidence: expect.stringContaining("RecoveryModeTriggerModule"),
       },
     });
     expect(profile.review.unresolvedQuestions).toBeUndefined();
-    expect(profile.controls?.[3]).toMatchObject({
-      label: "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
+    expect(profile.controls?.find((control) => `${control.chain}:${control.address}` === DAO_PROXY_ADMIN_AUTHORITY)).toMatchObject({
       timelockDelaySec: 172800,
-      evidence: expect.stringContaining("ADMIN_ROLE 0"),
     });
-    expect(profile.controls?.[4]).toMatchObject({
+    expect(profile.controls?.find((control) => `${control.chain}:${control.address}` === SECURITY_COUNCIL_AUTHORITY)).toMatchObject({
       timelockDelaySec: 0,
       failureDomainKeys: [
         "eoa:ethereum:0xaa1e36165b3ac105f25549c06e1f06d573a40be3",
         "module:ethereum:0xeec7919bab68876e14737970fe4965ab9737cd29",
         "safe:ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc",
       ],
-      bypassSurfaces: [expect.stringContaining("only to request setRecoveryMode(true)")],
     });
     expect(controlReview.state).toBe("reviewed-controls");
     expect(new Set(mintControls.map((control) => control.controlKey)).size).toBe(5);

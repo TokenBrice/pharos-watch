@@ -7,10 +7,6 @@
 import { describe, expect, it } from "vitest";
 import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
 import fraxReserveSource from "@shared/data/stablecoins/domains/reserves/frax-frax.json";
-import flipcashMetaSource from "@shared/data/stablecoins/coins/usdf-flipcash.json";
-import astherusMetaSource from "@shared/data/stablecoins/coins/usdf-astherus.json";
-import megaMetaSource from "@shared/data/stablecoins/coins/usdm-mega.json";
-import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -310,33 +306,41 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     });
   });
 
-  it("loads every economic role from reviewed production metadata and preserves the Frax WTGXX non-link", () => {
-    const productionMeta = [
-      {
-        ...fraxMetaSource,
-        reserves: fraxReserveSource.reserves,
-        reserveReview: fraxReserveSource.reserveReview,
-      },
-      flipcashMetaSource,
-      astherusMetaSource,
-      megaMetaSource,
-      wrappedMSource,
-    ] as unknown as V9ExtensionRegistryMeta[];
-    const metaById = new Map(productionMeta.map((meta) => [meta.id, meta] as const));
-    const expectedRoles = [
-      ["wm-m0", "m-m0", "serial-claim"],
-      ["usdf-flipcash", "usdc-circle", "basket-exposure"],
-      ["usdf-astherus", "usdt-tether", "exit-dependency"],
-      ["usdm-mega", "usdtb-ethena", "control-operator"],
-      ["usdf-astherus", "usdt-tether", "oracle-nav"],
-    ] as const;
-    for (const [assetId, upstreamAssetId, role] of expectedRoles) {
-      expect(metaById.get(assetId)?.dependencyReview?.relationships).toContainEqual(
-        expect.objectContaining({ id: upstreamAssetId, economicRole: role }),
-      );
-    }
+  it.each([
+    ["serial-claim", "wrapper", "serial-dependency"],
+    ["basket-exposure", "collateral", "collateral-exposure"],
+    ["exit-dependency", "mechanism", "local-component"],
+    ["control-operator", "mechanism", "local-component"],
+    ["oracle-nav", "mechanism", "local-component"],
+  ] as const)("compiles a reviewed %s relationship from metadata", (economicRole, type, pathKind) => {
+    const fixed = exactTwoAssetFixedInput({ mapAlphaCollateral: type === "collateral", omitAlphaReserve: type !== "collateral" });
+    const weight = type === "collateral" ? 0.5 : 1;
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      ["alpha", {
+        id: "alpha", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01",
+        dependencies: [{ id: "beta", type, weight }],
+        dependencyReview: {
+          reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", confidence: "verified",
+          sources: [{ label: "Role review", url: "https://example.com/roles" }],
+          rationale: "The upstream supplies the explicitly reviewed economic relationship.",
+          relationships: [{ id: "beta", type, weight, economicRole, reason: "Reviewed upstream relationship." }],
+        },
+      }],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
+    ]);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!;
+    expect(compiled.dependencies.edges).toMatchObject([{
+      upstreamAssetId: "beta", economicRole, dependencyType: type, weight, pathKind,
+      edgeKey: `${economicRole}:${type}:beta`,
+    }]);
+    expect(compiled.dependencies.status.observationState).toBe("known");
+  });
 
-    const frax = metaById.get("frax-frax")!;
+  it("preserves the reviewed Frax WTGXX non-link", () => {
+    const frax = {
+      ...fraxMetaSource, reserves: fraxReserveSource.reserves, reserveReview: fraxReserveSource.reserveReview,
+    } as unknown as V9ExtensionRegistryMeta;
     const wtgxx = frax.reserves!.find((reserve) => reserve.name.startsWith("WTGXX"))!;
     expect(frax.reserveReview?.nonLinkDispositions).toContainEqual(
       expect.objectContaining({

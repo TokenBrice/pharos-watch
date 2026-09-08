@@ -143,11 +143,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:webhook-reconciled"],
-          rows: [{ value: await expectedWebhookCacheValue(), updated_at: nowSec }],
-        },
+        cacheSelectEntry("telegram:webhook-reconciled", { value: await expectedWebhookCacheValue(), updated_at: nowSec }),
       ],
       { requireMatch: true },
     );
@@ -169,21 +165,9 @@ describe("reconcileTelegramWebhookRegistration", () => {
 
   it("registers the webhook with allowed updates and records the reconciliation cache", async () => {
     const db = mockD1([
-      {
-        match: CACHE_SELECT_MATCH,
-        matchBinds: ["telegram:webhook-reconciled"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_SELECT_MATCH,
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_WRITE_MATCH,
-        rows: [],
-      },
+      cacheSelectEntry("telegram:webhook-reconciled"),
+      cacheSelectEntry("telegram:reconcile:429:setWebhook"),
+      cacheWriteEntry(),
     ]);
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
@@ -215,155 +199,47 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(typeof writes[0]?.binds[2]).toBe("number");
   });
 
-  it("re-registers when a fresh cached config does not match the effective webhook config", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1(
-      [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:webhook-reconciled"],
-          rows: [
-            {
-              value: JSON.stringify({
-                version: 2,
-                url: "https://api.pharos.watch/api/telegram-webhook",
-                allowed_updates: ["message"],
-                secret_token: {
-                  present: true,
-                  marker: await secretTokenMarker(),
-                },
-              }),
-              updated_at: nowSec,
-            },
-          ],
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_WRITE_MATCH,
-          rows: [],
-        },
-      ],
-      { requireMatch: true },
-    );
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  it.each(["different updates", "rotated secret", "stale"] as const)(
+    "re-registers for %s rather than trusting the cached configuration",
+    async (scenario) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const cached = JSON.parse(await expectedWebhookCacheValue(
+        undefined, scenario === "rotated secret" ? "old-secret-token" : "secret-token",
+      ));
+      if (scenario === "different updates") cached.allowed_updates = ["message"];
+      const db = mockD1([
+        cacheSelectEntry("telegram:webhook-reconciled", {
+          value: JSON.stringify(cached),
+          updated_at: nowSec - (scenario === "stale" ? 901 : 0),
+        }),
+        cacheSelectEntry("telegram:reconcile:429:setWebhook"),
+        cacheWriteEntry(),
+      ], { requireMatch: true });
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
-    const result = await reconcileTelegramWebhookRegistration(db, {
-      botToken: "bot-token",
-      webhookSecret: "secret-token",
-      selfUrl: "https://api.pharos.watch",
-    });
+      const result = await reconcileTelegramWebhookRegistration(db, {
+        botToken: "bot-token",
+        webhookSecret: "secret-token",
+        selfUrl: "https://api.pharos.watch",
+      });
 
-    expect(result).toMatchObject({
-      attempted: true,
-      skipped: false,
-      expectedUrl: "https://api.pharos.watch/api/telegram-webhook",
-    });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const body = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
-    expect(body.allowed_updates).toEqual([
-      "message",
-      "callback_query",
-      "my_chat_member",
-      "inline_query",
-      "chosen_inline_result",
-    ]);
-  });
-
-  it("re-registers when the cached secret marker belongs to a previous secret", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1(
-      [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:webhook-reconciled"],
-          rows: [{ value: await expectedWebhookCacheValue(undefined, "old-secret-token"), updated_at: nowSec }],
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_WRITE_MATCH,
-          rows: [],
-        },
-      ],
-      { requireMatch: true },
-    );
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const result = await reconcileTelegramWebhookRegistration(db, {
-      botToken: "bot-token",
-      webhookSecret: "secret-token",
-      selfUrl: "https://api.pharos.watch",
-    });
-
-    expect(result).toMatchObject({
-      attempted: true,
-      skipped: false,
-      expectedUrl: "https://api.pharos.watch/api/telegram-webhook",
-    });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("re-registers when the matching cached config is stale", async () => {
-    const staleUpdatedAtSec = Math.floor(Date.now() / 1000) - 901;
-    const db = mockD1(
-      [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:webhook-reconciled"],
-          rows: [{ value: await expectedWebhookCacheValue(), updated_at: staleUpdatedAtSec }],
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_WRITE_MATCH,
-          rows: [],
-        },
-      ],
-      { requireMatch: true },
-    );
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    const result = await reconcileTelegramWebhookRegistration(db, {
-      botToken: "bot-token",
-      webhookSecret: "secret-token",
-      selfUrl: "https://api.pharos.watch",
-    });
-
-    expect(result).toMatchObject({
-      attempted: true,
-      skipped: false,
-      expectedUrl: "https://api.pharos.watch/api/telegram-webhook",
-    });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
+      expect(result).toMatchObject({
+        attempted: true, skipped: false, expectedUrl: "https://api.pharos.watch/api/telegram-webhook",
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string)).toEqual({
+        url: "https://api.pharos.watch/api/telegram-webhook",
+        secret_token: "secret-token",
+        allowed_updates: ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"],
+      });
+    },
+  );
 
   it("continues registering only the current secret token", async () => {
     const db = mockD1([
-      {
-        match: CACHE_SELECT_MATCH,
-        matchBinds: ["telegram:webhook-reconciled"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_SELECT_MATCH,
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_WRITE_MATCH,
-        rows: [],
-      },
+      cacheSelectEntry("telegram:webhook-reconciled"),
+      cacheSelectEntry("telegram:reconcile:429:setWebhook"),
+      cacheWriteEntry(),
     ]);
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
@@ -380,17 +256,8 @@ describe("reconcileTelegramWebhookRegistration", () => {
   it("throws when Telegram rejects the registration", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:webhook-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
+        cacheSelectEntry("telegram:webhook-reconciled"),
+        cacheSelectEntry("telegram:reconcile:429:setWebhook"),
       ],
       { requireMatch: true },
     );
@@ -415,21 +282,9 @@ describe("reconcileTelegramMenuButton", () => {
 
   it("sets the default Web App menu button and records the cache marker", async () => {
     const db = mockD1([
-      {
-        match: CACHE_SELECT_MATCH,
-        matchBinds: ["telegram:menu-reconciled"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_SELECT_MATCH,
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_WRITE_MATCH,
-        rows: [],
-      },
+      cacheSelectEntry("telegram:menu-reconciled"),
+      cacheSelectEntry("telegram:reconcile:429:setChatMenuButton"),
+      cacheWriteEntry(),
     ]);
     fetchSpy
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, result: { type: "default" } }), { status: 200 }))
@@ -458,16 +313,8 @@ describe("reconcileTelegramMenuButton", () => {
 
   it("skips setChatMenuButton when the current menu button already matches", async () => {
     const db = mockD1([
-      {
-        match: CACHE_SELECT_MATCH,
-        matchBinds: ["telegram:menu-reconciled"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: CACHE_WRITE_MATCH,
-        rows: [],
-      },
+      cacheSelectEntry("telegram:menu-reconciled"),
+      cacheWriteEntry(),
     ]);
     fetchSpy.mockResolvedValueOnce(
       new Response(
@@ -504,11 +351,7 @@ describe("reconcileTelegramCommandRegistration", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:commands-reconciled"],
-          rows: [{ value: expectedCommandsCacheValue(), updated_at: nowSec }],
-        },
+        cacheSelectEntry("telegram:commands-reconciled", { value: expectedCommandsCacheValue(), updated_at: nowSec }),
       ],
       { requireMatch: true },
     );
@@ -528,21 +371,10 @@ describe("reconcileTelegramCommandRegistration", () => {
   it("registers scoped slash-command suggestions for private and group chats and records the reconciliation cache", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:commands-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_WRITE_MATCH,
-          rows: [],
-        },
+        cacheSelectEntry("telegram:commands-reconciled"),
+        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
+        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_group_chats"),
+        cacheWriteEntry(),
       ],
       { requireMatch: true },
     );
@@ -634,17 +466,8 @@ describe("reconcileTelegramCommandRegistration", () => {
   it("passes an already-aborted signal into Telegram command registration fetches", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:commands-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
+        cacheSelectEntry("telegram:commands-reconciled"),
+        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
       ],
       { requireMatch: true },
     );
@@ -672,46 +495,13 @@ describe("reconcileTelegramCommandRegistration", () => {
     }
     expect(groupCommands).not.toContain("start");
     expect(groupCommands).not.toContain("forget");
-    expect(groupCommands).toEqual([
-      "help",
-      "sample",
-      "status",
-      "brief",
-      "top",
-      "why",
-      "coverage",
-      "health",
-      "list",
-      "subscribe",
-      "unsubscribe",
-      "presets",
-      "set",
-      "settings",
-      "mute",
-      "pause",
-      "timezone",
-      "unsnooze",
-      "unmutehours",
-      "cancel",
-      "export",
-      "import",
-    ]);
   });
 
   it("skips the second scope call when Telegram rejects the private-chat registration", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:commands-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
+        cacheSelectEntry("telegram:commands-reconciled"),
+        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
       ],
       { requireMatch: true },
     );
@@ -730,17 +520,9 @@ describe("reconcileTelegramCommandRegistration", () => {
   it("throws when Telegram rejects the group-chat registration after a successful private-chat call", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:commands-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
+        cacheSelectEntry("telegram:commands-reconciled"),
+        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_private_chats"),
+        cacheSelectEntry("telegram:reconcile:429:setMyCommands:all_group_chats"),
       ],
       { requireMatch: true },
     );
@@ -767,11 +549,7 @@ describe("reconcileTelegramProfileRegistration", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:profile-reconciled"],
-          rows: [{ value: expectedProfileCacheValue(), updated_at: nowSec }],
-        },
+        cacheSelectEntry("telegram:profile-reconciled", { value: expectedProfileCacheValue(), updated_at: nowSec }),
       ],
       { requireMatch: true },
     );
@@ -791,21 +569,9 @@ describe("reconcileTelegramProfileRegistration", () => {
   it("registers name, short description, and description and records the cache marker", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:profile-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_WRITE_MATCH,
-          rows: [],
-        },
+        cacheSelectEntry("telegram:profile-reconciled"),
+        ...profileBackoffSelectEntries(),
+        cacheWriteEntry(),
       ],
       { requireMatch: true },
     );
@@ -837,21 +603,9 @@ describe("reconcileTelegramProfileRegistration", () => {
   it('treats Telegram "is not modified" 400 as success and still refreshes the cache marker', async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:profile-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_WRITE_MATCH,
-          rows: [],
-        },
+        cacheSelectEntry("telegram:profile-reconciled"),
+        ...profileBackoffSelectEntries(),
+        cacheWriteEntry(),
       ],
       { requireMatch: true },
     );
@@ -875,17 +629,8 @@ describe("reconcileTelegramProfileRegistration", () => {
   it("throws when Telegram rejects with a non-idempotent error", async () => {
     const db = mockD1(
       [
-        {
-          match: CACHE_SELECT_MATCH,
-          matchBinds: ["telegram:profile-reconciled"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: CACHE_SELECT_MATCH,
-          rows: [],
-          first: null,
-        },
+        cacheSelectEntry("telegram:profile-reconciled"),
+        ...profileBackoffSelectEntries(),
       ],
       { requireMatch: true },
     );

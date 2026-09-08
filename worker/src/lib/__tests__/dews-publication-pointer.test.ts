@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   buildDewsStablecoinIdsDigest,
   reconcileDewsPublishedGenerationLedger,
   readDewsPublishedGenerationResult,
   writeDewsPublishedGeneration,
 } from "../dews-publication-pointer";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { sha256Hex } from "@shared/lib/sha256";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { persistDewsResults } from "../dews/persistence";
 import type { DewsComputedRow } from "../dews/contracts";
 
@@ -52,36 +51,32 @@ function openSqlitePublicationDb(): {
 }
 
 describe("DEWS publication pointer reader", () => {
-  it("preserves prepared SQL and binds across publication targets", async () => {
-    const stablecoinId = "usdt-tether";
-    const result = {
-      stablecoinId, score: 12, band: "CALM", signals: { supply: { value: 10, available: true, weight: 1 } },
-      amplifiers: { psi: 1, contagion: 1 }, baseScore: 12, finalScore: 12, availableWeight: 1,
-      effectiveWeights: { supply: 1 }, evidenceKinds: ["supply"], insufficientEvidenceReason: null, dataQualityScore: 1, topContributors: [],
-    } as unknown as DewsComputedRow;
-    const db = mockD1([
-      { match: "stress-history-daily-ids", rows: [{ stablecoin_id: stablecoinId }] },
-      { match: "publication-generation-count", rows: [{ cnt: 1 }], first: { cnt: 1 } },
-      { match: "stress-latest-generation-count", rows: [{ cnt: 1 }], first: { cnt: 1 } },
-      { match: "stress_signal_history", rows: [] },
-      { match: "INSERT INTO cache", rows: [] },
-      { match: "INSERT INTO surface_publication_generations", rows: [] },
-      { match: "stress_signals", rows: [], allowUnused: true },
-      { match: "stress_signal_publication_rows", rows: [], allowUnused: true },
-    ]);
-    await persistDewsResults({ db, results: [result], eligibleIds: new Set([stablecoinId]), publishFreshnessSentinel: false, nowSec });
-    const reconcileDb = mockD1([
-      pointerMatch(pointerPayload(nowSec - 60), nowSec - 60),
-      { match: "INSERT INTO surface_publication_generations", rows: [] },
-    ]);
-    await reconcileDewsPublishedGenerationLedger(reconcileDb, nowSec);
-    const markers = ["publication-row-insert", "stress-latest-upsert", "INSERT INTO surface_publication_generations"];
-    const prepared = [...db.getHistory(), ...reconcileDb.getHistory()]
-      .filter(({ sql }) => markers.some((marker) => sql.includes(marker)));
-
-    expect(prepared.map(({ sql, binds }) => sha256Hex(JSON.stringify([sql, binds])))).toEqual([
-      "7f0dc83fca1c3bc1d43100a0e4fee545fe86cb465fb23d8a1017ff5ffb2b7c21", "49f53ee3c6b87944e00e28c23ad65b7de11eac6df39d7e69c37dcf05f9461d84", "3ea45d3e78172956d93f6465b6d6abbc8279500e692aa896dfa683f6f5e2ae79", "dbebc7d2bc105892c8b739f4c3c718d560f97d7474aac36f73c1c46a5efe2d93",
-    ]);
+  it("persists the published generation and latest stress rows", async () => {
+    const { sqlite, db } = openSqlitePublicationDb();
+    try {
+      const result = {
+        stablecoinId: "usdt-tether", score: 12, band: "CALM", signals: { supply: { value: 10, available: true } },
+        amplifiers: { psi: 1, contagion: 1 }, baseScore: 12, finalScore: 12, availableWeight: 1,
+        effectiveWeights: { supply: 1 }, evidenceKinds: ["supply"], insufficientEvidenceReason: null, dataQualityScore: 1, topContributors: [],
+      } as unknown as DewsComputedRow;
+      await persistDewsResults({ db, results: [result], eligibleIds: new Set(["usdt-tether"]), publishFreshnessSentinel: false, nowSec });
+      for (const table of ["stress_signal_publication_rows", "stress_signals_latest"]) {
+        const rows = sqlite.prepare(`SELECT stablecoin_id, computed_at, score, band, signals_json FROM ${table}`).all();
+        expect(rows).toEqual([{
+          stablecoin_id: "usdt-tether", computed_at: nowSec, score: 12, band: "CALM",
+          signals_json: expect.any(String),
+        }]);
+        expect(JSON.parse(String(rows[0].signals_json))).toMatchObject({
+          signals: { supply: { value: 10, available: true } },
+          amplifiers: { psi: 1, contagion: 1 }, baseScore: 12, finalScore: 12,
+        });
+      }
+      await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toMatchObject({
+        status: "ok", computedAt: nowSec, expectedRowCount: 1,
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns ok for a valid published generation pointer", async () => {

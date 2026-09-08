@@ -1,12 +1,15 @@
 import { DatabaseSync } from "node:sqlite";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinitionByKey, getStatusPageActions } from "@shared/lib/api-endpoints";
 import { route, type ResolvedRoute } from "../../router";
 import { getCatalogActionAuditOwner } from "../../lib/catalog-action-audit";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { getRouteMatch } from "../registry";
 import type { FullRouteContext } from "../shared";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 function makeContext(db: D1Database, request: Request): FullRouteContext {
   return {
@@ -33,8 +36,7 @@ describe("catalog action audit coverage", () => {
   });
 
   it("runs canonical auditing at the shared router boundary", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
-    const db = createSqliteD1(sqlite);
+    const { sqlite, db } = fixtures.open();
     const endpoint = getEndpointDefinitionByKey("trigger-digest")!;
     const request = new Request("https://ops-api.pharos.watch/api/trigger-digest", {
       method: "POST",
@@ -63,6 +65,7 @@ describe("catalog action audit coverage", () => {
   it("returns a distinct recoverable failure when canonical audit persistence fails", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const sqlite = new DatabaseSync(":memory:");
+    try {
     const db = createSqliteD1(sqlite);
     const endpoint = getEndpointDefinitionByKey("trigger-digest")!;
     const request = new Request("https://ops-api.pharos.watch/api/trigger-digest", {
@@ -91,5 +94,9 @@ describe("catalog action audit coverage", () => {
     expect(response.headers.get("X-Execution-Certainty")).toBe("audit-incomplete");
     await expect(response.json()).resolves.toMatchObject({ error: "audit_persistence_failed" });
     expect(warning).toHaveBeenCalled();
+    } finally {
+      sqlite.close();
+      warning.mockRestore();
+    }
   });
 });

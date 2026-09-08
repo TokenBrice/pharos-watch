@@ -312,7 +312,7 @@ async function loadMintBurnHealth(
         () =>
           db
             .prepare(
-              `SELECT item_count, metadata
+              `SELECT job, item_count, metadata
                FROM cron_runs
                WHERE (
                  job = ?

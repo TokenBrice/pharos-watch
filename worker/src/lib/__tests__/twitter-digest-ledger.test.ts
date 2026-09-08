@@ -1,6 +1,6 @@
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   deliverTwitterDigestWithLedger,
   type TwitterDigestDeliveryRecord,
@@ -8,13 +8,7 @@ import {
 
 const KEY = "daily-digest:twitter-sent:2026-08-22";
 const NOW_SEC = 1_787_360_000;
-const openDatabases: DatabaseSync[] = [];
-
-function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const { sqlite, db } = createLatestSchemaSqlite();
-  openDatabases.push(sqlite);
-  return { sqlite, db };
-}
+const fixtures = createLatestSchemaFixtureTracker();
 
 function loadRecord(sqlite: DatabaseSync): TwitterDigestDeliveryRecord {
   const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(KEY) as { value: string };
@@ -23,12 +17,12 @@ function loadRecord(sqlite: DatabaseSync): TwitterDigestDeliveryRecord {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const sqlite of openDatabases.splice(0)) sqlite.close();
+  fixtures.closeAll();
 });
 
 describe("Twitter digest delivery ledger", () => {
   it("retains execution_unknown after a throw-after-send error and never reposts automatically", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const post = vi.fn(async () => {
       throw new Error("connection closed after request transmission");
@@ -51,7 +45,7 @@ describe("Twitter digest delivery ledger", () => {
   });
 
   it("logs an error when a stale sending claim is reconciled as execution_unknown", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     sqlite
       .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
@@ -83,7 +77,7 @@ describe("Twitter digest delivery ledger", () => {
   });
 
   it("allows bounded retries after definitive rejection", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const rejection = Object.assign(new Error("Twitter API 403: denied"), {
       twitterDeliveryFailureKind: "definitive_failure",
@@ -112,7 +106,7 @@ describe("Twitter digest delivery ledger", () => {
   });
 
   it("records sent state and the returned tweet id", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const post = vi.fn(async () => ({
       tweetId: "1900000000000000001",
       mediaAttached: true,

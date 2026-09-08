@@ -6,51 +6,18 @@ import {
 } from "@shared/lib/report-card-evidence-journal";
 import {
   buildReportCardsFixedInputCacheEntry,
-  createReportCardsFixedInput,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
 } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import { makeV9FixedInput, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 const ASSET_ID = "usdc-circle";
 const DIGEST = "a".repeat(64);
 
 function singleAssetFixedInput() {
-  const full = createSafetyScoreV9FullRegistryInput();
-  return createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    activeAssetIds: [ASSET_ID],
-    capturedAt: full.capturedAt,
-    sourceGeneration: full.sourceGeneration,
-    dexGenerationId: full.dexGenerationId,
-    redemptionGenerationId: full.redemptionGenerationId,
-    registryRevision: full.registryRevision,
-    methodologyVersion: full.methodologyVersion,
-    clockSec: full.clockSec,
-    updatedAt: full.updatedAt,
-    liquidityStale: full.liquidityStale,
-    redemptionStale: full.redemptionStale,
-    inputFreshness: full.inputFreshness,
-    pegDataById: { [ASSET_ID]: full.pegDataById[ASSET_ID]! },
-    activeDepegPeakBpsById: {},
-    dexLiqMap: { [ASSET_ID]: full.dexLiqMap[ASSET_ID]! },
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: { [ASSET_ID]: full.resolvedBlacklistStatuses[ASSET_ID]! },
-    liveReserveMap: { [ASSET_ID]: full.liveReserveMap[ASSET_ID]! },
-    liveReserveProvenanceMap: {
-      [ASSET_ID]: full.liveReserveProvenanceMap[ASSET_ID]!,
-    },
-    chainCirculatingById: {
-      [ASSET_ID]: full.chainCirculatingById[ASSET_ID]!,
-    },
-    aggregateCirculatingById: {},
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
-  });
+  return makeV9FixedInput({ assetId: ASSET_ID, clockSec: v9TestClockSec() });
 }
 
 function journalRecord(

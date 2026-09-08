@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
-import {
-  ACTIVE_STABLECOINS,
-  DELISTED_STABLECOINS,
-  FROZEN_STABLECOINS,
-  PRE_LAUNCH_STABLECOINS,
-  QUARANTINED_STABLECOINS,
-} from "@shared/lib/stablecoins/registry";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
+  const coins = ["active", "pre-launch", "frozen", "quarantined", "delisted"]
+    .map((status) => ({ id: status, status }));
+  return {
+    WORKER_TRACKED_STABLECOINS: coins,
+    WORKER_TRACKED_META_BY_ID: new Map(coins.map((coin) => [coin.id, coin])),
+  };
+});
 import {
   assertSubscribableCoin,
   isSubscribableCoin,
@@ -13,21 +15,12 @@ import {
 
 describe("Telegram subscription eligibility", () => {
   it("allows active and pre-launch assets but rejects every inactive post-launch state", () => {
-    const active = ACTIVE_STABLECOINS[0];
-    const preLaunch = PRE_LAUNCH_STABLECOINS[0];
-    const frozen = FROZEN_STABLECOINS[0];
-    const quarantined = QUARANTINED_STABLECOINS[0];
-    const delisted = DELISTED_STABLECOINS[0];
-    if (!active || !preLaunch || !frozen || !quarantined || !delisted) {
-      throw new Error("Expected lifecycle fixtures");
-    }
-
-    expect(isSubscribableCoin(active.id)).toBe(true);
-    expect(isSubscribableCoin(preLaunch.id)).toBe(true);
-    expect(isSubscribableCoin(frozen.id)).toBe(false);
-    expect(isSubscribableCoin(quarantined.id)).toBe(false);
-    expect(isSubscribableCoin(delisted.id)).toBe(false);
+    expect(isSubscribableCoin("active")).toBe(true);
+    expect(isSubscribableCoin("pre-launch")).toBe(true);
+    expect(isSubscribableCoin("frozen")).toBe(false);
+    expect(isSubscribableCoin("quarantined")).toBe(false);
+    expect(isSubscribableCoin("delisted")).toBe(false);
     expect(isSubscribableCoin("not-a-coin")).toBe(false);
-    expect(() => assertSubscribableCoin(frozen.id)).toThrow(/not subscribable/i);
+    expect(() => assertSubscribableCoin("frozen")).toThrow(RangeError);
   });
 });

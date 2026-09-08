@@ -216,11 +216,46 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     ).toEqual([]);
   });
 
-  it("expands every curated overlay after its date-only admission gate elapses", () => {
+  it("validates the schema and expansion of every curated overlay", () => {
     for (const rawOverlay of mechanismReviewOverlaysAsset.overlays) {
       const overlay = MechanismReviewOverlaySchema.parse(rawOverlay);
       expect(() => expandOverlayReview(overlay), overlay.assetId).not.toThrow();
     }
+  });
+
+  it("admits curated quality at next-day midnight and drops it exactly at expiry", () => {
+    const admitted = Date.UTC(2026, 6, 16) / 1_000;
+    const expires = Date.UTC(2027, 6, 15) / 1_000;
+    const meta = { ...ATTESTED_META, id: "ausd-agora" };
+    const reviewAt = (clockSec: number) => buildSafetyScoreV9MechanismReview(
+      fixedInputStub({ "ausd-agora": [{}] }, clockSec), meta, "fiat-cash",
+    );
+    const fallback = {
+      archetype: "fiat-cash",
+      claimAndSegregation: { quality: null, status: { observationState: "bounded-unknown" } },
+      assuranceAndReconciliation: { quality: "adequate", status: { observationState: "known" } },
+    };
+    expect(reviewAt(admitted - 1)).toMatchObject(fallback);
+    expect(reviewAt(admitted)).toMatchObject({
+      claimAndSegregation: { quality: "strong", status: { observationState: "known" } },
+    });
+    expect(reviewAt(expires - 1)).toMatchObject({
+      claimAndSegregation: { quality: "strong", status: { observationState: "known" } },
+    });
+    expect(reviewAt(expires)).toMatchObject(fallback);
+  });
+
+  it("admits unavailable adjudications next day and removes every component at exact expiry", () => {
+    const admitted = Date.UTC(2026, 7, 9) / 1_000;
+    const expires = Date.UTC(2027, 7, 8) / 1_000;
+    const componentsAt = (clockSec: number) => getSafetyScoreV9MechanismReviewedUnavailableComponents(
+      "a7a5-old-vector", "fiat-cash", clockSec,
+    ).map((row) => row.componentKey);
+    const expected = ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"];
+    expect(componentsAt(admitted - 1)).toEqual([]);
+    expect(componentsAt(admitted)).toEqual(expected);
+    expect(componentsAt(expires - 1)).toEqual(expected);
+    expect(componentsAt(expires)).toEqual([]);
   });
 
   it("merges a gated fiat-cash overlay over the built review without degrading derived assurance", () => {

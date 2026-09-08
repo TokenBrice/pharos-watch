@@ -5,6 +5,35 @@ import {
 } from "../pricing-source-freshness";
 
 describe("pricing source freshness", () => {
+  it("accepts the trusted-age boundary but rejects the next second", () => {
+    const input = { source: "bitstamp", nowSec: 1_800_000_000 };
+    expect(validatePricingSourceFreshness({ ...input, observedAt: input.nowSec - 600 }).accepted).toBe(true);
+    expect(validatePricingSourceFreshness({ ...input, observedAt: input.nowSec - 601 })).toMatchObject({
+      accepted: false, reason: "stale_observed_at", ageSec: 601,
+    });
+  });
+
+  it.each([undefined, 0])("honors the future-skew boundary with override %s", (maxFutureSkewSec) => {
+    const input = { source: "pyth", nowSec: 1_800_000_000, maxFutureSkewSec };
+    const boundary = input.nowSec + (maxFutureSkewSec ?? 600);
+    expect(validatePricingSourceFreshness({ ...input, observedAt: boundary }).accepted).toBe(true);
+    expect(validatePricingSourceFreshness({ ...input, observedAt: boundary + 1 })).toMatchObject({
+      accepted: false, reason: "future_observed_at",
+    });
+  });
+
+  it("lets callers require timestamps on otherwise optional sources", () => {
+    expect(validatePricingSourceFreshness({ source: "coingecko", requireObservedAt: true })).toMatchObject({
+      accepted: false, reason: "missing_observed_at",
+    });
+  });
+
+  it("accepts fresh composites while preserving an explicit observed-at mode", () => {
+    expect(validateCompositePricingSourceFreshness({
+      source: "coingecko+pyth", nowSec: 1_800_000_000, observedAt: 1_799_999_700,
+      observedAtMode: "unknown",
+    })).toEqual({ accepted: true, observedAt: 1_799_999_700, observedAtMode: "unknown" });
+  });
   it("accepts a fresh upstream-observed CEX source", () => {
     const decision = validatePricingSourceFreshness({
       source: "coinbase",

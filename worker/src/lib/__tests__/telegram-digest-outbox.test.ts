@@ -1,6 +1,6 @@
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("../digest-safety-context", async (importOriginal) => {
@@ -44,14 +44,9 @@ const safetyContext = {
   publishedAt: null,
   reason: "safety-section-omitted",
 };
-const openDatabases: DatabaseSync[] = [];
+const fixtures = createLatestSchemaFixtureTracker();
 let ownerSequence = 0;
 
-function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const { sqlite, db } = createLatestSchemaSqlite();
-  openDatabases.push(sqlite);
-  return { sqlite, db };
-}
 
 function loadEdition(sqlite: DatabaseSync, editionKey = "daily:2026-07-10"): StoredEdition {
   return sqlite
@@ -103,12 +98,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.useRealTimers();
-  for (const sqlite of openDatabases.splice(0)) sqlite.close();
+  fixtures.closeAll();
 });
 
 describe("Telegram digest outbox", () => {
   it("sends the dated map as a durable photo before the text chunks", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const mapImageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-10";
     const mapAppendixHtml = [
       "<b>Today’s map</b>",
@@ -161,7 +156,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("keeps failed photo delivery retryable without advancing the text cursor", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const mapImageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-09";
     await enqueueDaily(db, { mapImageUrl, mapDate: "2026-07-09" });
     const fetchMock = mockFetch([{
@@ -206,7 +201,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("does not resend a durably accepted photo when text delivery retries", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db, {
       mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-10",
       mapDate: "2026-07-10",
@@ -242,7 +237,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("sends a text-only edition with media_state none", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
 
@@ -259,7 +254,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("persists sending before the Bot API effect and commits success actions with sent", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const successActions = [{ key: "telegram:appendix-pointer", value: "edition-42" }];
     await enqueueDaily(db, { successActions });
     const statesAtFetch: string[] = [];
@@ -289,7 +284,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("persists the rollout-gated recap CTA inside the immutable text payload", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const enqueued = await enqueueDaily(db, {
       recapRollout: { mode: "public", allowedChatIds: new Set() },
     });
@@ -307,7 +302,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("honors Telegram retry_after and retries the identical stored payload", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const storedPayload = (JSON.parse(loadEdition(sqlite).payload_chunks_json) as string[])[0]!;
     const fetchMock = mockFetch([{
@@ -338,7 +333,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("keeps a due retry queued when the authoritative fresh-delivery permit is paused", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const nowSec = Math.floor(Date.now() / 1000);
     sqlite.prepare(
@@ -356,7 +351,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("resumes a split appendix from the first unconfirmed chunk without replaying accepted chunks", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const successActions = [{ key: "telegram:appendix-pointer", value: "large-edition" }];
     const enqueue = await enqueueDaily(db, {
       appendixHtml: `<b>Tracking Changes</b>\n\n${"long appendix line\n".repeat(500)}`,
@@ -394,7 +389,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("fences network ambiguity and never replays it automatically", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const fetchMock = mockFetch([{ match: () => true, outcomes: [new DOMException("timed out after request start", "TimeoutError")] }]);
 
@@ -409,7 +404,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("turns an expired sending owner into execution_unknown without replay", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const nowSec = Math.floor(Date.now() / 1000);
     sqlite.prepare(
@@ -430,7 +425,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("does not let a stale accepted-chunk writer overwrite a newer owner generation", async () => {
-    const { sqlite, db: baseDb } = createHarness();
+    const { sqlite, db: baseDb } = fixtures.open();
     await enqueueDaily(baseDb);
     let replacedOwner = false;
     const db = {
@@ -478,7 +473,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("keeps confirmed permanent rejection distinct from ambiguous execution", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const fetchMock = mockFetch([{
       match: () => true,
@@ -499,7 +494,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("preserves the first immutable edition and reports a later payload mismatch", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const first = await enqueueDaily(db);
     const second = await enqueueDaily(db, { extended: "Different regenerated copy." });
 
@@ -509,7 +504,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("includes the typed map identity in immutable edition equality", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const first = await enqueueDaily(db, {
       mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-10",
       mapDate: "2026-07-10",
@@ -529,7 +524,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("keeps the migration compatible with the previous Worker's insert shape", () => {
-    const { sqlite } = createHarness();
+    const { sqlite } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1000);
     sqlite.prepare(
       `INSERT INTO telegram_digest_outbox (
@@ -561,7 +556,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("refuses to enqueue safety claims without an identified publication", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
 
     await expect(enqueueDaily(db, {
       title: "USDT Safety Score",
@@ -573,7 +568,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("terminalizes an unbound safety claim restored from persisted chunks before sending", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     sqlite
       .prepare("UPDATE telegram_digest_outbox SET payload_chunks_json = ? WHERE edition_key = ?")
@@ -598,7 +593,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("terminalizes a queued edition authored under a stale exact safety identity before sending", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const authoredIdentity = {
       model: "v9" as const,
       schemaVersion: 1 as const,
@@ -638,7 +633,7 @@ describe("Telegram digest outbox", () => {
   });
 
   it("updates weekly compatibility metadata only after the exact edition is sent", async () => {
-    const { sqlite, db } = createHarness();
+    const { sqlite, db } = fixtures.open();
     const generatedAt = Math.floor(Date.now() / 1000);
     sqlite.prepare(
       "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, '', '{}', ?)",

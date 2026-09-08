@@ -1,4 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
+afterEach(() => vi.restoreAllMocks());
 import type {
   WorkflowStep,
   WorkflowStepConfig,
@@ -44,10 +49,6 @@ import {
   safetyScoreV9WorkflowInstanceId as scheduledInstanceId,
 } from "../../handlers/scheduled/v9-publication";
 
-interface BoundStatement {
-  sql: string;
-  bindings: unknown[];
-}
 
 function d1Result(changes = 0): D1Result {
   return {
@@ -57,55 +58,32 @@ function d1Result(changes = 0): D1Result {
   } as unknown as D1Result;
 }
 
-function createRecordingDb(
-  seed: Record<string, { value: string; updatedAt: number }> = {},
-) {
-  const statements: BoundStatement[] = [];
-  const cache = new Map(Object.entries(seed));
+function createWorkflowDb() {
+  const fixture = fixtures.open();
+  fixture.sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+    "report-cards:fixed-input:exact", "fixed-input-envelope", 1788433200,
+  );
+  return fixture;
+}
 
-  const prepare = (sql: string): D1PreparedStatement => {
-    const bindings: unknown[] = [];
-    const statement = {
-      bind: (...values: unknown[]) => {
-        bindings.splice(0, bindings.length, ...values);
-        return statement;
-      },
-      first: async () => {
-        if (sql.includes("SELECT value, updated_at FROM cache")) {
-          const row = cache.get(String(bindings[0]));
-          return row === undefined
-            ? null
-            : { value: row.value, updated_at: row.updatedAt };
-        }
-        return null;
-      },
-      run: async () => {
-        statements.push({ sql, bindings: [...bindings] });
-        return d1Result(1);
-      },
-      all: async () => d1Result(),
-      raw: async () => [],
-    } as unknown as D1PreparedStatement;
-    return statement;
+async function compileCanonicalPublication(compilerDb: D1Database) {
+  for (const [key, value] of [
+    ["report-cards:v9", "canonical-publication-envelope"],
+    ["report-cards:v9:publication-health", "canonical-health"],
+    ["report-cards:v9:last-attempt", "canonical-attempt"],
+  ] as const) {
+    await compilerDb.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(key, value, 1788433200).run();
+  }
+  return {
+    status: "ok",
+    itemCount: 200,
+    metadata: JSON.stringify({
+      sourceGenerationId: "report-cards:v9:1788433200",
+      baseInputGenerationId: "report-cards-input:v1:1788433200",
+      publication: { status: "published" },
+    }),
   };
-
-  const db = {
-    prepare,
-    batch: async (batch: D1PreparedStatement[]) => {
-      for (const statement of batch) {
-        await statement.run();
-        const recorded = statements[statements.length - 1]!;
-        if (recorded.sql.includes("INSERT INTO cache")) {
-          cache.set(String(recorded.bindings[0]), {
-            value: String(recorded.bindings[1]),
-            updatedAt: Number(recorded.bindings[2]),
-          });
-        }
-      }
-      return batch.map(() => d1Result(1));
-    },
-  } as unknown as D1Database;
-  return { db, statements };
 }
 
 class ReplayFakeStep {
@@ -156,32 +134,8 @@ describe("Safety Score V9 publication Workflow", () => {
     // step because the runtime event did not expose `instanceId`, so the slot
     // must come from the trigger's `params` payload.
     const step = new ReplayFakeStep();
-    const { db } = createRecordingDb({
-      "report-cards:fixed-input:exact": {
-        value: "fixed-input-envelope",
-        updatedAt: 1788433200,
-      },
-    });
-    computeSafetyScoreV9.mockImplementation(async (compilerDb: D1Database) => {
-      for (const [key, value] of [
-        ["report-cards:v9", "canonical-publication-envelope"],
-        ["report-cards:v9:publication-health", "canonical-health"],
-        ["report-cards:v9:last-attempt", "canonical-attempt"],
-      ] as const) {
-        await compilerDb.prepare(
-          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        ).bind(key, value, 1788433200).run();
-      }
-      return {
-        status: "ok",
-        itemCount: 200,
-        metadata: JSON.stringify({
-          sourceGenerationId: "report-cards:v9:1788433200",
-          baseInputGenerationId: "report-cards-input:v1:1788433200",
-          publication: { status: "published" },
-        }),
-      };
-    });
+    const { db } = createWorkflowDb();
+    computeSafetyScoreV9.mockImplementation(compileCanonicalPublication);
     const runtimeEvent = {
       timestamp: EVENT.timestamp,
       workflowName: EVENT.workflowName,
@@ -199,32 +153,8 @@ describe("Safety Score V9 publication Workflow", () => {
 
   it("replays completed steps without repeating compiler or writer effects", async () => {
     const step = new ReplayFakeStep();
-    const { db, statements } = createRecordingDb({
-      "report-cards:fixed-input:exact": {
-        value: "fixed-input-envelope",
-        updatedAt: 1788433200,
-      },
-    });
-    computeSafetyScoreV9.mockImplementation(async (compilerDb: D1Database) => {
-      for (const [key, value] of [
-        ["report-cards:v9", "canonical-publication-envelope"],
-        ["report-cards:v9:publication-health", "canonical-health"],
-        ["report-cards:v9:last-attempt", "canonical-attempt"],
-      ] as const) {
-        await compilerDb.prepare(
-          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        ).bind(key, value, 1788433200).run();
-      }
-      return {
-        status: "ok",
-        itemCount: 200,
-        metadata: JSON.stringify({
-          sourceGenerationId: "report-cards:v9:1788433200",
-          baseInputGenerationId: "report-cards-input:v1:1788433200",
-          publication: { status: "published" },
-        }),
-      };
-    });
+    const { db, sqlite } = createWorkflowDb();
+    computeSafetyScoreV9.mockImplementation(compileCanonicalPublication);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     const first = await runSafetyScoreV9PublicationWorkflow(
@@ -241,12 +171,13 @@ describe("Safety Score V9 publication Workflow", () => {
     expect(first).toEqual(second);
     expect(parseNativeV9InputCacheArtifact).toHaveBeenCalledTimes(1);
     expect(computeSafetyScoreV9).toHaveBeenCalledTimes(1);
-    expect(statements.filter(({ sql }) =>
-      sql.includes("INSERT INTO cache")
-    )).toHaveLength(1);
-    expect(statements.filter(({ sql }) =>
-      sql.includes("INSERT INTO cron_runs")
-    )).toHaveLength(1);
+    expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
+      { key: "report-cards:fixed-input:exact" },
+      { key: "safety-score-v9:shadow:report-cards:v9:1788433200" },
+    ]);
+    expect(sqlite.prepare("SELECT job, status FROM cron_runs").all()).toEqual([
+      { job: SAFETY_SCORE_V9_WORKFLOW_JOB, status: "ok" },
+    ]);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(step.calls.slice(0, 4).map(({ name }) => name)).toEqual([
       "load fixed input",
@@ -254,12 +185,27 @@ describe("Safety Score V9 publication Workflow", () => {
       "gate publication",
       "write shadow publication",
     ]);
-    for (const { config } of step.calls) {
-      expect(config).toMatchObject({
-        retries: { limit: 3, backoff: "exponential" },
-        timeout: "14 minutes",
-      });
+  });
+
+  it("rejects mixed batches before any live write or capture", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec("INSERT INTO cache VALUES ('live', 'original', 1)");
+    for (const query of [
+      "INSERT INTO cache (key, value, updated_at) VALUES ('live', 'changed', 2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      "DELETE FROM cache WHERE key = 'live'",
+      "DELETE FROM cron_runs",
+    ]) {
+      const capture = createSafetyScoreV9ShadowCaptureDatabase(db);
+      await expect(capture.db.batch([
+        capture.db.prepare("SELECT value FROM cache"),
+        capture.db.prepare(query),
+      ])).rejects.toThrow();
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'live'").get()).toEqual({ value: "original" });
+      expect(capture.state.cacheWrites.size).toBe(0);
     }
+    const capture = createSafetyScoreV9ShadowCaptureDatabase(db);
+    await expect(capture.db.batch([db.prepare("DELETE FROM cache")])).rejects.toThrow("untracked");
+    expect(sqlite.prepare("SELECT value FROM cache").all()).toEqual([{ value: "original" }]);
   });
 
   it("captures canonical runner cache writes without executing live writes", async () => {
@@ -293,48 +239,79 @@ describe("Safety Score V9 publication Workflow", () => {
     ).rejects.toThrow("non-cache D1 write");
   });
 
-  it("writes only the generation-scoped shadow key and a compatible terminal row", async () => {
-    const { db, statements } = createRecordingDb();
-    const shadowKey = `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:1788433200`;
-    await writeSafetyScoreV9ShadowPublication(
-      db,
-      EVENT.instanceId,
-      1788433200,
-      EVENT.timestamp.getTime(),
-      {
-        shadowKey,
-        shadowValue: "shadow-envelope",
-        updatedAt: 1788433200,
-        cronStatus: "ok",
-        itemCount: 200,
-        error: null,
-        cronMetadata: "{\"publicationStatus\":\"published\"}",
-      },
-    );
+  it("keeps identical shadow retries durable and rolls back conflicting generations", async () => {
+    const { db, sqlite } = fixtures.open();
+    const gated = {
+      shadowKey: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:1788433200`,
+      shadowValue: "shadow-envelope",
+      updatedAt: 1788433200,
+      cronStatus: "ok" as const,
+      itemCount: 200,
+      error: null,
+      cronMetadata: "{\"publicationStatus\":\"published\"}",
+    };
+    const write = (value = gated, instanceId = EVENT.instanceId as string) =>
+      writeSafetyScoreV9ShadowPublication(db, instanceId, 1788433200, EVENT.timestamp.getTime(), value);
+    await write();
+    const rows = sqlite.prepare("SELECT * FROM cron_runs").all();
+    expect(rows).toMatchObject([{
+      job: SAFETY_SCORE_V9_WORKFLOW_JOB, status: "ok", item_count: 200,
+      slot_started_at: 1788433200, error: null,
+      idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${EVENT.instanceId}`,
+    }]);
+    await write();
+    expect(sqlite.prepare("SELECT * FROM cron_runs").all()).toEqual(rows);
+    for (const conflict of [{ ...gated, shadowValue: "different" }, { ...gated, updatedAt: gated.updatedAt + 1 }]) {
+      await expect(write(conflict, "conflicting-instance")).rejects.toThrow();
+      expect(sqlite.prepare("SELECT key, value, updated_at FROM cache").all()).toEqual([{
+        key: gated.shadowKey, value: "shadow-envelope", updated_at: 1788433200,
+      }]);
+      expect(sqlite.prepare("SELECT * FROM cron_runs").all()).toEqual(rows);
+    }
+  });
 
-    const cacheWrite = statements.find(({ sql }) =>
-      sql.includes("INSERT INTO cache"),
-    );
-    expect(cacheWrite?.bindings[0]).toBe(shadowKey);
-    expect(statements.some(({ bindings }) =>
-      bindings[0] === "report-cards:v9" ||
-      bindings[0] === "report-cards:v9:publication-health"
-    )).toBe(false);
+  it("records terminal errors without shadow publication for missing, newer or advanced inputs", async () => {
+    for (const failure of ["missing", "newer", "advanced"] as const) {
+      const { db, sqlite } = createWorkflowDb();
+      if (failure === "missing") sqlite.exec("DELETE FROM cache");
+      if (failure === "newer") {
+        parseNativeV9InputCacheArtifact.mockResolvedValueOnce({
+          input: { sourceGeneration: "report-cards:v9:1788433200", baseInputGenerationId: "report-cards-input:v1:1788433200", clockSec: 1788433201 },
+        });
+      }
+      computeSafetyScoreV9.mockImplementation(async (compilerDb: D1Database) => {
+        const result = await compileCanonicalPublication(compilerDb);
+        return { ...result, metadata: JSON.stringify({
+          ...JSON.parse(result.metadata), sourceGenerationId: "report-cards:v9:1788433201",
+        }) };
+      });
+      const result = await runSafetyScoreV9PublicationWorkflow({ DB: db }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep);
+      expect(result).toEqual({ instanceId: EVENT.instanceId, shadowKey: null, sourceGeneration: null, status: "error" });
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key != 'report-cards:fixed-input:exact'").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT status, error FROM cron_runs").all()).toEqual([{
+        status: "error", error: expect.stringContaining(failure === "missing" ? "missing" : failure === "newer" ? "newer" : "advanced"),
+      }]);
+    }
+  });
 
-    const terminal = statements.find(({ sql }) =>
-      sql.includes("INSERT INTO cron_runs"),
-    );
-    expect(terminal?.bindings).toEqual([
-      SAFETY_SCORE_V9_WORKFLOW_JOB,
-      1788433200,
-      expect.any(Number),
-      "ok",
-      200,
-      "{\"publicationStatus\":\"published\"}",
-      1788433200,
-      null,
-      `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${EVENT.instanceId}`,
-    ]);
+  it("rejects identity mismatches and publication-envelope inconsistencies independently", async () => {
+    const fixed = { sourceGeneration: "report-cards:v9:1788433200", baseInputGenerationId: "report-cards-input:v1:1788433200", clockSec: 1788433200 };
+    const metadata = { sourceGenerationId: fixed.sourceGeneration, baseInputGenerationId: fixed.baseInputGenerationId, publication: { status: "published" } };
+    const compiled = {
+      status: "ok" as const, itemCount: 1, metadata: JSON.stringify(metadata), error: null,
+      publicationEnvelope: "canonical", publicationHealth: null, publicationAttempt: null,
+      failedPublicationAttempt: null, capturedCacheKeys: ["report-cards:v9"],
+    };
+    await expect(gateSafetyScoreV9ShadowPublication(EVENT.instanceId, fixed.clockSec, fixed, compiled))
+      .resolves.toMatchObject({ shadowKey: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:${fixed.sourceGeneration}` });
+    for (const invalid of [
+      { ...compiled, metadata: JSON.stringify({ ...metadata, sourceGenerationId: "other" }) },
+      { ...compiled, metadata: JSON.stringify({ ...metadata, baseInputGenerationId: "other" }) },
+      { ...compiled, publicationEnvelope: null },
+      { ...compiled, metadata: JSON.stringify({ ...metadata, publication: { status: "held" } }) },
+    ]) {
+      await expect(gateSafetyScoreV9ShadowPublication(EVENT.instanceId, fixed.clockSec, fixed, invalid)).rejects.toThrow();
+    }
   });
 
   it("persists held assessment sidecars without inventing a publication", async () => {

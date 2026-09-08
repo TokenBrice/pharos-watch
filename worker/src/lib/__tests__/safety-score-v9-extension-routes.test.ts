@@ -16,6 +16,7 @@ import {
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9/extension-routes";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
+import { dexRouteObservation } from "./safety-score-v9-extension-routes.test-support";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
 const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
@@ -83,23 +84,10 @@ const FASTER_REVIEWED_SETTLEMENT = {
 } satisfies NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>;
 
 function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput {
-  const route: ExitRouteObservation = {
+  const route = dexRouteObservation(V9_FIXTURE_CLOCK, {
     routeId: "dex:usdaf-asymmetry:dl:ethereum%3Apool:ethereum%3Athbill-output",
-    routeFamily: "dex-amm",
-    scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
-    requestedNotionalUsd: 1_000_000,
-    settlementHorizonSec: 300,
-    maxCostBps: 200,
-    executableUsd: 900_000,
-    completionRatio: 0.9,
     output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
-    evidenceKind: "reserve-based-amm-simulation",
-    confidence: "high",
-    scoreEligible: true,
-    observedAt: V9_FIXTURE_CLOCK,
-    freshnessSeconds: 0,
-    commonModeKeys: ["chain:ethereum", "protocol:curve"],
-  };
+  });
   return createReportCardsFixedInput({
     captureKind: "public-reconstruction",
     activeAssetIds: ["usdaf-asymmetry"],
@@ -133,19 +121,7 @@ function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput
         concentrationHhi: 0.5,
         poolCount: 1,
         chainCount: 1,
-        exitRouteObservations: [route],
-        exitRouteObservationCoverage: {
-          status: "populated",
-          capabilityMatrixVersion: "p4a.9",
-          retainedPoolCount: 1,
-          observationCount: 1,
-          scoreEligibleObservationCount: 1,
-          scoreEligiblePoolCount: 1,
-          scoreEligibleCapabilityPoolCount: 1,
-          unsupportedPoolCount: 0,
-          evidenceCounts: { "reserve-based-amm-simulation": 1 },
-          unsupportedReasons: {},
-        },
+        ...singleObservationDexLiquidity(route),
         methodologyVersion: "dex:fixture-v1",
         updatedAt: V9_FIXTURE_CLOCK,
       },
@@ -262,51 +238,37 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(row).not.toHaveProperty("scoringDisposition");
   });
 
-  it("records capacity, settlement, and cost gaps distinctly while retaining partial terms", () => {
-    const expectedMissingFields = {
-      "axcnh-anchorx": ["capacity", "settlement", "cost"],
-      "brla-brla-digital": ["capacity", "settlement", "cost"],
-      "gbpsafo-spiko": ["capacity", "cost"],
-      "jaaa-janus-henderson-anemoy": ["capacity", "settlement", "cost"],
-      "mapollo-midas": ["capacity", "settlement", "cost"],
-      "mf-one-midas": ["capacity", "settlement"],
-      "mhyper-midas": ["capacity", "settlement"],
-      "mmev-midas": ["capacity", "settlement", "cost"],
-      "mtbill-midas": ["capacity", "settlement"],
-      "mxnb-juno": ["capacity", "settlement", "cost"],
-      "qcad-stablecorp": ["capacity", "settlement", "cost"],
-      "sbc-brale": ["capacity", "settlement", "cost"],
-      "usd1-world-liberty-financial": ["capacity", "settlement", "cost"],
-      "usdn-noble": ["capacity", "settlement", "cost"],
-      "vbill-vaneck": ["capacity", "settlement", "cost"],
-      "wars-argentine-peso": ["capacity", "settlement", "cost"],
-      "xo-exodus": ["settlement"],
-    } as const;
-
-    for (const [assetId, missingScoringFields] of Object.entries(expectedMissingFields)) {
-      expect(getRedemptionBackstopConfig(assetId)?.v9RouteReviewTerms).toMatchObject({
-        scoringDisposition: "bounded-terms-gap",
-        missingScoringFields,
-        reviewedAt: expect.any(String),
-        rationale: expect.any(String),
-        docs: expect.arrayContaining([expect.objectContaining({ url: expect.any(String) })]),
-      });
-    }
-
-    expect(getRedemptionBackstopConfig("xo-exodus")?.costModel).toMatchObject({
-      kind: "fee-bps",
-      feeBps: 0,
-    });
-    const usd1Terms = getRedemptionBackstopConfig("usd1-world-liberty-financial")?.v9RouteReviewTerms;
-    expect(usd1Terms).toMatchObject({
+  it.each([
+    { missingFields: ["capacity"] },
+    { missingFields: ["settlement"] },
+    { missingFields: ["cost"] },
+    { missingFields: ["capacity", "settlement", "cost"] },
+  ] as const)("projects omitted $missingFields terms as diagnostic while retaining captured terms", ({ missingFields }) => {
+    const row = makeSupplyFullRedemption({ feeBps: 7 });
+    const fixed = fixedInputStub(row);
+    expect(buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]?.coverageClass).toBe("exact-lower-bound");
+    const retainedBefore = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, row.stablecoinId);
+    const frozen = structuredClone(row);
+    withV9RouteReviewTerms(row.stablecoinId, {
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-    });
-    expect(usd1Terms).not.toHaveProperty("settlementModel");
-    expect(usd1Terms).not.toHaveProperty("settlementDelaySec");
-    expect(getRedemptionBackstopConfig("mtbill-midas")?.costModel).toMatchObject({
-      kind: "fee-bps",
-      feeBps: 7,
+      missingScoringFields: [...missingFields],
+      reviewedAt: "2026-07-01",
+      rationale: "The omitted terms have no reviewed bound.",
+      docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["settlement"] }],
+    }, () => {
+      const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, row.stablecoinId);
+      const reviews = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId);
+      expect(retained).toEqual(retainedBefore);
+      expect(retained).toMatchObject([{ observation: { executableUsd: 5_000_000 } }]);
+      expect(reviews).toMatchObject([{
+        coverageClass: "diagnostic", settlementModel: "atomic", settlementSlaSec: 0,
+      }]);
+      expect([...reviews[0]!.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
+        [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
+          requestedNotionalUsd, maxCostBps: 200, executionCostBps: 7,
+        })),
+      );
+      expect(row).toEqual(frozen);
     });
   });
 
@@ -345,7 +307,11 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       fixedInputStub(fixedFeeRow),
       fixedFeeRow.stablecoinId,
     )[0]!;
-    expect(fixedFeeReview.executionCosts.every((point) => point.executionCostBps === 25)).toBe(true);
+    expect([...fixedFeeReview.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
+      [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
+        requestedNotionalUsd, maxCostBps: 200, executionCostBps: 25,
+      })),
+    );
   });
 
   it("projects conservative USDT-only reviewed constraints without changing the captured row", () => {
@@ -469,7 +435,11 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     };
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
 
-    expect(review.executionCosts.every((point) => point.executionCostBps === 30)).toBe(true);
+    expect([...review.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
+      [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
+        requestedNotionalUsd, maxCostBps: 200, executionCostBps: 30,
+      })),
+    );
     expect(review).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high" });
     expect(review.output).toMatchObject({
       kind: "tracked-stablecoin",
@@ -900,16 +870,9 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 
   it("values production-shaped tracked DEX output aliases by canonical stablecoin id", () => {
     const fixedInput = fixedInputStub(undefined);
-    const route: ExitRouteObservation = {
+    const route = dexRouteObservation(NOW, {
       routeId:
         "dex:asset-input:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool:ethereum%3A0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
-      routeFamily: "dex-amm",
-      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
-      requestedNotionalUsd: 1_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
-      executableUsd: 900_000,
-      completionRatio: 0.9,
       output: {
         kind: "tracked-stablecoin",
         trackedAssetIds: ["usdf-falcon"],
@@ -918,34 +881,9 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       outputUnitValueUsd: 0.95,
       outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
       outputUnitValueObservedAt: NOW,
-      evidenceKind: "reserve-based-amm-simulation",
-      confidence: "high",
-      scoreEligible: true,
-      observedAt: NOW,
-      freshnessSeconds: 0,
-      commonModeKeys: ["chain:ethereum", "protocol:curve"],
-    };
+    });
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "asset-input": {
-        exitRouteObservations: [route],
-        exitRouteObservationCoverage: {
-          status: "populated",
-          capabilityMatrixVersion: "p4a.9",
-          retainedPoolCount: 2_418,
-          observationCount: 44,
-          scoreEligibleObservationCount: 44,
-          scoreEligiblePoolCount: 38,
-          scoreEligibleCapabilityPoolCount: 38,
-          unsupportedPoolCount: 2_380,
-          evidenceCounts: { "reserve-based-amm-simulation": 44 },
-          unsupportedReasons: {
-            "nonExecutableEvidence:defillama-pool-shaped": 1_449,
-            "nonExecutableEvidence:curve-stableswap-shaped": 11,
-            "nonExecutableEvidence:direct-api-amm-shaped": 653,
-            "nonExecutableEvidence:discovery-pool-shaped": 267,
-          },
-        },
-      },
+      "asset-input": singleObservationDexLiquidity(route),
     };
     (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
       "usdf-falcon": { pegCurrency: "USD", currentDeviationBps: -12, priceObservedAt: NOW },
@@ -973,26 +911,15 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 
   it("uses a source-bound exact DEX output reference when peg and NAV valuation are unavailable", () => {
     const fixedInput = fixedInputStub(undefined);
-    const route: ExitRouteObservation = {
+    const route = dexRouteObservation(NOW, {
       routeId: "dex:scrvusd-curve:dl:ethereum%3Ausdaf-output",
-      routeFamily: "dex-amm",
-      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
-      requestedNotionalUsd: 1_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
       executableUsd: 31_206.39,
       completionRatio: 0.03120639,
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdaf-asymmetry"] },
       outputUnitValueUsd: 0.9975,
       outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
       outputUnitValueObservedAt: NOW - 30,
-      evidenceKind: "reserve-based-amm-simulation",
-      confidence: "high",
-      scoreEligible: true,
-      observedAt: NOW,
-      freshnessSeconds: 0,
-      commonModeKeys: ["chain:ethereum", "protocol:curve"],
-    };
+    });
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
       "scrvusd-curve": singleObservationDexLiquidity(route),
     };
@@ -1054,23 +981,10 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 
   it("values a NAV output from the captured NAV price without creating a peg valuation", () => {
     const fixedInput = fixedInputStub(undefined);
-    const route: ExitRouteObservation = {
+    const route = dexRouteObservation(NOW, {
       routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Anav-output",
-      routeFamily: "dex-amm",
-      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
-      requestedNotionalUsd: 1_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
-      executableUsd: 900_000,
-      completionRatio: 0.9,
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
-      evidenceKind: "reserve-based-amm-simulation",
-      confidence: "high",
-      scoreEligible: true,
-      observedAt: NOW,
-      freshnessSeconds: 0,
-      commonModeKeys: ["chain:ethereum", "protocol:curve"],
-    };
+    });
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
       "asset-input": singleObservationDexLiquidity(route),
     };
@@ -1209,24 +1123,16 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     mature = false,
     adapterProfileId?: string,
   ): ExitRouteObservation {
-    const observation: ExitRouteObservation = {
+    const observation = dexRouteObservation(NOW, {
       routeId: `dex:usdc-circle:dl:ethereum%3Apool:${evidenceKind}`,
-      routeFamily: "dex-amm",
       scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: `pool-${evidenceKind}`, protocol: "curve" },
-      requestedNotionalUsd: 1_000_000,
-      settlementHorizonSec: 300,
       maxCostBps: 50,
       executableUsd: 950_000,
       completionRatio: 0.95,
       output: { kind: "fiat", currency: "USD" },
       evidenceKind,
       ...(adapterProfileId ? { adapterProfileId } : {}),
-      confidence: "high",
-      scoreEligible: true,
-      observedAt: NOW,
-      freshnessSeconds: 0,
-      commonModeKeys: ["chain:ethereum", "protocol:curve"],
-    };
+    });
     if (evidenceKind === "measured-executable-depth" && mature) {
       const conservativeCapacityCurve = [
         {

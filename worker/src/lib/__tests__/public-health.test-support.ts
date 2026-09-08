@@ -1,4 +1,39 @@
 import type { PublicHealthAssessment } from "../public-health-assessment";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+
+export function makePriceCoverageMetadata(
+  nowSec: number,
+  missingId: string | null,
+  consecutive = 2,
+  alertEligible = true,
+  compact = false,
+): Record<string, unknown> {
+  const activeIds = [...ACTIVE_IDS];
+  const missingIds = missingId == null ? [] : [missingId];
+  const eligibleIds = alertEligible ? missingIds : [];
+  return {
+    activePublicationCoverage: {
+      complete: true, expectedActiveCount: activeIds.length, presentActiveCount: activeIds.length,
+      waivedActiveCount: 0, missingActiveIds: [], waivedActiveIds: [], expiredWaiverIds: [],
+    },
+    activePriceCoverage: {
+      complete: missingId == null, expectedActiveCount: activeIds.length, presentActiveCount: activeIds.length,
+      pricedActiveCount: activeIds.length - missingIds.length, missingPriceCount: missingIds.length,
+      pricedActiveIds: activeIds.filter((id) => id !== missingId), missingActiveIds: missingIds,
+      affectedMarketCapUsd: missingId == null ? 0 : 88_000_000,
+      missingActiveAssets: compact || missingId == null ? [] : [{
+        stablecoinId: missingId, symbol: "MISS", marketCapUsd: 88_000_000,
+        currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
+        consecutiveMissingGenerations: consecutive, lastAcceptedPrice: 1.001,
+        lastAcceptedSource: "pyth", lastAcceptedObservedAt: nowSec - 900 * consecutive,
+        rejectionReason: "no-accepted-price", alertEligible,
+      }],
+      ...(compact ? { missingActiveState: [[missingId, consecutive, 0.999, "redstone", nowSec - 3_600, "no-accepted-price"]] } : {}),
+      alertEligibleCount: eligibleIds.length, alertEligibleIds: eligibleIds,
+      maxConsecutiveMissingGenerations: missingId == null ? 0 : consecutive,
+    },
+  };
+}
 
 export function makePublicHealth(
   overallStatus: PublicHealthAssessment["overallStatus"] = "healthy",

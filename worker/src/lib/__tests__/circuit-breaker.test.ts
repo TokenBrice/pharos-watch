@@ -13,7 +13,7 @@ import {
   resetCircuitBreakerStateForTests,
 } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 

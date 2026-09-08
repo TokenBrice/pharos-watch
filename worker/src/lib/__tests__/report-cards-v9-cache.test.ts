@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const mockLoadPublication = vi.fn();
@@ -16,31 +16,6 @@ const {
   ReportCardsV9SnapshotUnavailableError,
 } = await import("../report-cards-v9-cache");
 
-function evaluatorPublication() {
-  const response = makeReportCardsV9Response();
-  return {
-    model: "v9-critical-path" as const,
-    lifecycle: "active" as const,
-    schemaVersion: 5 as const,
-    candidateId: response.source.candidateId,
-    policyVersion: response.methodology.version,
-    policy: response.methodology.policy,
-    evaluationBuildDigest:
-      response.safetyScoreIdentity.evaluationBuildDigest,
-    baseInputGenerationId:
-      response.safetyScoreIdentity.baseInputGenerationId,
-    publicationGenerationId:
-      response.safetyScoreIdentity.publicationGenerationId,
-    factSetDigest: response.source.factSetDigest,
-    resultDigest: response.source.resultDigest,
-    sourceGenerations: response.source.sourceGenerations,
-    asOfSec: response.asOfSec,
-    publishedAtSec: response.updatedAt,
-    completeness: response.completeness,
-    cards: response.cards,
-  };
-}
-
 describe("canonical V9 report-card cache", () => {
   beforeEach(() => {
     mockLoadPublication.mockReset();
@@ -48,7 +23,7 @@ describe("canonical V9 report-card cache", () => {
   });
 
   it("projects the evaluator publication into the active report-v5 contract", () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     const health = makeReportCardsV9Response().publicationHealth;
 
     expect(
@@ -64,7 +39,7 @@ describe("canonical V9 report-card cache", () => {
   });
 
   it("holds the stored publication when health points at another generation", () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     const health = {
       ...makeReportCardsV9Response().publicationHealth,
       acceptedPublicationGenerationId: "report-cards:v9:other",
@@ -79,7 +54,7 @@ describe("canonical V9 report-card cache", () => {
   });
 
   it("holds a newer stored publication when health is older", () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     const health = {
       ...makeReportCardsV9Response().publicationHealth,
       acceptedPublicationGenerationId: "report-cards:v9:older",
@@ -97,7 +72,7 @@ describe("canonical V9 report-card cache", () => {
   });
 
   it("requires a publication and health row", async () => {
-    mockLoadPublication.mockResolvedValue(evaluatorPublication());
+    mockLoadPublication.mockResolvedValue(makeWorkerSafetyScoreV9Publication());
     mockLoadPublicationHealth.mockResolvedValue(null);
 
     await expect(

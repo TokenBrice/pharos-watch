@@ -1,12 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-function openSqliteWithMigrations(): import("node:sqlite").DatabaseSync {
-  return createLatestSchemaSqlite().sqlite;
-}
+const fixtures = createLatestSchemaFixtureTracker();
+let sqlite: DatabaseSync;
+beforeAll(() => { sqlite = fixtures.open().sqlite; });
+afterAll(fixtures.closeAll);
 
 function explainQueryPlan(
-  sqlite: import("node:sqlite").DatabaseSync,
+  sqlite: DatabaseSync,
   sql: string,
 ): string {
   const rows = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all() as Array<{
@@ -17,7 +19,6 @@ function explainQueryPlan(
 
 describe("surface publication generation indexes", () => {
   it("uses the surface/start index for latest attempted generation lookups", () => {
-    const sqlite = openSqliteWithMigrations();
     const plan = explainQueryPlan(
       sqlite,
       `SELECT generation_id
@@ -26,13 +27,11 @@ describe("surface publication generation indexes", () => {
         ORDER BY started_at DESC
         LIMIT 1`,
     );
-    sqlite.close();
 
     expect(plan).toContain("idx_surface_publication_generations_surface_started");
   });
 
   it("uses the surface/state/published index for latest published generation lookups", () => {
-    const sqlite = openSqliteWithMigrations();
     const plan = explainQueryPlan(
       sqlite,
       `SELECT generation_id
@@ -41,13 +40,11 @@ describe("surface publication generation indexes", () => {
         ORDER BY published_at DESC, started_at DESC
         LIMIT 1`,
     );
-    sqlite.close();
 
     expect(plan).toContain("idx_surface_publication_generations_surface_state_published");
   });
 
   it("uses the surface/state/start index for latest failed candidate lookups", () => {
-    const sqlite = openSqliteWithMigrations();
     const plan = explainQueryPlan(
       sqlite,
       `SELECT generation_id
@@ -56,7 +53,6 @@ describe("surface publication generation indexes", () => {
         ORDER BY started_at DESC
         LIMIT 1`,
     );
-    sqlite.close();
 
     expect(plan).toContain("idx_surface_publication_generations_surface_state_started");
   });

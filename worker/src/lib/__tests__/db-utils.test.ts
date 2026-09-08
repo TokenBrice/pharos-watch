@@ -19,7 +19,7 @@ import {
   writeFreshnessSentinel,
 } from "../db-cache";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

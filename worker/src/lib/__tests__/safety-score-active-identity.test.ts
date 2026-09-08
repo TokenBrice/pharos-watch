@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 
 const mockLoadPublication = vi.fn();
 const mockLoadPublicationHealth = vi.fn();
@@ -14,30 +15,7 @@ const { loadActiveSafetyScoreIdentity } = await import(
   "../safety-score-active-source"
 );
 
-function evaluatorPublication() {
-  const response = makeReportCardsV9Response();
-  return {
-    model: "v9-critical-path" as const,
-    lifecycle: "active" as const,
-    schemaVersion: 5 as const,
-    candidateId: response.source.candidateId,
-    policyVersion: response.methodology.version,
-    policy: response.methodology.policy,
-    evaluationBuildDigest: response.safetyScoreIdentity.evaluationBuildDigest,
-    baseInputGenerationId: response.safetyScoreIdentity.baseInputGenerationId,
-    publicationGenerationId:
-      response.safetyScoreIdentity.publicationGenerationId,
-    factSetDigest: response.source.factSetDigest,
-    resultDigest: response.source.resultDigest,
-    sourceGenerations: response.source.sourceGenerations,
-    asOfSec: response.asOfSec,
-    publishedAtSec: response.updatedAt,
-    completeness: response.completeness,
-    cards: response.cards,
-  };
-}
-
-function matchingHealth(publication: ReturnType<typeof evaluatorPublication>) {
+function matchingHealth(publication: SafetyScoreV9CurrentResponse) {
   return {
     ...makeReportCardsV9Response().publicationHealth,
     acceptedPublicationGenerationId: publication.publicationGenerationId,
@@ -58,7 +36,7 @@ describe("active Safety Score identity", () => {
   });
 
   it("resolves the canonical publication identity without the cards", async () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     mockLoadPublication.mockResolvedValue(publication);
     mockLoadPublicationHealth.mockResolvedValue(matchingHealth(publication));
 
@@ -78,7 +56,7 @@ describe("active Safety Score identity", () => {
   });
 
   it("reports a held publication as held and still carries its identity", async () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     mockLoadPublication.mockResolvedValue(publication);
     mockLoadPublicationHealth.mockResolvedValue({
       ...matchingHealth(publication),
@@ -96,7 +74,7 @@ describe("active Safety Score identity", () => {
   });
 
   it("holds when health points at another generation", async () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     mockLoadPublication.mockResolvedValue(publication);
     mockLoadPublicationHealth.mockResolvedValue({
       ...makeReportCardsV9Response().publicationHealth,
@@ -122,7 +100,7 @@ describe("active Safety Score identity", () => {
   });
 
   it("fails closed to error when the health row is missing", async () => {
-    const publication = evaluatorPublication();
+    const publication = makeWorkerSafetyScoreV9Publication();
     mockLoadPublication.mockResolvedValue(publication);
     mockLoadPublicationHealth.mockResolvedValue(null);
 
