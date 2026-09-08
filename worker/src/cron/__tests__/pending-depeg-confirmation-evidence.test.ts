@@ -7,6 +7,8 @@ import { DEPEG_PENDING_MIN_AGE_SEC, DEX_FRESHNESS_SEC } from "../../lib/constant
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
 import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolChallengersByCoin, DexPriceRowsByCoin, DexPriceSourcesByCoin } from "../pending-depeg-confirmation";
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
+import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 
@@ -19,10 +21,7 @@ function row(overrides: Partial<PendingDepegRow> = {}): PendingDepegRow {
   const firstSeenAt = overrides.first_seen_at ?? NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC - 60;
   const firstSeenBps = overrides.first_seen_bps ?? -220;
   const firstPrice = overrides.first_price ?? 0.978;
-  return { id: 1, stablecoin_id: COIN_ID, symbol: "USDT", peg_type: "peggedUSD", direction: "below", first_seen_bps: firstSeenBps, first_seen_at: firstSeenAt, first_price: firstPrice, last_seen_bps: firstSeenBps, last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC, last_price: firstPrice, peak_seen_bps: null, peak_price: null, peg_reference: 1, reason: "large-cap", updated_at: firstSeenAt, ...overrides };
-}
-function emptyEvidence(): CollectedConfirmationEvidence {
-  return { confirmingSources: [], opposingSources: [], unavailableSources: [], circuitOpenSources: [], hardOpposingSources: [], offchainStatus: "insufficient", offchainSourceKey: null, offchainPeakCandidate: null, dexStatus: "insufficient", dexPeakCandidates: [], dexConfirmationKeys: [], cexStatus: "insufficient", cexPeakCandidate: null, poolStatus: "insufficient", poolConfirmations: [] };
+  return makePendingDepegRow({ id: 1, stablecoin_id: COIN_ID, symbol: "USDT", first_seen_at: firstSeenAt, first_seen_bps: firstSeenBps, first_price: firstPrice, last_seen_bps: firstSeenBps, last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC, last_price: firstPrice, updated_at: firstSeenAt, ...overrides });
 }
 function input(overrides: Partial<ConfirmationEvidenceInput> = {}): ConfirmationEvidenceInput {
   const value = overrides.row ?? row();

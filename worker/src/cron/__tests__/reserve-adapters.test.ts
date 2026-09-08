@@ -64,11 +64,8 @@ describe("adaptCircleTransparency", () => {
     expect(() => adaptCircleTransparency("<div>empty page</div>", "usdc")).toThrow("missing reserve attributes");
   });
 
-  it("throws when attributes have zero or invalid values", () => {
-    const html = `
-      <div data-usdc-us-treasuries="0" data-usdc-months="100"></div>
-    `;
-
+  it.each(["0", "-1", "4.7.18"])("rejects a complete fixture with treasury value %s", (value) => {
+    const html = mockUsdcHtml.replace('data-usdc-us-treasuries="47.08"', `data-usdc-us-treasuries="${value}"`);
     expect(() => adaptCircleTransparency(html, "usdc")).toThrow("missing reserve attributes");
   });
 

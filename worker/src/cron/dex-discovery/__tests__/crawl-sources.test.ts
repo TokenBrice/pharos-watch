@@ -1,3 +1,4 @@
+import { coinGeckoPool } from "./discovery.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
@@ -433,24 +434,7 @@ describe("crawlCoin DexScreener hardening", () => {
       transportOk: true,
       schemaDegraded: false,
       pools: [
-        {
-          id: "cg-pool",
-          type: "pool",
-          attributes: {
-            address: "0xPool",
-            name: "USDC / USDT",
-            pool_created_at: "2025-01-01T00:00:00.000Z",
-            base_token_price_usd: "1.0002",
-            quote_token_price_usd: "0.9999",
-            reserve_in_usd: "220000",
-            volume_usd: { h24: "18000" },
-          },
-          relationships: {
-            base_token: { data: { id: "token_0xabc", type: "token" } },
-            quote_token: { data: { id: "token_0xquote", type: "token" } },
-            dex: { data: { id: "uniswap-v3", type: "dex" } },
-          },
-        } as never,
+        coinGeckoPool() as never,
       ],
     });
 
@@ -500,24 +484,10 @@ describe("crawlCoin DexScreener hardening", () => {
       transportOk: true,
       schemaDegraded: false,
       pools: [
-        {
-          id: "solana_PoolCase",
-          type: "pool",
-          attributes: {
-            address: "PoolCase",
-            name: "EUSD / USDC",
-            pool_created_at: "2025-01-01T00:00:00.000Z",
-            base_token_price_usd: "1",
-            quote_token_price_usd: "1",
-            reserve_in_usd: "220000",
-            volume_usd: { h24: "18000" },
-          },
-          relationships: {
-            base_token: { data: { id: "solana_MintCase", type: "token" } },
-            quote_token: { data: { id: "solana_QuoteCase", type: "token" } },
-            dex: { data: { id: "raydium", type: "dex" } },
-          },
-        } as never,
+        coinGeckoPool({
+          id: "solana_PoolCase", address: "PoolCase", name: "EUSD / USDC", network: "solana",
+          baseToken: "MintCase", quoteToken: "QuoteCase", dex: "raydium", basePrice: "1", quotePrice: "1",
+        }) as never,
       ],
     });
 
@@ -599,24 +569,7 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("keeps shared CoinGecko onchain pools distinct across stablecoins", async () => {
-    const sharedPool = {
-      id: "cg-pool",
-      type: "pool",
-      attributes: {
-        address: "0xPool",
-        name: "USDC / USDT",
-        pool_created_at: "2025-01-01T00:00:00.000Z",
-        base_token_price_usd: "1.0002",
-        quote_token_price_usd: "0.9999",
-        reserve_in_usd: "220000",
-        volume_usd: { h24: "18000" },
-      },
-      relationships: {
-        base_token: { data: { id: "token_0xabc", type: "token" } },
-        quote_token: { data: { id: "token_0xquote", type: "token" } },
-        dex: { data: { id: "uniswap-v3", type: "dex" } },
-      },
-    } as never;
+    const sharedPool = coinGeckoPool() as never;
     vi.mocked(fetchCgTokenPoolsWithStatus)
       .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, pools: [sharedPool] })
       .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, pools: [sharedPool] });
@@ -649,24 +602,15 @@ describe("crawlCoin DexScreener hardening", () => {
       transportOk: true,
       schemaDegraded: false,
       pools: [
-        {
+        coinGeckoPool({
           id: "eth_0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
-          type: "pool",
-          attributes: {
-            address: "0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
-            name: "XAUt / sUSDS",
-            pool_created_at: "2026-01-27T20:19:51Z",
-            base_token_price_usd: "76259889535.2567",
-            quote_token_price_usd: "18550521.8243312",
-            reserve_in_usd: "2020820673.4245",
-            volume_usd: { h24: "1035914339.44693" },
-          },
-          relationships: {
-            base_token: { data: { id: "eth_0x68749665ff8d2d112fa859aa293f07a622782f38", type: "token" } },
-            quote_token: { data: { id: "eth_0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", type: "token" } },
-            dex: { data: { id: "carbon-defi-ethereum", type: "dex" } },
-          },
-        } as never,
+          address: "0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236", name: "XAUt / sUSDS",
+          createdAt: "2026-01-27T20:19:51Z", network: "eth",
+          basePrice: "76259889535.2567", quotePrice: "18550521.8243312",
+          reserve: "2020820673.4245", volume: "1035914339.44693",
+          baseToken: "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          quoteToken: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", dex: "carbon-defi-ethereum",
+        }) as never,
       ],
     });
 
@@ -812,19 +756,8 @@ describe("crawlCoin DexScreener hardening", () => {
       schemaDegraded: false,
       pools: [],
     });
-    vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
-      expect(config.tokens).toEqual([
-        {
-          sourceChain: "eth",
-          ourChain: "ethereum",
-          address: "0xabc",
-          stablecoinId: "usdc-circle",
-        },
-      ]);
-      return { stoppedEarly: false };
-    });
 
-    await crawlCoin(
+    const result = await crawlCoin(
       createMockDb(),
       "usdc-circle",
       [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
@@ -833,6 +766,9 @@ describe("crawlCoin DexScreener hardening", () => {
     );
 
     expect(crawlTokenPools).not.toHaveBeenCalled();
+    expect(result.deploymentOutcomes).toEqual([
+      expect.objectContaining({ outcome: "verified_no_pools", observedPoolCount: 0 }),
+    ]);
   });
 
   it("preserves non-EVM token case in GeckoTerminal requests", async () => {

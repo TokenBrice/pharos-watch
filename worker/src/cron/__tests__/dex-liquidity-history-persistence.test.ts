@@ -4,6 +4,8 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
+import { makeFullScoreResult } from "./dex-liquidity-persistence.test-support";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 
 const NOW_SEC = Math.floor(Date.UTC(2026, 6, 10, 12) / 1000);
 const SNAPSHOT_DATE = NOW_SEC - (NOW_SEC % 86_400);
@@ -19,30 +21,13 @@ function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
 }
 
 function makeScore(score = 80): FullScoreResult {
-  return {
-    tvl: 1_000_000,
-    effectiveTvl: 900_000,
-    vol24h: 100_000,
-    score,
-    hhi: 0.1,
-    durability: 80,
-    components: {
-      tvlDepth: 80,
-      volumeActivity: 80,
-      poolQuality: 80,
-      durability: 80,
-      pairDiversity: 80,
-    },
-    weightedBalanceRatio: 1,
-    organicFrac: 1,
-    avgStress: 0,
-    lockedLiqPct: null,
-    coverageClass: "primary",
-    coverageConfidence: 1,
+  return makeFullScoreResult({
+    tvl: 1_000_000, effectiveTvl: 900_000, vol24h: 100_000, score, durability: 80,
+    components: { tvlDepth: 80, volumeActivity: 80, poolQuality: 80, durability: 80, pairDiversity: 80 },
+    weightedBalanceRatio: 1, organicFrac: 1, avgStress: 0,
     sourceMix: { dl: { poolCount: 1, tvlUsd: 1_000_000 } },
-    balanceMeasuredTvlUsd: 1_000_000,
-    organicMeasuredTvlUsd: 1_000_000,
-  };
+    balanceMeasuredTvlUsd: 1_000_000, organicMeasuredTvlUsd: 1_000_000,
+  });
 }
 
 function makeScoreWithRouteEvidence(): FullScoreResult {
@@ -149,6 +134,21 @@ describe("DEX liquidity history atomic identity replacement", () => {
     expectExactActiveIdentity(rows);
     expect(rows.some((row) => row.stablecoin_id === staleId)).toBe(false);
     expect(rows.some((row) => row.stablecoin_id === missingActiveId)).toBe(true);
+    expect(sqlite.prepare(`SELECT total_tvl_usd, total_volume_24h_usd, liquidity_score,
+      snapshot_date, methodology_version, coverage_class, coverage_confidence, source_mix_json
+      FROM dex_liquidity_history WHERE stablecoin_id = ?`).get(scoredId)).toEqual({
+      total_tvl_usd: 1_000_000, total_volume_24h_usd: 100_000, liquidity_score: 80,
+      snapshot_date: SNAPSHOT_DATE, methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
+      coverage_class: "primary", coverage_confidence: 1,
+      source_mix_json: JSON.stringify({ dl: { poolCount: 1, tvlUsd: 1_000_000 } }),
+    });
+    expect(sqlite.prepare(`SELECT total_tvl_usd, total_volume_24h_usd, liquidity_score,
+      snapshot_date, methodology_version, coverage_class, coverage_confidence, source_mix_json
+      FROM dex_liquidity_history WHERE stablecoin_id = ?`).get(missingActiveId)).toEqual({
+      total_tvl_usd: 0, total_volume_24h_usd: 0, liquidity_score: null,
+      snapshot_date: SNAPSHOT_DATE, methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
+      coverage_class: "unobserved", coverage_confidence: 0, source_mix_json: null,
+    });
   });
 
   it("retains bounded same-notional route evidence prospectively", async () => {
@@ -301,6 +301,10 @@ describe("DEX liquidity history atomic identity replacement", () => {
     const richerExistingId = ACTIVE_ID_LIST[1]!;
     insertSnapshotRows(sqlite, ACTIVE_ID_LIST, new Set([incomingScoredId, richerExistingId]));
     const before = loadSnapshotIdentity(sqlite);
+    const retentionCutoff = NOW_SEC - 365 * 86_400;
+    sqlite.prepare(`INSERT INTO dex_liquidity_history
+      (stablecoin_id, total_tvl_usd, snapshot_date) VALUES ('expired', 1, ?), ('cutoff', 2, ?)`)
+      .run(retentionCutoff - 1, retentionCutoff);
     const batchSpy = vi.spyOn(fixture.db, "batch");
 
     const result = await writeHistoricalSnapshots(
@@ -317,6 +321,9 @@ describe("DEX liquidity history atomic identity replacement", () => {
     });
     expect(batchSpy).not.toHaveBeenCalled();
     expect(loadSnapshotIdentity(sqlite)).toEqual(before);
+    expect(result.historyRowsPruned).toBe(1);
+    expect(sqlite.prepare("SELECT stablecoin_id FROM dex_liquidity_history WHERE snapshot_date <= ?")
+      .all(retentionCutoff)).toEqual([{ stablecoin_id: "cutoff" }]);
   });
 
   it("rolls back the date delete when any replacement insert fails", async () => {

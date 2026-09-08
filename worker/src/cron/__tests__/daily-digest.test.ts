@@ -33,7 +33,6 @@ import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/dig
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
-import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
 
 const DEFAULT_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
@@ -238,7 +237,11 @@ describe("history and DEWS collectors", () => {
     const flat = await run(JSON.stringify(signals), [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }]); const wrapped = await run(JSON.stringify({ signals, amplifiers: { psi: 1, contagion: 1 } }));
     expect(flat.value?.elevatedCoins[0].topSignals?.[0].name).toBe("pool balance drift"); expect(wrapped.value?.elevatedCoins[0].topSignals).toEqual(flat.value?.elevatedCoins[0].topSignals);
     expect((await run('{"pool":', [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }])).degradedReasons).toContain("dews-stress-signals-json"); expect((await run("{}")).value?.elevatedCoins[0].topSignals).toEqual([]);
-    const partial = mockD1([first("SELECT value, updated_at FROM cache WHERE key = ?", { updatedAt: at, source: "compute-dews", publishStatus: "published", coverageVersion: 2, expectedRowCount: 2, stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]) }), { match: "pharos:stress-signals:published-exact", rows: [{ stablecoin_id: "usdt-tether", score: 65, band: "ALERT", signals_json: "{}", computed_at: at }] }]);
-    expect((await collectDewsStress(makeCollectorCtx(partial))).degradedReasons).toContain("dews-published-generation");
+    const rows = ["usdt-tether", "usdc-circle"].map((id) => ({ stablecoin_id: id, score: 65, band: "ALERT", signals_json: "{}", computed_at: at }));
+    const tables = makePublishedDewsTables(rows);
+    tables[1] = { ...tables[1], rows: [rows[0]] };
+    const partial = await collectDewsStress(ctxFor(tables));
+    expect(partial.value).toBeUndefined();
+    expect(partial.degradedReasons).toContain("dews-published-generation");
   });
 });

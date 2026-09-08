@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptJupUsdData, fetchJupUsdReserves } from "../jupusd";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+
+vi.mock("../../../lib/fetch-retry", async () => {
+  // The adapter imports this mocked dependency before top-level helper imports initialize.
+  const { mockFetchRetry } = await import("../../../test-helpers/cron");
+  return mockFetchRetry({ fetchWithRetry: vi.fn() });
+});
+import { fetchWithRetry } from "../../../lib/fetch-retry";
+
+const unexpectedRequests: unknown[] = [];
+afterEach(() => {
+  const unexpected = unexpectedRequests.splice(0);
+  vi.resetAllMocks();
+  expect(unexpected).toEqual([]);
+});
 
 describe("adaptJupUsdData", () => {
   it("groups published JupUSD holdings and emits whitelisted redemption capacity", () => {
@@ -164,17 +178,20 @@ describe("fetchJupUsdReserves", () => {
     };
   }
 
-  // Cache keys embed each fetch's per-attempt timeout: data 8s, oracle 4s,
-  // snapshots 10s (see the per-fetch budgets in jupusd.ts).
-  const dataKey = `json-get:${baseUrl}:8000:null`;
-  const snapshotsKey = `json-get:${snapshotsUrl}:10000:null`;
-  const oracleKey = `json-get:${oracleUrl}:4000:null`;
+  function mockTransport(failedUrl?: string, error?: Error) {
+    vi.mocked(fetchWithRetry).mockImplementation(async (url) => {
+      if (url === failedUrl) throw error;
+      if (url === baseUrl) return Response.json(dataPayload);
+      if (url === snapshotsUrl) return Response.json({ snapshots: [{ timestamp: 1776000000 }] });
+      if (url === oracleUrl) return Response.json({ ripcord: false });
+      unexpectedRequests.push(url);
+      throw new Error(`Unexpected JupUSD request: ${url}`);
+    });
+    return new Map<string, Promise<unknown>>();
+  }
 
   it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(dataKey, Promise.resolve(dataPayload));
-    cache.set(snapshotsKey, Promise.reject(new Error("snapshots http 503")));
-    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
+    const cache = mockTransport(snapshotsUrl, new Error("snapshots http 503"));
 
     const result = await fetchJupUsdReserves(
       coin,
@@ -193,10 +210,7 @@ describe("fetchJupUsdReserves", () => {
   });
 
   it("emits jupusd-oracle-unavailable info warning when oracle feed fails", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(dataKey, Promise.resolve(dataPayload));
-    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
-    cache.set(oracleKey, Promise.reject(new Error("oracle http 502")));
+    const cache = mockTransport(oracleUrl, new Error("oracle http 502"));
 
     const result = await fetchJupUsdReserves(
       coin,
@@ -215,10 +229,7 @@ describe("fetchJupUsdReserves", () => {
   });
 
   it("emits no warnings when both snapshots and oracle succeed", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(dataKey, Promise.resolve(dataPayload));
-    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
-    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
+    const cache = mockTransport();
 
     const result = await fetchJupUsdReserves(
       coin,
@@ -231,10 +242,7 @@ describe("fetchJupUsdReserves", () => {
   });
 
   it("labels core transparency data fetch failures with the failing fetch", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(dataKey, Promise.reject(new Error("Fetch failed for https://api.jupusd.money/api/data")));
-    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
-    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
+    const cache = mockTransport(baseUrl, new Error("Fetch failed for https://api.jupusd.money/api/data"));
 
     await expect(fetchJupUsdReserves(
       coin,
@@ -248,10 +256,7 @@ describe("fetchJupUsdReserves", () => {
 
   it("rethrows the original error untouched when the adapter attempt signal aborted", async () => {
     const abortError = new Error("adapter-timeout");
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(dataKey, Promise.reject(abortError));
-    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
-    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
+    const cache = mockTransport(baseUrl, abortError);
     const controller = new AbortController();
     controller.abort(abortError);
 

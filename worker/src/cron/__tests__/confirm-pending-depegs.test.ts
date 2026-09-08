@@ -11,22 +11,24 @@ import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-sche
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
+const makeBinanceNoData = vi.hoisted((): (() => BinancePriceOutcome) => () => ({
+  kind: "no-data",
+  value: {
+    prices: new Map<string, number>(),
+    diagnostics: [{
+      source: "binance",
+      stage: "primary",
+      endpoint: "data-api.binance.vision/api/v3/ticker/price",
+      status: 200,
+      ok: true,
+      success: false,
+      matchedCount: 0,
+    }],
+  },
+}));
+
 vi.mock("../../lib/cex-tickers", () => {
-  const fetchBinancePricesDetailed = vi.fn(async () => ({
-    kind: "no-data",
-    value: {
-      prices: new Map<string, number>(),
-      diagnostics: [{
-        source: "binance",
-        stage: "primary",
-        endpoint: "data-api.binance.vision/api/v3/ticker/price",
-        status: 200,
-        ok: true,
-        success: false,
-        matchedCount: 0,
-      }],
-    },
-  }));
+  const fetchBinancePricesDetailed = vi.fn(async () => makeBinanceNoData());
   return {
     createBinanceFetchSession: vi.fn(() => ({})),
     fetchBinancePricesDetailed,
@@ -47,7 +49,7 @@ vi.mock("../../lib/native-peg-quotes", () => ({
   }),
 }));
 
-import { fetchBinancePricesDetailed } from "../../lib/cex-tickers";
+import { fetchBinancePricesDetailed, type BinancePriceOutcome } from "../../lib/cex-tickers";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
@@ -92,21 +94,7 @@ afterEach(() => {
   vi.mocked(fetchWithRetry).mockReset();
   vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
   vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
-  vi.mocked(fetchBinancePricesDetailed).mockReset().mockResolvedValue({
-    kind: "no-data",
-    value: {
-      prices: new Map<string, number>(),
-      diagnostics: [{
-        source: "binance",
-        stage: "primary",
-        endpoint: "data-api.binance.vision/api/v3/ticker/price",
-        status: 200,
-        ok: true,
-        success: false,
-        matchedCount: 0,
-      }],
-    },
-  });
+  vi.mocked(fetchBinancePricesDetailed).mockReset().mockResolvedValue(makeBinanceNoData());
   sqliteFixtures.closeAll();
 });
 

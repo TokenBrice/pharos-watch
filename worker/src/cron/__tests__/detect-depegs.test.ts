@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { seedOpenEvent, seedDexEvidence } from "./detect-depegs.test-support";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 const mockD1 = createMockD1Preset([
   { match: "FROM dex_price_challenger_snapshots", rows: [] },
@@ -75,7 +79,7 @@ function isCloseEventUpdate(sql: string): boolean {
 function makeAsset(overrides: {
   id: string;
   symbol: string;
-  price: number;
+  price: number | null;
   pegType?: string;
   circulating?: Record<string, number>;
   priceSource?: string;
@@ -109,6 +113,48 @@ describe("detectDepegEvents", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    sqliteFixtures.closeAll();
+    vi.restoreAllMocks();
+  });
+
+  it("rejects pre-aborted detection before hydration or writes", async () => {
+    const { db } = sqliteFixtures.open();
+    const prepare = vi.spyOn(db, "prepare");
+    const controller = new AbortController();
+    const reason = new Error("cancel detection");
+    controller.abort(reason);
+    await expect(detectDepegEvents(db, [], undefined, controller.signal)).rejects.toBe(reason);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetchCurrentNativePegQuotes).not.toHaveBeenCalled();
+  });
+
+  it("does not repair duplicates or persist candidates when hydration is cancelled", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    seedOpenEvent(sqlite);
+    seedOpenEvent(sqlite, { id: 2, started_at: Math.floor(Date.now() / 1000) - 7200 });
+    const controller = new AbortController();
+    const reason = new Error("cancel hydration");
+    vi.mocked(fetchCurrentNativePegQuotes).mockImplementationOnce(async () => {
+      controller.abort(reason);
+      return new Map();
+    });
+    await expect(detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.96 })], undefined, controller.signal)).rejects.toBe(reason);
+    expect(sqlite.prepare("SELECT id, peak_deviation_bps FROM depeg_events ORDER BY id").all()).toEqual([
+      { id: 1, peak_deviation_bps: -200 }, { id: 2, peak_deviation_bps: -200 },
+    ]);
+    expect(sqlite.prepare("SELECT * FROM depeg_pending").all()).toEqual([]);
+  });
+
+  it("rejects main persistence failure without continuing orphan cleanup", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    seedOpenEvent(sqlite);
+    seedOpenEvent(sqlite, { id: 99, stablecoin_id: "removed-coin" });
+    sqlite.exec("CREATE TRIGGER fail_peak BEFORE UPDATE OF peak_deviation_bps ON depeg_events BEGIN SELECT RAISE(ABORT, 'peak write failed'); END");
+    await expect(detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.96 })])).rejects.toThrow("peak write failed");
+    expect(sqlite.prepare("SELECT id, peak_deviation_bps, ended_at FROM depeg_events ORDER BY id").all()).toEqual([
+      { id: 1, peak_deviation_bps: -200, ended_at: null },
+      { id: 99, peak_deviation_bps: -200, ended_at: null },
+    ]);
   });
 
   it("skips detection and emits a degraded warning when open-event hydration reaches its limit", async () => {
@@ -183,171 +229,54 @@ describe("detectDepegEvents", () => {
     }
   });
 
-  it("no events created when prices are stable", async () => {
-    const prepareSpy = vi.fn();
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      prepareSpy(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    const assets = [
+  it("creates neither pending nor live rows for stable prices, NAV tokens, or invalid prices", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    await detectDepegEvents(db, [
       makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 }),
       makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.999 }),
-    ];
+      makeAsset({ id: "nav-token-test", symbol: "NAVT", price: 0.5 }),
+      makeAsset({ id: "eurc-circle", symbol: "EUROC", price: null }),
+      makeAsset({ id: "brz-transfero", symbol: "BRZ", price: NaN }),
+      makeAsset({ id: "a7a5-old-vector", symbol: "A7A5", price: 0 }),
+    ]);
+    expect(sqlite.prepare("SELECT * FROM depeg_pending").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM depeg_events").all()).toEqual([]);
+  });
 
-    await detectDepegEvents(db, assets);
-
-    // No INSERT should have been called
-    const insertCalls = prepareSpy.mock.calls.filter(
-      (args) => (args[0] as string).includes("INSERT INTO depeg_events")
+  it.each([
+    ["usdt-tether", "USDT", "peggedUSD", 1, 99, false],
+    ["usdt-tether", "USDT", "peggedUSD", 1, 100, true],
+    ["usdt-tether", "USDT", "peggedUSD", 1, 101, true],
+    ["eurc-circle", "EUROC", "peggedEUR", 1.08, 149, false],
+    ["eurc-circle", "EUROC", "peggedEUR", 1.08, 150, true],
+    ["eurc-circle", "EUROC", "peggedEUR", 1.08, 151, true],
+  ] as const)("routes %s at %i reference and %i bps to pending=%s", async (id, symbol, pegType, reference, bps, pending) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    await detectDepegEvents(db, [makeAsset({ id, symbol, pegType, price: reference * (1 - bps / 10000) })]);
+    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_seen_bps FROM depeg_pending").all()).toEqual(
+      pending ? [{ stablecoin_id: id, direction: "below", first_seen_bps: -bps }] : [],
     );
-    expect(insertCalls).toHaveLength(0);
+    expect(sqlite.prepare("SELECT * FROM depeg_events").all()).toEqual([]);
   });
 
-  it("starts pending confirmation when price deviates past threshold", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // USDT at 0.98 → 200 bps below peg, above 100 bps threshold
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const inserts = preparedSqls.filter(s => s.includes("INSERT INTO depeg_pending"));
-    expect(inserts.length).toBeGreaterThanOrEqual(1);
-    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(false);
-  });
-
-  it("does not trigger at exactly the threshold (100 bps for USD)", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // 99 bps below → should NOT trigger (0.99 → ~100 bps, but round() may edge it)
-    // Use 0.991 which is clearly only 90 bps
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.991 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const inserts = preparedSqls.filter(s => s.includes("INSERT INTO depeg_events"));
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("uses higher threshold (150 bps) for non-USD pegs", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // EUROC: pegRef=1.08, price=1.065 → bps = round((1.065/1.08 - 1) * 10000) = -139 → <150, no event
-    const assets = [
-      makeAsset({ id: "eurc-circle", symbol: "EUROC", price: 1.065, pegType: "peggedEUR" }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const inserts = preparedSqls.filter(s => s.includes("INSERT INTO depeg_events"));
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("updates peak deviation when price worsens during ongoing event", async () => {
+  it("persists a worsening peak without replacing the event's origin", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      {
-        match: "depeg_events",
-        rows: [{
-          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-          direction: "below", peak_deviation_bps: -200, started_at: now - 600,
-          start_price: 0.98, peak_price: 0.98, peg_reference: 1,
-          recovery_price: null, ended_at: null, source: "live",
-        }],
-      },
-      { match: "dex_prices", rows: [] },
+    seedOpenEvent(sqlite, { started_at: now - 600 });
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.96 })]);
+    expect(sqlite.prepare("SELECT id, started_at, start_price, peak_deviation_bps, peak_price, ended_at FROM depeg_events").all()).toEqual([
+      { id: 1, started_at: now - 600, start_price: 0.98, peak_deviation_bps: -400, peak_price: 0.96, ended_at: null },
     ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // Worse deviation: 0.96 → -400 bps
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.96 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const peakUpdates = preparedSqls.filter(s =>
-      s.includes("UPDATE depeg_events SET peak_deviation_bps")
-    );
-    expect(peakUpdates.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("closes event when price recovers", async () => {
+  it("persists sustained recovery at the observed price and time", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      {
-        match: "depeg_events",
-        rows: [{
-          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-          direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
-          start_price: 0.98, peak_price: 0.98, peg_reference: 1,
-          recovery_price: null, ended_at: null, source: "live",
-          recovery_first_seen_at: now - 900,
-          recovery_last_seen_at: now - 900,
-        }],
-      },
-      { match: "dex_prices", rows: [] },
+    seedOpenEvent(sqlite, { recovery_first_seen_at: now - 900, recovery_last_seen_at: now - 900 });
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 })]);
+    expect(sqlite.prepare("SELECT id, ended_at, recovery_price, recovery_first_seen_at FROM depeg_events").all()).toEqual([
+      { id: 1, ended_at: now, recovery_price: 1.001, recovery_first_seen_at: null },
     ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // Price recovered
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const closures = preparedSqls.filter(s =>
-      s.includes("UPDATE depeg_events SET ended_at")
-    );
-    expect(closures.length).toBeGreaterThanOrEqual(1);
   });
 
   it("closes a stale live event when fresh multi-source primary agreement is back inside threshold", async () => {
@@ -393,42 +322,17 @@ describe("detectDepegEvents", () => {
     expect(closures.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("handles direction change: closes old and starts pending confirmation", async () => {
+  it("closes the old direction and persists the opposite pending candidate", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      {
-        match: "depeg_events",
-        rows: [{
-          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-          direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
-          start_price: 0.98, peak_price: 0.98, peg_reference: 1,
-          recovery_price: null, ended_at: null, source: "live",
-        }],
-      },
-      { match: "dex_prices", rows: [] },
+    seedOpenEvent(sqlite);
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.02 })]);
+    expect(sqlite.prepare("SELECT id, direction, ended_at, recovery_price, close_reason FROM depeg_events").all()).toEqual([
+      { id: 1, direction: "below", ended_at: now, recovery_price: null, close_reason: "superseded-direction" },
     ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // Now above peg: 1.02 → +200 bps (direction change from "below" to "above")
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.02 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const closures = preparedSqls.filter(s =>
-      s.includes("UPDATE depeg_events SET ended_at")
-    );
-    const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_pending")
-    );
-    expect(closures.length).toBeGreaterThanOrEqual(1);
-    expect(inserts.length).toBeGreaterThanOrEqual(1);
+    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_price FROM depeg_pending").all()).toEqual([
+      { stablecoin_id: "usdt-tether", direction: "above", first_price: 1.02 },
+    ]);
   });
 
   it("keeps a live event open through an opposite low-confidence tick without DEX support", async () => {
@@ -546,45 +450,15 @@ describe("detectDepegEvents", () => {
     expect(liveInserts).toHaveLength(0);
   });
 
-  it("merges duplicate open events: keeps earliest, absorbs worst peak", async () => {
+  it("merges duplicates into the earliest event and absorbs the worst peak", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      {
-        match: "depeg_events",
-        rows: [
-          {
-            id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-            direction: "below", peak_deviation_bps: -150, started_at: now - 7200,
-            start_price: 0.985, peak_price: 0.985, peg_reference: 1,
-            recovery_price: null, ended_at: null, source: "live",
-          },
-          {
-            id: 2, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-            direction: "below", peak_deviation_bps: -300, started_at: now - 3600,
-            start_price: 0.97, peak_price: 0.97, peg_reference: 1,
-            recovery_price: null, ended_at: null, source: "live",
-          },
-        ],
-      },
-      { match: "dex_prices", rows: [] },
+    seedOpenEvent(sqlite, { id: 2, started_at: now - 3600, peak_deviation_bps: -300, peak_price: 0.97 });
+    seedOpenEvent(sqlite, { id: 7, started_at: now - 7200, start_price: 0.985, peak_deviation_bps: -150, peak_price: 0.985 });
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 })]);
+    expect(sqlite.prepare("SELECT id, started_at, start_price, peak_deviation_bps, peak_price, ended_at FROM depeg_events").all()).toEqual([
+      { id: 7, started_at: now - 7200, start_price: 0.985, peak_deviation_bps: -300, peak_price: 0.97, ended_at: null },
     ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    // Still depegging
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.97 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    // Should delete the duplicate
-    const deletes = preparedSqls.filter(s => s.includes("DELETE FROM depeg_events"));
-    expect(deletes.length).toBeGreaterThanOrEqual(1);
   });
 
   it("inserts into depeg_pending for >$1B coins", async () => {
@@ -845,101 +719,14 @@ describe("detectDepegEvents", () => {
     expect(preparedSqls.some(isCloseEventUpdate)).toBe(true);
   });
 
-  it("skips NAV tokens", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
+
+  it.each([[5, "above"], [0.01, "below"]] as const)("routes extreme price %s into %s pending confirmation", async (price, direction) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price })]);
+    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_price FROM depeg_pending").all()).toEqual([
+      { stablecoin_id: "usdt-tether", direction, first_price: price },
     ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    const assets = [
-      makeAsset({ id: "nav-token-test", symbol: "NAVT", price: 0.50 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_events")
-    );
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("skips assets with null/NaN/zero price", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0 }),
-      makeAsset({ id: "usdc-circle", symbol: "USDC", price: NaN }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_events")
-    );
-    expect(inserts).toHaveLength(0);
-  });
-
-  it("routes extreme upside moves into pending confirmation instead of dropping them", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 5.00 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const pending = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_pending")
-    );
-    expect(pending.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("routes extreme downside moves into pending confirmation instead of dropping them", async () => {
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      { match: "depeg_events", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    const assets = [
-      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.01 }),
-    ];
-
-    await detectDepegEvents(db, assets);
-
-    const pending = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_pending")
-    );
-    expect(pending.length).toBeGreaterThanOrEqual(1);
+    expect(sqlite.prepare("SELECT * FROM depeg_events").all()).toEqual([]);
   });
 
   it("routes fresh multi-source extreme downside moves through pending confirmation", async () => {
@@ -1221,66 +1008,22 @@ describe("detectDepegEvents", () => {
     expect(closures).toHaveLength(0);
   });
 
-  it("closes an ongoing event when ambiguous recovery is corroborated by multiple DEX protocols with no challenger contradiction", async () => {
+  it("persists ambiguous recovery corroborated by independent DEX protocols", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    const preparedSqls: string[] = [];
-    const db = mockD1([
-      {
-        match: "depeg_events",
-        rows: [{
-          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-          direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
-          start_price: 0.976, peak_price: 0.976, peg_reference: 1,
-          recovery_price: null, ended_at: null, source: "live",
-          recovery_first_seen_at: now - 900,
-          recovery_last_seen_at: now - 900,
-        }],
-      },
-      {
-        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
-        rows: [{
-          stablecoin_id: "usdt-tether",
-          dex_price_usd: 0.9998,
-          deviation_from_primary_bps: 3,
-          source_pool_count: 4,
-          source_total_tvl: 1_900_000,
-          updated_at: now - 60,
-        }],
-      },
-      {
-        match: "price_sources_json",
-        rows: [{
-          stablecoin_id: "usdt-tether",
-          price_sources_json: JSON.stringify([
-            { protocol: "fluid", sourceFamily: "fluid", chain: "ethereum", price: 0.9997, tvl: 900_000 },
-            { protocol: "balancer", sourceFamily: "balancer", chain: "ethereum", price: 1.0001, tvl: 700_000 },
-            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.9999, tvl: 300_000 },
-          ]),
-          updated_at: now - 60,
-        }],
-      },
+    seedOpenEvent(sqlite, { recovery_first_seen_at: now - 900, recovery_last_seen_at: now - 900 });
+    seedDexEvidence(sqlite, 0.9998, [
+      { protocol: "fluid", price: 0.9997, tvl: 900_000 },
+      { protocol: "balancer", price: 1.0001, tvl: 700_000 },
+      { protocol: "curve", price: 0.9999, tvl: 300_000 },
     ]);
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      preparedSqls.push(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
-
-    await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 0.9999,
-        priceSource: "cached",
-        priceConfidence: "fallback",
-        priceUpdatedAt: now - 600,
-      }),
+    await detectDepegEvents(db, [makeAsset({
+      id: "usdt-tether", symbol: "USDT", price: 0.9999,
+      priceSource: "cached", priceConfidence: "fallback", priceUpdatedAt: now - 600,
+    })]);
+    expect(sqlite.prepare("SELECT id, ended_at, recovery_price, close_reason FROM depeg_events").all()).toEqual([
+      { id: 1, ended_at: now, recovery_price: 0.9998, close_reason: "recovered-dex" },
     ]);
-
-    const closures = preparedSqls.filter((sql) =>
-      sql.includes("UPDATE depeg_events SET ended_at")
-    );
-    expect(closures.length).toBeGreaterThanOrEqual(1);
   });
 
   it("keeps an ongoing event open when authoritative primary recovery conflicts with trusted DEX depeg evidence", async () => {

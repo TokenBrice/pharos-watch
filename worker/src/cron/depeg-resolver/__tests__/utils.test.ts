@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
@@ -7,6 +7,9 @@ import {
   hydrateV9DependencyImpairment,
   toStructural,
 } from "../utils";
+
+beforeEach(() => clearV9DependencyImpairment());
+afterEach(() => clearV9DependencyImpairment());
 
 describe("peg taxonomy projection", () => {
   it("projects the canonical BRL currency for DefiLlama's peggedREAL type", () => {
@@ -47,7 +50,6 @@ describe("V9 dependency impairment", () => {
 
     expect(toStructural(fixtureMeta("wrapper-fixture", 0.1)).dependencyImpaired).toBe(true);
 
-    clearV9DependencyImpairment();
   });
 
   it("keeps the legacy registry dependency check only when V9 is unavailable", () => {
@@ -65,6 +67,5 @@ describe("V9 dependency impairment", () => {
 
     expect(toStructural(fixtureMeta("wrapper-fixture", 1)).dependencyImpaired).toBe(false);
 
-    clearV9DependencyImpairment();
   });
 });

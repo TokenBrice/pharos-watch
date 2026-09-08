@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { createCrawlStageContext } from "../staged-pool";
+import { discoveryContext } from "./discovery.test-support";
 import { crawlIconBalancedPoolsStage, isIconBalancedDiscoveryDeployment } from "../crawl-icon-balanced-pools";
-import type { StagedPool } from "../types";
 
 const ICON_RPC_URL = "https://ctz.solidwallet.io/api/v3";
 const DEX_ADDRESS = "cxa0af3165c08318e988cb30993b3048335b94af6c";
@@ -15,17 +14,7 @@ function target(chain = "icon", address = BNUSD_ADDRESS): ContractDeployment {
 }
 
 function context() {
-  const pools: StagedPool[] = [];
-  return {
-    pools,
-    value: createCrawlStageContext({
-      stablecoinId: "bnusd-balanced",
-      knownPoolIds: new Set(),
-      nowSec: 1_800_000_000,
-      pools,
-      priceObs: [],
-    }),
-  };
+  return discoveryContext("bnusd-balanced");
 }
 
 function rpcResult(id: number, result: unknown) {

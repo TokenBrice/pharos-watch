@@ -126,10 +126,17 @@ describe("Sugar ABI projection", () => {
       "0x0000000000000000000000000000000000000022",
       "0x0000000000000000000000000000000000000033",
     ]);
-    expect(projected.map((pool) => Object.keys(pool))).toEqual([
-      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee", "factory"],
-      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee", "factory"],
-    ]);
+    expect(projected).toEqual(decoded.slice(1).map((pool) => ({
+      lp: pool.lp,
+      type: pool.type,
+      token0: pool.token0,
+      reserve0: pool.reserve0,
+      token1: pool.token1,
+      reserve1: pool.reserve1,
+      sqrt_ratio: pool.sqrt_ratio,
+      pool_fee: pool.pool_fee,
+      factory: pool.factory,
+    })));
     expect(projected.map((pool) => pool.reserve0)).toEqual([20n, 30n]);
   });
 
@@ -151,11 +158,6 @@ describe("Sugar ABI projection", () => {
       symbol: "USDC",
       decimals: 6,
     });
-    expect(Object.keys(tokens.values().next().value ?? {})).toEqual([
-      "token_address",
-      "symbol",
-      "decimals",
-    ]);
   });
 });
 

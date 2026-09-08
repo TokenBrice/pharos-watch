@@ -3,7 +3,9 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 const NOW = new Date("2026-06-10T03:00:00Z");
 const NOW_SEC = Math.floor(NOW.getTime() / 1000);
@@ -109,6 +111,7 @@ describe("runCronDurationWatchdog", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    sqliteFixtures.closeAll();
   });
 
   it("stays ok while averages sit under the 80% ceiling ratio", async () => {
@@ -339,19 +342,20 @@ describe("runCronDurationWatchdog", () => {
     expect(result.status).toBeUndefined();
   });
 
-  it("excludes stale-slot reconciled child rows from runtime averages", async () => {
-    const db = watchdogDb([
-      statsMatcher("sync-stablecoins", { n: 20, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.2), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
-    ]);
-
+  it("excludes reconciled child errors and stale-reason rows from runtime statistics", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, error, metadata) VALUES ('sync-stablecoins', ?, ?, ?, ?, ?)");
+    for (let index = 0; index < 20; index++) insert.run(NOW_SEC - index * 60, 1000, "ok", null, null);
+    insert.run(NOW_SEC - 10, SYNC_TIMEOUT_MS * 100, "error", STALE_SLOT_CHILD_ERROR, null);
+    insert.run(NOW_SEC - 20, SYNC_TIMEOUT_MS * 100, "error", null, JSON.stringify({ reason: STALE_SLOT_METADATA_REASON }));
     const result = await runCronDurationWatchdog(db);
-    const runtimeQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM cron_runs"));
-
     expect(result.status).toBeUndefined();
-    expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_CHILD_ERROR))).toBe(true);
-    expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_METADATA_REASON))).toBe(true);
-    expect(runtimeQueries.every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
-    expect(runtimeQueries.some((entry) => entry.sql.includes("json_extract(metadata, '$.reason')"))).toBe(true);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      stats: expect.arrayContaining([expect.objectContaining({
+        job: "sync-stablecoins", runs: 20, avgMs: 1000, maxMs: 1000, capHits: 0,
+      })]),
+      runtimeBreaching: [],
+    });
   });
 
   it("keeps live reserve run-budget truncations as runtime pressure", async () => {
@@ -395,8 +399,6 @@ describe("runCronDurationWatchdog", () => {
       slotAbandonmentBreaching: ["hourlyYieldSync"],
       breaching: ["hourlyYieldSync"],
     });
-    expect(db.getHistory().some((entry) => entry.binds.includes(STALE_SLOT_ERROR))).toBe(true);
-    expect(db.getHistory().every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
   });
 
   it("separates publication failures, terminal-accounting gaps, and preserved child success", async () => {
@@ -434,7 +436,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("executes lifecycle classification against SQLite and fails legacy ambiguity closed", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const { sqlite } = sqliteFixtures.open();
     const insertSlot = sqlite.prepare(
       `INSERT INTO cron_slot_executions (
          slot_key, slot_started_at, state, execution_owner, started_at, updated_at,
@@ -495,7 +497,6 @@ describe("runCronDurationWatchdog", () => {
         terminalAccountingUnknownSlots: 2,
       }),
     ]));
-    sqlite.close();
   });
 
   it("keeps recovered slot abandonment history visible without degrading", async () => {

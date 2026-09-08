@@ -50,7 +50,10 @@ describe("pricing application helpers", () => {
     ];
     const candidate = makePriceResult({
       price: 1.003,
-      source: "coingecko",
+      source: "coingecko+pyth",
+      selectedSource: "pyth",
+      candidateSources: ["coingecko", "pyth", "defillama-list"],
+      agreeSources: ["coingecko", "pyth"],
     });
     applyConsensusResults({
       assets,
@@ -61,8 +64,13 @@ describe("pricing application helpers", () => {
     });
 
     expect(assets[0].price).toBe(1.003);
-    expect(assets[0].priceSource).toBe("coingecko");
-    expect(assets[0].priceSelectedSource).toBe("coingecko");
+    expect(assets[0].priceSource).toBe("coingecko+pyth");
+    expect(assets[0].priceSelectedSource).toBe("pyth");
+    expect(assets[0].consensusSources).toEqual(["coingecko", "pyth", "defillama-list"]);
+    expect(assets[0].agreeSources).toEqual(["coingecko", "pyth"]);
+    expect(assets[0].priceObservedAt).toBe(1_700_000_000);
+    expect(assets[0].priceObservedAtMode).toBe("upstream");
+    expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
     expect(assets[0].priceConfidence).toBe("high");
   });
 
@@ -88,6 +96,7 @@ describe("pricing application helpers", () => {
     expect(assets[0].price).toBe(0.999);
     expect(assets[0].priceSource).toBe("manual");
     expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
+    expect(assets[0].priceObservedAt).toBe(1_799_999_950);
   });
 
   it("stamps the existing price when the primary candidate is rejected", () => {
@@ -97,6 +106,7 @@ describe("pricing application helpers", () => {
         price: 1.001,
         priceSource: "coingecko",
         priceConfidence: "single-source",
+        priceObservedAt: 1_799_999_900,
       }),
     ];
     const candidate = makePriceResult({
@@ -123,6 +133,7 @@ describe("pricing application helpers", () => {
     expect(assets[0].price).toBe(1.001);
     expect(assets[0].priceSource).toBe("coingecko");
     expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
+    expect(assets[0].priceObservedAt).toBe(1_799_999_900);
     warnSpy.mockRestore();
   });
 

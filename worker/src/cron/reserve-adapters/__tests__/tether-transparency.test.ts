@@ -20,7 +20,8 @@ import {
   type TetherTransparencyResponse,
 } from "../tether-transparency";
 import { fetchJsonAdapterInput } from "../helpers";
-import { expectValidAdapterOutput, TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 // Captured 2026-07-09 from GET https://tether.to/transparency.json
@@ -65,6 +66,7 @@ function makeConfig(params: TetherTransparencyParams): LiveReservesConfig {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  signal = new AbortController().signal;
 });
 
 describe("adaptTetherTransparency", () => {

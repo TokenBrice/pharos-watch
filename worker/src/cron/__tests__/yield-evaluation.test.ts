@@ -7,59 +7,8 @@ import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta } from "../yie
 import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import type { ResolvedYield } from "../yield-sync/types";
+import { baseEvaluationInput, freshUsdBenchmark, resolvedYield } from "./yield-evaluation.test-support";
 
-function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {}): EvaluateYieldSourcesInput {
-  const startSec = overrides.startSec ?? 1776729600;
-  return {
-    resolved: [],
-    startSec,
-    sevenDaysAgoSec: startSec - 7 * 86400,
-    safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
-    riskFreeRates: {
-      USD: freshUsdBenchmark(startSec),
-      EUR: null,
-      CHF: null,
-      GBP: null,
-      JPY: null,
-      MXN: null,
-      BRL: null,
-      AUD: null,
-      CAD: null,
-      RUB: null,
-      TRY: null,
-      SGD: null,
-    },
-    tier1PrevRates: new Map(),
-    sourceHistory: new Map(),
-    onChainCompatibilityHistoryById: new Map(),
-    legacyDeterministicOnChainHistoryById: new Map(),
-    legacyHistoryById: new Map(),
-    prevTvlBySource: new Map(),
-    legacyPrevTvlById: new Map(),
-    prevBestSourceKeyByCoin: new Map(),
-    sourceSwitchCount30dByCoin: new Map(),
-    stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
-    ...overrides,
-  };
-}
-
-function freshUsdBenchmark(observedAt: number, rate = 4.2) {
-  return {
-    ...withYieldBenchmarkStaticMeta("USD", {
-      rate,
-      recordDate: "2026-04-20",
-      fetchedAt: observedAt,
-      ageSeconds: 0,
-      source: "fred-dgs3mo-test",
-      isFallback: false,
-      fallbackMode: null,
-    }),
-    lastMarketRate: rate,
-    lastMarketRecordDate: "2026-04-20",
-    lastMarketFetchedAt: observedAt,
-    lastMarketSource: "fred-dgs3mo-test",
-  };
-}
 
 function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
   return {
@@ -79,23 +28,6 @@ function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
   };
 }
 
-function resolvedYield(overrides: Partial<ResolvedYield>): ResolvedYield {
-  return {
-    currentApy: 5,
-    apyBase: 5,
-    apyReward: null,
-    sourcePool: null,
-    sourceTvlUsd: 1_000_000,
-    dataSource: "defillama",
-    exchangeRate: null,
-    sourceKey: "defillama:coin-a:base",
-    sourceObservedAt: 1776729600,
-    comparisonAnchorObservedAt: null,
-    yieldSource: "Fixture source",
-    yieldType: "lending-vault",
-    ...overrides,
-  };
-}
 
 function benchmarkMeta(key: "USD_EFFR", rate: number) {
   return {
@@ -215,28 +147,32 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
 describe("evaluateYieldSources", () => {
   it("cooperative evaluation matches synchronous evaluation and reports progress", async () => {
     const input = baseEvaluationInput({
-      resolved: [{
-        id: "coin-a",
-        symbol: "A",
-        yield: resolvedYield({
-          sourceKey: "defillama:coin-a:base",
-        }),
-      }],
+      resolved: [
+        { id: "coin-a", symbol: "A", yield: resolvedYield({ sourceKey: "new-source", currentApy: 8, apyReward: 7 }) },
+        { id: "coin-a", symbol: "A", yield: resolvedYield({ sourceKey: "old-source", currentApy: 3 }) },
+        { id: "coin-b", symbol: "B", yield: resolvedYield({ sourceKey: "stale-source", sourceObservedAt: 1 }) },
+        { id: "coin-c", symbol: "C", yield: resolvedYield({ sourceKey: "invalid-source", currentApy: NaN }) },
+        { id: "coin-d", symbol: "D", yield: resolvedYield({ sourceKey: "valid-source", currentApy: 4 }) },
+      ],
+      prevBestSourceKeyByCoin: new Map([["coin-a", "previous-source"]]),
+      sourceSwitchCount30dByCoin: new Map([["coin-a", 3]]),
+      prevTvlBySource: new Map([[buildHistoryKey("coin-a", "new-source"), 5_000_000]]),
     });
-    const progress: string[] = [];
+    const progress: number[] = [];
 
     const sync = evaluateYieldSources(input);
     const cooperative = await evaluateYieldSourcesCooperative(input, {
       yieldEveryCoins: 1,
       onProgress: (snapshot) => {
-        progress.push(snapshot.phase);
+        progress.push(snapshot.coinsDone);
       },
     });
 
-    expect(cooperative.evaluatedSources).toHaveLength(sync.evaluatedSources.length);
-    expect(cooperative.bestSourceKeyByCoin.get("coin-a")).toBe(sync.bestSourceKeyByCoin.get("coin-a"));
-    expect(cooperative.medianApy).toBe(sync.medianApy);
-    expect(progress).toEqual(["coin-evaluation", "coin-evaluation", "warning-finalization"]);
+    expect(cooperative).toEqual(sync);
+    expect(sync.rowsRejected).toBeGreaterThan(0);
+    expect(sync.sourceSwitches).toBe(1);
+    expect(progress[progress.length - 1]).toBe(4);
+    expect(progress).toEqual([...progress].sort((a, b) => a - b));
   });
 
   it("covers source-risk golden rows from evaluation inputs", () => {
@@ -906,7 +842,7 @@ describe("evaluateYieldSources", () => {
 
   it("does not carry old scrvUSD trailing-delta history into the current-rate source", () => {
     const startSec = 1775891171;
-    const result = evaluateYieldSources({
+    const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
         {
           id: "scrvusd-curve",
@@ -928,26 +864,11 @@ describe("evaluateYieldSources", () => {
         },
       ],
       startSec,
-      sevenDaysAgoSec: startSec - 7 * 86400,
       safetyScores: new Map([["scrvusd-curve", { score: 86, grade: "A-" }]]),
       riskFreeRates: {
+        ...baseEvaluationInput().riskFreeRates,
         USD: buildHardcodedUsdBenchmark("test"),
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: null,
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
       },
-      tier1PrevRates: new Map(),
-      sourceHistory: new Map(),
-      onChainCompatibilityHistoryById: new Map(),
-      legacyDeterministicOnChainHistoryById: new Map(),
       legacyHistoryById: new Map([
         [
           "scrvusd-curve",
@@ -967,12 +888,9 @@ describe("evaluateYieldSources", () => {
           ],
         ],
       ]),
-      prevTvlBySource: new Map(),
-      legacyPrevTvlById: new Map(),
       prevBestSourceKeyByCoin: new Map([["scrvusd-curve", "onchain:scrvusd-curve"]]),
-      sourceSwitchCount30dByCoin: new Map(),
       stablecoinSupplyById: new Map([["scrvusd-curve", 100_000_000]]),
-    });
+    }));
 
     const [source] = result.evaluatedSources;
     expect(source?.currentApy).toBeCloseTo(4.2747, 4);
@@ -983,7 +901,7 @@ describe("evaluateYieldSources", () => {
   it("excludes deterministic on-chain bootstrap seed rows from rolling APY stats", () => {
     const startSec = 1776729600;
     const sourceKey = "onchain:iusd-infinifi";
-    const result = evaluateYieldSources({
+    const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
         {
           id: "iusd-infinifi",
@@ -1005,23 +923,11 @@ describe("evaluateYieldSources", () => {
         },
       ],
       startSec,
-      sevenDaysAgoSec: startSec - 7 * 86400,
       safetyScores: new Map([["iusd-infinifi", { score: 72, grade: "B" }]]),
       riskFreeRates: {
+        ...baseEvaluationInput().riskFreeRates,
         USD: buildHardcodedUsdBenchmark("test"),
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: null,
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
       },
-      tier1PrevRates: new Map(),
       sourceHistory: new Map([
         [
           buildHistoryKey("iusd-infinifi", sourceKey),
@@ -1068,15 +974,8 @@ describe("evaluateYieldSources", () => {
           ],
         ],
       ]),
-      onChainCompatibilityHistoryById: new Map(),
-      legacyDeterministicOnChainHistoryById: new Map(),
-      legacyHistoryById: new Map(),
-      prevTvlBySource: new Map(),
-      legacyPrevTvlById: new Map(),
-      prevBestSourceKeyByCoin: new Map(),
-      sourceSwitchCount30dByCoin: new Map(),
       stablecoinSupplyById: new Map([["iusd-infinifi", 100_000_000]]),
-    });
+    }));
 
     const [source] = result.evaluatedSources;
     expect(source?.apy30d).toBeCloseTo(5.5, 4);

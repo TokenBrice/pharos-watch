@@ -104,6 +104,7 @@ import {
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "../persistence";
+import { stagedPool } from "./discovery.test-support";
 
 const mockValidationReferences = {
   rates: {},
@@ -112,30 +113,12 @@ const mockValidationReferences = {
 };
 
 function makeStagedPool(poolId: string) {
-  return {
-    poolId,
-    stablecoinId: "coin-a",
-    source: "dexscreener" as const,
-    chain: "ethereum",
-    protocol: "uniswap-v3",
-    dexId: "uniswap-v3",
-    symbol: "COINA",
-    tvlUsd: 100_000,
-    volume24h: 25_000,
-    qualityMultiplier: 1,
-    poolType: "concentrated",
-    feeTier: 500,
-    balanceRatio: 1,
-    isStable: true,
-    baseToken: "0xaaa",
-    quoteToken: "0xusdc",
-    quoteSymbol: "USDC",
-    priceUsd: 1,
-    lockedLiqPct: null,
-    rawJson: null,
-    discoveredAt: 1_700_000_000,
-    refreshedAt: 1_700_000_000,
-  };
+  return stagedPool({
+    poolId, stablecoinId: "coin-a", protocol: "uniswap-v3", dexId: "uniswap-v3", symbol: "COINA",
+    tvlUsd: 100_000, volume24h: 25_000, poolType: "concentrated", feeTier: 500, balanceRatio: 1,
+    isStable: true, baseToken: "0xaaa", quoteToken: "0xusdc",
+    discoveredAt: 1_700_000_000, refreshedAt: 1_700_000_000,
+  });
 }
 
 const db = makeNoopD1({

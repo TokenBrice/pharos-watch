@@ -1,13 +1,8 @@
 /**
  * Integration tests for syncViaCoingeckoFallback (fallback.ts).
  *
- * Strategy:
- * - Use the REAL stablecoin registry (ACTIVE_STABLECOINS) — the CLAUDE.md
- *   gotcha is "list circulating is already USD-denominated". A mocked registry
- *   cannot catch denomination drift.
- * - Mock only the heavy sub-phase modules (enrichment, cache, depeg) and D1.
- * - buildFallbackAssetsFromCoinGecko is tested directly with the real registry
- *   to verify USD-denomination for non-USD pegged coins.
+ * Uses real registry coverage at the orchestrator and explicit metadata for
+ * intake denomination/identity cases. Heavy downstream phases and D1 are mocked.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -149,7 +144,14 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   //     cover the exact active registry set.
   // -----------------------------------------------------------------------
   it("(a) publishes fallback data but degrades incomplete active-set coverage", async () => {
-    const cgData = buildRealCgData(200);
+    const omittedIds = ["usdt-tether", "usdc-circle"];
+    const cgData = buildRealCgData(Infinity);
+    for (const coin of ACTIVE_STABLECOINS) {
+      if (omittedIds.includes(coin.id) && coin.geckoId) delete cgData[coin.geckoId];
+    }
+    const expectedMissingIds = ACTIVE_STABLECOINS
+      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId])
+      .map((coin) => coin.id).sort();
     const db = mockD1([]);
 
     const result = await syncViaCoingeckoFallback(
@@ -174,10 +176,10 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(meta.activePublicationCoverage).toMatchObject({ complete: false });
     const activePriceCoverage = meta.activePriceCoverage as {
       missingPriceCount: number;
-      missingActiveAssets: unknown[];
+      missingActiveIds: string[];
       missingActiveState: unknown[];
     };
-    expect(activePriceCoverage.missingActiveAssets).toHaveLength(20);
+    expect(activePriceCoverage.missingActiveIds.slice().sort()).toEqual(expectedMissingIds);
     expect(activePriceCoverage.missingActiveState).toHaveLength(activePriceCoverage.missingPriceCount);
     expect(meta.priceSourceAttemptLedger).toMatchObject({
       version: 1,
@@ -225,13 +227,10 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   // multiplying by price (that would be denomination drift).
   // -----------------------------------------------------------------------
   it("(c) stores usd_market_cap directly (no price multiplication) for non-USD pegs", () => {
-    const eurCoins = ACTIVE_STABLECOINS.filter(
-      (c) => c.flags.pegCurrency === "EUR" && c.geckoId,
-    );
-    // Skip test if there are no EUR coins in the registry (shouldn't happen)
-    if (eurCoins.length === 0) return;
-
-    const testCoin = eurCoins[0]!;
+    const testCoin = {
+      id: "fixture-eur", name: "Fixture EUR", symbol: "FEUR", geckoId: "fixture-eur",
+      flags: { pegCurrency: "EUR" as const, backing: "fiat-backed" as const },
+    };
     const USD_MARKET_CAP = 80_000_000; // represents ~€74M at EUR/USD ~0.93
     const EUR_USD_PRICE = 1.07; // current EUR price in USD terms
 
@@ -244,7 +243,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
           last_updated_at: NOW_SEC,
         },
       },
-      // Use real registry implicitly (stablecoins param defaults to ACTIVE_STABLECOINS)
+      // Explicit metadata keeps denomination coverage independent of catalog membership.
       stablecoins: [testCoin],
     });
 
@@ -267,29 +266,24 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   });
 
   // -----------------------------------------------------------------------
-  // (d) buildFallbackAssetsFromCoinGecko uses the real registry (no mocks)
-  //     and skips coins without a geckoId or with zero/missing market cap.
+  // (d) Intake skips coins without a geckoId or with zero market cap.
   // -----------------------------------------------------------------------
-  it("(d) skips coins with no geckoId or zero market cap from real registry", () => {
-    const noGeckoIdCoins = ACTIVE_STABLECOINS.filter((c) => !c.geckoId);
-    const withGeckoIdCoins = ACTIVE_STABLECOINS.filter((c) => c.geckoId);
-
-    // Provide zero market cap for coins that DO have geckoIds
-    const zeroCgData: Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> = {};
-    for (const coin of withGeckoIdCoins.slice(0, 10)) {
-      zeroCgData[coin.geckoId!] = { usd: 1, usd_market_cap: 0, last_updated_at: NOW_SEC };
-    }
-
+  it("(d) skips absent identity and zero supply while retaining the valid peer", () => {
+    const coin = { name: "Fixture", symbol: "FIX", flags: { pegCurrency: "USD" as const, backing: "fiat-backed" as const } };
     const assets = buildFallbackAssetsFromCoinGecko({
       syncStartSec: NOW_SEC,
-      cgData: zeroCgData,
+      stablecoins: [
+        { ...coin, id: "no-gecko" },
+        { ...coin, id: "zero", geckoId: "zero" },
+        { ...coin, id: "valid", geckoId: "valid" },
+      ],
+      cgData: {
+        "undefined": { usd: 1, usd_market_cap: 999, last_updated_at: NOW_SEC },
+        zero: { usd: 1, usd_market_cap: 0, last_updated_at: NOW_SEC },
+        valid: { usd: 1, usd_market_cap: 100, last_updated_at: NOW_SEC },
+      },
     });
-
-    // All entries were zero market cap → nothing should be included
-    expect(assets).toHaveLength(0);
-
-    // Sanity: coins without geckoId are always skipped
-    expect(noGeckoIdCoins.length).toBeGreaterThanOrEqual(0); // structural assertion
+    expect(assets.map((asset) => asset.id)).toEqual(["valid"]);
   });
 
   // -----------------------------------------------------------------------

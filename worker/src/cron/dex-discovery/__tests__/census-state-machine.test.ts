@@ -89,6 +89,16 @@ describe("DEX census attempt state machine", () => {
       legacyReason: DEX_DISCOVERY_BOUNDED_CRAWL_REASON,
     });
   });
+
+  it("prefers completed exhaustive and non-exhaustive responses over competing failures", () => {
+    expect(resolveDexCensusAttempt(signals({
+      exhaustiveSucceeded: true, nonExhaustiveSucceededEmpty: true,
+      providerDegraded: true, providerFailed: true,
+    })).attemptResult).toBe("verified_no_pools");
+    expect(resolveDexCensusAttempt(signals({
+      nonExhaustiveSucceededEmpty: true, providerDegraded: true, providerFailed: true,
+    })).attemptResult).toBe("provider_non_exhaustive");
+  });
 });
 
 describe("DEX census evidence state machine", () => {
@@ -155,5 +165,25 @@ describe("DEX census evidence state machine", () => {
       outcome: "provider_inaccessible",
       reason: DEX_DISCOVERY_PROVIDER_OUTAGE_REASON,
     })).disposition).toBe("provider-outage");
+  });
+
+  it("keeps evidence current at the exact age and attempt-fence boundaries", () => {
+    const state = classifyStoredDexCensusState(storedRow({
+      observedAt: NOW_SEC - 86_400,
+      discoveryLastCrawlAt: NOW_SEC - 86_400,
+    }));
+    expect(state).toEqual({
+      attemptResult: "verified_no_pools", evidenceState: "current", disposition: "verified-no-pools",
+    });
+    expect(isCurrentDexCensusStateComplete(state)).toBe(true);
+  });
+
+  it("supersedes inaccessible evidence when the provider set changes", () => {
+    expect(classifyStoredDexCensusState(storedRow({
+      outcome: "provider_inaccessible", reason: DEX_DISCOVERY_PROVIDER_OUTAGE_REASON,
+      providerSetSuperseded: true,
+    }))).toEqual({
+      attemptResult: "provider_outage", evidenceState: "superseded", disposition: "superseded",
+    });
   });
 });

@@ -12,7 +12,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   buildDexLiquidityPublicationGenerationId,
@@ -21,8 +21,9 @@ import {
   pruneOldDexLiquidityGenerations,
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
-import type { FullScoreResult } from "../dex-liquidity/types";
+import { makeFullScoreResult } from "./dex-liquidity-persistence.test-support";
 import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
+import type { FullScoreResult } from "../dex-liquidity/types";
 
 const INACTIVE_TRACKED_STABLECOIN = TRACKED_STABLECOINS.find((coin) => !ACTIVE_IDS.has(coin.id));
 
@@ -40,7 +41,6 @@ interface DexPersistenceMockDb extends D1Database {
 }
 
 function makeDb(options: {
-  historyRows?: Array<{ stablecoin_id: string; liquidity_score: number | null }>;
   historyError?: unknown;
   candidateCoverage?: {
     row_count: number;
@@ -49,7 +49,6 @@ function makeDb(options: {
   };
   currentGenerationRows?: number;
   newerCurrentRows?: number;
-  publicationState?: { value: "staged" | "published" | "failed" | null };
   deploymentOutcomeRows?: DexDeploymentCensusRow[];
 } = {}): DexPersistenceMockDb {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
@@ -66,7 +65,7 @@ function makeDb(options: {
             throw (options.historyError instanceof Error ? options.historyError : new Error(String(options.historyError)));
           }
           return {
-            results: (options.historyRows ?? []) as T[],
+            results: [] as T[],
             success: true,
             meta: {},
           };
@@ -99,15 +98,6 @@ function makeDb(options: {
       },
       run: async () => {
         history.push({ sql, binds: [...boundValues] });
-        if (sql.includes("dex_liquidity_publication_generations") && sql.includes("INSERT")) {
-          if (options.publicationState != null) {
-            if (sql.includes("INSERT OR REPLACE")) {
-              options.publicationState.value = "staged";
-            } else if (options.publicationState.value !== "published") {
-              options.publicationState.value = "staged";
-            }
-          }
-        }
         return { success: true, meta: { changes: 1 } };
       },
     } as unknown as PreparedStatementWithMeta;
@@ -122,25 +112,7 @@ function makeDb(options: {
   } as unknown as DexPersistenceMockDb;
 }
 
-function makeHistoryIdentityRows(
-  scoredIds: ReadonlySet<string>,
-  ids = ACTIVE_STABLECOINS.map((coin) => coin.id),
-): Array<{ stablecoin_id: string; liquidity_score: number | null }> {
-  return ids.map((stablecoinId) => ({
-    stablecoin_id: stablecoinId,
-    liquidity_score: scoredIds.has(stablecoinId) ? 1 : null,
-  }));
-}
 
-function extractHistoryInsertRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
-  const rows: unknown[][] = [];
-  for (const statement of statements) {
-    for (let index = 0; index < statement.boundValues.length; index += 10) {
-      rows.push(statement.boundValues.slice(index, index + 10));
-    }
-  }
-  return rows;
-}
 
 const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 29;
 
@@ -169,33 +141,6 @@ function getPreparedBatchStatements(sqlFragment: string): PreparedStatementWithM
   );
 }
 
-function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScoreResult {
-  return {
-    tvl: 1,
-    effectiveTvl: 1,
-    vol24h: 1,
-    score: 1,
-    hhi: 0.1,
-    durability: 50,
-    components: {
-      tvlDepth: 10,
-      volumeActivity: 10,
-      poolQuality: 10,
-      durability: 50,
-      pairDiversity: 5,
-    },
-    weightedBalanceRatio: null,
-    organicFrac: null,
-    avgStress: null,
-    lockedLiqPct: null,
-    coverageClass: "primary",
-    coverageConfidence: 1,
-    sourceMix: { dl: { poolCount: 1, tvlUsd: 1 } },
-    balanceMeasuredTvlUsd: 0,
-    organicMeasuredTvlUsd: 0,
-    ...overrides,
-  };
-}
 
 describe("dex-liquidity persistence", () => {
   afterEach(() => {
@@ -815,162 +760,36 @@ describe("dex-liquidity persistence", () => {
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
   });
 
-  it("keeps an already-published generation published when restaging a retry", async () => {
-    const metrics = initMetrics("usdt-tether", "USDT");
-    const publicationState = { value: "published" as const };
-    const db = makeDb({ publicationState });
-
-    await expect(
-      persistScores(
-        db,
-        new Map([["usdt-tether", metrics]]),
-        new Map([["usdt-tether", makeFullScoreResult()]]),
-        {
-          totalTvl: 1,
-          totalVol24h: 1,
-          totalVol7d: 1,
-          totalVol7dMeasured: true,
-          poolCount: 1,
-          chainCount: 1,
-          protocolTvl: {},
-          chainTvl: {},
-        },
-        1_700_000_000,
-      ),
-    ).resolves.toMatchObject({
-      generationId: buildDexLiquidityPublicationGenerationId(1_700_000_000),
-      currentGenerationRows: ACTIVE_STABLECOINS.length + 1,
-    });
-
-    expect(publicationState.value).toBe("published");
-    const stageSql = db
-      .getHistory()
-      .find((entry) =>
-        entry.sql.includes("INSERT INTO dex_liquidity_publication_generations") &&
-        entry.sql.includes("ON CONFLICT(generation_id) DO UPDATE")
-      )?.sql;
-    expect(stageSql).toContain("dex_liquidity_publication_generations.state = 'published'");
+  it("preserves published counters and timestamps when retry staging fails", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    try {
+      const { sqlite, db } = fixtures.open();
+      const actual = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+      vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
+      const now = 1_700_000_000;
+      const generationId = buildDexLiquidityPublicationGenerationId(now);
+      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, written_row_count,
+         current_row_count, created_at, published_at) VALUES (?, ?, 'published', 7, 7, 7, ?, ?)`)
+        .run(generationId, now, now - 100, now - 50);
+      sqlite.exec(`CREATE TRIGGER fail_retry_staging BEFORE INSERT ON dex_liquidity_run_rows
+        BEGIN SELECT RAISE(ABORT, 'injected staging failure'); END`);
+      await expect(persistScores(db, new Map(), new Map(), {
+        totalTvl: 1, totalVol24h: 1, totalVol7d: 1, totalVol7dMeasured: true,
+        poolCount: 1, chainCount: 1, protocolTvl: {}, chainTvl: {},
+      }, now)).rejects.toThrow("injected staging failure");
+      expect(sqlite.prepare(`SELECT state, written_row_count, current_row_count,
+        created_at, published_at, failed_at, failure_reason
+        FROM dex_liquidity_publication_generations WHERE generation_id = ?`).get(generationId)).toEqual({
+        state: "published", written_row_count: 7, current_row_count: 7,
+        created_at: now - 100, published_at: now - 50, failed_at: null, failure_reason: null,
+      });
+    } finally {
+      fixtures.closeAll();
+    }
   });
 
-  it("skips historical snapshot writes only when active and scored identities are exact", async () => {
-    const scoredIds = new Set(["usdt-tether", "usdc-circle"]);
-    const result = await writeHistoricalSnapshots(
-      makeDb({
-        historyRows: makeHistoryIdentityRows(scoredIds),
-      }),
-      new Map([
-        ["usdt-tether", makeFullScoreResult()],
-        ["usdc-circle", makeFullScoreResult()],
-      ]),
-    );
 
-    expect(result).toEqual({
-      snapshotRowsWritten: 0,
-      skipped: true,
-      writeFailed: false,
-      historyRowsPruned: 1,
-      retentionPruneFailed: false,
-    });
-    expect(batchExecute).not.toHaveBeenCalled();
-    expect(executeAtomicBatch).not.toHaveBeenCalled();
-  });
-
-  it("prunes historical snapshots beyond the public 365-day window when today's snapshot is already complete", async () => {
-    const nowSec = Math.floor(Date.UTC(2026, 0, 1, 12) / 1000);
-    const db = makeDb({
-      historyRows: makeHistoryIdentityRows(new Set(["usdt-tether"])),
-    });
-
-    const result = await writeHistoricalSnapshots(
-      db,
-      new Map([["usdt-tether", makeFullScoreResult()]]),
-      undefined,
-      nowSec,
-    );
-
-    expect(result).toMatchObject({
-      snapshotRowsWritten: 0,
-      skipped: true,
-      writeFailed: false,
-      historyRowsPruned: 1,
-      retentionPruneFailed: false,
-    });
-    const prune = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("pharos:dex-liquidity:history-retention-delete"));
-    expect(prune?.sql).toContain("DELETE FROM dex_liquidity_history");
-    expect(prune?.binds).toEqual([nowSec - 365 * 86_400]);
-  });
-
-  it("reconciles missing historical snapshots and backfills placeholder rows", async () => {
-    const nowMs = Date.UTC(2026, 0, 1, 12);
-    vi.spyOn(Date, "now").mockReturnValue(nowMs);
-    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-
-    const result = await writeHistoricalSnapshots(
-      makeDb({
-        historyRows: makeHistoryIdentityRows(
-          new Set(["usdt-tether"]),
-          [
-            "usdt-tether",
-            ...ACTIVE_STABLECOINS.map((coin) => coin.id).filter((id) => id !== "usdt-tether"),
-          ].slice(0, 10),
-        ),
-      }),
-      new Map([
-        ["usdt-tether", makeFullScoreResult({ tvl: 10, vol24h: 11, score: 12 })],
-        ["usdc-circle", makeFullScoreResult({ tvl: 20, vol24h: 21, score: 22 })],
-      ]),
-    );
-
-    expect(result).toEqual({
-      snapshotRowsWritten: ACTIVE_STABLECOINS.length,
-      skipped: false,
-      writeFailed: false,
-      historyRowsPruned: 1,
-      retentionPruneFailed: false,
-    });
-    expect(executeAtomicBatch).toHaveBeenCalledTimes(1);
-    const [, statements] = vi.mocked(executeAtomicBatch).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
-    expect(prepared.length).toBeLessThanOrEqual(100);
-
-    const todayMidnight = Math.floor(nowMs / 86_400_000) * 86_400;
-    expect(prepared[0]?.sql).toContain("pharos:dex-liquidity:history-date-replace");
-    expect(prepared[0]?.boundValues).toEqual([todayMidnight]);
-    const insertedRows = extractHistoryInsertRows(prepared.slice(1));
-    expect(insertedRows).toHaveLength(ACTIVE_STABLECOINS.length);
-    const usdtSnapshot = insertedRows.find((row) => row[0] === "usdt-tether");
-    const daiPlaceholder = insertedRows.find((row) => row[0] === "dai-makerdao");
-
-    expect(usdtSnapshot).toEqual([
-      "usdt-tether",
-      10,
-      11,
-      12,
-      todayMidnight,
-      "primary",
-      1,
-      JSON.stringify({ dl: { poolCount: 1, tvlUsd: 1 } }),
-      LIQUIDITY_METHODOLOGY_VERSION,
-      null,
-    ]);
-    expect(daiPlaceholder).toEqual([
-      "dai-makerdao",
-      0,
-      0,
-      null,
-      todayMidnight,
-      "unobserved",
-      0,
-      null,
-      LIQUIDITY_METHODOLOGY_VERSION,
-      null,
-    ]);
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[dex-liquidity] Reconciled daily snapshot (10/1 ->"),
-    );
-  });
 
   it("logs and swallows snapshot query failures", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -995,54 +814,39 @@ describe("dex-liquidity persistence", () => {
 });
 
 describe("dex liquidity generation prune", () => {
-  it("deletes terminal and abandoned staged generations past the 3-hour horizon in bounded oldest-first batches", async () => {
-    const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
-    const statement = (sql: string, binds: unknown[] = []) => ({
-      bind: (...nextBinds: unknown[]) => statement(sql, nextBinds),
-      run: async () => {
-        executed.push({ kind: "run", sql, binds });
-        return { meta: { changes: 2 } };
-      },
-      first: async () => {
-        executed.push({ kind: "first", sql, binds });
-        return { oldest_remaining_at: 1_699_990_000 };
-      },
-    });
-    const db = makeNoopD1({
-      prepare: (sql: string) => statement(sql, []),
-    });
-
-    const nowSec = 1_700_000_000;
-    const retention = await pruneOldDexLiquidityGenerations(db, nowSec);
-
-    expect(executed).toHaveLength(3);
-    const cutoff = nowSec - 3 * 60 * 60;
-    const [runRows, ledger, oldest] = executed;
-
-    expect(runRows.sql).toContain("DELETE FROM dex_liquidity_run_rows");
-    expect(runRows.sql).toContain("state IN ('staged', 'published', 'failed')");
-    expect(runRows.sql).toContain("EXISTS");
-    expect(runRows.sql).toContain("SELECT 1 FROM dex_liquidity_run_rows candidate_row");
-    expect(runRows.sql).toContain("SELECT publication_generation_id");
-    expect(runRows.sql).toContain("stablecoin_id = '__global__'");
-    expect(runRows.sql).toContain("ORDER BY started_at ASC LIMIT ?");
-    expect(runRows.binds).toEqual([cutoff, 16]);
-
-    expect(ledger.sql).toContain("DELETE FROM dex_liquidity_publication_generations");
-    expect(ledger.sql).toContain("state IN ('staged', 'published', 'failed')");
-    expect(ledger.sql).toContain("SELECT publication_generation_id");
-    expect(ledger.sql).toContain("NOT EXISTS");
-    expect(ledger.sql).toContain("SELECT 1 FROM dex_liquidity_run_rows r");
-    expect(ledger.sql).toContain("ORDER BY candidate.started_at ASC");
-    expect(ledger.binds).toEqual([cutoff, 16]);
-    expect(oldest.kind).toBe("first");
-    expect(retention).toMatchObject({
-      cutoff,
-      deletedRunRows: 2,
-      deletedGenerationRows: 2,
-      deletedRows: 4,
-      oldestRemainingAt: 1_699_990_000,
-      error: null,
-    });
+  it("prunes expired unreferenced generations while protecting current references and the cutoff", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    try {
+      const { sqlite, db } = fixtures.open();
+      const now = 1_700_000_000;
+      const cutoff = now - 3 * 60 * 60;
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, created_at) VALUES (?, ?, ?, 1, ?)`);
+      for (const [id, timestamp, state] of [
+        ["expired-staged", cutoff - 5, "staged"], ["expired-failed", cutoff - 4, "failed"],
+        ["expired-published", cutoff - 3, "published"], ["global-reference", cutoff - 2, "published"],
+        ["asset-reference", cutoff - 1, "published"], ["cutoff", cutoff, "staged"],
+        ["recent", cutoff + 1, "published"],
+      ] as const) {
+        insert.run(id, timestamp, state, timestamp);
+        sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
+          (generation_id, stablecoin_id, symbol, updated_at) VALUES (?, 'usdt-tether', 'USDT', ?)`).run(id, timestamp);
+      }
+      sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, updated_at, publication_generation_id, publication_state)
+        VALUES ('__global__', 'GLOBAL', ?, 'global-reference', 'published'),
+               ('usdt-tether', 'USDT', ?, 'asset-reference', 'published')`).run(now, now);
+      const retention = await pruneOldDexLiquidityGenerations(db, now);
+      expect(sqlite.prepare("SELECT generation_id FROM dex_liquidity_publication_generations ORDER BY generation_id").all())
+        .toEqual(["asset-reference", "cutoff", "global-reference", "recent"].map((generation_id) => ({ generation_id })));
+      expect(sqlite.prepare("SELECT generation_id FROM dex_liquidity_run_rows ORDER BY generation_id").all())
+        .toEqual(["cutoff", "global-reference", "recent"].map((generation_id) => ({ generation_id })));
+      expect(retention).toMatchObject({
+        cutoff, deletedRunRows: 4, deletedGenerationRows: 3, deletedRows: 7,
+        oldestRemainingAt: cutoff - 2, error: null,
+      });
+    } finally {
+      fixtures.closeAll();
+    }
   });
 });

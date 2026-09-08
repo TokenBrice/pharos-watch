@@ -53,6 +53,7 @@ describe("loadTrackedStablecoinMaps", () => {
             id: "slvon-ondo",
             price: 52.37,
             priceConfidence: "high",
+            circulating: { peggedUSD: 100, peggedEUR: 250 },
             agreeSources: ["coingecko", "coingecko-onchain-address", "alchemy-address"],
           }),
           makeAsset({
@@ -65,10 +66,11 @@ describe("loadTrackedStablecoinMaps", () => {
       },
     });
 
-    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+    const { stablecoinPriceById, stablecoinMcapById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
 
     expect(stablecoinPriceById.get("slvon-ondo")).toBe(52.37);
     expect(stablecoinPriceById.get("susn-noon")).toBe(1.2055005012280287);
+    expect(stablecoinMcapById).toEqual(new Map([["slvon-ondo", 350], ["susn-noon", 1_000_000]]));
   });
 
   it("rejects fallback-only multi-source tracked prices for CL target references", async () => {
@@ -88,9 +90,10 @@ describe("loadTrackedStablecoinMaps", () => {
       },
     });
 
-    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+    const { stablecoinPriceById, stablecoinMcapById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
 
     expect(stablecoinPriceById.has("usdc-circle")).toBe(false);
+    expect(stablecoinMcapById).toEqual(new Map([["usdc-circle", 1_000_000]]));
   });
 
   it("still rejects a soft price without fresh multi-source agreement", async () => {
@@ -105,5 +108,32 @@ describe("loadTrackedStablecoinMaps", () => {
     const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
 
     expect(stablecoinPriceById.has("slvon-ondo")).toBe(false);
+  });
+
+  it("omits nonpositive circulating amounts without dropping trusted prices", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: { peggedAssets: [
+        makeAsset({
+          id: "zero", price: 1, circulating: { peggedUSD: 0 },
+          priceConfidence: "high", agreeSources: ["coingecko", "coingecko-onchain-address", "alchemy-address"],
+        }),
+        makeAsset({
+          id: "negative", price: 1, circulating: { peggedUSD: -1 },
+          priceConfidence: "high", agreeSources: ["coingecko", "coingecko-onchain-address", "alchemy-address"],
+        }),
+      ] },
+    });
+    const maps = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+    expect(maps.stablecoinMcapById).toEqual(new Map());
+    expect(maps.stablecoinPriceById).toEqual(new Map([["zero", 1], ["negative", 1]]));
+  });
+
+  it("returns both empty maps when the cache is unavailable", async () => {
+    loadStablecoinsCache.mockResolvedValue({ kind: "missing" });
+    expect(await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC)).toEqual({
+      stablecoinPriceById: new Map(), stablecoinMcapById: new Map(),
+    });
   });
 });

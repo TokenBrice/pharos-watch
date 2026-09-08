@@ -490,63 +490,31 @@ describe("wlfi-freeze destroy events", () => {
   });
 });
 
+function makeBlacklistLog(overrides: Partial<EtherscanLogEntry> = {}): EtherscanLogEntry {
+  return {
+    ...makeEtherscanLog(256, 0),
+    address: USDC_CONFIG.contractAddress,
+    topics: [USDC_CONFIG.events[0]!.topicHash, "0x" + "0".repeat(24) + "aa".repeat(20)],
+    ...overrides,
+  };
+}
+
 describe("parseEvmLogs branch coverage", () => {
-  it("skips logs with malformed blockNumber", () => {
-    const rows = parseEvmLogs(USDC_CONFIG, [
-      {
-        address: USDC_CONFIG.contractAddress,
-        topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855", "0x" + "0".repeat(24) + "aa".repeat(20)],
-        data: "0x",
-        blockNumber: "0xzz",
-        transactionHash: "0xdeadbeef".padEnd(66, "0"),
-        logIndex: "0x0",
-        timeStamp: "0x1000",
-      },
-    ]);
-    expect(rows).toHaveLength(0);
-  });
-
-  it("skips logs with missing timestamp", () => {
-    const rows = parseEvmLogs(USDC_CONFIG, [
-      {
-        address: USDC_CONFIG.contractAddress,
-        topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855", "0x" + "0".repeat(24) + "aa".repeat(20)],
-        data: "0x",
-        blockNumber: "0x100",
-        transactionHash: "0xdeadbeef".padEnd(66, "0"),
-        logIndex: "0x0",
-      },
-    ]);
-    expect(rows).toHaveLength(0);
-  });
-
-  it("returns undefined for unknown topic hash", () => {
-    const rows = parseEvmLogs(USDC_CONFIG, [
-      {
-        address: USDC_CONFIG.contractAddress,
-        topics: ["0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"],
-        data: "0x",
-        blockNumber: "0x100",
-        transactionHash: "0xdeadbeef".padEnd(66, "0"),
-        logIndex: "0x0",
-        timeStamp: "0x1000",
-      },
-    ]);
-    expect(rows).toHaveLength(0);
+  it.each<[string, Partial<EtherscanLogEntry>]>([
+    ["malformed blockNumber", { blockNumber: "0xzz" }],
+    ["missing timestamp", { timeStamp: undefined }],
+    ["unknown topic hash", { topics: ["0x" + "dd".repeat(32)] }],
+  ])("skips logs with %s", (_name, overrides) => {
+    expect(parseEvmLogs(USDC_CONFIG, [makeBlacklistLog()])).toHaveLength(1);
+    expect(parseEvmLogs(USDC_CONFIG, [makeBlacklistLog(overrides)])).toEqual([]);
   });
 
   it("handles malformed address array data gracefully", () => {
-    const rows = parseEvmLogs(USDTB_CONFIG, [
-      {
-        address: USDTB_CONFIG.contractAddress,
-        topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
-        data: "0xdeadbeef",
-        blockNumber: "0x100",
-        transactionHash: "0xdeadbeef".padEnd(66, "0"),
-        logIndex: "0x0",
-        timeStamp: "0x1000",
-      },
-    ]);
+    const rows = parseEvmLogs(USDTB_CONFIG, [makeBlacklistLog({
+      address: USDTB_CONFIG.contractAddress,
+      topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
+      data: "0xdeadbeef",
+    })]);
     expect(rows).toHaveLength(0);
   });
 
@@ -572,111 +540,38 @@ describe("parseEvmLogs branch coverage", () => {
     expect(rows.length).toBe(500);
   });
 
-  it("resolves eventType from data bool slot (bool=true => blacklist)", () => {
-    const tusdBlacklistedTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
-    const account = "0x0000000000000000000000001111111111111111111111111111111111111111";
-    const config: ContractEventConfig = {
-      configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
-      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
-      stablecoinId: "tusd-trueusd",
-      stablecoin: "USDC", // placeholder — we only care about event_type resolution here
-      contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
-      decimals: 18,
-      events: [
-        {
-          signature: "Blacklisted(address,bool)",
-          topicHash: tusdBlacklistedTopic,
-          eventType: "blacklist",
-          hasAmount: false,
-          eventTypeFromDataBoolIndex: 0,
-        },
-      ],
-    };
-    const rows = parseEvmLogs(config, [
-      {
-        address: config.contractAddress,
-        topics: [tusdBlacklistedTopic, account],
-        data: "0x" + "01".padStart(64, "0"),
-        blockNumber: "0x1",
-        transactionHash: "0xtusd-on",
-        logIndex: "0x0",
-        timeStamp: "0x61000000",
-      },
-    ]);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].event_type).toBe("blacklist");
-    expect(rows[0].address).toBe("0x1111111111111111111111111111111111111111");
-  });
+  const boolTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
+  const boolConfig: ContractEventConfig = {
+    configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
+    chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+    stablecoinId: "tusd-trueusd",
+    stablecoin: "USDC",
+    contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
+    decimals: 18,
+    events: [{
+      signature: "Blacklisted(address,bool)",
+      topicHash: boolTopic,
+      eventType: "blacklist",
+      hasAmount: false,
+      eventTypeFromDataBoolIndex: 0,
+    }],
+  };
 
-  it("resolves eventType from data bool slot (bool=false => unblacklist)", () => {
-    const tusdBlacklistedTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
-    const account = "0x0000000000000000000000002222222222222222222222222222222222222222";
-    const config: ContractEventConfig = {
-      configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
-      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
-      stablecoinId: "tusd-trueusd",
-      stablecoin: "USDC", // placeholder — we only care about event_type resolution here
-      contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
-      decimals: 18,
-      events: [
-        {
-          signature: "Blacklisted(address,bool)",
-          topicHash: tusdBlacklistedTopic,
-          eventType: "blacklist",
-          hasAmount: false,
-          eventTypeFromDataBoolIndex: 0,
-        },
-      ],
-    };
-    const rows = parseEvmLogs(config, [
-      {
-        address: config.contractAddress,
-        topics: [tusdBlacklistedTopic, account],
-        data: "0x" + "00".repeat(32),
-        blockNumber: "0x1",
-        transactionHash: "0xtusd-off",
-        logIndex: "0x0",
-        timeStamp: "0x61000000",
-      },
-    ]);
+  it.each([
+    ["one", "01".padStart(64, "0"), "blacklist"],
+    ["zero", "00".repeat(32), "unblacklist"],
+    ["high-bit-set", "ff".repeat(32), "blacklist"],
+  ] as const)("decodes the %s bool word", (_name, word, eventType) => {
+    const rows = parseEvmLogs(boolConfig, [makeBlacklistLog({
+      address: boolConfig.contractAddress,
+      topics: [boolTopic, "0x" + "0".repeat(24) + "11".repeat(20)],
+      data: "0x" + word,
+    })]);
     expect(rows).toHaveLength(1);
-    expect(rows[0].event_type).toBe("unblacklist");
-    expect(rows[0].address).toBe("0x2222222222222222222222222222222222222222");
-  });
-
-  it("treats high-bit-set data slot as truthy (uint256 max => blacklist)", () => {
-    const tusdBlacklistedTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
-    const account = "0x0000000000000000000000003333333333333333333333333333333333333333";
-    const config: ContractEventConfig = {
-      configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
-      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
-      stablecoinId: "tusd-trueusd",
-      stablecoin: "USDC",
-      contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
-      decimals: 18,
-      events: [
-        {
-          signature: "Blacklisted(address,bool)",
-          topicHash: tusdBlacklistedTopic,
-          eventType: "blacklist",
-          hasAmount: false,
-          eventTypeFromDataBoolIndex: 0,
-        },
-      ],
-    };
-    const rows = parseEvmLogs(config, [
-      {
-        address: config.contractAddress,
-        topics: [tusdBlacklistedTopic, account],
-        data: "0x" + "ff".repeat(32),
-        blockNumber: "0x1",
-        transactionHash: "0xtusd-maxuint",
-        logIndex: "0x0",
-        timeStamp: "0x61000000",
-      },
-    ]);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].event_type).toBe("blacklist");
+    expect(rows[0]).toMatchObject({
+      event_type: eventType,
+      address: "0x1111111111111111111111111111111111111111",
+    });
   });
 
   it("decodes non-indexed address from data for USDT DestroyedBlackFunds", () => {

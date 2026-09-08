@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext } from "../reserve-adapters/index";
 import { getCachedRequest } from "../reserve-adapters/request";
@@ -17,6 +18,15 @@ import {
   shouldAttemptFetchMock,
 } from "./live-reserves.test-support";
 
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
+  const registry = await importOriginal<typeof StablecoinRegistry>();
+  return {
+    ...registry,
+    ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS.filter((coin) =>
+      ["usdc-circle", "eurc-circle"].includes(coin.id)),
+  };
+});
+
 function metadataOf(result: { metadata?: string }): { adapterLatency: AdapterLatencySummary } {
   return JSON.parse(result.metadata ?? "{}") as { adapterLatency: AdapterLatencySummary };
 }
@@ -25,7 +35,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
   });
@@ -57,6 +66,51 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     expect(summary.groups.map((group) => group.adapterKey)).toEqual(
       [...summary.groups.map((group) => group.adapterKey)].sort(),
     );
+  });
+  it("counts cumulative bucket boundaries and selects exact percentiles", () => {
+    const collector = createAdapterLatencyCollector();
+    for (const elapsedMs of [1, 5, 6, 10, 25]) {
+      collector.recordAttempt({
+        adapterKey: "test", chain: "ethereum", stage: "primary", cacheHit: false,
+        ioCallCount: 1, waveCount: 1, elapsedMs, error: false,
+      });
+    }
+    expect(collector.finalize().total.elapsedMs).toEqual({
+      count: 5, sumMs: 47,
+      buckets: [1, 2, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+      p50UpperBoundMs: 10, p95UpperBoundMs: 25,
+    });
+  });
+
+  it("normalizes invalid durations and leaves overflow percentiles unbounded", () => {
+    const collector = createAdapterLatencyCollector();
+    for (const elapsedMs of [-1, NaN, Infinity, 20_001]) {
+      collector.recordAttempt({
+        adapterKey: "test", chain: "ethereum", stage: "primary", cacheHit: false,
+        ioCallCount: 0, waveCount: 0, elapsedMs, error: false,
+      });
+    }
+    expect(collector.finalize().total.elapsedMs).toEqual({
+      count: 4, sumMs: 20_001,
+      buckets: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      p50UpperBoundMs: 1, p95UpperBoundMs: null,
+    });
+  });
+
+  it("counts repeated omitted attempts rather than omitted groups", () => {
+    const collector = createAdapterLatencyCollector();
+    for (let index = 0; index < ADAPTER_LATENCY_MAX_GROUPS + 10; index++) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        collector.recordAttempt({
+          adapterKey: `adapter-${index}`, chain: "ethereum", stage: "primary", cacheHit: false,
+          ioCallCount: 0, waveCount: 0, elapsedMs: 1, error: false,
+        });
+      }
+    }
+    const summary = collector.finalize();
+    expect(summary.omittedGroups).toBeGreaterThan(0);
+    expect(summary.omittedAttempts).toBe(summary.omittedGroups * 3);
+    expect(summary.total.attemptCount).toBe((ADAPTER_LATENCY_MAX_GROUPS + 10) * 3);
   });
 
   it("persists attempt, limiter-call, wave, cache-hit, and percentile attribution", async () => {

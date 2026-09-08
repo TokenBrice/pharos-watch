@@ -1,8 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectTape } from "../project-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/tape-projectors/__tests__/test-support";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 const SEC = 1_700_000_000;
 
@@ -118,8 +121,6 @@ describe("projectTape", () => {
     // bind order: eventId, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency, ...
     expect(inserts[0]![2]).toBe("critical");
     expect(inserts[1]![2]).toBe("notice");
-    // Stable event ids (deterministic hash) so a second run is a no-op.
-    expect(typeof inserts[0]![0]).toBe("string");
   });
 
   it("projects depeg.resolved as severity=info", async () => {
@@ -349,31 +350,18 @@ describe("projectTape", () => {
     expect(inserts[0]![2]).toBe("info");
   });
 
-  it("uses INSERT OR REPLACE so re-runs are idempotent on the source key", async () => {
-    const db = dbWithOverride({
-      match: MATCH_DEPEG_OPENED,
-      rows: [
-        {
-          id: 1,
-          stablecoin_id: "usdt-tether",
-          symbol: "USDT",
-          peg_type: "peggedUSD",
-          direction: "below",
-          peak_deviation_bps: -1500,
-          started_at: SEC,
-          ended_at: null,
-          peg_reference: 1,
-          source: "live",
-          methodology_version: "5.0",
-        },
-      ],
-    });
-
+  it("keeps one durable event identity when the same source is replayed", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, peg_reference, source, start_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run("usdt-tether", "USDT", "peggedUSD", "below", -1500, now - 60, 1, "live", 0.85);
     await projectTape(db);
-    const inserts = tapeInsertBindsForType(db, "depeg.opened");
-    expect(inserts.length).toBeGreaterThan(0);
-    const firstInsertSql = db.getHistory().find((e) => e.sql.includes("tape_events"))?.sql ?? "";
-    expect(firstInsertSql).toContain("INSERT OR REPLACE INTO tape_events");
+    const readEvents = () => sqlite.prepare("SELECT event_id, type, coin_id, severity, ts FROM tape_events WHERE type = 'depeg.opened'").all();
+    const first = readEvents();
+    expect(first).toHaveLength(1);
+    sqlite.prepare("DELETE FROM cache WHERE key LIKE 'tape-projector:cursor:%'").run();
+    await projectTape(db);
+    expect(readEvents()).toEqual(first);
   });
 
   it("emits no relational-class events when the source tables are empty", async () => {

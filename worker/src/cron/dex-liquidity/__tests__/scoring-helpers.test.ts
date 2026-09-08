@@ -47,11 +47,15 @@ function makeCoverageInput(
 }
 
 describe("classifyCoverage", () => {
-  it("returns primary when all TVL is from dl source", () => {
-    const { coverageClass } = classifyCoverage(
-      makeCoverageInput({ dl: { poolCount: 3, tvlUsd: 10_000_000 } }, 10_000_000),
-    );
-    expect(coverageClass).toBe("primary");
+  it.each<[LiquiditySourceMixByFamily, number, string]>([
+    [{ dl: { poolCount: 3, tvlUsd: 10_000_000 } }, 10_000_000, "primary"],
+    [{ dl: { poolCount: 2, tvlUsd: 4_000_000 }, direct_api: { poolCount: 1, tvlUsd: 1_000_000 } }, 5_000_000, "primary"],
+    [{ dl: { poolCount: 2, tvlUsd: 4_000_000 }, cg_onchain: { poolCount: 1, tvlUsd: 1_000_000 } }, 5_000_000, "mixed"],
+    [{ cg_onchain: { poolCount: 2, tvlUsd: 3_000_000 } }, 3_000_000, "fallback"],
+    [{ cg_tickers: { poolCount: 1, tvlUsd: 2_000_000 } }, 2_000_000, "fallback"],
+    [{}, 5_000_000, "unobserved"],
+  ])("classifies source mix %j with TVL %d as %s", (mix, tvl, expected) => {
+    expect(classifyCoverage(makeCoverageInput(mix, tvl)).coverageClass).toBe(expected);
   });
 
   it("returns primary when all TVL is from direct_api source", () => {
@@ -62,50 +66,12 @@ describe("classifyCoverage", () => {
     expect(coverageConfidence).toBe(0.6);
   });
 
-  it("returns primary when TVL comes from mix of dl and direct_api only", () => {
-    const { coverageClass } = classifyCoverage(
-      makeCoverageInput(
-        { dl: { poolCount: 2, tvlUsd: 4_000_000 }, direct_api: { poolCount: 1, tvlUsd: 1_000_000 } },
-        5_000_000,
-      ),
-    );
-    expect(coverageClass).toBe("primary");
-  });
-
-  it("returns mixed when TVL spans dl and a fallback source (cg_onchain)", () => {
-    const { coverageClass } = classifyCoverage(
-      makeCoverageInput(
-        { dl: { poolCount: 2, tvlUsd: 4_000_000 }, cg_onchain: { poolCount: 1, tvlUsd: 1_000_000 } },
-        5_000_000,
-      ),
-    );
-    expect(coverageClass).toBe("mixed");
-  });
-
-  it("returns fallback when all TVL is from cg_onchain only", () => {
-    const { coverageClass } = classifyCoverage(
-      makeCoverageInput({ cg_onchain: { poolCount: 2, tvlUsd: 3_000_000 } }, 3_000_000),
-    );
-    expect(coverageClass).toBe("fallback");
-  });
-
-  it("returns fallback when all TVL is from cg_tickers only", () => {
-    const { coverageClass } = classifyCoverage(
-      makeCoverageInput({ cg_tickers: { poolCount: 1, tvlUsd: 2_000_000 } }, 2_000_000),
-    );
-    expect(coverageClass).toBe("fallback");
-  });
-
   it("returns unobserved when totalTvlUsd is zero", () => {
     const { coverageClass, coverageConfidence } = classifyCoverage(makeCoverageInput({}, 0));
     expect(coverageClass).toBe("unobserved");
     expect(coverageConfidence).toBe(0);
   });
 
-  it("returns unobserved when sourceMix is empty even with positive TVL", () => {
-    const { coverageClass } = classifyCoverage(makeCoverageInput({}, 5_000_000));
-    expect(coverageClass).toBe("unobserved");
-  });
 
   it("caps coverageConfidence at 1 for fully measured broad primary coverage", () => {
     const { coverageClass, coverageConfidence } = classifyCoverage(

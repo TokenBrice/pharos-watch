@@ -463,36 +463,6 @@ describe("enqueuePendingAlerts", () => {
     expect(db.getHistory()).toHaveLength(0);
   });
 
-  it("resets not_before_at on the stale-row re-enqueue path", async () => {
-    // P1.6 regression: a stale row whose prior life ended in a rate-limit
-    // defer should not stay held back after a fresh start. The upsert refresh
-    // predicate must also cover rows whose source-specific TTL already expired.
-    const db = mockD1([
-      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
-    ]);
-
-    const nowSec = 10_000;
-
-    await enqueuePendingAlerts(
-      db,
-      [{ chatId: "stale-chat", html: "<b>Fresh</b>", disableNotification: false }],
-      nowSec,
-    );
-
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
-    expect(insert).toBeDefined();
-    // The new CASE branch must come first so it takes precedence over the
-    // existing MAX/COALESCE logic when the prior row is stale.
-    expect(insert!.sql.replace(/\s+/g, " ")).toContain(
-      `not_before_at = CASE WHEN COALESCE( telegram_pending_alerts.expires_at,`
-      + ` telegram_pending_alerts.created_at + ${PENDING_TTL_SEC} ) <= excluded.created_at`
-      + ` OR telegram_pending_alerts.created_at < excluded.created_at - ${PENDING_TTL_SEC}`
-      + ` THEN excluded.not_before_at`,
-    );
-    // The TTL constant is inlined into the generated predicate, so the
-    // statement binds only its eighteen insert values.
-    expect(insert!.binds).toHaveLength(18);
-  });
 
   it("refreshes expired short-TTL rows on re-enqueue before the one-hour stale cutoff", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
@@ -661,60 +631,30 @@ describe("buildDedupeKey", () => {
 });
 
 describe("loadChatsInBackoff", () => {
-  it("returns the max not_before_at by chat for pending rows in backoff", async () => {
-    const nowSec = 5000;
-    const db = mockD1([
-      {
-        match: "SELECT chat_id, MAX(not_before_at)",
-        rows: [{ chat_id: "chat-A", not_before_at: 5100 }, { chat_id: "chat-B", not_before_at: 5300 }],
-      },
-    ]);
+  it("aggregates only live future backoffs, including legacy TTL boundaries", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = 5_000;
+    try {
+      for (const seed of [
+        { chatId: "live", notBeforeAt: 5_100, expiresAt: 5_001 },
+        { chatId: "live", notBeforeAt: 5_200, expiresAt: 6_000 },
+        { chatId: "live", notBeforeAt: 9_000, expiresAt: 5_000 },
+        { chatId: "expired", notBeforeAt: 9_000, expiresAt: 4_999 },
+        { chatId: "ready", notBeforeAt: 5_000, expiresAt: 6_000 },
+        { chatId: "unset", notBeforeAt: null, expiresAt: 6_000 },
+        { chatId: "legacy-live", notBeforeAt: 5_300, createdAt: now - PENDING_TTL_SEC + 1 },
+        { chatId: "legacy-expired", notBeforeAt: 9_000, createdAt: now - PENDING_TTL_SEC },
+      ]) insertPendingSqlite(sqlite, { html: seed.chatId, createdAt: now - 60, ...seed });
 
-    const result = await loadChatsInBackoff(db, nowSec);
-    expect(result).toEqual(new Map([["chat-A", 5100], ["chat-B", 5300]]));
-
-    const history = db.getHistory();
-    const select = history.find((entry) => entry.sql.includes("SELECT chat_id, MAX(not_before_at)"));
-    expect(select?.sql).toContain("not_before_at IS NOT NULL");
-    expect(select?.sql).toContain("COALESCE(expires_at, created_at + ?) > ?");
-    expect(select?.sql).toContain("not_before_at > ?");
-    expect(select?.sql).toContain("GROUP BY chat_id");
-    expect(select?.binds).toEqual([PENDING_TTL_SEC, nowSec, nowSec]);
-  });
-
-  it("returns an empty set when no rows are in backoff", async () => {
-    const db = mockD1([
-      { match: "SELECT chat_id, MAX(not_before_at)", rows: [] },
-    ]);
-    expect(await loadChatsInBackoff(db, 1000)).toEqual(new Map());
-  });
-
-  it("does not report TTL-expired short-TTL rows as in backoff but does report unexpired ones", async () => {
-    // P1.8 regression: filter on COALESCE(expires_at, created_at + PENDING_TTL_SEC) > nowSec
-    // (matching the capacity.ts idiom), not on created_at + PENDING_TTL_SEC. A 30-min-TTL
-    // launch/admin row that has expired but not yet been swept must not surface as
-    // "in backoff"; a genuinely-future expires_at row on the same chat must.
-    const nowSec = 5000;
-    const db = mockD1([
-      {
-        match: "SELECT chat_id, MAX(not_before_at)",
-        // The mock returns whatever it is seeded; this fixture asserts on the SQL
-        // shape and bind values that drive the actual D1 filter.
-        rows: [{ chat_id: "fresh-chat", not_before_at: nowSec + 120 }],
-      },
-    ]);
-
-    const result = await loadChatsInBackoff(db, nowSec);
-    expect(result).toEqual(new Map([["fresh-chat", nowSec + 120]]));
-
-    const select = db.getHistory().find((entry) =>
-      entry.sql.includes("SELECT chat_id, MAX(not_before_at)"),
-    );
-    // Buggy form filtered by `created_at >= nowSec - PENDING_TTL_SEC`, which would
-    // include rows whose 30-min expires_at had already passed.
-    expect(select?.sql).not.toContain("created_at >= ?");
-    expect(select?.sql).toContain("COALESCE(expires_at, created_at + ?) > ?");
-    expect(select?.binds).toEqual([PENDING_TTL_SEC, nowSec, nowSec]);
+      expect(await loadChatsInBackoff(db, now)).toEqual(new Map([
+        ["legacy-live", 5_300],
+        ["live", 5_200],
+      ]));
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 8 });
+      expect(await loadChatsInBackoff(db, 10_000)).toEqual(new Map());
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

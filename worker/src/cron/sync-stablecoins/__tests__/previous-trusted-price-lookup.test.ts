@@ -34,6 +34,36 @@ function makeCacheEntry(overrides: Partial<PriceCacheEntry> = {}): PriceCacheEnt
 }
 
 describe("buildPreviousTrustedPriceLookup", () => {
+  it("rejects a newer low-confidence replay in favor of trusted publication", () => {
+    const lookup = buildPreviousTrustedPriceLookup(
+      new Map([["coin", makeAsset({ price: 1.001 })]]), NOW_SEC,
+      new Map([["coin", makeCacheEntry({ price: 0.9, confidence: "low", observedAt: NOW_SEC - 1 })]]),
+    );
+    expect(lookup.get("coin")).toMatchObject({ price: 1.001, observedAt: NOW_SEC - 60 });
+  });
+
+  it("rejects non-positive and nonfinite replay prices", () => {
+    const replay = new Map([0, -1, NaN, Infinity].map((price, index) => [
+      `invalid-${index}`, makeCacheEntry({ price }),
+    ]));
+    expect([...buildPreviousTrustedPriceLookup(new Map(), NOW_SEC, replay)]).toEqual([]);
+  });
+
+  it("omits an asset when neither publication nor replay is trusted", () => {
+    expect([...buildPreviousTrustedPriceLookup(
+      new Map([["coin", makeAsset({ priceConfidence: "low" })]]), NOW_SEC,
+      new Map([["coin", makeCacheEntry({ confidence: "low" })]]),
+    )]).toEqual([]);
+  });
+
+  it("uses replay update time when its observation timestamp is missing", () => {
+    const lookup = buildPreviousTrustedPriceLookup(
+      new Map([["coin", makeAsset()]]), NOW_SEC,
+      new Map([["coin", makeCacheEntry({ price: 0.998, observedAt: null, updatedAt: NOW_SEC - 10 })]]),
+    );
+    expect(lookup.get("coin")).toMatchObject({ price: 0.998, observedAt: NOW_SEC - 10 });
+  });
+
   it("returns previous-cache row when replay cache has no matching entry", () => {
     const previous = new Map<string, PeggedAsset>([["usdt-tether", makeAsset({ price: 1.0 })]]);
     const replay = new Map<string, PriceCacheEntry>();

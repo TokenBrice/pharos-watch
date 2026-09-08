@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  cleanupEnrichMissingPricesTest,
   fixtureFetchPrimaryPrices,
   fixtureApplyPoolChallenge,
   fixtureApplyListAggregatorDowngrade,
@@ -23,6 +24,7 @@ const fixtureMockD1 = makePrimaryPricingDb;
 
 describe("pool challenge — soft-only high confidence downgrade", () => {
   afterEach(() => {
+    cleanupEnrichMissingPricesTest();
     vi.restoreAllMocks();
   });
 
@@ -737,63 +739,26 @@ describe("applyPoolChallenge", () => {
     expect(results.get("ousg-ondo-finance")!.price).toBe(110.15);
   });
 
-  // --- Boundary tests: verify the peggedUSD 500 bps / non-USD peg-aware threshold is inclusive. ---
-  // Boundary check in applyPoolChallenge is `bps >= poolChallengeBps`, so a protocol median that
-  // produces a bps value at or above the threshold fires; strictly below does not.
-
-  it("fires at exactly the USD threshold (500 bps) — inclusive boundary", () => {
-    // price 0.9512 vs consensus 1.0 → bps = 0.0488 / 0.9756 * 10_000 ≈ 500.205 bps (≥500 → triggers).
+  it.each([
+    ["USD below", "peggedUSD", 41 / 64, 39 / 64 + 1e-10, 0],
+    ["USD exact", "peggedUSD", 41 / 64, 39 / 64, 1],
+    ["USD above", "peggedUSD", 41 / 64, 39 / 64 - 1e-10, 1],
+    ["JPY below", "peggedJPY", 203 / 32768, 197 / 32768 + 1e-12, 0],
+    ["JPY exact", "peggedJPY", 203 / 32768, 197 / 32768, 1],
+    ["JPY above", "peggedJPY", 203 / 32768, 197 / 32768 - 1e-12, 1],
+  ])("applies the inclusive pool threshold: %s", (_label, pegType, price, poolPrice, expected) => {
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "dusd-test",
-      result: makePriceConsensusResult(),
-      pools: [{ price: 0.9512, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+      assetId: "boundary-test",
+      pegType,
+      result: makePriceConsensusResult({ price }),
+      pools: [{ price: poolPrice, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
     });
-
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(1);
-    expect(results.get("dusd-test")!.confidence).toBe("low");
-    // Single protocol at boundary → confidence downgraded, price preserved.
-    expect(results.get("dusd-test")!.price).toBe(1.0);
-    expect(results.get("dusd-test")!.source).not.toBe("pool-tvl-weighted");
-  });
-
-  it("does NOT fire just below the USD threshold (~499 bps)", () => {
-    // price 0.9513 vs consensus 1.0 → bps ≈ 499.15 bps (<500 → no downgrade).
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "dusd-test",
-      result: makePriceConsensusResult(),
-      pools: [{ price: 0.9513, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+    expect(fixtureApplyPoolChallenge(results, pools, pegTypes, stats)).toBe(expected);
+    expect(results.get("boundary-test")).toMatchObject({
+      price,
+      source: "coingecko+defillama-list",
+      confidence: expected ? "low" : "high",
     });
-
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(0);
-    expect(results.get("dusd-test")!.confidence).toBe("high");
-    expect(results.get("dusd-test")!.price).toBe(1.0);
-  });
-
-  it("fires at the non-USD peg-aware threshold (peggedJPY, 300 bps)", () => {
-    // peggedJPY → min(2 * 150, 500) = 300 bps. consensus 0.00682 vs pool 0.006618 → ≈300.64 bps.
-    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
-      assetId: "jpyc-jpyc",
-      pegType: "peggedJPY",
-      result: makePriceConsensusResult({
-        price: 0.00682,
-        source: "coingecko+defillama-list+dex-promoted",
-        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
-        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
-      }),
-      pools: [{ price: 0.006618, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
-    });
-
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
-
-    expect(downgrades).toBe(1);
-    expect(results.get("jpyc-jpyc")!.confidence).toBe("low");
-    // Single protocol → price preserved.
-    expect(results.get("jpyc-jpyc")!.price).toBe(0.00682);
-    expect(results.get("jpyc-jpyc")!.source).not.toBe("pool-tvl-weighted");
   });
 
   it("replaces price when exactly 2 independent protocols hit the boundary", () => {
@@ -839,43 +804,13 @@ describe("applyPoolChallenge", () => {
 });
 
 describe("applyListAggregatorDowngrade", () => {
-  it("downgrades 2-source list-aggregator clusters (coingecko + defillama-list)", () => {
+  it.each(["defillama-list", "defillama", "coinmarketcap"])("downgrades coingecko + %s", (other) => {
     const results = makePrimaryPriceResults("usdt-tether", {
-      source: "coingecko+defillama-list",
-      dlPrice: 1.0,
-      cgPrice: 1.0,
-      candidateSources: ["coingecko", "defillama-list"],
-      agreeSources: ["coingecko", "defillama-list"],
-    });
-    const stats = makePriceValidationStats();
-    fixtureApplyListAggregatorDowngrade(results, stats);
-    expect(results.get("usdt-tether")!.confidence).toBe("single-source");
-    expect(stats.high).toBe(0);
-    expect(stats.singleSource).toBe(1);
-  });
-
-  it("downgrades 2-source list-aggregator clusters even when detail endpoint is the second voice", () => {
-    const results = makePrimaryPriceResults("usdt-tether", {
-      source: "coingecko+defillama",
-      dlPrice: 1.0,
-      cgPrice: 1.0,
-      candidateSources: ["coingecko", "defillama"],
-      agreeSources: ["coingecko", "defillama"],
-    });
-    const stats = makePriceValidationStats();
-    fixtureApplyListAggregatorDowngrade(results, stats);
-    expect(results.get("usdt-tether")!.confidence).toBe("single-source");
-    expect(stats.high).toBe(0);
-    expect(stats.singleSource).toBe(1);
-  });
-
-  it("downgrades CMC-style list aggregators when paired only with another list aggregator", () => {
-    const results = makePrimaryPriceResults("usdt-tether", {
-      source: "coingecko+coinmarketcap",
-      dlPrice: 1.0,
-      cgPrice: 1.0,
-      candidateSources: ["coingecko", "coinmarketcap"],
-      agreeSources: ["coingecko", "coinmarketcap"],
+      source: `coingecko+${other}`,
+      dlPrice: 1,
+      cgPrice: 1,
+      candidateSources: ["coingecko", other],
+      agreeSources: ["coingecko", other],
     });
     const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);

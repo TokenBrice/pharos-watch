@@ -101,150 +101,53 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     ).toBe(true);
   });
 
-  it("does not restore a reconciled curated aggregate packet with an extra stale chain", () => {
-    const current = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 105_000_000 },
-      chainCirculating: {},
-    });
-    const previous = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "onchain-total-supply",
-      circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating({
-        Ethereum: chainRow(69_000_000),
-        "Removed Chain": chainRow(1_000_000),
-      }),
-      supplyObservedAt: NOW_SEC - 900,
-    });
-
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["syrupusdc-maple", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
-
-    expect(result.restoredCount).toBe(0);
-    expect(result.assets[0]).toBe(current);
-  });
-
-  it("does not restore a curated packet with a negative extra circulating bucket", () => {
-    const current = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 105_000_000 },
-      chainCirculating: {},
-    });
-    const previous = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "onchain-total-supply",
-      circulating: { peggedUSD: 101_000_000, unexpected: -1_000_000 },
-      chainCirculating: syrupChainCirculating(),
-      supplyObservedAt: NOW_SEC - 900,
-    });
-
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["syrupusdc-maple", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
-
-    expect(result.restoredCount).toBe(0);
-    expect(result.assets[0]).toBe(current);
-  });
-
-  it("does not restore a curated packet with malformed chain history", () => {
-    const current = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 105_000_000 },
-      chainCirculating: {},
-    });
-    const previous = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "onchain-total-supply",
-      circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating({
+  it.each([
+    {
+      label: "extra stale chain",
+      patch: { chainCirculating: syrupChainCirculating({
+        Ethereum: chainRow(69_000_000), "Removed Chain": chainRow(1_000_000),
+      }) },
+      expiredIds: [],
+    },
+    {
+      label: "negative circulating bucket",
+      patch: { circulating: { peggedUSD: 101_000_000, unexpected: -1_000_000 } },
+      expiredIds: [],
+    },
+    {
+      label: "malformed chain history",
+      patch: { chainCirculating: syrupChainCirculating({
         Ethereum: { ...chainRow(70_000_000), circulatingPrevWeek: -1 },
-      }),
-      supplyObservedAt: NOW_SEC - 900,
-    });
-
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["syrupusdc-maple", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
-
-    expect(result.restoredCount).toBe(0);
-    expect(result.assets[0]).toBe(current);
-  });
-
-  it("expires a curated aggregate packet while retaining the fresh CoinGecko fallback", () => {
+      }) },
+      expiredIds: [],
+    },
+    {
+      label: "expired observation",
+      patch: { supplyObservedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1 },
+      expiredIds: ["syrupusdc-maple"],
+    },
+    {
+      label: "future observation",
+      patch: { supplyObservedAt: NOW_SEC + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC + 1 },
+      expiredIds: ["syrupusdc-maple"],
+    },
+  ])("retains the fresh fallback when the curated packet has $label", ({ patch, expiredIds }) => {
     const current = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 105_000_000 },
-      chainCirculating: {},
+      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      supplySource: "coingecko-fallback", circulating: { peggedUSD: 105_000_000 },
     });
     const previous = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "onchain-total-supply",
-      circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating(),
-      supplyObservedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
+      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
+      chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
+      ...patch,
     });
-
     const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["syrupusdc-maple", previous]]),
-      new Set(),
-      NOW_SEC,
+      [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
     );
-
     expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual(["syrupusdc-maple"]);
-    expect(result.assets[0]).toBe(current);
-  });
-
-  it("rejects a future-dated curated aggregate packet instead of extending its restore window", () => {
-    const current = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 105_000_000 },
-      chainCirculating: {},
-    });
-    const previous = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
-      supplySource: "onchain-total-supply",
-      circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating(),
-      supplyObservedAt: NOW_SEC + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC + 1,
-    });
-
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["syrupusdc-maple", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
-
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual(["syrupusdc-maple"]);
+    expect(result.expiredRestoreIds).toEqual(expiredIds);
+    expect(result.assets).toEqual([current]);
     expect(result.assets[0]).toBe(current);
   });
 

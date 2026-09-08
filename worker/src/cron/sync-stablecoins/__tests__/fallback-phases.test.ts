@@ -9,12 +9,10 @@ import {
 import { restoreFallbackCacheState } from "../fallback";
 import { loadPreviousStablecoinsById } from "../shared";
 import { checkStablecoinsPriceStaleness } from "../runtime";
-import { buildFallbackStablecoinsSyncResult } from "../metadata";
 import {
   buildFallbackStablecoinsPublicationPolicy,
   runStablecoinsPostIntakePublication,
 } from "../publication";
-import { evaluateStablecoinActivePriceCoverage } from "../../../lib/stablecoin-publication-coverage";
 import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -407,10 +405,6 @@ describe("CoinGecko fallback phases", () => {
     const previousAssetsById = new Map<string, PeggedAsset>([
       ["fixture-old", makeAsset({ id: "fixture-old", geckoId: "fixture-old" })],
     ]);
-    const expectedActivePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
-      previousCoverage: null,
-      previousAcceptedAssetsById: previousAssetsById,
-    });
 
     const result = await runStablecoinsPostIntakePublication({
       db,
@@ -437,28 +431,17 @@ describe("CoinGecko fallback phases", () => {
       policy: buildFallbackStablecoinsPublicationPolicy(assets),
     });
 
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
       depegPipelineSucceeded: true,
       providerDiagnostics: [],
+      cacheWriteSucceeded: true,
+      downstreamSafe: false,
+      capabilities: { stablecoinsCache: false, depegPipeline: true },
+      activePublicationCoverage: { complete: false },
     });
-    const expectedResult = buildFallbackStablecoinsSyncResult({
-      assets,
-      enrichStats: {},
-      providerDiagnostics: [],
-      authoritativeOverrideCount: 0,
-      rejectedCount: 0,
-      cachedFallbackCount: 0,
-      nativePegCorrectionCount: 0,
-      nativePegFillCount: 0,
-      stalenessWarning: false,
-      stalenessSummary: null,
-      stalenessCheckFailed: false,
-      depegErrorCount: 0,
-      cacheKey: "stablecoins",
-      syncStartSec: NOW_SEC,
-      activePriceCoverage: expectedActivePriceCoverage,
-    });
-    expect(result.metadata).toBe(expectedResult.metadata);
+    expect(metadata.activePriceCoverage.missingActiveIds).toContain("usdt-tether");
+    expect(metadata.activePriceCoverage.missingActiveIds).not.toContain("fixture-new");
     expect(result.productivity).toEqual({
       productive: true,
       reason: "stablecoins-fallback-cache-published",

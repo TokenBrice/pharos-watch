@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+import { mockFetchRetry } from "../../../test-helpers/cron";
+
+vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn() }));
+import { fetchWithRetry } from "../../../lib/fetch-retry";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -16,8 +20,13 @@ import {
 } from "../infinifi";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
-const RATE_HISTORY_CACHE_KEY =
-  "json-get:https://example.com/api/protocol/rate-history/siUSD?daysAgo=7:6000:null";
+const RATE_HISTORY_URL = "https://example.com/api/protocol/rate-history/siUSD?daysAgo=7";
+const unexpectedRequests: unknown[] = [];
+afterEach(() => {
+  const unexpected = unexpectedRequests.splice(0);
+  vi.resetAllMocks();
+  expect(unexpected).toEqual([]);
+});
 
 const EMPTY_RATE_HISTORY: InfiniFiRateHistoryResponse = { code: "OK", data: { dataPoints: [] } };
 
@@ -132,7 +141,13 @@ function routeResponse(overrides: {
   };
 }
 
-function fetchRouteReserves(response: InfiniFiProtocolData = routeResponse()) {
+function fetchRouteReserves(response: InfiniFiProtocolData = routeResponse(), rateHistory: InfiniFiRateHistoryResponse = EMPTY_RATE_HISTORY) {
+  vi.mocked(fetchWithRetry).mockImplementation(async (url) => {
+    if (url === ROUTE_URL) return Response.json(response);
+    if (url === RATE_HISTORY_URL) return Response.json(rateHistory);
+    unexpectedRequests.push(url);
+    throw new Error(`Unexpected InfiniFi request: ${url}`);
+  });
   return fetchInfiniFiReserves(
     { id: "infinifi" } as never,
     {
@@ -142,12 +157,7 @@ function fetchRouteReserves(response: InfiniFiProtocolData = routeResponse()) {
       inputs: { primary: { kind: "http-json", url: ROUTE_URL } },
     },
     new AbortController().signal,
-    {
-      requestCache: new Map<string, Promise<unknown>>([
-        [`json-get:${ROUTE_URL}:12000:null`, Promise.resolve(response)],
-        [RATE_HISTORY_CACHE_KEY, Promise.resolve(EMPTY_RATE_HISTORY)],
-      ]),
-    } as never,
+    { requestCache: new Map() } as never,
   );
 }
 
@@ -189,6 +199,17 @@ const SAMPLE_RESPONSE: InfiniFiProtocolData = {
     ],
   },
 };
+
+function farmResponse(farms: InfiniFiProtocolData["data"]["farms"], totalTVLAssetNormalized: number): InfiniFiProtocolData {
+  return { code: "OK", data: { stats: { asset: { totalTVLAssetNormalized } }, farms } };
+}
+
+function protocolBufferResponse() {
+  return farmResponse([
+    ...SAMPLE_RESPONSE.data.farms,
+    { name: "ProtocolBuffer", label: "Protocol Buffer", assetsNormalized: 25, type: "PROTOCOL", underlyingAssetSymbol: "USDC" },
+  ], 125);
+}
 
 describe("adaptInfiniFi", () => {
   beforeEach(() => {
@@ -248,17 +269,10 @@ describe("adaptInfiniFi", () => {
   });
 
   it("recognizes current tiny SwapFarm and Tokemak infiniFiUSD positions", () => {
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        farms: [
-          { name: "SwapFarm", label: "Multi Farm", assetsNormalized: 1, type: "LIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "tokemak-auto-infinifiUSD", label: "infinifiUSD Autopool", assetsNormalized: 9, type: "ILLIQUID", underlyingAssetSymbol: "infinifiUSD" },
-        ],
-        stats: { asset: { totalTVLAssetNormalized: 10 } },
-      },
-    };
+    const response = farmResponse([
+      { name: "SwapFarm", label: "Multi Farm", assetsNormalized: 1, type: "LIQUID", underlyingAssetSymbol: "USDC" },
+      { name: "tokemak-auto-infinifiUSD", label: "infinifiUSD Autopool", assetsNormalized: 9, type: "ILLIQUID", underlyingAssetSymbol: "infinifiUSD" },
+    ], 10);
 
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
@@ -269,17 +283,10 @@ describe("adaptInfiniFi", () => {
   });
 
   it("recognizes current Liquid Cap and CoW Swap fxSave positions", () => {
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        farms: [
-          { name: "liquid-cap", label: "Liquid Cap", assetsNormalized: 60, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
-          { name: "cowswap-fxSave", label: "f(x) fxSAVE", assetsNormalized: 40, type: "ILLIQUID", underlyingAssetSymbol: "fxSAVE" },
-        ],
-        stats: { asset: { totalTVLAssetNormalized: 100 } },
-      },
-    };
+    const response = farmResponse([
+      { name: "liquid-cap", label: "Liquid Cap", assetsNormalized: 60, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
+      { name: "cowswap-fxSave", label: "f(x) fxSAVE", assetsNormalized: 40, type: "ILLIQUID", underlyingAssetSymbol: "fxSAVE" },
+    ], 100);
 
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
@@ -290,20 +297,13 @@ describe("adaptInfiniFi", () => {
   });
 
   it("recognizes current Pendle, New Silver, stcUSD, and Sentora PRIME positions", () => {
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        farms: [
-          { name: "pendle-v3-PT-apxUSD-18JUN2026", label: "Pendle PT-apxUSD-18JUN2026", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "PT-apxUSD-18JUN2026" },
-          { name: "pendle-v3-PT-apyUSD-18JUN2026", label: "Pendle PT-apyUSD-18JUN2026", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "PT-apyUSD-18JUN2026" },
-          { name: "new-silver-junior", label: "New Silver", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "morpho-v2-sentora-prime", label: "Sentora PRIME Main", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "senPYUSDPRIMEv2" },
-          { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
-        ],
-        stats: { asset: { totalTVLAssetNormalized: 100 } },
-      },
-    };
+    const response = farmResponse([
+      { name: "pendle-v3-PT-apxUSD-18JUN2026", label: "Pendle PT-apxUSD-18JUN2026", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "PT-apxUSD-18JUN2026" },
+      { name: "pendle-v3-PT-apyUSD-18JUN2026", label: "Pendle PT-apyUSD-18JUN2026", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "PT-apyUSD-18JUN2026" },
+      { name: "new-silver-junior", label: "New Silver", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+      { name: "morpho-v2-sentora-prime", label: "Sentora PRIME Main", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "senPYUSDPRIMEv2" },
+      { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
+    ], 100);
 
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
@@ -318,17 +318,10 @@ describe("adaptInfiniFi", () => {
   });
 
   it("flags dust unknown farms and preserves them in final slices when they remain material at one-decimal precision", () => {
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        farms: [
-          ...SAMPLE_RESPONSE.data.farms,
-          { name: "dust-farm", label: "Dust Farm", assetsNormalized: 0.4, type: "LIQUID", underlyingAssetSymbol: "USDC" },
-        ],
-        stats: { asset: { totalTVLAssetNormalized: 100.4 } },
-      },
-    };
+    const response = farmResponse([
+      ...SAMPLE_RESPONSE.data.farms,
+      { name: "dust-farm", label: "Dust Farm", assetsNormalized: 0.4, type: "LIQUID", underlyingAssetSymbol: "USDC" },
+    ], 100.4);
 
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toContain("dust-farm");
@@ -380,23 +373,7 @@ describe("adaptInfiniFi", () => {
   });
 
   it("keeps PROTOCOL farm exposure explicit instead of renormalizing active farm subset", () => {
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        stats: { asset: { totalTVLAssetNormalized: 125 } },
-        farms: [
-          ...SAMPLE_RESPONSE.data.farms,
-          {
-            name: "ProtocolBuffer",
-            label: "Protocol Buffer",
-            assetsNormalized: 25,
-            type: "PROTOCOL",
-            underlyingAssetSymbol: "USDC",
-          },
-        ],
-      },
-    };
+    const response = protocolBufferResponse();
 
     const result = adaptInfiniFi(response);
     expect(result.excludedProtocolFarms).toEqual(["ProtocolBuffer"]);
@@ -407,41 +384,7 @@ describe("adaptInfiniFi", () => {
   });
 
   it("warns when source TVL exceeds emitted active farm rows", async () => {
-    const url = "https://example.com/infinifi";
-    const response: InfiniFiProtocolData = {
-      ...SAMPLE_RESPONSE,
-      data: {
-        ...SAMPLE_RESPONSE.data,
-        stats: { asset: { totalTVLAssetNormalized: 125 } },
-        farms: [
-          ...SAMPLE_RESPONSE.data.farms,
-          {
-            name: "ProtocolBuffer",
-            label: "Protocol Buffer",
-            assetsNormalized: 25,
-            type: "PROTOCOL",
-            underlyingAssetSymbol: "USDC",
-          },
-        ],
-      },
-    };
-
-    const result = await fetchInfiniFiReserves(
-      { id: "infinifi" } as never,
-      {
-        adapter: "infinifi",
-        version: 1,
-        semantics: "collateral-mix",
-        inputs: { primary: { kind: "http-json", url } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [`json-get:${url}:12000:null`, Promise.resolve(response)],
-          [RATE_HISTORY_CACHE_KEY, Promise.resolve(EMPTY_RATE_HISTORY)],
-        ]),
-      } as never,
-    );
+    const result = await fetchRouteReserves(protocolBufferResponse());
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
@@ -539,7 +482,6 @@ describe("adaptInfiniFi", () => {
   });
 
   it("falls back to unverified freshness when the optional rate-history probe has malformed data points", async () => {
-    const url = "https://example.com/infinifi";
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,
       data: {
@@ -551,22 +493,7 @@ describe("adaptInfiniFi", () => {
       },
     };
 
-    const result = await fetchInfiniFiReserves(
-      { id: "infinifi" } as never,
-      {
-        adapter: "infinifi",
-        version: 1,
-        semantics: "collateral-mix",
-        inputs: { primary: { kind: "http-json", url } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [`json-get:${url}:12000:null`, Promise.resolve(response)],
-          [RATE_HISTORY_CACHE_KEY, Promise.resolve({ code: "OK", data: { dataPoints: [null] } })],
-        ]),
-      } as never,
-    );
+    const result = await fetchRouteReserves(response, { code: "OK", data: { dataPoints: [null] } });
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
@@ -578,7 +505,6 @@ describe("adaptInfiniFi", () => {
 
   it("verifies freshness from the siUSD rate-history probe when it matches the live staked rate", async () => {
     primeRouteProbe();
-    const url = "https://example.com/infinifi";
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,
       data: {
@@ -599,22 +525,7 @@ describe("adaptInfiniFi", () => {
       },
     };
 
-    const result = await fetchInfiniFiReserves(
-      { id: "infinifi" } as never,
-      {
-        adapter: "infinifi",
-        version: 1,
-        semantics: "collateral-mix",
-        inputs: { primary: { kind: "http-json", url } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [`json-get:${url}:12000:null`, Promise.resolve(response)],
-          [RATE_HISTORY_CACHE_KEY, Promise.resolve(rateHistory)],
-        ]),
-      } as never,
-    );
+    const result = await fetchRouteReserves(response, rateHistory);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",

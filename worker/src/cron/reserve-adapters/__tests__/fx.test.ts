@@ -8,19 +8,69 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchDefiLlamaPrices: vi.fn(),
+    fetchJsonWithRetry: vi.fn(),
     fetchOnchainUint256,
     makeOnchainCallers: makeOnchainCallersMock({ uint256: fetchOnchainUint256 }),
   };
 });
 
 import { adaptFx, fetchFxReserves } from "../fx";
-import { fetchDefiLlamaPrices, fetchOnchainUint256 } from "../helpers";
+import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainUint256 } from "../helpers";
 
+
+const fxCoin = TRACKED_META_BY_ID.get("fxusd-f-x-protocol")!;
+const apiConfig = {
+  ...fxCoin.liveReservesConfig!,
+  inputs: { primary: { kind: "http-json" as const, url: "https://fx.example/tvl" } },
+};
+
+function mockApiPools(extra: Record<string, { collateralBalance: string }> = {}) {
+  vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+    data: { poolInfo: {
+      wstETH: { collateralBalance: "2000000000000000000" },
+      wbtc: { collateralBalance: "100000000" },
+      ...extra,
+    } },
+  });
+  vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 4_000], ["wbtc", 100_000]]));
+}
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("adaptFx", () => {
+  it("fails closed at the HTTP consumer for unknown positive collateral", async () => {
+    mockApiPools({ unexpectedAsset: { collateralBalance: "1" } });
+    await expect(fetchFxReserves(fxCoin, apiConfig, new AbortController().signal))
+      .rejects.toThrow("unmapped positive collateral keys with unquantified exposure: unexpectedAsset");
+  });
+
+  it("rejects a missing price instead of renormalizing the priced balance", async () => {
+    mockApiPools();
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 4_000]]));
+    await expect(fetchFxReserves(fxCoin, apiConfig, new AbortController().signal))
+      .rejects.toThrow("Missing DefiLlama price for wbtc");
+  });
+
+  it.each([
+    ["0xee65a03c", "collateral"], ["0xf9d45fd2", "debt"],
+  ])("rejects an independently unreadable on-chain %s read", async (selector, kind) => {
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) =>
+      contract === "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8" && data === selector
+        ? null : 10n ** 18n);
+    await expect(fetchFxReserves(fxCoin, fxCoin.liveReservesConfig!, new AbortController().signal))
+      .rejects.toThrow(`fx on-chain ${kind} read failed for wstETH`);
+  });
+
+  it("values API WBTC at eight decimals rather than the on-chain eighteen", async () => {
+    mockApiPools();
+    const result = await fetchFxReserves(fxCoin, apiConfig, new AbortController().signal);
+    expect(result.slices).toEqual([
+      { name: "WBTC", pct: 92.6, risk: "medium" },
+      { name: "wstETH (Lido)", pct: 7.4, risk: "low" },
+    ]);
+  });
+
   it("extracts non-zero collateral balances from the official fx TVL payload", () => {
     const result = adaptFx({
       data: {

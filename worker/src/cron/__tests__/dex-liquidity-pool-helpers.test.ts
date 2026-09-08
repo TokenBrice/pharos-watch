@@ -8,6 +8,7 @@ import {
   computeDurabilityScore,
   computeLiquidityScore,
   computePoolPairQuality,
+  computePoolQualityContribution,
   computePoolStress,
   getGtDexQuality,
   getTrackedContracts,
@@ -22,6 +23,16 @@ import {
 describe("dex-liquidity pool helpers", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("bounds an out-of-range balance ratio before computing monetary contributions", () => {
+    const input = { qualityTvlUsd: 1_000_000, effectiveTvlUsd: 800_000, qualityMultiplier: 0.85, pairQuality: 1 };
+    const balanced = computePoolQualityContribution({ ...input, balanceRatio: 1 });
+    const pathological = computePoolQualityContribution({ ...input, balanceRatio: 2 });
+    expect(pathological).toEqual(balanced);
+    expect(pathological).toEqual({
+      balanceHealth: 1, combinedQuality: 0.85, qualityAdjustedTvl: 850_000, effectiveTvl: 680_000,
+    });
   });
 
   it("parses composite pool names and generic delimiters", () => {

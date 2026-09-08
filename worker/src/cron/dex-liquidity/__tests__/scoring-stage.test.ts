@@ -8,8 +8,6 @@ import type {
 import { initMetrics } from "../pool-helpers";
 import {
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
-  DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL,
-  DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT,
   decodeDexLiquidityScoringStageChunks,
   encodeDexLiquidityScoringStageChunks,
   loadDexLiquidityScoringStage,
@@ -424,17 +422,14 @@ describe("DEX liquidity scoring stage", () => {
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
     });
-    expect(DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT).toBe(1);
-    expect(DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL).toBe(24);
-    expect(onChunkBatchPersisted).toHaveBeenCalledTimes(
-      Math.ceil(stored.chunkCount / DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL),
-    );
-    expect(onChunkBatchPersisted.mock.calls[0]?.[0]).toMatchObject({
-      chunkCount: Math.min(
-        stored.chunkCount,
-        DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL,
-      ),
-    });
+    let previousProgress = { chunkCount: 0, recordCount: 0, payloadBytes: 0 };
+    for (const [progress] of onChunkBatchPersisted.mock.calls) {
+      for (const key of ["chunkCount", "recordCount", "payloadBytes"] as const) {
+        expect(progress[key]).toBeGreaterThan(previousProgress[key]);
+        expect(progress[key]).toBeLessThanOrEqual(stored[key]);
+      }
+      previousProgress = progress;
+    }
 
     const loaded = await loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,

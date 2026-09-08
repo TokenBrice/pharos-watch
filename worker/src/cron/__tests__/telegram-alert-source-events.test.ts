@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import type { TelegramDispatchEvents } from "../dispatch-telegram-events";
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";
@@ -47,22 +47,9 @@ const V9_IDENTITY = {
   publicationGenerationId: "report-cards:v9:1",
 };
 
-interface Harness {
-  sqlite: DatabaseSync;
-  db: D1Database;
-}
-
-const openDatabases: DatabaseSync[] = [];
-
-afterEach(() => {
-  for (const sqlite of openDatabases.splice(0)) sqlite.close();
-});
-
-function createHarness(): Harness {
-  const { sqlite, db } = createLatestSchemaSqlite();
-  openDatabases.push(sqlite);
-  return { sqlite, db };
-}
+const { open: createHarness, closeAll } = createLatestSchemaFixtureTracker();
+type Harness = { sqlite: DatabaseSync; db: D1Database };
+afterEach(closeAll);
 
 function events(stablecoinIds = ["usdc-circle"]): TelegramDispatchEvents {
   return {

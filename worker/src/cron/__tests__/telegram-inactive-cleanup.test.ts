@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const { runTelegramInactiveCleanup } = await import("../telegram-inactive-cleanup");
 
-const databases: DatabaseSync[] = [];
+const { open: setupLatestSchemaSqlite, closeAll } = createLatestSchemaFixtureTracker();
 
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  while (databases.length > 0) databases.pop()?.close();
+  closeAll();
 });
 
 const ONE_DAY_SEC = 86_400;
@@ -18,11 +18,6 @@ const INACTIVE_RETENTION_SEC = 180 * ONE_DAY_SEC;
 const RUN_INTERVAL_SEC = 7 * ONE_DAY_SEC;
 const CACHE_LAST_RUN_KEY = "cron:telegram-inactive-cleanup:last-run";
 
-function setupLatestSchemaSqlite(): { sqlite: DatabaseSync; db: D1Database } {
-  const result = createLatestSchemaSqlite();
-  databases.push(result.sqlite);
-  return result;
-}
 
 type GlobalAlertColumn =
   | "global_alert_dews"

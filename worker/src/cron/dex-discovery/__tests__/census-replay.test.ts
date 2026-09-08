@@ -134,67 +134,20 @@ describe("DEX census rotating replay", () => {
     const observedKey = TARGET_KEYS[6]!;
     const verifiedKey = TARGET_KEYS[7]!;
 
+    const repeat = (
+      ...args: Parameters<typeof createDexCensusReplayVisit>
+    ): DexCensusReplayVisit[] => Array.from({ length: 4 }, () => createDexCensusReplayVisit(...args));
     const plans = new Map<string, readonly DexCensusReplayVisit[]>([
-      [boundedKey, [
-        createDexCensusReplayVisit("bounded"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-      ]],
-      [retryableKey, [
-        createDexCensusReplayVisit("retryable"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-      ]],
-      [outageKey, [
-        createDexCensusReplayVisit("outage"),
-        createDexCensusReplayVisit("outage"),
-        createDexCensusReplayVisit("outage"),
-        createDexCensusReplayVisit("outage"),
-      ]],
-      [nonExhaustiveKey, [
-        createDexCensusReplayVisit("non-exhaustive"),
-        createDexCensusReplayVisit("non-exhaustive"),
-        createDexCensusReplayVisit("non-exhaustive"),
-        createDexCensusReplayVisit("non-exhaustive"),
-      ]],
-      [supersededKey, [
-        createDexCensusReplayVisit("bounded", { persistence: "fence-only" }),
-        createDexCensusReplayVisit("bounded", { persistence: "fence-only" }),
-        createDexCensusReplayVisit("bounded", { persistence: "fence-only" }),
-        createDexCensusReplayVisit("bounded", { persistence: "fence-only" }),
-      ]],
-      [staleKey, [
-        createDexCensusReplayVisit("bounded", { persistence: "retain", checked: false }),
-        createDexCensusReplayVisit("bounded", { persistence: "retain", checked: false }),
-        createDexCensusReplayVisit("bounded", { persistence: "retain", checked: false }),
-        createDexCensusReplayVisit("bounded", { persistence: "retain", checked: false }),
-      ]],
-      [observedKey, [
-        createDexCensusReplayVisit("observed", { observedPoolCount: 2 }),
-        createDexCensusReplayVisit("observed", { observedPoolCount: 2 }),
-        createDexCensusReplayVisit("observed", { observedPoolCount: 2 }),
-        createDexCensusReplayVisit("observed", { observedPoolCount: 2 }),
-      ]],
-      [verifiedKey, [
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-      ]],
-      [TARGET_KEYS[8]!, [
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-      ]],
-      [TARGET_KEYS[9]!, [
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-        createDexCensusReplayVisit("verified-empty"),
-      ]],
+      [boundedKey, [createDexCensusReplayVisit("bounded"), ...repeat("verified-empty").slice(1)]],
+      [retryableKey, [createDexCensusReplayVisit("retryable"), ...repeat("verified-empty").slice(1)]],
+      [outageKey, repeat("outage")],
+      [nonExhaustiveKey, repeat("non-exhaustive")],
+      [supersededKey, repeat("bounded", { persistence: "fence-only" })],
+      [staleKey, repeat("bounded", { persistence: "retain", checked: false })],
+      [observedKey, repeat("observed", { observedPoolCount: 2 })],
+      [verifiedKey, repeat("verified-empty")],
+      [TARGET_KEYS[8]!, repeat("verified-empty")],
+      [TARGET_KEYS[9]!, repeat("verified-empty")],
     ]);
     const replay = replayDexCensusSweep({
       stablecoinId: "synthetic-adverse",

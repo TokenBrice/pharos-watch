@@ -46,21 +46,32 @@ const config: LiveReservesConfig = {
   },
 };
 
+function mockPool(tcr: bigint | null = 167n * 10n ** 16n, invalid?: { selector: string; value: bigint | null }) {
+  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+    if (data === invalid?.selector) return invalid.value;
+    if (contract === ACTIVE_POOL && data === "0x14a6bf0f") return 3_500_000n * 10n ** 18n;
+    if (contract === ACTIVE_POOL && data === "0x1529a639") return 90n * 10n ** 18n;
+    if (contract === PRICE_FEED && data === "0x0fdb11cf") return 65_000n * 10n ** 18n;
+    if (contract === TROVE_MANAGER && data === "0x794e5724") return 110n * 10n ** 16n;
+    if (contract === TROVE_MANAGER && data.startsWith("0xb82f263d")) return tcr;
+    throw new Error(`Unexpected pool read: ${contract} ${data}`);
+  });
+  vi.mocked(fetchOnchainRateBps).mockResolvedValue(75);
+}
+
+function fetchPool() {
+  return fetchLiquityNativeActivePoolReserves(
+    { id: "meusd-mezo" } as StablecoinMeta, config, new AbortController().signal,
+  );
+}
+
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe("fetchLiquityNativeActivePoolReserves", () => {
   it("emits native active-pool collateral slices and bounded direct capacity", async () => {
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      if (contract === ACTIVE_POOL && data === "0x14a6bf0f") return 3_500_000n * 10n ** 18n;
-      if (contract === ACTIVE_POOL && data === "0x1529a639") return 90n * 10n ** 18n;
-      if (contract === PRICE_FEED && data === "0x0fdb11cf") return 65_000n * 10n ** 18n;
-      if (contract === TROVE_MANAGER && data === "0x794e5724") return 110n * 10n ** 16n;
-      if (contract === TROVE_MANAGER && data.startsWith("0xb82f263d")) return 167n * 10n ** 16n;
-      return null;
-    });
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(75);
+    mockPool();
 
     const result = await fetchLiquityNativeActivePoolReserves(
       { id: "meusd-mezo" } as StablecoinMeta,
@@ -104,5 +115,49 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
       "https://mainnet.mezo.public.validationcloud.io",
       undefined,
     );
+  });
+
+  it.each([
+    [110n * 10n ** 16n, "open"],
+    [110n * 10n ** 16n - 1n, "degraded"],
+  ] as const)("compares raw TCR %s against MCR without rounded-ratio loss", async (tcr, status) => {
+    mockPool(tcr);
+    const result = await fetchPool();
+    expect(result.metadata?.redemption?.routeStatus).toBe(status);
+    expect(result.warnings?.map(({ code }) => code) ?? []).toEqual(
+      status === "open" ? [] : ["redemption-route-status-degraded"],
+    );
+  });
+
+  it("distinguishes unreadable TCR from a degraded measured ratio", async () => {
+    mockPool(null);
+    const result = await fetchPool();
+    expect(result.metadata?.redemption?.routeStatus).toBe("unknown");
+    expect(result.metadata).not.toHaveProperty("totalCollateralRatio");
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "redemption-route-status-degraded", effect: "degraded" }),
+    ]);
+  });
+
+  it("rejects each required read when zero or unreadable", async () => {
+    for (const [selector, message] of [
+      ["0x14a6bf0f", "active-pool debt"], ["0x1529a639", "native collateral balance"],
+      ["0x0fdb11cf", "collateral price"], ["0x794e5724", "MCR"],
+    ]) {
+      for (const value of [0n, null]) {
+        mockPool(undefined, { selector, value });
+        await expect(fetchPool()).rejects.toThrow(`${message} read is zero/unreadable`);
+      }
+    }
+  });
+
+  it("keeps valid reserves without inventing an unavailable optional fee", async () => {
+    mockPool();
+    vi.mocked(fetchOnchainRateBps).mockResolvedValue(null);
+    const result = await fetchPool();
+    expect(result.slices).toEqual([{ name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" }]);
+    expect(result.metadata?.redemption?.routeStatus).toBe("open");
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
+    expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
   });
 });

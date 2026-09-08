@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import { buildSharedSourceCacheKey, LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import {
   getReserveAdapterMock,
@@ -17,6 +18,18 @@ const mockD1 = mockLiveReserveD1;
 const mockAdapterRegistry = mockLiveReserveAdapterRegistry;
 
 describe("syncLiveReserves", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  let replacedStore = false;
+  afterEach(() => {
+    fixtures.closeAll();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    if (replacedStore) {
+      vi.doUnmock("../../lib/live-reserves/store");
+      vi.resetModules();
+      replacedStore = false;
+    }
+  });
   const configuredCoinCount = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
   const sharedSourceInvocationCount = ACTIVE_STABLECOINS
     .filter((coin) => coin.liveReservesConfig)
@@ -49,8 +62,6 @@ describe("syncLiveReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.doUnmock("../../lib/live-reserves/store");
-    vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
     recoverNoCandidateMock.mockClear();
@@ -328,6 +339,7 @@ describe("syncLiveReserves", () => {
       && entry.sql.includes("s.stablecoin_id")
     ));
     expect(attemptRepairs).toHaveLength(2);
+    expect(compositionRepairs).toHaveLength(2);
     for (let index = 0; index < checkpointAdvances.length; index += 1) {
       const advanceIndex = history.indexOf(checkpointAdvances[index]!);
       expect(history.indexOf(compositionRepairs[index]!)).toBeLessThan(advanceIndex);
@@ -405,11 +417,19 @@ describe("syncLiveReserves", () => {
     }));
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    const { db, sqlite } = fixtures.open();
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     expect(adapterFetch).toHaveBeenCalledTimes(sharedSourceInvocationCount);
     expect(sharedSourceInvocationCount).toBeLessThan(configuredCoinCount);
+    expect(result.itemCount).toBe(configuredCoinCount);
+    const snapshots = sqlite.prepare("SELECT stablecoin_id, slices FROM reserve_composition ORDER BY stablecoin_id").all();
+    expect(snapshots.map((row) => row.stablecoin_id)).toEqual(
+      ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).map((coin) => coin.id).sort(),
+    );
+    expect(snapshots.map((row) => JSON.parse(String(row.slices)))).toEqual(
+      snapshots.map(() => [{ name: "Mock Farm", pct: 100, risk: "low" }]),
+    );
   });
 
   it("returns ok with warning metadata when the adapter yields warnings (warnings are metadata-only)", async () => {
@@ -750,6 +770,8 @@ describe("syncLiveReserves", () => {
     );
 
     const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    replacedStore = true;
+    vi.resetModules();
     vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       cleanupStaleLiveReserveArtifacts: vi.fn(async () => {
@@ -850,6 +872,8 @@ describe("syncLiveReserves", () => {
 
     const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
     let finalizeCalls = 0;
+    replacedStore = true;
+    vi.resetModules();
     vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       finalizeReserveSyncSuccess: vi.fn(async (...args: Parameters<typeof actualStore.finalizeReserveSyncSuccess>) => {
@@ -898,6 +922,8 @@ describe("syncLiveReserves", () => {
     );
 
     const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    replacedStore = true;
+    vi.resetModules();
     vi.doMock("../../lib/live-reserves/store", async () => ({
       ...actualStore,
       finalizeReserveSyncSuccess: vi.fn(async () => (
@@ -1382,7 +1408,8 @@ describe("buildSharedSourceCacheKey", () => {
     const keyA = buildSharedSourceCacheKey(configA, adapter);
     const keyB = buildSharedSourceCacheKey(configB, adapter);
 
-    expect(keyA).toBeDefined();
+    expect(keyA).toBeTypeOf("string");
+    expect(keyB).toBeTypeOf("string");
     expect(keyA).toEqual(keyB);
   });
 

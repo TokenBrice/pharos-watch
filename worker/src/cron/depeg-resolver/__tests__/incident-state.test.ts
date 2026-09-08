@@ -6,29 +6,9 @@ import {
   recordSystemHealthDeferrals,
 } from "../incident-state";
 import { toStructural } from "../utils";
-import type { DdrEventDbRow } from "../types";
+import { makeEventRow, makeIncident } from "./depeg-resolver.test-support";
 import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
 
-function makeEventRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
-  return {
-    id: 1,
-    stablecoin_id: "usdt-tether",
-    symbol: "USDT",
-    peg_type: "peggedUSD",
-    direction: "below",
-    peak_deviation_bps: -250,
-    started_at: 1_750_000_000,
-    ended_at: null,
-    recovery_price: null,
-    peg_reference: 1,
-    source: "live",
-    confirmation_sources: null,
-    pending_reason: null,
-    provenance_replay_run_id: null,
-    provenance_replay_version: null,
-    ...overrides,
-  };
-}
 
 describe("toStructural", () => {
   it("carries curated issuer evidence into DDR structural context", () => {
@@ -120,22 +100,6 @@ describe("ensureCanonicalIncidentsForEvents", () => {
 });
 
 describe("applyConfirmationTimes", () => {
-  function makeIncident(overrides: Partial<DdrCanonicalIncident> = {}): DdrCanonicalIncident {
-    return {
-      incidentKey: "ddr2:test-incident-1",
-      eventId: 1,
-      currentEventId: 1,
-      stablecoinId: "usdt-tether",
-      pegCurrency: "USD",
-      direction: "below",
-      startedAt: 1_750_000_000,
-      eligibleAt: 1_750_000_000,
-      policyUniverseIncluded: true,
-      confirmedAt: null,
-      lockState: null,
-      ...overrides,
-    };
-  }
 
   it("reseats both alias keys to a single shared updated reference", () => {
     // The incident is aliased under eventId=1 and currentEventId=2.
@@ -163,22 +127,6 @@ describe("applyConfirmationTimes", () => {
 });
 
 describe("recordSystemHealthDeferrals", () => {
-  function makeIncident(overrides: Partial<DdrCanonicalIncident> = {}): DdrCanonicalIncident {
-    return {
-      incidentKey: "ddr2:test-incident-1",
-      eventId: 1,
-      currentEventId: 1,
-      stablecoinId: "usdt-tether",
-      pegCurrency: "USD",
-      direction: "below",
-      startedAt: 1_750_000_000,
-      eligibleAt: 1_750_000_000,
-      policyUniverseIncluded: true,
-      confirmedAt: null,
-      lockState: null,
-      ...overrides,
-    };
-  }
 
   it("skips incidents whose lock state is already sealed or in publication flow", async () => {
     const sealedStates = ["frozen", "no_call", "publication_retry_pending", "publication_failed", "published"] as const;

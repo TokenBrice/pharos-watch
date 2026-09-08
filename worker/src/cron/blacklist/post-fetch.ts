@@ -216,7 +216,7 @@ export async function processFetchedBlacklistRows(
   const insertedRows = await insertBlacklistRows(options.db, newRows, options.signal);
   const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
   const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
-  const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows);
+  const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows, options.signal);
   const cacheSyncRows = [...ledgerRows, ...duplicateLedgerRows];
   const latestLedgerRows = [
     ...buildCurrentBalanceSnapshotRows(ledgerRows),

@@ -1,13 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 import { WORKER_CANARY_RUN_RETENTION_SEC } from "../../lib/canary-checks";
 
-function createTestDb() {
-  const { sqlite } = createLatestSchemaSqlite();
-  return { db: createSqliteD1(sqlite), sqlite };
-}
+const fixtures = createLatestSchemaFixtureTracker();
+const createTestDb = fixtures.open;
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-06-03T12:00:00Z"));
+});
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+});
 
 function insert(sqlite: import("node:sqlite").DatabaseSync, sql: string, ...values: unknown[]): void {
   sqlite.prepare(sql).run(...(values as never[]));
@@ -38,12 +43,12 @@ describe("runPruneCronHistory", () => {
     {
       label: "removes cron_runs older than 7 days and keeps newer rows",
       seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
-        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 3600, 1, "ok");
-        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - 3600, 1, "ok");
+        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 1, 1, "ok");
+        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC, 1, "ok");
       },
       remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
         select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs"),
-      expected: (now: number) => [{ started_at: now - 3600 }],
+      expected: (now: number) => [{ started_at: now - ONE_WEEK_SEC }],
       deletedKey: "cronRunsDeleted",
       cutoffKey: "cutoffCronRunsSec",
       cutoff: (now: number) => now - ONE_WEEK_SEC,
@@ -188,13 +193,13 @@ describe("runPruneCronHistory", () => {
     expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
     expect(metadata.blockTimestampCacheDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
-    expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
-    expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
-    expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - WORKER_CANARY_RUN_RETENTION_SEC, -2);
-    expect(metadata.cutoffRecoveryCheckpointsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
+    expect(metadata.cutoffCronRunsSec).toBe(now - ONE_WEEK_SEC);
+    expect(metadata.cutoffRepairTasksSec).toBe(now - ONE_WEEK_SEC);
+    expect(metadata.cutoffCanaryRunsSec).toBe(now - WORKER_CANARY_RUN_RETENTION_SEC);
+    expect(metadata.cutoffRecoveryCheckpointsSec).toBe(now - TWO_WEEKS_SEC);
     expect(metadata.cutoffSelectorSnapshotDailyQuotaDate).toBe(toUtcDateString(now - TWO_DAYS_SEC));
-    expect(metadata.cutoffBlockTimestampCacheSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
-    expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
+    expect(metadata.cutoffBlockTimestampCacheSec).toBe(now - TWO_WEEKS_SEC);
+    expect(metadata.cutoffSlotExecutionsSec).toBe(now - TWO_WEEKS_SEC);
   });
 
   it("returns ok with zero counts when no rows are past either cutoff", async () => {

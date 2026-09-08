@@ -67,6 +67,30 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   });
 }
 
+function nativeQuote() {
+  return new Map([["eurc-circle", {
+    stablecoinId: "eurc-circle", pegCurrency: "EUR", nativePrice: 1,
+    priceUsd: 1.08, updatedAt: 1_700_000_000, referencePriceUsd: 1.08, referenceType: "fresh",
+  }]]);
+}
+
+function nativePipelineInput(
+  asset: PeggedAsset,
+  db = mockD1(),
+  missingBefore = new Set<string>(),
+): Parameters<typeof runPostEnrichmentPricePipeline>[0] {
+  return {
+    assets: [asset], missingBefore, db, syncStartSec: 1_700_000_050,
+    validationReferences: {
+      rates: { peggedEUR: 1.08 }, type: "fresh", updatedAt: 1_700_000_000,
+      typeByPeg: { peggedEUR: "fresh" },
+    },
+    validationContexts: { get: makeValidationContext },
+    previousTrustedPrices: new Map(), returnIfAborted: () => null,
+    abortResult: () => ({ status: "error", metadata: "{}" }),
+  };
+}
+
 describe("runPostEnrichmentPricePipeline", () => {
   beforeEach(() => {
     fetchCurrentNativePegImpliedUsdQuotesMock.mockReset().mockResolvedValue(new Map());
@@ -138,34 +162,9 @@ describe("runPostEnrichmentPricePipeline", () => {
   it("replaces weak non-USD fiat prices with fresh native-implied USD prices", async () => {
     const asset = makeAsset();
     const db = mockD1();
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(new Map([
-      ["eurc-circle", {
-        stablecoinId: "eurc-circle",
-        pegCurrency: "EUR",
-        nativePrice: 1,
-        priceUsd: 1.08,
-        updatedAt: 1_700_000_000,
-        referencePriceUsd: 1.08,
-        referenceType: "fresh",
-      }],
-    ]));
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
 
-    const result = await runPostEnrichmentPricePipeline({
-      assets: [asset],
-      missingBefore: new Set(),
-      db,
-      syncStartSec: 1_700_000_050,
-      validationReferences: {
-        rates: { peggedEUR: 1.08 },
-        type: "fresh",
-        updatedAt: 1_700_000_000,
-        typeByPeg: { peggedEUR: "fresh" },
-      },
-      validationContexts: { get: makeValidationContext },
-      previousTrustedPrices: new Map(),
-      returnIfAborted: () => null,
-      abortResult: () => ({ status: "error", metadata: "{}" }),
-    }, "");
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset, db), "");
 
     expect(isAbortResult(result)).toBe(false);
     if (isAbortResult(result)) {
@@ -196,34 +195,9 @@ describe("runPostEnrichmentPricePipeline", () => {
       agreeSources: ["binance", "kraken"],
       consensusSources: ["binance", "kraken"],
     });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(new Map([
-      ["eurc-circle", {
-        stablecoinId: "eurc-circle",
-        pegCurrency: "EUR",
-        nativePrice: 1,
-        priceUsd: 1.08,
-        updatedAt: 1_700_000_000,
-        referencePriceUsd: 1.08,
-        referenceType: "fresh",
-      }],
-    ]));
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
 
-    const result = await runPostEnrichmentPricePipeline({
-      assets: [asset],
-      missingBefore: new Set(),
-      db: mockD1(),
-      syncStartSec: 1_700_000_050,
-      validationReferences: {
-        rates: { peggedEUR: 1.08 },
-        type: "fresh",
-        updatedAt: 1_700_000_000,
-        typeByPeg: { peggedEUR: "fresh" },
-      },
-      validationContexts: { get: makeValidationContext },
-      previousTrustedPrices: new Map(),
-      returnIfAborted: () => null,
-      abortResult: () => ({ status: "error", metadata: "{}" }),
-    }, "");
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
 
     expect(isAbortResult(result)).toBe(false);
     if (isAbortResult(result)) {
@@ -244,34 +218,9 @@ describe("runPostEnrichmentPricePipeline", () => {
       agreeSources: ["kraken", "coingecko"],
       consensusSources: ["kraken", "coingecko"],
     });
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(new Map([
-      ["eurc-circle", {
-        stablecoinId: "eurc-circle",
-        pegCurrency: "EUR",
-        nativePrice: 1,
-        priceUsd: 1.08,
-        updatedAt: 1_700_000_000,
-        referencePriceUsd: 1.08,
-        referenceType: "fresh",
-      }],
-    ]));
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
 
-    const result = await runPostEnrichmentPricePipeline({
-      assets: [asset],
-      missingBefore: new Set(),
-      db: mockD1(),
-      syncStartSec: 1_700_000_050,
-      validationReferences: {
-        rates: { peggedEUR: 1.08 },
-        type: "fresh",
-        updatedAt: 1_700_000_000,
-        typeByPeg: { peggedEUR: "fresh" },
-      },
-      validationContexts: { get: makeValidationContext },
-      previousTrustedPrices: new Map(),
-      returnIfAborted: () => null,
-      abortResult: () => ({ status: "error", metadata: "{}" }),
-    }, "");
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
 
     expect(isAbortResult(result)).toBe(false);
     if (isAbortResult(result)) {
@@ -297,34 +246,9 @@ describe("runPostEnrichmentPricePipeline", () => {
         rows: [],
       },
     ]);
-    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(new Map([
-      ["eurc-circle", {
-        stablecoinId: "eurc-circle",
-        pegCurrency: "EUR",
-        nativePrice: 1,
-        priceUsd: 1.08,
-        updatedAt: 1_700_000_000,
-        referencePriceUsd: 1.08,
-        referenceType: "fresh",
-      }],
-    ]));
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
 
-    const result = await runPostEnrichmentPricePipeline({
-      assets: [asset],
-      missingBefore: new Set(["eurc-circle"]),
-      db,
-      syncStartSec: 1_700_000_050,
-      validationReferences: {
-        rates: { peggedEUR: 1.08 },
-        type: "fresh",
-        updatedAt: 1_700_000_000,
-        typeByPeg: { peggedEUR: "fresh" },
-      },
-      validationContexts: { get: makeValidationContext },
-      previousTrustedPrices: new Map(),
-      returnIfAborted: () => null,
-      abortResult: () => ({ status: "error", metadata: "{}" }),
-    }, "");
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset, db, new Set(["eurc-circle"])), "");
 
     expect(isAbortResult(result)).toBe(false);
     if (isAbortResult(result)) {

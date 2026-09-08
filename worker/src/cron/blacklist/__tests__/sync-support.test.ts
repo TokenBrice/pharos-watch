@@ -1,42 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { deriveSyncBlacklistStatus } from "../sync-support";
 
-describe("sync blacklist status derivation", () => {
-  it("degrades any runtime pressure or provider error", () => {
-    expect(
-      deriveSyncBlacklistStatus(1, true, {
-        contractsSkipped: 8,
-        totalConfigs: 71,
-        incompleteRuntimeConfigs: 0,
-        subrequestBudgetHit: false,
-      }),
-    ).toBe("degraded");
-  });
+const threshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
 
-  it("keeps material runtime pressure degraded", () => {
-    expect(
-      deriveSyncBlacklistStatus(0, true, {
-        contractsSkipped: 11,
-        totalConfigs: 71,
-        incompleteRuntimeConfigs: 0,
-        subrequestBudgetHit: false,
-      }),
-    ).toBe("degraded");
-    expect(
-      deriveSyncBlacklistStatus(0, true, {
-        contractsSkipped: 0,
-        totalConfigs: 71,
-        incompleteRuntimeConfigs: 1,
-        subrequestBudgetHit: false,
-      }),
-    ).toBe("degraded");
-    expect(
-      deriveSyncBlacklistStatus(0, true, {
-        contractsSkipped: 0,
-        totalConfigs: 71,
-        incompleteRuntimeConfigs: 0,
-        subrequestBudgetHit: true,
-      }),
-    ).toBe("degraded");
+describe("sync blacklist status derivation", () => {
+  it.each([
+    ["healthy", 0, false, "ok"],
+    ["provider-only failure", 1, false, "degraded"],
+    ["runtime-only pressure", 0, true, "degraded"],
+    ["exact error threshold", threshold, false, "degraded"],
+    ["error precedence over runtime pressure", threshold + 1, true, "error"],
+  ] as const)("classifies %s", (_name, errors, runtimePressure, expected) => {
+    expect(deriveSyncBlacklistStatus(errors, runtimePressure)).toBe(expected);
   });
 });

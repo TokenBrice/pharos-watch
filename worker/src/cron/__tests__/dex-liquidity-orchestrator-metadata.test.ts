@@ -5,7 +5,7 @@ import { initLiquidityFallbackCounters } from "../dex-liquidity/pool-helpers";
 import type { DexLiquidityPostScoreAnalysis } from "../dex-liquidity/orchestrator-analysis";
 import type { DexPricePersistenceDiagnostics } from "../dex-liquidity/scoring";
 
-function metadataParams() {
+function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
   return {
     rowsRead: 4_000,
     rowsWritten: 300,
@@ -47,11 +47,35 @@ function metadataParams() {
 }
 
 describe("dex liquidity cron metadata", () => {
-  it("keeps score diagnostics while omitting the removed shadow evidence ledger", () => {
-    const metadata = buildDexLiquidityCronMetadata(metadataParams());
+  it("aggregates rejection groups and applies aggregate TVL materiality", () => {
+    const params = metadataParams();
+    params.poolRejections = [
+      { reason: "invalid-pool-identity", poolIds: ["a", "b"], count: 2, tvlUsd: 600_000 },
+      { reason: "invalid-pool-volume", poolIds: ["c"], count: 1, tvlUsd: 400_000 },
+    ];
+    const metadata = buildDexLiquidityCronMetadata(params);
+    expect(metadata).toMatchObject({
+      rowsDropped: 3, validationFailures: 3,
+      poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: true },
+    });
+  });
 
-    expect(metadata.fallbackCounters).toBeDefined();
-    expect(metadata.shadowAdmissionReport).toBeUndefined();
-    expect(Object.keys(metadata).some((key) => key.startsWith("mxLedger"))).toBe(false);
+  it("deduplicates failures and fallback signals without dropping distinct identities", () => {
+    const params = metadataParams();
+    params.failedSources = ["curve", "raydium", "curve"];
+    params.fallbackSignals = ["gecko", "orderbook", "gecko"];
+    expect(buildDexLiquidityCronMetadata(params)).toMatchObject({
+      failedSources: ["curve", "raydium"], fallbackMode: ["gecko", "orderbook"],
+    });
+  });
+
+  it("bounds inactive diagnostics while retaining the full skipped count", () => {
+    const params = metadataParams();
+    params.persistence.inactiveMetricIdsSkipped = Array.from({ length: 30 }, (_, i) => `inactive-${i}`);
+    params.persistence.inactiveMetricRowsSkipped = 30;
+    expect(buildDexLiquidityCronMetadata(params).persistence).toMatchObject({
+      inactiveMetricRowsSkipped: 30,
+      inactiveMetricIdsSkipped: Array.from({ length: 25 }, (_, i) => `inactive-${i}`),
+    });
   });
 });

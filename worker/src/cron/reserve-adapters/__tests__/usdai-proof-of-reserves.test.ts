@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   adaptUsdAiProofOfReserves,
   extractUsdAiProofPageTimestamp,
@@ -7,6 +8,7 @@ import {
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
 
+afterEach(() => vi.unstubAllGlobals());
 const SAMPLE_RAW_PAYLOAD = JSON.stringify([
   {
     type: "TBILL",
@@ -356,6 +358,17 @@ describe("usdai-proof-of-reserves adapter", () => {
   });
 
   it("fetches the raw API payload through the shared text cache and adapts it", async () => {
+    const fetchSpy = mockFetch([
+      {
+        match: "https://example.com/usdai/proof-of-reserves?chainId=42161",
+        body: SAMPLE_RAW_PAYLOAD,
+      },
+      {
+        match: "https://app.usd.ai/reserves",
+        body: '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"},'
+          + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"}]}',
+      },
+    ], { requireMatch: true, strictUrl: true });
     const result = await fetchUsdAiProofOfReserves(
       { id: "susdai-usd-ai" } as never,
       {
@@ -370,22 +383,13 @@ describe("usdai-proof-of-reserves adapter", () => {
         },
       },
       new AbortController().signal,
-      {
-        requestCache: new Map([
-          [
-            "text-get:https://example.com/usdai/proof-of-reserves?chainId=42161:12000:null",
-            Promise.resolve(SAMPLE_RAW_PAYLOAD),
-          ],
-          [
-            "text-get:https://app.usd.ai/reserves:12000:null",
-            Promise.resolve(
-              '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"},'
-              + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"}]}',
-            ),
-          ],
-        ]),
-      } as never,
+      { requestCache: new Map() },
     );
+    fetchSpy.assertAllRoutesUsed();
+    expect(fetchSpy.getHistory().map(({ url }) => url).sort()).toEqual([
+      "https://app.usd.ai/reserves",
+      "https://example.com/usdai/proof-of-reserves?chainId=42161",
+    ]);
 
     expect(result.slices[0]).toEqual({
       name: "PYUSD (PayPal USD)",

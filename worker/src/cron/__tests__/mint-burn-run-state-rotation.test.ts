@@ -60,7 +60,7 @@ describe("resolveRotatedConfigs", () => {
     expect(attempted.size).toBe(127);
   });
 
-  it("retries from the same durable frontier after a crash before completion", async () => {
+  it("round-trips and replaces the durable resume frontier", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const fullSet = Array.from({ length: 127 }, (_, index) => ({ key: `config-${index}` }));
@@ -71,12 +71,6 @@ describe("resolveRotatedConfigs", () => {
       expect(resolveRotatedConfigs(beforeCrash.state.resumeConfigKey, fullSet, keyFn)[0]?.key)
         .toBe("config-94");
 
-      // A killed run never reaches the completion-only state write. Its retry
-      // must therefore observe and attempt the same first deferred config.
-      const retry = await getMintBurnRunState(db, "sync-mint-burn-extended");
-      expect(retry.state.resumeConfigKey).toBe("config-94");
-      expect(resolveRotatedConfigs(retry.state.resumeConfigKey, fullSet, keyFn)[0]?.key)
-        .toBe("config-94");
 
       await setMintBurnRunState(db, "sync-mint-burn-extended", 0, "config-61");
       const afterSuccessfulRetry = await getMintBurnRunState(db, "sync-mint-burn-extended");

@@ -267,6 +267,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
     expect(authoritativeAdvance).toBeDefined();
     expect(terminalAdvance).toBeDefined();
+    expect(historyRepair).toBeDefined();
     expect(history.indexOf(historyRepair!)).toBeLessThan(history.indexOf(authoritativeAdvance!));
   });
 

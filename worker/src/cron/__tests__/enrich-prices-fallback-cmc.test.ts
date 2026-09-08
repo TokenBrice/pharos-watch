@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   staleIsoTimestamp,
   cmcUsdQuote,
@@ -16,6 +16,7 @@ import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cm
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
+  afterEach(() => vi.useRealTimers());
   it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {
     // Two coins share symbol "GUSD" — slug-based matching should pick the right price
     const assets: PeggedAsset[] = [
@@ -122,7 +123,7 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("skips the CMC breaker check when no assets are missing", async () => {
+  it("preserves priced assets without requesting CMC quotes", async () => {
     const assets: PeggedAsset[] = [
       makePeggedAsset({
         id: "usdg-paxos",
@@ -153,10 +154,13 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
+    const fetchSpy = fixtureMockFetch();
     await expect(fixtureRunCmcPass(assets, "test-cmc-key", undefined, db)).resolves.toEqual({
       resolved: 0,
       failures: [],
     });
+    expect(assets[0].price).toBe(1);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("skips ambiguous tracked symbols without a slug in CMC fallback", async () => {
@@ -353,6 +357,10 @@ describe("enrichMissingPrices", () => {
   });
 
   it("replays an identity-verified targeted quote across the next three cooldown generations", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-06-25T12:00:00Z"));
+    const initialTime = Date.now();
+    const observedAt = initialTime / 1000 - 60;
     const makeAsset = () => makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
@@ -411,6 +419,7 @@ describe("enrichMissingPrices", () => {
     const fetchSpy = fixtureMockFetch();
 
     for (let generation = 2; generation <= 4; generation += 1) {
+      vi.setSystemTime(initialTime + (generation - 1) * 15 * 60 * 1000);
       const assets = [makeAsset()];
       const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, replayDb);
       expect(result.resolved, `generation ${generation}`).toBe(1);
@@ -418,6 +427,7 @@ describe("enrichMissingPrices", () => {
         price: 1.0002,
         priceSource: "coinmarketcap",
         priceConfidence: "fallback",
+        priceObservedAt: observedAt,
         priceObservedAtMode: "upstream",
       });
       expect(result.diagnostics).toEqual(expect.arrayContaining([
@@ -433,6 +443,14 @@ describe("enrichMissingPrices", () => {
       ]));
     }
     expect(fetchSpy).not.toHaveBeenCalled();
+    vi.setSystemTime(initialTime + 60 * 60 * 1000);
+    const expiredAssets = [makeAsset()];
+    const expired = await fixtureRunCmcPass(expiredAssets, "test-cmc-key", undefined, replayDb);
+    expect(expired.resolved).toBe(0);
+    expect(expiredAssets[0].price).toBe(0);
+    expect(fetchSpy.getHistory().map(({ url }) => url)).toContainEqual(
+      expect.stringContaining("/v1/cryptocurrency/category"),
+    );
   });
 
   it.each([

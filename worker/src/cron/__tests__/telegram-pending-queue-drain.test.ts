@@ -12,7 +12,6 @@ import {
   insertRecapDeliveryFixture,
   insertRiskPendingSqlite,
   insertSourceEventSqlite,
-  insertSubscriberSqlite,
   makePendingQueryRow,
   makeTelegramBlockedResult,
   makeTelegramDeliveryResult,
@@ -22,7 +21,9 @@ import {
   makeTelegramSentResult,
   resetTelegramPendingMocks,
   withPendingQueueScenario,
+  type TelegramDeliveryResult,
 } from "./telegram-pending-queue.test-support";
+import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES]);
@@ -71,6 +72,13 @@ function row(id: number, overrides: Record<string, unknown> = {}) {
 
 function queueDb(rows: Record<string, unknown>[], extra: MockTableConfig[] = []) {
   return mockD1([{ match: "FROM telegram_pending_alerts p", rows }, ...extra]);
+}
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
 }
 
 function history(db: { getHistory(): Array<{ sql: string; binds: unknown[] }> }, fragment: string) {
@@ -147,27 +155,34 @@ describe("drainPendingQueue contract cases", () => {
     expect(pendingBackoffSec(4, 1800)).toBe(1800);
   });
 
-  it("writes local retry backoff and keeps retryable alerts alive past the legacy cap", async () => {
-    mockSendToChat.mockResolvedValue(makeTelegramRetryableResult({ statusCode: 500, errorClass: "server_error" }));
+  it("persists retries past the legacy cap and eventually accepts exactly one delivery", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = queueDb([row(401, { chat_id: "a", attempts: 0, created_at: now - 60 }), row(402, { chat_id: "b", attempts: 2, created_at: now - 60 })], [{ match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }]);
-    await drainPendingQueue(db, "bot-token", 10);
-    const updates = history(db, "SET attempts");
-    expect(updates).toHaveLength(2);
-    expect(updates.find((entry) => entry.binds[4] === 401)?.binds[0]).toBe(now + 60);
-    expect(updates.find((entry) => entry.binds[4] === 402)?.binds[0]).toBe(now + 240);
-
-    let attempts = 0;
-    for (let elapsed = 0; elapsed <= 30; elapsed += 5) {
-      vi.setSystemTime(new Date(Date.now() + (elapsed === 0 ? 0 : 5 * 60_000)));
-      mockSendToChat.mockResolvedValueOnce(elapsed >= 25 ? makeTelegramSentResult() : makeTelegramRateLimitedResult({ rateLimitScope: "chat", retryAfterSec: 120 }));
-      const result = await drainPendingQueue(queueDb([row(999, { created_at: now, attempts })], [{ match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]), "bot-token", 10);
-      if (result.sent) break;
-      attempts++;
-      expect(result).toMatchObject({ retryQueued: 1, dropped: 0 });
-      expect(attempts).toBeLessThan(PENDING_MAX_ATTEMPTS);
-    }
-    expect(mockSendToChat).toHaveBeenCalledWith("chat-999", expect.any(String), "bot-token", expect.any(Object));
+    await withPendingQueueScenario({
+      now,
+      pending: { id: 999, chatId: "retry", html: "Eventually delivered", createdAt: now, expiresAt: now + PENDING_TTL_SEC },
+    }, async ({ sqlite, db }) => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const attemptAt = now + attempt * 300;
+        vi.setSystemTime(attemptAt * 1000);
+        mockSendToChat.mockResolvedValueOnce(makeTelegramRateLimitedResult({ rateLimitScope: "chat", retryAfterSec: 120 }));
+        expect(await drainPendingQueue(db, "bot-token", 1)).toMatchObject({
+          attempted: 1, sent: 0, retryQueued: 1, dropped: 0, droppedMaxAttemptsFallback: 0,
+        });
+        expect(sqlite.prepare("SELECT attempts, not_before_at, expires_at FROM telegram_pending_alerts WHERE id = 999").get()).toEqual({
+          attempts: attempt + 1, not_before_at: attemptAt + 120, expires_at: now + PENDING_TTL_SEC,
+        });
+        expect((await drainPendingQueue(db, "bot-token", 1)).attempted).toBe(0);
+      }
+      vi.setSystemTime((now + 1800) * 1000);
+      mockSendToChat.mockResolvedValueOnce(makeTelegramSentResult());
+      expect(await drainPendingQueue(db, "bot-token", 1)).toMatchObject({
+        attempted: 1, sent: 1, acceptedChats: 1, droppedMaxAttemptsFallback: 0,
+      });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 0 });
+      expect((await drainPendingQueue(db, "bot-token", 1)).sent).toBe(0);
+      expect(mockSendToChat).toHaveBeenCalledTimes(7);
+    });
   });
 
   it.each([
@@ -272,7 +287,7 @@ describe("drainPendingQueue contract cases", () => {
     const now = Math.floor(Date.now() / 1000);
     const scope = serializePendingAlertScope([{ stablecoinId: "usdc-circle", family: "dews" }]);
     const pending = { id: 801, chatId: "preference", html: "cancel", createdAt: now - 60, expiresAt: now + 600, sourceType: "risk_alert", alertType: "dews", dedupeKey: "preference-key", sourceEventId: "source-cancel", alertScopeJson: scope, preferenceGeneration: 1, markupPolicyJson: serializePendingMarkupPolicy({}) };
-    const cancel = await withPendingQueueScenario({ now, subscriber: { chatId: "preference", preferenceGeneration: 2, globalAlertDews: 0 }, pending, target: { jobId: "job", targetKey: "target", chatId: "preference", alertType: "dews", pendingDedupeKey: "preference-key" } }, async ({ sqlite, db }) => ({ result: await drainPendingQueue(db, "bot-token", 1), dead: sqlite.prepare("SELECT reason, last_error_class FROM telegram_alert_dead_letters WHERE pending_id = 801").get() }));
+    const cancel = await withPendingQueueScenario({ now, subscriber: { chatId: "preference", preferenceGeneration: 2, global: { dews: false } }, pending, target: { jobId: "job", targetKey: "target", chatId: "preference", alertType: "dews", pendingDedupeKey: "preference-key" } }, async ({ sqlite, db }) => ({ result: await drainPendingQueue(db, "bot-token", 1), dead: sqlite.prepare("SELECT reason, last_error_class FROM telegram_alert_dead_letters WHERE pending_id = 801").get() }));
     expect(cancel.result).toMatchObject({ attempted: 0, dropped: 1 });
     expect(cancel.dead).toEqual({ reason: "preference_changed", last_error_class: "scope_disabled" });
 
@@ -342,7 +357,7 @@ describe("drainPendingQueue contract cases", () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue(makeTelegramSentResult());
     const { sqlite } = createLatestSchemaSqlite();
-    insertSubscriberSqlite(sqlite, { chatId: "race", globalAlertDepeg: 1 });
+    insertTelegramSubscriber(sqlite, { chatId: "race", createdAt: 0, lastActiveAt: 0, global: { depeg: true } });
     const raceNow = Math.floor(Date.now() / 1000);
     insertPendingSqlite(sqlite, { id: 701, chatId: "race", html: "race", createdAt: raceNow - 60, expiresAt: raceNow + 600, dedupeKey: "race-key" });
     const raced = createClaimContentionD1(sqlite);
@@ -394,19 +409,38 @@ describe("drainPendingQueue contract cases", () => {
     expect(budget.result).toMatchObject({ attempted: 2, sent: 2 });
     expect(budget.count).toEqual({ count: 1 });
 
-    vi.useRealTimers();
     const started: string[] = [];
     const releases = new Map<string, () => void>();
-    mockSendToChat.mockImplementation((chatId: string, html: string) => { const key = `${chatId}:${html}`; started.push(key); return new Promise((resolve) => releases.set(key, () => resolve(makeTelegramSentResult()))); });
+    const keys = ["same:chunk-0", "a:only", "b:only", "c:only", "same:chunk-1", "same:chunk-2", "same:chunk-3"];
+    const barriers = new Map(keys.map((key) => [key, deferred<void>()]));
+    let releasingAll = false;
+    mockSendToChat.mockImplementation((chatId: string, html: string) => {
+      const key = `${chatId}:${html}`;
+      started.push(key);
+      barriers.get(key)!.resolve();
+      if (releasingAll) return Promise.resolve(makeTelegramSentResult());
+      const response = deferred<TelegramDeliveryResult>();
+      releases.set(key, () => response.resolve(makeTelegramSentResult()));
+      return response.promise;
+    });
     const serialRows = [...Array.from({ length: 4 }, (_, i) => row(1800 + i, { chat_id: "same", message_html: `chunk-${i}`, chunk_index: i })), ...["a", "b", "c"].map((chatId, i) => row(1900 + i, { chat_id: chatId, message_html: "only" }))];
     const serialDb = queueDb(serialRows, [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]);
     const promise = drainPendingQueue(serialDb, "bot-token", serialRows.length);
-    await vi.waitFor(() => expect(started).toHaveLength(4));
-    expect(started).toEqual(["same:chunk-0", "a:only", "b:only", "c:only"]);
-    for (const key of ["a:only", "b:only", "c:only", "same:chunk-0"]) releases.get(key)?.();
-    for (let i = 1; i < 4; i++) await vi.waitFor(() => expect(started).toContain(`same:chunk-${i}`)).then(() => releases.get(`same:chunk-${i}`)?.());
-    await expect(promise).resolves.toMatchObject({ attempted: serialRows.length, sent: serialRows.length });
-    expect(started.filter((key) => key.startsWith("same:"))).toEqual(["same:chunk-0", "same:chunk-1", "same:chunk-2", "same:chunk-3"]);
+    try {
+      await Promise.all(keys.slice(0, 4).map((key) => barriers.get(key)!.promise));
+      expect(started).toEqual(keys.slice(0, 4));
+      for (const key of keys.slice(0, 4)) releases.get(key)!();
+      for (const key of keys.slice(4)) {
+        await barriers.get(key)!.promise;
+        releases.get(key)!();
+      }
+      await expect(promise).resolves.toMatchObject({ attempted: serialRows.length, sent: serialRows.length });
+      expect(started.filter((key) => key.startsWith("same:"))).toEqual(["same:chunk-0", "same:chunk-1", "same:chunk-2", "same:chunk-3"]);
+    } finally {
+      releasingAll = true;
+      for (const release of releases.values()) release();
+      await promise;
+    }
   });
 
   it("cleans expired rows into the SQL dead-letter protocol", async () => {

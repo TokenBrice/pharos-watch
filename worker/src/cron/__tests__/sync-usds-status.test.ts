@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockD1Preset, findD1HistoryEntry, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
+import * as circuitBreaker from "../../lib/circuit-breaker";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
@@ -26,6 +27,7 @@ describe("syncUsdsStatus", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("writes USDS status cache on happy path", async () => {
@@ -57,6 +59,53 @@ describe("syncUsdsStatus", () => {
     expect(cached.freezeCapabilityPresent).toBe(false);
     expect(cached.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
     expect(cached.lastChecked).toBe(Math.floor(Date.now() / 1000));
+  });
+
+  it.each(["0".repeat(64), `${"0".repeat(63)}1`])("publishes freeze capability for valid probe word %s", async (word) => {
+    mockFetch([
+      { match: "action=eth_getStorageAt", body: { result: `0x${"0".repeat(24)}${"a".repeat(40)}` } },
+      { match: "action=eth_call", body: { result: `0x${word}` } },
+    ]);
+    const db = mockD1();
+    const result = await syncUsdsStatus(db, "etherscan-key");
+    expect(result.itemCount).toBe(1);
+    const insert = getCacheInsert(db);
+    expect(insert).toBeDefined();
+    expect(JSON.parse(String(insert!.binds[1]))).toMatchObject({
+      freezeCapabilityPresent: true,
+      implementationAddress: `0x${"a".repeat(40)}`,
+    });
+  });
+
+  it("skips fresh cached status without network or publication", async () => {
+    const fetch = mockFetch([]);
+    const db = mockD1([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", first: { value: "{}", updated_at: Math.floor(Date.now() / 1000) }, rows: [] }]);
+    const result = await syncUsdsStatus(db, "etherscan-key");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "cache-fresh" });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(getCacheInsert(db)).toBeUndefined();
+  });
+
+  it("skips an open Etherscan circuit without network or publication", async () => {
+    vi.spyOn(circuitBreaker, "shouldAttemptFetch").mockResolvedValue(false);
+    const fetch = mockFetch([]);
+    const db = mockD1();
+    const result = await syncUsdsStatus(db, "etherscan-key");
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "etherscan-circuit-open" });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(getCacheInsert(db)).toBeUndefined();
+  });
+
+  it("reports CAS loss without classifying the provider as failed", async () => {
+    const outcome = vi.spyOn(circuitBreaker, "recordOutcomeSafe");
+    mockFetch([{ match: "action=eth_getStorageAt", body: { result: "0x0000000000000000000000001923dfee706a8e78157416c29cbccfde7cdf4102" } }]);
+    const db = mockD1([{ match: "INSERT INTO cache", rows: [], runMeta: { changes: 0 } }]);
+    const result = await syncUsdsStatus(db, "etherscan-key");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ cacheWriteMode: "skipped-newer", casSkipped: true });
+    expect(outcome).toHaveBeenCalledWith(db, "etherscan", true);
+    expect(outcome).not.toHaveBeenCalledWith(db, "etherscan", false);
   });
 
   it("returns degraded when upstream probe call fails", async () => {

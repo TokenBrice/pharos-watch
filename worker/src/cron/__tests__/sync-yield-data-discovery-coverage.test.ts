@@ -3,7 +3,6 @@ import {
   mutableActiveStablecoins,
   mutableTrackedMetaById,
   makeDb,
-  makeCacheWriteFailureDb,
   getPublishedYieldRows,
   findPublishedYieldRow,
   getYieldRankingsCachePayload,
@@ -33,8 +32,16 @@ import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
 import { loadYieldSyncState } from "../yield-sync/state-loading";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-families";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
 
-function supplementalCandidate(sourceKey: string, observedAt: number): ResolvedYieldCandidate {
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => sqliteFixtures.closeAll());
+
+function supplementalCandidate(
+  sourceKey: string,
+  observedAt: number,
+  overrides: Partial<ResolvedYieldCandidate["yield"]> = {},
+): ResolvedYieldCandidate {
   return {
     stablecoinId: "100",
     symbol: "sDAI",
@@ -53,6 +60,7 @@ function supplementalCandidate(sourceKey: string, observedAt: number): ResolvedY
       yieldType: "lending-vault",
       sourceObservedAt: observedAt,
       comparisonAnchorObservedAt: null,
+      ...overrides,
     },
   };
 }
@@ -65,33 +73,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1:morpho": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 6.1,
-                  apyBase: 6.1,
-                  apyReward: null,
-                  sourcePool: "vault-sdai-morpho",
-                  sourceTvlUsd: 50_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
-                  yieldSource: "Morpho: sDAI Vault",
-                  yieldType: "lending-vault",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-          }, nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -116,33 +98,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1:morpho": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 6.1,
-                  apyBase: 6.1,
-                  apyReward: null,
-                  sourcePool: "vault-sdai-morpho",
-                  sourceTvlUsd: 50_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
-                  yieldSource: "Morpho: sDAI Vault",
-                  yieldType: "lending-vault",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-          }, nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
       "yield:supplemental-sources:v1:beefy": cacheRow("{bad json", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -164,77 +120,15 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1:morpho": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 6.1,
-                  apyBase: 6.1,
-                  apyReward: null,
-                  sourcePool: "vault-sdai-morpho",
-                  sourceTvlUsd: 50_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
-                  yieldSource: "Morpho: sDAI Vault",
-                  yieldType: "lending-vault",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-          }, nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
       "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
             sourceCount: 2,
             data: [
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 6.1,
-                  apyBase: 6.1,
-                  apyReward: null,
-                  sourcePool: "vault-sdai-morpho",
-                  sourceTvlUsd: 50_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
-                  yieldSource: "Morpho: sDAI Vault",
-                  yieldType: "lending-vault",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 5.8,
-                  apyBase: 5.8,
-                  apyReward: null,
-                  sourcePool: "beefy-sdai",
-                  sourceTvlUsd: 20_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:beefy:ethereum:beefy-sdai",
-                  yieldSource: "Beefy: sDAI",
-                  yieldType: "lending-vault",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
+              { ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined },
+              { ...supplementalCandidate("protocol-api:beefy:ethereum:beefy-sdai", nowSec, { currentApy: 5.8, apyBase: 5.8, sourcePool: "beefy-sdai", sourceTvlUsd: 20_000_000, yieldSource: "Beefy: sDAI" }), stablecoinId: undefined },
             ],
           }, nowSec),
     });
@@ -332,33 +226,25 @@ describe("syncYieldData", () => {
               apyMean30d: 4.43603,
             }),
           ], nowSec),
-      "yield:supplemental-sources:v1:morpho": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 2.23864,
-                  apyBase: 2.23864,
-                  apyReward: null,
-                  sourcePool: "vault-sdai-prime",
-                  sourceTvlUsd: 25_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xsdai",
-                  yieldSource: "Morpho: sDAI Prime",
-                  yieldType: "lending-opportunity",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-      }, nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{
+        symbol: "sDAI",
+        chain: "ethereum",
+        address: null,
+        yield: {
+          currentApy: 2.23864,
+          apyBase: 2.23864,
+          apyReward: null,
+          sourcePool: "vault-sdai-prime",
+          sourceTvlUsd: 25_000_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:morpho-vault:ethereum:0xsdai",
+          yieldSource: "Morpho: sDAI Prime",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: nowSec,
+          comparisonAnchorObservedAt: null,
+        },
+      }], nowSec),
       stablecoins: cacheRow([{ id: "100", circulating: { peggedUSD: 5_000_000_000 } }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -464,33 +350,25 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1:aaveV3": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "USDC",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 3.2,
-                  apyBase: 3.2,
-                  apyReward: null,
-                  sourcePool: null,
-                  sourceTvlUsd: null,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "aave-v3-onchain:ethereum:0xusdc",
-                  yieldSource: "Aave v3 (ethereum)",
-                  yieldType: "lending-opportunity",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-      }, nowSec),
+      "yield:supplemental-sources:v1:aaveV3": supplementalFamilyCacheRow([{
+        symbol: "USDC",
+        chain: "ethereum",
+        address: null,
+        yield: {
+          currentApy: 3.2,
+          apyBase: 3.2,
+          apyReward: null,
+          sourcePool: null,
+          sourceTvlUsd: null,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "aave-v3-onchain:ethereum:0xusdc",
+          yieldSource: "Aave v3 (ethereum)",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: nowSec,
+          comparisonAnchorObservedAt: null,
+        },
+      }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -522,33 +400,25 @@ describe("syncYieldData", () => {
               },
             ],
       }, nowSec),
-      "yield:supplemental-sources:v1:morpho": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "USDC",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 4.1,
-                  apyBase: 4.1,
-                  apyReward: null,
-                  sourcePool: "vault-usdc-small",
-                  sourceTvlUsd: 5_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xusdc-small",
-                  yieldSource: "Morpho: USDC Small",
-                  yieldType: "lending-opportunity",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-      }, nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{
+        symbol: "USDC",
+        chain: "ethereum",
+        address: null,
+        yield: {
+          currentApy: 4.1,
+          apyBase: 4.1,
+          apyReward: null,
+          sourcePool: "vault-usdc-small",
+          sourceTvlUsd: 5_000_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:morpho-vault:ethereum:0xusdc-small",
+          yieldSource: "Morpho: USDC Small",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: nowSec,
+          comparisonAnchorObservedAt: null,
+        },
+      }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -578,33 +448,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      "yield:supplemental-sources:v1:morpho": cacheRow({
-            version: 1,
-            updatedAt: nowSec,
-            source: "sync-yield-supplemental",
-            sourceCount: 1,
-            data: [
-              {
-                symbol: "sDAI",
-                chain: "ethereum",
-                address: null,
-                yield: {
-                  currentApy: 6.1,
-                  apyBase: 6.1,
-                  apyReward: null,
-                  sourcePool: "vault-sdai-morpho",
-                  sourceTvlUsd: 50_000_000,
-                  dataSource: "protocol-api",
-                  exchangeRate: null,
-                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
-                  yieldSource: "Morpho: sDAI Vault",
-                  yieldType: "lending-vault",
-                  sourceObservedAt: nowSec,
-                  comparisonAnchorObservedAt: null,
-                },
-              },
-            ],
-      }, nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
       "yield:onchain-health:v1": cacheRow({
             version: 1,
             consecutiveAllFailRuns: 2,
@@ -1260,7 +1104,7 @@ describe("syncYieldData", () => {
   });
 
   it("preserves published D1 rows when yield-rankings cache persistence fails before data replacement", async () => {
-    const db = makeCacheWriteFailureDb(new Error("cache unavailable"));
+    const { db, sqlite } = sqliteFixtures.open();
     mockHealthyRiskFreeRateCache();
 
     fixtureMockFetch([
@@ -1279,6 +1123,17 @@ describe("syncYieldData", () => {
         },
       },
     ]);
+    await fixtureSyncYieldData(db);
+    const previousCache = sqlite.prepare("SELECT * FROM cache WHERE key = 'yield-rankings'").get();
+    const previousData = sqlite.prepare("SELECT * FROM yield_data ORDER BY stablecoin_id, source_key").all();
+    const previousHistory = sqlite.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all();
+    expect(previousCache).toBeDefined();
+    expect(previousData).toHaveLength(1);
+    expect(previousHistory).toHaveLength(1);
+    sqlite.exec(`CREATE TRIGGER fail_rankings BEFORE UPDATE ON cache WHEN NEW.key = 'yield-rankings'
+      BEGIN SELECT RAISE(ABORT, 'cache unavailable'); END`);
+    vi.advanceTimersByTime(60_000);
+    vi.mocked(fixtureWriteFreshnessSentinel).mockClear();
 
     const result = await fixtureSyncYieldData(db);
 
@@ -1290,5 +1145,8 @@ describe("syncYieldData", () => {
     expect(metadata.reason).toBe("yield-publication-transaction-failed");
     expect(metadata.publishFailure ?? "").toContain("cache unavailable");
     expect(fixtureWriteFreshnessSentinel).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT * FROM cache WHERE key = 'yield-rankings'").get()).toEqual(previousCache);
+    expect(sqlite.prepare("SELECT * FROM yield_data ORDER BY stablecoin_id, source_key").all()).toEqual(previousData);
+    expect(sqlite.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all()).toEqual(previousHistory);
   });
 });

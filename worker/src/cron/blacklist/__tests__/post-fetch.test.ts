@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
@@ -6,6 +6,7 @@ import { D1_BATCH_SIZE } from "../../../lib/constants";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { makePendingBlacklistRow } from "./blacklist.test-support";
 
 vi.mock("../../../lib/blacklist/amount-recovery", () => ({
   enrichRowBalances: vi.fn(),
@@ -56,9 +57,35 @@ function makeRunBudget(): BlacklistRunBudget {
   };
 }
 
+function postFetchOptions(
+  db: D1Database,
+  rows: BlacklistRow[],
+  overrides: Partial<Parameters<typeof processFetchedBlacklistRows>[0]> = {},
+): Parameters<typeof processFetchedBlacklistRows>[0] {
+  return {
+    db,
+    config,
+    rows,
+    chainLabel: "evm",
+    etherscanApiKey: null,
+    drpcApiKey: null,
+    trongridApiKey: null,
+    etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+    tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
+    runBudget: makeRunBudget(),
+    ...overrides,
+  };
+}
+
 describe("processFetchedBlacklistRows", () => {
+  beforeEach(() => {
+    vi.mocked(enrichRowBalances).mockReset();
+    vi.mocked(insertBlacklistRows).mockReset();
+    vi.mocked(syncCurrentBalanceCacheForRows).mockReset();
+  });
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("honors abort before a post-fetch D1 read", async () => {
@@ -67,23 +94,14 @@ describe("processFetchedBlacklistRows", () => {
     const prepare = vi.fn();
     const row = makeBlacklistRow({ id: "ethereum-aborted" }) as BlacklistRow;
 
-    await expect(processFetchedBlacklistRows({
-      db: makeNoopD1({ prepare }),
-      config,
-      rows: [row],
-      chainLabel: "evm",
-      etherscanApiKey: null,
-      drpcApiKey: null,
-      trongridApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      runBudget: makeRunBudget(),
+    await expect(processFetchedBlacklistRows(postFetchOptions(makeNoopD1({ prepare }), [row], {
       signal: controller.signal,
-    })).rejects.toThrow("stop post-fetch");
+    }))).rejects.toThrow("stop post-fetch");
     expect(prepare).not.toHaveBeenCalled();
   });
 
   it("retries a transient D1 overload while filtering existing ids", async () => {
+    vi.useFakeTimers();
     const row = makeBlacklistRow({
       id: "ethereum-overload-retry",
       suppression_reason: "fixture-suppressed",
@@ -99,36 +117,19 @@ describe("processFetchedBlacklistRows", () => {
     });
     vi.spyOn(Math, "random").mockReturnValue(0);
 
-    const result = await processFetchedBlacklistRows({
-      db,
-      config,
-      rows: [row],
-      chainLabel: "evm",
-      etherscanApiKey: null,
-      drpcApiKey: null,
-      trongridApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      runBudget: makeRunBudget(),
-    });
+    const pending = processFetchedBlacklistRows(postFetchOptions(db, [row]));
+    await vi.runAllTimersAsync();
+    const result = await pending;
 
     expect(attempts).toBe(2);
     expect(result.insertedRows).toBe(0);
   });
 
   it("runs a current-balance cache repair lane for duplicate fetched rows", async () => {
-    const duplicateRow = makeBlacklistRow({
+    const duplicateRow = makePendingBlacklistRow({
       id: "ethereum-0xduplicate-0x0",
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
-      event_type: "blacklist",
       address: "0x0000000000000000000000000000000000000123",
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
-    }) as BlacklistRow;
+    });
     const db = mockD1([
       {
         match: "SELECT id FROM blacklist_events WHERE id IN",
@@ -146,18 +147,7 @@ describe("processFetchedBlacklistRows", () => {
       budgetExhausted: false,
     });
 
-    const result = await processFetchedBlacklistRows({
-      db,
-      config,
-      rows: [duplicateRow],
-      chainLabel: "evm",
-      etherscanApiKey: null,
-      drpcApiKey: null,
-      trongridApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      runBudget: makeRunBudget(),
-    });
+    const result = await processFetchedBlacklistRows(postFetchOptions(db, [duplicateRow]));
 
     expect(result.insertedRows).toBe(0);
     expect(result.enrichCounters).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
@@ -176,18 +166,10 @@ describe("processFetchedBlacklistRows", () => {
   });
 
   it("chunks duplicate repair latest-state lookups at the D1 batch limit", async () => {
-    const duplicateRows = Array.from({ length: 101 }, (_, index) => makeBlacklistRow({
+    const duplicateRows = Array.from({ length: 101 }, (_, index) => makePendingBlacklistRow({
       id: `ethereum-0xduplicate-chunk-${index}`,
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
-      event_type: "blacklist",
       address: `0x${(index + 1).toString(16).padStart(40, "0")}`,
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
-    }) as BlacklistRow);
+    }));
     const db = mockD1([
       {
         match: "SELECT id FROM blacklist_events WHERE id IN",
@@ -214,18 +196,7 @@ describe("processFetchedBlacklistRows", () => {
       budgetExhausted: false,
     });
 
-    const result = await processFetchedBlacklistRows({
-      db,
-      config,
-      rows: duplicateRows,
-      chainLabel: "evm",
-      etherscanApiKey: null,
-      drpcApiKey: null,
-      trongridApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      runBudget: makeRunBudget(),
-    });
+    const result = await processFetchedBlacklistRows(postFetchOptions(db, duplicateRows));
 
     expect(result.insertedRows).toBe(0);
     expect(batchSizes).toEqual([D1_BATCH_SIZE, 1]);
@@ -240,32 +211,17 @@ describe("processFetchedBlacklistRows", () => {
   });
 
   it("uses duplicate unblacklist rows when selecting repair latest state", async () => {
-    const blacklistRow = makeBlacklistRow({
+    const blacklistRow = makePendingBlacklistRow({
       id: "ethereum-0xduplicate-release-0",
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
-      event_type: "blacklist",
       address: "0x0000000000000000000000000000000000000789",
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
       timestamp: 100,
-    }) as BlacklistRow;
-    const unblacklistRow = makeBlacklistRow({
+    });
+    const unblacklistRow = makePendingBlacklistRow({
       id: "ethereum-0xduplicate-release-1",
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
       event_type: "unblacklist",
       address: blacklistRow.address,
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
       timestamp: 200,
-    }) as BlacklistRow;
+    });
     const db = mockD1([
       {
         match: "SELECT id FROM blacklist_events WHERE id IN",
@@ -283,18 +239,7 @@ describe("processFetchedBlacklistRows", () => {
       budgetExhausted: false,
     });
 
-    const result = await processFetchedBlacklistRows({
-      db,
-      config,
-      rows: [blacklistRow, unblacklistRow],
-      chainLabel: "evm",
-      etherscanApiKey: null,
-      drpcApiKey: null,
-      trongridApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      runBudget: makeRunBudget(),
-    });
+    const result = await processFetchedBlacklistRows(postFetchOptions(db, [blacklistRow, unblacklistRow]));
 
     expect(result.insertedRows).toBe(0);
     expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
@@ -308,32 +253,17 @@ describe("processFetchedBlacklistRows", () => {
   });
 
   it("passes same-batch blacklist rows to cache sync even when a later unblacklist is latest", async () => {
-    const blacklistRow = makeBlacklistRow({
+    const blacklistRow = makePendingBlacklistRow({
       id: "ethereum-0xtransient-0",
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
-      event_type: "blacklist",
       address: "0x0000000000000000000000000000000000000456",
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
       timestamp: 20,
-    }) as BlacklistRow;
-    const unblacklistRow = makeBlacklistRow({
+    });
+    const unblacklistRow = makePendingBlacklistRow({
       id: "ethereum-0xtransient-1",
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
       event_type: "unblacklist",
       address: blacklistRow.address,
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
       timestamp: 21,
-    }) as BlacklistRow;
+    });
     const db = mockD1([
       {
         match: "SELECT id FROM blacklist_events WHERE id IN",
@@ -349,18 +279,7 @@ describe("processFetchedBlacklistRows", () => {
       budgetExhausted: false,
     });
 
-    const result = await processFetchedBlacklistRows({
-      db,
-      config,
-      rows: [blacklistRow, unblacklistRow],
-      chainLabel: "evm",
-      etherscanApiKey: null,
-      drpcApiKey: null,
-      trongridApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-      runBudget: makeRunBudget(),
-    });
+    const result = await processFetchedBlacklistRows(postFetchOptions(db, [blacklistRow, unblacklistRow]));
 
     expect(result.insertedRows).toBe(2);
     expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
@@ -371,5 +290,45 @@ describe("processFetchedBlacklistRows", () => {
         latestRows: [blacklistRow, unblacklistRow],
       }),
     );
+  });
+
+  it("stops mixed-row processing when insertion completes after cancellation", async () => {
+    const controller = new AbortController();
+    const fresh = makeBlacklistRow({ id: "fresh" }) as BlacklistRow;
+    const duplicate = makeBlacklistRow({ id: "duplicate", address: "0xdef" }) as BlacklistRow;
+    const db = mockD1([
+      { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicate.id }] },
+      { match: "SELECT * FROM blacklist_events", rows: [{ ...duplicate }] },
+    ], { requireMatch: true });
+    const batch = vi.spyOn(db, "batch");
+    vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
+    vi.mocked(insertBlacklistRows).mockImplementation(async () => {
+      controller.abort(new Error("stop after insert"));
+      return 1;
+    });
+    await expect(processFetchedBlacklistRows(postFetchOptions(db, [fresh, duplicate], {
+      signal: controller.signal,
+    }))).rejects.toThrow("stop after insert");
+    expect(batch).not.toHaveBeenCalled();
+    expect(syncCurrentBalanceCacheForRows).not.toHaveBeenCalled();
+  });
+
+  it("uses a newer persisted release when repairing mixed fetched rows", async () => {
+    const fresh = makeBlacklistRow({ id: "fresh", timestamp: 100 }) as BlacklistRow;
+    const duplicate = makeBlacklistRow({ id: "duplicate", address: "0xdef", timestamp: 100 }) as BlacklistRow;
+    const release = { ...duplicate, id: "release", event_type: "unblacklist" as const, timestamp: 200 };
+    const db = mockD1([
+      { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicate.id }] },
+      { match: "SELECT * FROM blacklist_events", rows: [release] },
+    ], { requireMatch: true });
+    vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
+    vi.mocked(insertBlacklistRows).mockResolvedValue(1);
+    vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
+      updated: 1, failed: 0, skippedDueBudget: 0, budgetExhausted: false,
+    });
+    const result = await processFetchedBlacklistRows(postFetchOptions(db, [fresh, duplicate]));
+    expect(result.insertedRows).toBe(1);
+    expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(db, config, [fresh, duplicate],
+      expect.objectContaining({ latestRows: [fresh, release] }));
   });
 });

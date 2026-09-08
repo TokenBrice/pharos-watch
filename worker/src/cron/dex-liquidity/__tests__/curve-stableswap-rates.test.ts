@@ -167,17 +167,21 @@ function dependencies(input: {
 
 const chainAddressToId = new Map([[`ethereum:${FRXUSD}`, "frxusd-frax"]]);
 
+function run(pool: PoolEntry, state = dependencies(), nowSec = BLOCK_TIMESTAMP + 60) {
+  return enrichCurveStableswapRateInputExecutionModels({
+    metrics: metrics(pool),
+    chainAddressToId,
+    chainRpcs: new Map([["ethereum", {} as never]]),
+    nowSec,
+    dependencies: state as never,
+  });
+}
+
 describe("Curve StableSwap-NG rate-input state capture", () => {
   it("builds the scaled model from a recorded same-block static-fee state", async () => {
     const state = dependencies();
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(state.fetchMulticall).toHaveBeenCalledWith(
       "ethereum",
@@ -218,13 +222,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
   it("keeps the rate-bearing gate when the pinned rate array is incomplete", async () => {
     const state = dependencies({ rates: [10n ** 18n] });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
@@ -237,13 +235,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
   it("keeps the rate-bearing gate when every stored rate is the plain unit multiplier", async () => {
     const state = dependencies({ rates: [10n ** 18n, 10n ** 18n] });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
@@ -258,13 +250,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     // model carries fee * multiplier so the exit capacity stays a lower bound.
     const state = dependencies({ offpegFeeMultiplier: 20_000_000_000n });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0002, 12);
@@ -273,13 +259,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
   it("prices a multiplier at or below the fee denominator as the static fee", async () => {
     const state = dependencies({ offpegFeeMultiplier: 0n });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0001, 12);
@@ -288,13 +268,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
   it("keeps the rate-bearing gate when the bounded fee reaches the whole trade", async () => {
     const state = dependencies({ fee: 9_000_000_000n, offpegFeeMultiplier: 20_000_000_000n });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
@@ -307,13 +281,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
   it("keeps the rate-bearing gate when coin order fails at the pinned block", async () => {
     const state = dependencies({ coinAddresses: [FRXUSD, SFRXUSD] });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
@@ -328,13 +296,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
       header: { timestamp: BLOCK_TIMESTAMP - CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC - 1, hash: BLOCK_HASH },
     });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP,
-      dependencies: state as never,
-    });
+    await run(pool, state, BLOCK_TIMESTAMP);
 
     expect(state.fetchMulticall).not.toHaveBeenCalled();
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
@@ -350,13 +312,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
       confirmedHeader: { timestamp: BLOCK_TIMESTAMP, hash: `0x${"22".repeat(32)}` as `0x${string}` },
     });
     const pool = poolEntry();
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(state.fetchMulticall).toHaveBeenCalledTimes(1);
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
@@ -370,13 +326,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
   it("does not replace an existing score-facing measured route", async () => {
     const state = dependencies();
     const pool = poolEntry({ measuredExecution: {} as never });
-    await enrichCurveStableswapRateInputExecutionModels({
-      metrics: metrics(pool),
-      chainAddressToId,
-      chainRpcs: new Map([["ethereum", {} as never]]),
-      nowSec: BLOCK_TIMESTAMP + 60,
-      dependencies: state as never,
-    });
+    await run(pool, state);
 
     expect(state.fetchBlockNumber).not.toHaveBeenCalled();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();

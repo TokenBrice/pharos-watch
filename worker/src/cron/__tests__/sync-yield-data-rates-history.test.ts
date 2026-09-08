@@ -17,9 +17,15 @@ import {
   fixtureMockFetch,
   fixtureYieldConfigModule,
   fixtureEvmRpcModule,
+  fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import type * as YieldHelpers from "../yield-helpers";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => sqliteFixtures.closeAll());
 
 function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
   return createFixtureMockD1([
@@ -38,6 +44,7 @@ function makeDb() {
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
   afterEach(cleanupSyncYieldDataTest);
+  afterEach(() => vi.mocked(fixtureYieldHelpersModule.computeApyFromPrice).mockReset().mockReturnValue(4));
   it("tries price-derived as additional source when DL returns 0% APY for navToken", async () => {
     // sDAI (navToken: true) gets a DL pool with 0% APY.
     // The resolve logic should also try price-derived and pick the non-zero source.
@@ -109,24 +116,13 @@ describe("syncYieldData", () => {
 
   it("uses the oldest available 7-45 day price anchor for young navToken coverage", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeYieldHistoryDb([], {
-      createDb: fixtureMockD1,
-      additionalTables: [
-        {
-          match:
-            "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
-          matchBinds: ["100"],
-          rows: [],
-          first: { price: 1.05, snapshot_date: nowSec },
-        },
-        {
-          match: "FROM supply_history",
-          matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
-          rows: [],
-          first: { price: 1.01, snapshot_date: nowSec - 10 * 86400 },
-        },
-      ],
-    });
+    const { db, sqlite } = sqliteFixtures.open();
+    const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
+    vi.spyOn(fixtureYieldHelpersModule, "computeApyFromPrice").mockImplementation(actual.computeApyFromPrice);
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");
+    for (const [days, price] of [[0, 1.05], [10, 1.04], [30, 1.01], [46, 0.99], [6, 1.045]]) {
+      insert.run("100", nowSec - days * 86400, 1_000_000, price);
+    }
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec),
@@ -136,9 +132,13 @@ describe("syncYieldData", () => {
 
     await fixtureSyncYieldData(db);
 
-    const priceDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "price-derived");
+    const priceDerivedRow = sqlite.prepare("SELECT current_apy FROM yield_data WHERE stablecoin_id = '100' AND source_key = 'price-derived'").get();
     expect(priceDerivedRow).toBeDefined();
-    expect(Number(priceDerivedRow?.current_apy)).toBeGreaterThan(0);
+    expect(Number(priceDerivedRow!.current_apy)).toBeCloseTo(((1.05 / 1.01) ** (365.25 / 30) - 1) * 100, 8);
+    const cached = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
+    const payload = JSON.parse(String(cached!.value));
+    expect(payload.rankings.find((entry: { id: string }) => entry.id === "100").provenance)
+      .toMatchObject({ comparisonAnchorObservedAt: nowSec - 30 * 86400 });
   });
 
   it("computes trailing APY from source-specific history instead of mixed coin-level history", async () => {

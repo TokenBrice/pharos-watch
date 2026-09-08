@@ -1,15 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   buildFailedCrawlDeploymentOutcomes,
   buildStaticInaccessibleDeploymentOutcomes,
   classifyDexDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
 } from "../deployment-outcomes";
-import type { DexDeploymentProviderCheck, StagedPool } from "../types";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import type { StagedPool } from "../types";
+import { stagedPool } from "./discovery.test-support";
+import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
-const NEW_PROVIDER_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly DexDeploymentProviderCheck["provider"][];
-const NEW_SOURCE_TYPE_PINS = ["aquarius", "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap"] as const satisfies readonly StagedPool["source"][];
 
 const DEPLOYMENT = {
   chain: "ethereum",
@@ -33,45 +34,9 @@ const STELLAR_AQUARIUS_DEPLOYMENT = {
 };
 
 function poolFor(address: string): StagedPool {
-  return {
-    poolId: "ethereum:0xpool",
-    stablecoinId: "test",
-    source: "dexscreener",
-    chain: "ethereum",
-    protocol: "test",
-    dexId: "test",
-    symbol: "TEST / USDC",
-    tvlUsd: 10_000,
-    volume24h: 1_000,
-    qualityMultiplier: 1,
-    poolType: "amm",
-    feeTier: null,
-    balanceRatio: null,
-    isStable: null,
-    baseToken: address,
-    quoteToken: "0x0000000000000000000000000000000000000002",
-    quoteSymbol: "USDC",
-    priceUsd: 1,
-    lockedLiqPct: null,
-    rawJson: null,
-    discoveredAt: 1,
-    refreshedAt: 1,
-  };
+  return stagedPool({ baseToken: address });
 }
 
-function createRecordingDb(): { db: D1Database; statements: Array<{ sql: string; values: unknown[] }> } {
-  const statements: Array<{ sql: string; values: unknown[] }> = [];
-  const db = makeNoopD1({
-    prepare: vi.fn((sql: string) => ({
-      bind: vi.fn((...values: unknown[]) => {
-        statements.push({ sql, values });
-        return {};
-      }),
-    })),
-    batch: vi.fn(async (batched: unknown[]) => batched.map(() => ({ meta: { changes: 1 } }))),
-  });
-  return { db, statements };
-}
 
 function outcomeWrite(overrides: { chain: string; address: string }) {
   return {
@@ -86,9 +51,6 @@ function outcomeWrite(overrides: { chain: string; address: string }) {
 }
 
 describe("DEX deployment outcomes", () => {
-  it("keeps the new provider and staged-source unions aligned", () => {
-    expect(NEW_PROVIDER_TYPE_PINS).toEqual(NEW_SOURCE_TYPE_PINS);
-  });
 
   it("separates observed, verified empty, and inaccessible outcomes", () => {
     const observed = classifyDexDeploymentOutcomes({
@@ -334,34 +296,23 @@ describe("DEX deployment outcomes", () => {
     expect(evm[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 1 });
   });
 
-  it("persists canonical deployment addresses without lowercasing non-EVM identities", async () => {
-    const { db, statements } = createRecordingDb();
-
-    await upsertDexDeploymentOutcomes(db, [
-      outcomeWrite({ chain: "solana", address: "MintCase" }),
-      outcomeWrite({ chain: "ethereum", address: "0xAbC" }),
-    ]);
-
-    expect(statements.filter((statement) => statement.sql.startsWith("INSERT")).map((statement) => statement.values[2])).toEqual([
-      "MintCase",
-      "0xabc",
-    ]);
-  });
-
-  it("deletes the superseded lowercase twin of a non-EVM deployment", async () => {
-    const { db, statements } = createRecordingDb();
-
+  it("persists canonical identities while removing only the same-coin lowercase legacy twin", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO dex_deployment_outcomes
+      (stablecoin_id, chain, contract_address, outcome, reason, observed_at)
+      VALUES ('test', 'solana', 'mintcase', 'verified_no_pools', 'legacy', 50),
+        ('other', 'solana', 'mintcase', 'verified_no_pools', 'foreign', 50),
+        ('test', 'solana', 'MintCase', 'verified_no_pools', 'canonical', 60)`);
     await upsertDexDeploymentOutcomes(db, [
       outcomeWrite({ chain: "solana", address: "MintCase" }),
       outcomeWrite({ chain: "ethereum", address: "0xAbC" }),
       outcomeWrite({ chain: "solana", address: "alreadylowercase" }),
     ]);
-
-    const deletes = statements.filter((statement) => statement.sql.startsWith("DELETE"));
-    expect(deletes).toHaveLength(1);
-    expect(deletes[0]!.values).toEqual(["test", "solana", "mintcase"]);
-    // The cleanup runs before the canonical write for the same deployment.
-    expect(statements[0]!.sql.startsWith("DELETE")).toBe(true);
-    expect(statements[1]!.values[2]).toBe("MintCase");
+    expect(sqlite.prepare("SELECT stablecoin_id, chain, contract_address, observed_at FROM dex_deployment_outcomes ORDER BY stablecoin_id, chain, contract_address").all()).toEqual([
+      { stablecoin_id: "other", chain: "solana", contract_address: "mintcase", observed_at: 50 },
+      { stablecoin_id: "test", chain: "ethereum", contract_address: "0xabc", observed_at: 100 },
+      { stablecoin_id: "test", chain: "solana", contract_address: "MintCase", observed_at: 100 },
+      { stablecoin_id: "test", chain: "solana", contract_address: "alreadylowercase", observed_at: 100 },
+    ]);
   });
 });
