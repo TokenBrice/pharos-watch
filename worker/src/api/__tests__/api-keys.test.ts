@@ -19,7 +19,7 @@ import {
 import { makeApiKeyMutationTables, makeRequestAttributionTables } from "../../test-helpers/api-key-test-support";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {

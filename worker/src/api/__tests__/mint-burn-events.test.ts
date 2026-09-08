@@ -4,7 +4,7 @@ import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleMintBurnEvents } from "../mint-burn-events";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

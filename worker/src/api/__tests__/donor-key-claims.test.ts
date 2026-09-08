@@ -10,8 +10,8 @@ import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { handleDonorKeyClaim } from "../donor-key-claims";
 

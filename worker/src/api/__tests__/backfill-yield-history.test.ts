@@ -80,4 +80,20 @@ describe("handleBackfillYieldHistory", () => {
 
     expect(fetchZephyrZysSource).toHaveBeenCalledTimes(1);
   });
+
+  it("skips unavailable protocol observations without writing history", async () => {
+    vi.mocked(fetchZephyrZysSource).mockResolvedValueOnce(null);
+    const db = mockD1([], { requireMatch: true });
+    const url = makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol");
+    const res = await handleBackfillYieldHistory({
+      db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }),
+    });
+    expect(await readJsonResponse(res, 200)).toEqual({
+      coinsProcessed: 1,
+      rowsInserted: 0,
+      coinResults: [{ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: false }],
+      skipped: ["ZYS: missing protocol response"],
+    });
+    expect(db.getHistory()).toEqual([]);
+  });
 });

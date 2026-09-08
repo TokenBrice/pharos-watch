@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 
 const fixtures = createLatestSchemaFixtureTracker();

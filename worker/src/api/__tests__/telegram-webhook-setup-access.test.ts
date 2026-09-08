@@ -23,21 +23,11 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "setup-step",
-          action_payload: JSON.stringify({
-            step: "awaiting-ticker",
-            alertTypes: ["dews"],
-            target: null,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: null,
-        },
+        first: makeSetupPendingRow({
+          step: "awaiting-ticker",
+          alertTypes: ["dews"],
+          target: null,
+        }),
       },
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "USDC"), "test-secret", "bot-token");
@@ -258,17 +248,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "setup-step",
-          action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: null,
-        },
+        first: makeSetupPendingRow({ step: "branch", alertTypes: [], target: null }),
       },
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
@@ -283,17 +263,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "setup-step",
-          action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: null,
-        },
+        first: makeSetupPendingRow({ step: "branch", alertTypes: [], target: null }),
       },
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "recommended"), "test-secret", "bot-token");
@@ -309,17 +279,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "setup-step",
-          action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: null,
-        },
+        first: makeSetupPendingRow({ step: "branch", alertTypes: [], target: null }),
       },
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/cancel"), "test-secret", "bot-token");

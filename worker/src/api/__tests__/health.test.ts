@@ -22,26 +22,26 @@ const STABLECOIN_COVERAGE_QUERY_MATCH =
 function healthD1(tables: MockTableConfig[]) {
   return buildStatusD1Scenario({
     sections: ["sentinel"],
-    overrides: [],
-    optionalOverrides: [
-      ...tables,
-      { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null },
-      { match: "FROM dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "FROM yield_data", rows: [], first: { age: 60 } },
-      { match: "key LIKE 'circuit:%'", rows: [] },
-      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
-      { match: "blacklist-gap-metrics-cache-write", rows: [] },
+    overrides: [
+      ...tables.map((table) => ({ ...table, allowUnused: true })),
+      { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null, allowUnused: true },
+      { match: "FROM dex_liquidity", rows: [], first: { age: 60 }, allowUnused: true },
+      { match: "FROM yield_data", rows: [], first: { age: 60 }, allowUnused: true },
+      { match: "key LIKE 'circuit:%'", rows: [], allowUnused: true },
+      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null, allowUnused: true },
+      { match: "blacklist-gap-metrics-cache-write", rows: [], allowUnused: true },
       {
         match: "status IN ('ok', 'degraded')",
         rows: [],
         first: { item_count: 0, metadata: null },
+        allowUnused: true,
       },
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "stamped_identity", rows: [], first: null },
-      { match: "publication_identity", rows: [], first: null },
-      { match: "telegram_subscribers", rows: [], first: { n: 0 } },
-      { match: "telegram_pending_alerts", rows: [], first: null },
-      { match: "dispatch-telegram-alerts", rows: [], first: null },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null, allowUnused: true },
+      { match: "stamped_identity", rows: [], first: null, allowUnused: true },
+      { match: "publication_identity", rows: [], first: null, allowUnused: true },
+      { match: "telegram_subscribers", rows: [], first: { n: 0 }, allowUnused: true },
+      { match: "telegram_pending_alerts", rows: [], first: null, allowUnused: true },
+      { match: "dispatch-telegram-alerts", rows: [], first: null, allowUnused: true },
     ],
   });
 }

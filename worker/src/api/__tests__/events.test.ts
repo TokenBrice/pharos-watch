@@ -7,7 +7,7 @@ import {
   ScoreTapeEventPayloadSchema,
   TapeEventsResponseSchema,
 } from "@shared/types/tape-event";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

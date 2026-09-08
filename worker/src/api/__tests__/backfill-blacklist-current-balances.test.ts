@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillBlacklistCurrentBalances } from "../backfill-blacklist-current-balances";
 import { getBlacklistConfigsForSymbolAndChain } from "../../lib/blacklist-contracts";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 stubCryptoForAuth();
 const fixtures = createLatestSchemaFixtureTracker();

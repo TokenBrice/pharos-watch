@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   createTelegramFetchSpy,
@@ -21,6 +23,8 @@ const {
 } = await import("../telegram-webhook-settings-render");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
   return telegramCallBody(call);
@@ -206,6 +210,59 @@ describe("handleSettingsCallback — chat-level", () => {
     expect(jsonBody(ackCalls()[0]).text).toContain("dews");
   });
 
+  it("replays a stored global target rather than toggling the changed current state", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews)
+      VALUES ('42', 1, 1, 1)`);
+    await handleSettingsCallback(db, "fake-token", {
+      id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
+    }, "gt", "dews", {
+      beforeIrreversibleEffect: async () => undefined,
+      storedIntent: createTelegramWebhookIntent("callback:settings-gt", { alertType: "dews", next: 1 }, "required"),
+    });
+    expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ global_alert_dews: 1 });
+    expect(editCalls()).toHaveLength(1);
+    expect(ackCalls()).toHaveLength(1);
+  });
+
+  it("delivers a replayed panel and acknowledgement without reapplying the mutation", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers
+      (chat_id, created_at, last_active_at, global_alert_dews, preference_generation) VALUES ('42', 1, 1, 0, 7)`);
+    await handleSettingsCallback(db, "fake-token", {
+      id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
+    }, "gt", "dews", {
+      beforeIrreversibleEffect: async () => undefined,
+      storedIntent: createTelegramWebhookIntent("callback:settings-gt", { alertType: "dews", next: 1 }, "required"),
+      wasMutationApplied: true,
+    });
+    expect(sqlite.prepare(`SELECT global_alert_dews, preference_generation
+      FROM telegram_subscribers WHERE chat_id = '42'`).get())
+      .toEqual({ global_alert_dews: 0, preference_generation: 7 });
+    expect(editCalls()).toHaveLength(1);
+    expect(ackCalls()).toHaveLength(1);
+  });
+
+  it("does not confirm or acknowledge a failed atomic settings mutation", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews)
+      VALUES ('42', 1, 1, 0)`);
+    const confirmAtomicMutationApplied = vi.fn();
+    await expect(handleSettingsCallback(db, "fake-token", {
+      id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
+    }, "gt", "dews", {
+      beforeIrreversibleEffect: async () => undefined,
+      prepareMutationAppliedStatement: () => db.prepare("INSERT INTO telegram_subscribers (chat_id) VALUES (NULL)"),
+      confirmAtomicMutationApplied,
+    })).rejects.toThrow();
+    expect(confirmAtomicMutationApplied).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ global_alert_dews: 0 });
+    expect(editCalls()).toEqual([]);
+    expect(ackCalls()).toEqual([]);
+  });
+
   it("settings:q:1 enables quiet hours with the default 22-07 window", async () => {
     const db = mockD1();
     await handleSettingsCallback(
@@ -238,7 +295,10 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:q:0 disables quiet hours", async () => {
-    const db = mockD1();
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers
+      (chat_id, created_at, last_active_at, quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, global_alert_reserve)
+      VALUES ('42', 1, 1, 1, 22, 7, 1)`);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -252,9 +312,10 @@ describe("handleSettingsCallback — chat-level", () => {
       "0",
     );
 
-    const upsert = db.getHistory().find((h) => /quiet_hours_enabled = excluded\.quiet_hours_enabled/.test(h.sql));
-    expect(upsert).toBeDefined();
-    expect(upsert!.binds[12]).toBe(0);
+    expect(sqlite.prepare(`SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+      global_alert_reserve FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null, global_alert_reserve: 1,
+    });
   });
 
   it("settings:sc clears the snooze timestamp", async () => {
@@ -329,7 +390,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:db:0 turns DEWS off without losing the row's other settings", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+      INSERT INTO telegram_subscriptions
+      (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step)
+      VALUES ('42', 'usdc-circle', 1, 1, 1, 'WARNING', 'downgrade-only', 100)`);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -343,9 +408,10 @@ describe("handleSettingsCallback — per-coin", () => {
       "usdc-circle:db:0",
     );
 
-    const insert = db.getHistory().find((h) => /alert_dews = excluded\.alert_dews/.test(h.sql));
-    expect(insert).toBeDefined();
-    expect(insert!.binds[2]).toBe(0);
+    expect(sqlite.prepare(`SELECT alert_dews, alert_depeg, alert_safety, safety_mode, depeg_worsening_bps_step
+      FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'`).get()).toEqual({
+      alert_dews: 0, alert_depeg: 1, alert_safety: 1, safety_mode: "downgrade-only", depeg_worsening_bps_step: 100,
+    });
   });
 
   it("settings:c:<id>:sm:d sets safety mode to downgrade-only", async () => {

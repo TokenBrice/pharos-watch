@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { handlePause } from "../pause";
 import { makeCommandContext, buttonsFromMarkup, expectMiniAppButton } from "./webhook-commands.test-support";
 

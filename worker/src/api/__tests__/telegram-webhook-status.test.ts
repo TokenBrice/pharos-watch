@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),

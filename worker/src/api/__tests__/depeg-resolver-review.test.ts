@@ -5,11 +5,12 @@ import {
   DDR_METHODOLOGY_VERSION_LABEL,
   DDRR_REVIEWER_VERSION,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { DDRR_REVIEWER_VERSION as DDRR_CACHE_REVIEWER_VERSION } from "@shared/types/depeg-resolver-review";
+import { DDRR_REVIEWER_VERSION as DDRR_CACHE_REVIEWER_VERSION, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
-import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
+import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
+import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -142,6 +143,42 @@ function snapshot(computedAt: number, expiresAt: number): LegacyDdrrCachePayload
 }
 
 describe("handleDepegResolverReview", () => {
+  it.each([-1, 0, 1])("retains current snapshot reviews at expiry offset %s", async (offset) => {
+    const row: DdrrRow = {
+      kind: "prediction_review", eventId: 42, currentEventId: 42, incidentKey: "lusd-liquity:below:1",
+      stablecoinId: "lusd-liquity", symbol: "LUSD", name: "Liquity USD", pegCurrency: "USD",
+      governance: "decentralized", direction: "below", startedAt: 1, eligibleAt: 1,
+      sourceEventState: "recovered", terminalEvidenceAt: null, terminalEvidenceInterval: null,
+      terminalEvidencePrecision: null, publicPredictionId: 7, assessmentId: 9, predictionState: "frozen",
+      predictionMethodologyVersion: DDR_METHODOLOGY_VERSION, predictionPolicyVersion: "sticky-24h-v1",
+      lockedAt: 2, publishedAt: 3, publicationSnapshotToken: "snapshot-1",
+      frozen: { resolutionTier: "recovery_likely", predictedRemainingSec: 3600,
+        iqrRemainingSec: [1800, 7200], horizonCells: [], stratum: "below - moderate - robust - USD", factors: [] },
+      actual: { kind: "recovered", actualEndedAt: 7202, actualRemainingSec: 7200,
+        terminalEvidenceAt: null, terminalEvidenceInterval: null, terminalEvidencePrecision: null, reviewedAt: 7202 },
+      verdictReview: "correct_recoverable", durationReview: "inside_band", horizonReviews: [],
+      predictedRemainingSec: 3600, actualRemainingSec: 7200, medianReview: "median_late_by",
+      signedDurationErrorSec: 3600, absoluteDurationErrorSec: 3600, withinIqr: true,
+    };
+    const payload = buildDdrrResponseEnvelope({
+      nowSec: 1_998_000, summary: summarizeDdrrRows([row]), rows: [row],
+      assessedEventCount: 1, methodologyVersions: [DDR_METHODOLOGY_VERSION],
+    });
+    vi.useFakeTimers();
+    vi.setSystemTime((payload._meta.expiresAt + offset) * 1000);
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [{
+      key: "depeg-resolver-review:snapshot", updated_at: payload._meta.computedAt,
+      value: JSON.stringify({ generation: DDRR_SNAPSHOT_CACHE_GENERATION,
+        methodologyVersion: DDR_METHODOLOGY_VERSION, reviewerVersion: DDRR_REVIEWER_VERSION, payload }),
+    }] }]);
+    const body = await readJsonResponse<DdrrResponse>(await handleDepegResolverReview(db), 200);
+    expect(body.rows).toEqual([row]);
+    expect(body._meta.computedAt).toBe(1_998_000);
+    expect(body._meta.degraded).toBe(offset > 0);
+    expect(body._meta.degradedReason).toBe(offset > 0 ? "stale-cache" : null);
+    expect(body.summary.headline.recoveryLikelihoodScoredCount).toBe(1);
+  });
+
   it("rejects old reviewer snapshots instead of serving v1 review rows", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);

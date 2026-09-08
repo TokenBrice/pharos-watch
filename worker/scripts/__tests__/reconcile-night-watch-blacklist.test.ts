@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaFixtureTracker } from "../../src/test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import frozenManifestJson from "../data/night-watch-blacklist-manifest-2026-07-09.json";
 import {
   fetchTronPage,

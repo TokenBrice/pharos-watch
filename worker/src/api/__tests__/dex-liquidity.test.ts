@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 function makeDexDeploymentOutcomeFallbackTable() {
   return { match: "FROM dex_deployment_outcomes", rows: [] };

@@ -1,10 +1,12 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { DepegEventsResponseSchema } from "@shared/types/market";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDepegEvents } from "../depeg-events";
+
+afterEach(() => vi.useRealTimers());
 
 describe("handleDepegEvents", () => {
   const row = makeDepegRow();
@@ -198,6 +200,8 @@ describe("handleDepegEvents", () => {
   });
 
   it("uses latest successful sync timestamp for freshness headers", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
@@ -205,8 +209,7 @@ describe("handleDepegEvents", () => {
       { match: "cron_runs", rows: [], first: { started_at: now - 45 } },
     ]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    const age = Number(res.headers.get("X-Data-Age"));
-    expect(age).toBeLessThan(120);
+    expect(res.headers.get("X-Data-Age")).toBe("45");
   });
 
   it("rejects oversized limits instead of coercing them", async () => {

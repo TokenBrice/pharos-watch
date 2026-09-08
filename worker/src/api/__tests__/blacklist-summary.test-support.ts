@@ -1,6 +1,6 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin, type BlacklistSummaryResponse } from "@shared/types/market";
 
-interface BalanceRow {
+type BalanceRow = {
   id: string;
   stablecoin: BlacklistStablecoin;
   chain_id: string;
@@ -17,7 +17,7 @@ interface BalanceRow {
   contract_address?: string;
   last_successful_observed_at?: number;
   consecutive_failures?: number;
-}
+};
 
 export function balanceRow(
   stablecoin: BlacklistStablecoin, chain: string, address: string, amount: number | null,

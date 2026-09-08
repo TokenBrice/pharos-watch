@@ -3,6 +3,7 @@ import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscripti
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TELEGRAM_BOT_COMMANDS } from "@shared/lib/telegram-bot-registration";
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../webhook-commands";
+import { makePendingSelectionRow, makeSelectionSubscription } from "./telegram-selection.test-support";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -483,16 +484,9 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(
-            firstAmbiguous.matches,
-            { alertTypes: ["dews"], presetIds: [] },
-            ["USDA"],
-          ),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(firstAmbiguous.matches,
+        { alertTypes: ["dews"], presetIds: [] },
+        ["USDA"],), "999"),
       },
     ]);
 
@@ -519,38 +513,16 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(
-            ambiguous.matches,
-            { alertTypes: ["dews"] },
-            ["USDC"],
-          ),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches,
+        { alertTypes: ["dews"] },
+        ["USDC"],)),
       },
       {
         match: "FROM telegram_subscriptions",
         matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
         rows: [
-          {
-            stablecoin_id: ambiguous.matches[0].id,
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
-          {
-            stablecoin_id: usdc.matches[0].id,
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
+          makeSelectionSubscription(ambiguous.matches[0].id, null),
+          makeSelectionSubscription(usdc.matches[0].id, null),
         ],
       },
     ]);
@@ -581,16 +553,11 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, {
-            alertTypes: ["depeg"],
-            presetIds: [],
-            depegWorseningBpsStep: 250,
-          }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, {
+          alertTypes: ["depeg"],
+          presetIds: [],
+          depegWorseningBpsStep: 250,
+        }), "999"),
       },
       {
         match: "FROM telegram_subscriptions",
@@ -626,12 +593,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "111",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
       },
     ]);
 
@@ -658,12 +620,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999"),
       },
     ]);
 
@@ -686,12 +643,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999"),
       },
     ]);
 
@@ -718,12 +670,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "111",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
       },
       {
         match: "RETURNING value",
@@ -754,12 +701,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "111",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
       },
     ]);
 
@@ -786,12 +728,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999"),
       },
     ]);
 
@@ -817,25 +754,12 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "111",
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
       },
       {
         match: "FROM telegram_subscriptions",
         rows: [
-          {
-            stablecoin_id: ambiguous.matches[0].id,
-            alert_dews: 1,
-            alert_depeg: 0,
-            alert_safety: 0,
-            dews_min_band: null,
-            safety_mode: null,
-            depeg_worsening_bps_step: null,
-          },
+          makeSelectionSubscription(ambiguous.matches[0].id, null),
         ],
       },
     ]);
@@ -862,11 +786,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "unsubscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, {}, ["USDC"]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-        },
+        first: makePendingSelectionRow("unsubscribe", pendingActionPayload(ambiguous.matches, {}, ["USDC"])),
       },
     ]);
 
@@ -1028,11 +948,7 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-        },
+        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] })),
       },
     ]);
 
@@ -1121,4 +1037,43 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("current membership was unavailable for preview");
   });
 
+  it("finalizes pending /set disambiguation with the shared completion handler", async () => {
+    const ambiguous = resolveTicker("USDF");
+    const usdc = resolveTicker("USDC");
+    if (ambiguous.status !== "ambiguous" || usdc.status !== "unique") {
+      throw new Error("Expected fixed ticker fixtures for telegram set disambiguation flow test");
+    }
+
+    const db = makeTelegramWebhookDb([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: makePendingSelectionRow("set", pendingActionPayload(ambiguous.matches, {
+          ticker: "USDF", setting: "dews", enabled: true, minBand: "WARNING",
+        }, ["USDC"])),
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
+        rows: [
+          makeSelectionSubscription(ambiguous.matches[0].id, "WARNING"),
+          makeSelectionSubscription(usdc.matches[0].id, "WARNING"),
+        ],
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "1"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(
+      history
+        .filter((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))
+        .map((entry) => entry.binds[1]),
+    ).toEqual([ambiguous.matches[0].id, usdc.matches[0].id]);
+
+    const text = sentMessageBody().text;
+    expect(text).toContain("Updated settings");
+    expect(text).toContain("DEWS&gt;=WARNING");
+  });
 });

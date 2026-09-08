@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "@shared/lib/telegram-mini-app-contract";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   encodeWatchlistTokenV3,
   type WatchlistTokenDirectState,
@@ -244,7 +244,8 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
   });
 
   it("rejects no-op bulk previews and applies every explicit direct alert disable", async () => {
-    const { db } = setup();
+    const { db, sqlite } = setup();
+    sqlite.prepare("UPDATE telegram_subscriptions SET alert_safety = 1, alert_launch = 1, alert_reserve = 1 WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'").run(AUTH.userId);
     await expect(executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
       kind: "preview-bulk-watchlist",
       addStablecoinIds: ["dai-makerdao"],
@@ -259,6 +260,8 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
         freeze: true,
       },
     })).resolves.toBeUndefined();
+    expect(sqlite.prepare("SELECT alert_safety, alert_launch, alert_reserve, alert_freeze, dews_min_band FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'").get(AUTH.userId))
+      .toEqual({ alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 1, dews_min_band: "DANGER" });
     await expect(applyTelegramMiniAppMutation(db, AUTH, {
       kind: "unfollow-preset",
       presetId: "unknown-preset",

@@ -3,7 +3,7 @@ import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-ro
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import type * as Persistence from "../../lib/mint-burn-pipeline/persistence";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

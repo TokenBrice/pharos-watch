@@ -5,6 +5,7 @@ import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
   buildSourceRiskGoldenFixture,
@@ -250,114 +251,38 @@ describe("handleYieldRankings", () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb({
       rankings: [
-        {
-          id: "rated-coin",
-          symbol: "RATE",
-          name: "Rated Coin",
-          currentApy: 5.3,
-          apy7d: 5.2,
-          apy30d: 5,
-          apyBase: 5,
-          apyReward: null,
-          yieldSource: "Source A",
-          yieldType: "lending-vault",
-          dataSource: "defillama",
-          sourceTvlUsd: 1_000_000,
-          pharosYieldScore: 8,
-          safetyScore: 40,
-          safetyGrade: "NR",
-          yieldToRisk: 0.08,
-          excessYield: 1,
-          yieldStability: 0.8,
-          apyVariance30d: 0.5,
-          apyMin30d: 4.9,
-          apyMax30d: 5.4,
-          warningSignals: [],
-          altSources: [],
-          provenance: {
-            sourceKey: "pool-a",
-            sourceObservedAt: updatedAt,
-            sourceAgeSeconds: 30,
-            confidenceTier: "curated",
-            selectionMethod: "confidence-weighted",
-            selectionReason: "curated canonical source selected by confidence-weighted arbitration",
-            sourceSwitch: false,
-            previousBestSourceKey: "pool-a",
-            usedLegacyHistory: false,
-            usedDefaultSafety: true,
-            benchmarkRecordDate: "2026-03-12",
-            benchmarkIsFallback: false,
-            benchmarkFallbackMode: null,
-            anomalies: [],
-          },
-        },
-        {
-          id: "nr-coin",
-          symbol: "NRC",
-          name: "NR Coin",
-          currentApy: 3.2,
-          apy7d: 3.2,
-          apy30d: 3.1,
-          apyBase: 3.1,
-          apyReward: null,
-          yieldSource: "Source B",
-          yieldType: "lending-vault",
-          dataSource: "defillama",
-          sourceTvlUsd: 500_000,
-          pharosYieldScore: 7,
-          safetyScore: 40,
-          safetyGrade: "NR",
-          yieldToRisk: 0.05,
-          excessYield: 0.5,
-          yieldStability: 0.9,
-          apyVariance30d: 0.2,
-          apyMin30d: 3.0,
-          apyMax30d: 3.3,
-          warningSignals: [],
-          altSources: [],
-          provenance: {
-            sourceKey: "pool-b",
-            sourceObservedAt: updatedAt,
-            sourceAgeSeconds: 30,
-            confidenceTier: "curated",
-            selectionMethod: "confidence-weighted",
-            selectionReason: "curated canonical source selected by confidence-weighted arbitration",
-            sourceSwitch: false,
-            previousBestSourceKey: "pool-b",
-            usedLegacyHistory: false,
-            usedDefaultSafety: false,
-            benchmarkRecordDate: "2026-03-12",
-            benchmarkIsFallback: false,
-            benchmarkFallbackMode: null,
-            anomalies: [],
-          },
-        },
-        {
-          id: "orphan-coin",
-          symbol: "ORPH",
-          name: "Orphan Coin",
-          currentApy: 9.9,
-          apy7d: 9.9,
-          apy30d: 9.9,
-          apyBase: 9.9,
-          apyReward: null,
-          yieldSource: "Source C",
-          yieldType: "lending-vault",
-          dataSource: "defillama",
-          sourceTvlUsd: 100_000,
-          pharosYieldScore: 99,
-          safetyScore: 99,
-          safetyGrade: "A+",
-          yieldToRisk: 1,
-          excessYield: 5,
-          yieldStability: 1,
-          apyVariance30d: 0,
-          apyMin30d: 9.9,
-          apyMax30d: 9.9,
-          warningSignals: [],
-          altSources: [],
-          provenance: null,
-        },
+        makeYieldRanking({
+          id: "rated-coin", symbol: "RATE", name: "Rated Coin",
+          currentApy: 5.3, apy7d: 5.2, apy30d: 5, apyBase: 5,
+          yieldSource: "Source A", yieldType: "lending-vault", dataSource: "defillama",
+          sourceTvlUsd: 1_000_000, pharosYieldScore: 8, safetyScore: 40, safetyGrade: "NR",
+          yieldToRisk: 0.08, excessYield: 1, yieldStability: 0.8,
+          apyVariance30d: 0.5, apyMin30d: 4.9, apyMax30d: 5.4,
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-a", sourceObservedAt: updatedAt, sourceAgeSeconds: 30,
+            previousBestSourceKey: "pool-a", usedDefaultSafety: true, benchmarkRecordDate: "2026-03-12",
+          }),
+        }),
+        makeYieldRanking({
+          id: "nr-coin", symbol: "NRC", name: "NR Coin",
+          currentApy: 3.2, apy7d: 3.2, apy30d: 3.1, apyBase: 3.1,
+          yieldSource: "Source B", yieldType: "lending-vault", dataSource: "defillama",
+          sourceTvlUsd: 500_000, pharosYieldScore: 7, safetyScore: 40, safetyGrade: "NR",
+          yieldToRisk: 0.05, excessYield: 0.5, yieldStability: 0.9,
+          apyVariance30d: 0.2, apyMin30d: 3, apyMax30d: 3.3,
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-b", sourceObservedAt: updatedAt, sourceAgeSeconds: 30,
+            previousBestSourceKey: "pool-b", usedDefaultSafety: false, benchmarkRecordDate: "2026-03-12",
+          }),
+        }),
+        makeYieldRanking({
+          id: "orphan-coin", symbol: "ORPH", name: "Orphan Coin",
+          currentApy: 9.9, apy7d: 9.9, apy30d: 9.9, apyBase: 9.9,
+          yieldSource: "Source C", yieldType: "lending-vault", dataSource: "defillama",
+          sourceTvlUsd: 100_000, pharosYieldScore: 99, safetyScore: 99, safetyGrade: "A+",
+          yieldToRisk: 1, excessYield: 5, yieldStability: 1,
+          apyVariance30d: 0, apyMin30d: 9.9, apyMax30d: 9.9, provenance: null,
+        }),
       ],
       riskFreeRate: 4.25,
       scalingFactor: 8,
@@ -404,52 +329,7 @@ describe("handleYieldRankings", () => {
 
     const res = await handleYieldRankings(db);
 
-    const body = await readJsonResponse(res, 200) as {
-      rankings: Array<{
-        id: string;
-        safetyGrade: string;
-        safetyScore: number;
-        safetyReason?: string | null;
-        yieldToRisk: number | null;
-        pharosYieldScore: number | null;
-        provenance: {
-          usedDefaultSafety: boolean;
-          safetyProvenance?: string;
-          safetyReason?: string | null;
-          calculationMode?: string;
-          evidenceClass?: string;
-          evidenceCompleteness?: number;
-          scoreQualification?: string;
-          scoreQualified?: boolean;
-        } | null;
-      }>;
-      provenance: {
-        safetySnapshot: {
-          kind: string;
-          coverageRatio: number;
-          coveredCount: number;
-          trackedCount: number;
-          reason: string | null;
-          source?: string;
-          publicationGenerationId?: string | null;
-          methodologyVersion?: string | null;
-          publishedAt?: number | null;
-        };
-        liveSafetyHydration?: {
-          kind: string;
-          coverageRatio: number;
-          coveredCount: number;
-          trackedCount: number;
-          reason: string | null;
-          source: string;
-          publicationGenerationId: string | null;
-          methodologyVersion: string | null;
-          publishedAt: number | null;
-        };
-      };
-      warnings?: Array<{ code: string; reasons?: string[] }>;
-      _meta: { ageSeconds: number };
-    };
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse & { _meta: { ageSeconds: number } };
     expect(body.rankings).toHaveLength(3);
     expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["rated-coin", "nr-coin", "orphan-coin"]);
 
@@ -490,7 +370,7 @@ describe("handleYieldRankings", () => {
       scoreQualified: true,
     });
 
-    expect(body.provenance.safetySnapshot).toMatchObject({
+    expect(body.provenance?.safetySnapshot).toMatchObject({
       kind: "ok",
       coverageRatio: 0.5,
       coveredCount: 1,
@@ -501,7 +381,7 @@ describe("handleYieldRankings", () => {
       methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: updatedAt,
     });
-    expect(body.provenance.liveSafetyHydration).toMatchObject({
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
       coverageRatio: 0.3333,
       coveredCount: 1,

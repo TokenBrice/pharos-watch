@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../telegram-webhook-shared";

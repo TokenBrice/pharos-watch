@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1, type SqliteD1Options } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1, type SqliteD1Options } from "@shared/test-utils/sqlite-d1";
 
 export function createCacheSqlite() {
   const sqlite = new DatabaseSync(":memory:");

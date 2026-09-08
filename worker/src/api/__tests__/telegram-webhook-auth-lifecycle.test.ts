@@ -1,4 +1,4 @@
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {

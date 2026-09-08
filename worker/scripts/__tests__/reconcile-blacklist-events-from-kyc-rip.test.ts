@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-events-from-kyc-rip";
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
-import { createLatestSchemaFixtureTracker } from "../../src/test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { RemoteD1Client } from "../lib/remote-d1";
 
 const databases = createLatestSchemaFixtureTracker();

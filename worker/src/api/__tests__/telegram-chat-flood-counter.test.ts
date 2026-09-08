@@ -3,17 +3,23 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   recordTelegramChatCommandFlood,
   TELEGRAM_CHAT_FLOOD_UPSERT_SQL,
 } from "../../lib/telegram/processed-updates";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createCacheSqlite } from "./telegram-sqlite.test-support";
 
-function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  return { sqlite, db: createSqliteD1(sqlite) };
+const databases: DatabaseSync[] = [];
+const workers: Worker[] = [];
+afterEach(() => {
+  for (const sqlite of databases.splice(0)) sqlite.close();
+});
+
+function createHarness() {
+  const fixture = createCacheSqlite();
+  databases.push(fixture.sqlite);
+  return fixture;
 }
 
 function executeInWorker(path: string, binds: unknown[]): Promise<{ value: string }> {
@@ -37,6 +43,8 @@ function executeInWorker(path: string, binds: unknown[]): Promise<{ value: strin
         workerData: { path, sql: TELEGRAM_CHAT_FLOOD_UPSERT_SQL, binds },
       },
     );
+    workers.push(worker);
+    worker.once("exit", (code) => reject(new Error(`Worker exited without a result (${code})`)));
     worker.once("message", (row) => resolve(row as { value: string }));
     worker.once("error", reject);
   });
@@ -71,6 +79,7 @@ describe("recordTelegramChatCommandFlood", () => {
         Array.from({ length: 16 }, (_, index) => index + 1),
       );
     } finally {
+      await Promise.allSettled(workers.splice(0).map((worker) => worker.terminate()));
       sqlite.close();
       rmSync(directory, { recursive: true, force: true });
     }

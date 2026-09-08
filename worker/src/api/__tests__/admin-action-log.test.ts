@@ -1,7 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it } from "vitest";
 import { handleAdminActionLog } from "../admin-action-log";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

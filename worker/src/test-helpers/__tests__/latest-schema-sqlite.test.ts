@@ -19,7 +19,7 @@ vi.mock("node:fs", () => ({
   readFileSync: () => state.migration,
 }));
 
-import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "../latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 afterEach(() => {
   vi.restoreAllMocks();

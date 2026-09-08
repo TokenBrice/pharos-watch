@@ -21,7 +21,7 @@ function fixtureMockD1(
 ) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
-    optionalOverrides: overrides,
+    overrides,
     sectionOverrides: {
       sentinel: [{ match: "SELECT 1", rows: [], first: { "1": 1 } }],
       derived: [
@@ -454,35 +454,6 @@ describe("handleStatus", () => {
   it("lets operators bypass a fresh cron snapshot with refresh=live", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
-        rows: [
-          makeRawStatusSnapshotRow(now, 60, {
-            rawOverallStatus: "stale",
-            availabilityStatus: "stale",
-            causes: {
-              availability: [
-                {
-                  code: "fresh-snapshot-sentinel",
-                  layer: "availability",
-                  severity: "critical",
-                  message: "must not be served",
-                },
-              ],
-              dataQuality: [],
-              overall: [
-                {
-                  code: "fresh-snapshot-sentinel",
-                  layer: "availability",
-                  severity: "critical",
-                  message: "must not be served",
-                },
-              ],
-            },
-          }),
-        ],
-      },
       ...makeMinimalLiveStatusRows(now),
     ]);
 
@@ -561,7 +532,6 @@ describe("handleStatus", () => {
       // Table freshness queries (dex-liquidity, yield-data, dews)
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       // cron_runs query
       {
         match: "cron_runs",
@@ -640,19 +610,11 @@ describe("handleStatus", () => {
         ],
       },
       // Data quality: stablecoins cache for missing prices
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       // Data quality: blacklist totals
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 2 } },
       // Data quality: active depegs
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      // Data quality: stale on-chain supply
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      // Data quality: on-chain divergences (empty — no rows)
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -837,7 +799,6 @@ describe("handleStatus", () => {
       },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
       {
         match: "cron_runs",
         rows: [
@@ -889,15 +850,9 @@ describe("handleStatus", () => {
           makeCronRow("sync-blacklist"),
         ],
       },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 2 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -950,12 +905,9 @@ describe("handleStatus", () => {
       { match: "cron_run_progress", rows: [] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
-      { match: "stress_signals", rows: [], first: { age: 300 } },
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-      { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });

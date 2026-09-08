@@ -2,7 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleDigestSnapshot } from "../digest-snapshot";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const todayStr = new Date(nowSec * 1000).toISOString().slice(0, 10);

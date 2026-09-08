@@ -3,6 +3,10 @@ import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 // Stub external fetches before importing the handler
 type FetchOutcome = Response | Error | Promise<Response>;
@@ -73,6 +77,9 @@ const fetchTextWithRetryMock = vi.fn(
     return { response, body: await response.clone().text() };
   },
 );
+const retryImplementation = fetchWithRetryMock.getMockImplementation()!;
+const jsonRetryImplementation = fetchJsonWithRetryMock.getMockImplementation()!;
+const textRetryImplementation = fetchTextWithRetryMock.getMockImplementation()!;
 
 // Keep detail tests deterministic and fast: we validate handler behavior,
 // not fetch-retry backoff timing.
@@ -118,33 +125,14 @@ describe("handleStablecoinDetail", () => {
   beforeEach(() => {
     resetStablecoinDetailStateForTests();
     fetchSpy = installFetchMock();
-    fetchWithRetryMock.mockReset().mockImplementation(async (url, init, _maxRetries, options) => {
-      try {
-        const res = await fetch(url, init);
-        if (res.ok) return res;
-        if (res.status === 404 && options?.passthrough404) return res;
-        await res.body?.cancel();
-        return null;
-      } catch {
-        return null;
-      }
-    });
-    fetchJsonWithRetryMock.mockReset().mockImplementation(async (url, init, maxRetries, options) => {
-      const response = await fetchWithRetryMock(url, init, maxRetries, options);
-      if (!response) return null;
-      const cloned = response.clone();
-      const body = (await cloned.json()) as unknown;
-      return { response, body };
-    });
-    fetchTextWithRetryMock.mockReset().mockImplementation(async (url, init, maxRetries, options) => {
-      const response = await fetchWithRetryMock(url, init, maxRetries, options);
-      if (!response) return null;
-      return { response, body: await response.clone().text() };
-    });
+    fetchWithRetryMock.mockReset().mockImplementation(retryImplementation);
+    fetchJsonWithRetryMock.mockReset().mockImplementation(jsonRetryImplementation);
+    fetchTextWithRetryMock.mockReset().mockImplementation(textRetryImplementation);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    fixtures.closeAll();
   });
 
   it.each([
@@ -321,13 +309,9 @@ describe("handleStablecoinDetail", () => {
     ] });
     const now = Math.floor(Date.now() / 1000);
 
-    const db = mockD1([
-      {
-        match: "cache",
-        rows: [],
-        first: { value: staleCachedValue, updated_at: now - 600 }, // stale cache (10 min old)
-      },
-    ]);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("detail:usdt-tether", staleCachedValue, now - 600);
 
     queueFetch(new Response(freshUpstreamBody, { status: 200 }));
 
@@ -340,8 +324,10 @@ describe("handleStablecoinDetail", () => {
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(80_000_000);
     expect(ctx.waitUntil).toHaveBeenCalled();
-    await Promise.allSettled(ctx.waitUntilPromises);
-    expect(fetchSpy).toHaveBeenCalled();
+    await Promise.all(ctx.waitUntilPromises);
+    const refreshed = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    expect(await refreshed.json()).toMatchObject(JSON.parse(freshUpstreamBody));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("returns stale cache when upstream fails but cache exists", async () => {
@@ -423,8 +409,11 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
     let resolveFetch!: (response: Response) => void;
+    let entered!: () => void;
+    const fetchEntered = new Promise<void>((resolve) => { entered = resolve; });
     respondToFetch(() => new Promise<Response>((resolve) => {
       resolveFetch = resolve;
+      entered();
     }));
 
     const ctxA = makeCtx();
@@ -434,7 +423,8 @@ describe("handleStablecoinDetail", () => {
 
     expect(resA.status).toBe(200);
     expect(resB.status).toBe(200);
-    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+    await fetchEntered;
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
     await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -449,17 +439,22 @@ describe("handleStablecoinDetail", () => {
       first: { value: cachedValue, updated_at: now - 900 },
     }]);
     const resolvers: Array<(response: Response) => void> = [];
+    const entries: Array<() => void> = [];
+    const fetchEntries = [0, 1].map(() => new Promise<void>((resolve) => entries.push(resolve)));
     respondToFetch(() => new Promise<Response>((resolve) => {
       resolvers.push(resolve);
+      entries[resolvers.length - 1]();
     }));
 
     const ctxA = makeCtx();
     const ctxB = makeCtx();
     await handleStablecoinDetail(db, "usdt-tether", ctxA);
+    await fetchEntries[0];
     resetStablecoinDetailStateForTests();
     await handleStablecoinDetail(db, "usdt-tether", ctxB);
 
-    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    await fetchEntries[1];
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     for (const resolve of resolvers) {
       resolve(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
     }
@@ -483,8 +478,11 @@ describe("handleStablecoinDetail", () => {
     ]);
     const coldDb = mockD1([{ match: "cache", rows: [] }]);
     let resolveFetch!: (response: Response) => void;
+    let entered!: () => void;
+    const fetchEntered = new Promise<void>((resolve) => { entered = resolve; });
     respondToFetch(() => new Promise<Response>((resolve) => {
       resolveFetch = resolve;
+      entered();
     }));
 
     const backgroundCtx = makeCtx();
@@ -495,7 +493,8 @@ describe("handleStablecoinDetail", () => {
 
     const syncCtx = makeCtx();
     const syncResponse = handleStablecoinDetail(coldDb, "usdt-tether", syncCtx);
-    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+    await fetchEntered;
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     resolveFetch(new Response(freshUpstreamBody, { status: 200 }));
 
     const res = await syncResponse;
@@ -509,26 +508,30 @@ describe("handleStablecoinDetail", () => {
     await Promise.allSettled(backgroundCtx.waitUntilPromises);
   });
 
-  it("calls ctx.waitUntil to cache the response", async () => {
+  it("publishes fresh tokens that a later detail request reads without fetching", async () => {
     const dlBody = makeDLDetailBody();
-    const db = mockD1([
-      { match: "RETURNING generation", rows: [], first: { generation: 1 } },
-      { match: "cache", rows: [] },
-    ]);
-
+    const { db } = fixtures.open();
     queueFetch(new Response(dlBody, { status: 200 }));
-
     const ctx = makeCtx();
-    await handleStablecoinDetail(db, "usdt-tether", ctx);
+    const first = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    expect(await readJsonResponse(first, 200)).toMatchObject(JSON.parse(dlBody));
+    await Promise.all(ctx.waitUntilPromises);
+    const later = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    expect(await readJsonResponse(later, 200)).toMatchObject(JSON.parse(dlBody));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
 
-    expect(ctx.waitUntil).toHaveBeenCalled();
-    await Promise.allSettled(ctx.waitUntilPromises);
-    const detailWrite = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "detail:usdt-tether"
-    );
-    expect(detailWrite?.sql).toContain("ON CONFLICT(key) DO UPDATE");
-    expect(detailWrite?.sql).toContain("detail_cache_write_generations");
-    expect(detailWrite?.sql).toContain("generation = ?");
+  it("keeps newer published tokens visible when an older generation writes last", async () => {
+    const { db } = fixtures.open();
+    const oldClaim = await claimDetailCacheGeneration(db, "usdt-tether");
+    const newClaim = await claimDetailCacheGeneration(db, "usdt-tether");
+    const oldBody = makeDLDetailBody({ tokens: [{ date: 1, totalCirculatingUSD: { peggedUSD: 80 } }] });
+    const newBody = makeDLDetailBody({ tokens: [{ date: 2, totalCirculatingUSD: { peggedUSD: 120 } }] });
+    await publishDetailCacheGeneration(db, "detail:usdt-tether", newBody, newClaim);
+    await publishDetailCacheGeneration(db, "detail:usdt-tether", oldBody, oldClaim);
+    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    expect(await readJsonResponse(response, 200)).toMatchObject(JSON.parse(newBody));
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("does not claim a detail cache generation before a fresh body is ready", async () => {
@@ -561,6 +564,9 @@ describe("handleStablecoinDetail", () => {
       if (value.includes("api.llama.fi/protocol/tether-gold")) {
         return new Response(JSON.stringify({ tvl: [] }), { status: 200 });
       }
+      if (new URL(value).hostname === "pro-api.coingecko.com" && request.headers.get("x-cg-pro-api-key") !== "cg-pro-key") {
+        return new Response("Unauthorized", { status: 401 });
+      }
       if (value.includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold/market_chart")) {
         return new Response(JSON.stringify({
           market_caps: [[1_700_000_000_000, 1_000]],
@@ -576,9 +582,11 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx, "cg-pro-key");
 
-    expect(res.status).toBe(200);
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold/market_chart"))).toBe(true);
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold?market_data=true"))).toBe(true);
+    const body = await readJsonResponse(res, 200) as { tokens: Array<{ totalCirculating: unknown; totalCirculatingUSD: unknown }> };
+    expect(body.tokens).toEqual([expect.objectContaining({
+      totalCirculating: { peggedGOLD: 200 },
+      totalCirculatingUSD: { peggedGOLD: 400 },
+    })]);
   });
 
   it("normalizes non-USD DefiLlama detail responses into explicit native and USD token fields", async () => {

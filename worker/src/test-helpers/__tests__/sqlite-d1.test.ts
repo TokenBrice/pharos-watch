@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
 const connections: DatabaseSync[] = [];
 afterEach(() => connections.splice(0).forEach((sqlite) => sqlite.close()));

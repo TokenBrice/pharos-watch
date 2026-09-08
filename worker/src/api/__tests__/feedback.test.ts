@@ -9,7 +9,7 @@ import {
 } from "@shared/test-utils/mock-d1";
 import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import type { FeedbackEnv } from "../feedback";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 // Stub fetch and crypto.subtle before importing the handler

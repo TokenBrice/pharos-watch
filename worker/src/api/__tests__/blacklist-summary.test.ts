@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import {
   makeBlacklistReconciliationStatusRow,
@@ -7,6 +7,15 @@ import {
 } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { BlacklistSummaryResponse } from "@shared/types/market";
+import { balanceRow, makeValidSummaryPayload } from "./blacklist-summary.test-support";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  sqliteFixtures.closeAll();
+  vi.useRealTimers();
+});
 
 function makeBlacklistSummaryFallbackTables() {
   return [
@@ -44,14 +53,22 @@ function makeBlacklistSummaryFallbackTables() {
   ];
 }
 
-async function makeValidSummaryPayload() {
-  return readJsonResponse<Record<string, unknown>>(await handleBlacklistSummary(mockD1(makeBlacklistSummaryFallbackTables())), 200);
-}
 
 describe("handleBlacklistSummary", () => {
+  it("serves an actual producer snapshot through the public cache reader", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    await materializeBlacklistSummarySnapshot(db, now, now - 30);
+    const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get("blacklist:summary:producer:v1") as { value: string };
+    const snapshot = JSON.parse(stored.value) as { payload: BlacklistSummaryResponse };
+    const response = await handleBlacklistSummary(db);
+    expect(await readJsonResponse(response, 200)).toEqual(snapshot.payload);
+  });
+
   it("serves a fresh producer snapshot without live blacklist_events scans", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const payload = { ...await makeValidSummaryPayload(), totalEvents: 7, additiveField: { retained: true } };
+    const payload = { ...makeValidSummaryPayload(), totalEvents: 7, additiveField: { retained: true } };
     const db = mockD1([
       {
         match: "blacklist-summary-snapshot-read",
@@ -106,7 +123,7 @@ describe("handleBlacklistSummary", () => {
     "rejects malformed nested cached %s rather than serving it",
     async (field) => {
       const now = Math.floor(Date.now() / 1000);
-      const payload = await makeValidSummaryPayload();
+      const payload = makeValidSummaryPayload();
       payload[field] = field === "chart" || field === "chains" ? [{}] : {};
       payload.totalEvents = 99;
       const db = mockD1([
@@ -124,7 +141,7 @@ describe("handleBlacklistSummary", () => {
     "requires current-version cached %s even though public responses allow omission",
     async (field) => {
       const now = Math.floor(Date.now() / 1000);
-      const payload = await makeValidSummaryPayload();
+      const payload = makeValidSummaryPayload();
       delete payload[field];
       payload.totalEvents = 99;
       const db = mockD1([
@@ -140,7 +157,7 @@ describe("handleBlacklistSummary", () => {
   it("serves a stale producer snapshot without refreshing producer freshness from the public request", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleAt = now - 24 * 60 * 60;
-    const payload = { ...await makeValidSummaryPayload(), totalEvents: 9 };
+    const payload = { ...makeValidSummaryPayload(), totalEvents: 9 };
     const db = mockD1([
       {
         match: "blacklist-summary-snapshot-read",
@@ -168,7 +185,7 @@ describe("handleBlacklistSummary", () => {
 
   it("hydrates a legacy producer snapshot with durable reconciliation status", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const payload = await makeValidSummaryPayload();
+    const payload = makeValidSummaryPayload();
     delete payload.reconciliation;
     const db = mockD1([
       {
@@ -326,20 +343,7 @@ describe("handleBlacklistSummary", () => {
       {
         match: "FROM blacklist_current_balances",
         rows: [
-          {
-            id: "USDT:ethereum:0x111",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            address: "0x111",
-            amount_native: 1250,
-            amount_usd: 1250,
-            source: "current_balance",
-            status: "resolved",
-            observed_at: 1_777_000_150,
-            attempt_count: 1,
-            last_attempted_at: 1_777_000_150,
-            last_error_class: null,
-          },
+          balanceRow("USDT", "ethereum", "0x111", 1250, 1_777_000_150),
         ],
       },
       {
@@ -482,62 +486,12 @@ describe("handleBlacklistSummary", () => {
       {
         match: "FROM blacklist_current_balances",
         rows: [
-          {
-            id: "USDC:base:0xgap",
-            stablecoin: "USDC",
-            chain_id: "base",
-            address: "0xgap",
-            amount_native: null,
-            amount_usd: null,
-            source: "current_balance",
-            status: "recoverable_pending",
-            observed_at: observedAt,
-            attempt_count: 2,
-            last_attempted_at: observedAt,
-            last_error_class: "rpc_timeout",
-          },
-          {
-            id: "USDC:ethereum:0xactive",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            address: "0xactive",
-            amount_native: 500,
-            amount_usd: 500,
-            source: "current_balance",
-            status: "resolved",
-            observed_at: observedAt,
-            attempt_count: 1,
-            last_attempted_at: observedAt,
-            last_error_class: null,
-          },
-          {
-            id: "USDT:tron:TRdestroyed",
-            stablecoin: "USDT",
-            chain_id: "tron",
-            address: "TRdestroyed",
-            amount_native: 300,
-            amount_usd: 300,
-            source: "destroy_event",
-            status: "resolved",
-            observed_at: observedAt,
-            attempt_count: 1,
-            last_attempted_at: observedAt,
-            last_error_class: null,
-          },
-          {
-            id: "USDC:polygon:0xother",
-            stablecoin: "USDC",
-            chain_id: "polygon",
-            address: "0xother",
-            amount_native: 25,
-            amount_usd: 25,
-            source: "reconciled_snapshot",
-            status: "resolved",
-            observed_at: observedAt,
-            attempt_count: 1,
-            last_attempted_at: observedAt,
-            last_error_class: null,
-          },
+          balanceRow("USDC", "base", "0xgap", null, observedAt, {
+            status: "recoverable_pending", attempt_count: 2, last_error_class: "rpc_timeout",
+          }),
+          balanceRow("USDC", "ethereum", "0xactive", 500, observedAt),
+          balanceRow("USDT", "tron", "TRdestroyed", 300, observedAt, { source: "destroy_event" }),
+          balanceRow("USDC", "polygon", "0xother", 25, observedAt, { source: "reconciled_snapshot" }),
         ],
       },
       { match: "quarter_sort_key", rows: [] },
@@ -612,20 +566,7 @@ describe("handleBlacklistSummary", () => {
       {
         match: "FROM blacklist_current_balances",
         rows: [
-          {
-            id: "USDC:ethereum:0xreleased",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            address: "0xreleased",
-            amount_native: 100,
-            amount_usd: 100,
-            source: "current_balance",
-            status: "resolved",
-            observed_at: observedAt,
-            attempt_count: 1,
-            last_attempted_at: observedAt,
-            last_error_class: null,
-          },
+          balanceRow("USDC", "ethereum", "0xreleased", 100, observedAt),
         ],
       },
       { match: "quarter_sort_key", rows: [] },
@@ -822,34 +763,10 @@ describe("handleBlacklistSummary", () => {
       {
         match: "FROM blacklist_current_balances",
         rows: [
-          {
-            id: "USDC:ethereum:0xold",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            address: "0xold",
-            amount_native: 1,
-            amount_usd: 1,
-            source: "bootstrap_log_scan",
-            status: "resolved",
-            observed_at: now - 90 * 86400,
-            attempt_count: 0,
-            last_attempted_at: null,
-            last_error_class: null,
-          },
-          {
-            id: "USDC:ethereum:0xfresh",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            address: "0xfresh",
-            amount_native: 1,
-            amount_usd: 1,
-            source: "current_balance",
-            status: "resolved",
-            observed_at: now,
-            attempt_count: 1,
-            last_attempted_at: now,
-            last_error_class: null,
-          },
+          balanceRow("USDC", "ethereum", "0xold", 1, now - 90 * 86400, {
+            source: "bootstrap_log_scan", attempt_count: 0, last_attempted_at: null,
+          }),
+          balanceRow("USDC", "ethereum", "0xfresh", 1, now),
         ],
       },
       { match: "quarter_sort_key", rows: [] },
@@ -888,20 +805,7 @@ describe("handleBlacklistSummary", () => {
       {
         match: "FROM blacklist_current_balances",
         rows: [
-          {
-            id: "USDT:ethereum:0xold-current",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            address: "0xold-current",
-            amount_native: 1,
-            amount_usd: 1,
-            source: "current_balance",
-            status: "resolved",
-            observed_at: now - 90 * 86400,
-            attempt_count: 1,
-            last_attempted_at: now - 90 * 86400,
-            last_error_class: null,
-          },
+          balanceRow("USDT", "ethereum", "0xold-current", 1, now - 90 * 86400),
         ],
       },
       {
@@ -958,45 +862,28 @@ describe("handleBlacklistSummary", () => {
     expect(json.dataQuality.warnings).toEqual([]);
   });
 
-  it("excludes suppression_reason != null from public aggregates", async () => {
-    // Handler's WHERE suppression_reason IS NULL filter lives in SQL; the
-    // aggregate queries would simply return empty/zero rows for suppressed-only
-    // corpora. Mirror that here with zero-count aggregates.
-    const db = mockD1([
-      { match: "GROUP BY stablecoin, event_type", rows: [] },
-      { match: "latest_event_type", rows: [] },
-      {
-        match: "COUNT(*) AS total",
-        rows: [],
-        first: { total: 0, max_ts: null, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
-      },
-      { match: "FROM blacklist_current_balances", rows: [] },
-      { match: "quarter_sort_key", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: null } },
-      ...makeBlacklistSummaryFallbackTables(),
+  it("excludes only suppressed events from public aggregates", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+    const now = Date.now() / 1000;
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url, suppression_reason)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', ?, ?, 1, ?, '', '', ?)`);
+    insert.run("public", "0xpublic", "0xpublic-tx", now - 60, null);
+    insert.run("suppressed", "0xhidden", "0xhidden-tx", now - 30, "duplicate");
+    const json = await readJsonResponse<BlacklistSummaryResponse>(await handleBlacklistSummary(db), 200);
+    expect(json.totalEvents).toBe(1);
+    expect(json.stats.recentCount).toBe(1);
+    expect(json.stats.recentCount24h).toBe(1);
+    expect(json.stats.perCoinTotalEvents.USDC).toBe(1);
+    expect(json.stats.perCoinRecentEventTypes.USDC).toEqual({ freezes: 1, destroys: 0, releases: 0 });
+    expect(json.stats.perCoinQuarterlyEventTypes.USDC).toEqual([
+      { quarter: "Q2 '26", blacklist: 1, unblacklist: 0, destroy: 0 },
     ]);
-
-    const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: {
-        frozenAddresses: number;
-        perCoinFrozenAddressCount: Record<string, number>;
-        perCoinFrozenTotal: Record<string, number>;
-        perCoinDestroyedTotal: Record<string, number>;
-        perCoinQuarterlyEventTypes: Record<string, unknown[]>;
-        perCoinRecentEventTypes: Record<string, { freezes: number; destroys: number; releases: number }>;
-      };
-      totalEvents: number;
-    };
-    expect(json.stats.frozenAddresses).toBe(0);
-    expect(json.totalEvents).toBe(0);
-    // Empty corpus → every coin returns 0 / [] (not undefined), so clients
-    // don't need presence checks.
-    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(0);
-    expect(json.stats.perCoinFrozenTotal.USDC).toBe(0);
-    expect(json.stats.perCoinDestroyedTotal.USDC).toBe(0);
-    expect(json.stats.perCoinQuarterlyEventTypes.USDC).toEqual([]);
-    expect(json.stats.perCoinRecentEventTypes.USDC).toEqual({ freezes: 0, destroys: 0, releases: 0 });
+    expect(json.stats.perCoinTotalEvents.USDT).toBe(0);
+    expect(json.stats.perCoinQuarterlyEventTypes.USDT).toEqual([]);
   });
 
   it("preserves net-frozen semantics for frozenAddresses", async () => {
@@ -1186,24 +1073,12 @@ describe("handleBlacklistSummary", () => {
       {
         match: "FROM blacklist_current_balances",
         rows: [
-          {
+          balanceRow("USDT", "ethereum", "0xdestroyed", 100, observedAt, {
             id: "USDT:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7:ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7:0xdestroyed",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            address: "0xdestroyed",
             config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
             contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-            amount_native: 100,
-            amount_usd: 100,
-            source: "destroy_event",
-            status: "resolved",
-            observed_at: observedAt,
-            last_successful_observed_at: observedAt,
-            attempt_count: 1,
-            last_attempted_at: observedAt,
-            last_error_class: null,
-            consecutive_failures: 0,
-          },
+            source: "destroy_event", last_successful_observed_at: observedAt, consecutive_failures: 0,
+          }),
         ],
       },
       { match: "quarter_sort_key", rows: [] },

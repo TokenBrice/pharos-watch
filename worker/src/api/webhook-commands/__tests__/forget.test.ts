@@ -3,7 +3,7 @@ import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { handleForget } from "../forget";
 import type { WebhookCommandContext } from "../context";
 import { makeCommandContext } from "./webhook-commands.test-support";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { prepareTelegramProcessedUpdatePendingMutationApplied } from "../../../lib/telegram/processed-updates";
 
 const fixtures = createLatestSchemaFixtureTracker();

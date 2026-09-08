@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
@@ -9,10 +9,18 @@ import { resetRequestAttributionStateForTests } from "../lib/request-source-attr
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DONOR_KEY_CLAIMS_OPEN, SELF_SERVE_ISSUANCE_OPEN } from "@shared/lib/public-api-contract";
 import {
-  matchesHttpResponseObservation,
   observeHttpResponse,
   type HttpResponseObservation,
 } from "@shared/test-utils/http-response-contract";
+import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
+import { handleStatus } from "../api/status";
+import type * as StatusModule from "../api/status";
+
+vi.mock("@shared/lib/cloudflare-access-jwt", () => ({ verifyAccessJwt: vi.fn(async () => false) }));
+vi.mock("../api/status", async (importOriginal) => {
+  const original = await importOriginal<typeof StatusModule>();
+  return { ...original, handleStatus: vi.fn(original.handleStatus) };
+});
 
 const VALID_KEY_PEPPER = "test-pepper";
 const VALID_KEY_PREFIX = "0123456789abcdef";
@@ -76,6 +84,11 @@ describe("worker.fetch", () => {
   const cacheMatch = vi.fn();
   const cachePut = vi.fn(async () => undefined);
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
   beforeEach(() => {
     vi.useRealTimers();
     resetApiKeyStateForTests();
@@ -83,6 +96,7 @@ describe("worker.fetch", () => {
     vi.restoreAllMocks();
     cacheMatch.mockReset();
     cachePut.mockReset();
+    vi.mocked(verifyAccessJwt).mockResolvedValue(false);
     vi.stubGlobal("caches", {
       default: {
         match: cacheMatch,
@@ -270,7 +284,6 @@ describe("worker.fetch", () => {
       ]);
 
       expect(observed).toEqual(expected);
-      expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
     },
     15_000,
   );
@@ -357,44 +370,40 @@ describe("worker.fetch", () => {
     expect(env.DB.getHistory()).toEqual([]);
   });
 
-  it("serves edge-cache hits for cacheable GET paths", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-
-    const env = makeEnv({ DB: mockD1(await validKeyDbTables(), { requireMatch: true }) });
-    const { ctx } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        method: "GET",
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ cached: true });
+  it("serves authenticated edge-cache hits without rewriting the cache and accounts for the key", async () => {
+    cacheMatch.mockResolvedValueOnce(Response.json({ cached: true }));
+    const { response, env } = await performStablecoinsFetch();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ cached: true });
     expect(cacheMatch).toHaveBeenCalledTimes(1);
     expect(cachePut).not.toHaveBeenCalled();
+    const history = env.DB.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats") && entry.binds[0] === 7)).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
   });
 
   it("skips edge cache for cache-bypass endpoints", async () => {
-    const env = makeEnv();
+    vi.mocked(verifyAccessJwt).mockResolvedValueOnce(true);
+    vi.mocked(handleStatus).mockResolvedValueOnce(Response.json({ status: "healthy", source: "handler" }));
+    const env = makeEnv({
+      CF_ACCESS_OPS_API_AUD: "ops-aud",
+      CF_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+    });
     const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/status", {
+      new Request("https://ops-api.pharos.watch/api/status", {
         method: "GET",
+        headers: { "Cf-Access-Jwt-Assertion": "verified-operator-token" },
       }),
       env,
       ctx,
     );
     await Promise.all(waits);
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "healthy", source: "handler" });
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
   });
@@ -726,32 +735,6 @@ describe("worker.fetch", () => {
     });
   });
 
-  it("accepts a valid API key on /api/* routes", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    const env = makeEnv({
-      DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
-    });
-    const { ctx, waits } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", {
-        method: "GET",
-        headers: { "X-API-Key": VALID_API_KEY },
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(res.status).toBe(200);
-    const history = env.DB.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats") && entry.binds[0] === 7)).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
-  });
 
   type ApiKeyDependencyFailureCase = {
     name: string;
@@ -887,6 +870,45 @@ describe("worker.fetch", () => {
     },
     15_000,
   );
+
+  it.each([false, true])("handles warm-key edge misses with expired=%s", async (expired) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00Z"));
+    const overrides = {
+      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
+    } as const;
+    cacheMatch.mockResolvedValueOnce(Response.json({ warm: true }));
+    const warm = await performStablecoinsFetch("GET", undefined, overrides);
+    expect(warm.response.status).toBe(200);
+    await expect(warm.response.json()).resolves.toEqual({ warm: true });
+    vi.advanceTimersByTime(expired ? API_KEY_AUTH_CACHE_TTL_MS : API_KEY_AUTH_CACHE_TTL_MS - 1);
+    cacheMatch.mockClear();
+    cacheMatch.mockResolvedValue(undefined);
+    const db = expired
+      ? mockD1([{
+          match: "FROM api_keys",
+          matchBinds: [VALID_KEY_PREFIX],
+          rows: [],
+          throwError: new Error("auth unavailable"),
+        }], { requireMatch: true })
+      : mockD1(await validKeyDbTables([{
+          match: "cache",
+          rows: [],
+          first: { key: "stablecoins", value: JSON.stringify({ peggedAssets: [] }), updated_at: Math.floor(Date.now() / 1000) },
+        }]));
+    const { response } = await performStablecoinsFetch("GET", db, overrides);
+    expect(response.status).toBe(expired ? 503 : 200);
+    if (expired) {
+      await expect(response.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
+      expect(cacheMatch).not.toHaveBeenCalled();
+      expect(cachePut).not.toHaveBeenCalled();
+    } else {
+      await expect(response.json()).resolves.toMatchObject({ peggedAssets: [] });
+      expect(cacheMatch).toHaveBeenCalledTimes(1);
+      expect(cachePut).toHaveBeenCalledTimes(1);
+    }
+  });
 
   it("rate-limits repeated cacheable reads with the isolate-local fallback when limiter storage fails", async () => {
     cacheMatch

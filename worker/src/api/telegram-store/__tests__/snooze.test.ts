@@ -1,9 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { setSubscriptionSnooze } from "../snooze";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const NOW_SEC = 1_800_000_000;
 

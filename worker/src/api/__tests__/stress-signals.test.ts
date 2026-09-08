@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleStressSignals } from "../stress-signals";
@@ -9,6 +9,7 @@ import {
 } from "@shared/types/market";
 import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
+afterEach(() => vi.restoreAllMocks());
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
 const preLaunchStablecoinId = PRE_LAUNCH_STABLECOINS[0]?.id;
@@ -489,6 +490,13 @@ describe("handleStressSignals contract tests", () => {
     expect(body.signals).toHaveProperty("usdt-tether");
     expect(body.signals).not.toHaveProperty("usdc-circle");
     expect(body.malformedRows).toBe(1);
+    expect(body).toMatchObject({
+      computedCount: 1,
+      missingCount: ACTIVE_IDS.size - 2,
+      coverageStatus: "degraded",
+      coverageReasons: ["partial-coverage"],
+      coverageRatio: Number((1 / ACTIVE_IDS.size).toFixed(4)),
+    });
   });
 
   it("filters out untracked IDs from aggregate responses", async () => {
@@ -896,6 +904,32 @@ describe("handleStressSignals contract tests", () => {
     expect(body.history).toEqual([]);
     expect(body.malformedRows).toBe(2);
   });
+
+  it("uses newest valid history for methodology when current is missing", async () => {
+    const db = makeStrictSingleCoinDb(null, [
+      { snapshot_date: nowSec - 86400, score: 20, band: "WATCH", signals_json: signalsJson },
+      { snapshot_date: nowSec - 100, score: 25, band: "WATCH", signals_json: signalsJson },
+    ]);
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"));
+    expect(await readJsonResponse(res, 200)).toMatchObject({
+      current: null,
+      currentStatus: "unavailable",
+      methodology: { asOf: nowSec - 100 },
+    });
+    expect(res.headers.get("X-Data-Age")).toBeNull();
+  });
+
+  it.each([[1800, "fresh"], [1801, "lagging"], [14400, "lagging"], [14401, "stale"]])(
+    "classifies a current row aged %i seconds as %s",
+    async (age, expected) => {
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const db = makeStrictSingleCoinDb({
+        score: 25, band: "WATCH", signals_json: signalsJson, computed_at: nowSec - Number(age),
+      });
+      const res = await handleStressSignals(db, new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"));
+      expect(await readJsonResponse(res, 200)).toMatchObject({ current: { ageClassification: expected } });
+    },
+  );
 
   it("marks aggregate rows unavailable when none are readable", async () => {
     const db = makeStrictAggregateDb([

@@ -2,7 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { handleRequestSourceStats } from "../request-source-stats";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const NOW = 1_700_000_000;
