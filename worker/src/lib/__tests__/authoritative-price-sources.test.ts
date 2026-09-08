@@ -105,7 +105,6 @@ vi.mock("../../api/backfill-price-sources", () => ({
 
 import {
   AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS,
-  AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS,
   type AuthoritativeLivePriceCandidate,
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeHistoricalPriceSeries,
@@ -693,10 +692,6 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("defaults the live override wall-clock budget to 10 seconds", () => {
-    expect(AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS).toBe(10_000);
-    expect(createAuthoritativeLivePriceOverrideStats().budgetMs).toBe(10_000);
-  });
 
   it("prioritizes every missing price before already-priced override candidates", () => {
     const prioritized = prioritizeAuthoritativeLivePriceCandidates([
@@ -889,6 +884,57 @@ describe("authoritative-price-sources", () => {
         rejectionClass: "timeout",
       }),
     ]);
+  });
+
+  it("aborts pending overrides at ten seconds by default and leaves later candidates unattempted", async () => {
+    vi.useFakeTimers();
+    // Drive the platform timeout with the same virtual clock as candidate timeouts.
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException("Timed out", "TimeoutError")), milliseconds);
+      return controller.signal;
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+          }),
+      );
+      const stats = createAuthoritativeLivePriceOverrideStats();
+      let settled = false;
+      const run = fetchLiveOverrides(
+        [
+          unpricedChild("cusd-cap"),
+          unpricedChild("iusd-infinifi"),
+          unpricedChild("susdc-spark"),
+          unpricedChild("steakusdc-steakhouse"),
+          unpricedChild("bbqusdc-steakhouse"),
+          freshParent("usdc-circle", 1, "protocol-redeem", {
+            nowSec: Math.floor(Date.now() / 1000),
+          }),
+        ],
+        { stats },
+      ).then((result) => {
+        settled = true;
+        return result;
+      });
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      expect(stats.timedOut).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      expect((await run).size).toBe(0);
+      expect(stats).toMatchObject({ timedOut: true, attemptedCount: 4, skippedBudget: 1 });
+      expect(stats.assetAttempts.filter((attempt) => attempt.state === "skipped")).toEqual([
+        expect.objectContaining({ skipReason: "budget", rejectionClass: "timeout" }),
+      ]);
+    } finally {
+      timeoutSpy.mockRestore();
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("continues to the next live candidate after a single candidate timeout", async () => {
@@ -1514,7 +1560,12 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("replays historical M0 extension prices from the tracked wM market series", async () => {
+  it.each([
+    ["usdk-kast", "KAST Dollar", "USDK"],
+    ["xo-exodus", "XO Cash", "XO"],
+    ["usdnr-nerona", "Nerona USD", "USDnr"],
+    ["m-m0", "M by M0", "M"],
+  ])("replays historical %s prices from the tracked wM market series", async (id, name, symbol) => {
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
       prices: [
         { timestamp: 1_776_000_000, price: 0.99971 },
@@ -1532,11 +1583,9 @@ describe("authoritative-price-sources", () => {
       },
     });
 
-    const usdkResult = await fetchAuthoritativeHistoricalPriceSeries(
+    const result = await fetchAuthoritativeHistoricalPriceSeries(
       {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
+        id, name, symbol,
         flags: {
           pegCurrency: "USD",
           backing: "rwa-backed",
@@ -1550,64 +1599,8 @@ describe("authoritative-price-sources", () => {
         candidateTimestamps: [1_776_000_000, 1_776_003_600],
       },
     );
-    const xoResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "xo-exodus",
-        name: "XO Cash",
-        symbol: "XO",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-    const usdnrResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "usdnr-nerona",
-        name: "Nerona USD",
-        symbol: "USDnr",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-    const mResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "m-m0",
-        name: "M by M0",
-        symbol: "M",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(4);
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      1,
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(1);
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "wm-m0",
         geckoId: "wrappedm-by-m0",
@@ -1618,67 +1611,7 @@ describe("authoritative-price-sources", () => {
         coingeckoApiKey: null,
       },
     );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      4,
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(mResult).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-    expect(usdkResult).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-    expect(xoResult).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-    expect(usdnrResult).toEqual({
+    expect(result).toEqual({
       matched: true,
       source: "protocol-redeem",
       prices: [

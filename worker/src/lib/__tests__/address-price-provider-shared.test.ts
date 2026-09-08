@@ -11,29 +11,12 @@ import {
   parseNonNegativeNumber,
   parsePositiveNumber,
 } from "../address-price-providers/shared";
-import type { AddressPriceTarget } from "../address-price-providers/types";
+import { makeTarget } from "./address-price-providers.test-support";
 
 vi.mock("../fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
 }));
 
-function target(id: string, address: string, providerChainId = "base"): AddressPriceTarget {
-  return {
-    stablecoinId: id,
-    symbol: id.toUpperCase(),
-    chain: providerChainId === "solana" ? "solana" : "base",
-    providerChainId,
-    address,
-    origin: "contracts",
-    previousSourceDepth: 1,
-    previousMissingGenerations: 0,
-    alertEligibleMissingPrice: false,
-    recentlyMissingPrice: false,
-    missingPrice: false,
-    expiresBeforeNextGeneration: false,
-    circulatingUsd: 1_000_000,
-  };
-}
 
 describe("address-price provider shared contracts", () => {
   beforeEach(() => {
@@ -57,9 +40,9 @@ describe("address-price provider shared contracts", () => {
   });
 
   it("groups live targets by CoinGecko network", () => {
-    const base = target("base", "0x01");
-    const solana = target("solana", "So111", "solana");
-    expect([...groupTargetsByProviderChain([base, solana, target("base-2", "0x02")])]).toEqual([
+    const base = makeTarget({ stablecoinId: "base", symbol: "BASE", address: "0x01" });
+    const solana = makeTarget({ stablecoinId: "solana", symbol: "SOLANA", address: "So111", chain: "solana", providerChainId: "solana" });
+    expect([...groupTargetsByProviderChain([base, solana, makeTarget({ stablecoinId: "base-2", symbol: "BASE-2", address: "0x02" })])]).toEqual([
       ["base", [base, expect.objectContaining({ stablecoinId: "base-2" })]],
       ["solana", [solana]],
     ]);
@@ -72,7 +55,7 @@ describe("address-price provider shared contracts", () => {
         status: 429,
         headers: { "Retry-After": "120" },
       }));
-    const fixtureTarget = target("fixture", "0x01");
+    const fixtureTarget = makeTarget({ stablecoinId: "fixture", symbol: "FIXTURE", address: "0x01" });
 
     const missing = await fetchProviderJson({
       provider: "coingecko-onchain-address",
@@ -122,8 +105,8 @@ describe("address-price provider shared contracts", () => {
   });
 
   it("tracks resolved, failed, and cap-skipped live targets", () => {
-    const resolved = target("resolved", "0x01");
-    const skipped = target("skipped", "0x02");
+    const resolved = makeTarget({ stablecoinId: "resolved", symbol: "RESOLVED", address: "0x01" });
+    const skipped = makeTarget({ stablecoinId: "skipped", symbol: "SKIPPED", address: "0x02" });
     const runner = createAddressProviderRunner({
       provider: "coingecko-onchain-address",
       label: "CoinGecko onchain",
@@ -181,7 +164,7 @@ describe("address-price provider shared contracts", () => {
   });
 
   it("marks unresolved attempts failed or rejected from provider diagnostics", () => {
-    const fixtureTarget = target("fixture", "0x01");
+    const fixtureTarget = makeTarget({ stablecoinId: "fixture", symbol: "FIXTURE", address: "0x01" });
     const runner = createAddressProviderRunner({
       provider: "coingecko-onchain-address",
       label: "CoinGecko onchain",

@@ -6,6 +6,9 @@ import {
 import {
   closeOpenLeaseDatabases,
   makeLeaseDb,
+  makeLeaseRow,
+  makeProgressRow,
+  makeRunningSlot,
   setSlotUpdatedAt,
 } from "./cron-leases.test-support";
 
@@ -17,6 +20,7 @@ describe("runScheduledSlotWithFence", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     closeOpenLeaseDatabases();
   });
 
@@ -82,17 +86,7 @@ describe("runScheduledSlotWithFence", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "halfHourlyOffset",
-          slot_started_at: now - 60,
-          state: "running",
-          result_status: null,
-          execution_owner: "owner-a",
-          started_at: now - 60,
-          finished_at: null,
-          updated_at: now - 10,
-          metadata: null,
-        },
+        makeRunningSlot("halfHourlyOffset", now - 60, "owner-a", now - 10),
       ],
     });
 
@@ -109,17 +103,7 @@ describe("runScheduledSlotWithFence", () => {
     const slotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "halfHourlyOffset",
-          slot_started_at: slotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "owner-a",
-          started_at: slotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("halfHourlyOffset", slotStartedAt, "owner-a", now - 1800),
       ],
     });
     const fn = vi.fn(async () => ({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 }));
@@ -172,23 +156,10 @@ describe("runScheduledSlotWithFence", () => {
         },
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now - 60,
-          heartbeat_at: now - 1800,
-          updated_at: now - 1800,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-a", now - 60, now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: slotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-a",
-          slot_started_at: slotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", slotStartedAt, slotStartedAt + 20, now - 1800, "publication"),
       ],
     });
     const fn = vi.fn(async () => ({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 }));
@@ -250,36 +221,13 @@ describe("runScheduledSlotWithFence", () => {
     const slotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: slotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: slotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", slotStartedAt, "slot-owner-a", now - 1800),
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now - 60,
-          heartbeat_at: now - 1800,
-          updated_at: now - 1800,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-a", now - 60, now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: slotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-a",
-          slot_started_at: slotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", slotStartedAt, slotStartedAt + 20, now - 1800, "publication"),
       ],
       beforeSlotTakeover: (sqlite) => {
         setSlotUpdatedAt(sqlite, "hourlyYieldSync", slotStartedAt, now);
@@ -323,23 +271,10 @@ describe("runScheduledSlotWithFence", () => {
         },
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now - 60,
-          heartbeat_at: now - 1800,
-          updated_at: now - 1800,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-a", now - 60, now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: slotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-a",
-          slot_started_at: slotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", slotStartedAt, slotStartedAt + 20, now - 1800, "publication"),
       ],
       beforeSlotReconciliationClaim: (sqlite) => {
         setSlotUpdatedAt(sqlite, "hourlyYieldSync", slotStartedAt, now);
@@ -360,51 +295,31 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("uses a five-minute default scheduled-slot stale window", async () => {
+  it("takes over a slot with a heartbeat 301 seconds old", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const sixMinutesAgo = now - 10 * 60;
+    const slotStartedAt = now - 360;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "fourHourlyReserveSync",
-          slot_started_at: sixMinutesAgo,
-          state: "running",
-          result_status: null,
-          execution_owner: "owner-a",
-          started_at: sixMinutesAgo,
-          finished_at: null,
-          updated_at: sixMinutesAgo,
-          metadata: null,
-        },
+        makeRunningSlot("fourHourlyReserveSync", slotStartedAt, "owner-a", now - 301),
       ],
     });
     const fn = vi.fn(async () => undefined);
 
     const result = await runScheduledSlotWithFence(db, "fourHourlyReserveSync", fn, {
-      slotStartedAt: sixMinutesAgo,
+      slotStartedAt,
       owner: "owner-b",
     });
 
-    expect(result.status).not.toBe("skipped_running");
-    expect(fn).toHaveBeenCalled();
+    expect(result.status).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps a freshly heartbeating slot exclusive under the default stale window", async () => {
+  it("keeps a slot with a heartbeat 299 seconds old exclusive", async () => {
     const now = Math.floor(Date.now() / 1000);
     const slotStartedAt = now - 6 * 60;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "fourHourlyReserveSync",
-          slot_started_at: slotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "owner-a",
-          started_at: slotStartedAt,
-          finished_at: null,
-          updated_at: now - 60,
-          metadata: null,
-        },
+        makeRunningSlot("fourHourlyReserveSync", slotStartedAt, "owner-a", now - 299),
       ],
     });
     const fn = vi.fn(async () => undefined);
@@ -423,17 +338,7 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 1_000;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 30,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "owner-a", now - 30),
       ],
     });
 
@@ -452,17 +357,7 @@ describe("runScheduledSlotWithFence", () => {
     const currentSlotStartedAt = now;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "halfHourlyOffset",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("halfHourlyOffset", staleSlotStartedAt, "owner-a", now - 1800),
       ],
     });
     const fn = vi.fn(async () => undefined);
@@ -493,42 +388,32 @@ describe("runScheduledSlotWithFence", () => {
     const currentSlotStartedAt = now;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now - 60,
-          heartbeat_at: now - 1800,
-          updated_at: now - 1800,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-a", now - 60, now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "evaluation",
-          lease_owner: "yield-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "evaluation"),
       ],
     });
 
     const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: currentSlotStartedAt, staleAfterSec: 1200 });
 
-    expect(summary.slotsReconciled).toBe(1);
+    expect(summary).toMatchObject({
+      candidateSlots: 1, slotsReconciled: 1, syntheticCronRuns: 1,
+      progressRowsCleared: 1, leasesCleared: 1,
+    });
+    expect(summary.abandonedSlots).toEqual([
+      expect.objectContaining({
+        slotKey: "hourlyYieldSync", slotStartedAt: staleSlotStartedAt,
+        abandonedJobs: [
+          expect.objectContaining({
+            job: "sync-yield-data", progressStage: "evaluation", leaseOwner: "yield-owner-a",
+          }),
+        ],
+      }),
+    ]);
     expect(db.getRuns()).toEqual([
       expect.objectContaining({
         job: "sync-yield-data",
@@ -641,17 +526,7 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
     });
 
@@ -685,27 +560,10 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 5,
-          updated_at: now - 1790,
-          stage: "started",
-          lease_owner: null,
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", null, staleSlotStartedAt, staleSlotStartedAt + 5, now - 1790, "started"),
       ],
     });
 
@@ -736,78 +594,6 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("sweeps stale slot progress across schedule keys before the next same slot runs", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const staleSlotStartedAt = now - 3600;
-    const db = makeLeaseDb({
-      slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
-      ],
-      leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now - 60,
-          heartbeat_at: now - 1800,
-          updated_at: now - 1800,
-        },
-      ],
-      progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
-      ],
-    });
-
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
-
-    expect(summary).toMatchObject({
-      candidateSlots: 1,
-      slotsReconciled: 1,
-      syntheticCronRuns: 1,
-      progressRowsCleared: 1,
-      leasesCleared: 1,
-    });
-    expect(summary.abandonedSlots).toEqual([
-      expect.objectContaining({
-        slotKey: "hourlyYieldSync",
-        slotStartedAt: staleSlotStartedAt,
-        abandonedJobs: [
-          expect.objectContaining({
-            job: "sync-yield-data",
-            progressStage: "publication",
-            leaseOwner: "yield-owner-a",
-          }),
-        ],
-      }),
-    ]);
-    expect(db.getRuns()).toEqual([
-      expect.objectContaining({
-        job: "sync-yield-data",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-      }),
-    ]);
-    expect(db.getProgress("sync-yield-data")).toBeUndefined();
-    expect(db.getLease("sync-yield-data")).toBeUndefined();
-    expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)?.result_status).toBe("error");
-    expect(db.getCache("cron:event:hourlyyieldsync:scheduled-slot-abandoned")).toBeDefined();
-  });
 
   // Regression guard: `finishStaleScheduledSlotExecution`'s survivor check is scoped to the
   // slot's own child jobs. `slot_started_at` is an aligned wall-clock timestamp shared across
@@ -818,36 +604,13 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "quarterHourly",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("quarterHourly", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       leases: [
-        {
-          job: "daily-digest",
-          lease_owner: "digest-owner-a",
-          lease_until: now - 60,
-          heartbeat_at: now - 1800,
-          updated_at: now - 1800,
-        },
+        makeLeaseRow("daily-digest", "digest-owner-a", now - 60, now - 1800),
       ],
       progress: [
-        {
-          job: "daily-digest",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "digest-trigger-poll",
-          lease_owner: "digest-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("daily-digest", "digest-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "digest-trigger-poll"),
       ],
     });
 
@@ -880,27 +643,10 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const missingLeaseDb = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "publication"),
       ],
     });
 
@@ -939,36 +685,13 @@ describe("runScheduledSlotWithFence", () => {
 
     const newerLeaseDb = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-new",
-          lease_until: now + 300,
-          heartbeat_at: now - 60,
-          updated_at: now - 60,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-new", now + 300, now - 60),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-old",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-old", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "publication"),
       ],
     });
 
@@ -995,27 +718,10 @@ describe("runScheduledSlotWithFence", () => {
 
     const fenceLostDb = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 1800,
-          stage: "publication",
-          lease_owner: "yield-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "publication"),
       ],
       beforeOrphanedProgressDelete: (sqlite) => {
         sqlite
@@ -1045,36 +751,13 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now + 300,
-          heartbeat_at: now - 60,
-          updated_at: now - 60,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-a", now + 300, now - 60),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 60,
-          stage: "evaluation",
-          lease_owner: "yield-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 60, "evaluation"),
       ],
     });
 
@@ -1093,36 +776,13 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        {
-          slot_key: "hourlyYieldSync",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          result_status: null,
-          execution_owner: "slot-owner-a",
-          started_at: staleSlotStartedAt,
-          finished_at: null,
-          updated_at: now - 1800,
-          metadata: null,
-        },
+        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
       ],
       leases: [
-        {
-          job: "sync-yield-data",
-          lease_owner: "yield-owner-a",
-          lease_until: now + 300,
-          heartbeat_at: now - 400,
-          updated_at: now - 400,
-        },
+        makeLeaseRow("sync-yield-data", "yield-owner-a", now + 300, now - 400),
       ],
       progress: [
-        {
-          job: "sync-yield-data",
-          started_at: staleSlotStartedAt + 20,
-          updated_at: now - 400,
-          stage: "evaluation",
-          lease_owner: "yield-owner-a",
-          slot_started_at: staleSlotStartedAt,
-        },
+        makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 400, "evaluation"),
       ],
     });
 

@@ -1,6 +1,61 @@
 import type { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
+
+export function makeRenewalDb(outcomes: Array<number | Error>) {
+  const remaining = [...outcomes];
+  const observations = { renewals: 0, releases: 0 };
+  const db = makeNoopD1({
+    prepare: (sql: string) => ({
+      bind: () => ({
+        run: async () => {
+          let changes: number;
+          if (sql.includes("INSERT INTO cron_leases")) {
+            changes = 1;
+          } else if (sql.includes("UPDATE cron_leases")) {
+            observations.renewals++;
+            const outcome = remaining.shift();
+            if (outcome === undefined) throw new Error("Unexpected extra lease renewal");
+            if (outcome instanceof Error) throw outcome;
+            changes = outcome;
+          } else if (sql.includes("DELETE FROM cron_leases")) {
+            observations.releases++;
+            changes = 1;
+          } else {
+            throw new Error(`Unexpected lease SQL: ${sql}`);
+          }
+          return { success: true, meta: { changes } };
+        },
+      }),
+    }),
+  });
+  return { db, observations };
+}
+
+export function makeRunningSlot(
+  slotKey: string, slotStartedAt: number, owner: string, updatedAt: number,
+  overrides: Partial<SlotExecutionRow> = {},
+): SlotExecutionRow {
+  return {
+    slot_key: slotKey, slot_started_at: slotStartedAt, state: "running", result_status: null,
+    execution_owner: owner, started_at: slotStartedAt, finished_at: null,
+    updated_at: updatedAt, metadata: null, ...overrides,
+  };
+}
+
+export function makeLeaseRow(job: string, owner: string, until: number, heartbeatAt: number): LeaseRow {
+  return { job, lease_owner: owner, lease_until: until, heartbeat_at: heartbeatAt, updated_at: heartbeatAt };
+}
+
+export function makeProgressRow(
+  job: string, owner: string | null, slotStartedAt: number, startedAt: number, updatedAt: number, stage: string,
+): ProgressRow {
+  return {
+    job, lease_owner: owner, slot_started_at: slotStartedAt,
+    started_at: startedAt, updated_at: updatedAt, stage,
+  };
+}
 
 type LeaseRow = {
   job: string;

@@ -9,7 +9,8 @@ import {
 } from "../auth";
 
 vi.mock("@shared/lib/cloudflare-access-jwt", () => ({
-  verifyAccessJwt: vi.fn().mockResolvedValue(true),
+  verifyAccessJwt: vi.fn(async ({ token, aud, teamDomain }) =>
+    token === "valid-jwt" && aud === "test-aud" && teamDomain === "pharos-watch"),
 }));
 
 const TEST_ENV = {
@@ -64,6 +65,13 @@ describe("auth helpers", () => {
     });
     const result = await hasValidAdminCredential(request, false, TEST_ENV);
     expect(result).toBe(true);
+  });
+
+  it("rejects a configured ops request when JWT verification fails", async () => {
+    const request = new Request("https://ops-api.pharos.watch/api/status", {
+      headers: { "Cf-Access-Jwt-Assertion": "invalid-jwt" },
+    });
+    expect(await hasValidAdminCredential(request, false, TEST_ENV)).toBe(false);
   });
 
   it("rejects Access-authenticated Worker preview requests on admin routes", async () => {

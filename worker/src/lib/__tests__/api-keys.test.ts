@@ -24,7 +24,7 @@ import {
   updateApiKey,
 } from "../api-keys";
 import { authenticateApiKeyFromFreshCache } from "../api-key-auth";
-import { getApiKeyRuntimeState, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
+import { getApiKeyRuntimeState, getCachedApiKeyByPrefix, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
 
 describe("api key helpers", () => {
   beforeEach(() => {
@@ -232,6 +232,18 @@ describe("api key helpers", () => {
     await expect((invalidTier as Response).json()).resolves.toEqual({
       error: "tier must be one of: standard, self-serve, donor",
     });
+  });
+
+  it.each(["9".repeat(400), Infinity, "Infinity"])("rejects nonfinite expiry %s before database access", async (expiresAt) => {
+    const body = { name: "Invalid expiry", expiresAt };
+    const normalized = normalizeCreateInput(body);
+    expect(normalized).toBeInstanceOf(Response);
+    expect((normalized as Response).status).toBe(400);
+    const db = mockD1([], { requireMatch: true });
+    const created = await createApiKey(db, "pepper", body, 222);
+    expect(created).toBeInstanceOf(Response);
+    expect((created as Response).status).toBe(400);
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("preserves explicit null expiry as a non-expiring exception", async () => {
@@ -882,6 +894,8 @@ describe("api key helpers", () => {
   });
 
   it("caps the isolate-local API key auth cache", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
     const secretHash = await hmacSha256Hex("pepper", "abcdefghijklmnopqrstuvwxyzABCDEF");
     const db = mockD1([
       {
@@ -895,19 +909,39 @@ describe("api key helpers", () => {
       },
     ], { requireMatch: true });
 
-    for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES + 5; i++) {
-      await lookupApiKeyByPrefix(db, i.toString(16).padStart(16, "0"));
+    const state = getApiKeyRuntimeState();
+    const row = makeApiKeyRow({ secret_hash: secretHash });
+    for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES - 1; i++) {
+      state.apiKeyCache.set(`seed-${i}`, { row, freshUntilMs: Date.now() + API_KEY_AUTH_CACHE_TTL_MS });
     }
+    for (let i = 0; i < 3; i++) await lookupApiKeyByPrefix(db, `new-${i}`);
+    expect(state.apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
+    expect(getCachedApiKeyByPrefix("seed-0")).toBeNull();
+    expect(getCachedApiKeyByPrefix("new-2")?.name).toBe("Cached");
+  });
 
-    expect(getApiKeyRuntimeState().apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
+  it("expires cached authentication exactly at its TTL", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const db = mockD1([{ match: "FROM api_keys", rows: [makeApiKeyRow({ name: "TTL key" })] }]);
+    await lookupApiKeyByPrefix(db, "ttl");
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS - 1);
+    expect(getCachedApiKeyByPrefix("ttl")?.name).toBe("TTL key");
+    vi.advanceTimersByTime(1);
+    expect(getCachedApiKeyByPrefix("ttl")).toBeNull();
   });
 
   it("caps isolate-local fallback rate-limit buckets", () => {
-    for (let i = 0; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + 5; i++) {
-      expect(checkIsolateLocalApiKeyRateLimit(i + 1, 120, 600)).toBeNull();
+    const state = getApiKeyRuntimeState();
+    for (let i = 1; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES; i++) {
+      state.apiKeyFallbackRateLimitById.set(i, { bucketStart: 600, count: 1 });
     }
-
-    expect(getApiKeyRuntimeState().apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    for (let i = 0; i < 3; i++) {
+      expect(checkIsolateLocalApiKeyRateLimit(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + i, 1, 600)).toBeNull();
+    }
+    expect(state.apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    expect(state.apiKeyFallbackRateLimitById.has(1)).toBe(false);
+    expect(checkIsolateLocalApiKeyRateLimit(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + 2, 1, 600)?.status).toBe(429);
   });
 
   it("caps isolate-local last-used throttling state", async () => {
@@ -919,7 +953,11 @@ describe("api key helpers", () => {
       },
     ], { requireMatch: true });
 
-    for (let i = 0; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 5; i++) {
+    const state = getApiKeyRuntimeState();
+    for (let i = 1; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i++) {
+      state.apiKeyLastUsageUpdateById.set(i, 1_000);
+    }
+    for (let i = API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3; i++) {
       await recordApiKeyUsage(
         db,
         {
@@ -939,6 +977,8 @@ describe("api key helpers", () => {
     }
 
     expect(getApiKeyRuntimeState().apiKeyLastUsageUpdateById.size).toBe(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
+    expect(state.apiKeyLastUsageUpdateById.has(1)).toBe(false);
+    expect(state.apiKeyLastUsageUpdateById.has(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3)).toBe(true);
   });
 
   it("records an audit log entry when creating a key", async () => {

@@ -13,6 +13,9 @@ import {
   resetCircuitBreakerStateForTests,
 } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
+import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 function makeRecord(overrides: Partial<CircuitRecord> = {}): CircuitRecord {
   return {
@@ -67,6 +70,8 @@ describe("circuit-breaker", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+    fixtures.closeAll();
   });
 
   describe("mapCronStatusToCircuitOutcome", () => {
@@ -175,6 +180,59 @@ describe("circuit-breaker", () => {
 
       expect(countCircuitRecordReads(db, "reset-source")).toBe(2);
     });
+
+    it("refreshes backing state exactly when the memo expires", async () => {
+      const { db, sqlite } = fixtures.open();
+      expect(await getCircuitRecord(db, "expiry")).toEqual(makeRecord());
+      const changed = makeRecord({ state: "open", consecutiveFailures: 3 });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("circuit:expiry", JSON.stringify(changed), 100);
+      vi.advanceTimersByTime(4_999);
+      expect(await getCircuitRecord(db, "expiry")).toEqual(makeRecord());
+      vi.advanceTimersByTime(1);
+      expect(await getCircuitRecord(db, "expiry")).toEqual(changed);
+    });
+
+    it("does not let a pre-write deferred read repopulate stale memo state", async () => {
+      const { db } = fixtures.open();
+      await getCircuitRecord(db, "racing");
+      // Outcome captures the current memo before a separate expired read begins.
+      const write = recordOutcome(db, "racing", false);
+      vi.advanceTimersByTime(5_000);
+      const originalPrepare = db.prepare.bind(db);
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        const statement = originalPrepare(sql);
+        if (!sql.startsWith("SELECT value, updated_at")) return statement;
+        const bind = statement.bind.bind(statement);
+        statement.bind = (...args: unknown[]) => {
+          const bound = bind(...args);
+          const first = bound.first.bind(bound);
+          bound.first = (async () => {
+            const old = await first();
+            await gate;
+            return old;
+          }) as typeof bound.first;
+          return bound;
+        };
+        return statement;
+      });
+      const oldRead = getCircuitRecord(db, "racing");
+      const outcome = await write;
+      release();
+      expect(await oldRead).toEqual(makeRecord());
+      expect(await getCircuitRecord(db, "racing")).toEqual(outcome.after);
+      expect(outcome.after.consecutiveFailures).toBe(1);
+    });
+
+    it("isolates memo records for the same source in different databases", async () => {
+      const first = fixtures.open();
+      const second = fixtures.open();
+      await recordOutcome(first.db, "shared-source", false);
+      expect((await getCircuitRecord(first.db, "shared-source")).consecutiveFailures).toBe(1);
+      expect(await getCircuitRecord(second.db, "shared-source")).toEqual(makeRecord());
+    });
   });
 
   // --- shouldAttemptFetch ---
@@ -232,10 +290,13 @@ describe("circuit-breaker", () => {
   describe("recordOutcome — success", () => {
     it("resets consecutiveFailures to 0", async () => {
       const stored = makeRecord({ state: "closed", consecutiveFailures: 2 });
-      const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", true);
-      // Verify by reading back (the mock doesn't persist writes, but no error means success)
-      expect(true).toBe(true);
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("circuit:src", JSON.stringify(stored), 100);
+      const expected = makeRecord({ lastSuccessAt: Math.floor(Date.now() / 1000) });
+      expect(await recordOutcome(db, "src", true)).toEqual({ before: stored, after: expected });
+      const row = sqlite.prepare("SELECT value FROM cache WHERE key = 'circuit:src'").get();
+      expect(JSON.parse(String(row?.value))).toEqual(expected);
     });
 
     it("transitions half-open → closed", async () => {
@@ -296,13 +357,6 @@ describe("circuit-breaker", () => {
   // --- recordOutcome — failure ---
 
   describe("recordOutcome — failure", () => {
-    it("increments consecutiveFailures", async () => {
-      const stored = makeRecord({ state: "closed", consecutiveFailures: 1 });
-      const db = mockDbWithCircuit("src", stored);
-      // After calling recordOutcome(false), consecutiveFailures should be 2
-      // We can verify the function doesn't throw
-      await recordOutcome(db, "src", false);
-    });
 
     it("opens circuit at threshold (3 failures)", async () => {
       const stored = makeRecord({ state: "closed", consecutiveFailures: 2 });

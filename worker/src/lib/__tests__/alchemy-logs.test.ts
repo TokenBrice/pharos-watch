@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import {
   buildAlchemyUrl,
   getAlchemyBlockNumber,
@@ -8,7 +9,7 @@ import {
 } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 let fetchMock: ReturnType<typeof mockFetch>;
 
@@ -26,39 +27,29 @@ function makeLog(txHash: string, blockNumber = 0x176f050) {
   };
 }
 
+const timestampDatabases: DatabaseSync[] = [];
+afterEach(() => {
+  for (const sqlite of timestampDatabases.splice(0)) sqlite.close();
+});
+
 function makeDbForTimestampCache(
   opts: {
-    cachedRows?: Array<{ block_number: number; timestamp: number }>;
-    onBatchWrite?: (count: number) => void;
+    cachedRows?: Array<{ block_number: number; timestamp: number; chain_id?: string; updated_at?: number }>;
     onCacheReadBindCount?: (count: number) => void;
   } = {},
 ): D1Database {
-  return makeNoopD1({
-    prepare: (sql: string) => ({
-      bind: (..._args: unknown[]) => {
-        if (sql.includes("FROM block_timestamp_cache")) {
-          opts.onCacheReadBindCount?.(_args.length);
-        }
-        return {
-          all: async <T>() => ({
-            results: (sql.includes("FROM block_timestamp_cache") ? (opts.cachedRows ?? []) : []) as T[],
-            success: true,
-            meta: {},
-          }),
-          first: async <T>() => null as T | null,
-          run: async () => ({ success: true, meta: { changes: 1 } }),
-        };
-      },
-      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: async <T>() => null as T | null,
-      run: async () => ({ success: true, meta: { changes: 1 } }),
-    }),
-    batch: async (stmts: unknown[]) => {
-      opts.onBatchWrite?.(stmts.length);
-      return [] as unknown[];
-    },
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
+  const sqlite = new DatabaseSync(":memory:");
+  timestampDatabases.push(sqlite);
+  sqlite.exec(`CREATE TABLE block_timestamp_cache (
+    chain_id TEXT NOT NULL, block_number INTEGER NOT NULL, timestamp INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL, PRIMARY KEY (chain_id, block_number)
+  )`);
+  const insert = sqlite.prepare("INSERT INTO block_timestamp_cache VALUES (?, ?, ?, ?)");
+  for (const row of opts.cachedRows ?? []) {
+    insert.run(row.chain_id ?? "ethereum", row.block_number, row.timestamp, row.updated_at ?? Math.floor(Date.now() / 1000));
+  }
+  return createSqliteD1(sqlite, {
+    onAll: (sql) => opts.onCacheReadBindCount?.((sql.match(/\?/g) ?? []).length),
   });
 }
 
@@ -591,18 +582,28 @@ describe("resolveBlockTimestamps", () => {
     expect(budget.count).toBe(0);
   });
 
+  it("excludes other chains and expired persistent timestamps", async () => {
+    const db = makeDbForTimestampCache({
+      cachedRows: [
+        { block_number: 100, timestamp: 1700000100 },
+        { block_number: 100, timestamp: 999, chain_id: "base" },
+        { block_number: 101, timestamp: 1700000101, updated_at: 1 },
+        { block_number: 102, timestamp: 1700000102 },
+      ],
+    });
+    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [100, 101], createBudget(0), {
+      persistentCache: { db, chainId: "ethereum" },
+    });
+    expect([...result]).toEqual([[100, 1700000100]]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("writes fetched timestamps into persistent cache", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify([{ jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } }]), { status: 200 }),
     );
 
-    let batchWrites = 0;
-    const db = makeDbForTimestampCache({
-      cachedRows: [],
-      onBatchWrite: (count) => {
-        batchWrites += count;
-      },
-    });
+    const db = makeDbForTimestampCache();
 
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], budget, {
@@ -610,7 +611,11 @@ describe("resolveBlockTimestamps", () => {
     });
 
     expect(result.get(0x176f050)).toBe(0x6651a2c0);
-    expect(batchWrites).toBeGreaterThan(0);
+    const cached = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], createBudget(0), {
+      persistentCache: { db, chainId: "ethereum" },
+    });
+    expect([...cached]).toEqual([[0x176f050, 0x6651a2c0]]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns partial map when budget exhausted mid-batch", async () => {
@@ -651,7 +656,7 @@ describe("resolveBlockTimestamps", () => {
       persistentCache: { db, chainId: "ethereum" },
     });
 
-    expect(result.size).toBe(blocks.length);
+    expect([...result]).toEqual(blocks.map((block) => [block, 1700000000 + block]));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(cacheReadQueries).toBeGreaterThan(1);
     expect(maxBindCount).toBeLessThanOrEqual(100);
