@@ -258,6 +258,37 @@ describe("projectYieldRankingsSummary", () => {
     expect(detailed.rankings[0].altSources).toHaveLength(3);
   });
 
+  it.each([
+    ["fallback-usd", false, true],
+    ["native", true, true],
+    ["native", false, undefined],
+  ] as const)("serializes benchmark fallback for %s with explicit flag %s", (mode, flag, expected) => {
+    const detailed = makeDetailedResponse(1);
+    detailed.rankings[0].benchmarkSelectionMode = mode;
+    detailed.rankings[0].benchmarkIsFallback = flag;
+    const wire = JSON.parse(JSON.stringify(projectYieldRankingsSummary(detailed)));
+    if (expected === undefined) {
+      expect(wire.rankings[0]).not.toHaveProperty("benchmarkIsFallback");
+    } else {
+      expect(wire.rankings[0].benchmarkIsFallback).toBe(true);
+    }
+  });
+
+  it.each([null, undefined])("preserves sparse metadata without invention: %s", (metadata) => {
+    const detailed = makeDetailedResponse(1);
+    detailed.rankings[0].provenance = metadata;
+    detailed.rankings[0].sourceRisk = metadata;
+    const summary = projectYieldRankingsSummary(detailed);
+    expect(summary.rankings[0].provenance).toBe(metadata);
+    expect(summary.rankings[0].sourceRisk).toBe(metadata);
+    const wire = JSON.parse(JSON.stringify(summary));
+    expect(YieldRankingsSummaryResponseSchema.safeParse(wire).success).toBe(true);
+    for (const field of ["provenance", "sourceRisk"]) {
+      if (metadata === undefined) expect(wire.rankings[0]).not.toHaveProperty(field);
+      else expect(wire.rankings[0][field]).toBeNull();
+    }
+  });
+
   // The projection copies fields off the summary schemas' own `.shape` keys rather
   // than restating them. These frozen lists pin the emitted wire shape AND its key
   // order, so a schema reorder or an accidentally added/removed field is visible

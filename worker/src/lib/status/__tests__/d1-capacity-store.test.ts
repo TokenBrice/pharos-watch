@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   D1_CAPACITY_CACHE_KEY,
   loadCachedD1CapacityAssessment,
@@ -7,61 +7,36 @@ import {
 } from "../d1-capacity-store";
 
 const NOW = 1_783_661_028;
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 describe("D1 capacity observation store", () => {
-  it("records an hourly observation, prunes retention, and publishes the assessment cache", async () => {
-    const db = mockD1([
-      { match: "INSERT INTO d1_capacity_observations", rows: [] },
-      { match: "DELETE FROM d1_capacity_observations", rows: [] },
-      {
-        match: "SELECT observed_at, database_size_bytes",
-        rows: [
-          { observed_at: NOW - 23 * 3600, database_size_bytes: 3_977_000_000 },
-          { observed_at: NOW - 12 * 3600, database_size_bytes: 3_988_000_000 },
-          { observed_at: NOW, database_size_bytes: 4_000_000_000 },
-        ],
-      },
-      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
-    ], { requireMatch: true });
-
+  it("replaces hourly observations, fences older samples and prunes only expired history", async () => {
+    const { db, sqlite } = fixtures.open();
+    const cutoff = NOW - 180 * 86400;
+    const insert = sqlite.prepare("INSERT INTO d1_capacity_observations (observed_hour, observed_at, database_size_bytes, maximum_size_bytes, created_at) VALUES (?, ?, ?, ?, ?)");
+    for (const [at, size] of [[cutoff - 1, 1_000_000_000], [cutoff, 1_000_000_000], [NOW - 23 * 3600, 3_977_000_000], [NOW - 12 * 3600, 3_988_000_000]] as const) {
+      insert.run(at, at, size, 10_000_000_000, at);
+    }
     const assessment = await refreshD1CapacityAssessment(db, 4_000_000_000, NOW);
-
-    expect(assessment.utilizationPercent).toBe(40);
-    expect(assessment.forecastBasis).toBe("linear-window");
-    expect(assessment.conservativeWindow).toBe("24h");
-    expect(assessment.growthBytesPerDay).toBe(24_000_000);
-    expect(db.getHistory().some((entry) => entry.binds[0] === D1_CAPACITY_CACHE_KEY)).toBe(true);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+    expect(assessment).toMatchObject({ utilizationPercent: 40, forecastBasis: "linear-window", conservativeWindow: "24h", growthBytesPerDay: 24_000_000 });
+    expect(sqlite.prepare("SELECT observed_at FROM d1_capacity_observations ORDER BY observed_at").all()).toEqual(
+      [cutoff, NOW - 23 * 3600, NOW - 12 * 3600, NOW].map((observed_at) => ({ observed_at })),
+    );
+    await refreshD1CapacityAssessment(db, 4_001_000_000, NOW + 1);
+    await refreshD1CapacityAssessment(db, 1, NOW);
+    expect(sqlite.prepare("SELECT observed_at, database_size_bytes FROM d1_capacity_observations WHERE observed_hour = ?").get(Math.floor(NOW / 3600) * 3600)).toEqual({ observed_at: NOW + 1, database_size_bytes: 4_001_000_000 });
+    await expect(loadCachedD1CapacityAssessment(db, NOW + 1)).resolves.toMatchObject({ observedAt: NOW + 1, databaseSizeBytes: 4_001_000_000 });
   });
 
-  it("loads only fresh, structurally valid cache envelopes", async () => {
-    const assessment = {
-      observedAt: NOW,
-      databaseSizeBytes: 6_000_000_000,
-      maximumSizeBytes: 10_000_000_000,
-      utilizationRatio: 0.6,
-      utilizationPercent: 60,
-      thresholdState: "watch",
-      crossedThresholdPercent: 60,
-      nextThresholdPercent: 75,
-      sampleCount: 3,
-      forecastBasis: "linear-30d",
-      forecastSpanHours: 48,
-      growthBytesPerDay: 100_000_000,
-      nextThresholdAt: NOW + 15 * 86_400,
-      exhaustionAt: NOW + 40 * 86_400,
-      daysUntilExhaustion: 40,
-    };
-    const db = mockD1([{
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: [D1_CAPACITY_CACHE_KEY],
-      rows: [{
-        key: D1_CAPACITY_CACHE_KEY,
-        value: JSON.stringify({ version: 1, assessment }),
-        updated_at: NOW,
-      }],
-    }], { requireMatch: true });
-
-    await expect(loadCachedD1CapacityAssessment(db, NOW + 60)).resolves.toEqual(assessment);
+  it("accepts the exact freshness boundary and rejects expired or invalid envelopes", async () => {
+    const { db, sqlite } = fixtures.open();
+    const assessment = await refreshD1CapacityAssessment(db, 6_000_000_000, NOW);
+    await expect(loadCachedD1CapacityAssessment(db, NOW + 60, 60)).resolves.toEqual(assessment);
+    await expect(loadCachedD1CapacityAssessment(db, NOW + 61, 60)).resolves.toBeNull();
+    for (const value of ["{", JSON.stringify({ version: 2, assessment }), JSON.stringify({ version: 1, assessment: { ...assessment, databaseSizeBytes: "invalid" } })]) {
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(value, D1_CAPACITY_CACHE_KEY);
+      await expect(loadCachedD1CapacityAssessment(db, NOW, 60)).resolves.toBeNull();
+    }
   });
 });

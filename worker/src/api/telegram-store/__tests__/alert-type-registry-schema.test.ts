@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import {
   TELEGRAM_ALERT_FAMILIES,
   TELEGRAM_ALERT_PERSISTENCE,
   TELEGRAM_ALERT_TYPE_BY_SETTING_CODE,
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 /**
  * The alert-type registry's column names are load-bearing D1 identifiers: the
@@ -15,15 +15,13 @@ import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sq
  * is checked against the migrated schema here.
  */
 
+const { sqlite } = createLatestSchemaSqlite();
+afterAll(() => sqlite.close());
+
 function tableColumns(table: string): Set<string> {
-  const { sqlite } = createLatestSchemaSqlite();
-  try {
-    return new Set(
-      sqlite.prepare(`SELECT name FROM pragma_table_info(?)`).all(table).map((row) => String(row.name)),
-    );
-  } finally {
-    sqlite.close();
-  }
+  return new Set(
+    sqlite.prepare(`SELECT name FROM pragma_table_info(?)`).all(table).map((row) => String(row.name)),
+  );
 }
 
 describe("telegram alert-type persistence registry", () => {

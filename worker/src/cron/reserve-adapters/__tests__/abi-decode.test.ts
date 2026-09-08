@@ -62,10 +62,13 @@ describe("decodeStrictAddressWord", () => {
     expect(decodeStrictAddressWord(dirty)).toBeNull();
   });
 
-  it("lowercases the decoded address and rejects non-word input", () => {
-    expect(decodeStrictAddressWord(`0x${addressWord(STRATEGY_A.toUpperCase())}`)).toBe(
-      STRATEGY_A,
+  it("lowercases alphabetic address digits", () => {
+    expect(decodeStrictAddressWord(`0x${addressWord("0xaBcDeF1234567890aBCdEf1234567890AbCdEf12")}`)).toBe(
+      "0xabcdef1234567890abcdef1234567890abcdef12",
     );
+  });
+
+  it("rejects non-word input", () => {
     expect(decodeStrictAddressWord(`0x${"00".repeat(31)}`)).toBeNull();
     expect(decodeStrictAddressWord(null)).toBeNull();
   });

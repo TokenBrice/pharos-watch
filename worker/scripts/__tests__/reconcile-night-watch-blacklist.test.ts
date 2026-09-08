@@ -1,8 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { DatabaseSync } from "node:sqlite";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import frozenManifestJson from "../data/night-watch-blacklist-manifest-2026-07-09.json";
 import {
   fetchTronPage,
@@ -19,7 +16,8 @@ const frozenManifest = frozenManifestJson as FrozenManifest;
 const bookmark = "00001d80-000109c2-000050a4-9f8ee3f29d2234f14494a399c6769f35";
 const nowMs = frozenManifest.cutoffInclusive + 15 * 60_000;
 const expectedApplyRunId = `${frozenManifest.manifestId}:apply:${Math.floor(nowMs / 1000)}`;
-const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../migrations");
+const databases = createLatestSchemaFixtureTracker();
+afterEach(() => databases.closeAll());
 
 describe("TronGrid retry policy", () => {
   it("uses the existing exponential fallback for malformed Retry-After", async () => {
@@ -238,14 +236,7 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(summary.runId).toBe(expectedApplyRunId);
     expect(JSON.stringify(summary)).not.toContain(bookmark);
 
-    const sqlite = new DatabaseSync(":memory:");
-    const migrationFiles = readdirSync(migrationsDir)
-      .filter((filename) => filename.endsWith(".sql"))
-      .filter((filename) => filename.startsWith("0000_") || Number(filename.slice(0, 4)) >= 72)
-      .sort();
-    for (const filename of migrationFiles) {
-      sqlite.exec(readFileSync(resolve(migrationsDir, filename), "utf8"));
-    }
+    const { sqlite } = databases.open();
     for (const statement of mutationStatements) sqlite.exec(statement);
     const finalStatements = executeStatements.mock.calls[1]?.[0] as string[];
     for (const statement of finalStatements) sqlite.exec(statement);
@@ -263,71 +254,37 @@ describe("Night Watch blacklist reconciliation", () => {
       reconciliation_manifest_id: null,
       reconciliation_run_id: expectedApplyRunId,
     });
-    sqlite.close();
   });
 
-  it("preserves a concurrently newer balance instead of overwriting it", async () => {
+  it.each(["amount_native", "observed_at", "last_attempted_at"] as const)(
+    "preserves a concurrent change to %s without overwriting it",
+    async (field) => {
     const { d1, executeStatements } = makeD1();
     await runNightWatchBlacklistReconciliation(options(true), dependencies(d1));
     const mutationStatements = executeStatements.mock.calls[0]?.[0] as string[];
     const balanceStatement = mutationStatements.find((sql) => sql.includes("INSERT INTO blacklist_current_balances"));
-    expect(balanceStatement).toContain(
-      "COALESCE(blacklist_current_balances.observed_at, 0) <= excluded.observed_at",
-    );
-    expect(balanceStatement).toContain(
-      "COALESCE(blacklist_current_balances.last_attempted_at, 0) <= excluded.last_attempted_at",
-    );
-    expect(balanceStatement).toContain("blacklist_current_balances.amount_native IS excluded.amount_native");
-
-    const sqlite = new DatabaseSync(":memory:");
-    try {
-      const migrationFiles = readdirSync(migrationsDir)
-        .filter((filename) => filename.endsWith(".sql"))
-        .filter((filename) => filename.startsWith("0000_") || Number(filename.slice(0, 4)) >= 72)
-        .sort();
-      for (const filename of migrationFiles) {
-        sqlite.exec(readFileSync(resolve(migrationsDir, filename), "utf8"));
-      }
+    const { sqlite } = databases.open();
       sqlite.exec(balanceStatement!);
       const inserted = sqlite
         .prepare("SELECT id, observed_at, last_attempted_at FROM blacklist_current_balances LIMIT 1")
         .get() as { id: string; observed_at: number; last_attempted_at: number };
-      sqlite
-        .prepare(
-          `UPDATE blacklist_current_balances
-              SET amount_native = 999,
-                  amount_usd = 999
-            WHERE id = ?`,
-        )
-        .run(inserted.id);
-
+      sqlite.prepare(`UPDATE blacklist_current_balances SET ${field} = ${field} + 1 WHERE id = ?`).run(inserted.id);
+      const before = sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(inserted.id);
       sqlite.exec(balanceStatement!);
-
-      const preserved = sqlite
-        .prepare(
-          `SELECT amount_native, observed_at, last_attempted_at
-             FROM blacklist_current_balances
-            WHERE id = ?`,
-        )
-        .get(inserted.id);
-      expect(preserved).toEqual({
-        amount_native: 999,
-        observed_at: inserted.observed_at,
-        last_attempted_at: inserted.last_attempted_at,
-      });
-    } finally {
-      sqlite.close();
-    }
+      expect(sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(inserted.id)).toEqual(before);
   });
 
-  it("marks reconciliation failed when a concurrent balance prevents exact replay parity", async () => {
+  it.each([
+    ["amount_native", 999], ["amount_usd", 999], ["source", "wrong-source"],
+    ["contract_address", "wrong-contract"], ["config_key", "wrong-config"],
+  ])("rejects independently corrupted %s replay parity", async (field, value) => {
     const fixture = makeD1();
     const originalQuery = fixture.d1.query;
     fixture.d1.query = (<T>(sql: string): T[] => {
       const rows = originalQuery<T>(sql);
       if (sql.includes("FROM blacklist_current_balances") && fixture.executeStatements.mock.calls.length > 0) {
         const balances = rows as Array<Record<string, unknown>>;
-        if (balances[0]) balances[0].amount_native = 999;
+        if (balances[0]) balances[0][field] = value;
       }
       return rows;
     }) as RemoteD1Client["query"];
@@ -340,46 +297,6 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(summary.samples.balanceMismatches).not.toEqual([]);
   });
 
-  it("requires exact amount USD and source for balance replay parity", async () => {
-    const fixture = makeD1();
-    const originalQuery = fixture.d1.query;
-    fixture.d1.query = (<T>(sql: string): T[] => {
-      const rows = originalQuery<T>(sql);
-      if (sql.includes("FROM blacklist_current_balances") && fixture.executeStatements.mock.calls.length > 0) {
-        const balances = rows as Array<Record<string, unknown>>;
-        if (balances[0]) {
-          balances[0].amount_usd = 999;
-          balances[0].source = "destroy_event";
-        }
-      }
-      return rows;
-    }) as RemoteD1Client["query"];
-
-    const summary = await runNightWatchBlacklistReconciliation(options(true), dependencies(fixture.d1));
-
-    expect(summary.status).toBe("failed");
-    expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
-    expect(summary.samples.balanceMismatches).not.toEqual([]);
-  });
-
-  it("requires exact contract and config identity for balance replay parity", async () => {
-    const fixture = makeD1();
-    const originalQuery = fixture.d1.query;
-    fixture.d1.query = (<T>(sql: string): T[] => {
-      const rows = originalQuery<T>(sql);
-      if (sql.includes("FROM blacklist_current_balances") && fixture.executeStatements.mock.calls.length > 0) {
-        const balances = rows as Array<Record<string, unknown>>;
-        if (balances[0]) balances[0].contract_address = "wrong-contract";
-      }
-      return rows;
-    }) as RemoteD1Client["query"];
-
-    const summary = await runNightWatchBlacklistReconciliation(options(true), dependencies(fixture.d1));
-
-    expect(summary.status).toBe("failed");
-    expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
-    expect(summary.samples.balanceMismatches).not.toEqual([]);
-  });
 
   it("is idempotent when every frozen identity already exists", async () => {
     const { d1 } = makeD1(true);

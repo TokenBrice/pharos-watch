@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createDewsDb } from "./compute-dews.test-support";
+import { computeDEWS } from "../../lib/dews";
 
 // v5.95 contagion amplifier: exercise the real computeDEWS (not mocked) so the
 // two-pass scoring loop's amplifier wiring is end-to-end verified.
@@ -57,21 +58,6 @@ const MILD_STRESS: Omit<CoinFixture, "id" | "symbol" | "pegType"> = {
   tvl7dAgo: 95_000_000,
 };
 
-// Pushes score near (but below) the DANGER floor of 76, so contagion * PSI
-// amplification would cross 100 without the final clamp in computeDEWS.
-const NEAR_MAX_STRESS: Omit<CoinFixture, "id" | "symbol" | "pegType"> = {
-  circulating: 8_500_000_000,
-  circulatingPrevDay: 10_000_000_000,
-  circulatingPrevWeek: 10_300_000_000,
-  price: 0.92,
-  priceConfidence: "low",
-  weightedBalanceRatio: 0.45,
-  avgPoolStress: 70,
-  liquidityScoreNow: 50,
-  liquidityScore7dAgo: 80,
-  tvlNow: 20_000_000,
-  tvl7dAgo: 50_000_000,
-};
 
 function buildFixture(
   id: string,
@@ -114,13 +100,6 @@ vi.mock("@shared/lib/peg-rates", () => ({
   normalizePegType: vi.fn((pegType: string | undefined) => pegType),
 }));
 
-vi.mock("../../lib/db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...actual,
-    batchExecute: vi.fn(async () => {}),
-  };
-});
 
 // eslint-disable-next-line no-var
 var insertedSignals: Record<string, { score: number; band: string; signalsJson: string }> = {};
@@ -218,21 +197,17 @@ function makeDb(): D1Database {
       return null as T | null;
     };
 
-    const run = async () => ({ success: true, meta: { changes: 1 } });
+    const run = async () => {
+      if (sql.includes("pharos:dews:publication-row-insert")) {
+        const [stablecoinId, , score, band, signalsJson] = boundArgs as [string, number, number, string, string];
+        insertedSignals[stablecoinId] = { score, band, signalsJson };
+      }
+      return { success: true, meta: { changes: 1 } };
+    };
 
     return {
       bind: (...args: unknown[]) => {
         boundArgs = args;
-        if (sql.includes("pharos:dews:publication-row-insert")) {
-          const [stablecoinId, , score, band, signalsJson] = boundArgs as [
-            string,
-            number,
-            number,
-            string,
-            string,
-          ];
-          insertedSignals[stablecoinId] = { score, band, signalsJson };
-        }
         return { all, first, run };
       },
       all,
@@ -241,14 +216,7 @@ function makeDb(): D1Database {
     };
   };
 
-  return makeNoopD1({
-    prepare: (sql: string) => stmt(sql),
-    batch: async (statements: D1PreparedStatement[]) => Promise.all(
-      statements.map((statement) => statement.run()),
-    ),
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  });
+  return createDewsDb((sql) => stmt(sql));
 }
 
 interface CapturedResult {
@@ -271,6 +239,7 @@ function capturedResults(): Map<string, CapturedResult> {
 }
 
 describe("computeAndStoreDEWS v5.95 contagion amplifier", () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
@@ -334,20 +303,29 @@ describe("computeAndStoreDEWS v5.95 contagion amplifier", () => {
     expect(eurHealthy.amplifiers.contagion).toBe(1);
   });
 
-  it("final amplifier cap (PSI * contagion) cannot push the score past 100", async () => {
-    // Worst case: PSI=0 => 1.3x amplifier, same-peg-type DANGER => 1.15x
-    // contagion, total 1.495x. Even with a raw weighted sum near 100, the
-    // final score must clamp to <= 100.
-    psiScore = 0;
-    fixtures = [
-      buildFixture("hot-coin", "HOT", "peggedUSD", NEAR_MAX_STRESS),
-      buildFixture("anchor-danger", "ANC", "peggedUSD", HUGE_STRESS),
-    ];
+  it("clamps the real scorer to 100 when both amplifiers push its base score beyond 100", () => {
+    // Test the scorer's defensive clamp directly: orchestration deliberately
+    // excludes first-pass WARNING/DANGER coins from contagion amplification.
+    const hot = computeDEWS({
+      stablecoinId: "hot-coin", pegType: "peggedUSD", mcapUsd: 8_000_000_000,
+      circulatingCurrent: HUGE_STRESS.circulating,
+      circulatingPrevDay: HUGE_STRESS.circulatingPrevDay,
+      circulatingPrevWeek: HUGE_STRESS.circulatingPrevWeek,
+      weightedBalanceRatio: HUGE_STRESS.weightedBalanceRatio,
+      avgPoolStress: HUGE_STRESS.avgPoolStress, topPools: [],
+      liquidityScore: HUGE_STRESS.liquidityScoreNow,
+      liquidityScore7dAgo: HUGE_STRESS.liquidityScore7dAgo,
+      tvlCurrent: HUGE_STRESS.tvlNow, tvl7dAgo: HUGE_STRESS.tvl7dAgo,
+      price: HUGE_STRESS.price, priceConfidence: HUGE_STRESS.priceConfidence,
+      prevPriceConfidence: null, pegRef: 1, dexPriceUsd: null,
+      blacklistEvents24h: 0, blacklistEvents7d: 0, hasBlacklistTracking: false,
+      burnVolume24hUsd: null, mintVolume24hUsd: null, burnBaseline30dUsd: null,
+      flowDataAgeDays: 0, yieldWarnings: [], psiScore: 0, contagionAmplifier: 1.15,
+    })!;
 
-    await computeAndStoreDEWS(makeDb());
-    const hot = capturedResults().get("hot-coin")!;
-
-    expect(hot.score).toBeLessThanOrEqual(100);
-    expect(hot.score).toBeGreaterThanOrEqual(0);
+    expect(hot.amplifiers).toEqual({ psi: 1.3, contagion: 1.15 });
+    expect(hot.baseScore * hot.amplifiers.psi * hot.amplifiers.contagion).toBeGreaterThan(100);
+    expect(hot.insufficientEvidenceReason).toBeNull();
+    expect(hot.score).toBe(100);
   });
 });

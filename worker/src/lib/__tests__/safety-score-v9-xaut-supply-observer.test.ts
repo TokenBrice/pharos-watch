@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ChainRpcConfig } from "../chain-registry";
+import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
+import type { EvmMulticall3Call } from "../evm-rpc";
 import {
   buildXautTransparencySource,
   XAUT0_ADAPTER_ADDRESS,
@@ -53,28 +54,6 @@ function transparencyBody(input: {
   });
 }
 
-function uint256(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
-
-function addressWord(address: string): `0x${string}` {
-  return `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
-}
-
-function chainRpcs(): Map<string, ChainRpcConfig> {
-  return new Map([
-    [
-      "ethereum",
-      {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://ethereum.example",
-        explorerUrl: "https://etherscan.io",
-      },
-    ],
-  ]);
-}
 
 function observerDependencies() {
   const fetchEvmBlockHeader = vi.fn().mockResolvedValue({
@@ -82,38 +61,26 @@ function observerDependencies() {
     timestamp: BLOCK_TIME_SEC,
     hash: BLOCK_HASH,
   });
-  const fetchEvmMulticall3Aggregate3AtBlock = vi.fn().mockResolvedValue([
-    {
-      label: "canonical-total-supply",
-      success: true,
-      returnData: uint256(TOTAL_SUPPLY_RAW),
-    },
-    {
-      label: "canonical-decimals",
-      success: true,
-      returnData: uint256(6n),
-    },
-    {
-      label: "treasury-not-issued-balance",
-      success: true,
-      returnData: uint256(TREASURY_BALANCE_RAW),
-    },
-    {
-      label: "adapter-locked-supply",
-      success: true,
-      returnData: uint256(LOCKED_SUPPLY_RAW),
-    },
-    {
-      label: "adapter-token",
-      success: true,
-      returnData: addressWord(XAUT_CANONICAL_TOKEN_ADDRESS),
-    },
-    {
-      label: "adapter-endpoint",
-      success: true,
-      returnData: addressWord(XAUT0_LAYERZERO_ENDPOINT_ADDRESS),
-    },
-  ]);
+  const fetchEvmMulticall3Aggregate3AtBlock = vi.fn(async (
+    chainId: string | undefined, calls: readonly EvmMulticall3Call[], block?: number | "latest",
+  ) => {
+    if (chainId !== "ethereum" || block !== BLOCK_NUMBER) throw new Error("Unexpected XAUT block");
+    const token = "0x68749665ff8d2d112fa859aa293f07a622782f38";
+    const adapter = "0xb9c2321bb7d0db468f570d10a424d1cc8efd696c";
+    const values: Record<string, `0x${string}`> = {
+      [`${token}:0x18160ddd`]: uint256(TOTAL_SUPPLY_RAW),
+      [`${token}:0x313ce567`]: uint256(6n),
+      [`${token}:0x70a082310000000000000000000000005754284f345afc66a98fbb0a0afe71e0f007b949`]: uint256(TREASURY_BALANCE_RAW),
+      [`${token}:0x70a08231000000000000000000000000b9c2321bb7d0db468f570d10a424d1cc8efd696c`]: uint256(LOCKED_SUPPLY_RAW),
+      [`${adapter}:0xfc0c546a`]: addressWord(token),
+      [`${adapter}:0x5e280f11`]: addressWord("0x1a44076050125825900e736c501f859c50fe728c"),
+    };
+    return calls.map((call) => {
+      const value = values[`${call.target.toLowerCase()}:${call.callData}`];
+      if (!value) throw new Error("Unexpected XAUT request");
+      return { label: call.label, success: true, returnData: value };
+    });
+  });
   const fetchEvmCodeAtBlock = vi.fn(
     async (_chainId: string | undefined, address: string) => {
       switch (address.toLowerCase()) {

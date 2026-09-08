@@ -8,6 +8,7 @@ import {
   monthKey,
 } from "../helpers";
 import type { CostLineItem, Donation } from "../schema";
+import { makeDonation } from "./funding.test-support";
 
 const COSTS: CostLineItem[] = [
   { label: "Ike", category: "team", usd_per_month: 1500 },
@@ -18,17 +19,13 @@ const COSTS: CostLineItem[] = [
   { label: "Domain", category: "infra", usd_per_month: 2.85 },
 ];
 
-const D = (ts: number, kind: Donation["kind"], usd: number, from = "0xa"): Donation => ({
-  chain: "ethereum",
+const D = (ts: number, kind: Donation["kind"], usd: number, from = "a"): Donation => makeDonation({
   tx_hash: `0x${ts}`,
   block_timestamp: ts,
-  from_address: from,
+  from_address: `0x${from.padStart(40, "0")}`,
   display: from,
   kind,
-  asset_symbol: "ETH",
-  amount_decimal: 0.1,
   usd_at_receipt: usd,
-  price_note: "coingecko-spot-test",
 });
 
 describe("computeCostsTotal", () => {
@@ -71,18 +68,18 @@ describe("summarizeDonations", () => {
 
   it("splits community from founder and counts distinct community donors", () => {
     const rows: Donation[] = [
-      D(apr, "community", 100, "0xa"),
-      D(apr, "community", 50, "0xb"),
-      D(apr, "founder", 1000, "0xf"),
-      D(mar, "community", 200, "0xa"),
-      D(feb, "pool", 25, "0xp"),
+      D(apr, "community", 100, "a"),
+      D(apr, "community", 50, "b"),
+      D(apr, "founder", 1000, "f"),
+      D(mar, "community", 200, "a"),
+      D(feb, "pool", 25, "d"),
     ];
     const s = summarizeDonations(rows, apr);
     expect(s.currentMonthCommunityUsd).toBe(150);
     expect(s.currentMonthFounderUsd).toBe(1000);
     expect(s.lifetimeCommunityUsd).toBe(375); // 100 + 50 + 200 + 25
     expect(s.lifetimeFounderUsd).toBe(1000);
-    // Distinct community senders across lifetime: 0xa, 0xb, 0xp
+    // Distinct community senders across lifetime: a, b, d.
     expect(s.lifetimeCommunityDonorCount).toBe(3);
   });
 
@@ -124,11 +121,11 @@ describe("computeMonthlyHistory", () => {
 
   it("aggregates community totals per month, excluding the current month and founders", () => {
     const rows: Donation[] = [
-      D(may, "community", 5, "0xa"),
-      D(apr, "community", 100, "0xa"),
-      D(apr, "community", 50, "0xb"),
-      D(apr, "founder", 999, "0xf"),
-      D(mar, "community", 25, "0xc"),
+      D(may, "community", 5, "a"),
+      D(apr, "community", 100, "a"),
+      D(apr, "community", 50, "b"),
+      D(apr, "founder", 999, "f"),
+      D(mar, "community", 25, "c"),
     ];
     const history = computeMonthlyHistory(rows, may);
     expect(history).toEqual([
@@ -138,7 +135,7 @@ describe("computeMonthlyHistory", () => {
   });
 
   it("returns empty when there is no prior-month data", () => {
-    const rows: Donation[] = [D(may, "community", 5, "0xa")];
+    const rows: Donation[] = [D(may, "community", 5, "a")];
     expect(computeMonthlyHistory(rows, may)).toEqual([]);
   });
 
@@ -146,7 +143,7 @@ describe("computeMonthlyHistory", () => {
     const rows: Donation[] = [];
     for (let i = 0; i < 14; i++) {
       const ts = Date.UTC(2025, i, 15) / 1000;
-      rows.push(D(ts, "community", 10, "0xa"));
+      rows.push(D(ts, "community", 10, "a"));
     }
     const history = computeMonthlyHistory(rows, Date.UTC(2026, 4, 1) / 1000, 6);
     expect(history).toHaveLength(6);

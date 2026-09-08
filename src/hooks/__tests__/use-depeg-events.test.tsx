@@ -19,49 +19,65 @@ vi.mock("@/lib/api", () => ({
 }));
 
 import { useActiveDepegEvents, useInfiniteDepegEvents } from "../use-depeg-events";
+import { latestInfiniteQueryOptions, makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
+import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
+
+/**
+ * Cursor pages as the depeg-events endpoint serves them: the terminal page
+ * carries no cursor and omits `pending`/`counts` once nothing is outstanding.
+ */
+interface DepegEventsPageFixtureData {
+  events: { id: number }[];
+  total: number;
+  totalExact: boolean;
+  nextCursor: string | null;
+  pending?: { stablecoinId: string }[];
+  counts?: { incidents: number; thresholdCrossings: number };
+}
+
+const FIRST_PAGE: CursorPageFixture<DepegEventsPageFixtureData> = {
+  data: {
+    events: [{ id: 1 }, { id: 2 }],
+    total: 3,
+    totalExact: false,
+    nextCursor: "cursor-2",
+    pending: [{ stablecoinId: "coin-a" }],
+    counts: { incidents: 3, thresholdCrossings: 5 },
+  },
+  meta: { status: "fresh" },
+};
+
+const TERMINAL_PAGE: CursorPageFixture<DepegEventsPageFixtureData> = {
+  data: {
+    events: [{ id: 3 }],
+    total: 3,
+    totalExact: false,
+    nextCursor: null,
+  },
+  meta: null,
+};
 
 describe("useInfiniteDepegEvents", () => {
-  it("flattens paged results and auto-loads remaining pages when requested", async () => {
+  it("auto-loads the outstanding cursor page exactly once and flattens the result", async () => {
     const fetchNextPage = vi.fn(async () => undefined);
-    useInfiniteQueryMock.mockReturnValue({
-      data: {
-        pages: [
-          {
-            data: {
-              events: [{ id: 1 }, { id: 2 }],
-              total: 3,
-              totalExact: false,
-              nextCursor: "cursor-2",
-              pending: [{ stablecoinId: "coin-a" }],
-              counts: { incidents: 3, thresholdCrossings: 5 },
-            },
-            meta: { status: "fresh" },
-          },
-          {
-            data: {
-              events: [{ id: 3 }],
-              total: 3,
-              totalExact: false,
-              nextCursor: null,
-            },
-            meta: null,
-          },
-        ],
-      },
-      error: null,
-      fetchNextPage,
-      hasNextPage: true,
-      isFetchingNextPage: false,
-      isLoading: false,
-      isError: false,
-    });
+    // First render: one page with an outstanding cursor. After the fetch, the query
+    // reports both pages and no further cursor — the only state real pagination reaches.
+    useInfiniteQueryMock.mockReturnValueOnce(
+      makeInfiniteQueryResult([FIRST_PAGE], { fetchNextPage, hasNextPage: true }),
+    );
+    useInfiniteQueryMock.mockReturnValue(
+      makeInfiniteQueryResult([FIRST_PAGE, TERMINAL_PAGE], { fetchNextPage }),
+    );
 
-    const { result } = renderHook(() => useInfiniteDepegEvents({
+    const { result, rerender } = renderHook(() => useInfiniteDepegEvents({
       stablecoinId: "usdc-circle",
       autoLoadAll: true,
     }));
 
     await waitFor(() => expect(fetchNextPage).toHaveBeenCalledOnce());
+    expect(result.current.isFullyLoaded).toBe(false);
+
+    rerender();
 
     expect(result.current.data).toEqual({
       events: [{ id: 1 }, { id: 2 }, { id: 3 }],
@@ -72,16 +88,14 @@ describe("useInfiniteDepegEvents", () => {
       counts: { incidents: 3, thresholdCrossings: 5 },
     });
     expect(result.current.loadedCount).toBe(3);
+    // An inexact total does not hold completion open once the cursor is exhausted.
     expect(result.current.isFullyLoaded).toBe(true);
     expect(result.current.meta).toEqual({ status: "fresh" });
+    // Traversal stops at exhaustion instead of re-firing on every render.
+    rerender();
+    expect(fetchNextPage).toHaveBeenCalledOnce();
 
-    const options = useInfiniteQueryMock.mock.calls[0][0] as {
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      getNextPageParam: (lastPage: { data: { nextCursor?: string | null } }) => string | undefined;
-      queryFn: ({ pageParam, signal }: { pageParam: string | null; signal?: AbortSignal }) => Promise<unknown>;
-    };
+    const options = latestInfiniteQueryOptions(useInfiniteQueryMock);
     expect(options.queryKey).toEqual([
       "depeg-events",
       "infinite",
@@ -90,9 +104,7 @@ describe("useInfiniteDepegEvents", () => {
     ]);
     expect(options.staleTime).toBe(15 * 60 * 1000);
     expect(options.refetchInterval).toBe(30 * 60 * 1000);
-    expect(options.getNextPageParam(
-      { data: { nextCursor: "cursor-3" } },
-    )).toBe("cursor-3");
+    expect(options.getNextPageParam({ data: { nextCursor: "cursor-3" } })).toBe("cursor-3");
 
     await options.queryFn({ pageParam: "cursor-2" });
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
@@ -102,28 +114,57 @@ describe("useInfiniteDepegEvents", () => {
     );
   });
 
-  it("keeps derived data references stable when query pages are unchanged", () => {
-    const pages = [
-      {
-        data: {
-          events: [{ id: 1 }],
-          total: 1,
-          totalExact: true,
-          nextCursor: null,
-          pending: [{ stablecoinId: "coin-a" }],
-        },
-        meta: { status: "fresh" },
-      },
-    ];
-    useInfiniteQueryMock.mockReturnValue({
-      data: { pages },
-      error: null,
-      fetchNextPage: vi.fn(),
-      hasNextPage: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-      isError: false,
+  it("holds an exact total open until every counted event is loaded", () => {
+    const exactPage = (events: { id: number }[]) => ({
+      data: { events, total: 3, totalExact: true, nextCursor: null, pending: [] },
+      meta: null,
     });
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([exactPage([{ id: 1 }, { id: 2 }])]));
+
+    const { result, rerender } = renderHook(() => useInfiniteDepegEvents());
+
+    // Cursor exhausted, but the exact total still promises a third event.
+    expect(result.current.loadedCount).toBe(2);
+    expect(result.current.isFullyLoaded).toBe(false);
+
+    useInfiniteQueryMock.mockReturnValue(
+      makeInfiniteQueryResult([exactPage([{ id: 1 }, { id: 2 }, { id: 3 }])]),
+    );
+    rerender();
+
+    expect(result.current.isFullyLoaded).toBe(true);
+  });
+
+  it("stays incomplete while a cursor remains even after the exact total is reached", () => {
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([{
+      data: {
+        events: [{ id: 1 }, { id: 2 }],
+        total: 2,
+        totalExact: true,
+        nextCursor: "cursor-2",
+        pending: [],
+      },
+      meta: null,
+    }]));
+
+    const { result } = renderHook(() => useInfiniteDepegEvents());
+
+    expect(result.current.loadedCount).toBe(2);
+    expect(result.current.isFullyLoaded).toBe(false);
+  });
+
+  it("keeps derived data references stable when query pages are unchanged", () => {
+    const page = {
+      data: {
+        events: [{ id: 1 }],
+        total: 1,
+        totalExact: true,
+        nextCursor: null,
+        pending: [{ stablecoinId: "coin-a" }],
+      },
+      meta: { status: "fresh" },
+    };
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([page]));
 
     const { result, rerender } = renderHook(() => useInfiniteDepegEvents());
     const firstData = result.current.data;
@@ -135,27 +176,15 @@ describe("useInfiniteDepegEvents", () => {
     expect(result.current.data).toBe(firstData);
     expect(result.current.data.events).toBe(firstEvents);
     expect(result.current.data.pending).toBe(firstPending);
-    expect(result.current.meta).toBe(pages[0].meta);
+    expect(result.current.meta).toBe(page.meta);
   });
 
   it("builds active-only cursor queries", async () => {
-    useInfiniteQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      fetchNextPage: vi.fn(),
-      hasNextPage: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-      isError: false,
-    });
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([]));
 
     renderHook(() => useActiveDepegEvents({ stablecoinId: "usdt-tether" }));
 
-    const latestCall = useInfiniteQueryMock.mock.calls[useInfiniteQueryMock.mock.calls.length - 1];
-    const options = latestCall?.[0] as {
-      queryKey: unknown[];
-      queryFn: ({ pageParam, signal }: { pageParam: string | null; signal?: AbortSignal }) => Promise<unknown>;
-    };
+    const options = latestInfiniteQueryOptions(useInfiniteQueryMock);
     expect(options.queryKey).toEqual([
       "depeg-events",
       "infinite",
@@ -172,23 +201,11 @@ describe("useInfiniteDepegEvents", () => {
   });
 
   it("requests pending incidents when enabled", async () => {
-    useInfiniteQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      fetchNextPage: vi.fn(),
-      hasNextPage: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-      isError: false,
-    });
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([]));
 
     renderHook(() => useInfiniteDepegEvents({ includePending: true }));
 
-    const latestCall = useInfiniteQueryMock.mock.calls[useInfiniteQueryMock.mock.calls.length - 1];
-    const options = latestCall?.[0] as {
-      queryKey: unknown[];
-      queryFn: ({ pageParam, signal }: { pageParam: string | null; signal?: AbortSignal }) => Promise<unknown>;
-    };
+    const options = latestInfiniteQueryOptions(useInfiniteQueryMock);
     expect(options.queryKey).toEqual([
       "depeg-events",
       "infinite",

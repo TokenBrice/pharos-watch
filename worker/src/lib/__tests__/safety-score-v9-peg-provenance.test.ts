@@ -1,5 +1,5 @@
 import { computePegScore } from "@shared/lib/peg-score";
-import type { DepegEvent, PegSummaryCoin } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/market";
 import { describe, expect, it } from "vitest";
 import {
   buildSafetyScoreV9PegProvenanceSummary,
@@ -7,70 +7,15 @@ import {
   projectSafetyScoreV9PegScoreResult,
   SafetyScoreV9PegProvenanceSummarySchema,
 } from "../safety-score-v9/peg-provenance";
+import { event, legacyEvents, pegSummary as buildPegSummary, replayProvenance as buildReplayProvenance } from "./safety-score-v9-peg-provenance.test-support";
 
 const DAY_SEC = 86_400;
 const CLOCK_SEC = 1_784_869_388;
 const TRACKING_START_SEC = 1_730_419_200;
 const ASSET_ID = "usdg-paxos";
 
-type EventOverrides = Partial<DepegEvent> & Pick<DepegEvent, "id" | "startedAt" | "peakDeviationBps">;
-
-function event(overrides: EventOverrides): DepegEvent {
-  const {
-    id,
-    startedAt,
-    peakDeviationBps,
-    direction: overrideDirection,
-    ...optionalOverrides
-  } = overrides;
-  const direction = peakDeviationBps > 0 ? "above" : "below";
-  const pegReference = optionalOverrides.pegReference ?? 1;
-  const startPrice =
-    optionalOverrides.startPrice ??
-    pegReference * (1 + peakDeviationBps / 10_000);
-  return {
-    id,
-    stablecoinId: ASSET_ID,
-    symbol: "USDG",
-    pegType: "peggedUSD",
-    direction: overrideDirection ?? direction,
-    peakDeviationBps,
-    startedAt,
-    endedAt: startedAt + 3_600,
-    startPrice,
-    peakPrice: startPrice,
-    recoveryPrice: pegReference,
-    pegReference,
-    source: "backfill",
-    constituentEventCount: 1,
-    confirmationSources: null,
-    pendingReason: null,
-    closeReason: null,
-    provenance: null,
-    ...optionalOverrides,
-  };
-}
-
-function replayProvenance(
-  confidenceTier: "high" | "medium" | "low",
-  providers: string[] = ["provider-a", "provider-b"],
-): NonNullable<DepegEvent["provenance"]> {
-  return {
-    sourceKind: "market",
-    replayRunId: "replay:1",
-    replayVersion: "depeg-backfill-v6.0",
-    sourcePriceProviders: providers,
-    quoteMode: "native-peg",
-    pegReferenceSource: "native-peg-history",
-    supplySource: "defillama-history",
-    confirmationPolicy: "two-point-36h-or-extreme",
-    confirmationPointCount: 2,
-    confidenceTier,
-    auditVerdict: "confirmed",
-    pegScoreEligible: true,
-    updatedAt: CLOCK_SEC - DAY_SEC,
-  };
-}
+const replayProvenance = (confidence: "high" | "medium" | "low", providers?: string[]) =>
+  buildReplayProvenance(CLOCK_SEC, confidence, providers);
 
 function auditProvenance(
   auditVerdict: "confirmed" | "disputed" | "false_positive" | "no_data" | "repaired",
@@ -93,33 +38,8 @@ function expectedFor(
   );
 }
 
-function pegSummary(events: readonly DepegEvent[]): PegSummaryCoin {
-  const result = computePegScore([...events], TRACKING_START_SEC, CLOCK_SEC);
-  return {
-    id: ASSET_ID,
-    symbol: "USDG",
-    name: "Global Dollar",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: 0,
-    pegScore: result.pegScore,
-    pegPct: result.pegPct,
-    severityScore: result.severityScore,
-    spreadPenalty: result.spreadPenalty,
-    eventCount: result.eventCount,
-    worstDeviationBps: result.worstDeviationBps,
-    activeDepeg: result.activeDepeg,
-    lastEventAt: result.lastEventAt,
-    trackingSpanDays: result.trackingSpanDays,
-    historyCoverage: {
-      startedAt: TRACKING_START_SEC,
-      source: "asset-age",
-      status: "assumed",
-    },
-    methodologyVersion: "6.098",
-  };
-}
+const pegSummary = (events: readonly DepegEvent[]) =>
+  buildPegSummary(events, CLOCK_SEC, TRACKING_START_SEC, "6.098");
 
 function build(
   events: readonly DepegEvent[],
@@ -143,26 +63,7 @@ function build(
   });
 }
 
-const USDG_LEGACY_ROWS = [
-  [26637, 153, 1731330362, 1731333917],
-  [26638, 121, 1731348371, 1731351959],
-  [26639, 165, 1731557457, 1731560995],
-  [26640, -403, 1731902932, 1731906479],
-  [26641, 538, 1732195745, 1732213901],
-  [26642, 499, 1732705785, 1732709445],
-  [26643, 434, 1734026615, 1734037416],
-  [26644, 102, 1734609836, 1734613431],
-  [26645, 6544, 1738195431, 1738199030],
-  [26646, 2961, 1738263698, 1738267293],
-  [26647, 480, 1738339433, 1738343312],
-  [26648, 435, 1738454574, 1738458185],
-  [26649, -680, 1740769483, 1740773147],
-] as const;
-
-const USDG_LEGACY_EVENTS = USDG_LEGACY_ROWS.map(
-  ([id, peakDeviationBps, startedAt, endedAt]) =>
-    event({ id, peakDeviationBps, startedAt, endedAt }),
-);
+const USDG_LEGACY_EVENTS = legacyEvents();
 
 describe("Safety Score V9 peg provenance", () => {
   it("keeps the USDG-shaped legacy-inclusive score unchanged and isolates the upper-bound diagnostic", () => {

@@ -61,7 +61,7 @@ describe("Yield publication quality-mix guard", () => {
       label: "major quality substitution",
       previous: directRankings(10),
       current: [...directRankings(5), ...modeledRankings(5)],
-      expectedMetadata: JSON.stringify({
+      expectedMetadata: {
         reason: "published-source-quality-mix-regression",
         qualityMixReasons: ["direct-curated-collapse", "fallback-modeled-substitution"],
         previousPublishedDirectCuratedCount: 10,
@@ -75,7 +75,7 @@ describe("Yield publication quality-mix guard", () => {
         previousPublishedRankingCount: 10,
         currentPublishedRankingCount: 10,
         publishedRankingCountDelta: 0,
-      }),
+      },
     },
     {
       label: "conservative quality floor",
@@ -95,7 +95,7 @@ describe("Yield publication quality-mix guard", () => {
       expect(guarded.result).toBeNull();
     } else {
       expect(guarded.result?.status).toBe("degraded");
-      expect(guarded.result?.metadata).toBe(expectedMetadata);
+      expect(JSON.parse(guarded.result?.metadata ?? "{}")).toEqual(expectedMetadata);
     }
   });
 
@@ -119,6 +119,54 @@ describe("Yield publication quality-mix guard", () => {
 });
 
 describe("Yield publication coverage guard snapshots", () => {
+  it.each([
+    { label: "opportunity-only collapse", yieldCount: 11, opportunityCount: 6, reason: "published-lending-opportunity-coverage-regression" },
+    { label: "yield precedence when both collapse", yieldCount: 6, opportunityCount: 6, reason: "published-yield-coverage-regression" },
+    { label: "rounded cohort threshold accepted", yieldCount: 7, opportunityCount: 7, reason: null },
+  ])("guards $label with total coverage preserved", async ({ yieldCount, opportunityCount, reason }) => {
+    const previous = [...directRankings(11, "yield"), ...directRankings(11, "opportunity")];
+    const current = [
+      ...directRankings(yieldCount, "yield"),
+      ...directRankings(opportunityCount, "opportunity"),
+      ...directRankings(22 - yieldCount - opportunityCount, "other"),
+    ];
+    const guarded = await guardPublishedYieldCoverage({
+      previousYieldPublicationSnapshot: previousSnapshot(previous),
+      previewRankingsPayload: { rankings: current },
+      yieldCoinIdSet: new Set(directRankings(11, "yield").map(({ id }) => id)),
+      opportunityCoinIdSet: new Set(directRankings(11, "opportunity").map(({ id }) => id)),
+    });
+    if (reason === null) {
+      expect(guarded.result).toBeNull();
+    } else {
+      expect(guarded.result?.status).toBe("degraded");
+      expect(JSON.parse(guarded.result?.metadata ?? "{}")).toMatchObject({
+        reason, previousPublishedRankingCount: 22, currentPublishedRankingCount: 22,
+        currentPublishedYieldBearingCount: yieldCount, currentPublishedOpportunityCount: opportunityCount,
+      });
+    }
+  });
+
+  it.each([4, 5])("requires the proportional substitution floor (increase %s)", async (increase) => {
+    const guarded = await guardPublishedYieldCoverage({
+      previousYieldPublicationSnapshot: previousSnapshot([...directRankings(25), ...modeledRankings(2)]),
+      previewRankingsPayload: { rankings: [
+        ...directRankings(14), ...modeledRankings(2 + increase), ...discoveredRankings(11 - increase),
+      ] },
+      yieldCoinIdSet: new Set(),
+      opportunityCoinIdSet: new Set(),
+    });
+    if (increase === 4) {
+      expect(guarded.result).toBeNull();
+    } else {
+      expect(guarded.result?.status).toBe("degraded");
+      expect(JSON.parse(guarded.result?.metadata ?? "{}")).toMatchObject({
+        reason: "published-source-quality-mix-regression", minimumFallbackModeledIncrease: 5,
+        publishedFallbackModeledCountDelta: 5, minimumDirectCuratedCount: 15,
+      });
+    }
+  });
+
   it.each([
     {
       label: "missing",
@@ -157,8 +205,7 @@ describe("Yield publication coverage guard snapshots", () => {
       current: directRankings(3, "current"),
       yieldCoinIdSet: new Set<string>(),
       opportunityCoinIdSet: new Set<string>(),
-      reason: "published-total-coverage-regression",
-      expectedMetadata: JSON.stringify({
+      expectedMetadata: {
         reason: "published-total-coverage-regression",
         previousPublishedYieldBearingCount: 0,
         currentPublishedYieldBearingCount: 0,
@@ -167,7 +214,7 @@ describe("Yield publication coverage guard snapshots", () => {
         previousPublishedRankingCount: 10,
         currentPublishedRankingCount: 3,
         publishedRankingCountDelta: -7,
-      }),
+      },
     },
     {
       label: "yield-bearing cohort regression",
@@ -175,8 +222,7 @@ describe("Yield publication coverage guard snapshots", () => {
       current: directRankings(5, "yield"),
       yieldCoinIdSet: new Set(directRankings(10, "yield").map((row) => row.id)),
       opportunityCoinIdSet: new Set<string>(),
-      reason: "published-yield-coverage-regression",
-      expectedMetadata: JSON.stringify({
+      expectedMetadata: {
         reason: "published-yield-coverage-regression",
         previousPublishedYieldBearingCount: 10,
         currentPublishedYieldBearingCount: 5,
@@ -185,9 +231,9 @@ describe("Yield publication coverage guard snapshots", () => {
         previousPublishedRankingCount: 10,
         currentPublishedRankingCount: 5,
         publishedRankingCountDelta: -5,
-      }),
+      },
     },
-  ])("keeps $label metadata stable", async ({ previous, current, yieldCoinIdSet, opportunityCoinIdSet, reason, expectedMetadata }) => {
+  ])("keeps $label metadata stable", async ({ previous, current, yieldCoinIdSet, opportunityCoinIdSet, expectedMetadata }) => {
     const guarded = await guardPublishedYieldCoverage({
       previousYieldPublicationSnapshot: previousSnapshot(previous),
       previewRankingsPayload: { rankings: current },
@@ -196,7 +242,6 @@ describe("Yield publication coverage guard snapshots", () => {
     });
 
     expect(guarded.result?.status).toBe("degraded");
-    expect(guarded.result?.metadata).toBe(expectedMetadata);
-    expect(JSON.parse(guarded.result?.metadata ?? "{}")).toMatchObject({ reason });
+    expect(JSON.parse(guarded.result?.metadata ?? "{}")).toEqual(expectedMetadata);
   });
 });

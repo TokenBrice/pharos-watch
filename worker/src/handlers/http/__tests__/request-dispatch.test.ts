@@ -271,6 +271,36 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.route).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])("enforces the fast limiter before serving authenticated cache hits (blocked=%s)", async (blocked) => {
+    const cached = new Response("cached");
+    const rejection = new Response("limited", { status: 429 });
+    mocks.evaluateCachedPublicApiReadFastGate.mockResolvedValue({
+      isAdmin: false, isSiteProxy: false,
+      apiKey: { id: 123, trafficClass: "external", rateLimitPerMinute: 120 },
+      requestLane: "public-api", response: null,
+    });
+    mocks.readEdgeCache.mockResolvedValue(cached);
+    mocks.checkCachedPublicApiReadFastRateLimit.mockReturnValue(blocked ? rejection : null);
+    mocks.addCorsHeaders.mockImplementation((response: Response) => {
+      response.headers.set("Access-Control-Allow-Origin", "https://pharos.watch");
+      return response;
+    });
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/stablecoins", { headers: { "X-API-Key": "cached-key" } }),
+      makeEnv(), makeCtx(),
+    );
+
+    expect(response.status).toBe(blocked ? 429 : 200);
+    await expect(response.text()).resolves.toBe(blocked ? "limited" : "cached");
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(mocks.checkCachedPublicApiReadFastRateLimit).toHaveBeenCalledOnce();
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    expect(mocks.addCorsHeaders).toHaveBeenCalledOnce();
+    expect(mocks.evaluateAccessGate).not.toHaveBeenCalled();
+    expect(mocks.route).not.toHaveBeenCalled();
+  });
+
   it("does not probe edge cache twice after a fast-gate cache miss", async () => {
     const routedResponse = new Response(JSON.stringify({ ok: true }), {
       status: 200,

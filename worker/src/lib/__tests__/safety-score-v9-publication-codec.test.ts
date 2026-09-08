@@ -1,6 +1,8 @@
+import { bytesToBase64 } from "@shared/lib/base64";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { createHash } from "node:crypto";
-import { gunzipSync, gzipSync } from "node:zlib";
+import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   makeWorkerSafetyScoreV9Publication,
@@ -13,7 +15,69 @@ import {
   serializeSafetyScoreV9Publication,
 } from "../safety-score-v9/publication-codec";
 
+async function authenticatedPayload(
+  publication: SafetyScoreV9CurrentResponse,
+  mutate: (payload: SafetyScoreV9CurrentResponse) => unknown,
+) {
+  const envelope = JSON.parse(await serializeSafetyScoreV9Publication(publication));
+  return authenticatedBytes(envelope, Buffer.from(stableJsonStringifyV1(mutate(structuredClone(publication)))));
+}
+
+function authenticatedBytes(envelope: Record<string, unknown>, payload: Buffer) {
+  const compressed = gzipSync(payload);
+  return stableJsonStringifyV1({
+    ...envelope,
+    payloadSha256: createHash("sha256").update(payload).digest("hex"),
+    uncompressedBytes: payload.byteLength,
+    compressedBytes: compressed.byteLength,
+    payload: bytesToBase64(new Uint8Array(compressed)),
+  });
+}
+
 describe("Safety Score V9 publication codec", () => {
+  it("rejects digest and valid identity tampering independently", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const stored = await serializeSafetyScoreV9Publication(publication);
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
+    const envelope = JSON.parse(stored);
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...envelope, payloadSha256: "f".repeat(64),
+    }))).rejects.toThrow(/checksum mismatch/);
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...envelope, identity: { ...envelope.identity, publicationGenerationId: "another-publication" },
+    }))).rejects.toThrow(/identity mismatch/);
+  });
+
+  it("rejects independent compressed and inflated length corruption", async () => {
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    for (const [changes, error] of [
+      [{ compressedBytes: envelope.compressedBytes + 1 }, /compressed byte length mismatch/],
+      [{ uncompressedBytes: envelope.uncompressedBytes + 1 }, /payload length mismatch/],
+      [{ uncompressedBytes: envelope.uncompressedBytes - 1 }, /exceeds its declared uncompressed byte length/],
+    ] as const) {
+      await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, ...changes }))).rejects.toThrow(error);
+    }
+  });
+
+  it("enforces declared size limits at the exact boundary and one byte beyond", async () => {
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    for (const [field, limit, mismatch, exceeded] of [
+      ["compressedBytes", 1_350_000, /compressed byte length mismatch/, /exceeds 1350000 compressed bytes/],
+      ["uncompressedBytes", 8_000_000, /payload length mismatch/, /exceeds 8000000 uncompressed bytes/],
+    ] as const) {
+      await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit }))).rejects.toThrow(mismatch);
+      await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit + 1 }))).rejects.toThrow(exceeded);
+    }
+    await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_000))).rejects.toThrow(/Malformed.*JSON/);
+    await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_001))).rejects.toThrow(/exceeds 1900000 stored bytes/);
+  });
+
+  it("rejects invalid UTF-8 with authenticated transport metadata", async () => {
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    const stored = authenticatedBytes(envelope, Buffer.from([0xc3, 0x28]));
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/not valid UTF-8/);
+  });
+
   it("round-trips the canonical compressed publication", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await serializeSafetyScoreV9Publication(publication);
@@ -30,16 +94,9 @@ describe("Safety Score V9 publication codec", () => {
 
   it("rejects invalid evidence inside a compressed publication with a valid payload digest", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
-    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(publication));
-    publication.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
-    const payload = stableJsonStringifyV1(publication);
-    const compressed = gzipSync(Buffer.from(payload));
-    const stored = stableJsonStringifyV1({
-      ...envelope,
-      payloadSha256: createHash("sha256").update(payload).digest("hex"),
-      uncompressedBytes: Buffer.byteLength(payload),
-      compressedBytes: compressed.byteLength,
-      payload: Buffer.from(compressed).toString("base64"),
+    const stored = await authenticatedPayload(publication, (payload) => {
+      payload.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
+      return payload;
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/totalFactCount/);
@@ -47,27 +104,10 @@ describe("Safety Score V9 publication codec", () => {
 
   it("reads the last V5 publication emitted before stressStateDigest retired", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
-    const envelope = JSON.parse(
-      await serializeSafetyScoreV9Publication(publication),
-    ) as Record<string, unknown>;
-    const priorPayload = JSON.parse(
-      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
-    ) as typeof publication;
-    const legacyPayload = stableJsonStringifyV1({
-      ...priorPayload,
-      cards: priorPayload.cards.map((card) => ({
-        ...card,
-        stressStateDigest: "a".repeat(64),
-      })),
-    });
-    const compressed = gzipSync(Buffer.from(legacyPayload));
-    const stored = stableJsonStringifyV1({
-      ...envelope,
-      payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
-      uncompressedBytes: Buffer.byteLength(legacyPayload),
-      compressedBytes: compressed.byteLength,
-      payload: Buffer.from(compressed).toString("base64"),
-    });
+    const stored = await authenticatedPayload(publication, (payload) => ({
+      ...payload,
+      cards: payload.cards.map((card) => ({ ...card, stressStateDigest: "a".repeat(64) })),
+    }));
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
       publication,
@@ -103,22 +143,10 @@ describe("Safety Score V9 publication codec", () => {
         }),
       ],
     });
-    const envelope = JSON.parse(
-      await serializeSafetyScoreV9Publication(publication),
-    ) as Record<string, unknown>;
-    const legacyPublication = JSON.parse(
-      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
-    ) as typeof publication;
-    legacyPublication.cards[0]!.caps = [cap];
-    legacyPublication.cards[0]!.bindingCap = cap;
-    const legacyPayload = stableJsonStringifyV1(legacyPublication);
-    const compressed = gzipSync(Buffer.from(legacyPayload));
-    const stored = stableJsonStringifyV1({
-      ...envelope,
-      payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
-      uncompressedBytes: Buffer.byteLength(legacyPayload),
-      compressedBytes: compressed.byteLength,
-      payload: Buffer.from(compressed).toString("base64"),
+    const stored = await authenticatedPayload(publication, (payload) => {
+      payload.cards[0]!.caps = [cap];
+      payload.cards[0]!.bindingCap = cap;
+      return payload;
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
@@ -130,12 +158,7 @@ describe("Safety Score V9 publication codec", () => {
     const publication = makeWorkerSafetyScoreV9Publication({
       policyVersion: "9.18",
     });
-    const envelope = JSON.parse(
-      await serializeSafetyScoreV9Publication(publication),
-    ) as Record<string, unknown>;
-    const legacyPublication = JSON.parse(
-      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
-    ) as typeof publication;
+    const legacyPublication = structuredClone(publication);
     for (const card of legacyPublication.cards) {
       delete (card.scoreTrace.evidenceResponsibility as { facts?: unknown }).facts;
       card.scoreTrace.evidenceResponsibility.summaries =
@@ -143,15 +166,7 @@ describe("Safety Score V9 publication codec", () => {
           (summary) => summary.responsibility !== "published-evidence-expired",
         );
     }
-    const legacyPayload = stableJsonStringifyV1(legacyPublication);
-    const compressed = gzipSync(Buffer.from(legacyPayload));
-    const stored = stableJsonStringifyV1({
-      ...envelope,
-      payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
-      uncompressedBytes: Buffer.byteLength(legacyPayload),
-      compressedBytes: compressed.byteLength,
-      payload: Buffer.from(compressed).toString("base64"),
-    });
+    const stored = await authenticatedPayload(publication, () => legacyPublication);
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
       legacyPublication,
@@ -179,12 +194,7 @@ describe("Safety Score V9 publication codec", () => {
     const publication = makeWorkerSafetyScoreV9Publication({
       policyVersion: "9.35",
     });
-    const envelope = JSON.parse(
-      await serializeSafetyScoreV9Publication(publication),
-    ) as Record<string, unknown>;
-    const storedPublication = JSON.parse(
-      Buffer.from(gunzipSync(Buffer.from(String(envelope.payload), "base64"))).toString("utf8"),
-    ) as typeof publication;
+    const storedPublication = structuredClone(publication);
     for (const card of storedPublication.cards) {
       card.scoreTrace.evidenceResponsibility.summaries =
         card.scoreTrace.evidenceResponsibility.summaries.filter(
@@ -197,15 +207,7 @@ describe("Safety Score V9 publication codec", () => {
         );
     }
     expect(storedPublication.cards[0]!.scoreTrace.evidenceResponsibility.facts).toBeDefined();
-    const payload = stableJsonStringifyV1(storedPublication);
-    const compressed = gzipSync(Buffer.from(payload));
-    const stored = stableJsonStringifyV1({
-      ...envelope,
-      payloadSha256: createHash("sha256").update(payload).digest("hex"),
-      uncompressedBytes: Buffer.byteLength(payload),
-      compressedBytes: compressed.byteLength,
-      payload: Buffer.from(compressed).toString("base64"),
-    });
+    const stored = await authenticatedPayload(publication, () => storedPublication);
 
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
       storedPublication,
@@ -270,7 +272,8 @@ describe("Safety Score V9 publication codec", () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     // Uncompressed payload with reordered keys is valid JSON but not the
     // canonical serialization the store authenticates.
-    const reordered = JSON.stringify(JSON.parse(stableJsonStringifyV1(publication)), Object.keys(publication).reverse());
+    const reordered = JSON.stringify(Object.fromEntries(Object.entries(publication).reverse()));
+    expect(JSON.parse(reordered)).toEqual(publication);
     await expect(parseSafetyScoreV9Publication(reordered)).rejects.toThrow(/not canonical/);
   });
 

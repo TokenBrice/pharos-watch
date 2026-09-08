@@ -23,6 +23,8 @@ import {
   type CronProgressUpdate,
 } from "./sync-yield-data.test-support";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
+import type * as YieldHelpers from "../yield-helpers";
 
 function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
   return fixtureMockD1([
@@ -52,20 +54,7 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
-              pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 5.2,
-              apyBase: 5.2,
-              apyReward: null,
-              apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
           ],
         },
       },
@@ -158,20 +147,7 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
-              pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 5.2,
-              apyBase: 5.2,
-              apyReward: null,
-              apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
           ],
         },
       },
@@ -231,27 +207,15 @@ describe("syncYieldData", () => {
 
   it("publishes evaluated warning signals into the yield rankings cache", async () => {
     const db = makePublicationCacheDb();
-    vi.mocked(fixtureYieldHelpersModule.detectWarningSignals).mockReturnValue(["yield-spike"]);
+    const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
+    vi.spyOn(fixtureYieldHelpersModule, "detectWarningSignals").mockImplementation(actual.detectWarningSignals);
 
     fixtureMockFetch([
       {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
-              pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 9,
-              apyBase: 9,
-              apyReward: null,
-              apyMean30d: 3,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 9, apyBase: 1, apyReward: 8, apyMean30d: 3 }),
           ],
         },
       },
@@ -263,7 +227,7 @@ describe("syncYieldData", () => {
     const parsed = getYieldRankingsCachePayload(db) as {
       rankings: Array<{ warningSignals: string[] }>;
     };
-    expect(parsed.rankings[0]?.warningSignals).toContain("yield-spike");
+    expect(parsed.rankings[0]?.warningSignals).toContain("reward-heavy");
   });
 
   it("continues when published-generation repair fails before history load", async () => {
@@ -278,20 +242,7 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
-              pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 5.2,
-              apyBase: 5.2,
-              apyReward: null,
-              apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
           ],
         },
       },
@@ -346,20 +297,7 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
-              pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 5.2,
-              apyBase: 5.2,
-              apyReward: null,
-              apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
           ],
         },
       },
@@ -390,20 +328,7 @@ describe("syncYieldData", () => {
         match: "yields.llama.fi",
         body: {
           data: [
-            {
-              pool: "pool-sdai-1",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 5.2,
-              apyBase: 5.2,
-              apyReward: null,
-              apyMean30d: 5.1,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
           ],
         },
       },
@@ -458,20 +383,7 @@ describe("syncYieldData", () => {
           match: "yields.llama.fi",
           body: {
             data: [
-              {
-                pool: "pool-sdai-1",
-                chain: "Ethereum",
-                project: "maker",
-                symbol: "sDAI",
-                tvlUsd: 1_000_000_000,
-                apy: 5.2,
-                apyBase: 5.2,
-                apyReward: null,
-                apyMean30d: 5.1,
-                stablecoin: true,
-                exposure: "single",
-                underlyingTokens: null,
-              },
+              makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
             ],
           },
         },
@@ -505,20 +417,7 @@ describe("syncYieldData", () => {
             source: "sync-dex-liquidity",
             poolCount: 1,
             data: [
-              {
-                pool: "pool-sdai-cached",
-                chain: "Ethereum",
-                project: "maker",
-                symbol: "sDAI",
-                tvlUsd: 900_000_000,
-                apy: 4.8,
-                apyBase: 4.8,
-                apyReward: null,
-                apyMean30d: 4.7,
-                stablecoin: true,
-                exposure: "single",
-                underlyingTokens: null,
-              },
+              makeDlYieldPool({ pool: "pool-sdai-cached", project: "maker", symbol: "sDAI", tvlUsd: 900_000_000, apy: 4.8, apyBase: 4.8, apyMean30d: 4.7 }),
             ],
           }, Math.floor(Date.now() / 1000)),
     });

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toFunctionSelector } from "viem/utils";
 import {
   fetchXdaiBridgeReserves,
   type XdaiBridgeParams,
@@ -147,6 +148,7 @@ function installRpcFixtures(options: {
   gnosis?: ReturnType<typeof gnosisResults>;
   ethereumBlock?: typeof ETHEREUM_BLOCK;
   gnosisBlock?: typeof GNOSIS_BLOCK;
+  convertedAssets?: bigint;
 } = {}) {
   const ethereumBlock = options.ethereumBlock ?? ETHEREUM_BLOCK;
   const gnosisBlock = options.gnosisBlock ?? GNOSIS_BLOCK;
@@ -155,13 +157,45 @@ function installRpcFixtures(options: {
   rpc.fetchEvmBlockHeaderAtTag.mockImplementation(blockHeader);
   rpc.fetchEvmCodeAtBlock.mockResolvedValue("0x6000");
   rpc.fetchEvmStorageAtBlock.mockResolvedValue(addressWord(ADDRESSES.home));
-  rpc.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (chain: string, calls: Array<{ label: string }>) => {
-    if (calls.some((entry) => entry.label === "susds-convertToAssets")) {
-      return [result("susds-convertToAssets", word(DEFAULTS.susdsAssets))];
-    }
-    return chain === "ethereum"
-      ? (options.ethereum ?? ethereumResults())
-      : (options.gnosis ?? gnosisResults());
+  const identities: Record<string, [string, string, string?]> = {
+    "foreign-daiToken": [ADDRESSES.foreign, "daiToken()"],
+    "foreign-sDaiToken": [ADDRESSES.foreign, "sDaiToken()"],
+    "foreign-erc20token": [ADDRESSES.foreign, "erc20token()"],
+    "foreign-interestEnabled": [ADDRESSES.foreign, "isInterestEnabled(address)", addressWord(ADDRESSES.usds)],
+    "foreign-investedAmount": [ADDRESSES.foreign, "investedAmount(address)", addressWord(ADDRESSES.usds)],
+    "foreign-bridgeMode": [ADDRESSES.foreign, "getBridgeMode()"],
+    "susds-asset": [ADDRESSES.susds, "asset()"],
+    "susds-maxWithdraw": [ADDRESSES.susds, "maxWithdraw(address)", addressWord(ADDRESSES.foreign)],
+    "susds-convertToAssets": [ADDRESSES.susds, "convertToAssets(uint256)", word(DEFAULTS.susdsShares)],
+    "home-blockReward": [ADDRESSES.home, "blockRewardContract()"],
+    "home-usdsDeposit": [ADDRESSES.home, "usdsDepositContract()"],
+    "home-bridgeMode": [ADDRESSES.home, "getBridgeMode()"],
+    mintedTotallyByBridge: [ADDRESSES.blockReward, "mintedTotallyByBridge(address)", addressWord(ADDRESSES.home)],
+    totalBurntCoins: [ADDRESSES.home, "totalBurntCoins()"],
+  };
+  for (const token of ["usds", "susds", "dai", "sdai"] as const) {
+    identities[`${token}-balance`] = [ADDRESSES[token], "balanceOf(address)", addressWord(ADDRESSES.foreign)];
+    identities[`${token}-decimals`] = [ADDRESSES[token], "decimals()"];
+  }
+  rpc.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (
+    chain: string, calls: Array<{ label: string; target: string; callData: string }>, block: number,
+  ) => {
+    const values = chain === "ethereum" ? (options.ethereum ?? ethereumResults()) : (options.gnosis ?? gnosisResults());
+    return calls.map((call) => {
+      const identity = identities[call.label];
+      const expectedChain = call.label.startsWith("home-") || ["mintedTotallyByBridge", "totalBurntCoins"].includes(call.label)
+        ? "gnosis" : "ethereum";
+      if (!identity || chain !== expectedChain || block !== (chain === "ethereum" ? ethereumBlock.number : gnosisBlock.number)
+        || call.target.toLowerCase() !== identity[0].toLowerCase()
+        || call.callData.toLowerCase() !== `${toFunctionSelector(identity[1])}${identity[2]?.slice(2) ?? ""}`) {
+        throw new Error(`Unexpected xDAI observation: ${chain}/${block}/${JSON.stringify(call)}`);
+      }
+      const value = call.label === "susds-convertToAssets"
+        ? result(call.label, word(options.convertedAssets ?? DEFAULTS.susdsAssets))
+        : values.find((entry) => entry.label === call.label);
+      if (!value) throw new Error(`Missing xDAI response: ${call.label}`);
+      return value;
+    });
   });
 }
 
@@ -188,8 +222,8 @@ describe("xdai-bridge adapter", () => {
       expect.objectContaining({ name: "Liquid USDS held by the Ethereum xDAI Foreign Bridge", coinId: "usds-sky", depType: "collateral" }),
     ]);
     expect(output.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(100);
-    expect(output.metadata).toMatchObject({ freshnessMode: "not-applicable", supplyUsd: expect.any(Number), totalReserveUsd: expect.any(Number) });
-    expect(output.metadata?.collateralizationRatio).toBeGreaterThan(1);
+    expect(output.metadata).toMatchObject({ freshnessMode: "not-applicable", supplyUsd: 64_623_307, totalReserveUsd: 65_036_450 });
+    expect(output.metadata?.collateralizationRatio).toBeCloseTo(65_036_450 / 64_623_307, 9);
     expect(output.metadata?.redemption).toBeUndefined();
     expect(output.metadata?.details).toMatchObject({ finalityTag: "finalized", crossChainTimestampSkewSec: 10 });
   });
@@ -215,10 +249,7 @@ describe("xdai-bridge adapter", () => {
   it("keeps the observed coverage ratio and degrades on a material shortfall", async () => {
     installRpcFixtures({
       ethereum: ethereumResults({ "usds-balance": word(0n) }),
-    });
-    rpc.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (chain: string, calls: Array<{ label: string }>) => {
-      if (calls.some((entry) => entry.label === "susds-convertToAssets")) return [result("susds-convertToAssets", word(60_000_000n * 10n ** 18n))];
-      return chain === "ethereum" ? ethereumResults({ "usds-balance": word(0n) }) : gnosisResults();
+      convertedAssets: 60_000_000n * 10n ** 18n,
     });
 
     const output = await fetchFixture();
@@ -241,6 +272,24 @@ describe("xdai-bridge adapter", () => {
     rpc.fetchEvmBlockHeaderAtTag.mockImplementation(skewedBlockHeader);
 
     await expect(fetchFixture()).rejects.toThrow("cross-chain finalized block timestamp skew 100s exceeds 60s");
+  });
+
+  it("reads balances at the historical block selected to align finalized anchors", async () => {
+    const aligned = { ...ETHEREUM_BLOCK, number: ETHEREUM_BLOCK.number - 1, timestamp: NOW_SEC - 200 };
+    const olderGnosis = { ...GNOSIS_BLOCK, timestamp: NOW_SEC - 200 };
+    installRpcFixtures({ ethereumBlock: aligned, gnosisBlock: olderGnosis });
+    rpc.fetchEvmBlockHeaderAtTag.mockImplementation(async (chain: string) => chain === "ethereum" ? ETHEREUM_BLOCK : olderGnosis);
+    const output = await fetchFixture();
+    expect(output.metadata?.details).toMatchObject({
+      ethereumBlock: { number: aligned.number }, crossChainTimestampSkewSec: 0,
+    });
+    expect(output.metadata?.totalReserveUsd).toBe(65_036_450);
+  });
+
+  it("rejects a closing block hash that changed during observation", async () => {
+    rpc.fetchEvmBlockHeader.mockImplementation(async (chain: string) =>
+      chain === "ethereum" ? { ...ETHEREUM_BLOCK, hash: GNOSIS_BLOCK.hash } : GNOSIS_BLOCK);
+    await expect(fetchFixture()).rejects.toThrow("ethereum finalized block changed during the read");
   });
 
   it("fails closed when legacy DAI/sDAI exposure becomes material", async () => {

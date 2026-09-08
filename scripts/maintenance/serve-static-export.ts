@@ -55,9 +55,17 @@ function isCompressibleContentType(contentType: string): boolean {
 }
 
 function pickAcceptedCompression(acceptEncoding = ""): "br" | "gzip" | null {
-  const accepted = acceptEncoding.toLowerCase();
-  if (accepted.includes("br")) return "br";
-  if (accepted.includes("gzip")) return "gzip";
+  const qualities = new Map<string, number>();
+  for (const entry of acceptEncoding.toLowerCase().split(",")) {
+    const [coding, ...parameters] = entry.trim().split(";");
+    const qualityParameter = parameters.map((parameter) => parameter.trim()).find((parameter) => parameter.startsWith("q="));
+    const quality = qualityParameter === undefined ? 1 : Number(qualityParameter.slice(2));
+    qualities.set(coding, Number.isFinite(quality) && quality >= 0 && quality <= 1 ? quality : 0);
+  }
+  const brotliQuality = qualities.get("br") ?? qualities.get("*") ?? 0;
+  const gzipQuality = qualities.get("gzip") ?? qualities.get("*") ?? 0;
+  if (brotliQuality > 0 && brotliQuality >= gzipQuality) return "br";
+  if (gzipQuality > 0) return "gzip";
   return null;
 }
 

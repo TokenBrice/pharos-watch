@@ -162,9 +162,10 @@ export function stateReadTables(overrides: {
   ];
 }
 
-export function historyHas(db: MockD1Database, sqlNeedle: string, bindNeedles: unknown[] = []): boolean {
+export function historyMatches(db: MockD1Database, sqlNeedle: string, bindings: Record<number, unknown> = {}): boolean {
   return db.getHistory().some((entry) =>
-    entry.sql.includes(sqlNeedle) && bindNeedles.every((value) => entry.binds.includes(value)),
+    entry.sql.includes(sqlNeedle)
+      && Object.entries(bindings).every(([index, value]) => entry.binds[Number(index)] === value),
   );
 }
 

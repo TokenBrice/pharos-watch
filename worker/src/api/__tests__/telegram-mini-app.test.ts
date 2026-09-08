@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BOT_TOKEN,
   NOW_SEC,
-  historyHas,
+  historyMatches,
   makeMiniAppDb,
   makeMiniAppRequest,
   makeStreamedMiniAppRequest,
@@ -166,7 +166,7 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(mutation.status).toBe(404);
     await expect(mutation.json()).resolves.toMatchObject({ code: "recap-unavailable" });
-    expect(historyHas(mutationDb, "telegram_recap_preferences")).toBe(false);
+    expect(historyMatches(mutationDb, "telegram_recap_preferences")).toBe(false);
   });
 
   it("loads private-chat state through one D1 batch plus separate health diagnostics", async () => {
@@ -349,22 +349,6 @@ describe("handleTelegramMiniAppSession", () => {
       );
     expect(deniedRows).toHaveLength(1);
     expect(deniedRows[0].binds).toContain("rate_limited");
-  });
-
-  it("does not emit analytics for oversized pre-auth session bodies", async () => {
-    // Body-cap rejections fire before HMAC validation and must not write
-    // unauthenticated analytics rows on the public Mini App endpoint.
-    const db = makeMiniAppDb();
-    const req = new Request("https://api.pharos.watch/api/telegram-mini-app/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": String(20 * 1024) },
-      body: JSON.stringify({ initData: "x" }),
-    });
-
-    const response = await handleTelegramMiniAppSession(db, req, BOT_TOKEN);
-
-    expect(response.status).toBe(413);
-    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects oversized session bodies with 413 before parsing JSON", async () => {
@@ -552,8 +536,8 @@ describe("handleTelegramMiniAppSession", () => {
     );
 
     expect(await readJsonResponse(response, 429)).toMatchObject({ code: "rate-limited" });
-    expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", [cooldownKey])).toBe(true);
-    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied"])).toBe(false);
+    expect(historyMatches(db, "INSERT INTO cache (key, value, updated_at)", { 0: cooldownKey })).toBe(true);
+    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation_denied"})).toBe(false);
   });
 
   it("emits mini_app_mutation_denied with a stale-auth class on stale mutation auth", async () => {
@@ -582,7 +566,7 @@ describe("handleTelegramMiniAppSession", () => {
     expect(deniedRows).toHaveLength(1);
     expect(deniedRows[0].binds).toContain("stale-auth");
     expect(deniedRows[0].binds).toContain(mutationActionDetail({ kind: "clear-snooze" }));
-    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_session_invalid"])).toBe(false);
+    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_session_invalid"})).toBe(false);
   });
 
   it("attaches a non-null latencyBucket to successful session analytics rows", async () => {

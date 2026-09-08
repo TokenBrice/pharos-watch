@@ -534,9 +534,18 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       }),
     });
 
-    expect(() => compileFixture(metadata)).toThrow(
-      `Safety Score v9 mint/bridge ownership validation failed for fixture-shadowed-bridge-mint: representation-route-without-bridge-mint at bridgeRouteRisk.routes[0].id: reviewed representation route "${BASE_ROUTE}" is covered by control IDs ["admin-only-shadow"], but none includes "bridge-mint"; name the bridge-mint holder in one of those controls, or stop referencing the route so the conservative route-derived fallback overlay applies`,
-    );
+    let failure: unknown;
+    try {
+      compileFixture(metadata);
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    const message = (failure as Error).message;
+    expect(message).toContain("representation-route-without-bridge-mint");
+    expect(message).toContain(metadata.id);
+    expect(message).toContain(BASE_ROUTE);
+    expect(message).toContain("admin-only-shadow");
   });
 
   it("rejects a structured bridge control that references an unknown route", () => {

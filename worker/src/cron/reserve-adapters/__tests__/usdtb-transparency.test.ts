@@ -19,8 +19,8 @@ import { fetchJsonAdapterInput } from "../helpers";
 import {
   expectValidAdapterOutput,
   mockedReserveHelper,
-  TEST_SIGNAL,
 } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 
 function makeCoin(): StablecoinMeta {
   return { id: "usdtb-ethena", name: "Ethena USDtb", ticker: "USDTB" } as unknown as StablecoinMeta;
@@ -53,6 +53,7 @@ const USDTB_BACKING: UsdtbBackingAndSupplyPayload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  signal = new AbortController().signal;
 });
 
 describe("adaptUsdtbTransparency", () => {
@@ -166,12 +167,12 @@ describe("fetchUsdtbTransparencyReserves", () => {
     mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue(USDTB_BACKING);
     const config = makeConfig();
 
-    const result = await fetchUsdtbTransparencyReserves(makeCoin(), config, TEST_SIGNAL);
+    const result = await fetchUsdtbTransparencyReserves(makeCoin(), config, signal);
 
     expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
       config,
       "usdtb-transparency",
-      TEST_SIGNAL,
+      signal,
       12_000,
       undefined,
     );
@@ -182,6 +183,6 @@ describe("fetchUsdtbTransparencyReserves", () => {
     mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://usdtb.money/api/transparency/backing-and-supply/current"));
     const config = makeConfig();
 
-    await expect(fetchUsdtbTransparencyReserves(makeCoin(), config, TEST_SIGNAL)).rejects.toThrow("HTTP 500");
+    await expect(fetchUsdtbTransparencyReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 500");
   });
 });

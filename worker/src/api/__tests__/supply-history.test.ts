@@ -4,6 +4,9 @@ import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleSupplyHistory } from "../supply-history";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 function mockD1(
   tables: Parameters<typeof baseMockD1>[0] = [],
@@ -22,6 +25,7 @@ describe("handleSupplyHistory", () => {
   const row = makeSupplyRow();
 
   afterEach(() => {
+    fixtures.closeAll();
     vi.restoreAllMocks();
   });
 
@@ -162,6 +166,36 @@ describe("handleSupplyHistory", () => {
     expect(res.headers.get("Warning")).toContain("Response is stale");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM cron_runs"))).toBe(false);
     db.assertAllMatchesUsed();
+  });
+
+  it("fences completed publication inclusively and returns chronological history", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES ('usdt-tether', ?, ?, 1)");
+    for (const offset of [-10, 1, 0]) insert.run(now + offset, 100 + offset);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('snapshot-supply:last-write', ?, ?)").run(JSON.stringify({ snapshotDate: now }), now);
+    expect(await readJsonResponse(await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether")), 200)).toEqual([
+      { date: now - 10, circulatingUsd: 90, price: 1 },
+      { date: now, circulatingUsd: 100, price: 1 },
+    ]);
+  });
+
+  it("uses the newest markerless row for freshness and leaves empty history unfreshened", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const url = new URL("https://x/api/supply-history?stablecoin=usdt-tether");
+    const empty = await handleSupplyHistory(db, url);
+    expect(await readJsonResponse(empty, 200)).toEqual([]);
+    expect(empty.headers.get("X-Data-Age")).toBeNull();
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES ('usdt-tether', ?, 10, 1), ('usdt-tether', ?, 20, 1)").run(now - 30, now - 300);
+    const populated = await handleSupplyHistory(db, url);
+    expect(populated.headers.get("X-Data-Age")).toBe("30");
+    expect(await readJsonResponse(populated, 200)).toEqual([
+      { date: now - 300, circulatingUsd: 20, price: 1 },
+      { date: now - 30, circulatingUsd: 10, price: 1 },
+    ]);
   });
 });
 

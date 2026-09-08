@@ -1,6 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import {
   handleApiKeyDeactivateRoute,
@@ -8,14 +7,11 @@ import {
   handleApiKeysRoute,
   handleApiKeyUpdateRoute,
 } from "../api-keys";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 stubCryptoForAuth();
 
-function setup() {
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
+const fixtures = createLatestSchemaFixtureTracker();
 
 function mutationRequest(path: string, idempotencyKey: string, body?: Record<string, unknown>): Request {
   return makeApiRequest(path, {
@@ -30,12 +26,13 @@ function mutationRequest(path: string, idempotencyKey: string, body?: Record<str
 }
 
 afterEach(() => {
+  fixtures.closeAll();
   vi.restoreAllMocks();
 });
 
 describe("API key lifecycle idempotency", () => {
   it("redacts create and rotate replay storage while replaying ordinary lifecycle mutations", async () => {
-    const { sqlite, db } = setup();
+    const { sqlite, db } = fixtures.open();
 
     const firstCreate = await handleApiKeysRoute({
       db,

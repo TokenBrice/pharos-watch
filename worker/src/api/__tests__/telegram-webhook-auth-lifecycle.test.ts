@@ -1,3 +1,4 @@
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -130,70 +131,32 @@ describe("handleTelegramWebhook", () => {
 
   it("does not replay command effects when the terminal processed marker fails", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const firstDb = makeLifecycleDb([
-      {
-        match: "INSERT OR IGNORE INTO telegram_processed_updates",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "SET effect_state = 'started'",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      { match: "telegram_pending_disambiguation", rows: [] },
-      {
-        match: "SET status = 'processed'",
-        rows: [],
-        throwError: new Error("processed marker unavailable"),
-      },
-      {
-        match: "SET status = 'failed'",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ]);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec(`CREATE TRIGGER fail_terminal_marker
+        BEFORE UPDATE OF status ON telegram_processed_updates
+        WHEN NEW.status = 'processed'
+        BEGIN SELECT RAISE(ABORT, 'processed marker unavailable'); END`);
+      const first = await handleTelegramWebhook(db,
+        makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }), "test-secret", "bot-token");
+      expect(first.status).toBe(500);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(sqlite.prepare(
+        "SELECT status, effect_state FROM telegram_processed_updates WHERE update_id = 5500",
+      ).get()).toEqual({ status: "failed", effect_state: "execution_unknown" });
 
-    const first = await handleTelegramWebhook(
-      firstDb,
-      makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }),
-      "test-secret",
-      "bot-token",
-    );
-    expect(first.status).toBe(500);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-
-    const retryDb = makeLifecycleDb([
-      {
-        match: "INSERT OR IGNORE INTO telegram_processed_updates",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "SELECT status, received_at, effect_state, claim_owner, claim_generation",
-        rows: [],
-        first: {
-          status: "failed",
-          received_at: Math.floor(Date.now() / 1000),
-          effect_state: "started",
-          claim_owner: "owner-first",
-          claim_generation: 1,
-        },
-      },
-    ]);
-    const retry = await handleTelegramWebhook(
-      retryDb,
-      makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(retry.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(retryDb.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation"))).toBe(
-      false,
-    );
-    errorSpy.mockRestore();
+      sqlite.exec("DROP TRIGGER fail_terminal_marker");
+      const retry = await handleTelegramWebhook(db,
+        makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }), "test-secret", "bot-token");
+      expect(retry.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(sqlite.prepare(
+        "SELECT effect_state FROM telegram_processed_updates WHERE update_id = 5500",
+      ).get()).toEqual({ effect_state: "execution_unknown" });
+    } finally {
+      sqlite.close();
+      errorSpy.mockRestore();
+    }
   });
 
   it("welcomes a group when my_chat_member reports the bot was added", async () => {

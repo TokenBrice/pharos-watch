@@ -18,22 +18,30 @@ import {
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
 
+function scoringInput(
+  pillars: V9ScoringInput["pillars"],
+  evidenceLevel: V9EvidenceLevel = "strong",
+  unresolved: V9ScoringInput["unresolved"] = [],
+): V9ScoringInput {
+  return {
+    assetId: "veritas",
+    pillars,
+    pegScore: 100,
+    pegApplicable: true,
+    evidenceLevel,
+    trackRecordMonths: 48,
+    activeDepegBps: null,
+    parentRequired: false,
+    parentScore: null,
+    structuralSignals: [],
+    unresolved,
+  };
+}
+
 // Folded in from `safety-score-v9-veritas-cap-rounding-repro.test.ts` (VER-001).
 {
   function input(exit: number): V9ScoringInput {
-    return {
-      assetId: "veritas-cap-rounding",
-      pillars: { backing: 44.714375, exit, control: 95 },
-      pegScore: 100,
-      pegApplicable: true,
-      evidenceLevel: "strong",
-      trackRecordMonths: 48,
-      activeDepegBps: null,
-      parentRequired: false,
-      parentScore: null,
-      structuralSignals: [],
-      unresolved: [],
-    };
+    return scoringInput({ backing: 44.714375, exit, control: 95 });
   }
 
   // VER-001 regression: replacing the fractional hard cap must retain monotonic
@@ -66,19 +74,7 @@ import {
   // same decimal-safe nearest rounding.
   describe("VERITAS finding VER-002: continuous aggregate rounds deterministically", () => {
     it("nearest-rounds the smooth aggregate independently of the weighted mean", () => {
-      const input: V9ScoringInput = {
-        assetId: "veritas-half-rounding",
-        pillars: { backing: 42.91, exit: 70.96, control: 70 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: [],
-        unresolved: [],
-      };
+      const input = scoringInput({ backing: 42.91, exit: 70.96, control: 70 });
 
       const trace = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
       expect(trace.weightedQuality).toBe(59.5);
@@ -123,19 +119,7 @@ import {
 {
   function score(pillars: { backing: number; exit: number; control: number }) {
     return scoreV9Input(
-      {
-        assetId: "veritas-ii-decimal-boundary",
-        pillars,
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: [],
-        unresolved: [],
-      },
+      scoringInput(pillars),
       V9_CANDIDATE_POLICY_V1,
     );
   }
@@ -166,25 +150,13 @@ import {
 
 // Folded in from `safety-score-v9-veritas-bounded-invariants.test.ts` (VERITAS bounded-state invariants).
 {
-  function scoringInput(pillars: V9ScoringInput["pillars"], evidenceLevel: V9EvidenceLevel = "strong"): V9ScoringInput {
-    return {
-      assetId: "veritas-bounded-sweep",
-      pillars,
-      pegScore: 100,
-      pegApplicable: true,
-      evidenceLevel,
-      trackRecordMonths: 48,
-      activeDepegBps: null,
-      parentRequired: false,
-      parentScore: null,
-      structuralSignals: [],
-      unresolved: [{
-        code: "no-viable-exit-path",
-        reason: "VERITAS measured-adverse attribution fixture.",
-        critical: false,
-        responsibility: "measured-adverse",
-      }],
-    };
+  function boundedInput(pillars: V9ScoringInput["pillars"], evidenceLevel: V9EvidenceLevel = "strong") {
+    return scoringInput(pillars, evidenceLevel, [{
+      code: "no-viable-exit-path",
+      reason: "VERITAS measured-adverse attribution fixture.",
+      critical: false,
+      responsibility: "measured-adverse",
+    }]);
   }
 
   describe("VERITAS bounded-state invariants", () => {
@@ -193,9 +165,9 @@ import {
         for (let exit = 0; exit <= 100; exit += 5) {
           for (let control = 0; control <= 100; control += 5) {
             const pillars = { backing, exit, control };
-            const limited = scoreV9Input(scoringInput(pillars, "limited"), V9_CANDIDATE_POLICY_V1);
-            const adequate = scoreV9Input(scoringInput(pillars, "adequate"), V9_CANDIDATE_POLICY_V1);
-            const strong = scoreV9Input(scoringInput(pillars), V9_CANDIDATE_POLICY_V1);
+            const limited = scoreV9Input(boundedInput(pillars, "limited"), V9_CANDIDATE_POLICY_V1);
+            const adequate = scoreV9Input(boundedInput(pillars, "adequate"), V9_CANDIDATE_POLICY_V1);
+            const strong = scoreV9Input(boundedInput(pillars), V9_CANDIDATE_POLICY_V1);
 
             expect(limited.finalScore).not.toBeNull();
             expect(adequate.finalScore).not.toBeNull();
@@ -212,7 +184,7 @@ import {
     it("executes every reason-registry treatment and keeps bounded missing or stale facts rateable", () => {
       for (const entry of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) {
         const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code);
-        const input = scoringInput({ backing: 95, exit: 95, control: 95 });
+        const input = boundedInput({ backing: 95, exit: 95, control: 95 });
         const responsibility = V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code];
         input.unresolved = [{
           code: entry.code,
@@ -260,13 +232,16 @@ import {
             V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code] === "measured-adverse"
           ),
       );
+      const baselines = Array.from({ length: 101 }, (_, score) => {
+        const input = boundedInput({ backing: score, exit: score, control: score });
+        return { input, trace: scoreV9Input(input, V9_CANDIDATE_POLICY_V1) };
+      });
 
       for (const entry of ceilingReasons) {
         const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code);
         for (let score = 0; score <= 100; score += 1) {
-          const completeInput = scoringInput({ backing: score, exit: score, control: score });
-          const boundedInput = structuredClone(completeInput);
-          boundedInput.unresolved = [
+          const { input: completeInput, trace: complete } = baselines[score];
+          const input: V9ScoringInput = { ...completeInput, unresolved: [
             ...completeInput.unresolved,
             {
               code: entry.code,
@@ -274,10 +249,9 @@ import {
               critical: resolved.critical,
               responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code],
             },
-          ];
+          ] };
 
-          const bounded = scoreV9Input(boundedInput, V9_CANDIDATE_POLICY_V1);
-          const complete = scoreV9Input(completeInput, V9_CANDIDATE_POLICY_V1);
+          const bounded = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
           expect(complete.finalScore!, `${entry.code} at ${score}`).toBeGreaterThanOrEqual(bounded.finalScore!);
         }
       }

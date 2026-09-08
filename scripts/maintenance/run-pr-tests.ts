@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { localBin } from "../lib/local-bin.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
@@ -47,7 +46,7 @@ export function runPrTests({
   }
 
   const changedFiles = collectChangedFilePaths(base, head, env, spawn);
-  const files = selectPrTestFiles(parseVitestFileList(String(listResult.stdout ?? "")), undefined, changedFiles).filter((file) => existsSync(file));
+  const files = selectPrTestFiles(parseVitestFileList(String(listResult.stdout ?? "")), undefined, changedFiles);
   const result = spawn(vitest, withCiVitestArgs(["run", ...files, ...rest], env), {
     env,
     stdio: "inherit",

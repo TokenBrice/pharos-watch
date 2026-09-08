@@ -118,14 +118,11 @@ describe("page metadata helpers", () => {
   });
 
   it("falls back to word-boundary trimming when no short sentence exists", () => {
-    const text =
-      "This is a deliberately long paragraph without an early sentence break so the helper needs to trim on a word boundary instead of cutting the text midword";
+    expect(summarizeText("alpha beta gamma", 12)).toBe("alpha beta…");
+  });
 
-    const summary = summarizeText(text, 80);
-
-    expect(summary.length).toBeLessThanOrEqual(80);
-    expect(summary.endsWith("…")).toBe(true);
-    expect(summary).not.toContain("midwor");
+  it("trims an unbroken token when there is no word boundary", () => {
+    expect(summarizeText("abcdefghijklmnop", 12)).toBe("abcdefghijk…");
   });
 
   it("builds OG URLs from the shared API origin", () => {

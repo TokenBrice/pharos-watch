@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../lib/yield-history-ownership-handoffs";
 import { loadYieldHistorySnapshots, MAX_PREVIOUS_TVL_HISTORY_ROWS } from "../yield-sync/history";
 
@@ -35,7 +35,7 @@ function insertHistory(
       row.isBest ?? 0,
       row.apy ?? 1,
       row.sourceTvlUsd ?? null,
-      row.publicationState ?? "published",
+      row.publicationState === undefined ? "published" : row.publicationState,
     );
 }
 
@@ -45,6 +45,28 @@ describe("loadYieldHistorySnapshots", () => {
   afterEach(() => {
     sqlite?.close();
     sqlite = null;
+  });
+
+  it("keeps published and legacy anchors when newer staged rows compete", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    for (const [stablecoinId, publicationState] of [["coin-a", "published"], ["coin-b", null]] as const) {
+      insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 100, isBest: 1, apy: 4, sourceTvlUsd: 10, publicationState });
+      insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 200, isBest: 1, apy: 99, sourceTvlUsd: 999, publicationState: "staged" });
+    }
+    insertHistory(sqlite, { stablecoinId: "staged-only", sourceKey: "source-a", recordedAt: 200, isBest: 1, publicationState: "staged" });
+    expect(sqlite.prepare("SELECT publication_state FROM yield_history WHERE stablecoin_id = 'coin-b' AND recorded_at = 100").get()).toEqual({ publication_state: null });
+
+    for (const sourceKeysByStablecoin of [undefined, new Map(["coin-a", "coin-b", "staged-only"].map((id) => [id, new Set(["source-a"])]))]) {
+      const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b", "staged-only"], 1_000, 300, { sourceKeysByStablecoin });
+      const identities = (rows: typeof snapshots.historyRows) => rows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at, row.source_tvl_usd]);
+      const expected = [["coin-a", "source-a", 100, 10], ["coin-b", "source-a", 100, 10]];
+      expect(identities(snapshots.historyRows)).toEqual(expected);
+      expect(identities(snapshots.prevTvlRows)).toEqual(expected);
+      expect(identities(snapshots.prevBestRows)).toEqual(expected);
+      expect(snapshots.historyRows.map((row) => row.apy)).toEqual([4, 4]);
+      expect(snapshots.prevBestRows.map((row) => row.apy)).toEqual([4, 4]);
+    }
   });
 
   it("returns one previous TVL row per stablecoin/source bucket", async () => {

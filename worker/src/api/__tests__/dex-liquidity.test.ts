@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 function makeDexDeploymentOutcomeFallbackTable() {
   return { match: "FROM dex_deployment_outcomes", rows: [] };
@@ -373,92 +373,28 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("organicMeasuredTvlUsd");
   });
 
-  it("classifies observed but unmeasured liquidity explicitly", async () => {
+  it.each([
+    [0, "fallback", 0.5, "observed_unmeasured", false],
+    [1_900_000, "primary", 0.9, "measured", true],
+    [2_000_000, "fallback", 0.5, "observed_unmeasured", false],
+    [900_000, "mixed", 0.8, "partial_measured", true],
+  ] as const)("classifies %s measured TVL with %s coverage at %s confidence", async (measuredTvl, coverage, confidence, evidenceClass, measured) => {
     const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [makeDexLiquidityRow({
-          total_tvl_usd: 2_000_000,
-          balance_measured_tvl_usd: 0,
-          coverage_class: "fallback",
-          coverage_confidence: 0.5,
-        })],
-      },
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow({
+        total_tvl_usd: 2_000_000,
+        balance_measured_tvl_usd: measuredTvl,
+        coverage_class: coverage,
+        coverage_confidence: confidence,
+      })] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
     ]);
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-    const coin = body["usdt-tether"];
-    expect(coin?.liquidityEvidenceClass).toBe("observed_unmeasured");
-    expect(coin?.hasMeasuredLiquidityEvidence).toBe(false);
-    expect(coin?.trendworthy).toBe(false);
-  });
-
-  it("classifies strong measured liquidity and marks high-confidence snapshots trendworthy", async () => {
-    const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [makeDexLiquidityRow({
-          total_tvl_usd: 2_000_000,
-          balance_measured_tvl_usd: 1_900_000,
-          coverage_class: "primary",
-          coverage_confidence: 0.9,
-        })],
-      },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-    const coin = body["usdt-tether"];
-    expect(coin?.liquidityEvidenceClass).toBe("measured");
-    expect(coin?.hasMeasuredLiquidityEvidence).toBe(true);
-    expect(coin?.trendworthy).toBe(true);
-  });
-
-  it("uses coverage confidence instead of balance ratio for liquidity evidence", async () => {
-    const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [makeDexLiquidityRow({
-          total_tvl_usd: 2_000_000,
-          balance_measured_tvl_usd: 2_000_000,
-          coverage_class: "fallback",
-          coverage_confidence: 0.5,
-        })],
-      },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-    const coin = body["usdt-tether"];
-    expect(coin?.liquidityEvidenceClass).toBe("observed_unmeasured");
-    expect(coin?.hasMeasuredLiquidityEvidence).toBe(false);
-    expect(coin?.trendworthy).toBe(false);
-  });
-
-  it("classifies partial measured liquidity separately", async () => {
-    const db = mockDexD1([
-      {
-        match: "dex_liquidity",
-        rows: [makeDexLiquidityRow({
-          total_tvl_usd: 2_000_000,
-          balance_measured_tvl_usd: 900_000,
-          coverage_class: "mixed",
-          coverage_confidence: 0.8,
-        })],
-      },
-      { match: "dex_liquidity_history", rows: [] },
-      { match: "dex_prices", rows: [] },
-    ]);
-    const res = await handleDexLiquidity(db);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
-    const coin = body["usdt-tether"];
-    expect(coin?.liquidityEvidenceClass).toBe("partial_measured");
-    expect(coin?.hasMeasuredLiquidityEvidence).toBe(true);
-    expect(coin?.trendworthy).toBe(true);
+    const body = await readJsonResponse<Record<string, Record<string, unknown>>>(await handleDexLiquidity(db), 200);
+    expect(body["usdt-tether"]).toMatchObject({
+      liquidityEvidenceClass: evidenceClass,
+      hasMeasuredLiquidityEvidence: measured,
+      trendworthy: measured,
+    });
   });
 
   it("includes X-Data-Age header", async () => {

@@ -39,20 +39,11 @@ describe("admitLiquidityShift", () => {
 
     expect(result.admissible).toBe(true);
     expect(result.tvlChangePct).toBeCloseTo(-0.9097, 4);
-  });
-
-  it("reports the score move the TVL change alone accounts for", () => {
-    // A 91% TVL drop moves the log-scale TVL Depth component by
-    // 35 * log10(0.0903) at a 30% weight, about -11 composite points. Coverage
-    // that calls a ~10 point move "the score shrugging" is misreading the
-    // methodology, which is what edition #179 did.
-    const result = admitLiquidityShift(
-      snapshot({ liquidityScore: 46, totalTvlUsd: 13_720_000 }),
-      snapshot({ snapshotDate: YESTERDAY - DAY }),
-    );
-
+    // Comparability is independent of magnitude; log-scale TVL depth explains
+    // about eleven composite points even for this 91% drain.
     expect(result.expectedScoreDeltaFromTvl).toBeCloseTo(-10.98, 1);
   });
+
 
   it("rejects a pair whose rows are not one day apart", () => {
     const result = admitLiquidityShift(

@@ -9,70 +9,27 @@ function req(url: string, headers: Record<string, string> = {}): Request {
 }
 
 describe("rejectIfNotSiteDataUiOrigin", () => {
-  it("passes when Origin matches an allowed hostname", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", { Origin: "https://pharos.watch" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
-  });
-
-  it("passes when Origin matches ops UI", () => {
-    const r = req("https://ops.pharos.watch/_site-data/peg-summary", { Origin: "https://ops.pharos.watch" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
-  });
-
-  it("rejects a foreign Origin", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", { Origin: "https://evil.example.com" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
-  });
-
-  it("rejects a foreign Origin even if Referer is allowed", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", {
-      Origin: "https://evil.example.com",
-      Referer: "https://pharos.watch/",
-    });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
-  });
-
-  it("passes when Origin is absent but Referer hostname is allowed", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", { Referer: "https://pharos.watch/some-page" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
-  });
-
-  it("rejects when Origin is absent and Referer is foreign", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", { Referer: "https://evil.example.com/path" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
-  });
-
-  it("rejects when neither Origin nor Referer is present", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary");
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
-  });
-
-  it("rejects direct Pages preview requests without caller headers", () => {
-    const r = req("https://stablecoin-dashboard.pages.dev/_site-data/peg-summary");
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
-  });
-
-  it("passes on Pages preview hosts when Referer is a Pages preview hostname", () => {
-    const r = req("https://abc123.stablecoin-dashboard.pages.dev/_site-data/peg-summary", {
-      Referer: "https://abc123.stablecoin-dashboard.pages.dev/stablecoins",
-    });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
-  });
-
-  it("passes when Origin is a *.pages.dev preview hostname and request is on pharos.watch", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", {
-      Origin: "https://stablecoin-dashboard.pages.dev",
-    });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
-  });
-
-  it("rejects a malformed Origin header", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", { Origin: "not-a-url" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
-  });
-
-  it("rejects 'Origin: null' (file://, sandboxed iframes, some browsers)", () => {
-    const r = req("https://pharos.watch/_site-data/peg-summary", { Origin: "null" });
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
+  it.each<{ name: string; host?: string; headers: Record<string, string>; allowed: boolean }>([
+    { name: "site Origin", headers: { Origin: "https://pharos.watch" }, allowed: true },
+    { name: "ops Origin", host: "ops.pharos.watch", headers: { Origin: "https://ops.pharos.watch" }, allowed: true },
+    { name: "foreign Origin", headers: { Origin: "https://evil.example.com" }, allowed: false },
+    { name: "foreign Origin overrides allowed Referer", headers: { Origin: "https://evil.example.com", Referer: "https://pharos.watch/" }, allowed: false },
+    { name: "absent Origin uses allowed Referer", headers: { Referer: "https://pharos.watch/some-page" }, allowed: true },
+    { name: "absent Origin with foreign Referer", headers: { Referer: "https://evil.example.com/path" }, allowed: false },
+    { name: "missing caller headers", headers: {}, allowed: false },
+    { name: "direct preview without caller headers", host: "stablecoin-dashboard.pages.dev", headers: {}, allowed: false },
+    { name: "preview Referer on preview host", host: "abc123.stablecoin-dashboard.pages.dev", headers: { Referer: "https://abc123.stablecoin-dashboard.pages.dev/stablecoins" }, allowed: true },
+    { name: "preview Origin on site host", headers: { Origin: "https://stablecoin-dashboard.pages.dev" }, allowed: true },
+    { name: "malformed Origin without Referer", headers: { Origin: "not-a-url" }, allowed: false },
+    { name: "literal-null Origin without Referer", headers: { Origin: "null" }, allowed: false },
+    // audit: C4 — characterize current fallback; stricter invalid-Origin policy is deferred.
+    { name: "malformed Origin falls through to allowed Referer", headers: { Origin: "not-a-url", Referer: "https://pharos.watch/" }, allowed: true },
+    { name: "malformed Origin with foreign Referer", headers: { Origin: "not-a-url", Referer: "https://evil.example.com/" }, allowed: false },
+    { name: "literal-null Origin falls through to allowed Referer", headers: { Origin: "null", Referer: "https://pharos.watch/" }, allowed: true },
+    { name: "literal-null Origin with foreign Referer", headers: { Origin: "null", Referer: "https://evil.example.com/" }, allowed: false },
+  ])("$name", ({ host = "pharos.watch", headers, allowed }) => {
+    const result = rejectIfNotSiteDataUiOrigin(req(`https://${host}/_site-data/peg-summary`, headers), env, notFound);
+    if (allowed) expect(result).toBeNull();
+    else expect(result?.status).toBe(404);
   });
 });

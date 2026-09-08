@@ -17,6 +17,23 @@ import { fetchDefiLlamaPrices, fetchErc20Balance } from "../helpers";
 import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const coin = { id: "lisusd-lista" } as unknown as StablecoinMeta;
 
+function wbnbBranch() {
+  return {
+    name: "WBNB",
+    holder: "0xAAA",
+    token: { chain: "bsc", address: "0xBBB", decimals: 18 },
+    risk: "high" as const,
+  };
+}
+
+function listaConfig(params: Record<string, unknown>): LiveReservesConfig {
+  return {
+    adapter: "lista", version: 1, semantics: "collateral-mix",
+    inputs: { primary: { kind: "onchain-evm", chain: "bsc", rpcMode: "public-rpc" } },
+    params,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -26,12 +43,7 @@ describe("adaptListaReserves", () => {
     const result = adaptListaReserves({
       balances: [
         {
-          branch: {
-            name: "WBNB",
-            holder: "0xAAA",
-            token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-            risk: "high",
-          },
+          branch: wbnbBranch(),
           balanceRaw: 10_000_000_000_000_000_000n, // 10 BNB
         },
         {
@@ -94,12 +106,7 @@ describe("adaptListaReserves", () => {
       adaptListaReserves({
         balances: [
           {
-            branch: {
-              name: "WBNB",
-              holder: "0xAAA",
-              token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-              risk: "high",
-            },
+            branch: wbnbBranch(),
             balanceRaw: null,
           },
         ],
@@ -113,12 +120,7 @@ describe("adaptListaReserves", () => {
       adaptListaReserves({
         balances: [
           {
-            branch: {
-              name: "WBNB",
-              holder: "0xAAA",
-              token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-              risk: "high",
-            },
+            branch: wbnbBranch(),
             balanceRaw: 0n,
           },
         ],
@@ -131,12 +133,7 @@ describe("adaptListaReserves", () => {
     const result = adaptListaReserves({
       balances: [
         {
-          branch: {
-            name: "WBNB",
-            holder: "0xAAA",
-            token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-            risk: "high",
-          },
+          branch: wbnbBranch(),
           balanceRaw: 0n,
         },
         {
@@ -170,13 +167,23 @@ describe("adaptListaReserves", () => {
           },
           balanceRaw: 5000_000_000_000_000_000_000n, // 5000 USDT
         },
+        {
+          branch: {
+            name: "WBNB",
+            holder: "0xCCC",
+            token: { chain: "bsc", address: "0xDDD", decimals: 18 },
+            risk: "high",
+          },
+          balanceRaw: 10n * 10n ** 18n,
+        },
       ],
-      priceMap: new Map(),
+      priceMap: new Map([["USDT (via PSM)", 2], ["WBNB", 500]]),
     });
 
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].name).toBe("USDT (via PSM)");
-    expect(result.slices[0].pct).toBe(100);
+    expect(result.slices).toEqual([
+      { name: "USDT (via PSM)", pct: 50, risk: "low" },
+      { name: "WBNB", pct: 50, risk: "high" },
+    ]);
   });
 
   it("propagates coinId and depType to slices", () => {
@@ -207,12 +214,7 @@ describe("adaptListaReserves", () => {
       adaptListaReserves({
         balances: [
           {
-            branch: {
-              name: "WBNB",
-              holder: "0xAAA",
-              token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-              risk: "high",
-            },
+            branch: wbnbBranch(),
             balanceRaw: 1_000_000_000_000_000_000n,
           },
         ],
@@ -235,30 +237,17 @@ describe("fetchListaReserves", () => {
       ]),
     );
 
-    const config: LiveReservesConfig = {
-      adapter: "lista",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "bsc", rpcMode: "public-rpc" },
-      },
-      params: {
-        branches: [
-          {
-            name: "WBNB",
-            holder: "0xAAA",
-            token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-            risk: "high",
-          },
+    const config = listaConfig({
+      branches: [
+        wbnbBranch(),
           {
             name: "slisBNB",
             holder: "0xCCC",
             token: { chain: "bsc", address: "0xDDD", decimals: 18 },
             risk: "high",
           },
-        ],
-      },
-    };
+      ],
+    });
 
     const result = await fetchListaReserves(coin, config, signal);
     expect(result.slices).toHaveLength(2);
@@ -274,24 +263,8 @@ describe("fetchListaReserves", () => {
   });
 
   it("throws when input is not onchain-evm", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "lista",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: {
-        primary: { kind: "http-json", url: "https://example.com" },
-      },
-      params: {
-        branches: [
-          {
-            name: "WBNB",
-            holder: "0xAAA",
-            token: { chain: "bsc", address: "0xBBB", decimals: 18 },
-            risk: "high",
-          },
-        ],
-      },
-    };
+    const config = listaConfig({ branches: [wbnbBranch()] });
+    config.inputs.primary = { kind: "http-json", url: "https://example.com" };
 
     await expect(fetchListaReserves(coin, config, signal)).rejects.toThrow(
       "lista adapter requires an onchain-evm primary input",
@@ -299,15 +272,7 @@ describe("fetchListaReserves", () => {
   });
 
   it("throws when branches are missing", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "lista",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "bsc", rpcMode: "public-rpc" },
-      },
-      params: {},
-    };
+    const config = listaConfig({});
 
     await expect(fetchListaReserves(coin, config, signal)).rejects.toThrow(
       "lista adapter params invalid",

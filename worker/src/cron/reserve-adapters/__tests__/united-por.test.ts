@@ -12,7 +12,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptUnitedPorPayload, fetchUnitedPorReserves, type UnitedPorPayload } from "../united-por";
 import { fetchJsonWithRetry } from "../helpers";
-import { mockedReserveHelper, TEST_SIGNAL } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 
 const SLICE = {
   name: "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
@@ -47,6 +47,7 @@ const UNITED_POR_PAYLOAD: UnitedPorPayload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  signal = new AbortController().signal;
 });
 
 describe("adaptUnitedPorPayload", () => {
@@ -183,13 +184,13 @@ describe("adaptUnitedPorPayload", () => {
 
 describe("fetchUnitedPorReserves", () => {
   it("fetches the configured PoR endpoint and adapts the payload", async () => {
-    mockedReserveHelper(fetchJsonWithRetry).mockResolvedValue(UNITED_POR_PAYLOAD);
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(UNITED_POR_PAYLOAD);
 
-    const result = await fetchUnitedPorReserves(makeCoin(), makeConfig(), TEST_SIGNAL);
+    const result = await fetchUnitedPorReserves(makeCoin(), makeConfig(), signal);
 
     expect(fetchJsonWithRetry).toHaveBeenCalledWith(
       "https://u.tech/u-client-api/v1/public/u/por",
-      TEST_SIGNAL,
+      signal,
       12_000,
       undefined,
     );
@@ -197,8 +198,8 @@ describe("fetchUnitedPorReserves", () => {
   });
 
   it("propagates an error when the PoR endpoint fetch fails", async () => {
-    mockedReserveHelper(fetchJsonWithRetry).mockRejectedValue(new Error("HTTP 503 for https://u.tech/u-client-api/v1/public/u/por"));
+    vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("HTTP 503 for https://u.tech/u-client-api/v1/public/u/por"));
 
-    await expect(fetchUnitedPorReserves(makeCoin(), makeConfig(), TEST_SIGNAL)).rejects.toThrow("HTTP 503");
+    await expect(fetchUnitedPorReserves(makeCoin(), makeConfig(), signal)).rejects.toThrow("HTTP 503");
   });
 });

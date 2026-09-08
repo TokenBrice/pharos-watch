@@ -8,21 +8,7 @@ import {
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { createBudget } from "../../../lib/evm-logs";
 
-const ethereumConfig: ContractEventConfig = {
-  configKey: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-  chain: {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    evmChainId: 1,
-    explorerUrl: "https://etherscan.io",
-    type: "evm",
-  },
-  stablecoinId: "usdt-tether",
-  stablecoin: "USDT",
-  contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  decimals: 6,
-  events: [],
-};
+import { ethereumConfig } from "./balance.test-support";
 
 const tronConfig: ContractEventConfig = {
   configKey: "tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t",
@@ -116,19 +102,21 @@ describe("fetchEvmTokenCurrentBalance", () => {
     expect(amount).toBe(50);
   });
 
-  it("tries dRPC before Etherscan for the current-balance snapshot when configured", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: { result: null } }]);
-
-    await fetchEvmTokenCurrentBalance(
-      ethereumConfig,
-      "0x0000000000000000000000000000000000000abc",
-      null, // no etherscan key
-      "test-drpc-key",
-      async (fn) => fn(),
-      createBudget(10),
+  it("selects dRPC before configured chain RPC and Etherscan for current balances", async () => {
+    const fetchMock = mockFetch([
+      { match: "drpc.org", body: { result: "0x0f4240" } },
+      { match: "chain-rpc.test", body: { result: "0x1e8480" } },
+      { match: "etherscan.io", body: { result: "0x2dc6c0" } },
+    ], { requireMatch: true });
+    const amount = await fetchEvmTokenCurrentBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc",
+      "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
+      new Map([["ethereum", { ...ethereumConfig.chain, rpcUrl: "https://chain-rpc.test" }]]),
     );
-
-    expect(fetchMock.getHistory().some(({ url }) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
+    expect(amount).toBe(1);
+    expect(fetchMock.getHistory()).toHaveLength(1);
+    expect(fetchMock.getHistory()[0].url).toContain("drpc.org");
+    expect(JSON.parse(fetchMock.getHistory()[0].body!).params[1]).toBe("latest");
   });
 });
 
@@ -137,21 +125,26 @@ describe("fetchEvmTokenBalance", () => {
     vi.restoreAllMocks();
   });
 
-  it("tries dRPC and chain-RPC before Etherscan for Ethereum mainnet", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: { result: null } }]);
-
-    await fetchEvmTokenBalance(
-      ethereumConfig,
-      "0x0000000000000000000000000000000000000abc",
-      19000000,
-      null, // no etherscan key
-      "test-drpc-key",
-      async (fn) => fn(),
-      createBudget(10),
+  it.each([0, 1, 2])("selects the first successful historical provider after %i failures", async (failures) => {
+    const fetchMock = mockFetch([
+      { match: "drpc.org", body: { result: failures > 0 ? null : "0x0f4240" } },
+      { match: "chain-rpc.test", body: { result: failures > 1 ? null : "0x1e8480" } },
+      { match: "etherscan.io", body: { result: "0x2dc6c0" } },
+    ], { requireMatch: true });
+    const amount = await fetchEvmTokenBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", 19000000,
+      "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
+      new Map([["ethereum", { ...ethereumConfig.chain, rpcUrl: "https://chain-rpc.test" }]]),
     );
-
-    // dRPC should have been tried for Ethereum mainnet
-    expect(fetchMock.getHistory().some(({ url }) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
+    expect(amount).toBe(failures + 1);
+    const history = fetchMock.getHistory();
+    expect(history.map(({ url }) => new URL(url).hostname)).toEqual(
+      ["lb.drpc.org", "chain-rpc.test", "api.etherscan.io"].slice(0, failures + 1),
+    );
+    for (const request of history) {
+      expect(request.body ? JSON.parse(request.body).params[1] : new URL(request.url).searchParams.get("tag"))
+        .toBe("0x121eac0");
+    }
   });
 
   it("returns null when block number produces an invalid hex tag", async () => {

@@ -65,6 +65,11 @@ function renderBoard(
   );
 }
 
+const rowRenderers = [
+  ["desktop", renderBoard],
+  ["mobile", renderMobileCard],
+] as const;
+
 describe("YieldInstrumentBoard", () => {
   it("renders the rank-attribution chip when pys delta is material", () => {
     const row = {
@@ -110,20 +115,20 @@ describe("YieldInstrumentBoard", () => {
     expect(cursorHelpDash).toBeTruthy();
   });
 
-  it("renders the Deep dive link with proper href", () => {
-    renderBoard(baseRow);
+  it.each(rowRenderers)("renders the deep-dive destination on %s", (_surface, renderRow) => {
+    renderRow(baseRow);
 
     const link = screen.getByRole("link", { name: "Open full yield analysis for USDT" });
     expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/yield");
   });
 
-  it("renders a labeled source-risk summary when the source penalty is material", () => {
+  it.each(rowRenderers)("renders material source risk on %s", (_surface, renderRow) => {
     const row = {
       ...baseRow,
       sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: 1.32, sourceAgeSeconds: 60 },
     } as YieldViewModelRow;
 
-    renderBoard(row);
+    renderRow(row);
 
     expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
   });
@@ -196,9 +201,9 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.queryByText("Stale · 1d ago")).toBeNull();
   });
 
-  it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {
+  it.each(rowRenderers)("toggles compare by row identity on %s", (_surface, renderRow) => {
     const onToggleCompare = vi.fn();
-    renderBoard(baseRow, false, { onToggleCompare });
+    renderRow(baseRow, false, { onToggleCompare });
 
     fireEvent.click(screen.getByLabelText("Add USDT to compare"));
 
@@ -258,8 +263,8 @@ describe("YieldInstrumentBoard", () => {
 });
 
 describe("YieldInstrumentBoard — Why this PYS strip", () => {
-  it("renders the strip with all four factor cells when expanded with a non-null PYS", () => {
-    renderBoard(baseRow, true);
+  it.each(rowRenderers)("renders expanded PYS factors on %s", (_surface, renderRow) => {
+    renderRow(baseRow, true);
 
     const strip = screen.getByRole("group", { name: "Why this PYS" });
     expect(strip).toBeTruthy();
@@ -275,9 +280,9 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     expect(strip.textContent).toContain("Neutral");
   });
 
-  it("hides the strip when expanded with a null PYS but still renders the chart", () => {
+  it.each(rowRenderers)("hides null PYS but keeps history on %s", (_surface, renderRow) => {
     const row = { ...baseRow, pharosYieldScore: null } as YieldViewModelRow;
-    renderBoard(row, true);
+    renderRow(row, true);
 
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
@@ -307,14 +312,14 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
   });
 });
 
-describe("YieldInstrumentBoard — cohort percentile chip", () => {
+describe.each(rowRenderers)("%s cohort percentile chip", (_surface, renderRow) => {
   it("renders the percentile chip when cohortPercentile has a numeric value", () => {
     const row = {
       ...baseRow,
       cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" },
     } as YieldViewModelRow;
 
-    renderBoard(row);
+    renderRow(row);
 
     expect(screen.getByText("p64 of 18")).toBeTruthy();
   });
@@ -325,7 +330,7 @@ describe("YieldInstrumentBoard — cohort percentile chip", () => {
       cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" },
     } as YieldViewModelRow;
 
-    renderBoard(row);
+    renderRow(row);
 
     expect(screen.getByText("small peer set")).toBeTruthy();
   });
@@ -333,7 +338,7 @@ describe("YieldInstrumentBoard — cohort percentile chip", () => {
   it("renders nothing when cohortPercentile is null", () => {
     const row = { ...baseRow, cohortPercentile: null } as YieldViewModelRow;
 
-    renderBoard(row);
+    renderRow(row);
 
     expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
     expect(screen.queryByText("small peer set")).toBeNull();

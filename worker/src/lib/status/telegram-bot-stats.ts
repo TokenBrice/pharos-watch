@@ -293,6 +293,7 @@ const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
   "mini_app_snooze",
   "mini_app_coin_snooze",
   "mini_app_forget",
+  "mini_app_recap",
 ] as const;
 // These generic event types are also emitted by non-Mini-App bot flows, so
 // only count rows whose Mini App recorder populated a Mini App source category.

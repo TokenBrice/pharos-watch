@@ -96,4 +96,23 @@ describe("supply snapshot completion identity", () => {
       exactCoverageVerified: false,
     });
   });
+
+  it.each([
+    { ownedRowIds: ["coin-b", "coin-a"], accountedActiveCount: 2 },
+    { ownedRowIds: ["coin-a", "coin-a"], accountedActiveCount: 2 },
+    { ownedRowIds: ["", "coin-b"], accountedActiveCount: 2 },
+    { ownedRowIds: [42, "coin-b"], accountedActiveCount: 2 },
+    { ownedRowIds: ["coin-a", "coin-b"], accountedActiveCount: 1 },
+  ])("rejects malformed v2 ownership $ownedRowIds / $accountedActiveCount", async (proof) => {
+    const expectedCoverage = buildSupplySnapshotCoverageExpectation(["coin-a", "coin-b"], []);
+    const db = mockD1([{
+      match: "cache",
+      matchBinds: ["snapshot-supply:last-write"],
+      rows: [markerRow({ snapshotDate: SNAPSHOT_DATE, coverageVersion: 2, ...expectedCoverage, ...proof })],
+    }]);
+    await expect(getCompletedSupplySnapshot(db, { expectedCoverage })).resolves.toMatchObject({
+      exactCoverageVerified: false,
+      ownedRowIds: null,
+    });
+  });
 });

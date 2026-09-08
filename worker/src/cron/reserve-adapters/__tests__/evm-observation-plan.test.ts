@@ -137,4 +137,87 @@ describe("executeEvmObservationPlan", () => {
     expect(snapshot.values.supply).toBe(123n);
     expect(snapshot.metadata).toEqual({ blockNumber: 123, blockTimestamp: 456, runtimeCode: "0x6000" });
   });
+
+  it("rejects missing or invalid anchors and failed identity checks before dispatch", async () => {
+    const fields = [uint256Observation({ label: "supply", contract: "0x1", data: "0x1" })] as const;
+    const read = vi.fn();
+    const observeIdentity = vi.fn(async () => "wrong-code");
+    for (const anchorValue of [null, -1]) {
+      await expect(executeEvmObservationPlan({
+        adapterKey: "anchor-gate", fields, read,
+        anchor: { observe: async () => anchorValue, verify: (value) => value < 0 ? "invalid block" : null },
+        checks: [{ label: "code", observe: observeIdentity, verify: () => "code drift" }],
+      })).rejects.toThrow(/observation block anchor/);
+    }
+    expect(observeIdentity).not.toHaveBeenCalled();
+    for (const identity of [null, "wrong-code"]) {
+      await expect(executeEvmObservationPlan({
+        adapterKey: "identity-gate", fields, read,
+        anchor: { observe: async () => 123 },
+        checks: [{ label: "code", observe: async () => identity, verify: () => "code drift" }],
+      })).rejects.toThrow(/observation check failed/);
+    }
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("rejects null, incomplete, unknown-label and duplicate-label transport results", async () => {
+    const fields = ["a", "b"].map((label) => uint256Observation({ label, contract: "0x1", data: "0x1" }));
+    const row = (label: string) => ({ label, success: true, returnData: word(1n) });
+    for (const [results, error] of [
+      [null, "transport failed"],
+      [[row("a")], "count mismatch"],
+      [[row("a"), row("foreign")], "unknown label"],
+      [[row("a"), row("a")], "duplicate label"],
+    ] as const) {
+      await expect(executeEvmObservationPlan({
+        adapterKey: "transport-gate", fields, read: async () => results,
+      })).rejects.toThrow(error);
+    }
+  });
+
+  it("decodes reordered results by label rather than position", async () => {
+    const snapshot = await executeEvmObservationPlan({
+      adapterKey: "reordered",
+      fields: [
+        uint256Observation({ label: "assets", contract: "0x1", data: "0x1" }),
+        uint256Observation({ label: "supply", contract: "0x1", data: "0x2" }),
+      ],
+      read: async () => [
+        { label: "supply", success: true, returnData: word(7n) },
+        { label: "assets", success: true, returnData: word(11n) },
+      ],
+    });
+    expect(snapshot.values).toEqual({ assets: 11n, supply: 7n });
+  });
+
+  it("rejects malformed successful payloads even for optional observations", async () => {
+    for (const optional of [false, true]) {
+      await expect(executeEvmObservationPlan({
+        adapterKey: "decode-gate",
+        fields: [addressObservation({ label: "asset", contract: "0x1", data: "0x1", optional })],
+        read: async () => [{ label: "asset", success: true, returnData: "0x1234" }],
+      })).rejects.toThrow("observation decode failed");
+    }
+  });
+
+  it("verifies against all decoded fields including later declarations", async () => {
+    const fields = [
+      uint256Observation({
+        label: "assets", contract: "0x1", data: "0x1",
+        verify: (value, values) => value >= (values.supply as bigint) ? null : "underbacked",
+      }),
+      uint256Observation({ label: "supply", contract: "0x1", data: "0x2" }),
+    ];
+    for (const assets of [10n, 9n]) {
+      const result = executeEvmObservationPlan({
+        adapterKey: "cross-field", fields,
+        read: async () => [
+          { label: "assets", success: true, returnData: word(assets) },
+          { label: "supply", success: true, returnData: word(10n) },
+        ],
+      });
+      if (assets === 10n) expect((await result).values).toEqual({ assets: 10n, supply: 10n });
+      else await expect(result).rejects.toThrow("underbacked");
+    }
+  });
 });

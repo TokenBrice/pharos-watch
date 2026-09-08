@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { pruneTelegramMiniAppMutationBurstCache } from "../../cron/telegram-retention-cleanup";
 import { prepareDeleteTelegramChatCacheStatements } from "../telegram-webhook-store";
 import {
@@ -8,12 +8,7 @@ import {
   TELEGRAM_MINI_APP_MUTATION_BURST_LIMIT,
   TELEGRAM_MINI_APP_MUTATION_BURST_WINDOW_SEC,
 } from "../telegram-mini-app-rate-limit";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-
-function openDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
+import { createCacheSqlite as openDb } from "./telegram-sqlite.test-support";
 
 describe("acquireTelegramMiniAppMutationBurst", () => {
   let sqlite: DatabaseSync | null = null;

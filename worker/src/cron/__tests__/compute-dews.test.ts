@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { batchExecute } from "../../lib/db";
+import { createDewsDb, dewsCache, dewsCoin } from "./compute-dews.test-support";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => {
   const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>(
@@ -8,64 +10,15 @@ vi.mock("@shared/lib/stablecoins/registry", async () => {
   return { ...actual, FROZEN_IDS: new Set<string>() };
 });
 
-vi.mock("@shared/lib/psi-eligible", () => ({
-  PSI_ELIGIBLE_STABLECOINS: [
-    {
-      id: "usdt-tether",
-      symbol: "USDT",
-      flags: { navToken: false, pegCurrency: "USD" },
-    },
-    {
-      id: "pyusd-paypal",
-      symbol: "PYUSD",
-      flags: { navToken: false, pegCurrency: "USD" },
-    },
-    {
-      id: "usd1-world-liberty-financial",
-      symbol: "USD1",
-      flags: { navToken: false, pegCurrency: "USD" },
-    },
-    {
-      id: "eurc-euro-coin",
-      symbol: "EURC",
-      flags: { navToken: false, pegCurrency: "EUR" },
-    },
-  ],
-  PSI_ELIGIBLE_META_BY_ID: new Map([
-    [
-      "usdt-tether",
-      {
-        id: "usdt-tether",
-        symbol: "USDT",
-        flags: { navToken: false, pegCurrency: "USD" },
-      },
-    ],
-    [
-      "pyusd-paypal",
-      {
-        id: "pyusd-paypal",
-        symbol: "PYUSD",
-        flags: { navToken: false, pegCurrency: "USD" },
-      },
-    ],
-    [
-      "usd1-world-liberty-financial",
-      {
-        id: "usd1-world-liberty-financial",
-        symbol: "USD1",
-        flags: { navToken: false, pegCurrency: "USD" },
-      },
-    ],
-    [
-      "eurc-euro-coin",
-      {
-        id: "eurc-euro-coin",
-        symbol: "EURC",
-        flags: { navToken: false, pegCurrency: "EUR" },
-      },
-    ],
-  ]),
-}));
+vi.mock("@shared/lib/psi-eligible", () => {
+  const coins = [
+    { id: "usdt-tether", symbol: "USDT", flags: { navToken: false, pegCurrency: "USD" } },
+    { id: "pyusd-paypal", symbol: "PYUSD", flags: { navToken: false, pegCurrency: "USD" } },
+    { id: "usd1-world-liberty-financial", symbol: "USD1", flags: { navToken: false, pegCurrency: "USD" } },
+    { id: "eurc-euro-coin", symbol: "EURC", flags: { navToken: false, pegCurrency: "EUR" } },
+  ];
+  return { PSI_ELIGIBLE_STABLECOINS: coins, PSI_ELIGIBLE_META_BY_ID: new Map(coins.map((coin) => [coin.id, coin])) };
+});
 
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({
@@ -88,23 +41,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 });
 
 vi.mock("../../lib/db-cache", () => ({
-  getCache: vi.fn(async () => ({
-    value: JSON.stringify({
-      peggedAssets: [
-        {
-          id: "usdt-tether",
-          symbol: "USDT",
-          pegType: "peggedUSD",
-          price: 1,
-          priceConfidence: "high",
-          circulating: { peggedUSD: 100_000_000 },
-          circulatingPrevDay: { peggedUSD: 99_000_000 },
-          circulatingPrevWeek: { peggedUSD: 98_000_000 },
-        },
-      ],
-    }),
-    updatedAt: Math.floor(Date.now() / 1000),
-  })),
+  getCache: vi.fn(async () => dewsCache()),
   setCache: vi.fn(async () => {}),
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   writeFreshnessSentinel: vi.fn(async () => {}),
@@ -340,16 +277,17 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
       return null as T | null;
     };
 
-    const run = async () => ({ success: true, meta: { changes: 1 } });
+    let boundArgs: unknown[] = [];
+    const run = async () => {
+      if (sql.includes("pharos:dews:stress-history-sparse-insert") && typeof boundArgs[0] === "string") {
+        computedSnapshotIds.add(boundArgs[0]);
+      }
+      return { success: true, meta: { changes: 1 } };
+    };
 
     return {
       bind: (...args: unknown[]) => {
-        if (
-          sql.includes("pharos:dews:stress-history-sparse-insert")
-          && typeof args[0] === "string"
-        ) {
-          computedSnapshotIds.add(args[0]);
-        }
+        boundArgs = args;
         opts.onBind?.(sql, args);
         return { all, first, run };
       },
@@ -359,44 +297,51 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     };
   };
 
-  return makeNoopD1({
-    prepare: (sql: string) => stmt(sql),
-    batch: async (statements: D1PreparedStatement[]) => Promise.all(
-      statements.map((statement) => statement.run()),
-    ),
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  });
+  return createDewsDb((sql) => stmt(sql));
 }
 
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  sqliteFixtures.closeAll();
+  vi.useRealTimers();
+});
+
+function seededStressDb(ids: string[]) {
+  const fixture = sqliteFixtures.open();
+  const priorTime = Math.floor(Date.now() / 1000) - 86400;
+  for (const table of ["stress_signals", "stress_signal_history"]) {
+    const clock = table === "stress_signals" ? "computed_at" : "snapshot_date";
+    const insert = fixture.sqlite.prepare(`INSERT INTO ${table}
+      (stablecoin_id, ${clock}, score, band, signals_json) VALUES (?, ?, 22, 'WATCH', '{}')`);
+    for (const id of ids) insert.run(id, priorTime);
+  }
+  const prepare = fixture.db.prepare.bind(fixture.db);
+  fixture.db.prepare = (sql: string) => {
+    const statement = prepare(sql);
+    const bind = statement.bind.bind(statement);
+    statement.bind = (...args: unknown[]) => {
+      if (args.length > 90) throw new Error("D1 bind ceiling exceeded");
+      return bind(...args);
+    };
+    return statement;
+  };
+  return { ...fixture, priorTime };
+}
 describe("computeAndStoreDEWS", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
+    vi.mocked(batchExecute).mockImplementation(async (_db, statements) => {
+      for (const statement of statements) await statement.run();
+      return statements.length;
+    });
     vi.mocked(computeDEWS).mockClear();
     vi.mocked(derivePegRates).mockClear();
     vi.mocked(writeFreshnessSentinel).mockClear();
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       if (key === "dews:published-generation") return null;
-      return {
-        value: JSON.stringify({
-          peggedAssets: [
-            {
-              id: "usdt-tether",
-              symbol: "USDT",
-              pegType: "peggedUSD",
-              price: 1,
-              priceConfidence: "high",
-              circulating: { peggedUSD: 100_000_000 },
-              circulatingPrevDay: { peggedUSD: 99_000_000 },
-              circulatingPrevWeek: { peggedUSD: 98_000_000 },
-            },
-          ],
-          fxFallbackRates: { peggedEUR: 1.08 },
-        }),
-        updatedAt: Math.floor(Date.now() / 1000),
-      } as never;
+      return dewsCache([dewsCoin()], { fxFallbackRates: { peggedEUR: 1.08 } }) as never;
     });
   });
 
@@ -529,23 +474,9 @@ describe("computeAndStoreDEWS", () => {
   it("preserves explicit zero supply-history anchors for DEWS scoring", async () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
-      return {
-        value: JSON.stringify({
-          peggedAssets: [
-            {
-              id: "usdt-tether",
-              symbol: "USDT",
-              pegType: "peggedUSD",
-              price: 1,
-              priceConfidence: "high",
-              circulating: { peggedUSD: 100_000_000 },
-              circulatingPrevDay: { peggedUSD: 0 },
-              circulatingPrevWeek: { peggedUSD: 0 },
-            },
-          ],
-        }),
-        updatedAt: Math.floor(Date.now() / 1000),
-      } as never;
+      return dewsCache([dewsCoin({
+        circulatingPrevDay: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 0 },
+      })]) as never;
     });
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen);
@@ -567,21 +498,9 @@ describe("computeAndStoreDEWS", () => {
   it("marks supply-history anchors unavailable when both previous buckets are absent", async () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
-      return {
-        value: JSON.stringify({
-          peggedAssets: [
-            {
-              id: "usdt-tether",
-              symbol: "USDT",
-              pegType: "peggedUSD",
-              price: 1,
-              priceConfidence: "high",
-              circulating: { peggedUSD: 100_000_000 },
-            },
-          ],
-        }),
-        updatedAt: Math.floor(Date.now() / 1000),
-      } as never;
+      return dewsCache([dewsCoin({
+        circulatingPrevDay: undefined, circulatingPrevWeek: undefined,
+      })]) as never;
     });
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen);
@@ -683,18 +602,6 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceCoverage.mintBurnHourlyFreshRows).toBe(0);
   });
 
-  it("marks run degraded when dex_liquidity is unavailable", async () => {
-    const sqlSeen: string[] = [];
-    const db = makeDb(sqlSeen, { failDexLiquidity: true });
-
-    const result = await computeAndStoreDEWS(db);
-
-    expect(result.status).toBe("degraded");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
-    };
-    expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
-  });
 
   it("does not publish the DEWS freshness sentinel for degraded runs", async () => {
     const sqlSeen: string[] = [];
@@ -709,6 +616,9 @@ describe("computeAndStoreDEWS", () => {
       freshnessSentinelPublished: boolean;
     };
     expect(metadata.freshnessSentinelPublished).toBe(false);
+    expect(JSON.parse(result.metadata ?? "{}").sourceFailures).toContainEqual(
+      expect.objectContaining({ source: "dex-liquidity" }),
+    );
   });
 
   it("marks run degraded when previous stress_signals JSON is malformed", async () => {
@@ -1188,88 +1098,32 @@ describe("computeAndStoreDEWS", () => {
     expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
   });
 
-  it("marks thin non-USD peg references unavailable for DEWS divergence", async () => {
+  it.each([
+    { source: "median" as const, available: false, reference: 0, reason: "peg-reference-untrusted" },
+    { source: "fallback" as const, available: true, reference: 1.08, reason: null },
+  ])("uses $source authority for non-USD divergence", async ({ source, available, reference, reason }) => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
-      return {
-        value: JSON.stringify({
-          peggedAssets: [
-            {
-              id: "eurc-euro-coin",
-              symbol: "EURC",
-              pegType: "peggedEUR",
-              price: 1.05,
-              priceConfidence: "high",
-              circulating: { peggedEUR: 100_000_000 },
-              circulatingPrevDay: { peggedEUR: 100_000_000 },
-              circulatingPrevWeek: { peggedEUR: 100_000_000 },
-            },
-          ],
-        }),
-        updatedAt: Math.floor(Date.now() / 1000),
-      } as never;
+      return dewsCache([dewsCoin({
+        id: "eurc-euro-coin", symbol: "EURC", pegType: "peggedEUR", price: 1.05,
+        circulating: { peggedEUR: 100_000_000 },
+        circulatingPrevDay: { peggedEUR: 100_000_000 },
+        circulatingPrevWeek: { peggedEUR: 100_000_000 },
+      })]) as never;
     });
     vi.mocked(derivePegRates).mockReturnValueOnce({
       rates: { peggedUSD: 1, peggedEUR: 1.08 },
-      sources: { peggedUSD: "median", peggedEUR: "median" },
+      sources: { peggedUSD: "median", peggedEUR: source },
       counts: { peggedUSD: 1, peggedEUR: 1 },
     });
-    const sqlSeen: string[] = [];
 
-    await computeAndStoreDEWS(makeDb(sqlSeen, { dexLiqRows: [] }));
+    await computeAndStoreDEWS(makeDb([], { dexLiqRows: [] }));
 
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
-        stablecoinId: "eurc-euro-coin",
-        pegType: "peggedEUR",
-        pegRef: 0,
-        pegReferenceAvailable: false,
-        pegReferenceUnavailableReason: "peg-reference-untrusted",
-        pegRateSource: "median",
-        pegRateContributorCount: 1,
-      }),
-    );
-  });
-
-  it("keeps trusted fallback non-USD peg references available", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dews:bootstrap-complete") return null;
-      return {
-        value: JSON.stringify({
-          peggedAssets: [
-            {
-              id: "eurc-euro-coin",
-              symbol: "EURC",
-              pegType: "peggedEUR",
-              price: 1.05,
-              priceConfidence: "high",
-              circulating: { peggedEUR: 100_000_000 },
-              circulatingPrevDay: { peggedEUR: 100_000_000 },
-              circulatingPrevWeek: { peggedEUR: 100_000_000 },
-            },
-          ],
-        }),
-        updatedAt: Math.floor(Date.now() / 1000),
-      } as never;
-    });
-    vi.mocked(derivePegRates).mockReturnValueOnce({
-      rates: { peggedUSD: 1, peggedEUR: 1.08 },
-      sources: { peggedUSD: "median", peggedEUR: "fallback" },
-      counts: { peggedUSD: 1, peggedEUR: 1 },
-    });
-    const sqlSeen: string[] = [];
-
-    await computeAndStoreDEWS(makeDb(sqlSeen, { dexLiqRows: [] }));
-
-    expect(computeDEWS).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stablecoinId: "eurc-euro-coin",
-        pegType: "peggedEUR",
-        pegRef: 1.08,
-        pegReferenceAvailable: true,
-        pegReferenceUnavailableReason: null,
-        pegRateSource: "fallback",
-        pegRateContributorCount: 1,
+        stablecoinId: "eurc-euro-coin", pegType: "peggedEUR",
+        pegRef: reference, pegReferenceAvailable: available,
+        pegReferenceUnavailableReason: reason, pegRateSource: source, pegRateContributorCount: 1,
       }),
     );
   });
@@ -1374,20 +1228,21 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
-  it("purges orphan stress rows for IDs outside the current eligible set", async () => {
-    const sqlSeen: string[] = [];
-    const db = makeDb(sqlSeen, {
-      signalIds: ["usdt-tether", "999"],
-      historyIds: ["usdt-tether", "999"],
-    });
+  it("purges orphan stress rows while retaining eligible history across bounded batches", async () => {
+    const orphanIds = Array.from({ length: 145 }, (_, i) => `orphan-${i}`);
+    const { db, sqlite, priorTime } = seededStressDb(["usdt-tether", "pyusd-paypal", ...orphanIds]);
+    const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
 
     await computeAndStoreDEWS(db);
 
-    expect(sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals"))).toBe(true);
-    expect(sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history"))).toBe(true);
-    expect(sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN"))).toBe(true);
-    expect(sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN"))).toBe(true);
-    expect(sqlSeen.some((sql) => sql.includes("NOT IN"))).toBe(false);
+    for (const table of ["stress_signals", "stress_signal_history"]) {
+      expect(sqlite.prepare(`SELECT DISTINCT stablecoin_id FROM ${table} ORDER BY stablecoin_id`).all())
+        .toEqual([{ stablecoin_id: "pyusd-paypal" }, { stablecoin_id: "usdt-tether" }]);
+      const clock = table === "stress_signals" ? "computed_at" : "snapshot_date";
+      expect(sqlite.prepare(`SELECT stablecoin_id, score FROM ${table} WHERE ${clock} = ? ORDER BY stablecoin_id`).all(priorTime))
+        .toEqual([{ stablecoin_id: "pyusd-paypal", score: 22 }, { stablecoin_id: "usdt-tether", score: 22 }]);
+    }
   });
 
   it("retires current stress rows for eligible assets with no current supply", async () => {
@@ -1421,24 +1276,18 @@ describe("computeAndStoreDEWS", () => {
         updatedAt: Math.floor(Date.now() / 1000),
       } as never;
     });
-    const sqlSeen: string[] = [];
-    const currentRetireBinds: unknown[][] = [];
-    const db = makeDb(sqlSeen, {
-      signalIds: ["usdt-tether", "pyusd-paypal"],
-      historyIds: ["usdt-tether", "pyusd-paypal"],
-      onBind: (sql, args) => {
-        if (sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")) {
-          currentRetireBinds.push(args);
-        }
-      },
-    });
+    const { db, sqlite, priorTime } = seededStressDb(["usdt-tether", "pyusd-paypal"]);
+    const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
 
     const result = await computeAndStoreDEWS(db);
 
     expect(computeDEWS).toHaveBeenCalledTimes(1);
     expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({ stablecoinId: "usdt-tether" }));
-    expect(currentRetireBinds).toContainEqual(["pyusd-paypal"]);
-    expect(sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN"))).toBe(false);
+    expect(sqlite.prepare("SELECT DISTINCT stablecoin_id FROM stress_signals").all())
+      .toEqual([{ stablecoin_id: "usdt-tether" }]);
+    expect(sqlite.prepare("SELECT score FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .all("pyusd-paypal", priorTime)).toEqual([{ score: 22 }]);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rowsRetiredCurrent: number;
       rowsSkippedNoCurrentSupply: number;
@@ -1449,27 +1298,4 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceCoverage.coinsSkippedNoCurrentSupply).toBe(1);
   });
 
-  it("chunks orphan deletes to avoid D1 bind-variable overflow", async () => {
-    const sqlSeen: string[] = [];
-    const deleteBindCounts: number[] = [];
-    const orphanIds = Array.from({ length: 145 }, (_, i) => `orphan-${i}`);
-    const db = makeDb(sqlSeen, {
-      signalIds: ["usdt-tether", ...orphanIds],
-      historyIds: ["usdt-tether", ...orphanIds],
-      onBind: (sql, args) => {
-        if (
-          sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN") ||
-          sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")
-        ) {
-          deleteBindCounts.push(args.length);
-        }
-      },
-    });
-
-    await computeAndStoreDEWS(db);
-
-    expect(deleteBindCounts.length).toBeGreaterThan(2);
-    expect(Math.max(...deleteBindCounts)).toBeLessThanOrEqual(90);
-    expect(sqlSeen.some((sql) => sql.includes("NOT IN"))).toBe(false);
-  });
 });

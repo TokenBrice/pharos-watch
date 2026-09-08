@@ -363,12 +363,18 @@ function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void
 }
 
 async function expectResolvesWithin(promise: Promise<void>, timeoutMs: number, message: string): Promise<void> {
-  await Promise.race([
-    promise,
-    new Promise<never>((_resolve, reject) => {
-      setTimeout(() => reject(new Error(message)), timeoutMs);
-    }),
-  ]);
+  // Real watchdog: broken concurrent dispatch must reach finally and release the held read.
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 describe("adaptCrvUsd", () => {
@@ -435,23 +441,50 @@ describe("adaptCrvUsd", () => {
       yieldBasisCollateralPct: 66.66666666666666,
     });
   });
-
-  it("uses worst risk when multiple symbols share a bucket", () => {
-    const payload = {
-      chains: {
-        ethereum: {
-          data: [
-            { collateral_amount_usd: 100_000_000, collateral_token: { symbol: "wstETH" } },
-            { collateral_amount_usd: 50_000_000, collateral_token: { symbol: "weETH" } },
-          ],
-        },
-      },
-    };
-    const { slices } = adaptCrvUsd(payload);
-    const lstBucket = slices.find((s) => s.name.includes("wstETH"));
-    expect(lstBucket).toBeDefined();
-    expect(lstBucket!.risk).toBeDefined();
+  it("retains unknown collateral in the denominator and exposes its exact share", () => {
+    const result = adaptCrvUsd({ chains: { ethereum: { data: [
+      { collateral_amount_usd: 75, collateral_token: { symbol: "WBTC" } },
+      { collateral_amount_usd: 25, collateral_token: { symbol: "UNREVIEWED" } },
+    ] } } });
+    expect(result.slices).toEqual([
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 75, risk: "medium" },
+      { name: "Other / unmapped collateral markets", pct: 25, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({ unknownExposurePct: 25, activeMarketCount: 2, directCollateralUsd: 100 });
+    expect(result.warnings).toEqual([expect.objectContaining({ code: "unknown-market" })]);
   });
+
+  it("publishes all-unknown positive exposure rather than an empty recognized basket", () => {
+    const result = adaptCrvUsd({ chains: { ethereum: { data: [
+      { collateral_amount_usd: 100, collateral_token: { symbol: "UNREVIEWED" } },
+    ] } } });
+    expect(result.slices).toEqual([{ name: "Other / unmapped collateral markets", pct: 100, risk: "high" }]);
+    expect(result.metadata).toMatchObject({ unknownExposurePct: 100, activeMarketCount: 1 });
+    expect(result.warnings).toEqual([expect.objectContaining({ code: "unknown-market" })]);
+  });
+
+  it("excludes nonpositive and nonfinite values from exposure and active counts", () => {
+    const result = adaptCrvUsd({ chains: { ethereum: { data: [
+      { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } },
+      ...[0, -10, NaN, Infinity].map((collateral_amount_usd) => ({
+        collateral_amount_usd, collateral_token: { symbol: "UNREVIEWED" },
+      })),
+    ] } } }, [
+      { marketId: 1, symbol: "WETH", usd: 100 },
+      { marketId: 2, symbol: "UNREVIEWED", usd: -50 },
+      { marketId: 3, symbol: "UNREVIEWED", usd: Infinity },
+    ]);
+    expect(result.slices).toEqual([
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 50, risk: "medium" },
+      { name: "ETH", pct: 50, risk: "very-low" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      unknownExposurePct: 0, activeMarketCount: 2, directActiveMarketCount: 1,
+      yieldBasisActiveMarketCount: 1, directCollateralUsd: 100, yieldBasisCollateralUsd: 100,
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
 
   it("uses not-applicable freshness for direct LLAMMA onchain exposures", () => {
     const result = adaptCrvUsdOnchain(
@@ -607,18 +640,22 @@ describe("fetchCrvUsdReserves", () => {
     );
 
     const resultPromise = fetchCrvUsdReserves({} as never, HTTP_CRVUSD_CONFIG, signal);
-    await expectResolvesWithin(
-      secondMarketStarted,
-      100,
-      "Yield Basis market 1 was not requested before market 0 resolved",
-    );
-    firstMarket.resolve(
-      encodeFunctionResult({
-        abi: FACTORY_ABI,
-        functionName: "markets",
-        result: [BTC_ASSET, BTC_ASSET, BTC_ASSET, BTC_LT, BTC_ASSET, BTC_ASSET, BTC_ASSET] as const,
-      }),
-    );
+    try {
+      await expectResolvesWithin(
+        secondMarketStarted,
+        100,
+        "Yield Basis market 1 was not requested before market 0 resolved",
+      );
+    } finally {
+      firstMarket.resolve(
+        encodeFunctionResult({
+          abi: FACTORY_ABI,
+          functionName: "markets",
+          result: [BTC_ASSET, BTC_ASSET, BTC_ASSET, BTC_LT, BTC_ASSET, BTC_ASSET, BTC_ASSET] as const,
+        }),
+      );
+      await Promise.allSettled([resultPromise]);
+    }
 
     const result = await resultPromise;
 
@@ -662,14 +699,18 @@ describe("fetchCrvUsdReserves", () => {
     );
 
     const resultPromise = fetchCrvUsdReserves({} as never, ONCHAIN_CRVUSD_CONFIG, signal);
-    await expectResolvesWithin(
-      secondCollateralStarted,
-      100,
-      "LLAMMA market 1 collateral was not requested before market 0 resolved",
-    );
-    firstCollateral.resolve(
-      encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "collaterals", result: BTC_ASSET }),
-    );
+    try {
+      await expectResolvesWithin(
+        secondCollateralStarted,
+        100,
+        "LLAMMA market 1 collateral was not requested before market 0 resolved",
+      );
+    } finally {
+      firstCollateral.resolve(
+        encodeFunctionResult({ abi: CURVE_FACTORY_ABI, functionName: "collaterals", result: BTC_ASSET }),
+      );
+      await Promise.allSettled([resultPromise]);
+    }
 
     const result = await resultPromise;
 

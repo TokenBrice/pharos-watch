@@ -16,7 +16,8 @@ import {
   buildUsddHistoryUrl,
   fetchUsddDataPlatformReserves,
 } from "../usdd-data-platform";
-import { expectValidAdapterOutput, TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 
 const coin = {
   id: "usdd-decentralized-usd",
@@ -33,6 +34,7 @@ const coin = {
 } as const satisfies StablecoinMeta;
 beforeEach(() => {
   vi.clearAllMocks();
+  signal = new AbortController().signal;
 });
 
 describe("adaptUsddLatestCollateral", () => {

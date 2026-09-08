@@ -42,7 +42,7 @@ describe("decideCriticalLeadSeverity", () => {
   it("demotes an unchanged ongoing critical after the consecutive quota", () => {
     const decision = decideCriticalLeadSeverity({
       ...base,
-      ageHours: 26 * 24,
+      ageHours: 6,
       streak: { consecutive: MAX_CONSECUTIVE_HARD_LEADS, inWindow: MAX_CONSECUTIVE_HARD_LEADS },
     });
     expect(decision.severity).toBe("soft");
@@ -62,7 +62,7 @@ describe("decideCriticalLeadSeverity", () => {
       ...base,
       ageHours: 26 * 24,
       severityBps: -6300,
-      previousSeverityBps: -5700,
+      previousSeverityBps: -5800,
       streak: { consecutive: 5, inWindow: 5 },
     });
     expect(decision.severity).toBe("hard");
@@ -72,19 +72,29 @@ describe("decideCriticalLeadSeverity", () => {
     const decision = decideCriticalLeadSeverity({
       ...base,
       ageHours: 26 * 24,
-      severityBps: -5900,
+      severityBps: -6199,
       previousSeverityBps: -5700,
       streak: { consecutive: 2, inWindow: 3 },
     });
     expect(decision.severity).toBe("soft");
   });
 
-  it("a new event that exhausted its quota is demoted until it moves", () => {
-    const decision = decideCriticalLeadSeverity({
-      ...base,
-      ageHours: 40,
-      streak: { consecutive: 2, inWindow: 2 },
-    });
-    expect(decision.severity).toBe("soft");
+  it("enforces the rolling quota independently of consecutive leads", () => {
+    const input = { ...base, ageHours: 6 };
+    expect(decideCriticalLeadSeverity({ ...input, streak: { consecutive: 0, inWindow: 2 } }).severity).toBe("hard");
+    expect(decideCriticalLeadSeverity({ ...input, streak: { consecutive: 0, inWindow: 3 } }).severity).toBe("soft");
+  });
+
+  it("includes exactly 48 hours in the breaking-news window", () => {
+    const input = { ...base, streak: { consecutive: 0, inWindow: 0 } };
+    expect(decideCriticalLeadSeverity({ ...input, ageHours: 48 }).severity).toBe("hard");
+    expect(decideCriticalLeadSeverity({ ...input, ageHours: 48.001 }).severity).toBe("soft");
+  });
+
+  it("does not infer recency or worsening from missing history", () => {
+    const input = { ...base, streak: { consecutive: 0, inWindow: 0 } };
+    expect(decideCriticalLeadSeverity({ ...input, ageHours: undefined }).severity).toBe("soft");
+    expect(decideCriticalLeadSeverity({ ...input, ageHours: 49, previousSeverityBps: null }).severity).toBe("soft");
+    expect(decideCriticalLeadSeverity({ ...input, ageHours: 6, previousSeverityBps: null }).severity).toBe("hard");
   });
 });

@@ -11,6 +11,13 @@ import type {
   V9StructuralSignalKind,
 } from "../../types/safety-score-v9";
 import { makeV9Pillar as pillar, makeV9ProductionScoreInput as assetInput } from "./safety-score-v9-score.test-support";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
+import {
+  makeDeploymentControl,
+  makeEconomicControlArgs,
+  makeEconomicControlFacts,
+  makeReviewedMintInput,
+} from "./safety-score-v9-fixtures.test-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
 
@@ -305,44 +312,36 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
     expect(policy.backing.assuranceSeasonedCredit).toEqual({ points: 3, minMonths: 60 });
   });
 
-  it("mint credit reaches but never exceeds the next merged-ladder rung", () => {
-    const ladder = [
-      ...Object.values(policy.control.mintPostureQuality),
-      policy.control.mintPostureGrading.prudentialReconciled,
-      policy.control.mintPostureGrading.attestationOnlyReconciled,
-    ].sort((left, right) => left - right);
-    // 9.32 ladder gains the 35 (unbounded-reconciliation-unknown) and 50
-    // (collateral-gated) quality keys between the floor and concentrated-admin.
-    expect(ladder).toEqual(expect.arrayContaining([25, 35, 50, 55, 70, 80, 85, 100]));
-    expect(policy.control.mintPostureQuality["unbounded-reconciliation-unknown"]).toBe(35);
-    expect(policy.control.mintPostureQuality["collateral-gated"]).toBe(50);
-    for (const score of [25, 35, 50, 55, 70, 80, 85]) {
-      const next = ladder.find((value) => value > score)!;
-      const credited = Math.min(score + policy.control.mintPostureGrading.seasonedCreditPoints, next);
-      expect(credited).toBeLessThanOrEqual(next);
-      expect(credited).toBeGreaterThan(score);
+  it("applies seasoning at 60 months without crossing the next mint rung", () => {
+    const control = makeDeploymentControl("mint:seasoned", "mint", {
+      authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+    });
+    for (const [trackRecordMonths, expected] of [[59, 35], [60, 44]]) {
+      const result = evaluateV9EconomicControl(makeEconomicControlArgs({
+        facts: makeEconomicControlFacts([control]),
+        mint: makeReviewedMintInput(control.controlKey, {
+          reconciliation: "unknown",
+          supervision: "none",
+        }),
+        trackRecordMonths,
+      }));
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "unbounded-reconciliation-unknown",
+        score: expected,
+      });
     }
-    // The top rung (none-resolved 100) has no rung above it: no credit headroom.
-    const top = Math.max(...ladder);
-    expect(ladder.find((value) => value > top)).toBeUndefined();
   });
 
-  it("pins the adverse seasoning ceiling below unknown and above floor+credit", () => {
-    // 9.32: unbounded-or-compromised and unbounded-reconciliation-unknown can
-    // earn seasoned credit. The dedicated adverse ceiling (39) stops the floor
-    // rung from silently capping at next-rung-minus-one (34) once the 35 rung
-    // exists; the unknown-reconciliation rung keeps the generic ladder (44).
-    const quality = policy.control.mintPostureQuality;
-    const grading = policy.control.mintPostureGrading;
-    expect(quality["unbounded-or-compromised"]).toBe(25);
-    expect(quality["unbounded-reconciliation-unknown"]).toBe(35);
-    expect(quality["collateral-gated"]).toBe(50);
-    expect(grading.adverseSeasonedCreditCeiling).toBe(39);
-    expect(grading.adverseSeasonedCreditCeiling).toBeLessThan(quality.unknown);
-    expect(grading.adverseSeasonedCreditCeiling).toBeGreaterThanOrEqual(
-      quality["unbounded-or-compromised"] + grading.seasonedCreditPoints,
-    );
-    expect(quality["unbounded-reconciliation-unknown"] + grading.seasonedCreditPoints - 1).toBe(44);
+  it("does not award seasoning above the resolved no-mint top rung", () => {
+    for (const trackRecordMonths of [59, 60]) {
+      const result = evaluateV9EconomicControl(makeEconomicControlArgs({ trackRecordMonths }));
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "none-resolved",
+        score: 100,
+      });
+    }
   });
 });
 

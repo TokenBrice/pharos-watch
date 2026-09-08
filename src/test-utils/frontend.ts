@@ -25,11 +25,7 @@ function createMatchMediaMock(matches: MatchMediaMatches = false): MatchMediaMoc
 
 export function installMatchMediaMock(matches: MatchMediaMatches = false): MatchMediaMock {
   const mock = createMatchMediaMock(matches);
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    configurable: true,
-    value: mock,
-  });
+  vi.stubGlobal("matchMedia", mock);
   return mock;
 }
 

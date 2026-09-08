@@ -221,202 +221,65 @@ describe("curated on-chain supply paths", () => {
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susde-ethena"]).toBe("ethereum");
   });
 
-  it("resolves yUSD's reviewed OFT burn/mint deployments as a summed aggregate", () => {
-    const chains = [
-      "ethereum",
-      "arbitrum",
-      "base",
-      "optimism",
-      "sonic",
-      "plume",
-      "katana",
-      "bsc",
-      "avalanche",
-      "plasma",
-    ];
-    const contracts = chains.map((chain) => ({
-      chain,
-      address:
-        chain === "ethereum"
-          ? "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb"
-          : "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-      decimals: 18,
-    }));
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta(contracts, "yusd-yieldfi"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual(chains);
-    // Burn/mint on every remote: no canonical leg escrows the others.
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["yusd-yieldfi"]).toBeUndefined();
-  });
-
-  it("reallocates savUSD's canonical Avalanche vault instead of summing CCIP representations", () => {
-    const chains = [
-      "avalanche",
-      "ethereum",
-      "linea",
-      "plasma",
-      "berachain",
-      "bsc",
-      "monad",
-      "katana",
-      "megaeth",
-      "sei",
-    ];
+  it.each([
+    { id: "yusd-yieldfi", chains: ["ethereum", "arbitrum", "base", "optimism", "sonic", "plume", "katana", "bsc", "avalanche", "plasma"] },
+    { id: "savusd-avant", chains: ["avalanche", "ethereum", "linea", "plasma", "berachain", "bsc", "monad", "katana", "megaeth", "sei"],
+      canonical: "avalanche", zero: ["katana"], endpoints: { megaeth: "https://mainnet.megaeth.com/rpc" } },
+    { id: "cusdo-openeden", chains: ["ethereum", "base", "bsc", "solana"], mint: "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs" },
+    { id: "iauon-ondo", chains: ["ethereum", "bsc", "solana", "hyperevm"],
+      mint: "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo", zero: ["hyperevm"] },
+    { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma"] },
+    { id: "syusd-aegis", chains: ["ethereum", "bsc"] },
+    { id: "slvon-ondo", chains: ["ethereum", "bsc", "solana", "hyperevm"], mint: "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo" },
+    { id: "mhyper-midas", chains: ["ethereum", "monad", "plasma", "katana"] },
+    { id: "sdola-inverse-finance", chains: ["ethereum", "base", "optimism", "arbitrum", "berachain"],
+      zeroFlags: [undefined, true, true, true, true] },
+    { id: "usdk-kast", chains: ["solana"], mint: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", runtime: true },
+    { id: "xo-exodus", chains: ["solana"], mint: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", runtime: true },
+    { id: "srusd-reservoir", chains: ["ethereum", "berachain"], canonical: "ethereum" },
+    { id: "krwq-iq", chains: ["ethereum", "base", "polygon", "fraxtal", "codex", "morph-l2"],
+      canonical: "ethereum", zero: ["codex"], endpoints: { fraxtal: "https://rpc.frax.com" } },
+    { id: "syrupusdt-maple", chains: ["ethereum", "plasma", "bsc", "mantle", "ink"],
+      canonical: "ethereum", endpoints: { ink: "https://rpc-gel.inkonchain.com" } },
+    { id: "syrupusdc-maple", chains: ["ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo"],
+      canonical: "ethereum", mint: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", endpoints: { monad: "https://rpc.monad.xyz" } },
+    { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
+    { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
+      endpoints: { base: undefined, ethereum: undefined } },
+    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad"], canonical: "plasma",
+      zeroFlags: [undefined, undefined, undefined],
+      endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
+    { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
+      zero: ["harmony"], endpoints: { harmony: "https://api.harmony.one" },
+      fallback: { harmony: "https://api.s0.t.hmny.io" } },
+    { id: "ntbill-nest", chains: ["ethereum", "plume", "arbitrum", "bsc", "solana"],
+      mint: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", zeroFlags: [undefined, undefined, true, true, undefined],
+      endpoints: { plume: "https://rpc.plume.org" } },
+    { id: "cngn-compliant-naira", chains: ["base", "bsc", "celo", "solana", "ethereum", "polygon"],
+      mint: "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8", zero: ["ethereum", "polygon"], endpoints: { celo: undefined } },
+  ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime }) => {
     const contracts = chains.map((chain, index) => ({
       chain,
-      address: `0x${String(index + 1).padStart(40, "0")}`,
-      decimals: 18,
+      address: chain === "solana" ? mint! : `0x${String(index + 1).padStart(40, "0")}`,
+      decimals: chain === "solana" ? 6 : 18,
     }));
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta(contracts, "savusd-avant"));
-
+    const meta = makeMeta([...contracts].reverse(), id);
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map((entry) => entry.contract)).toEqual(contracts);
     expect(selected?.map((entry) => entry.config.chain)).toEqual(chains);
-    // The Avalanche CCIP LockRelease pool escrows every destination mint, so the
-    // canonical total must be reallocated rather than added to.
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["savusd-avant"]).toBe("avalanche");
-    expect(selected?.find((entry) => entry.config.chain === "katana")?.config.allowZeroSupply).toBe(true);
-    expect(selected?.find((entry) => entry.config.chain === "megaeth")?.config.rpcUrl).toBe(
-      "https://mainnet.megaeth.com/rpc",
-    );
-  });
-
-  // Shape: locally backed per-chain vaults / burn-mint satellites with a Solana
-  // leg. Nothing escrows anything, so the legs sum and no canonical entry exists.
-  it("sums per-chain vault aggregates that include a Solana leg", () => {
-    const cusdo = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0", decimals: 18 },
-      { chain: "base", address: "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65", decimals: 18 },
-      { chain: "bsc", address: "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef", decimals: 18 },
-      { chain: "solana", address: "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs", decimals: 6 },
-    ], "cusdo-openeden"));
-
-    expect(cusdo?.map((entry) => entry.config.chain)).toEqual(["ethereum", "base", "bsc", "solana"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["cusdo-openeden"]).toBeUndefined();
-
-    const iauon = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf", decimals: 18 },
-      { chain: "bsc", address: "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795", decimals: 18 },
-      { chain: "solana", address: "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo", decimals: 9 },
-      { chain: "hyperevm", address: "0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f", decimals: 18 },
-    ], "iauon-ondo"));
-
-    expect(iauon?.map((entry) => entry.config.chain)).toEqual(["ethereum", "bsc", "solana", "hyperevm"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["iauon-ondo"]).toBeUndefined();
-    // The reviewed HyperEVM deployment is live with zero supply today.
-    expect(iauon?.find((entry) => entry.config.chain === "hyperevm")?.config.allowZeroSupply).toBe(true);
-
-    // Same shape, same rule: these ids must resolve without a canonical entry.
-    for (const [id, chains] of [
-      ["susdai-usd-ai", ["arbitrum", "ethereum", "base", "plasma"]],
-      ["syusd-aegis", ["ethereum", "bsc"]],
-      ["slvon-ondo", ["ethereum", "bsc", "solana", "hyperevm"]],
-      ["mhyper-midas", ["ethereum", "monad", "plasma", "katana"]],
-    ] as const) {
-      const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta(
-        chains.map((chain, index) => ({
-          chain,
-          address: chain === "solana"
-            ? "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
-            : `0x${String(index + 1).padStart(40, "0")}`,
-          decimals: 18,
-        })),
-        id,
-      ));
-
-      expect(selected?.map((entry) => entry.config.chain)).toEqual([...chains]);
-      expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id]).toBeUndefined();
+    // Undefined means independent issuance; a canonical chain identifies escrow reallocation policy.
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id]).toBe(canonical);
+    for (const chain of zero ?? []) {
+      expect(selected?.find((entry) => entry.config.chain === chain)?.config.allowZeroSupply).toBe(true);
     }
-  });
-
-  // Shape: reviewed remote deployments that only ever hold seed dust. Every one
-  // of them has to tolerate a zero read or a single burn fails the aggregate.
-  it("keeps sDOLA's dust-only representation legs zero-tolerant", () => {
-    const chains = ["ethereum", "base", "optimism", "arbitrum", "berachain"];
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta(
-      chains.map((chain, index) => ({ chain, address: `0x${String(index + 1).padStart(40, "0")}`, decimals: 18 })),
-      "sdola-inverse-finance",
-    ));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual(chains);
-    expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual([undefined, true, true, true, true]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["sdola-inverse-finance"]).toBeUndefined();
-  });
-
-  // Shape: single-deployment assets configured purely so the aggregate lane
-  // publishes a per-chain row. The reviewed lock/mint escrows the underlying
-  // asset, not the tracked token, so there is nothing to reallocate.
-  it("admits single-deployment Solana assets as one-leg curated aggregates", () => {
-    for (const [id, mint] of [
-      ["usdk-kast", "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"],
-      ["xo-exodus", "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"],
-    ] as const) {
-      const meta = makeMeta([{ chain: "solana", address: mint, decimals: 6 }], id);
-      const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
-
-      expect(selected?.map((entry) => entry.config.chain)).toEqual(["solana"]);
-      expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id]).toBeUndefined();
-      expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    if (zeroFlags) expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual(zeroFlags);
+    for (const [chain, rpcUrl] of Object.entries(endpoints ?? {})) {
+      expect(selected?.find((entry) => entry.config.chain === chain)?.config.rpcUrl).toBe(rpcUrl);
     }
-  });
-
-  // Shape: canonical-chain lockbox (LayerZero OFT Adapter or CCIP LockRelease
-  // pool) whose totalSupply already contains every remote mint.
-  it("reallocates canonical Ethereum lockbox totals instead of summing representations", () => {
-    const srusd = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0x738d1115b90efa71ae468f1287fc864775e23a31", decimals: 18 },
-      { chain: "berachain", address: "0x5475611dffb8ef4d697ae39df9395513b6e947d7", decimals: 18 },
-    ], "srusd-reservoir"));
-
-    expect(srusd?.map((entry) => entry.config.chain)).toEqual(["ethereum", "berachain"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["srusd-reservoir"]).toBe("ethereum");
-
-    const krwqChains = ["ethereum", "base", "polygon", "fraxtal", "codex", "morph-l2"];
-    const krwq = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta(
-      krwqChains.map((chain, index) => ({ chain, address: `0x${String(index + 1).padStart(40, "0")}`, decimals: 18 })),
-      "krwq-iq",
-    ));
-
-    expect(krwq?.map((entry) => entry.config.chain)).toEqual(krwqChains);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["krwq-iq"]).toBe("ethereum");
-    expect(krwq?.find((entry) => entry.config.chain === "codex")?.config.allowZeroSupply).toBe(true);
-    expect(krwq?.find((entry) => entry.config.chain === "fraxtal")?.config.rpcUrl).toBe("https://rpc.frax.com");
-
-    const syrup = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d", decimals: 6 },
-      { chain: "plasma", address: "0xc4374775489cb9c56003bf2c9b12495fc64f0771", decimals: 6 },
-      { chain: "bsc", address: "0x8e9d4cea39299323fe8eda678cad449718556c4e", decimals: 6 },
-      { chain: "mantle", address: "0x051665f2455116e929b9972c36d23070f5054ce0", decimals: 6 },
-      { chain: "ink", address: "0x8a76fe7fa6da27f85a626c5c53730b38d13603d7", decimals: 6 },
-    ], "syrupusdt-maple"));
-
-    expect(syrup?.map((entry) => entry.config.chain)).toEqual(["ethereum", "plasma", "bsc", "mantle", "ink"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["syrupusdt-maple"]).toBe("ethereum");
-    expect(syrup?.find((entry) => entry.config.chain === "ink")?.config.rpcUrl).toBe("https://rpc-gel.inkonchain.com");
-
-    const syrupUsdc = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", decimals: 6 },
-      { chain: "base", address: "0x660975730059246a68521a3e2fbd4740173100f5", decimals: 6 },
-      { chain: "arbitrum", address: "0x41ca7586cc1311807b4605fbb748a3b8862b42b5", decimals: 6 },
-      { chain: "solana", address: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", decimals: 6 },
-      { chain: "ink", address: "0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9", decimals: 6 },
-      { chain: "monad", address: "0xab6e5a0c3799d020c790d34f7b2c02639e238af7", decimals: 6 },
-      { chain: "robinhood", address: "0xc6a4854eeb493224d5f9485e12dd3a81f22eee14", decimals: 6 },
-      { chain: "tempo", address: "0x20c0000000000000000000008191667423f70e67", decimals: 6 },
-    ], "syrupusdc-maple"));
-
-    expect(syrupUsdc?.map((entry) => entry.config.chain)).toEqual([
-      "ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo",
-    ]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["syrupusdc-maple"]).toBe("ethereum");
-    expect(syrupUsdc?.find((entry) => entry.config.chain === "monad")?.config.rpcUrl).toBe("https://rpc.monad.xyz");
-
-    // Same shape: the Ethereum escrow holds the whole MegaETH float.
-    const witry = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee", decimals: 18 },
-      { chain: "megaeth", address: "0x15b271d9012b5820fc42b1c495b4c1e206547de5", decimals: 18 },
-    ], "witry-brix"));
-
-    expect(witry?.map((entry) => entry.config.chain)).toEqual(["ethereum", "megaeth"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["witry-brix"]).toBe("ethereum");
+    for (const [chain, rpcUrl] of Object.entries(fallback ?? {})) {
+      expect(selected?.find((entry) => entry.config.chain === chain)?.config.fallbackRpcUrl).toBe(rpcUrl);
+    }
+    if (runtime) expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
   });
 
   // Shape variant: a reallocating mesh whose Stable-chain representation became
@@ -533,120 +396,6 @@ describe("curated on-chain supply paths", () => {
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susde-ethena"]).toBe("ethereum");
   });
 
-  // ODR-E4: the five `runtime-bridge-materiality-unavailable` assets whose
-  // chainCirculating was empty only because llamaId is null. Shapes below.
-
-  // Shape: canonical-chain burn on the outbound bridge leg, so the reviewed
-  // deployments sum and the near-zero representation stays zero-tolerant.
-  it("sums BRLV's Base issuance and its burn/mint Ethereum representation", () => {
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "base", address: "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", decimals: 18 },
-      { chain: "ethereum", address: "0xd7ca0e2c36d647446b782d1b72308e598373e2f5", decimals: 18 },
-    ], "brlv-crown"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual(["base", "ethereum"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["brlv-crown"]).toBeUndefined();
-    expect(selected?.find((entry) => entry.config.chain === "ethereum")?.config.allowZeroSupply).toBe(true);
-    // Both chains are in the worker registry, so neither needs a pinned endpoint.
-    expect(selected?.every((entry) => entry.config.rpcUrl === undefined)).toBe(true);
-  });
-
-  // Shape: CCIP LockRelease escrow on the native chain against BurnMint spokes,
-  // i.e. the same reallocation as savUSD and syrupUSDT but anchored on Plasma.
-  it("reallocates syzUSD's canonical Plasma total across its CCIP spokes", () => {
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "plasma", address: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6", decimals: 18 },
-      { chain: "ethereum", address: "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12", decimals: 18 },
-      { chain: "monad", address: "0x484be0540ad49f351eaa04eeb35df0f937d4e73f", decimals: 18 },
-    ], "syzusd-yuzu"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual(["plasma", "ethereum", "monad"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["syzusd-yuzu"]).toBe("plasma");
-    // The escrowing chain must be configured, or the reallocation has no anchor.
-    expect(selected?.some((entry) => entry.config.chain === "plasma")).toBe(true);
-    expect(selected?.find((entry) => entry.config.chain === "plasma")?.config.rpcUrl).toBe("https://rpc.plasma.to");
-    expect(selected?.find((entry) => entry.config.chain === "monad")?.config.rpcUrl).toBe("https://rpc.monad.xyz");
-    // No leg may be zero-tolerant here: all three carry material supply.
-    expect(selected?.every((entry) => entry.config.allowZeroSupply === undefined)).toBe(true);
-  });
-
-  // Shape: independent Ownable mints on three chains plus one dormant legacy
-  // bridge representation. Harmony is the only CHAIN_META EVM chain in the file
-  // that buildChainRpcs() cannot serve, so it must carry pinned endpoints.
-  it("sums IDRT's native mints and pins Harmony's shard-0 endpoints", () => {
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 },
-      { chain: "bsc", address: "0x66207e39bb77e6b99aab56795c7c340c08520d83", decimals: 2 },
-      { chain: "harmony", address: "0xcefbea899cfccdc653b171d063481b622086be3f", decimals: 2 },
-      { chain: "polygon", address: "0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b", decimals: 6 },
-    ], "idrt-rupiah-token"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual(["ethereum", "bsc", "polygon", "harmony"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["idrt-rupiah-token"]).toBeUndefined();
-    const harmony = selected?.find((entry) => entry.config.chain === "harmony")?.config;
-    expect(harmony?.rpcUrl).toBe("https://api.harmony.one");
-    expect(harmony?.fallbackRpcUrl).toBe("https://api.s0.t.hmny.io");
-    expect(harmony?.allowZeroSupply).toBe(true);
-  });
-
-  // Shape: four native BoringVault issuances plus a burn/mint Solana OFT leg,
-  // with two dust legs that must tolerate a zero read.
-  it("sums nTBILL's native vaults and its Solana OFT representation", () => {
-    const vault = "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9";
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "ethereum", address: vault, decimals: 6 },
-      { chain: "plume", address: vault, decimals: 6 },
-      { chain: "arbitrum", address: vault, decimals: 6 },
-      { chain: "bsc", address: vault, decimals: 18 },
-      { chain: "solana", address: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", decimals: 6 },
-    ], "ntbill-nest"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual([
-      "ethereum",
-      "plume",
-      "arbitrum",
-      "bsc",
-      "solana",
-    ]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["ntbill-nest"]).toBeUndefined();
-    expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual([
-      undefined,
-      undefined,
-      true,
-      true,
-      undefined,
-    ]);
-    expect(selected?.find((entry) => entry.config.chain === "plume")?.config.rpcUrl).toBe("https://rpc.plume.org");
-  });
-
-  // Shape: every reviewed leg is a lock/mint representation of an untracked
-  // canonical ledger (Bantu). There is nothing readable to reallocate out of and
-  // no leg escrows another, so the representations sum.
-  it("sums cNGN's representations without naming an unreadable canonical chain", () => {
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
-      { chain: "base", address: "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f", decimals: 6 },
-      { chain: "ethereum", address: "0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab", decimals: 6 },
-      { chain: "bsc", address: "0xa8aea66b361a8d53e8865c62d142167af28af058", decimals: 6 },
-      { chain: "polygon", address: "0x52828daa48c1a9a06f37500882b42daf0be04c3b", decimals: 6 },
-      { chain: "solana", address: "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8", decimals: 6 },
-      { chain: "celo", address: "0xf6829d7393dae24509eb1e52ee8e572e2e271a4f", decimals: 6 },
-    ], "cngn-compliant-naira"));
-
-    expect(selected?.map((entry) => entry.config.chain)).toEqual([
-      "base",
-      "bsc",
-      "celo",
-      "solana",
-      "ethereum",
-      "polygon",
-    ]);
-    // Bantu is untracked, so no canonical entry may claim one of these legs.
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["cngn-compliant-naira"]).toBeUndefined();
-    expect(selected?.find((entry) => entry.config.chain === "ethereum")?.config.allowZeroSupply).toBe(true);
-    expect(selected?.find((entry) => entry.config.chain === "polygon")?.config.allowZeroSupply).toBe(true);
-    // Celo is served by the worker's dRPC registry entry, so it needs no pin.
-    expect(selected?.find((entry) => entry.config.chain === "celo")?.config.rpcUrl).toBeUndefined();
-  });
 
   // The whole probe must fail closed: drop any one reviewed leg and the asset
   // resolves to null rather than publishing a partial per-chain split.

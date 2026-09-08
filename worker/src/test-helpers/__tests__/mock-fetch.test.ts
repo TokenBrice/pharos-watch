@@ -292,6 +292,7 @@ describe("mockFetch helper", () => {
       new Request("https://api.example.test/stall", { signal: originalController.signal }),
       { signal: effectiveController.signal },
     );
+    await vi.waitFor(() => expect(() => fetchSpy.assertAllOutcomesUsed()).not.toThrow());
     effectiveController.abort(new DOMException("test abort", "AbortError"));
 
     await expect(pending).rejects.toMatchObject({ name: "AbortError", message: "test abort" });

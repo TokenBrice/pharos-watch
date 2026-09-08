@@ -2,133 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
-  DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
-  DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredCapacityCurve,
   buildDexMeasuredExecutionTargetId,
   getDexMeasuredExecutionFreshnessMaxSec,
   getDexMeasuredExecutionProbeNotionals,
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
-  type DexMeasuredExecutionProfile,
-  type DexMeasuredExecutionQuotePointProof,
-  type DexMeasuredExecutionTarget,
 } from "../../types/measured-execution";
 import { ExitRouteCapacityPointSchema } from "../../types/exit-route";
 
-const TOKEN_IN = {
-  address: "0x1111111111111111111111111111111111111111",
-  symbol: "USD1",
-  decimals: 6,
-  referencePriceUsd: 1,
-  trackedAssetId: "usd1",
-};
-const TOKEN_OUT = {
-  address: "0x2222222222222222222222222222222222222222",
-  symbol: "USDC",
-  decimals: 6,
-  referencePriceUsd: 1,
-  trackedAssetId: "usdc-circle",
-};
-
-function proofPoint(inputUsd: number, outputUsd: number) {
-  const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-  return {
-    amountInRaw: String(Math.round(inputUsd * 1_000_000)),
-    amountOutRaw: String(Math.round(outputUsd * 1_000_000)),
-    callData: "0x1234",
-    returnData: "0xabcd",
-    inputUsd,
-    outputUsd,
-    costBps,
-    passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
-  };
-}
-
-function revertedProofPoint(inputUsd: number): DexMeasuredExecutionQuotePointProof {
-  return {
-    amountInRaw: String(Math.round(inputUsd * 1_000_000)),
-    amountOutRaw: "0",
-    callData: "0x1234",
-    returnData: "0x",
-    inputUsd,
-    outputUsd: 0,
-    costBps: 10_000,
-    passesCostBound: false,
-    reverted: true,
-  };
-}
-
-function target(nowSec = 10_000): DexMeasuredExecutionTarget {
-  return {
-    schemaVersion: "dex-measured-target-v1",
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: "uniswap-v3-quoter-v2",
-      stablecoinId: "usd1",
-      chain: "ethereum",
-      protocol: "uniswap-v3",
-      poolId: "0x3333333333333333333333333333333333333333",
-      tokenInAddress: TOKEN_IN.address,
-      tokenOutAddress: TOKEN_OUT.address,
-      feePips: 500,
-    }),
-    stablecoinId: "usd1",
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
-    chain: "ethereum",
-    poolId: "0x3333333333333333333333333333333333333333",
-    tokenIn: TOKEN_IN,
-    tokenOut: TOKEN_OUT,
-    feePips: 500,
-    retainedTvlUsd: 1_000_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: nowSec - 600,
-  };
-}
-
-function profile(nowSec = 10_000): DexMeasuredExecutionProfile {
-  const quoteProof = [
-    proofPoint(1_000, 999),
-    proofPoint(100_000, 99_000),
-    proofPoint(1_000_000, 970_000),
-  ];
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    stablecoinId: "usd1",
-    chain: "ethereum",
-    protocol: "uniswap-v3",
-    poolId: "0x3333333333333333333333333333333333333333",
-    tokenInAddress: TOKEN_IN.address,
-    tokenOutAddress: TOKEN_OUT.address,
-    feePips: 500,
-  });
-  return {
-    schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
-    kind: "measured-executable-depth",
-    targetId,
-    targetGenerationId: "targets-1",
-    quoteGenerationId: "quotes-1",
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
-    chain: "ethereum",
-    poolId: "0x3333333333333333333333333333333333333333",
-    tokenIn: TOKEN_IN,
-    tokenOut: TOKEN_OUT,
-    feePips: 500,
-    retainedTvlUsdAtQuote: 1_000_000,
-    retainedPoolPriceUsdAtQuote: 1,
-    quotedAt: nowSec - 60,
-    blockNumber: 123,
-    executionEndpoint: {
-      address: "0x4444444444444444444444444444444444444444",
-      codeHash: `0x${"ab".repeat(32)}`,
-    },
-    maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-    marginalOutputRatio: 0.999,
-    quoteProof,
-    capacityCurve: buildDexMeasuredCapacityCurve(quoteProof, 1_000_000),
-  };
-}
+import { TOKEN_IN, TOKEN_OUT, proofPoint, revertedProofPoint, target, profile, validationInput } from "./dex-measured-execution.test-support";
 
 describe("DEX measured execution contract", () => {
   it("uses the reviewed TVL-tiered ladder", () => {
@@ -187,37 +70,16 @@ describe("DEX measured execution contract", () => {
     const nowSec = 10_000;
     const legacy = profile(nowSec);
     legacy.capacityCurve = legacy.capacityCurve.map(({ executionCostBps: _cost, ...point }) => point);
-    expect(validateDexMeasuredExecutionProfile({
-      profile: legacy,
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile(validationInput(legacy, nowSec))).toEqual([]);
 
     const tampered = profile(nowSec);
     tampered.capacityCurve[0]!.executionCostBps = 1;
-    expect(validateDexMeasuredExecutionProfile({
-      profile: tampered,
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toContain("invalid-capacity-curve");
+    expect(validateDexMeasuredExecutionProfile(validationInput(tampered, nowSec))).toContain("invalid-capacity-curve");
   });
 
   it("accepts a fresh identity-consistent lower-bound profile", () => {
     const nowSec = 10_000;
-    expect(validateDexMeasuredExecutionProfile({
-      profile: profile(nowSec),
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec), nowSec))).toEqual([]);
   });
 
   it("accepts successful high-tier probes while clamping reported capacity to 1.5x TVL", () => {
@@ -244,14 +106,9 @@ describe("DEX measured execution contract", () => {
       1_000_000,
       1_000_000,
     ]);
-    expect(validateDexMeasuredExecutionProfile({
-      profile: highTvlProfile,
-      quotedTarget: highTvlTarget,
-      currentTarget: highTvlTarget,
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile(validationInput(highTvlProfile, nowSec, {
+      quotedTarget: highTvlTarget, currentTarget: highTvlTarget,
+    }))).toEqual([]);
   });
 
   it("accepts a deterministic upper-probe revert as a capacity bracket", () => {
@@ -264,14 +121,7 @@ describe("DEX measured execution contract", () => {
     );
 
     expect(revertedProfile.capacityCurve.map((point) => point.executableUsd)).toEqual([1_000, 1_000, 1_000, 1_000]);
-    expect(validateDexMeasuredExecutionProfile({
-      profile: revertedProfile,
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile(validationInput(revertedProfile, nowSec))).toEqual([]);
   });
 
   it("accepts a deterministic marginal revert as measured zero capacity", () => {
@@ -285,14 +135,7 @@ describe("DEX measured execution contract", () => {
     );
 
     expect(revertedProfile.capacityCurve.every((point) => point.executableUsd === 0)).toBe(true);
-    expect(validateDexMeasuredExecutionProfile({
-      profile: revertedProfile,
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toEqual([]);
+    expect(validateDexMeasuredExecutionProfile(validationInput(revertedProfile, nowSec))).toEqual([]);
   });
 
   it("rejects a reverted proof with synthetic fields that do not match zero execution", () => {
@@ -303,14 +146,7 @@ describe("DEX measured execution contract", () => {
     tampered.marginalOutputRatio = 0;
     tampered.capacityCurve = buildDexMeasuredCapacityCurve(tampered.quoteProof, tampered.retainedTvlUsdAtQuote);
 
-    expect(validateDexMeasuredExecutionProfile({
-      profile: tampered,
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toContain("invalid-quote-proof");
+    expect(validateDexMeasuredExecutionProfile(validationInput(tampered, nowSec))).toContain("invalid-quote-proof");
   });
 
   it("projects raw calldata and return proofs out of the public profile", () => {
@@ -415,14 +251,7 @@ describe("DEX measured execution contract", () => {
     tampered.marginalOutputRatio = 0.95;
     tampered.quoteProof[0]!.amountOutRaw = "1030000000";
     tampered.capacityCurve[0]!.executableUsd = 99_999;
-    expect(validateDexMeasuredExecutionProfile({
-      profile: tampered,
-      quotedTarget: target(nowSec),
-      currentTarget: target(nowSec),
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toEqual(expect.arrayContaining([
+    expect(validateDexMeasuredExecutionProfile(validationInput(tampered, nowSec))).toEqual(expect.arrayContaining([
       "stale-observation",
       "quote-price-mismatch",
       "invalid-capacity-curve",
@@ -461,21 +290,11 @@ describe("DEX measured execution contract", () => {
     expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(10_800);
     expect(getDexMeasuredExecutionFreshnessMaxSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg)).toBe(10_800);
     expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(10_800);
-    expect(validateDexMeasuredExecutionProfile({
-      profile: retainedProfile,
-      quotedTarget: currentTarget,
-      currentTarget,
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).not.toContain("stale-observation");
-    expect(validateDexMeasuredExecutionProfile({
-      profile: { ...retainedProfile, quotedAt: nowSec - 10_801 },
-      quotedTarget: currentTarget,
-      currentTarget,
-      expectedTargetGenerationId: "targets-1",
-      expectedQuoteGenerationId: "quotes-1",
-      nowSec,
-    })).toContain("stale-observation");
+    expect(validateDexMeasuredExecutionProfile(validationInput(retainedProfile, nowSec, {
+      quotedTarget: currentTarget, currentTarget,
+    }))).not.toContain("stale-observation");
+    expect(validateDexMeasuredExecutionProfile(validationInput({ ...retainedProfile, quotedAt: nowSec - 10_801 }, nowSec, {
+      quotedTarget: currentTarget, currentTarget,
+    }))).toContain("stale-observation");
   });
 });

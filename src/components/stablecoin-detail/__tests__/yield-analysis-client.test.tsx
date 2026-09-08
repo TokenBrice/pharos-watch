@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { YieldHistoryPoint, YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, loadClientStablecoinDetailMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
@@ -16,30 +16,30 @@ const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, loadClient
 
 let sourcesParam = "";
 
-vi.mock("next/dynamic", () => {
-  let callIndex = 0;
-  return {
-    default: () => {
-      const testId = callIndex++ === 0 ? "yield-history-chart" : "yield-change-attribution";
-      return function DynamicYieldSection(props: {
-        availableSources?: Array<{ sourceKey: string }>;
-        externalSourceKeys?: string[];
-        benchmarkRate?: number;
-        medianApy?: number;
-      }) {
-        return (
-          <div
-            data-testid={testId}
-            data-available-sources={(props.availableSources ?? []).map((source) => source.sourceKey).join(",")}
-            data-external-source-keys={(props.externalSourceKeys ?? []).join(",")}
-            data-benchmark-rate={props.benchmarkRate}
-            data-median-apy={props.medianApy}
-          />
-        );
-      };
+vi.mock("next/dynamic", () => ({
+  // Doubles are told apart by their own props, not by declaration order.
+  default: () =>
+    function DynamicYieldSection(props: {
+      attribution?: unknown;
+      availableSources?: Array<{ sourceKey: string }>;
+      externalSourceKeys?: string[];
+      benchmarkRate?: number;
+      medianApy?: number;
+    }) {
+      if (props.attribution !== undefined) {
+        return <div data-testid="yield-change-attribution" />;
+      }
+      return (
+        <div
+          data-testid="yield-history-chart"
+          data-available-sources={(props.availableSources ?? []).map((source) => source.sourceKey).join(",")}
+          data-external-source-keys={(props.externalSourceKeys ?? []).join(",")}
+          data-benchmark-rate={props.benchmarkRate}
+          data-median-apy={props.medianApy}
+        />
+      );
     },
-  };
-});
+}));
 
 vi.mock("@/hooks/api-hooks", () => ({
   useYieldRankings: useYieldRankingsMock,
@@ -114,6 +114,27 @@ function setRankingsQuery(overrides: Record<string, unknown> = {}) {
     error: null,
     isLoading: false,
     ...overrides,
+  });
+}
+
+function makeHistoryPoint(
+  overrides: Partial<YieldHistoryPoint> & Pick<YieldHistoryPoint, "date" | "apy">,
+): YieldHistoryPoint {
+  return {
+    apyBase: null,
+    apyReward: null,
+    exchangeRate: null,
+    sourceTvlUsd: null,
+    warningSignals: [],
+    ...overrides,
+  };
+}
+
+function setHistoryQuery(history: YieldHistoryPoint[] = []) {
+  useYieldHistoryMock.mockReturnValue({
+    data: { current: null, history, methodology: { version: "v8.14" } },
+    error: null,
+    isLoading: false,
   });
 }
 
@@ -213,5 +234,131 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByRole("link", { name: "Back to USDN detail" })).toBeTruthy();
     expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
+  });
+
+  it("reset deletes only the sources param, then rerenders the all-sources view", () => {
+    sourcesParam = "alt-source";
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+
+    const view = render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reset to all sources" }));
+
+    expect(replaceParamsMock).toHaveBeenCalledTimes(1);
+    // The updater must surgically drop `sources` and keep unrelated filters.
+    const params = new URLSearchParams("sources=alt-source&utm_campaign=launch");
+    replaceParamsMock.mock.calls[0]![0]!(params);
+    expect(params.get("sources")).toBeNull();
+    expect(params.get("utm_campaign")).toBe("launch");
+
+    sourcesParam = "";
+    view.rerender(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Reset to all sources" })).toBeNull();
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe(
+      "primary-source,alt-source",
+    );
+  });
+
+  it("shows the all-source view without a reset control when every requested key is invalid", () => {
+    sourcesParam = "stale-source,bogus-key";
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+
+    render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe(
+      "primary-source,alt-source",
+    );
+    expect(screen.queryByRole("button", { name: "Reset to all sources" })).toBeNull();
+  });
+
+  it("groups consecutive identical warnings, counts repeats, and orders groups newest first", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([
+      makeHistoryPoint({ date: "2026-08-01T10:00:00Z", apy: 0.05, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
+      makeHistoryPoint({ date: "2026-08-02T10:00:00Z", apy: 0.05, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
+      // The APY change breaks the run into its own group even though the signal repeats.
+      makeHistoryPoint({ date: "2026-08-03T10:00:00Z", apy: 0.06, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
+      makeHistoryPoint({ date: "2026-08-04T10:00:00Z", apy: 0.06, yieldSource: "Alt Source", warningSignals: ["yield-divergence"] }),
+    ]);
+
+    render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+
+    const rows = Array.from(document.getElementById("warning-signals")!.querySelectorAll("li"));
+    expect(rows).toHaveLength(3);
+    expect(rows[0]!.textContent).toContain("Yield divergence");
+    expect(rows[0]!.textContent).toContain("Alt Source at 0.06%");
+    expect(rows[1]!.textContent).toContain("Yield spike");
+    expect(rows[1]!.textContent).toContain("0.06%");
+    expect(rows[2]!.textContent).toContain("×2");
+    expect(rows[2]!.textContent).toContain("Primary Source at 0.05%");
+    expect(rows[2]!.textContent).toContain("–");
+  });
+
+  it("renders the source transition once and omits a switch stamped with an invalid date", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([
+      makeHistoryPoint({ date: "2026-08-01T10:00:00Z", apy: 0.05, yieldSource: "Primary Source" }),
+      makeHistoryPoint({
+        date: "2026-08-02T10:00:00Z",
+        apy: 0.06,
+        yieldSource: "Alt Source",
+        sourceKey: "alt-source",
+        sourceSwitch: true,
+      }),
+      makeHistoryPoint({
+        date: "not-a-date",
+        apy: 0.07,
+        yieldSource: "Alt Source",
+        sourceKey: "alt-source",
+        sourceSwitch: true,
+      }),
+    ]);
+
+    render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+
+    const rows = Array.from(document.getElementById("source-switches")!.querySelectorAll("li"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.textContent).toContain("Primary Source → Alt Source");
+    expect(rows[0]!.textContent).toContain("APY at switch: 0.06%");
+  });
+
+  it("keeps the ready workbench mounted when a refetch errors over cached rankings", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]), error: new Error("refetch failed") });
+
+    render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+
+    expect(screen.getByTestId("pys-breakdown")).toBeTruthy();
+    expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+    // Cached data suppresses the error surface entirely.
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

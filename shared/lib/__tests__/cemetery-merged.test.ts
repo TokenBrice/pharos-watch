@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { buildMergedCemetery, frozenToDeadShape } from "../cemetery-merged";
+import { CEMETERY_ENTRIES as merged, frozenToDeadShape } from "@shared/lib/cemetery-merged";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import { FROZEN_STABLECOINS } from "../stablecoins/registry";
 
 describe("buildMergedCemetery", () => {
   it("contains every dead-stablecoins entry and every frozen-derived entry", () => {
-    const merged = buildMergedCemetery();
-    expect(merged.length).toBe(DEAD_STABLECOINS.length + FROZEN_STABLECOINS.length);
+    expect(merged.map((coin) => coin.id).sort()).toEqual(
+      [...DEAD_STABLECOINS, ...FROZEN_STABLECOINS].map((coin) => coin.id).sort(),
+    );
   });
 
   it("each entry has the DeadStablecoin shape", () => {
-    for (const entry of buildMergedCemetery()) {
+    for (const entry of merged) {
       expect(entry).toHaveProperty("id");
       expect(entry).toHaveProperty("epitaph");
       expect(entry).toHaveProperty("deathDate");
@@ -21,7 +22,6 @@ describe("buildMergedCemetery", () => {
   });
 
   it("frozen-derived entries carry archivedDataAvailable: true", () => {
-    const merged = buildMergedCemetery();
     const frozenIds = new Set(FROZEN_STABLECOINS.map((c) => c.id));
     for (const entry of merged) {
       if (frozenIds.has(entry.id)) {
@@ -32,41 +32,34 @@ describe("buildMergedCemetery", () => {
     }
   });
 
-  it("frozenToDeadShape projects obituary fields and flags archive availability", () => {
-    const sample = FROZEN_STABLECOINS[0];
-    if (!sample) {
-      // No frozen coins yet — assert the function throws on a missing-obituary fixture.
-      expect(() =>
-        frozenToDeadShape({
-          id: "synthetic-frozen",
-          name: "Synthetic",
-          symbol: "SYN",
-          flags: { pegCurrency: "USD" },
-          contracts: undefined,
-          obituary: undefined,
-        } as unknown as Parameters<typeof frozenToDeadShape>[0]),
-      ).toThrow(/missing obituary/);
-      return;
-    }
-    const result = frozenToDeadShape(sample);
-    expect(result.id).toBe(sample.id);
-    expect(result.archivedDataAvailable).toBe(true);
+  it("projects synthetic obituary content independently of the catalog", () => {
+    const result = frozenToDeadShape({
+      id: "synthetic-frozen", name: "Synthetic", symbol: "SYN",
+      flags: { pegCurrency: "EUR" },
+      obituary: {
+        deathDate: "2026-01-01", epitaph: "Closed", obituary: "Redemptions ended.",
+        causeOfDeath: "abandoned", peakMcap: 12345,
+        sourceUrl: "https://example.com/closure", sourceLabel: "Closure notice",
+      },
+    } as Parameters<typeof frozenToDeadShape>[0]);
+    expect(result).toMatchObject({
+      id: "synthetic-frozen", name: "Synthetic", symbol: "SYN", pegCurrency: "EUR",
+      deathDate: "2026-01-01", epitaph: "Closed", obituary: "Redemptions ended.",
+      causeOfDeath: "abandoned", peakMcap: 12345,
+      sourceUrl: "https://example.com/closure", sourceLabel: "Closure notice",
+      archivedDataAvailable: true,
+    });
   });
 
-  it("uses existing tracked logo paths for frozen DefiLlama assets", () => {
-    const eurr = FROZEN_STABLECOINS.find((coin) => coin.id === "eurr-stablr");
-    expect(eurr).toBeDefined();
-
-    const result = frozenToDeadShape(eurr!);
-    expect(result.logo).toBe("/logos/239-eurr.png");
+  it("rejects a frozen coin without obituary data", () => {
+    expect(() => frozenToDeadShape({
+      id: "synthetic-frozen", obituary: undefined,
+    } as unknown as Parameters<typeof frozenToDeadShape>[0])).toThrow(/missing obituary/);
   });
 
-  it("uses canonical tracked logo paths for frozen assets with id-named logos", () => {
-    const msy = FROZEN_STABLECOINS.find((coin) => coin.id === "msy-main-street");
-    expect(msy).toBeDefined();
-
-    const result = frozenToDeadShape(msy!);
-    expect(result.logo).toBe("/logos/msy-main-street.png");
+  it("preserves registered tracked logos in the merged catalog", () => {
+    expect(merged.find((coin) => coin.id === "eurr-stablr")?.logo).toBe("/logos/239-eurr.png");
+    expect(merged.find((coin) => coin.id === "msy-main-street")?.logo).toBe("/logos/msy-main-street.png");
   });
 
   it("falls back to the legacy cemetery logo heuristic when no tracked logo is registered", () => {

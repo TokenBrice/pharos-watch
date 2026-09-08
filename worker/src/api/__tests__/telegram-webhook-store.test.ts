@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { D1_BATCH_SIZE } from "../../lib/constants";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockTelegramD1 as mockD1 } from "../../test-helpers/__shared/telegram";
 import {
   countTelegramProcessedUpdateBacklog,
@@ -11,40 +11,45 @@ import {
   pruneTelegramProcessedUpdates,
   upsertSubscriberRow,
 } from "../telegram-webhook-store";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 describe("upsertSubscriberRow", () => {
   it("updates only quiet-hours columns on a mute-only call", async () => {
-    const db = mockD1([]);
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers
+      (chat_id, created_at, last_active_at, alert_dews, global_alert_dews, global_alert_reserve)
+      VALUES ('42', 1, 1, 1, 1, 1)`);
     await upsertSubscriberRow(db, {
       chatId: "42",
       username: "alice",
       nowSec: 1700000000,
       quietHours: { enabled: true, startHourUtc: 22, endHourUtc: 7 },
     });
-    const [entry] = db.getHistory();
-    expect(entry.sql).toContain("ON CONFLICT(chat_id)");
-    expect(entry.sql).toContain("quiet_hours_enabled = excluded.quiet_hours_enabled");
-    expect(entry.sql).not.toContain("alert_dews = excluded.alert_dews");
-    expect(entry.sql).not.toContain("global_alert_dews = excluded.global_alert_dews");
+    expect(sqlite.prepare(`SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+      alert_dews, global_alert_dews, global_alert_reserve FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7,
+      alert_dews: 1, global_alert_dews: 1, global_alert_reserve: 1,
+    });
   });
 
-  it("bumps alert flags via MAX when perCoinAlertBumps is set", async () => {
-    const db = mockD1([]);
+  it("bumps requested alert flags without clearing existing flags", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers
+      (chat_id, created_at, last_active_at, alert_dews, alert_depeg, alert_safety)
+      VALUES ('42', 1, 1, 1, 0, 1)`);
     await upsertSubscriberRow(db, {
       chatId: "42",
       username: null,
       nowSec: 1700000000,
-      perCoinAlertBumps: { dews: 1, depeg: 1 },
+      perCoinAlertBumps: { dews: 0, depeg: 1 },
     });
-    const [entry] = db.getHistory();
-    expect(entry.sql).toContain(
-      "alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews)",
-    );
-    expect(entry.sql).toContain(
-      "alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg)",
-    );
-    expect(entry.sql).not.toContain("alert_safety = MAX");
+    expect(sqlite.prepare(`SELECT alert_dews, alert_depeg, alert_safety
+      FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
+      alert_dews: 1, alert_depeg: 1, alert_safety: 1,
+    });
   });
 });
 
@@ -85,61 +90,42 @@ describe("persistPendingDisambiguationRow", () => {
     ]);
   });
 
-  it("returns false when a fresh pending row is owned by another user", async () => {
-    const db = mockD1([], { writeResults: { pendingOperation: { insert: 0 } } });
-
-    const persisted = await persistPendingDisambiguationRow(db, {
-      chatId: "-100",
-      actionType: "setup-step",
-      actionPayload: { step: "branch" },
-      alertTypes: [],
-      resolvedIds: [],
-      ambiguousTicker: "",
-      candidates: [],
-      remainingTickers: [],
-      initiatorUserId: "actor-2",
-      expiresAt: 1_700_000_300,
+  it.each([
+    { owner: "actor-1", expiresIn: 300, accepted: false },
+    { owner: "actor-2", expiresIn: 300, accepted: true },
+    { owner: "actor-1", expiresIn: -1, accepted: true },
+  ])("enforces pending ownership for $owner with expiry $expiresIn", async ({ owner, expiresIn, accepted }) => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const pending = {
+      chatId: "-100", actionType: "setup-step" as const, actionPayload: { step: "branch" },
+      alertTypes: [], resolvedIds: [], ambiguousTicker: "", candidates: [], remainingTickers: [],
+      initiatorUserId: owner, expiresAt: now + expiresIn,
+    };
+    await persistPendingDisambiguationRow(db, pending);
+    expect(await persistPendingDisambiguationRow(db, {
+      ...pending, initiatorUserId: "actor-2", expiresAt: now + 600, actionPayload: { step: "replacement" },
+    })).toBe(accepted);
+    expect(sqlite.prepare(`SELECT initiator_user_id, action_payload FROM telegram_pending_disambiguation
+      WHERE chat_id = '-100'`).get()).toEqual({
+      initiator_user_id: accepted ? "actor-2" : owner,
+      action_payload: JSON.stringify({ step: accepted ? "replacement" : "branch" }),
     });
-
-    expect(persisted).toBe(false);
-    db.assertAllMatchesUsed();
-    const [entry] = db.getHistory();
-    expect(entry?.sql).toContain("telegram_pending_disambiguation.expires_at <= ?");
-    expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
-    expect(entry?.binds).toEqual([
-      "-100",
-      "setup-step",
-      JSON.stringify({ step: "branch" }),
-      "[]",
-      "[]",
-      "",
-      "[]",
-      "[]",
-      1_700_000_300,
-      "actor-2",
-      expect.any(Number),
-    ]);
   });
 
-  it("uses the same ownership guard for bulk confirmations", async () => {
-    const db = mockD1([], { writeResults: { pendingOperation: { insert: 0 } } });
-
-    const persisted = await persistPendingConfirmBulk(db, {
-      chatId: "-100",
-      payload: {
-        kind: "unsubscribe",
-        presetIds: [],
-        coinIds: [],
-        unsubscribeAll: true,
-      },
-      initiatorUserId: "actor-2",
+  it("refuses bulk confirmation without replacing another owner's fresh operation", async () => {
+    const { db, sqlite } = fixtures.open();
+    await persistPendingDisambiguationRow(db, {
+      chatId: "-100", actionType: "setup-step", actionPayload: { step: "branch" },
+      alertTypes: [], resolvedIds: [], ambiguousTicker: "", candidates: [], remainingTickers: [],
+      initiatorUserId: "actor-1", expiresAt: Math.floor(Date.now() / 1000) + 300,
     });
-
-    expect(persisted).toBe(false);
-    db.assertAllMatchesUsed();
-    const [entry] = db.getHistory();
-    expect(entry?.binds).toContain("confirm-bulk");
-    expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
+    expect(await persistPendingConfirmBulk(db, {
+      chatId: "-100", payload: { kind: "unsubscribe", presetIds: [], coinIds: [], unsubscribeAll: true },
+      initiatorUserId: "actor-2",
+    })).toBe(false);
+    expect(sqlite.prepare(`SELECT action_type, initiator_user_id FROM telegram_pending_disambiguation
+      WHERE chat_id = '-100'`).get()).toEqual({ action_type: "setup-step", initiator_user_id: "actor-1" });
   });
 
   it("rejects pending disambiguation batches above the D1 limit", async () => {

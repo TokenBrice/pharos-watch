@@ -1,13 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { runPruneDetailCache } from "../prune-detail-cache";
 import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-function createTestDb() {
-  const { sqlite } = createLatestSchemaSqlite();
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
+const fixtures = createLatestSchemaFixtureTracker();
+const createTestDb = fixtures.open;
+afterEach(fixtures.closeAll);
 
 describe("runPruneDetailCache", () => {
   it("deletes orphaned and week-stale rows, keeps fresh readable rows", async () => {

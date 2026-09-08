@@ -41,17 +41,15 @@ describe("classification-pegs", () => {
     expect(filterOptionValues).toContain("all");
   });
 
-  it("mapPegMetadata returns the same structural output for the same input", () => {
-    const result1 = mapPegMetadata((m) => m.label);
-    const result2 = mapPegMetadata((m) => m.label);
-    expect(result1).toEqual(result2);
-  });
-
-  it("mapPegMetadata covers every key in PEG_METADATA", () => {
-    const mapped = mapPegMetadata((m) => m.filterTag);
-    for (const key of Object.keys(PEG_METADATA) as PegCurrency[]) {
-      expect(mapped[key], `mapPegMetadata missing key "${key}"`).toBeDefined();
-    }
+  it("maps every peg through the supplied metadata transformation", () => {
+    const expected = Object.fromEntries(Object.entries(PEG_METADATA).map(([key, meta]) => [
+      key, { token: `peg:${meta.filterTag.toUpperCase()}`, width: meta.label.length + 7 },
+    ]));
+    const mapped = mapPegMetadata((meta) => ({
+      token: `peg:${meta.filterTag.toUpperCase()}`,
+      width: meta.label.length + 7,
+    }));
+    expect(mapped).toEqual(expected);
   });
 
   it("every active coin's pegCurrency maps to a known PEG_METADATA key", () => {

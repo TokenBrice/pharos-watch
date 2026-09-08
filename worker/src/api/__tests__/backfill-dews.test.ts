@@ -376,6 +376,7 @@ describe("handleBackfillDEWS", () => {
       },
       {
         match: "SELECT MIN(snapshot_date) as min_day FROM stress_signal_history",
+        matchBinds: [],
         rows: [],
         first: { min_day: 1_772_323_200 },
       },
@@ -391,17 +392,6 @@ describe("handleBackfillDEWS", () => {
         rows: [],
         runMeta: { changes: 4 },
       },
-      {
-        match: "SELECT MIN(snapshot_date) as min_day FROM stress_signal_history",
-        rows: [],
-        first: { min_day: 1_772_323_200 },
-      },
-      {
-        match: "SELECT MIN(snapshot_date) as min_day FROM stress_signal_history WHERE snapshot_date > ?",
-        matchBinds: [1_775_606_400],
-        rows: [],
-        first: { min_day: null },
-      },
     ]);
     const request = makeApiRequest("/api/backfill-dews?repair=prune-history", {
       adminKey: "secret",
@@ -414,11 +404,16 @@ describe("handleBackfillDEWS", () => {
       dryRun: boolean;
       prunedRows: number;
       usedDefaultWindow: boolean;
+      oldestRemainingDay: number | null;
+      nextRetainedDayAfterWindow: number | null;
     };
     expect(body.repair).toBe("prune-history");
     expect(body.dryRun).toBe(false);
     expect(body.prunedRows).toBe(4);
     expect(body.usedDefaultWindow).toBe(true);
+    expect(body.oldestRemainingDay).toBe(1_772_323_200);
+    expect(body.nextRetainedDayAfterWindow).toBeNull();
+    db.assertAllMatchesUsed();
     expect(
       db.getHistory().some((entry) => entry.sql.includes("DELETE FROM stress_signal_history WHERE snapshot_date >= ? AND snapshot_date <= ?")),
     ).toBe(true);

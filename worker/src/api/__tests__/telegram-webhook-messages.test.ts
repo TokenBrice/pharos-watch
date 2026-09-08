@@ -1,3 +1,4 @@
+import { makeSubscriptionRow } from "./telegram-rows.test-support";
 import { describe, it, expect } from "vitest";
 import {
   MANAGE_PAGE_SIZE,
@@ -14,19 +15,6 @@ import {
 } from "../telegram-webhook-messages";
 import type { SubscriberRow, SubscriptionRow } from "../telegram-webhook-shared";
 
-function makeSubscriptionRow(stablecoinId: string): SubscriptionRow {
-  return {
-    stablecoin_id: stablecoinId,
-    alert_dews: 1,
-    alert_depeg: 0,
-    alert_safety: 0,
-    alert_launch: 0,
-    alert_reserve: 0,
-    dews_min_band: null,
-    safety_mode: null,
-    depeg_worsening_bps_step: null,
-  };
-}
 
 describe("buildNotFoundMessage", () => {
   it("includes the unknown ticker", () => {
@@ -81,104 +69,71 @@ describe("buildSubscriptionSummaryMessage", () => {
 
 describe("describeSubscriptionSettings", () => {
   it("shows DEWS with min band", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: "WARNING", safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: "WARNING", safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row)).toBe("DEWS>=WARNING");
   });
 
   it("shows all types", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 1, alert_safety: 1, alert_launch: 1, alert_reserve: 1, alert_freeze: 1,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 1, alert_safety: 1, alert_launch: 1, alert_reserve: 1, alert_freeze: 1,
+    dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row)).toBe("DEWS, Depeg, Safety, Launch, Reserve, Freeze");
   });
 
   it("shows reserve as an enabled per-coin alert type", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 1,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 1,
+    dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row)).toBe("Reserve");
   });
 
   it("shows freeze as an enabled per-coin alert type", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 1,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 1,
+    dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row)).toBe("Freeze");
   });
 
   it("shows Muted when no types enabled", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row)).toBe("Muted");
   });
 
   it("shows safety mode", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 1, alert_launch: 0,
-      dews_min_band: null, safety_mode: "downgrade-only", depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 1, alert_launch: 0, dews_min_band: null, safety_mode: "downgrade-only", depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row)).toBe("Safety downgrade-only");
   });
 
   it("shows depeg step", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 0, alert_depeg: 1, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: 250,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 1, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: 250, });
     expect(describeSubscriptionSettings(row)).toBe("Depeg +250bps");
   });
 
   it("appends a snooze countdown when alert_snooze_until_ts is in the future (P1-U10)", () => {
     const nowSec = 1_700_000_000;
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-      alert_snooze_until_ts: nowSec + 38 * 60,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    alert_snooze_until_ts: nowSec + 38 * 60, });
     expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS — snoozed for 38 min");
   });
 
   it("ignores an expired alert_snooze_until_ts", () => {
     const nowSec = 1_700_000_000;
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-      alert_snooze_until_ts: nowSec - 60,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    alert_snooze_until_ts: nowSec - 60, });
     expect(describeSubscriptionSettings(row, nowSec)).toBe("DEWS");
   });
 
   it("renders an all-flags-0 row as a muted override under perCoinTag (C74)", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row, undefined, { perCoinTag: true })).toBe("Muted (overrides defaults)");
   });
 
   it("tags a flagged row as per-coin under perCoinTag (C74)", () => {
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, });
     expect(describeSubscriptionSettings(row, undefined, { perCoinTag: true })).toBe("DEWS · per-coin");
   });
 
   it("keeps the snooze suffix alongside the per-coin tag (C74)", () => {
     const nowSec = 1_700_000_000;
-    const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
-      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
-      alert_snooze_until_ts: nowSec + 38 * 60,
-    };
+    const row = makeSubscriptionRow("x", { alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    alert_snooze_until_ts: nowSec + 38 * 60, });
     expect(describeSubscriptionSettings(row, nowSec, { perCoinTag: true })).toBe("DEWS · per-coin — snoozed for 38 min");
   });
 });
@@ -395,7 +350,7 @@ describe("buildManageWatchlistKeyboard", () => {
       "lusd-liquity",
       "susd-synthetix",
     ];
-    const subs = ids.map(makeSubscriptionRow);
+    const subs = ids.map((id) => makeSubscriptionRow(id));
 
     const page0 = buildManageWatchlistKeyboard(subs, 0);
     const coinRows0 = page0.inline_keyboard.slice(0, MANAGE_PAGE_SIZE);

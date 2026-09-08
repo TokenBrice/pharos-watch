@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbCacheMocks = vi.hoisted(() => ({
   setCache: vi.fn(async () => {}),
-  getCache: vi.fn(async () => null),
+  getCache: vi.fn<(_db: D1Database, key: string) => Promise<{ value: string; updatedAt: number } | null>>(async () => null),
   deleteCache: vi.fn(async () => {}),
 }));
 
@@ -35,6 +35,7 @@ function makeRequest(body?: string): Request {
 describe("trigger-digest route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbCacheMocks.getCache.mockResolvedValue(null);
   });
 
   it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
@@ -83,7 +84,9 @@ describe("trigger-digest route", () => {
     expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 
-  it("validates and persists the runtime style gate mode with the queued trigger", async () => {
+  it("updates weekly mode while preserving the stored daily mode", async () => {
+    dbCacheMocks.getCache.mockImplementation(async (_db, key) =>
+      key === DIGEST_STYLE_GATE_MODE_CACHE_KEYS.daily ? { value: "enforce", updatedAt: 1 } : null);
     const response = await handleTriggerDigest({
       request: makeRequest(JSON.stringify({ styleGateMode: { weekly: "enforce" } })),
       db: mockD1(),
@@ -93,7 +96,7 @@ describe("trigger-digest route", () => {
 
     expect(response?.status).toBe(202);
     expect(await response?.json()).toMatchObject({
-      styleGateMode: { daily: "shadow", weekly: "enforce" },
+      styleGateMode: { daily: "enforce", weekly: "enforce" },
     });
     expect(dbCacheMocks.setCache).toHaveBeenNthCalledWith(
       1,
@@ -107,6 +110,7 @@ describe("trigger-digest route", () => {
       "digest:force-run-request",
       expect.any(String),
     );
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -125,6 +129,23 @@ describe("trigger-digest route", () => {
 
     expect(response?.status).toBe(400);
     expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["invalid JSON", "{", 400],
+    ["non-object JSON", "[]", 400],
+    ["unknown field", '{"unexpected":true}', 400],
+    ["oversized body", " ".repeat(1_025), 413],
+  ] as const)("rejects %s without changing settings or queueing", async (_name, body, status) => {
+    const response = await handleTriggerDigest({
+      request: makeRequest(body),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(status);
+    expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
+    expect(dbCacheMocks.deleteCache).not.toHaveBeenCalled();
   });
 
 });

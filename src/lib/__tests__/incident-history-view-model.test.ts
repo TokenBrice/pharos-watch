@@ -146,6 +146,23 @@ describe("incident history view model", () => {
     ]);
   });
 
+  it("requires each filter independently while the other three match", () => {
+    const matching = {
+      severity: "critical", surface: "system", causeCode: "db_unhealthy", publicImpact: "impacting",
+    } as const;
+    const mismatches = [
+      { severity: "warning" },
+      { surface: "availability" },
+      { causeCode: "cache_ratio_degraded" },
+      { publicImpact: "not-impacting" },
+    ] as const;
+    for (const mismatch of mismatches) {
+      expect(buildIncidentHistoryView(transitions(), NOW_SECONDS, 0, {
+        ...matching, ...mismatch,
+      }).rows, JSON.stringify(mismatch)).toEqual([]);
+    }
+  });
+
   it("parses and serializes URL filters while preserving unrelated query state and hashes", () => {
     expect(
       parseIncidentHistoryQuery(
@@ -211,6 +228,33 @@ describe("incident history view model", () => {
       observedAt: 3_500,
       sourceCount: 1,
       sources: ["producer:prices"],
+    });
+    const base = input.producerHeads[0];
+    const competing = [
+      { ...base, job: "old", lastWorkerVersion: "worker-v1", lastInvokedAt: 3_000 },
+      { ...base, job: "unknown-time", lastWorkerVersion: "worker-v3", lastInvokedAt: null },
+      { ...base, job: "zeta", lastWorkerVersion: "worker-v2", lastInvokedAt: 3_600 },
+      { ...base, job: "blank", lastWorkerVersion: "  ", lastInvokedAt: 3_900 },
+      { ...base, job: "alpha", lastWorkerVersion: "worker-v2", lastInvokedAt: 3_600 },
+    ];
+    expect(deriveWorkerVersionEvidence({ producerHeads: competing })).toEqual({
+      status: "observed",
+      version: "worker-v2",
+      observedAt: 3_600,
+      sourceCount: 2,
+      sources: ["producer:alpha", "producer:zeta"],
+    });
+    expect(deriveWorkerVersionEvidence({
+      producerHeads: [
+        { ...base, job: "zeta", lastWorkerVersion: "worker-v3" },
+        { ...base, job: "alpha", lastWorkerVersion: "worker-v2" },
+      ],
+    })).toEqual({
+      status: "observed",
+      version: "worker-v2",
+      observedAt: 3_500,
+      sourceCount: 1,
+      sources: ["producer:alpha"],
     });
     expect(deriveWorkerVersionEvidence({ producerHeads: [] })).toEqual({
       status: "unavailable",

@@ -124,7 +124,7 @@ function makeResponse(): YieldRankingsSummaryResponse {
 
 describe("YieldClient", () => {
   beforeEach(() => {
-    searchParamsMock.forEach((_, key) => searchParamsMock.delete(key));
+    [...searchParamsMock.keys()].forEach((key) => searchParamsMock.delete(key));
     useYieldRankingsSummaryMock.mockReturnValue({
       data: makeResponse(),
       meta: null,

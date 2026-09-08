@@ -25,6 +25,7 @@ import {
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { createDeferredPromise } from "./deferred.test-support";
 
 beforeEach(() => sleepWithSignalMock.mockClear());
 afterEach(() => vi.unstubAllGlobals());
@@ -69,17 +70,6 @@ describe("fetchBinancePricesDetailed", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("returns empty map when Binance returns no stablecoin pairs", async () => {
-    mockFetch([{
-      match: () => true,
-      body: [
-            { symbol: "BTCUSD", price: "65000" },
-            { symbol: "ETHUSDT", price: "3500" },
-      ],
-    }]);
-    const results = (await fetchBinancePricesDetailed()).value.prices;
-    expect(results.size).toBe(0);
-  });
 
   it("reports Binance response and match counts for diagnostics", async () => {
     mockFetch([{
@@ -90,9 +80,9 @@ describe("fetchBinancePricesDetailed", () => {
       ],
     }]);
 
-    const {
-      value: { prices, diagnostics },
-    } = await fetchBinancePricesDetailed();
+    const outcome = await fetchBinancePricesDetailed();
+    const { value: { prices, diagnostics } } = outcome;
+    expect(outcome.kind).toBe("no-data");
 
     expect(prices.size).toBe(0);
     expect(diagnostics[0]).toMatchObject({
@@ -171,12 +161,6 @@ describe("fetchBinancePricesDetailed", () => {
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0001, 4);
   });
 
-  it("returns no-data outcome when hosts return 200 but no tracked pairs", async () => {
-    mockFetch([{ match: () => true, body: [{ symbol: "BTCUSD", price: "65000" }] }]);
-    const outcome = await fetchBinancePricesDetailed();
-    expect(outcome.kind).toBe("no-data");
-    expect(outcome.value.prices.size).toBe(0);
-  });
 
   it("jumps to the next host on 5xx without sleeping or retrying the same host", async () => {
     const fetchMock = mockFetch([{
@@ -364,12 +348,15 @@ describe("fetchCoinbasePrices", () => {
   it("keeps Coinbase product fetches serial inside the primary-provider budget", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
+    const gate = createDeferredPromise();
+    const started = createDeferredPromise();
     const fetchMock = mockFetch([{
       match: () => true,
       respond: async () => {
       inFlight++;
       maxInFlight = Math.max(maxInFlight, inFlight);
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      started.resolve();
+      await gate.promise;
       inFlight--;
       return new Response(JSON.stringify({ price: "1.0000", time: "2026-06-11T12:00:00.000Z" }), {
         status: 200,
@@ -378,7 +365,12 @@ describe("fetchCoinbasePrices", () => {
       },
     }]);
 
-    const outcome = await fetchCoinbasePrices(["USDT", "PAXG", "USDS", "USD1", "HONEY"]);
+    const run = fetchCoinbasePrices(["USDT", "PAXG", "USDS", "USD1", "HONEY"]);
+    await started.promise;
+    const initialInFlight = inFlight;
+    gate.resolve();
+    const outcome = await run;
+    expect(initialInFlight).toBe(1);
 
     expect(outcome.kind).toBe("ok");
     expect(fetchMock).toHaveBeenCalledTimes(5);
@@ -511,18 +503,6 @@ describe("fetchBitstampPrices", () => {
   });
 });
 
-describe("COINBASE_KNOWN_SYMBOLS", () => {
-  it("contains only uppercase symbols", () => {
-    for (const symbol of COINBASE_KNOWN_SYMBOLS) {
-      expect(symbol).toBe(symbol.toUpperCase());
-    }
-  });
-
-  it("has a reasonable number of entries (5-25)", () => {
-    expect(COINBASE_KNOWN_SYMBOLS.length).toBeGreaterThanOrEqual(5);
-    expect(COINBASE_KNOWN_SYMBOLS.length).toBeLessThanOrEqual(25);
-  });
-});
 
 describe("exchange symbol allowlists", () => {
   const trackedSymbols = new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol.toUpperCase()));
@@ -535,33 +515,14 @@ describe("exchange symbol allowlists", () => {
     ]),
   ].sort();
 
-  it("keeps Binance symbols uppercase and tracked", () => {
-    expect(new Set(BINANCE_KNOWN_SYMBOLS).size).toBe(BINANCE_KNOWN_SYMBOLS.length);
-    for (const symbol of BINANCE_KNOWN_SYMBOLS) {
-      expect(symbol).toBe(symbol.toUpperCase());
-      expect(trackedSymbols.has(symbol)).toBe(true);
-    }
-  });
-
-  it("keeps Kraken symbols uppercase", () => {
-    expect(new Set(KRAKEN_KNOWN_SYMBOLS).size).toBe(KRAKEN_KNOWN_SYMBOLS.length);
-    for (const symbol of KRAKEN_KNOWN_SYMBOLS) {
-      expect(symbol).toBe(symbol.toUpperCase());
-      expect(trackedSymbols.has(symbol)).toBe(true);
-    }
-  });
-
-  it("keeps Bitstamp symbols uppercase", () => {
-    expect(new Set(BITSTAMP_KNOWN_SYMBOLS).size).toBe(BITSTAMP_KNOWN_SYMBOLS.length);
-    for (const symbol of BITSTAMP_KNOWN_SYMBOLS) {
-      expect(symbol).toBe(symbol.toUpperCase());
-      expect(trackedSymbols.has(symbol)).toBe(true);
-    }
-  });
-
-  it("keeps Coinbase symbols uppercase, unique, and tracked", () => {
-    expect(new Set(COINBASE_KNOWN_SYMBOLS).size).toBe(COINBASE_KNOWN_SYMBOLS.length);
-    for (const symbol of COINBASE_KNOWN_SYMBOLS) {
+  it.each([
+    ["Binance", BINANCE_KNOWN_SYMBOLS],
+    ["Kraken", KRAKEN_KNOWN_SYMBOLS],
+    ["Bitstamp", BITSTAMP_KNOWN_SYMBOLS],
+    ["Coinbase", COINBASE_KNOWN_SYMBOLS],
+  ] as const)("keeps %s symbols uppercase, unique, and active", (_venue, symbols) => {
+    expect(new Set(symbols).size).toBe(symbols.length);
+    for (const symbol of symbols) {
       expect(symbol).toBe(symbol.toUpperCase());
       expect(trackedSymbols.has(symbol)).toBe(true);
     }

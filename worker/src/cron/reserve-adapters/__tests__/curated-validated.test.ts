@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
@@ -45,8 +45,11 @@ const MULTI_SLICE_RESERVES: ReserveSlice[] = [
   { name: "USDC", pct: 15, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
 ];
 
+const unexpectedProbeRequests: unknown[] = [];
+afterEach(() => { expect(unexpectedProbeRequests).toEqual([]); });
 beforeEach(() => {
   vi.clearAllMocks();
+  unexpectedProbeRequests.length = 0;
 });
 
 describe("fetchCuratedValidatedReserves", () => {
@@ -258,12 +261,19 @@ function mockProbeCallers(overrides: {
 }): void {
   vi.mocked(makeOnchainCallers).mockReturnValue({
     raw: vi.fn(async (contract: string, data: string) => {
-      if (data === "0x83f3084f") return overrides.connector === null ? null : addressWord(overrides.connector ?? MOC_CONNECTOR);
-      if (data === "0x99c6fe73") return overrides.docToken === null ? null : addressWord(overrides.docToken ?? DOC_TOKEN);
-      if (data === "0x5c975abb") return overrides.paused === undefined ? boolWord(false) : overrides.paused;
+      if (contract.toLowerCase() === MOC_STATE.toLowerCase() && data === "0x83f3084f") return overrides.connector === null ? null : addressWord(overrides.connector ?? MOC_CONNECTOR);
+      if (contract.toLowerCase() === MOC_CONNECTOR.toLowerCase() && data === "0x99c6fe73") return overrides.docToken === null ? null : addressWord(overrides.docToken ?? DOC_TOKEN);
+      if (contract.toLowerCase() === MOC.toLowerCase() && data === "0x5c975abb") return overrides.paused === undefined ? boolWord(false) : overrides.paused;
+      unexpectedProbeRequests.push({ contract, data });
       throw new Error(`unexpected raw call ${contract} ${data}`);
     }),
-    uint256: vi.fn(async () => (overrides.freeDoc === undefined ? 2_874_833n * 10n ** 18n : overrides.freeDoc)),
+    uint256: vi.fn(async (contract: string, data: string) => {
+      if (contract.toLowerCase() !== MOC_STATE.toLowerCase() || data !== "0xa8ba1d18") {
+        unexpectedProbeRequests.push({ contract, data });
+        throw new Error(`unexpected capacity call ${contract} ${data}`);
+      }
+      return overrides.freeDoc === undefined ? 2_874_833n * 10n ** 18n : overrides.freeDoc;
+    }),
   });
 }
 

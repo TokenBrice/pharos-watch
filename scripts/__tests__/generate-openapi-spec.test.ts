@@ -54,8 +54,9 @@ function resolveSchemaTree(
 }
 
 describe("OpenAPI runtime response contracts", () => {
+  const document = buildOpenApiDocument();
+
   it("derives documented response components from their canonical Zod schemas", () => {
-    const document = buildOpenApiDocument();
     const schemas = document.components.schemas as Record<string, unknown>;
     const historySchema = schemas.YieldHistoryResponse as {
       properties: { history: { items: Record<string, unknown> } };
@@ -83,11 +84,63 @@ describe("OpenAPI runtime response contracts", () => {
   });
 
   it("publishes the expired-evidence responsibility in the report-card schema", () => {
-    const document = buildOpenApiDocument();
     const schemas = document.components.schemas as Record<string, JsonSchemaObject>;
-    const reportCardsSchema = resolveSchemaTree(schemas.ReportCardsV9Response, schemas);
+    const reportCardsSchema = resolveSchemaTree(schemas.ReportCardsV9Response, schemas) as {
+      properties: { cards: { items: { properties: { scoreTrace: { properties: {
+        evidenceResponsibility: { properties: { summaries: { items: { properties: {
+          responsibility: { enum: string[] };
+        } } } } };
+      } } } } } };
+    };
+    expect(reportCardsSchema.properties.cards.items.properties.scoreTrace.properties
+      .evidenceResponsibility.properties.summaries.items.properties.responsibility.enum)
+      .toContain("published-evidence-expired");
+  });
 
-    expect(JSON.stringify(reportCardsSchema)).toContain("published-evidence-expired");
+  it("emits protected and public operation security, errors, and required path parameters", () => {
+    const protectedOperation = document.paths["/api/stablecoin/{stablecoinId}"].get;
+    expect(protectedOperation.security ?? document.security).toEqual([{ ApiKeyAuth: [] }]);
+    expect(protectedOperation.responses).toHaveProperty("401");
+    expect(protectedOperation.responses).toHaveProperty("429");
+    expect(protectedOperation.parameters).toContainEqual(expect.objectContaining({
+      name: "stablecoinId", in: "path", required: true,
+    }));
+    expect(protectedOperation.responses["200"].content["application/json"].schema)
+      .toEqual({ $ref: "#/components/schemas/StablecoinDetailResponse" });
+    const publicOperation = document.paths["/api/health"].get;
+    expect(publicOperation.security).toEqual([]);
+    expect(publicOperation.responses).not.toHaveProperty("401");
+    expect(publicOperation.responses).not.toHaveProperty("429");
+  });
+
+  it("resolves every emitted reference, including colliding shared shapes", () => {
+    const left = z.object({ value: z.string() });
+    const right = z.object({ value: z.number() });
+    const schemas = buildOpenApiResponseSchemas({
+      CollisionResponse: z.object({ left, leftAgain: left, right, rightAgain: right }),
+    });
+    const walk = (value: unknown, root: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value)) {
+        if (key === "$ref") {
+          expect(child).toMatch(/^#\//);
+          let resolved = root;
+          for (const segment of (child as string).slice(2).split("/")) {
+            resolved = (resolved as Record<string, unknown>)?.[segment.replace(/~1/g, "/").replace(/~0/g, "~")];
+          }
+          expect(resolved, String(child)).toBeDefined();
+        } else {
+          walk(child, root);
+        }
+      }
+    };
+    walk(document, document);
+    walk(schemas, { components: { schemas } });
+    const collision = resolveSchemaTree(schemas.CollisionResponse, schemas) as {
+      properties: Record<string, { properties: { value: { type: string } } }>;
+    };
+    expect(collision.properties.left.properties.value.type).toBe("string");
+    expect(collision.properties.right.properties.value.type).toBe("number");
   });
 
   it("keeps every named endpoint response tied to the typed runtime registry", () => {
@@ -141,7 +194,7 @@ describe("OpenAPI runtime response contracts", () => {
   });
 
   it("publishes properties for transform-bearing response output shapes", () => {
-    const schemas = buildOpenApiDocument().components.schemas as Record<string, {
+    const schemas = document.components.schemas as Record<string, {
       properties?: Record<string, unknown>;
     }>;
 

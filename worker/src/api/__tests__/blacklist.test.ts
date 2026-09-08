@@ -1,8 +1,10 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklist } from "../blacklist";
+
+afterEach(() => vi.useRealTimers());
 
 describe("handleBlacklist", () => {
   const row = makeBlacklistRow();
@@ -228,6 +230,8 @@ describe("handleBlacklist", () => {
   });
 
   it("derives freshness from sync-blacklist cron timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
     const now = Math.floor(Date.now() / 1000);
     const eventTs = now - 14 * 86400;
     const db = mockD1([
@@ -236,9 +240,9 @@ describe("handleBlacklist", () => {
       { match: "cron_runs", rows: [], first: { started_at: now - 30 } },
     ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
-    const age = Number(res.headers.get("X-Data-Age"));
+    const age = res.headers.get("X-Data-Age");
     const body = await res.json() as { methodology: { asOf: number } };
-    expect(age).toBeLessThan(120);
+    expect(age).toBe("30");
     expect(body.methodology.asOf).toBe(eventTs);
   });
 

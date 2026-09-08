@@ -6,7 +6,7 @@ vi.mock("../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources";
+import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);

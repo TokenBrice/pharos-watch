@@ -1,31 +1,29 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-stale-flags");
+const checker = resolve("scripts/ci/check-stale-flags.ts");
+const loader = resolve("node_modules/tsx/dist/loader.mjs");
+afterEach(cleanup);
 
 describe("check-stale-flags", () => {
-  it("fails an expired flag from a test-only fixture", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-stale-flags-"));
-    try {
-      const flagsDirectory = join(root, "src/lib");
-      mkdirSync(flagsDirectory, { recursive: true });
-      writeFileSync(
-        join(flagsDirectory, "feature-flags.ts"),
-        ["// expiresAt: 2020-01-01 — test-only expired flag", "TEST_ONLY_FLAG: true,"].join("\n"),
-      );
+  it("exits with the expired flag identity rather than a parser failure or healthy report", () => {
+    const root = makeRoot();
+    writeText(root, "src/lib/feature-flags.ts", [
+      "// expiresAt: 2020-01-01 — test-only expired flag",
+      "TEST_ONLY_FLAG: true,",
+    ].join("\n"));
 
-      const exit = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
-      const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
+    const result = spawnSync(process.execPath, ["--import", loader, checker], {
+      cwd: root,
+      encoding: "utf8",
+    });
 
-      try {
-        await import("../ci/check-stale-flags.ts");
-        expect(exit).toHaveBeenCalledWith(1);
-      } finally {
-        cwd.mockRestore();
-        exit.mockRestore();
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("TEST_ONLY_FLAG expired 2020-01-01");
+    expect(result.stdout).toBe("");
   });
 });

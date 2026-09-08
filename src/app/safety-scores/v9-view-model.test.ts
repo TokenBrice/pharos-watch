@@ -30,14 +30,18 @@ describe("Safety Scores V9 view model", () => {
 
   it("filters by grade and sorts by native V9 pillars", () => {
     expect(
-      filterAndSortV9Cards(cards, {
+      filterAndSortV9Cards([
+        cards[2],
+        makeV9Card({ ...cards[0], pillars: { ...cards[0].pillars, exit: { ...cards[0].pillars.exit, score: 50 } } }),
+        makeV9Card({ ...cards[1], pillars: { ...cards[1].pillars, exit: { ...cards[1].pillars.exit, score: 95 } } }),
+      ], {
         gradeFilter: "all",
         pegFilter: "all",
         pegTypeMap: new Map(),
         sortKey: "exit",
         mcapMap: new Map(),
       }).map((card) => card.id),
-    ).toEqual(["asset-a", "asset-b", "asset-c"]);
+    ).toEqual(["asset-b", "asset-a", "asset-c"]);
     expect(
       filterAndSortV9Cards(cards, {
         gradeFilter: "C",
@@ -80,6 +84,40 @@ describe("Safety Scores V9 view model", () => {
     expect(stats[0]).toMatchObject({ label: "Ecosystem avg.", value: "77" });
     expect(stats[1]).toMatchObject({ label: "Supply in A/B", value: "90%" });
     expect(stats[2]).toMatchObject({ label: "Weakest pillar", value: "Exit" });
+  });
+
+  it("sorts null scores last and breaks equal rated and unrated ties by id", () => {
+    const input = [
+      makeV9Card({ id: "nr-z", score: null, grade: "NR" }),
+      makeV9Card({ id: "rated-z", score: 80 }),
+      makeV9Card({ id: "nr-a", score: null, grade: "NR" }),
+      makeV9Card({ id: "rated-a", score: 80 }),
+    ];
+    expect(filterAndSortV9Cards(input, {
+      gradeFilter: "all", pegFilter: "all", pegTypeMap: new Map(), sortKey: "overall", mcapMap: new Map(),
+    }).map((card) => card.id)).toEqual(["rated-a", "rated-z", "nr-a", "nr-z"]);
+  });
+
+  it("sorts missing market caps below positive supply", () => {
+    expect(filterAndSortV9Cards(cards, {
+      gradeFilter: "all", pegFilter: "all", pegTypeMap: new Map(), sortKey: "mcap",
+      mcapMap: new Map([["asset-b", 20], ["asset-c", 100]]),
+    }).map((card) => card.id)).toEqual(["asset-c", "asset-b", "asset-a"]);
+  });
+
+  it("omits headline statistics for an entirely unrated universe", () => {
+    expect(buildV9HeadlineStats([makeV9Card({ score: null, grade: "NR" })], new Map())).toEqual([]);
+  });
+
+  it("excludes unrated supply from the headline denominator", () => {
+    const input = [...cards, makeV9Card({ id: "nr", score: null, grade: "NR" })];
+    const stats = buildV9HeadlineStats(input, new Map([["asset-a", 30], ["asset-c", 70], ["nr", 900]]));
+    expect(stats[0]).toMatchObject({ value: "77" });
+    expect(stats[1]).toMatchObject({ value: "30%" });
+  });
+
+  it("reports zero percent rather than NaN for rated cards without supply", () => {
+    expect(buildV9HeadlineStats(cards, new Map())[1]).toMatchObject({ value: "0%" });
   });
 
 });

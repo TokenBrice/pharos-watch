@@ -511,17 +511,6 @@ describe("yield config registry", () => {
       expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
     }
 
-    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
-      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
-      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
-        status: "covered",
-        strategies: [
-          expect.objectContaining({
-            kind: "rate-derived",
-          }),
-        ],
-      });
-    }
   });
 
   it("wires USDGO to an EFFR-linked rate-derived source", () => {

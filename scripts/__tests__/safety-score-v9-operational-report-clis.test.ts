@@ -664,6 +664,24 @@ describe("Safety Score v9 evidence-gap queue CLI", () => {
     });
     expect(queue?.entries[0]?.responsibility).toBe("integration-missing");
     expect(parseV9EvidenceGapQueue(JSON.parse(writes.get("queue.json")!))).toEqual(queue);
-    expect(() => runV9EvidenceGapQueueCli([...argv, "--require-clear"], io)).toThrow("contains 1 gap");
+    const required = memoryIo({ facts: factSet, policy: policyAsset });
+    expect(() => runV9EvidenceGapQueueCli([...argv, "--require-clear"], required.io)).toThrow("contains 1 gap");
+    expect(parseV9EvidenceGapQueue(JSON.parse(required.writes.get("queue.json")!))).toEqual(queue);
+  });
+
+  it("writes a clear queue and succeeds with require-clear once evidence resolves the gap", () => {
+    const core = factSetCore();
+    core.assets[0]!.gaps = [];
+    core.assets[0]!.implementation = {
+      status: knownStatus("v9.implementation.launch-date"),
+      launchedAtSec: 500,
+    };
+    const { io, writes } = memoryIo({ facts: compileV9FactSetV3(core), policy: policyAsset });
+    const queue = runV9EvidenceGapQueueCli(
+      ["--fact-set", "facts", "--policy", "policy", "--output", "queue.json", "--require-clear"],
+      io,
+    );
+    expect(queue?.entries).toEqual([]);
+    expect(parseV9EvidenceGapQueue(JSON.parse(writes.get("queue.json")!))).toEqual(queue);
   });
 });

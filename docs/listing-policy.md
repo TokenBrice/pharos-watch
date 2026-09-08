@@ -23,7 +23,7 @@ The listing class separates the research catalog from the core monetary aggregat
 | Class | Inclusion test | Aggregate treatment |
 | --- | --- | --- |
 | `core-stablecoin` | A transferable stable-value monetary instrument that is not a tracked variant, NAV/fund cash equivalent, or credit investment | Included in the core aggregate while active |
-| `cash-equivalent` | A non-variant with `flags.navToken === true`, or a non-variant classified as `mechanismArchetype: "tbill"` | Included in the core aggregate while active, with NAV-aware pricing |
+| `cash-equivalent` | A non-variant with `flags.navToken === true`, or a non-variant classified as `mechanismArchetype: "tbill"` | Included in the core aggregate while active; NAV-aware pricing applies only to rows with `flags.navToken === true`, while `tbill` rows without that flag keep ordinary peg-price bounds |
 | `stablecoin-variant` | A direct tracked child with `variantOf` and `variantKind` | Tracked and analyzed, but excluded from parent-inclusive aggregate totals to prevent double counting |
 | `stable-value-investment` | A non-variant classified as `mechanismArchetype: "rwa-credit-fund"` | Tracked on its separate investment surface, excluded from the core monetary aggregate |
 | `excluded` | Fails the scope or instrument tests | Historical record only; never active |

@@ -5,7 +5,7 @@ import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/mock-fetch";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { makeFluidTicker, makeFluidRpcResponse, makeBalancerPool, makeOrcaPool, makeCursorDb, orcaRoute } from "./dex-liquidity-direct-api.test-support";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -26,9 +26,6 @@ function mockTextFetch(body: string, status: number): void {
   mockFetch.mockImplementation(() => Promise.resolve(new Response(body, { status })));
 }
 
-function encodeRpcWords(words: Array<number | bigint>): string {
-  return `0x${words.map((word) => BigInt(word).toString(16).padStart(64, "0")).join("")}`;
-}
 
 // ---------------------------------------------------------------------------
 // Fluid
@@ -40,16 +37,7 @@ describe("fetchFluidPools", () => {
 
   it("fetches all chains and normalizes to DexApiPool[]", async () => {
     mockJsonFetch([
-      {
-        ticker_id: "0xbase_0xquote",
-        base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        last_price: "0.9999",
-        base_volume: "100000",
-        target_volume: "100000",
-        pool_id: FLUID_POOL_ADDRESS,
-        liquidity_in_usd: "500000",
-      },
+      makeFluidTicker(),
     ]);
 
     const pools = await fetchFluidPools();
@@ -69,16 +57,7 @@ describe("fetchFluidPools", () => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
         return Promise.resolve(jsonResponse([
-          {
-            ticker_id: "0xbase_0xquote",
-            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-            last_price: "0.9999",
-            base_volume: "100000",
-            target_volume: "100000",
-            pool_id: FLUID_POOL_ADDRESS,
-            liquidity_in_usd: "500000",
-          },
+          makeFluidTicker(),
         ]));
       }
       if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
@@ -87,13 +66,13 @@ describe("fetchFluidPools", () => {
       if (url.includes("ethereum-rpc.publicnode.com") || url.includes("eth.llamarpc.com")) {
         const body = String(init?.body ?? "");
         if (body.includes("0x957755e6")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([1_500_000, 500_000, 0, 0]) }));
+          return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
         }
         if (body.includes("0x55181f11")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([0, 0, 500_000, 2_500_000, 0, 0]) }));
+          return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
         }
         if (body.includes("0x42fcc6fb")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([100]) }));
+          return Promise.resolve(makeFluidRpcResponse([100]));
         }
       }
       return Promise.resolve(new Response("unexpected", { status: 500 }));
@@ -109,16 +88,7 @@ describe("fetchFluidPools", () => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
         return Promise.resolve(jsonResponse([
-          {
-            ticker_id: "0xbase_0xquote",
-            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-            last_price: "0.9999",
-            base_volume: "100000",
-            target_volume: "100000",
-            pool_id: FLUID_POOL_ADDRESS,
-            liquidity_in_usd: "500000",
-          },
+          makeFluidTicker(),
         ]));
       }
       if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
@@ -127,13 +97,13 @@ describe("fetchFluidPools", () => {
       if (url === "https://rpc.example") {
         const body = String(init?.body ?? "");
         if (body.includes("0x957755e6")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([1_500_000, 500_000, 0, 0]) }));
+          return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
         }
         if (body.includes("0x55181f11")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([0, 0, 500_000, 2_500_000, 0, 0]) }));
+          return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
         }
         if (body.includes("0x42fcc6fb")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([100]) }));
+          return Promise.resolve(makeFluidRpcResponse([100]));
         }
       }
       return Promise.resolve(new Response("unexpected", { status: 500 }));
@@ -161,16 +131,7 @@ describe("fetchFluidPools", () => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
         return Promise.resolve(jsonResponse([
-          {
-            ticker_id: "0xbase_0xquote",
-            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-            last_price: "0.9999",
-            base_volume: "100000",
-            target_volume: "100000",
-            pool_id: FLUID_POOL_ADDRESS,
-            liquidity_in_usd: "500000",
-          },
+          makeFluidTicker(),
         ]));
       }
       if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
@@ -210,16 +171,7 @@ describe("fetchFluidPools", () => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
         return Promise.resolve(jsonResponse([
-          {
-            ticker_id: "0xbase_0xquote",
-            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-            last_price: "0.9999",
-            base_volume: "100000",
-            target_volume: "100000",
-            pool_id: FLUID_POOL_ADDRESS,
-            liquidity_in_usd: "500000",
-          },
+          makeFluidTicker(),
           {
             ticker_id: "0xbroken_0xquote",
             base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -238,13 +190,13 @@ describe("fetchFluidPools", () => {
       if (url === "https://rpc.example") {
         const body = String(init?.body ?? "");
         if (body.includes("0x957755e6")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([1_500_000, 500_000, 0, 0]) }));
+          return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
         }
         if (body.includes("0x55181f11")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([0, 0, 500_000, 2_500_000, 0, 0]) }));
+          return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
         }
         if (body.includes("0x42fcc6fb")) {
-          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: encodeRpcWords([100]) }));
+          return Promise.resolve(makeFluidRpcResponse([100]));
         }
       }
       return Promise.resolve(new Response("unexpected", { status: 500 }));
@@ -553,16 +505,10 @@ describe("fetchBalancerPools", () => {
 
   it("paginates through multiple pages", async () => {
     // Page 1: full page (1000 items)
-    const page1 = Array.from({ length: 1000 }, (_, i) => ({
-      id: `0xpool${i}`,
-      type: "STABLE",
-      chain: "MAINNET",
-      dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
-      poolTokens: [
-        { address: `0xa${i}`, symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
-        { address: `0xb${i}`, symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
-      ],
-    }));
+    const page1 = Array.from({ length: 1000 }, (_, i) => (makeBalancerPool({ id: `0xpool${i}`, type: "STABLE", poolTokens: [
+      { address: `0xa${i}`, symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
+      { address: `0xb${i}`, symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
+    ] })));
     // Page 2: partial page (1 item) — signals end
     const page2 = [{
       id: "0xpoolLast",
@@ -673,16 +619,10 @@ describe("fetchBalancerPools", () => {
             { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
           ],
         },
-        {
-          id: "0xvalid",
-          type: "STABLE",
-          chain: "MAINNET",
-          dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
-          poolTokens: [
-            { address: "0xb", symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
-            { address: "0xc", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
-          ],
-        },
+        makeBalancerPool({ id: "0xvalid", type: "STABLE", poolTokens: [
+          { address: "0xb", symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
+          { address: "0xc", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
+        ] }),
       ]},
     });
 
@@ -802,7 +742,7 @@ describe("fetchRaydiumPools", () => {
     expect(pools.pools[0].chain).toBe("solana");
   });
 
-  it("stops pagination when TVL drops below threshold", async () => {
+  it("filters low-TVL rows on a short page", async () => {
     mockJsonFetch({
       success: true,
       data: { count: 2, data: [
@@ -824,11 +764,41 @@ describe("fetchRaydiumPools", () => {
     });
 
     const pools = await fetchRaydiumPools();
-    // Only the first pool (50K TVL >= 10K threshold) is included;
-    // second pool (5K) triggers the threshold break
+    // Short pages stop normally; low-TVL rows are excluded independently.
     const clmm = pools.pools.filter((p) => p.poolType === "raydium-clmm");
     expect(clmm).toHaveLength(1);
     expect(clmm[0].tvlUsd).toBe(50000);
+  });
+
+  it.each([
+    { eligiblePages: [1], expectedPages: [1, 2, 3] },
+    { eligiblePages: [1, 3], expectedPages: [1, 2, 3, 4, 5] },
+  ])("stops after two consecutive full low-TVL pages, resetting on eligibility: $eligiblePages", async ({
+    eligiblePages, expectedPages,
+  }) => {
+    const requested: Record<string, number[]> = { concentrated: [], standard: [] };
+    mockFetch.mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      const type = url.searchParams.get("poolType")!;
+      const page = Number(url.searchParams.get("page"));
+      if (url.origin !== "https://api-v3.raydium.io" || !requested[type]) {
+        throw new Error(`Unexpected request: ${url}`);
+      }
+      requested[type].push(page);
+      const rows = type === "standard" || page > expectedPages.length ? [] :
+        Array.from({ length: 1000 }, (_, index) => ({
+          type: "Concentrated", id: `page-${page}-row-${index}`,
+          mintA: { address: "a", symbol: "USDC", decimals: 6 },
+          mintB: { address: "b", symbol: "USDT", decimals: 6 },
+          price: 1, tvl: eligiblePages.includes(page) && index === 0 ? 50_000 : 5_000,
+          mintAmountA: 2500, mintAmountB: 2500, feeRate: 0.0001, day: { volume: 100 },
+        }));
+      return jsonResponse({ success: true, data: { data: rows } });
+    });
+    const result = await fetchRaydiumPools();
+    expect(requested).toEqual({ concentrated: expectedPages, standard: [1] });
+    expect(result.pools.map((pool) => pool.poolAddress)).toEqual(eligiblePages.map((page) => `page-${page}-row-0`));
+    expect(result.degraded).toBe(false);
   });
 
   it("handles complete API failure gracefully", async () => {
@@ -1082,27 +1052,11 @@ describe("fetchOrcaPools", () => {
   });
 
   it("follows cursor-based pagination", async () => {
-    const makePool = (addr: string) => ({
-      address: addr,
-      price: "1.0",
-      tvlUsdc: "100000",
-      feeRate: 100,
-      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-      tokenBalanceA: "50000",
-      tokenBalanceB: "50000",
-      stats: { "24h": { volume: "1000" } },
-    });
 
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("pool1")],
-        meta: { cursor: { next: "cursor123" } },
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("pool2")],
-        meta: { cursor: { next: null } },
-      }));
+    mockFetch = createFetchMock([
+      orcaRoute(null, [{ body: { data: [makeOrcaPool("pool1")], meta: { cursor: { next: "cursor123" } } } }]),
+      orcaRoute("cursor123", [{ body: { data: [makeOrcaPool("pool2")], meta: { cursor: { next: null } } } }]),
+    ], { requireMatch: true, strictUrl: true });
 
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(2);
@@ -1116,46 +1070,11 @@ describe("fetchOrcaPools", () => {
   });
 
   it("refreshes the Orca head before resuming a durable tail cursor", async () => {
-    const makePool = (address: string) => ({
-      address,
-      price: "1",
-      tvlUsdc: "100000",
-      feeRate: 100,
-      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-      tokenBalanceA: "50000",
-      tokenBalanceB: "50000",
-      stats: { "24h": { volume: "1000" } },
-    });
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("head")],
-        meta: { cursor: { next: "fresh-head-tail" } },
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("stored-tail")],
-        meta: { cursor: { next: null } },
-      }));
-    const writes: unknown[][] = [];
-    const db = makeNoopD1({
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn((...binds: unknown[]) => ({
-          first: vi.fn(async () => sql.includes("SELECT cursor")
-            ? {
-                cursor: "stored-cursor",
-                cycle_started_at: 100,
-                updated_at: 110,
-                completed_at: null,
-                pages_fetched: 4,
-              }
-            : null),
-          run: vi.fn(async () => {
-            writes.push(binds);
-            return { meta: { changes: 1 } };
-          }),
-        })),
-      })),
-    });
+    mockFetch = createFetchMock([
+      orcaRoute(null, [{ body: { data: [makeOrcaPool("head")], meta: { cursor: { next: "fresh-head-tail" } } } }]),
+      orcaRoute("stored-cursor", [{ body: { data: [makeOrcaPool("stored-tail")], meta: { cursor: { next: null } } } }]),
+    ], { requireMatch: true, strictUrl: true });
+    const { db, state } = makeCursorDb("stored-cursor");
 
     const result = await fetchOrcaPools(undefined, db);
 
@@ -1164,62 +1083,20 @@ describe("fetchOrcaPools", () => {
     expect(String(mockFetch.mock.calls[1][0])).toContain("minTvl=10000");
     expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["head", "stored-tail"]);
     expect(result.pagination).toMatchObject({ state: "complete", headRefreshed: true, cycleCompleted: true });
-    expect(writes[0]?.[1]).toBe("fresh-head-tail");
+    expect(state.cursor).toBe("fresh-head-tail");
   });
 
   it("degrades on cursor write failure and retries the stored tail next run", async () => {
-    const makePool = (address: string) => ({
-      address,
-      price: "1",
-      tvlUsdc: "100000",
-      feeRate: 100,
-      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-      tokenBalanceA: "50000",
-      tokenBalanceB: "50000",
-      stats: { "24h": { volume: "1000" } },
-    });
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("head-1")],
-        meta: { cursor: { next: "fresh-head-tail-1" } },
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("tail-1")],
-        meta: { cursor: { next: null } },
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("head-2")],
-        meta: { cursor: { next: "fresh-head-tail-2" } },
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("tail-2")],
-        meta: { cursor: { next: null } },
-      }));
+    mockFetch = createFetchMock([
+      orcaRoute(null, [1, 2].map((run) => ({
+        body: { data: [makeOrcaPool(`head-${run}`)], meta: { cursor: { next: `fresh-head-tail-${run}` } } },
+      }))),
+      orcaRoute("stored-tail", [1, 2].map((run) => ({
+        body: { data: [makeOrcaPool(`tail-${run}`)], meta: { cursor: { next: null } } },
+      }))),
+    ], { requireMatch: true, strictUrl: true });
 
-    let storedCursor = "stored-tail";
-    let writeAttempts = 0;
-    const db = makeNoopD1({
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn((...binds: unknown[]) => ({
-          first: vi.fn(async () => sql.includes("SELECT cursor")
-            ? {
-                cursor: storedCursor,
-                cycle_started_at: 100,
-                updated_at: 110,
-                completed_at: null,
-                pages_fetched: 4,
-              }
-            : null),
-          run: vi.fn(async () => {
-            writeAttempts++;
-            if (writeAttempts === 1) throw new Error("cursor write unavailable");
-            storedCursor = String(binds[1]);
-            return { success: true, meta: { changes: 1 } };
-          }),
-        })),
-      })),
-    });
+    const { db, state } = makeCursorDb("stored-tail", 1);
 
     const failedWrite = await fetchOrcaPools(undefined, db);
     const retriedWrite = await fetchOrcaPools(undefined, db);
@@ -1241,58 +1118,21 @@ describe("fetchOrcaPools", () => {
     });
     expect(String(mockFetch.mock.calls[1]?.[0])).toContain("next=stored-tail");
     expect(String(mockFetch.mock.calls[3]?.[0])).toContain("next=stored-tail");
-    expect(storedCursor).toBe("fresh-head-tail-2");
+    expect(state.cursor).toBe("fresh-head-tail-2");
   });
 
   it("preserves a far-tail cursor across a transient failure and retries it next run", async () => {
-    const makePool = (address: string) => ({
-      address,
-      price: "1",
-      tvlUsdc: "100000",
-      feeRate: 100,
-      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-      tokenBalanceA: "50000",
-      tokenBalanceB: "50000",
-      stats: { "24h": { volume: "1000" } },
-    });
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("head-1")],
-        meta: { cursor: { next: "fresh-head-tail-1" } },
-      }))
-      .mockResolvedValueOnce(new Response("temporary upstream failure", { status: 503 }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("head-2")],
-        meta: { cursor: { next: "fresh-head-tail-2" } },
-      }))
-      .mockResolvedValueOnce(jsonResponse({
-        data: [makePool("far-tail-retry")],
-        meta: { cursor: { next: null } },
-      }));
+    mockFetch = createFetchMock([
+      orcaRoute(null, [1, 2].map((run) => ({
+        body: { data: [makeOrcaPool(`head-${run}`)], meta: { cursor: { next: `fresh-head-tail-${run}` } } },
+      }))),
+      orcaRoute("far-tail-cursor", [
+        { response: new Response("temporary upstream failure", { status: 503 }) },
+        { body: { data: [makeOrcaPool("far-tail-retry")], meta: { cursor: { next: null } } } },
+      ]),
+    ], { requireMatch: true, strictUrl: true });
 
-    let storedCursor = "far-tail-cursor";
-    const persistedCursors: string[] = [];
-    const db = makeNoopD1({
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn((...binds: unknown[]) => ({
-          first: vi.fn(async () => sql.includes("SELECT cursor")
-            ? {
-                cursor: storedCursor,
-                cycle_started_at: 100,
-                updated_at: 110,
-                completed_at: null,
-                pages_fetched: 4,
-              }
-            : null),
-          run: vi.fn(async () => {
-            storedCursor = String(binds[1]);
-            persistedCursors.push(storedCursor);
-            return { success: true, meta: { changes: 1 } };
-          }),
-        })),
-      })),
-    });
+    const { db, state } = makeCursorDb("far-tail-cursor");
 
     const transientFailure = await fetchOrcaPools(undefined, db);
     const retriedTail = await fetchOrcaPools(undefined, db);
@@ -1306,53 +1146,22 @@ describe("fetchOrcaPools", () => {
     expect(retriedTail).toMatchObject({ ok: true, degraded: false });
     expect(String(mockFetch.mock.calls[1]?.[0])).toContain("next=far-tail-cursor");
     expect(String(mockFetch.mock.calls[3]?.[0])).toContain("next=far-tail-cursor");
-    expect(persistedCursors).toEqual(["far-tail-cursor", "fresh-head-tail-2"]);
+    expect(state.persistedCursors).toEqual(["far-tail-cursor", "fresh-head-tail-2"]);
   });
 
   it("resets a tail only when the API explicitly rejects its cursor", async () => {
-    const pool = {
-      address: "head",
-      price: "1",
-      tvlUsdc: "100000",
-      feeRate: 100,
-      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
-      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
-      tokenBalanceA: "50000",
-      tokenBalanceB: "50000",
-      stats: { "24h": { volume: "1000" } },
-    };
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [pool],
-        meta: { cursor: { next: "fresh-head-tail" } },
-      }))
-      .mockResolvedValueOnce(new Response("expired cursor", { status: 404 }));
-    const writes: unknown[][] = [];
-    const db = makeNoopD1({
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn((...binds: unknown[]) => ({
-          first: vi.fn(async () => sql.includes("SELECT cursor")
-            ? {
-                cursor: "expired-tail",
-                cycle_started_at: 100,
-                updated_at: 110,
-                completed_at: null,
-                pages_fetched: 4,
-              }
-            : null),
-          run: vi.fn(async () => {
-            writes.push(binds);
-            return { success: true, meta: { changes: 1 } };
-          }),
-        })),
-      })),
-    });
+    const pool = makeOrcaPool("head");
+    mockFetch = createFetchMock([
+      orcaRoute(null, [{ body: { data: [pool], meta: { cursor: { next: "fresh-head-tail" } } } }]),
+      orcaRoute("expired-tail", [{ response: new Response("expired cursor", { status: 404 }) }]),
+    ], { requireMatch: true, strictUrl: true });
+    const { db, state } = makeCursorDb("expired-tail");
 
     const result = await fetchOrcaPools(undefined, db);
 
     expect(result.pagination).toMatchObject({ state: "partial", cursor: "fresh-head-tail" });
     expect(result.errors).toContain("API rejected tail cursor (404); restarting from refreshed head");
-    expect(writes[0]?.[1]).toBe("fresh-head-tail");
+    expect(state.cursor).toBe("fresh-head-tail");
   });
 
   it("stops pagination on 429 mid-pagination and returns partial results", async () => {

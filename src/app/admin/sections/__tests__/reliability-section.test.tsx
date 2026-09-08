@@ -106,17 +106,13 @@ describe("ReliabilitySection", () => {
 
     const impact = screen.getByRole("tab", { name: /^Impact/ });
     const endpoints = screen.getByRole("tab", { name: /^Endpoints/ });
-    const tablist = screen.getByRole("tablist", { name: "Reliability views" });
     expect(screen.getByText("Impact panel mounted")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "Reliability Workbench" })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: "Impact reliability view" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("Reliability view: Impact");
-    expect(impact.className).toContain("min-h-11");
     expect(screen.queryByText("Endpoints panel mounted")).toBeNull();
     expect(impact.getAttribute("aria-controls")).toBe("reliability-panel-impact");
     expect(endpoints.getAttribute("aria-controls")).toBeNull();
-    expect(tablist.className).toContain("min-w-0");
-    expect(tablist.className).toContain("max-w-full");
 
     fireEvent.keyDown(impact, { key: "ArrowRight" });
 

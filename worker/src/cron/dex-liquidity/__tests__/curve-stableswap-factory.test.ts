@@ -236,7 +236,12 @@ function dependencies(
     fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
       multicall(calls, overrides),
     ),
-    hashCode: keccak256,
+    // Synthetic runtimes stand in for reviewed bytecode; unknown bytes still fail.
+    hashCode: (code: `0x${string}`) => code === FACTORY_CODE
+      ? DEPLOYMENT.expectedFactoryCodeHash
+      : code === IMPLEMENTATION_CODE
+        ? DEPLOYMENT.expectedPoolImplementationCodeHash
+        : keccak256(code),
   };
 }
 
@@ -279,12 +284,6 @@ describe("Curve StableSwap-NG factory census capture", () => {
       factoryCode: FACTORY_CODE,
       implementationCode: IMPLEMENTATION_CODE,
     });
-    // The registry pins the hash of the recorded runtime, so the fixture code
-    // stands in for it: rebind both pins to the fixture's own hashes.
-    deps.hashCode = ((code: `0x${string}`) =>
-      code === FACTORY_CODE
-        ? DEPLOYMENT.expectedFactoryCodeHash
-        : DEPLOYMENT.expectedPoolImplementationCodeHash) as never;
 
     const pool = poolEntry();
     await run(pool, deps);
@@ -333,14 +332,13 @@ describe("Curve StableSwap-NG factory census capture", () => {
       reason: "exact-pool-join-unresolved",
     });
     expect(deps.fetchMulticall).not.toHaveBeenCalled();
+    if ("implementationCode" in overrides) {
+      expect(deps.fetchCodeAtBlock.mock.calls.map((call) => call[1])).toContain(IMPLEMENTATION);
+    }
   });
 
   it("refuses a truncated factory inventory", async () => {
     const deps = dependencies({ poolCount: BigInt(DEPLOYMENT.maxIndexedPools + 1) });
-    deps.hashCode = ((code: `0x${string}`) =>
-      code === FACTORY_CODE
-        ? DEPLOYMENT.expectedFactoryCodeHash
-        : DEPLOYMENT.expectedPoolImplementationCodeHash) as never;
     const pool = poolEntry();
     await run(pool, deps);
 
@@ -371,10 +369,6 @@ describe("Curve StableSwap-NG factory census capture", () => {
     ["the amplification reads zero", { amplification: 0n } as StateOverrides, "invalid-invariant-parameters"],
   ])("gates when %s", async (_label, overrides, reason) => {
     const deps = dependencies(overrides);
-    deps.hashCode = ((code: `0x${string}`) =>
-      code === FACTORY_CODE
-        ? DEPLOYMENT.expectedFactoryCodeHash
-        : DEPLOYMENT.expectedPoolImplementationCodeHash) as never;
     const pool = poolEntry();
     await run(pool, deps);
 
@@ -384,10 +378,6 @@ describe("Curve StableSwap-NG factory census capture", () => {
 
   it("withdraws the model when the capture straddles a reorg", async () => {
     const deps = dependencies({ confirmedHeader: { timestamp: BLOCK_TIMESTAMP, hash: `0x${"9".repeat(64)}` } });
-    deps.hashCode = ((code: `0x${string}`) =>
-      code === FACTORY_CODE
-        ? DEPLOYMENT.expectedFactoryCodeHash
-        : DEPLOYMENT.expectedPoolImplementationCodeHash) as never;
     const pool = poolEntry();
     await run(pool, deps);
 

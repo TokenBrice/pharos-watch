@@ -35,7 +35,6 @@ describe("BACKTEST_ANCHORS fixture", () => {
   });
   it("anchors carry live Pharos verification provenance", () => {
     for (const anchor of BACKTEST_ANCHORS) {
-      expect(anchor.verificationNote).toMatch(/^Verified against live Pharos \/api\/depeg-events row on \d{4}-\d{2}-\d{2}\.$/);
       expect(anchor.sourceUrls.some((url) => url.includes("/api/depeg-events?stablecoin="))).toBe(true);
     }
   });

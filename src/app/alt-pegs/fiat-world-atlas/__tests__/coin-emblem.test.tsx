@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
-import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
-import type { PlacedCoin } from "@/lib/alt-peg-hero";
+import { makePlacedCoin, renderAtlas } from "./atlas.test-support";
 
-const sample: PlacedCoin = {
+const sample = makePlacedCoin({
   id: "eurc-circle",
   symbol: "EURC",
   name: "EURC",
@@ -16,78 +15,28 @@ const sample: PlacedCoin = {
   x: 52,
   y: 20,
   sizePx: 109,
-};
+});
 
 describe("CoinEmblem", () => {
 
   it("renders an anchor with href and accessible label", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem coin={sample} variant="fiat" />
-      </HoverProvider>,
-    );
+    const { getByRole } = renderAtlas(<><CoinEmblem coin={sample} variant="fiat" /></>);
     const link = getByRole("link");
     expect(link.getAttribute("href")).toBe("/stablecoin/eurc-circle");
     expect(link.getAttribute("aria-label")).toContain("EURC");
     expect(link.getAttribute("aria-label")).toContain("EUR");
   });
 
-  it("sizes + positions via inline style", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem coin={sample} variant="fiat" />
-      </HoverProvider>,
-    );
-    const link = getByRole("link") as HTMLAnchorElement;
-    expect(link.style.width).toBe("calc(var(--coin-size) * var(--peg-coin-scale, 1))");
-    expect(link.style.height).toBe("calc(var(--coin-size) * var(--peg-coin-scale, 1))");
-    expect(link.style.getPropertyValue("--coin-size")).toBe("109px");
-    expect(link.style.left).toBe("52%");
-    expect(link.style.top).toBe("20%");
-    expect(link.style.getPropertyValue("--coin-z")).toBe("24");
-  });
-
-  it("applies variant-specific class", () => {
-    const { getByRole, rerender } = render(
-      <HoverProvider>
-        <CoinEmblem coin={sample} variant="sun-core" />
-      </HoverProvider>,
-    );
-    expect(getByRole("link").className).toContain("coin-emblem--sun-core");
-
-    rerender(
-      <HoverProvider>
-        <CoinEmblem coin={{ ...sample, pegCurrency: "VAR" }} variant="star" />
-      </HoverProvider>,
-    );
-    expect(getByRole("link").className).toContain("coin-emblem--star");
-  });
-
-  it("encodes data-coin-id and data-peg for hover wiring", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem coin={sample} variant="fiat" />
-      </HoverProvider>,
-    );
-    const link = getByRole("link");
-    expect(link.getAttribute("data-coin-id")).toBe("eurc-circle");
-    expect(link.getAttribute("data-peg")).toBe("EUR");
-  });
-
   it("shows a key-data hover card for the active stablecoin", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem
-          coin={sample}
-          variant="fiat"
-          cohortCoinCount={4}
-          cohortMarketCap={1_000_000_000}
-          cohortSymbolPreview="EURC · EURCV · AEUR"
-          cohortRank={2}
-          showTickerLabel
-        />
-      </HoverProvider>,
-    );
+    const { getByRole } = renderAtlas(<><CoinEmblem
+      coin={sample}
+      variant="fiat"
+      cohortCoinCount={4}
+      cohortMarketCap={1_000_000_000}
+      cohortSymbolPreview="EURC · EURCV · AEUR"
+      cohortRank={2}
+      showTickerLabel
+    /></>);
     const link = getByRole("link");
     fireEvent.mouseEnter(link);
 
@@ -107,47 +56,52 @@ describe("CoinEmblem", () => {
     expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
     expect(link.getAttribute("aria-label")).toContain("#2 by non-USD cap");
     expect(link.getAttribute("aria-describedby")).toBe(card.id);
+    fireEvent.mouseLeave(link);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(link.hasAttribute("aria-describedby")).toBe(false);
   });
 
   it("shows the hover card on keyboard focus", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem coin={sample} variant="fiat" cohortCoinCount={4} cohortMarketCap={1_000_000_000} />
-      </HoverProvider>,
-    );
+    const { getByRole } = renderAtlas(<><CoinEmblem coin={sample} variant="fiat" cohortCoinCount={4} cohortMarketCap={1_000_000_000} /></>);
     const link = getByRole("link");
     fireEvent.focus(link);
 
     expect(screen.getByRole("tooltip").textContent).toContain("Open EURC profile");
+    fireEvent.blur(link);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(link.hasAttribute("aria-describedby")).toBe(false);
   });
 
   it("keeps requested ticker labels visible for small single-coin cohorts", () => {
-    render(
-      <HoverProvider>
-        <CoinEmblem coin={{ ...sample, sizePx: 34 }} variant="fiat" showTickerLabel />
-      </HoverProvider>,
-    );
+    renderAtlas(<><CoinEmblem coin={{ ...sample, sizePx: 34 }} variant="fiat" showTickerLabel /></>);
 
     expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
   });
 
-  it("positions edge hover cards back toward the map frame", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem coin={{ ...sample, x: 88, y: 12 }} variant="fiat" />
-      </HoverProvider>,
-    );
-    const link = getByRole("link");
-    expect(link.getAttribute("data-card-x")).toBe("right");
-    expect(link.getAttribute("data-card-y")).toBe("below");
+  it("moves the tooltip and accessible description to the newly hovered coin", () => {
+    renderAtlas(<><CoinEmblem coin={sample} variant="fiat" />
+    <CoinEmblem coin={{ ...sample, id: "peer", symbol: "PEER" }} variant="fiat" /></>);
+    const [first, second] = screen.getAllByRole("link");
+    fireEvent.mouseEnter(first);
+    expect(first.getAttribute("aria-describedby")).toBe(screen.getByRole("tooltip").id);
+    fireEvent.mouseEnter(second);
+    expect(screen.getByRole("tooltip").textContent).toContain("Open PEER profile");
+    expect(first.hasAttribute("aria-describedby")).toBe(false);
+    expect(second.getAttribute("aria-describedby")).toBe(screen.getByRole("tooltip").id);
   });
 
-  it("allows sky cohorts to force hover cards below the emblem", () => {
-    const { getByRole } = render(
-      <HoverProvider>
-        <CoinEmblem coin={{ ...sample, y: 70 }} variant="moon" hoverCardYPlacement="below" />
-      </HoverProvider>,
-    );
-    expect(getByRole("link").getAttribute("data-card-y")).toBe("below");
+  it.each([
+    { marketCap: 432_000_000, cohortMarketCap: undefined },
+    { marketCap: 432_000_000, cohortMarketCap: 0 },
+    { marketCap: 0, cohortMarketCap: 1_000_000_000 },
+  ])("does not manufacture a share from unavailable evidence: %j", ({ marketCap, cohortMarketCap }) => {
+    renderAtlas(<><CoinEmblem coin={{ ...sample, marketCap }} variant="fiat" cohortMarketCap={cohortMarketCap} /></>);
+    const link = screen.getByRole("link");
+    fireEvent.mouseEnter(link);
+    expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toBe("n/a");
+    expect(link.getAttribute("aria-label")).not.toContain("%");
+    if (marketCap === 0) expect(screen.getByText("Market cap").nextElementSibling?.textContent).toBe("n/a");
+    if (!cohortMarketCap) expect(screen.getByText("Cohort cap").nextElementSibling?.textContent).toBe("n/a");
   });
+
 });

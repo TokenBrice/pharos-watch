@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { loadFreshFreezeAlerts } from "../telegram-alert-freeze";
 import { dispatchFreezeAlertOutbox } from "../telegram-freeze-outbox";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function db(rows: unknown[], latestRun: number | null): D1Database {

@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { adaptBtcfi } from "../btcfi";
+import { adaptBtcfi, fetchBtcfiReserves } from "../btcfi";
+import { mockFetchStrict, jsonResponse } from "@shared/test-utils/mock-fetch";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("adaptBtcfi", () => {
   it("declares latest-state API aggregation as not-applicable freshness", () => {
@@ -105,5 +110,59 @@ describe("adaptBtcfi", () => {
       severity: "warning",
       effect: "degraded",
     });
+  });
+
+  it("aggregates normalized duplicate symbols with known and unknown weights", () => {
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 0, deposit_value: "20" },
+        { token_handler_id: 1, deposit_value: "40" },
+        { token_handler_id: 2, deposit_value: "30" },
+        { token_handler_id: 3, deposit_value: "10" },
+      ],
+      [
+        { id: 0, symbol: " wbtc ", isStable: false },
+        { id: 1, symbol: "WBTC", isStable: false },
+        { id: 2, symbol: "TBTC", isStable: false },
+        { id: 3, symbol: "UNKNOWN", isStable: false },
+      ],
+    );
+    expect(result.slices).toEqual([
+      { name: "WBTC", pct: 60, risk: "medium" },
+      { name: "TBTC", pct: 30, risk: "medium" },
+      { name: "Unmapped BTC variants", pct: 10, risk: "high" },
+    ]);
+    expect(result.metadata?.unknownExposurePct).toBe(10);
+  });
+
+  it("ignores unmatched, stable, missing, invalid and nonpositive deposits", () => {
+    const ignored = [
+      { token_handler_id: 99, deposit_value: "999" },
+      { token_handler_id: 1, deposit_value: "999" },
+      ...[undefined, "NaN", "Infinity", "0", "-1"].map((deposit_value) => ({ token_handler_id: 0, deposit_value })),
+    ];
+    const handlers = [{ id: 0, symbol: "WBTC", isStable: false }, { id: 1, symbol: "USD", isStable: true }];
+    expect(adaptBtcfi(ignored, handlers)).toEqual({ slices: [] });
+    expect(adaptBtcfi([...ignored, { token_handler_id: 0, deposit_value: "1" }], handlers).slices)
+      .toEqual([{ name: "WBTC", pct: 100, risk: "medium" }]);
+  });
+
+  it("fetches distinct market and handler payloads and rejects either endpoint failure", async () => {
+    const marketUrl = "https://btcfi.example/market";
+    const handlersUrl = "https://btcfi.example/handlers";
+    const config = {
+      adapter: "btcfi", version: 1, semantics: "collateral-mix",
+      inputs: { primary: { kind: "http-json", url: marketUrl } },
+      params: { handlersUrl },
+    } as LiveReservesConfig;
+    for (const failing of [null, marketUrl, handlersUrl]) {
+      mockFetchStrict([
+        { match: marketUrl, respond: () => jsonResponse([{ token_handler_id: 7, deposit_value: "25" }], failing === marketUrl ? 400 : 200) },
+        { match: handlersUrl, respond: () => jsonResponse([{ id: 7, symbol: "WBTC", isStable: false }], failing === handlersUrl ? 400 : 200) },
+      ]);
+      const result = fetchBtcfiReserves({ id: "btcfi" } as StablecoinMeta, config, new AbortController().signal);
+      if (failing) await expect(result).rejects.toThrow();
+      else expect((await result).slices).toEqual([{ name: "WBTC", pct: 100, risk: "medium" }]);
+    }
   });
 });

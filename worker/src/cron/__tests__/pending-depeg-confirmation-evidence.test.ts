@@ -5,8 +5,11 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEX_FRESHNESS_SEC } from "../../lib/constants";
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
+import { deriveDepegSignal } from "../../lib/depeg-signals";
 import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolChallengersByCoin, DexPriceRowsByCoin, DexPriceSourcesByCoin } from "../pending-depeg-confirmation";
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
+import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 
@@ -19,10 +22,7 @@ function row(overrides: Partial<PendingDepegRow> = {}): PendingDepegRow {
   const firstSeenAt = overrides.first_seen_at ?? NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC - 60;
   const firstSeenBps = overrides.first_seen_bps ?? -220;
   const firstPrice = overrides.first_price ?? 0.978;
-  return { id: 1, stablecoin_id: COIN_ID, symbol: "USDT", peg_type: "peggedUSD", direction: "below", first_seen_bps: firstSeenBps, first_seen_at: firstSeenAt, first_price: firstPrice, last_seen_bps: firstSeenBps, last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC, last_price: firstPrice, peak_seen_bps: null, peak_price: null, peg_reference: 1, reason: "large-cap", updated_at: firstSeenAt, ...overrides };
-}
-function emptyEvidence(): CollectedConfirmationEvidence {
-  return { confirmingSources: [], opposingSources: [], unavailableSources: [], circuitOpenSources: [], hardOpposingSources: [], offchainStatus: "insufficient", offchainSourceKey: null, offchainPeakCandidate: null, dexStatus: "insufficient", dexPeakCandidates: [], dexConfirmationKeys: [], cexStatus: "insufficient", cexPeakCandidate: null, poolStatus: "insufficient", poolConfirmations: [] };
+  return makePendingDepegRow({ id: 1, stablecoin_id: COIN_ID, symbol: "USDT", first_seen_at: firstSeenAt, first_seen_bps: firstSeenBps, first_price: firstPrice, last_seen_bps: firstSeenBps, last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC, last_price: firstPrice, updated_at: firstSeenAt, ...overrides });
 }
 function input(overrides: Partial<ConfirmationEvidenceInput> = {}): ConfirmationEvidenceInput {
   const value = overrides.row ?? row();
@@ -172,6 +172,75 @@ describe("collectConfirmationEvidence pool challenger status classification", ()
     const evidence = await collect(noOffchain({ poolChallengers: pools([{ price: 0.98, tvlUsd: 1_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" }, { price: 0.979, tvlUsd: 1_000_000, protocol: "curve", sourceFamily: "curve", chain: "arbitrum" }]) }));
     expect(evidence.poolStatus).toBe("insufficient");
     expect(evidence.poolConfirmations).toHaveLength(1);
+    expect(evidence.confirmingSources).toEqual([]);
+  });
+});
+
+describe("collectConfirmationEvidence native quote classification", () => {
+  const nativeInput = (price: number) => input({
+    nativePegQuote: { stablecoinId: COIN_ID, geckoId: "tether", pegCurrency: "USD", price, updatedAt: NOW_SEC - 30 },
+    nativeSignal: deriveDepegSignal(price, 1),
+  });
+
+  it("confirms off-chain status from a fresh native peg quote without querying CoinGecko", async () => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    const evidence = await collect(nativeInput(0.95), fetchSpy);
+    expect(evidence.offchainStatus).toBe("confirm");
+    expect(evidence.offchainSourceKey).toBe("native:usd");
+    expect(evidence.offchainPeakCandidate).toEqual({ bps: -500, price: 0.95 });
+    expect(evidence.confirmingSources).toContain("native:usd");
+  });
+
+  it("adds a native peg quote back inside the bar as hard opposing evidence", async () => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    const evidence = await collect(nativeInput(1.05), fetchSpy);
+    expect(evidence.offchainStatus).toBe("contradict");
+    expect(evidence.offchainSourceKey).toBe("native:usd");
+    expect(evidence.offchainPeakCandidate).toBeNull();
+    expect(evidence.opposingSources).toContain("native:usd");
+    expect(evidence.hardOpposingSources).toContain("native:usd");
+  });
+});
+
+describe("collectConfirmationEvidence recover and opposing classification", () => {
+  it("records an independent CoinGecko quote that settled back inside the bar as opposing evidence", async () => {
+    const fetchSpy = mockFetch([{ match: "api.coingecko.com/api/v3/simple/price", body: { tether: { usd: 0.997, last_updated_at: NOW_SEC - 30 } } }], { requireMatch: true });
+    const evidence = await collect(input(), fetchSpy);
+    expect(evidence.offchainStatus).toBe("recover");
+    expect(evidence.offchainSourceKey).toBe("coingecko-confirm");
+    expect(evidence.offchainPeakCandidate).toBeNull();
+    expect(evidence.opposingSources).toContain("coingecko-confirm");
+    expect(evidence.unavailableSources.some((source) => source.startsWith("coingecko-confirm"))).toBe(false);
+  });
+
+  it("marks the DEX aggregate as recover when two independent protocol families settle inside the bar", async () => {
+    const evidence = await collect(noOffchain({ dexPriceRows: dexRows(NOW_SEC - 30, 0.997), dexPriceSources: dexSources(NOW_SEC - 30, 0.997) }));
+    expect(evidence.dexStatus).toBe("recover");
+    expect(evidence.opposingSources).toEqual(expect.arrayContaining(["dex:curve", "dex:uniswap"]));
+    expect(evidence.hardOpposingSources).toEqual(expect.arrayContaining(["dex:curve", "dex:uniswap"]));
+    expect(evidence.confirmingSources).toEqual([]);
+    expect(evidence.dexConfirmationKeys).toEqual([]);
+  });
+
+  it("confirms from a fresh Binance quote beyond the secondary bar", async () => {
+    const evidence = await collect(noOffchain({ cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
+    expect(evidence.cexStatus).toBe("confirm");
+    expect(evidence.cexPeakCandidate).toEqual({ bps: -500, price: 0.95 });
+    expect(evidence.confirmingSources).toContain("cex:binance");
+  });
+
+  it("records an opposite-direction Binance quote as hard opposing evidence", async () => {
+    const evidence = await collect(noOffchain({ cexAllowed: true, cexPrices: new Map([["USDT", 1.05]]) }));
+    expect(evidence.cexStatus).toBe("contradict");
+    expect(evidence.cexPeakCandidate).toBeNull();
+    expect(evidence.opposingSources).toContain("cex:binance");
+    expect(evidence.hardOpposingSources).toContain("cex:binance");
+  });
+
+  it("ignores pool challengers with unusable prices instead of classifying them", async () => {
+    const evidence = await collect(noOffchain({ poolChallengers: pools([{ price: 0, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve" }]) }));
+    expect(evidence.poolStatus).toBe("insufficient");
+    expect(evidence.poolConfirmations).toEqual([]);
     expect(evidence.confirmingSources).toEqual([]);
   });
 });

@@ -54,4 +54,25 @@ describe("blacklistability review data checks", () => {
       },
     ]);
   });
+
+  it.each([undefined, []])("requires evidence when sources are %j and rationale is absent", (sources) => {
+    const coin = makeMeta("unsupported", {
+      blacklistabilityReview: { ...makeReview(false), sources, sourceFreeRationale: undefined },
+    });
+    expect(findBlacklistabilityReviewIssues([coin])).toEqual([{
+      id: "unsupported",
+      message: "blacklistabilityReview requires sources or sourceFreeRationale",
+    }]);
+  });
+
+  it("accepts sourced evidence without a source-free rationale", () => {
+    const coin = makeMeta("sourced", {
+      blacklistabilityReview: {
+        ...makeReview(false),
+        sources: [{ label: "Token docs", url: "https://example.com/token" }],
+        sourceFreeRationale: undefined,
+      },
+    });
+    expect(findBlacklistabilityReviewIssues([coin])).toEqual([]);
+  });
 });

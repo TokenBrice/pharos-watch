@@ -4,14 +4,16 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   GENERATED_AT,
+  getApiKeyAuditLogMock,
+  keyResponse,
   makeKey,
   renderPanel,
-  getApiKeyAuditLogMock,
+  setAuditLog,
 } from "./api-keys-panel-harness";
 
 describe("ApiKeysPanel editor and audit history", () => {
   it("mounts one focused selected-key editor with selected disclosure semantics and audit history", async () => {
-    getApiKeyAuditLogMock().mockReturnValue({
+    setAuditLog({
       data: {
         entries: [
           {
@@ -24,22 +26,11 @@ describe("ApiKeysPanel editor and audit history", () => {
           },
         ],
       },
-      error: null,
-      isLoading: false,
-      isFetching: false,
-      refetch: vi.fn().mockResolvedValue(undefined),
     });
     renderPanel([
       makeKey(),
       makeKey({ id: 2, name: "Digest Key", keyPrefix: "digest", maskedToken: "ph_live_digest_********" }),
     ]);
-
-    const inventoryShell = screen.getByTestId("api-keys-table");
-    expect(inventoryShell.className).toContain("table-header-sticky");
-    const viewport = inventoryShell.querySelector('[data-slot="table-viewport"]');
-    expect(viewport?.className).toContain("overflow-x-auto");
-    expect(viewport?.className).toContain("overflow-y-auto");
-    expect(screen.getByRole("columnheader", { name: "Actions" }).className).toContain("sticky");
 
     const opsEdit = screen.getByRole("button", { name: /^Edit Ops Key/ });
     expect(opsEdit.hasAttribute("aria-controls")).toBe(false);
@@ -66,12 +57,7 @@ describe("ApiKeysPanel editor and audit history", () => {
 
   it("returns focus to the inventory when an edit removes the selected key from the active view", async () => {
     const updatedKey = makeKey({ expiresAt: GENERATED_AT + 30 * 24 * 60 * 60 });
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ key: updatedKey }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    vi.mocked(fetch).mockResolvedValue(keyResponse({ key: updatedKey }, { status: 200 }));
     renderPanel([makeKey()]);
 
     fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
@@ -107,12 +93,7 @@ describe("ApiKeysPanel editor and audit history", () => {
         keys: [updatedKey, ...keys.slice(1)],
       },
     });
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ key: updatedKey }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    vi.mocked(fetch).mockResolvedValue(keyResponse({ key: updatedKey }, { status: 200 }));
     renderPanel(keys, refetch);
 
     fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "name" } });
@@ -129,14 +110,7 @@ describe("ApiKeysPanel editor and audit history", () => {
   });
 
   it("shows audit loading and unavailable states with a local retry", async () => {
-    const retryAudit = vi.fn().mockResolvedValue(undefined);
-    getApiKeyAuditLogMock().mockReturnValue({
-      data: undefined,
-      error: new Error("audit store unavailable"),
-      isLoading: false,
-      isFetching: false,
-      refetch: retryAudit,
-    });
+    const retryAudit = setAuditLog({ error: new Error("audit store unavailable") });
     renderPanel([makeKey()]);
 
     fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
@@ -146,13 +120,7 @@ describe("ApiKeysPanel editor and audit history", () => {
     expect(retryAudit).toHaveBeenCalledOnce();
 
     cleanup();
-    getApiKeyAuditLogMock().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-      isFetching: true,
-      refetch: retryAudit,
-    });
+    setAuditLog({ isLoading: true, isFetching: true });
     renderPanel([makeKey({ id: 2, name: "Loading Key" })]);
     fireEvent.click(screen.getByRole("button", { name: /^Edit Loading Key/ }));
     expect(screen.getByText("Loading audit history...")).toBeTruthy();

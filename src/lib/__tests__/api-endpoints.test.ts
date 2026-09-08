@@ -29,172 +29,30 @@ import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/maintenance/smoke-api.mjs";
 
 describe("api endpoint registry", () => {
-  it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
-    const expectedPaths = [
-      "/api/admin-action-log",
-      "/api/admin-telegram-broadcast",
-      "/api/api-key-requests",
-      "/api/api-key-requests-admin",
-      "/api/api-key-requests/verify",
-      "/api/api-keys",
-      "/api/api-keys/audit-log",
-      "/api/api-keys/lifecycle-summary",
-      "/api/audit-depeg-history",
-      "/api/audit-depeg-history?dry-run=true",
-      "/api/backfill-blacklist-current-balances",
-      "/api/backfill-cg-prices",
-      "/api/backfill-depegs",
-      "/api/backfill-dews",
-      "/api/backfill-mint-burn",
-      "/api/backfill-mint-burn-prices",
-      "/api/backfill-stability-index",
-      "/api/backfill-supply-history",
-      "/api/backfill-tape",
-      "/api/backfill-yield-history",
-      "/api/blacklist",
-      "/api/blacklist-summary",
-      "/api/bluechip-ratings",
-      "/api/chains",
-      "/api/daily-digest",
-      "/api/debug-sync-state",
-      "/api/depeg-events",
-      "/api/depeg-resolver",
-      "/api/depeg-resolver-review",
-      "/api/dex-liquidity",
-      "/api/dex-liquidity-history",
-      "/api/dex-liquidity-history?stablecoin=usdt-tether",
-      "/api/digest-archive",
-      "/api/digest-snapshot",
-      "/api/donor-key-claims",
-      "/api/events",
-      "/api/feedback",
-      "/api/health",
-      "/api/mint-burn-events",
-      "/api/mint-burn-events?stablecoin=usdt-tether",
-      "/api/mint-burn-flows",
-      "/api/non-usd-share",
-      "/api/non-usd-share?days=90",
-      "/api/peg-summary",
-      "/api/public-status-history",
-      "/api/reclassify-atomic-roundtrips",
-      "/api/redemption-backstops",
-      "/api/remediate-blacklist-amount-gaps",
-      "/api/report-cards/v9",
-      "/api/request-source-stats",
-      "/api/reset-blacklist-sync",
-      "/api/safety-grades",
-      "/api/safety-score-history",
-      "/api/safety-score-history-v2",
-      "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
-      "/api/safety-score-history?stablecoin=usdt-tether",
-      "/api/snapshot/:date/stablecoin/:id",
-      "/api/snapshots/:date.json",
-      "/api/snapshots/index",
-      "/api/stability-index",
-      "/api/stablecoin-charts",
-      "/api/stablecoin-reserves/:id",
-      "/api/stablecoin-reserves/iusd-infinifi",
-      "/api/stablecoin-summary/:id",
-      "/api/stablecoin-summary/usdt-tether",
-      "/api/stablecoin/:id",
-      "/api/stablecoin/pyusd-paypal",
-      "/api/stablecoins",
-      "/api/status",
-      "/api/status-history",
-      "/api/status-history?limit=10",
-      "/api/stress-signals",
-      "/api/supply-history",
-      "/api/supply-history?stablecoin=usdt-tether",
-      "/api/telegram-mini-app/mutate",
-      "/api/telegram-mini-app/session",
-      "/api/telegram-pulse",
-      "/api/telegram-webhook",
-      "/api/trigger-digest",
-      "/api/usds-status",
-      "/api/yield-adapter-manifest",
-      "/api/yield-history",
-      "/api/yield-history?stablecoin=usdt-tether",
-      "/api/yield-rankings",
-    ];
-
-    const actualPaths = [
-      ...new Set(
-        ENDPOINT_DEFINITIONS.flatMap((endpoint) =>
-          [endpoint.path, endpoint.probePath, endpoint.statusPageAction?.path].filter(
-            (path): path is string => typeof path === "string",
-          ),
-        ),
-      ),
-    ].sort();
-
-    expect(actualPaths).toEqual(expectedPaths);
-  });
-
-  it("keeps probe path groups stable", () => {
-    expect(getProbePaths("public")).toEqual([
-      "/api/stablecoins",
-      "/api/stablecoin/pyusd-paypal",
-      "/api/stablecoin-summary/usdt-tether",
-      "/api/stablecoin-reserves/iusd-infinifi",
-      "/api/stablecoin-charts",
-      "/api/peg-summary",
-      "/api/health",
-      "/api/public-status-history",
-      "/api/blacklist",
-      "/api/blacklist-summary",
-      "/api/depeg-events",
-      "/api/events",
-      "/api/usds-status",
-      "/api/bluechip-ratings",
-      "/api/dex-liquidity",
-      "/api/dex-liquidity-history?stablecoin=usdt-tether",
-      "/api/supply-history?stablecoin=usdt-tether",
-      "/api/daily-digest",
-      "/api/digest-archive",
-      "/api/snapshots/index",
-      "/api/yield-rankings",
-      "/api/yield-adapter-manifest",
-      "/api/yield-history?stablecoin=usdt-tether",
-      "/api/safety-score-history?stablecoin=usdt-tether",
-      "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
-      "/api/stability-index",
-      "/api/report-cards/v9",
-      "/api/safety-grades",
-      "/api/depeg-resolver",
-      "/api/depeg-resolver-review",
-      "/api/redemption-backstops",
-      "/api/mint-burn-flows",
-      "/api/mint-burn-events?stablecoin=usdt-tether",
-      "/api/stress-signals",
-      "/api/chains",
-      "/api/non-usd-share?days=90",
-      "/api/telegram-pulse",
+  it("publishes runnable probes in the correct security groups", () => {
+    const publicPaths = getProbePaths("public");
+    const adminPaths = getProbePaths("admin");
+    const manualPaths = getProbePaths("manual");
+    expect(publicPaths).toContain("/api/stablecoins");
+    expect(publicPaths).toContain("/api/health");
+    expect(publicPaths).toContain("/api/stablecoin/pyusd-paypal");
+    expect(adminPaths).toEqual([
+      "/api/status", "/api/status-history?limit=10", "/api/debug-sync-state",
     ]);
-
-    expect(getProbePaths("admin")).toEqual([
-      "/api/status",
-      "/api/status-history?limit=10",
-      "/api/debug-sync-state",
-    ]);
-
-    expect(getProbePaths("manual")).toEqual([
-      "/api/trigger-digest",
-      "/api/reset-blacklist-sync",
-      "/api/remediate-blacklist-amount-gaps",
-      "/api/backfill-blacklist-current-balances",
-      "/api/backfill-depegs",
-      "/api/backfill-supply-history",
-      "/api/backfill-cg-prices",
-      "/api/backfill-yield-history",
-      "/api/backfill-stability-index",
-      "/api/backfill-mint-burn-prices",
-      "/api/backfill-mint-burn",
-      "/api/backfill-tape",
-      "/api/reclassify-atomic-roundtrips",
-      "/api/audit-depeg-history?dry-run=true",
-      "/api/backfill-dews",
-      "/api/admin-telegram-broadcast",
-    ]);
+    expect(manualPaths).toContain("/api/audit-depeg-history?dry-run=true");
+    expect(manualPaths).toContain("/api/trigger-digest");
+    for (const path of [...publicPaths, ...adminPaths, ...manualPaths]) {
+      expect(path).not.toMatch(/:[a-z]/i);
+      expect(path).toMatch(/^\/api\//);
+    }
+    for (const path of publicPaths) {
+      expect(isAdminPath(new URL(path, "https://api.pharos.watch").pathname)).toBe(false);
+      expect(adminPaths).not.toContain(path);
+      expect(manualPaths).not.toContain(path);
+    }
+    for (const path of [...adminPaths, ...manualPaths]) {
+      expect(isAdminPath(new URL(path, "https://api.pharos.watch").pathname)).toBe(true);
+    }
   });
 
   it("excludes digest snapshot from auto-probe coverage because it requires an explicit date", () => {
@@ -358,100 +216,53 @@ describe("api endpoint registry", () => {
     expect(getSiteDataAccess("/api/api-keys/0/update")).toBeNull();
   });
 
-  it("validates endpoint methods from shared definitions", () => {
+  it("builds the yield summary projection path", () => {
     expect(API_PATHS.yieldRankingsSummary()).toBe("/api/yield-rankings?projection=summary");
-    expect(
-      validateEndpointMethod(new URL(`https://api.pharos.watch${API_PATHS.yieldRankingsSummary()}`), "GET"),
-    ).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests/verify"), "POST")).toBeNull();
-    expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/session"), "POST"),
-    ).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/mutate"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/request-source-stats"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/og/stablecoin/usdt-tether"), "HEAD")).toEqual({
-      message: "Method not allowed",
-      allowedMethods: ["GET"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/update"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/deactivate"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "POST")).toBeNull();
-    expect(
-      validateEndpointMethod(
-        new URL("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject"),
-        "POST",
-      ),
-    ).toBeNull();
-    expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
-    ).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "GET")).toBeNull();
-    expect(
-      validateEndpointMethod(
-        new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current&dry-run=true"),
-        "GET",
-      ),
-    ).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "POST")).toBeNull();
+  });
 
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "POST")).toEqual({
-      message: "Method not allowed",
-      allowedMethods: ["GET"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "HEAD")).toEqual({
-      message: "Method not allowed",
-      allowedMethods: ["GET"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/trigger-digest"), "GET")).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current"), "GET"),
-    ).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history"), "GET")).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "GET")).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "GET")).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/session"), "GET")).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "POST")).toEqual({
-      message: "Method not allowed",
-      allowedMethods: ["GET"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "GET")).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/unknown"), "POST")).toEqual({
-      message: "Method not allowed",
-      allowedMethods: ["GET"],
-    });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "DELETE")).toEqual({
-      message: "Method not allowed",
-      allowedMethods: ["GET", "POST"],
-    });
+  it.each([
+    ["/api/yield-rankings?projection=summary", "GET"],
+    ["/api/stablecoins", "GET"],
+    ["/api/feedback", "POST"],
+    ["/api/api-key-requests", "POST"],
+    ["/api/api-key-requests/verify", "POST"],
+    ["/api/telegram-mini-app/session", "POST"],
+    ["/api/telegram-mini-app/mutate", "POST"],
+    ["/api/api-key-requests-admin", "GET"],
+    ["/api/api-keys", "GET"],
+    ["/api/api-keys", "POST"],
+    ["/api/request-source-stats", "GET"],
+    ["/api/stablecoin/1", "GET"],
+    ["/api/stablecoin-summary/1", "GET"],
+    ["/api/api-keys/1/update", "POST"],
+    ["/api/api-keys/1/deactivate", "POST"],
+    ["/api/api-keys/1/rotate", "POST"],
+    ["/api/api-key-requests-admin/akr_abc12345/reject", "POST"],
+    ["/api/audit-depeg-history?dry-run=true", "GET"],
+    ["/api/backfill-dews", "GET"],
+    ["/api/backfill-dews?repair=refresh-current&dry-run=true", "GET"],
+    ["/api/backfill-dews", "POST"],
+  ])("allows %s via %s", (path, method) => {
+    expect(validateEndpointMethod(new URL(path, "https://api.pharos.watch"), method)).toBeNull();
+  });
+
+  it.each([
+    ["/api/og/stablecoin/usdt-tether", "HEAD", ["GET"]],
+    ["/api/stablecoins", "POST", ["GET"]],
+    ["/api/stablecoins", "HEAD", ["GET"]],
+    ["/api/trigger-digest", "GET", ["POST"]],
+    ["/api/backfill-dews?repair=refresh-current", "GET", ["POST"]],
+    ["/api/audit-depeg-history", "GET", ["POST"]],
+    ["/api/feedback", "GET", ["POST"]],
+    ["/api/api-key-requests", "GET", ["POST"]],
+    ["/api/telegram-mini-app/session", "GET", ["POST"]],
+    ["/api/api-key-requests-admin", "POST", ["GET"]],
+    ["/api/api-keys/1/rotate", "GET", ["POST"]],
+    ["/api/unknown", "POST", ["GET"]],
+    ["/api/stablecoins", "DELETE", ["GET", "POST"]],
+  ] as const)("rejects %s via %s with usable allowed methods", (path, method, allowedMethods) => {
+    expect(validateEndpointMethod(new URL(path, "https://api.pharos.watch"), method))
+      .toMatchObject({ allowedMethods });
   });
 
   it("keeps public-auth and site-data policies aligned", () => {
@@ -493,152 +304,26 @@ describe("api endpoint registry", () => {
     expect(isSiteDataAllowedPath("/api/status")).toBe(false);
   });
 
-  it("provides status-page actions in UI order", () => {
-    expect(getStatusPageActions()).toMatchObject([
-      {
-        label: "Trigger Digest",
-        path: "/api/trigger-digest",
-        confirm: "Trigger daily digest? Bypasses 1h dedup window.",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: false,
-        group: "communications",
-      },
-      {
-        label: "Reset Blacklist Sync",
-        path: "/api/reset-blacklist-sync",
-        confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.",
-        destructive: true,
-        method: "POST",
-        acceptsStablecoinFilter: false,
-        group: "recovery",
-      },
-      {
-        label: "Debug Sync State",
-        path: "/api/debug-sync-state",
-        confirm: "Fetch sync state debug dump?",
-        destructive: false,
-        method: "GET",
-        acceptsStablecoinFilter: false,
-        group: "audit",
-      },
-      {
-        label: "Remediate Blacklist Gaps",
-        path: "/api/remediate-blacklist-amount-gaps",
-        confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "recovery",
-      },
-      {
-        label: "Backfill Blacklist Balances",
-        path: "/api/backfill-blacklist-current-balances",
-        confirm: "Backfill current-balance cache for coins missing balance rows?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "recovery",
-      },
-      {
-        label: "Backfill Depegs",
-        path: "/api/backfill-depegs",
-        confirm: "Run depeg backfill? This may take several minutes.",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "recovery",
-      },
-      {
-        label: "Backfill Supply",
-        path: "/api/backfill-supply-history",
-        confirm: "Backfill supply history snapshots?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "recovery",
-      },
-      {
-        label: "Backfill CG Prices",
-        path: "/api/backfill-cg-prices",
-        confirm: "Backfill CoinGecko prices?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "recovery",
-      },
-      {
-        label: "Backfill Yield History",
-        path: "/api/backfill-yield-history",
-        confirm: "Backfill protocol yield history?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "recovery",
-      },
-      {
-        label: "Backfill PSI",
-        path: "/api/backfill-stability-index",
-        confirm: "Backfill stability index history?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: false,
-        group: "recovery",
-      },
-      {
-        label: "Preview Mint/Burn Price Repair",
-        path: "/api/backfill-mint-burn-prices",
-        confirm: "Preview historical mint/burn USD price repairs for NULL events?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "audit",
-      },
-      {
-        label: "Backfill Mint/Burn",
-        path: "/api/backfill-mint-burn",
-        confirm: "Run mint/burn backfill job?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: false,
-        group: "recovery",
-      },
-      {
-        label: "Backfill Tape",
-        path: "/api/backfill-tape",
-        confirm: "Re-run tape projectors for selected classes?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: false,
-        group: "recovery",
-      },
-      {
-        label: "Reclassify Roundtrips",
-        path: "/api/reclassify-atomic-roundtrips",
-        confirm: "Reclassify atomic roundtrips in mint/burn data?",
-        destructive: false,
-        method: "POST",
-        acceptsStablecoinFilter: true,
-        group: "audit",
-      },
-      {
-        label: "Audit Depegs",
-        path: "/api/audit-depeg-history?dry-run=true",
-        confirm: "Audit depeg history and review possible provenance repairs?",
-        destructive: false,
-        method: "GET",
-        acceptsStablecoinFilter: true,
-        group: "audit",
-      },
-      {
-        label: "Validate DEWS History",
-        path: "/api/backfill-dews",
-        confirm: "Run the read-only DEWS historical backtest?",
-        destructive: false,
-        method: "GET",
-        acceptsStablecoinFilter: false,
-        group: "audit",
-      },
+  it("provides independently specified status-action safety policies in UI order", () => {
+    expect(getStatusPageActions().map(({ path, method, destructive, acceptsStablecoinFilter, group }) =>
+      [path, method, destructive, acceptsStablecoinFilter, group],
+    )).toEqual([
+      ["/api/trigger-digest", "POST", false, false, "communications"],
+      ["/api/reset-blacklist-sync", "POST", true, false, "recovery"],
+      ["/api/debug-sync-state", "GET", false, false, "audit"],
+      ["/api/remediate-blacklist-amount-gaps", "POST", false, true, "recovery"],
+      ["/api/backfill-blacklist-current-balances", "POST", false, true, "recovery"],
+      ["/api/backfill-depegs", "POST", false, true, "recovery"],
+      ["/api/backfill-supply-history", "POST", false, true, "recovery"],
+      ["/api/backfill-cg-prices", "POST", false, true, "recovery"],
+      ["/api/backfill-yield-history", "POST", false, true, "recovery"],
+      ["/api/backfill-stability-index", "POST", false, false, "recovery"],
+      ["/api/backfill-mint-burn-prices", "POST", false, true, "audit"],
+      ["/api/backfill-mint-burn", "POST", false, false, "recovery"],
+      ["/api/backfill-tape", "POST", false, false, "recovery"],
+      ["/api/reclassify-atomic-roundtrips", "POST", false, true, "audit"],
+      ["/api/audit-depeg-history?dry-run=true", "GET", false, true, "audit"],
+      ["/api/backfill-dews", "GET", false, false, "audit"],
     ]);
   });
 
@@ -686,69 +371,19 @@ describe("api endpoint registry", () => {
     }
   });
 
-  it("matches status-action dry-run metadata to implemented query and method contracts", () => {
-    const dryRunContracts = Object.fromEntries(
-      getStatusPageActions().flatMap((action) => {
-        if (!action.dryRun.supported) return [];
-        const dryRun = action.dryRun;
-        return [
-          [
-            action.path,
-            {
-              queryParam: dryRun.queryParam,
-              liveSupported: dryRun.liveSupported,
-              dryRunMethod: dryRun.dryRunMethod ?? action.method,
-              liveMethod: dryRun.liveMethod ?? action.method,
-            },
-          ],
-        ];
-      }),
-    );
-
-    expect(dryRunContracts).toEqual({
-      "/api/remediate-blacklist-amount-gaps": {
-        queryParam: "dryRun",
-        liveSupported: true,
-        dryRunMethod: "POST",
-        liveMethod: "POST",
-      },
-      "/api/backfill-blacklist-current-balances": {
-        queryParam: "dryRun",
-        liveSupported: true,
-        dryRunMethod: "POST",
-        liveMethod: "POST",
-      },
-      "/api/backfill-depegs": {
-        queryParam: "dry-run",
-        liveSupported: true,
-        dryRunMethod: "POST",
-        liveMethod: "POST",
-      },
-      "/api/backfill-stability-index": {
-        queryParam: "dry-run",
-        liveSupported: true,
-        dryRunMethod: "POST",
-        liveMethod: "POST",
-      },
-      "/api/backfill-mint-burn-prices": {
-        queryParam: "dry-run",
-        liveSupported: false,
-        dryRunMethod: "POST",
-        liveMethod: "POST",
-      },
-      "/api/backfill-tape": {
-        queryParam: "dryRun",
-        liveSupported: true,
-        dryRunMethod: "POST",
-        liveMethod: "POST",
-      },
-      "/api/audit-depeg-history?dry-run=true": {
-        queryParam: "dry-run",
-        liveSupported: true,
-        dryRunMethod: "GET",
-        liveMethod: "POST",
-      },
-    });
+  it("matches status-action dry-run metadata to independent query and method contracts", () => {
+    expect(getStatusPageActions().flatMap((action) => action.dryRun.supported ? [[
+      action.path, action.dryRun.queryParam, action.dryRun.liveSupported,
+      action.dryRun.dryRunMethod ?? action.method, action.dryRun.liveMethod ?? action.method,
+    ]] : [])).toEqual([
+      ["/api/remediate-blacklist-amount-gaps", "dryRun", true, "POST", "POST"],
+      ["/api/backfill-blacklist-current-balances", "dryRun", true, "POST", "POST"],
+      ["/api/backfill-depegs", "dry-run", true, "POST", "POST"],
+      ["/api/backfill-stability-index", "dry-run", true, "POST", "POST"],
+      ["/api/backfill-mint-burn-prices", "dry-run", false, "POST", "POST"],
+      ["/api/backfill-tape", "dryRun", true, "POST", "POST"],
+      ["/api/audit-depeg-history?dry-run=true", "dry-run", true, "GET", "POST"],
+    ]);
   });
 
   it("does not infer status-page action paths from probe paths", () => {

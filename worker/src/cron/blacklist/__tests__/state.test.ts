@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { loadBlacklistConfigStates } from "../sync-support";
 import {
   claimBlacklistConfigAttempt,
   finalizeBlacklistConfigAttempt,
@@ -13,6 +14,9 @@ import {
 
 const EVM_CONFIG = CONTRACT_CONFIGS.find((config) => config.chain.type !== "tron")!;
 const TRON_CONFIG = CONTRACT_CONFIGS.find((config) => config.chain.type === "tron")!;
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 function makeState(config: typeof EVM_CONFIG, overrides: Partial<BlacklistConfigState> = {}): BlacklistConfigState {
   return {
@@ -66,88 +70,61 @@ describe("blacklist fair state", () => {
     ).toEqual(["evm-old-a", "evm-old-b"]);
   });
 
-  it("claims with the loaded generation and cursor", async () => {
-    const db = mockD1([
-      { match: "blacklist-state-bootstrap", rows: [], runMeta: { changes: 0 } },
-      { match: "blacklist-state-claim", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const state = makeState(EVM_CONFIG, { cursorValue: 482_000_000, attemptGeneration: 7 });
-
-    await expect(claimBlacklistConfigAttempt(db, state, 1_700_000_000)).resolves.toMatchObject({
-      expectedCursor: 482_000_000,
-      generation: 8,
+  it("rejects concurrent claims and stale finalizers/skips without changing durable state", async () => {
+    const { db, sqlite } = fixtures.open();
+    const key = EVM_CONFIG.configKey.toLowerCase();
+    sqlite.prepare(`INSERT INTO blacklist_sync_state
+      (config_key, last_block, cursor_value, attempt_generation) VALUES (?, 500, 500, 7)`).run(key);
+    const load = async () => (await loadBlacklistConfigStates(db)).configStates
+      .find((state) => state.configKey === EVM_CONFIG.configKey)!;
+    const firstRead = await load();
+    const concurrentRead = await load();
+    const firstClaim = await claimBlacklistConfigAttempt(db, firstRead, 100);
+    expect(firstClaim).toMatchObject({ generation: 8, expectedCursor: 500 });
+    await expect(claimBlacklistConfigAttempt(db, concurrentRead, 101)).resolves.toBeNull();
+    const newerClaim = await claimBlacklistConfigAttempt(db, await load(), 102);
+    expect(newerClaim).toMatchObject({ generation: 9, expectedCursor: 500 });
+    const durableBefore = sqlite.prepare("SELECT * FROM blacklist_sync_state WHERE config_key = ?").get(key);
+    await expect(finalizeBlacklistConfigAttempt(db, firstClaim!, {
+      outcome: "complete", nextCursor: 600, completedAt: 103,
+    })).resolves.toBe(false);
+    await recordBlacklistConfigSkips(db, [concurrentRead], 104);
+    expect(sqlite.prepare("SELECT * FROM blacklist_sync_state WHERE config_key = ?").get(key)).toEqual(durableBefore);
+    await expect(finalizeBlacklistConfigAttempt(db, newerClaim!, {
+      outcome: "quiet", nextCursor: 400, observedSafeHead: 700, completedAt: 105,
+    })).resolves.toBe(true);
+    expect(sqlite.prepare("SELECT * FROM blacklist_sync_state WHERE config_key = ?").get(key)).toMatchObject({
+      last_block: 500, cursor_value: 500, attempt_generation: 9,
+      last_succeeded_at: 105, last_outcome: "quiet", last_observed_safe_head: 700,
     });
-    const claim = db.getHistory().find((entry) => entry.sql.includes("blacklist-state-claim"));
-    expect(claim?.binds.slice(-2)).toEqual([7, 482_000_000]);
   });
 
-  it("rejects a concurrent claim without changing the cursor", async () => {
-    const db = mockD1([
-      { match: "blacklist-state-bootstrap", rows: [], runMeta: { changes: 0 } },
-      { match: "blacklist-state-claim", rows: [], runMeta: { changes: 0 } },
-    ]);
-
-    await expect(claimBlacklistConfigAttempt(db, makeState(EVM_CONFIG), 1_700_000_000)).resolves.toBeNull();
-  });
-
-  it("dual-writes a monotonic cursor under the claimed generation", async () => {
-    const db = mockD1([{ match: "blacklist-state-finalize", rows: [], runMeta: { changes: 1 } }]);
-
-    await expect(
-      finalizeBlacklistConfigAttempt(
-        db,
-        {
-          configKey: EVM_CONFIG.configKey,
-          cursorKind: "evm_block",
-          expectedCursor: 500,
-          generation: 4,
-          attemptedAt: 1_700_000_000,
-        },
-        {
-          outcome: "quiet",
-          nextCursor: 400,
-          observedSafeHead: 700,
-          completedAt: 1_700_000_100,
-        },
-      ),
-    ).resolves.toBe(true);
-
-    const finalize = db.getHistory()[0]!;
-    expect(finalize.binds[0]).toBe(500);
-    expect(finalize.binds[1]).toBe(500);
-    expect(finalize.binds.slice(-3)).toEqual([EVM_CONFIG.configKey.toLowerCase(), 4, 500]);
-  });
-
-  it("does not accept a late finalizer after its generation is superseded", async () => {
-    const db = mockD1([{ match: "blacklist-state-finalize", rows: [], runMeta: { changes: 0 } }]);
-
-    await expect(
-      finalizeBlacklistConfigAttempt(
-        db,
-        {
-          configKey: EVM_CONFIG.configKey,
-          cursorKind: "evm_block",
-          expectedCursor: 500,
-          generation: 4,
-          attemptedAt: 1_700_000_000,
-        },
-        {
-          outcome: "complete",
-          nextCursor: 600,
-          completedAt: 1_700_000_100,
-        },
-      ),
-    ).resolves.toBe(false);
+  it("rejects cursor-stale claims, finalizers and skips even when generation matches", async () => {
+    const { db, sqlite } = fixtures.open();
+    const state = makeState(EVM_CONFIG, { cursorValue: 500 });
+    const claim = await claimBlacklistConfigAttempt(db, state, 100);
+    expect(claim).not.toBeNull();
+    sqlite.prepare("UPDATE blacklist_sync_state SET last_block = 600, cursor_value = 600").run();
+    const stale = makeState(EVM_CONFIG, { cursorValue: 500, attemptGeneration: 1 });
+    await expect(claimBlacklistConfigAttempt(db, stale, 101)).resolves.toBeNull();
+    await expect(finalizeBlacklistConfigAttempt(db, claim!, {
+      outcome: "complete", nextCursor: 700, completedAt: 102,
+    })).resolves.toBe(false);
+    await recordBlacklistConfigSkips(db, [stale], 103);
+    expect(sqlite.prepare("SELECT * FROM blacklist_sync_state WHERE config_key = ?").get(claim!.configKey)).toMatchObject({
+      last_block: 600, cursor_value: 600, attempt_generation: 1, last_outcome: "running", last_skipped_at: null,
+    });
   });
 
   it("records budget skips without advancing a cursor", async () => {
-    const db = mockD1([{ match: "blacklist-state-budget-skip", rows: [], runMeta: { changes: 1 } }]);
-    const states = [makeState(EVM_CONFIG, { cursorValue: 123 })];
-
-    await recordBlacklistConfigSkips(db, states, 1_700_000_000);
-
-    const write = db.getHistory()[0]!;
-    expect(write.binds.slice(0, 5)).toEqual([EVM_CONFIG.configKey.toLowerCase(), 123, "evm_block", 123, 1_700_000_000]);
+    const { db, sqlite } = fixtures.open();
+    const state = makeState(EVM_CONFIG, { cursorValue: 123 });
+    await recordBlacklistConfigSkips(db, [state], 100);
+    await recordBlacklistConfigSkips(db, [state], 101);
+    expect(sqlite.prepare("SELECT * FROM blacklist_sync_state WHERE config_key = ?").get(state.configKey.toLowerCase())).toMatchObject({
+      last_block: 123, cursor_value: 123, last_skipped_at: 101,
+      consecutive_skips: 2, attempt_generation: 0, last_outcome: "budget_skipped",
+    });
   });
 
   it("uses the oldest required successful scan as producer freshness", () => {

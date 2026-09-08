@@ -1,27 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "../../../types";
+import { makeStablecoinMeta as meta } from "../../../test-utils/stablecoin";
 import {
   conservativeImplementationDate,
   fuzzyDateRange,
   resolveEffectiveImplementationLaunchDate,
 } from "../resolve-implementation-launch-date";
-
-function meta(overrides: Partial<StablecoinMeta>): StablecoinMeta {
-  return {
-    id: "asset",
-    name: "Asset",
-    symbol: "AST",
-    flags: {
-      backing: "crypto-backed",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    ...overrides,
-  };
-}
 
 describe("implementation launch-date policy", () => {
   it("uses the inclusive period end as the conservative fuzzy-date boundary", () => {
@@ -67,5 +50,46 @@ describe("implementation launch-date policy", () => {
 
     expect(result.cycleDetected).toBe(true);
     expect(result.sourceAssetId).toBe("b");
+  });
+
+  it("rejects impossible dates and non-day scoring clocks", () => {
+    expect(fuzzyDateRange("2023-02-29")).toBeNull();
+    expect(fuzzyDateRange("2024-04-31")).toBeNull();
+    expect(conservativeImplementationDate("2024-01-01", "2024-02-30")).toBeNull();
+    expect(conservativeImplementationDate("2024-01-01", "2024-Q2")).toBeNull();
+  });
+
+  it("prefers authored implementation date over the newer launch date", () => {
+    const coin = meta({ id: "asset", implementationLaunchDate: "2022-01-01", launchDate: "2025" });
+    expect(resolveEffectiveImplementationLaunchDate(coin, new Map(), "2026-07-13")).toMatchObject({
+      date: "2022-01-01", sourceAssetId: "asset",
+    });
+  });
+
+  it("walks beyond the parent to the newest required grandparent", () => {
+    const grandparent = meta({ id: "grandparent", launchDate: "2025" });
+    const parent = meta({ id: "parent", variantOf: grandparent.id, launchDate: "2024" });
+    const child = meta({ id: "child", variantOf: parent.id, launchDate: "2023" });
+    const registry = new Map([grandparent, parent, child].map((coin) => [coin.id, coin]));
+    expect(resolveEffectiveImplementationLaunchDate(child, registry, "2026-07-13")).toMatchObject({
+      date: "2025-12-31", sourceAssetId: "grandparent",
+    });
+  });
+
+  it("returns no date for missing-parent and entirely undated chains", () => {
+    const parent = meta({ id: "parent" });
+    const child = meta({ id: "child", variantOf: parent.id });
+    for (const registry of [new Map(), new Map([[parent.id, parent]])]) {
+      expect(resolveEffectiveImplementationLaunchDate(child, registry, "2026-07-13")).toEqual({
+        date: null, sourceAssetId: null, layers: [], cycleDetected: false,
+      });
+    }
+  });
+
+  it("breaks equal-date ties by asset ID rather than traversal order", () => {
+    const parent = meta({ id: "a", launchDate: "2024-12-31" });
+    const child = meta({ id: "z", variantOf: parent.id, launchDate: "2024" });
+    expect(resolveEffectiveImplementationLaunchDate(child, new Map([[parent.id, parent]]), "2026-07-13"))
+      .toMatchObject({ date: "2024-12-31", sourceAssetId: "a" });
   });
 });

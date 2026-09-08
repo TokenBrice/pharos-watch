@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { createCrawlStageContext } from "../staged-pool";
+import { discoveryContext } from "./discovery.test-support";
 import {
   crawlCosmosPoolsStage,
   isNobleSwapDiscoveryDeployment,
   isOsmosisSqsDiscoveryDeployment,
   resetCosmosDiscoveryStateForTests,
 } from "../crawl-cosmos-pools";
-import type { StagedPool } from "../types";
 
 const OSMOSIS_USDX_DENOM = "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE";
 const OSMOSIS_OSMO_DENOM = "uosmo";
@@ -26,17 +25,7 @@ function nobleTarget(address = "uusdn"): ContractDeployment {
 }
 
 function context(stablecoinId = "usdx-kava") {
-  const pools: StagedPool[] = [];
-  return {
-    pools,
-    value: createCrawlStageContext({
-      stablecoinId,
-      knownPoolIds: new Set<string>(),
-      nowSec: 1_800_000_000,
-      pools,
-      priceObs: [],
-    }),
-  };
+  return discoveryContext(stablecoinId);
 }
 
 function osmosisPool(options: {

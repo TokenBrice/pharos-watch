@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { getOgCaptureValidationError } from "../lib/og-capture-validation.mts";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "../../public");
@@ -45,27 +46,6 @@ const ALL_PAGES = [
   { path: "/pharoswatchbot/", file: "og-pharoswatchbot.png" },
   { path: "/screener", file: "og-default.png" },
 ];
-
-const requestedPaths = process.argv.slice(2);
-const PAGES = requestedPaths.length ? ALL_PAGES.filter((p) => requestedPaths.includes(p.path)) : ALL_PAGES;
-
-if (requestedPaths.length && PAGES.length === 0) {
-  console.error(`No matching pages for: ${requestedPaths.join(", ")}`);
-  process.exit(1);
-}
-
-mkdirSync(OUT, { recursive: true });
-
-const browser = await chromium.launch();
-const context = await browser.newContext({
-  viewport: { width: OG_WIDTH, height: OG_HEIGHT },
-  colorScheme: "dark",
-  // Prevent cookie banners / consent overlays from appearing
-  locale: "en-US",
-});
-
-// Suppress non-critical console noise
-context.on("console", () => {});
 
 const SOCIAL_CAPTURE_CSS = `
   html,
@@ -113,61 +93,88 @@ const SOCIAL_CAPTURE_CSS = `
   }
 `;
 
-const failures = [];
+export async function runScreenshotOgCli(argv = process.argv.slice(2)) {
+  const requestedPaths = argv;
+  const PAGES = requestedPaths.length ? ALL_PAGES.filter((p) => requestedPaths.includes(p.path)) : ALL_PAGES;
 
-for (const { path: pagePath, file } of PAGES) {
-  const url = BASE + pagePath;
-  const outFile = path.join(OUT, file);
-
-  process.stdout.write(`  ${pagePath.padEnd(55)} → ${file} ... `);
-
-  const page = await context.newPage();
-  try {
-    let response;
-    try {
-      response = await page.goto(url, { waitUntil: "networkidle", timeout: 20_000 });
-    } catch {
-      // Pages with periodic polling (e.g. /digest) may never reach networkidle.
-      // Fall back to `load` and let the post-goto settle handle hydration.
-      response = await page.goto(url, { waitUntil: "load", timeout: 20_000 });
-    }
-    // Extra settle time for React hydration + data fetch
-    await page.waitForTimeout(3000);
-    const bodyText = await page.locator("body").innerText();
-    const validationError = getOgCaptureValidationError({
-      status: response?.status(),
-      hasMainContent: (await page.locator("#main-content").count()) > 0,
-      bodyText,
-    });
-    if (validationError) {
-      throw new Error(`${validationError} at ${page.url()}`);
-    }
-    await page.addStyleTag({ content: SOCIAL_CAPTURE_CSS });
-    // Hide the feedback button and any overlays
-    await page.evaluate(() => {
-      document.querySelectorAll('[data-radix-popper-content-wrapper], [role="dialog"]').forEach((el) => el.remove());
-      // Hide feedback button (find by aria-label or button text)
-      document.querySelectorAll("button").forEach((btn) => {
-        if (btn.textContent?.includes("Feedback")) btn.style.display = "none";
-      });
-    });
-    await page.screenshot({ path: outFile, clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } });
-    console.log("done");
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    failures.push({ pagePath, message });
-    console.log(`FAILED: ${message}`);
-  } finally {
-    await page.close();
+  if (requestedPaths.length && PAGES.length === 0) {
+    console.error(`No matching pages for: ${requestedPaths.join(", ")}`);
+    process.exit(1);
   }
 
-  if (failures.length > 0) break;
+  mkdirSync(OUT, { recursive: true });
+
+  const browser = await chromium.launch();
+  const context = await browser.newContext({
+    viewport: { width: OG_WIDTH, height: OG_HEIGHT },
+    colorScheme: "dark",
+    // Prevent cookie banners / consent overlays from appearing
+    locale: "en-US",
+  });
+
+  // Suppress non-critical console noise
+  context.on("console", () => {});
+
+  const failures = [];
+
+  for (const { path: pagePath, file } of PAGES) {
+    const url = BASE + pagePath;
+    const outFile = path.join(OUT, file);
+
+    process.stdout.write(`  ${pagePath.padEnd(55)} → ${file} ... `);
+
+    const page = await context.newPage();
+    try {
+      let response;
+      try {
+        response = await page.goto(url, { waitUntil: "networkidle", timeout: 20_000 });
+      } catch {
+        // Pages with periodic polling (e.g. /digest) may never reach networkidle.
+        // Fall back to `load` and let the post-goto settle handle hydration.
+        response = await page.goto(url, { waitUntil: "load", timeout: 20_000 });
+      }
+      // Extra settle time for React hydration + data fetch
+      await page.waitForTimeout(3000);
+      const bodyText = await page.locator("body").innerText();
+      const validationError = getOgCaptureValidationError({
+        status: response?.status(),
+        hasMainContent: (await page.locator("#main-content").count()) > 0,
+        bodyText,
+      });
+      if (validationError) {
+        throw new Error(`${validationError} at ${page.url()}`);
+      }
+      await page.addStyleTag({ content: SOCIAL_CAPTURE_CSS });
+      // Hide the feedback button and any overlays
+      await page.evaluate(() => {
+        document.querySelectorAll('[data-radix-popper-content-wrapper], [role="dialog"]').forEach((el) => el.remove());
+        // Hide feedback button (find by aria-label or button text)
+        document.querySelectorAll("button").forEach((btn) => {
+          if (btn.textContent?.includes("Feedback")) btn.style.display = "none";
+        });
+      });
+      await page.screenshot({ path: outFile, clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } });
+      console.log("done");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      failures.push({ pagePath, message });
+      console.log(`FAILED: ${message}`);
+    } finally {
+      await page.close();
+    }
+
+    if (failures.length > 0) break;
+  }
+
+  await browser.close();
+  if (failures.length > 0) {
+    console.error(`\nOG capture stopped after ${failures[0].pagePath} failed: ${failures[0].message}`);
+    process.exitCode = 1;
+  } else {
+    console.log("\nAll screenshots saved to public/");
+  }
 }
 
-await browser.close();
-if (failures.length > 0) {
-  console.error(`\nOG capture stopped after ${failures[0].pagePath} failed: ${failures[0].message}`);
-  process.exitCode = 1;
-} else {
-  console.log("\nAll screenshots saved to public/");
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  await runScreenshotOgCli();
 }

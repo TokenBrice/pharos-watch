@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scanForNewVariants } from "../yield-sync/variant-scanner";
 import type { DlPool } from "../yield-sync/types";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 describe("scanForNewVariants", () => {
   const knownVariants = new Set(["SUSDE", "SDAI", "SUSDS"]);
@@ -43,5 +44,26 @@ describe("scanForNewVariants", () => {
     const trackedSymbols = new Set(["USDC"]);
     const results = scanForNewVariants(pools, trackedSymbols, knownVariants);
     expect(results).toEqual([]);
+  });
+
+  it("discovers suffix variants at the TVL boundary and deduplicates mixed case", () => {
+    const results = scanForNewVariants([
+      makeDlYieldPool({ pool: "first", symbol: "USDCEarn", tvlUsd: 500_000 }),
+      makeDlYieldPool({ pool: "duplicate", symbol: "usdceARN", tvlUsd: 900_000 }),
+    ], new Set(["USDC"]), knownVariants);
+    expect(results).toEqual([{
+      baseSymbol: "USDC", variantSymbol: "USDCEarn", poolId: "first",
+      chain: "Ethereum", project: "maker", tvlUsd: 500_000, apy: 5,
+    }]);
+  });
+
+  it.each([
+    { symbol: "UNKNOWNVAULT" },
+    { apy: 0 },
+    { exposure: "multi" },
+  ])("excludes an otherwise eligible variant: %j", (overrides) => {
+    expect(scanForNewVariants([
+      makeDlYieldPool({ symbol: "USDCEarn", tvlUsd: 500_000, ...overrides }),
+    ], new Set(["USDC"]), knownVariants)).toEqual([]);
   });
 });

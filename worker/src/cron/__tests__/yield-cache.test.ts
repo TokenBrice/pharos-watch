@@ -10,6 +10,7 @@ import {
   buildYieldSupplementalFamilyCache,
   parseYieldSupplementalSourcesCache,
 } from "../yield-sync/cache";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 describe("parseRiskFreeRateCache", () => {
   const nowSec = 1710500000;
@@ -112,7 +113,7 @@ describe("parseDlStablecoinPoolsCache", () => {
   const nowSec = 1710500000;
 
   it("parses structured payload with data array", () => {
-    const pools = [{ pool: "abc", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null }];
+    const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
     const raw = buildDlStablecoinPoolsCache(pools, nowSec - 1800);
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 1800, nowSec);
     expect(result).not.toBeNull();
@@ -121,7 +122,7 @@ describe("parseDlStablecoinPoolsCache", () => {
   });
 
   it("rejects legacy array format", () => {
-    const pools = [{ pool: "abc", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null }];
+    const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
     const raw = JSON.stringify(pools);
     expect(parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec)).toBeNull();
   });
@@ -140,8 +141,8 @@ describe("parseDlStablecoinPoolsCache", () => {
       source: "sync-dex-liquidity",
       poolCount: 2,
       data: [
-        { pool: "bad-apy", chain: "Ethereum", symbol: "sDAI", apy: Number.NaN, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
-        { pool: "valid", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+        makeDlYieldPool({ pool: "bad-apy", project: "sdai", tvlUsd: 1e8, apy: Number.NaN }),
+        makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
       ],
     });
 
@@ -153,7 +154,7 @@ describe("parseDlStablecoinPoolsCache", () => {
 
   it("rejects structured DL cache payloads with future updatedAt", () => {
     const raw = buildDlStablecoinPoolsCache([
-      { pool: "valid", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null },
+      makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
     ], nowSec + 1);
 
     expect(parseDlStablecoinPoolsCache(raw, nowSec, nowSec)).toBeNull();

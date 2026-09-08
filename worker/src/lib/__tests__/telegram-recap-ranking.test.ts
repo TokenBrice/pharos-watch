@@ -40,7 +40,45 @@ describe("Telegram recap ranking", () => {
     expect(selected.facts.map((entry) => entry.eventId)).toEqual(["critical", "a", "b", "z"]);
   });
 
-  it("enforces the fact and coin caps with a deterministic omitted count", () => {
+  it("prioritizes adverse transitions before membership and time", () => {
+    const selected = selectTelegramRecapFacts([
+      fact({ eventId: "recovery", type: "score.upgraded", family: "score", membership: "direct", ts: 900 }),
+      fact({ eventId: "adverse", type: "score.downgraded", family: "score", coinId: "other", membership: "global", ts: 1 }),
+    ]);
+    expect(selected.facts.map((entry) => entry.eventId)).toEqual(["adverse", "recovery"]);
+  });
+
+  it("orders direct before preset before global, then newest before event id", () => {
+    const selected = selectTelegramRecapFacts([
+      fact({ eventId: "a-old", coinId: "old", ts: 10 }),
+      fact({ eventId: "z-new", coinId: "new", ts: 20 }),
+      fact({ eventId: "preset", coinId: "preset", membership: "preset", ts: 100 }),
+      fact({ eventId: "global", coinId: "global", membership: "global", ts: 200 }),
+    ]);
+    expect(selected.facts.map((entry) => entry.eventId)).toEqual(["z-new", "a-old", "preset", "global"]);
+  });
+
+  it("retains the greatest depeg magnitude rather than the newest observation", () => {
+    expect(collapseTelegramRecapFacts([
+      fact({ eventId: "peak", type: "depeg.peak_worsened", ts: 1, payload: { absDeviationBps: 500 } }),
+      fact({ eventId: "newest", ts: 900 }),
+    ]).map((entry) => entry.eventId)).toEqual(["peak"]);
+  });
+
+  it("caps new coins but admits later facts for selected coins and groups their output", () => {
+    const selected = selectTelegramRecapFacts([
+      ...Array.from({ length: 9 }, (_, index) => fact({
+        eventId: `coin-${index}`, coinId: `coin-${index}`, ts: 100 - index,
+      })),
+      fact({ eventId: "later", coinId: "coin-0", type: "score.downgraded", family: "score", ts: 1 }),
+    ]);
+    expect(selected.facts.map((entry) => entry.eventId)).toEqual([
+      "coin-0", "later", "coin-1", "coin-2", "coin-3", "coin-4", "coin-5", "coin-6", "coin-7",
+    ]);
+    expect(selected.omittedFactCount).toBe(1);
+  });
+
+  it("caps facts independently while below the coin cap", () => {
     const input = Array.from({ length: 14 }, (_, index) => fact({
       eventId: `event-${index}`,
       type: index % 2 === 0 ? "score.downgraded" : "yield.pys_dropped",
@@ -49,7 +87,12 @@ describe("Telegram recap ranking", () => {
       ts: 1_000 - index,
     }));
     const selected = selectTelegramRecapFacts(input);
-    expect(selected.facts).toHaveLength(12);
+    expect(selected.facts.map((entry) => entry.eventId)).toEqual(
+      Array.from({ length: 12 }, (_, index) => `event-${index}`),
+    );
+    expect([...new Set(selected.facts.map((entry) => entry.coinId))]).toEqual([
+      "coin-0", "coin-1", "coin-2", "coin-3", "coin-4", "coin-5",
+    ]);
     expect(selected.omittedFactCount).toBe(2);
   });
 });

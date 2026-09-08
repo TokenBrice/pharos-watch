@@ -84,13 +84,6 @@ const TELEGRAM_WRITE_DEFAULTS: MockTableConfig[] = [
   { match: "DELETE FROM cache", rows: [] },
 ];
 
-function tableWasUsed(table: MockTableConfig, history: TelegramWriteHistoryEntry[]): boolean {
-  return history.some((entry) =>
-    entry.sql.includes(table.match)
-    && (table.matchBinds == null || JSON.stringify(entry.binds) === JSON.stringify(table.matchBinds)),
-  );
-}
-
 /**
  * Strict Telegram D1 fixture with typed core reads and successful write defaults.
  * Explicit table matches win over fixtures, which win over the shared defaults.
@@ -116,23 +109,25 @@ export function mockTelegramD1(
       match: "FROM telegram_subscribers",
       rows: subscriber == null ? [] : [subscriber],
       first: subscriber,
+      allowUnused: !subscriberConfigured,
     },
-    { match: "FROM telegram_subscriptions", rows: subscriptions },
+    { match: "FROM telegram_subscriptions", rows: subscriptions, allowUnused: !subscriptionsConfigured },
     {
       match: "FROM telegram_pending_disambiguation",
       rows: pendingOperation == null ? [] : [pendingOperation],
       first: pendingOperation,
+      allowUnused: !pendingOperationConfigured,
     },
-    { match: "FROM telegram_preset_subscriptions", rows: [] },
-    { match: "FROM telegram_pending_alerts", rows: [], first: null },
-    { match: "FROM telegram_recap_preferences", rows: [], first: null },
-    { match: "FROM telegram_recap_targets", rows: [] },
-    { match: "FROM price_cache", rows: [], first: null },
-    { match: "FROM dex_liquidity", rows: [], first: null },
-    { match: "FROM yield_data", rows: [], first: null },
-    { match: "stress_signals", rows: [], first: null },
-    { match: "FROM depeg_events", rows: [], first: null },
-    { match: "FROM cache", rows: [], first: null },
+    { match: "FROM telegram_preset_subscriptions", rows: [], allowUnused: true },
+    { match: "FROM telegram_pending_alerts", rows: [], first: null, allowUnused: true },
+    { match: "FROM telegram_recap_preferences", rows: [], first: null, allowUnused: true },
+    { match: "FROM telegram_recap_targets", rows: [], allowUnused: true },
+    { match: "FROM price_cache", rows: [], first: null, allowUnused: true },
+    { match: "FROM dex_liquidity", rows: [], first: null, allowUnused: true },
+    { match: "FROM yield_data", rows: [], first: null, allowUnused: true },
+    { match: "stress_signals", rows: [], first: null, allowUnused: true },
+    { match: "FROM depeg_events", rows: [], first: null, allowUnused: true },
+    { match: "FROM cache", rows: [], first: null, allowUnused: true },
   ];
 
   for (const target of Object.keys(writeResults) as TelegramWriteTarget[]) {
@@ -151,22 +146,14 @@ export function mockTelegramD1(
   }
 
   const db = mockD1(
-    [...configuredMatches, ...fixtureMatches, ...fallbackTables, ...TELEGRAM_WRITE_DEFAULTS],
+    [
+      ...configuredMatches,
+      ...fixtureMatches,
+      ...fallbackTables.map((table) => ({ ...table, allowUnused: true })),
+      ...TELEGRAM_WRITE_DEFAULTS.map((table) => ({ ...table, allowUnused: true })),
+    ],
     mockOptions,
   );
-  db.assertAllMatchesUsed = () => {
-    const history = db.getHistory();
-    const requiredMatches = [
-      ...configuredMatches,
-      ...(subscriberConfigured ? fixtureMatches.slice(0, 1) : []),
-      ...(subscriptionsConfigured ? fixtureMatches.slice(1, 2) : []),
-      ...(pendingOperationConfigured ? fixtureMatches.slice(2, 3) : []),
-    ];
-    const unused = requiredMatches.filter((table) => !tableWasUsed(table, history));
-    if (unused.length > 0) {
-      throw new Error(`mockTelegramD1: unused configured match(es): ${unused.map((table) => table.match).join(", ")}`);
-    }
-  };
   onTestFinished(() => db.assertAllMatchesUsed());
   return db;
 }
@@ -215,7 +202,7 @@ export function createTelegramFetchSpy(): { fetchSpy: TelegramFetchSpy; reset: (
   vi.stubGlobal("fetch", fetchSpy);
   const reset = (): void => {
     fetchSpy.mockReset();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
   };
   return { fetchSpy, reset };
 }

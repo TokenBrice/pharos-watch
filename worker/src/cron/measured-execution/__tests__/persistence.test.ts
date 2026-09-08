@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 import {
@@ -14,12 +14,16 @@ import {
 } from "../evidence-reader";
 import {
   publishDexMeasuredQuoteGeneration, publishDexMeasuredTargetInventory, pruneDexMeasuredExecutionGenerations,
+  loadLatestPublishedDexMeasuredTargets,
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
-import { makeUniswapV3Target } from "./measured-execution.test-support";
+import { makeV3Target } from "./measured-execution.test-support";
+import { databases, evidenceDb, seedGeneration } from "./persistence.test-support";
+
+afterEach(() => databases.closeAll());
 
 const fixtureTarget = (chain: string): DexMeasuredExecutionTarget =>
-  makeUniswapV3Target({ chain });
+  makeV3Target({ chain });
 
 function fixtureProfile(
   target: DexMeasuredExecutionTarget,
@@ -49,147 +53,6 @@ function fixtureProfile(
 }
 
 
-function evidenceDb(input: {
-  target: DexMeasuredExecutionTarget;
-  latest: {
-    status: "measured" | "failed";
-    failureReason: string | null;
-    profile: ReturnType<typeof fixtureProfile> | null;
-  };
-  historical?: Array<{
-    target: DexMeasuredExecutionTarget;
-    profile?: ReturnType<typeof fixtureProfile> | null;
-    status?: "measured" | "failed";
-    failureReason?: string | null;
-    generationId?: string;
-    targetGenerationId?: string;
-    publishedAt?: number;
-  }>;
-}) {
-  const preparedSql: string[] = [];
-  const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
-    bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
-    first: async () => {
-      if (sql.includes("COUNT(*) AS row_count")) {
-        return {
-          row_count: 1,
-          min_target_generation_id: "target-generation-latest",
-          max_target_generation_id: "target-generation-latest",
-        };
-      }
-      if (sql.includes("state IN ('published', 'superseded')")) {
-        return {
-          generation_id: "target-generation-latest",
-          state: "superseded",
-          started_at: 1_000,
-          published_at: 1_010,
-          expected_rows: 1,
-          published_rows: 1,
-          dependency_snapshot_json: null,
-        };
-      }
-      if (sql.includes("WHERE surface = ? AND state = 'published'")) {
-        return {
-          generation_id: "quote-generation-latest",
-          state: "published",
-          started_at: 2_000,
-          published_at: 2_010,
-          expected_rows: 1,
-          published_rows: 1,
-          dependency_snapshot_json: JSON.stringify({ targetGenerationId: "target-generation-latest" }),
-        };
-      }
-      return null;
-    },
-    all: async () => {
-      if (sql.includes("SELECT history_generation.generation_id")) {
-        return {
-          results: (input.historical ?? []).length > 0
-            ? [{ generation_id: "historical-generation" }]
-            : [],
-        };
-      }
-      if (sql.includes("SELECT DISTINCT target_id")) {
-        return {
-          results: [
-            ...new Set((input.historical ?? []).map((entry) => entry.target.targetId)),
-          ].map((target_id) => ({ target_id })),
-        };
-      }
-      if (sql.includes("q.generation_id IN")) {
-        const selectedTargetIds = new Set(JSON.parse(String(binds[2] ?? "[]")) as string[]);
-        return {
-          results: (input.historical ?? [])
-            .filter((entry) => selectedTargetIds.has(entry.target.targetId))
-            .map((entry, index) => {
-              const profile = entry.profile ?? null;
-              return {
-                generation_id: entry.generationId ?? profile?.quoteGenerationId ?? `quote-generation-failed-${index}`,
-                target_generation_id:
-                  entry.targetGenerationId ?? profile?.targetGenerationId ?? `target-generation-failed-${index}`,
-                target_id: entry.target.targetId,
-                status: entry.status ?? "measured",
-                failure_reason: entry.failureReason ?? null,
-                quote_profile_json: profile ? JSON.stringify(profile) : null,
-                quote_published_at: entry.publishedAt ?? 1_900 - index,
-                target_json: JSON.stringify(entry.target),
-              };
-          }),
-        };
-      }
-      if (sql.includes("JOIN dex_measured_execution_targets")) {
-        return {
-          results: [
-            {
-              generation_id: "quote-generation-latest",
-              target_generation_id: "target-generation-latest",
-              target_id: input.target.targetId,
-              status: input.latest.status,
-              failure_reason: input.latest.failureReason,
-              quote_profile_json: input.latest.profile ? JSON.stringify(input.latest.profile) : null,
-              target_json: JSON.stringify(input.target),
-            },
-          ],
-        };
-      }
-      if (sql.includes("FROM dex_measured_execution_quotes")) {
-        return {
-          results: [
-            {
-              generation_id: "quote-generation-latest",
-              target_generation_id: "target-generation-latest",
-              target_id: input.target.targetId,
-              status: input.latest.status,
-              failure_reason: input.latest.failureReason,
-              quote_profile_json: input.latest.profile ? JSON.stringify(input.latest.profile) : null,
-            },
-          ],
-        };
-      }
-      if (sql.includes("FROM dex_measured_execution_targets")) {
-        return {
-          results: [
-            {
-              generation_id: "target-generation-latest",
-              target_id: input.target.targetId,
-              target_json: JSON.stringify(input.target),
-            },
-          ],
-        };
-      }
-      return { results: [] };
-    },
-  });
-  return {
-    preparedSql,
-    db: makeNoopD1({
-      prepare: (sql: string) => {
-        preparedSql.push(sql);
-        return makeStmt(sql);
-      },
-    }),
-  };
-}
 
 describe("measured execution publication", () => {
   it("retains a three-hour history window for every measured adapter", () => {
@@ -246,428 +109,169 @@ describe("measured execution publication", () => {
 
 });
 
-describe("measured execution raw payload policy", () => {
-  it("persists the raw producer envelope only for failed outcomes", async () => {
+describe("measured execution durable publication", () => {
+  it("persists profiles only for measured outcomes and raw payloads only for failures", async () => {
+    const { db, sqlite } = databases.open();
     const measuredTarget = fixtureTarget("ethereum");
     const failedTarget = fixtureTarget("base");
-    const profile = fixtureProfile(measuredTarget);
-    const batched: Array<{ sql: string; binds: unknown[] }> = [];
-    const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
-      sql,
-      binds,
-      bind: (...next: unknown[]) => makeStmt(sql, next),
-      run: async () => ({ meta: { changes: 1 } }),
-      first: async () => {
-        if (sql.includes("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes")) return { count: 2 };
-        return null;
-      },
-      all: async () => ({ results: [] }),
-    });
-    const db = makeNoopD1({
-      prepare: (sql: string) => makeStmt(sql),
-      batch: async (stmts: Array<{ sql: string; binds: unknown[] }>) => {
-        batched.push(...stmts);
-        return stmts.map(() => ({ meta: { changes: 1 } }));
-      },
-    });
-
-    const result = await publishDexMeasuredQuoteGeneration({
-      db,
-      generationId: "quote-generation",
-      targetGeneration: {
-        generationId: "target-generation",
-        targets: [measuredTarget, failedTarget],
-        publishedAt: 1_000,
-      },
+    const targetGeneration = await publishDexMeasuredTargetInventory({ db, targets: [measuredTarget, failedTarget], capturedAt: 1_000 });
+    const profile = fixtureProfile(measuredTarget, { targetGenerationId: targetGeneration.generationId });
+    await publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation",
+      targetGeneration: { ...targetGeneration, targets: [measuredTarget, failedTarget], publishedAt: 1_000 },
       outcomes: [
-        {
-          target: measuredTarget,
-          status: "measured",
-          profile,
-          rawPayload: { adapterProfileId: measuredTarget.adapterProfileId, targetId: measuredTarget.targetId },
-        },
-        {
-          target: failedTarget,
-          status: "failed",
-          failureReason: "profile-validation:test",
-          rawPayload: { adapterProfileId: failedTarget.adapterProfileId, targetId: failedTarget.targetId },
-        },
-      ],
-      quotedAt: 1_060,
-    });
-
-    expect(result).toEqual({ generationId: "quote-generation", measuredCount: 1, failedCount: 1 });
-    const insert = batched.find((stmt) => stmt.sql.includes("INSERT INTO dex_measured_execution_quotes"));
-    expect(insert).toBeDefined();
-    expect(insert?.binds).toHaveLength(28);
-    // Measured row (columns 0-13): profile persisted, raw payload dropped even though provided.
-    expect(insert?.binds[8]).toBe("measured");
-    expect(typeof insert?.binds[12]).toBe("string");
-    expect(insert?.binds[13]).toBeNull();
-    // Failed row (columns 14-27): no profile, raw payload retained as sole failure evidence.
-    expect(insert?.binds[22]).toBe("failed");
-    expect(insert?.binds[26]).toBeNull();
-    expect(typeof insert?.binds[27]).toBe("string");
-    expect(JSON.parse(insert?.binds[27] as string)).toMatchObject({ targetId: failedTarget.targetId });
-  });
-
-  it("omits budget-deferred rows and records a complete sparse manifest", async () => {
-    const measuredTarget = fixtureTarget("ethereum");
-    const deferredTarget = fixtureTarget("base");
-    const profile = fixtureProfile(measuredTarget);
-    const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const batched: Array<{ sql: string; binds: unknown[] }> = [];
-    const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
-      sql,
-      binds,
-      bind: (...next: unknown[]) => {
-        const statement = makeStmt(sql, next) as { sql: string; binds: unknown[] };
-        prepared.push(statement);
-        return statement;
-      },
-      run: async () => ({ meta: { changes: 1 } }),
-      first: async () => sql.includes("COUNT(*) AS count") ? { count: 1 } : null,
-      all: async () => ({ results: [] }),
-    });
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        return makeStmt(sql);
-      },
-      batch: async (statements: Array<{ sql: string; binds: unknown[] }>) => {
-        batched.push(...statements);
-        return statements.map(() => ({ meta: { changes: 1 } }));
-      },
-    });
-
-    const result = await publishDexMeasuredQuoteGeneration({
-      db,
-      generationId: "quote-generation",
-      targetGeneration: {
-        generationId: "target-generation",
-        targets: [measuredTarget, deferredTarget],
-        publishedAt: 1_000,
-      },
-      outcomes: [
-        { target: measuredTarget, status: "measured", profile },
-        { target: deferredTarget, status: "failed", failureReason: "budget-deferred" },
-      ],
-      quotedAt: 1_060,
-    });
-
-    expect(result).toEqual({ generationId: "quote-generation", measuredCount: 1, failedCount: 1 });
-    const candidate = prepared.find((statement) => statement.sql.includes("INSERT INTO surface_publication_generations"));
-    expect(candidate?.binds[3]).toBe(1);
-    const manifest = JSON.parse(String(candidate?.binds[5]));
-    expect(manifest).toMatchObject({
-      targetGenerationId: "target-generation",
-      targetCount: 2,
-      persistedOutcomeCount: 1,
-      omittedBudgetDeferredCount: 1,
-    });
-    expect(manifest.targetIdsSha256).toMatch(/^[0-9a-f]{64}$/);
-    const quoteInsert = batched.find((statement) => statement.sql.includes("INSERT INTO dex_measured_execution_quotes"));
-    expect(quoteInsert?.binds).toHaveLength(14);
-    expect(quoteInsert?.binds[2]).toBe(measuredTarget.targetId);
-  });
-
-  it("publishes an all-deferred generation without quote-row writes", async () => {
-    const deferredTarget = fixtureTarget("base");
-    const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
-      sql,
-      binds,
-      bind: (...next: unknown[]) => {
-        const statement = makeStmt(sql, next) as { sql: string; binds: unknown[] };
-        prepared.push(statement);
-        return statement;
-      },
-      run: async () => ({ meta: { changes: 1 } }),
-      first: async () => sql.includes("COUNT(*) AS count") ? { count: 0 } : null,
-      all: async () => ({ results: [] }),
-    });
-    const batch = vi.fn(async (statements: D1PreparedStatement[]) =>
-      statements.map(() => ({ meta: { changes: 1 } })),
-    );
-    const db = makeNoopD1({ prepare: (sql: string) => makeStmt(sql), batch });
-
-    const result = await publishDexMeasuredQuoteGeneration({
-      db,
-      generationId: "all-deferred-generation",
-      targetGeneration: {
-        generationId: "target-generation",
-        targets: [deferredTarget],
-        publishedAt: 1_000,
-      },
-      outcomes: [{ target: deferredTarget, status: "failed", failureReason: "budget-deferred" }],
-      quotedAt: 1_060,
-    });
-
-    expect(result).toEqual({ generationId: "all-deferred-generation", measuredCount: 0, failedCount: 1 });
-    expect(batch).toHaveBeenCalledTimes(1);
-    expect(prepared.some((statement) => statement.sql.includes("INSERT INTO dex_measured_execution_quotes"))).toBe(false);
-    const candidate = prepared.find((statement) => statement.sql.includes("INSERT INTO surface_publication_generations"));
-    expect(candidate?.binds[3]).toBe(0);
-    expect(JSON.parse(String(candidate?.binds[5]))).toMatchObject({
-      targetCount: 1,
-      persistedOutcomeCount: 0,
-      omittedBudgetDeferredCount: 1,
-    });
-  });
-
-  it("reconstructs only manifest-proven sparse deferrals and rejects a digest mismatch", async () => {
-    const measuredTarget = fixtureTarget("ethereum");
-    const deferredTarget = fixtureTarget("base");
-    const profile = fixtureProfile(measuredTarget);
-    const targets = [measuredTarget, deferredTarget].sort((left, right) => left.targetId.localeCompare(right.targetId));
-    const targetIdsSha256 = [...new Uint8Array(await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(JSON.stringify(targets.map((target) => target.targetId))),
-    ))].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    const buildDb = (manifestDigest = targetIdsSha256, includeMeasured = true) => {
-      const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
-        bind: (...next: unknown[]) => makeStmt(sql, next),
-        first: async () => {
-          if (sql.includes("COUNT(*) AS row_count")) {
-            return includeMeasured
-              ? { row_count: 1, min_target_generation_id: "target-generation", max_target_generation_id: "target-generation" }
-              : { row_count: 0, min_target_generation_id: null, max_target_generation_id: null };
-          }
-          if (sql.includes("state IN ('published', 'superseded')")) {
-            return { generation_id: "target-generation", state: "superseded", started_at: 1_000,
-              published_at: 1_010, expected_rows: 2, published_rows: 2, dependency_snapshot_json: null };
-          }
-          if (sql.includes("WHERE surface = ? AND state = 'published'")) {
-            return { generation_id: "quote-generation", state: "published", started_at: 1_050,
-              published_at: 1_060, expected_rows: includeMeasured ? 1 : 0, published_rows: includeMeasured ? 1 : 0,
-              dependency_snapshot_json: JSON.stringify({ targetGenerationId: "target-generation", targetCount: 2,
-                persistedOutcomeCount: includeMeasured ? 1 : 0, omittedBudgetDeferredCount: includeMeasured ? 1 : 2,
-                targetIdsSha256: manifestDigest }) };
-          }
-          return null;
-        },
-        all: async () => {
-          if (sql.includes("JOIN dex_measured_execution_targets")) {
-            const afterTargetId = String(binds[2]);
-            return { results: targets.filter((target) => target.targetId > afterTargetId).map((target) =>
-              includeMeasured && target.targetId === measuredTarget.targetId
-                ? { generation_id: "quote-generation", target_generation_id: "target-generation",
-                    target_id: target.targetId, status: "measured", failure_reason: null,
-                    quote_profile_json: JSON.stringify(profile), target_json: JSON.stringify(target) }
-                : { generation_id: null, target_generation_id: null, target_id: target.targetId,
-                    status: null, failure_reason: null, quote_profile_json: null, target_json: JSON.stringify(target) }) };
-          }
-          if (sql.includes("SELECT history_generation.generation_id")) return { results: [] };
-          return { results: [] };
-        },
-      });
-      return makeNoopD1({ prepare: (sql: string) => makeStmt(sql) });
-    };
-
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(buildDb());
-    expect(evidence?.byTargetId.get(deferredTarget.targetId)).toMatchObject({
-      status: "failed",
-      failureReason: "budget-deferred",
-      profile: null,
-    });
-    const allDeferredEvidence = await loadLatestPublishedDexMeasuredQuoteEvidence(
-      buildDb(targetIdsSha256, false),
-    );
-    expect([...allDeferredEvidence!.byTargetId.values()]).toHaveLength(2);
-    expect([...allDeferredEvidence!.byTargetId.values()].every(
-      (entry) => entry.status === "failed" && entry.failureReason === "budget-deferred",
-    )).toBe(true);
-    await expect(loadLatestPublishedDexMeasuredQuoteEvidence(buildDb("0".repeat(64)))).rejects.toThrow("incomplete");
-  });
-
-  it("loads published evidence without selecting or exposing the raw payload column", async () => {
-    const measuredTarget = fixtureTarget("ethereum");
-    const profile = fixtureProfile(measuredTarget);
-    const preparedSql: string[] = [];
-    const makeStmt = (sql: string): Record<string, unknown> => ({
-      bind: () => makeStmt(sql),
-      first: async () => {
-        if (sql.includes("COUNT(*) AS row_count")) {
-          return {
-            row_count: 1,
-            min_target_generation_id: "target-generation",
-            max_target_generation_id: "target-generation",
-          };
-        }
-        if (sql.includes("state IN ('published', 'superseded')")) {
-          return {
-            generation_id: "target-generation",
-            state: "superseded",
-            started_at: 1_000,
-            published_at: 1_010,
-            expected_rows: 1,
-            published_rows: 1,
-            dependency_snapshot_json: null,
-          };
-        }
-        if (sql.includes("WHERE surface = ? AND state = 'published'")) {
-          return {
-            generation_id: "quote-generation",
-            state: "published",
-            started_at: 1_050,
-            published_at: 1_060,
-            expected_rows: 1,
-            published_rows: 1,
-            dependency_snapshot_json: JSON.stringify({ targetGenerationId: "target-generation" }),
-          };
-        }
-        return null;
-      },
-      all: async () => {
-        if (sql.includes("SELECT history_generation.generation_id")) {
-          return { results: [] };
-        }
-        if (sql.includes("JOIN dex_measured_execution_targets")) {
-          return {
-            results: [
-              {
-                generation_id: "quote-generation",
-                target_generation_id: "target-generation",
-                target_id: measuredTarget.targetId,
-                status: "measured",
-                failure_reason: null,
-                quote_profile_json: JSON.stringify(profile),
-                target_json: JSON.stringify(measuredTarget),
-              },
-            ],
-          };
-        }
-        if (sql.includes("FROM dex_measured_execution_targets")) {
-          return {
-            results: [
-              {
-                generation_id: "target-generation",
-                target_id: measuredTarget.targetId,
-                target_json: JSON.stringify(measuredTarget),
-              },
-            ],
-          };
-        }
-        return { results: [] };
-      },
-    });
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        preparedSql.push(sql);
-        return makeStmt(sql);
-      },
-    });
-
+        { target: measuredTarget, status: "measured", profile, rawPayload: { secret: "discard" } },
+        { target: failedTarget, status: "failed", failureReason: "pool-revert", rawPayload: { reason: "execution reverted" } },
+      ], quotedAt: 1_060 });
+    const rows = sqlite.prepare("SELECT target_id, quote_profile_json, raw_quote_payload_json FROM dex_measured_execution_quotes ORDER BY chain").all();
+    expect(rows).toEqual([
+      { target_id: failedTarget.targetId, quote_profile_json: null, raw_quote_payload_json: JSON.stringify({ reason: "execution reverted" }) },
+      { target_id: measuredTarget.targetId, quote_profile_json: JSON.stringify(profile), raw_quote_payload_json: null },
+    ]);
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
-
-    expect(evidence?.quoteGenerationId).toBe("quote-generation");
-    const quoteSelect = preparedSql.find((sql) => sql.includes("JOIN dex_measured_execution_targets"));
-    expect(quoteSelect).toBeDefined();
-    expect(quoteSelect).not.toContain("raw_quote_payload_json");
-    const entry = evidence?.byTargetId.get(measuredTarget.targetId);
-    expect(entry?.status).toBe("measured");
-    expect(entry?.profile).toBeTruthy();
-    expect(entry).not.toHaveProperty("rawPayload");
+    expect(evidence?.byTargetId.get(measuredTarget.targetId)?.profile).toEqual(profile);
+    expect(evidence?.byTargetId.get(failedTarget.targetId)).not.toHaveProperty("rawPayload");
   });
 
-  it("loads current target and profile JSON in bounded keyset pages", async () => {
-    const targets = Array.from({ length: 65 }, (_, index) => fixtureTarget(`test-chain-${index}`)).sort((a, b) =>
-      a.targetId < b.targetId ? -1 : a.targetId > b.targetId ? 1 : 0,
-    );
-    const profiles = new Map(
-      targets.map((target) => [
-        target.targetId,
-        fixtureProfile(target, {
-          targetGenerationId: "target-generation",
-          quoteGenerationId: "quote-generation",
-        }),
-      ]),
-    );
-    const preparedSql: string[] = [];
-    const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
-      bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
-      first: async () => {
-        if (sql.includes("COUNT(*) AS row_count")) {
-          return {
-            row_count: targets.length,
-            min_target_generation_id: "target-generation",
-            max_target_generation_id: "target-generation",
-          };
-        }
-        if (sql.includes("state IN ('published', 'superseded')")) {
-          return {
-            generation_id: "target-generation",
-            state: "superseded",
-            started_at: 1_000,
-            published_at: 1_010,
-            expected_rows: targets.length,
-            published_rows: targets.length,
-            dependency_snapshot_json: null,
-          };
-        }
-        if (sql.includes("WHERE surface = ? AND state = 'published'")) {
-          return {
-            generation_id: "quote-generation",
-            state: "published",
-            started_at: 1_050,
-            published_at: 1_060,
-            expected_rows: targets.length,
-            published_rows: targets.length,
-            dependency_snapshot_json: JSON.stringify({ targetGenerationId: "target-generation" }),
-          };
-        }
-        return null;
-      },
-      all: async () => {
-        if (sql.includes("JOIN dex_measured_execution_targets")) {
-          const afterTargetId = String(binds[2]);
-          const pageSize = Number(binds[3]);
-          return {
-            results: targets
-              .filter((target) => target.targetId > afterTargetId)
-              .slice(0, pageSize)
-              .map((target) => ({
-                generation_id: "quote-generation",
-                target_generation_id: "target-generation",
-                target_id: target.targetId,
-                status: "measured",
-                failure_reason: null,
-                quote_profile_json: JSON.stringify(profiles.get(target.targetId)),
-                target_json: JSON.stringify(target),
-              })),
-          };
-        }
-        if (sql.includes("SELECT history_generation.generation_id")) {
-          return { results: [] };
-        }
-        return { results: [] };
-      },
-    });
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        preparedSql.push(sql);
-        return makeStmt(sql);
-      },
-    });
+  it("reconstructs sparse and all-deferred generations and rejects a tampered manifest", async () => {
+    const { db, sqlite } = databases.open();
+    const targets = [fixtureTarget("ethereum"), fixtureTarget("base")];
+    const published = await publishDexMeasuredTargetInventory({ db, targets, capturedAt: 1_000 });
+    const targetGeneration = { generationId: published.generationId, targets, publishedAt: 1_000 };
+    const profile = fixtureProfile(targets[0]!, { targetGenerationId: published.generationId });
+    for (const allDeferred of [false, true]) {
+      const generationId = allDeferred ? "all-deferred" : "quote-generation";
+      await publishDexMeasuredQuoteGeneration({ db, targetGeneration, generationId, quotedAt: allDeferred ? 1_100 : 1_060,
+        outcomes: targets.map((target, index) => !allDeferred && index === 0
+          ? { target, status: "measured" as const, profile }
+          : { target, status: "failed" as const, failureReason: "budget-deferred" }) });
+      expect(sqlite.prepare("SELECT target_id FROM dex_measured_execution_quotes WHERE generation_id = ?").all(generationId))
+        .toEqual(allDeferred ? [] : [{ target_id: targets[0]!.targetId }]);
+      const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+      expect(evidence?.quoteGenerationId).toBe(generationId);
+      expect(evidence?.byTargetId.get(targets[1]!.targetId)).toMatchObject({ status: "failed", failureReason: "budget-deferred", profile: null });
+      expect([...evidence!.byTargetId.keys()].sort()).toEqual(targets.map((target) => target.targetId).sort());
+    }
+    sqlite.prepare("UPDATE surface_publication_generations SET dependency_snapshot_json = json_set(dependency_snapshot_json, '$.targetIdsSha256', ?) WHERE generation_id = 'all-deferred'")
+      .run("0".repeat(64));
+    await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db)).rejects.toThrow("incomplete");
+  });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
-      deferProfiles: true,
-    });
+  it("loads all identities across current keyset pages with deferred profiles", async () => {
+    const { db } = databases.open();
+    const targets = Array.from({ length: DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE * 2 + 1 }, (_, index) => fixtureTarget(`test-chain-${index}`));
+    const published = await publishDexMeasuredTargetInventory({ db, targets, capturedAt: 1_000 });
+    const profiles = targets.map((target) => fixtureProfile(target, { targetGenerationId: published.generationId }));
+    await publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", quotedAt: 1_060,
+      targetGeneration: { generationId: published.generationId, targets, publishedAt: 1_000 },
+      outcomes: targets.map((target, index) => ({ target, status: "measured", profile: profiles[index]! })) });
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, { deferProfiles: true });
+    expect([...evidence!.byTargetId.keys()]).toEqual(targets.map((target) => target.targetId).sort());
+    for (const [index, target] of targets.entries()) {
+      const entry = evidence!.byTargetId.get(target.targetId)!;
+      expect(entry.profile).toBeNull();
+      expect(materializeDexMeasuredQuoteProfile(entry)).toEqual(profiles[index]);
+    }
+  });
 
-    expect(evidence?.byTargetId.size).toBe(targets.length);
-    expect([...evidence!.byTargetId.values()].every((entry) => entry.profile === null)).toBe(true);
-    expect(
-      [...evidence!.byTargetId.values()].every((entry) => typeof entry.deferredProfileJson === "string"),
-    ).toBe(true);
-    expect(materializeDexMeasuredQuoteProfile(evidence!.byTargetId.get(targets[0]!.targetId)!)).toEqual(
-      profiles.get(targets[0]!.targetId),
-    );
-    expect(
-      preparedSql.filter((sql) => sql.includes("JOIN dex_measured_execution_targets")),
-    ).toHaveLength(Math.ceil(targets.length / DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE));
+  it("rejects duplicate target inventories without replacing the published inventory", async () => {
+    const { db } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const prior = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 1_000 });
+    await expect(publishDexMeasuredTargetInventory({ db, targets: [target, target], capturedAt: 1_100 })).rejects.toThrow("duplicate target ids");
+    expect(await loadLatestPublishedDexMeasuredTargets(db)).toEqual({ generationId: prior.generationId, targets: [target], publishedAt: 1_000 });
+  });
+
+  it("rejects duplicate, missing and foreign quote outcomes without replacing prior evidence", async () => {
+    const { db } = evidenceDb({ target: fixtureTarget("ethereum"), latest: { status: "failed", failureReason: "pool-revert", profile: null } });
+    const targets = [fixtureTarget("ethereum"), fixtureTarget("base")];
+    const failed = (target: DexMeasuredExecutionTarget) => ({ target, status: "failed" as const, failureReason: "pool-revert" });
+    for (const outcomes of [[failed(targets[0]!), failed(targets[0]!)], [failed(targets[0]!)], [failed(targets[0]!), failed(fixtureTarget("polygon"))]]) {
+      await expect(publishDexMeasuredQuoteGeneration({ db, targetGeneration: { generationId: "candidate-targets", targets, publishedAt: 2_100 }, outcomes, quotedAt: 2_200 }))
+        .rejects.toThrow("exactly cover");
+      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.quoteGenerationId).toBe("quote-generation-latest");
+    }
+  });
+
+  it("rejects incoherent terminal states without replacing prior evidence", async () => {
+    const target = fixtureTarget("ethereum");
+    const { db } = evidenceDb({ target, latest: { status: "failed", failureReason: "pool-revert", profile: null } });
+    const profile = fixtureProfile(target);
+    for (const outcome of [
+      { target, status: "measured" as const },
+      { target, status: "measured" as const, profile, failureReason: "pool-revert" },
+      { target, status: "failed" as const, profile, failureReason: "pool-revert" },
+      { target, status: "failed" as const, failureReason: "   " },
+    ]) {
+      await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", targetGeneration: { generationId: "target-generation", targets: [target], publishedAt: 2_100 }, outcomes: [outcome], quotedAt: 2_200 }))
+        .rejects.toThrow("invalid terminal state");
+      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.quoteGenerationId).toBe("quote-generation-latest");
+    }
+  });
+
+  it("rejects profile target and generation identity disagreement", async () => {
+    const target = fixtureTarget("ethereum");
+    const { db } = evidenceDb({ target, latest: { status: "failed", failureReason: "pool-revert", profile: null } });
+    for (const profile of [
+      fixtureProfile(fixtureTarget("base")),
+      fixtureProfile(target, { targetGenerationId: "foreign-targets" }),
+      fixtureProfile(target, { quoteGenerationId: "foreign-quotes" }),
+    ]) {
+      await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", targetGeneration: { generationId: "target-generation", targets: [target], publishedAt: 2_100 }, outcomes: [{ target, status: "measured", profile }], quotedAt: 2_200 }))
+        .rejects.toThrow("mismatched generation identity");
+      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.quoteGenerationId).toBe("quote-generation-latest");
+    }
+  });
+
+  it("rejects post-write count mismatches and preserves both publication pointers", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const prior = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 1_000 });
+    const targetGeneration = { generationId: prior.generationId, targets: [target], publishedAt: 1_000 };
+    await publishDexMeasuredQuoteGeneration({ db, generationId: "prior-quotes", targetGeneration,
+      outcomes: [{ target, status: "failed", failureReason: "pool-revert" }], quotedAt: 1_060 });
+    sqlite.exec(`CREATE TRIGGER drop_candidate_target AFTER INSERT ON dex_measured_execution_targets
+      BEGIN DELETE FROM dex_measured_execution_targets WHERE generation_id = NEW.generation_id; END;
+      CREATE TRIGGER drop_candidate_quote AFTER INSERT ON dex_measured_execution_quotes
+      BEGIN DELETE FROM dex_measured_execution_quotes WHERE generation_id = NEW.generation_id; END;`);
+    await expect(publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 2_000 })).rejects.toThrow("row mismatch");
+    await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "broken-quotes", targetGeneration,
+      outcomes: [{ target, status: "failed", failureReason: "pool-revert" }], quotedAt: 2_060 })).rejects.toThrow("row mismatch");
+    expect(await loadLatestPublishedDexMeasuredTargets(db)).toEqual(targetGeneration);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    expect(evidence?.quoteGenerationId).toBe("prior-quotes");
+    expect([...evidence!.byTargetId.keys()]).toEqual([target.targetId]);
+    expect(sqlite.prepare("SELECT state FROM surface_publication_generations WHERE generation_id = 'broken-quotes'").get()).toEqual({ state: "failed" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()).toEqual({ count: 1 });
   });
 });
 
 describe("measured execution last-known-good selection", () => {
+  it("selects only complete superseded history inside the inclusive lookback", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    seedGeneration(sqlite, { generationId: "latest", targetGenerationId: "latest-targets",
+      publishedAt: 20_000, state: "published", rows: [{ target, status: "failed", failureReason: "pool-revert" }] });
+    const candidates = ["complete", "cutoff", "old", "failed", "candidate", "missing-row", "wrong-count"];
+    for (const name of candidates) {
+      const historicalTarget = fixtureTarget(name);
+      const publishedAt = name === "cutoff" ? 9_200 : name === "old" ? 9_199 : 19_000;
+      seedGeneration(sqlite, { generationId: name, targetGenerationId: `targets-${name}`, publishedAt,
+        state: name === "failed" || name === "candidate" ? name : "superseded",
+        rows: [{ target: historicalTarget, profile: fixtureProfile(historicalTarget, {
+          targetGenerationId: `targets-${name}`, quoteGenerationId: name, quotedAt: publishedAt,
+        }) }] });
+    }
+    sqlite.exec("DELETE FROM dex_measured_execution_quotes WHERE generation_id = 'missing-row'");
+    sqlite.exec("UPDATE surface_publication_generations SET published_rows = 2 WHERE generation_id = 'wrong-count'");
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    expect([...evidence!.byTargetId.keys()].sort()).toEqual([
+      target.targetId, fixtureTarget("complete").targetId, fixtureTarget("cutoff").targetId,
+    ].sort());
+    expect(evidence?.byTargetId.get(fixtureTarget("cutoff").targetId)).toMatchObject({
+      quoteGenerationId: "cutoff", resolution: "last-known-good",
+    });
+  });
   it("uses a prior measured row when the latest outcome is an operational failure", async () => {
     const measuredTarget = fixtureTarget("ethereum");
     const historicalProfile = fixtureProfile(measuredTarget, {
@@ -675,7 +279,7 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "quote-generation-lkg",
       quotedAt: 1_900,
     });
-    const { db, preparedSql } = evidenceDb({
+    const { db } = evidenceDb({
       target: measuredTarget,
       latest: {
         status: "failed",
@@ -707,12 +311,6 @@ describe("measured execution last-known-good selection", () => {
       consecutiveSuccessCount: 0,
       latestOperationalFailureAt: 2_010,
     });
-    const historicalSql = preparedSql.find((sql) => sql.includes("SELECT history_generation.generation_id"));
-    expect(historicalSql).toContain("state = 'superseded'");
-    expect(historicalSql).toContain("published_rows = history_generation.expected_rows");
-    expect(historicalSql).toContain("SELECT COUNT(*)");
-    const historicalRowsSql = preparedSql.find((sql) => sql.includes("q.generation_id IN"));
-    expect(historicalRowsSql).not.toContain("q.status = 'measured'");
   });
 
   it("preserves mature conservative history across a latest operational failure", async () => {
@@ -908,7 +506,7 @@ describe("measured execution last-known-good selection", () => {
         publishedAt: 1_900,
       };
     });
-    const { db, preparedSql } = evidenceDb({
+    const { db } = evidenceDb({
       target: latestTarget,
       latest: {
         status: "failed",
@@ -921,7 +519,6 @@ describe("measured execution last-known-good selection", () => {
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
 
     expect(evidence?.byTargetId).toHaveLength(66);
-    expect(preparedSql.filter((sql) => sql.includes("q.generation_id IN"))).toHaveLength(5);
     expect(evidence?.byTargetId.get(historical[64]!.target.targetId)).toMatchObject({
       status: "measured",
       resolution: "last-known-good",
@@ -931,78 +528,38 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("measured execution generation prune", () => {
-  it("deletes only terminal generations before the 4-hour cutoff in bounded oldest-first batches", async () => {
-    const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({
-          run: async () => {
-            executed.push({ kind: "run", sql, binds });
-            return {
-              meta: {
-                changes: sql.includes("DELETE FROM dex_measured_execution_quotes") ? 12 : 2,
-              },
-            };
-          },
-          first: async () => {
-            executed.push({ kind: "first", sql, binds });
-            return { oldest_remaining_at: 1_699_990_000 };
-          },
-        }),
-      }),
-    });
-
-    const nowSec = 1_700_000_000;
-    const retention = await pruneDexMeasuredExecutionGenerations(db, nowSec);
-
-    expect(executed).toHaveLength(4);
-    const cutoff = nowSec - 4 * 60 * 60;
-    const [quotes, targets, ledger, oldest] = executed;
-
-    expect(quotes.sql).toContain("DELETE FROM dex_measured_execution_quotes");
-    expect(quotes.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
-    expect(quotes.sql).toContain("started_at < ?");
-    expect(quotes.sql).toContain("ORDER BY started_at ASC LIMIT ?");
-    expect(quotes.binds).toEqual([
-      "dex-measured-execution-quotes",
-      "dex-shadow-measured-execution-quotes",
-      cutoff,
-      16,
-    ]);
-    expect(targets.sql).toContain("DELETE FROM dex_measured_execution_targets");
-    expect(targets.sql).toContain("NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)");
-    expect(targets.sql).toContain("ORDER BY started_at ASC LIMIT ?");
-    expect(targets.binds).toEqual([
-      "dex-measured-execution-targets",
-      "dex-shadow-measured-execution-targets",
-      cutoff,
-      16,
-    ]);
-
-    expect(ledger.sql).toContain("DELETE FROM surface_publication_generations");
-    expect(ledger.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
-    expect(ledger.sql).toContain("q.target_generation_id = candidate.generation_id");
-    expect(ledger.sql).toContain("FROM dex_measured_execution_targets t");
-    expect(ledger.sql).toContain("ORDER BY candidate.started_at ASC");
-    expect(ledger.sql).toContain("LIMIT ?");
-    expect(ledger.binds).toEqual([
-      "dex-measured-execution-targets",
-      "dex-measured-execution-quotes",
-      "dex-shadow-measured-execution-targets",
-      "dex-shadow-measured-execution-quotes",
-      cutoff,
-      16,
-    ]);
-    expect(oldest.kind).toBe("first");
-    expect(retention).toMatchObject({
-      cutoff,
-      deletedQuoteRows: 12,
-      deletedTargetRows: 2,
-      deletedGenerationRows: 2,
-      deletedRows: 16,
-      oldestRemainingAt: 1_699_990_000,
-      error: null,
-    });
+  it("prunes terminal rows in bounded batches while retaining referenced and cutoff generations", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const nowSec = 100_000;
+    const cutoff = nowSec - 14_400;
+    for (let index = 0; index < 18; index++) {
+      seedGeneration(sqlite, { generationId: `old-${index}`, targetGenerationId: `targets-${index}`,
+        publishedAt: cutoff - 100 + index, state: index % 2 ? "failed" : "rejected",
+        rows: [{ target, status: "failed", failureReason: "pool-revert" }] });
+    }
+    for (const [generationId, publishedAt, state] of [
+      ["published", cutoff - 200, "published"], ["candidate", cutoff - 190, "candidate"],
+      ["cutoff", cutoff, "superseded"], ["recent", cutoff + 1, "superseded"],
+    ] as const) {
+      seedGeneration(sqlite, { generationId, targetGenerationId: `targets-${generationId}`,
+        publishedAt, state, rows: [{ target, status: "failed", failureReason: "pool-revert" }] });
+    }
+    const quoteIds = () => sqlite.prepare("SELECT generation_id FROM dex_measured_execution_quotes ORDER BY generation_id")
+      .all().map((row: Record<string, unknown>) => row.generation_id);
+    const first = await pruneDexMeasuredExecutionGenerations(db, nowSec);
+    expect(first).toMatchObject({ cutoff, deletedQuoteRows: 16, deletedTargetRows: 14,
+      deletedGenerationRows: 16, deletedRows: 46, error: null });
+    expect(quoteIds()).toEqual(["candidate", "cutoff", "old-16", "old-17", "published", "recent"]);
+    for (let pass = 0; pass < 3; pass++) await pruneDexMeasuredExecutionGenerations(db, nowSec);
+    expect(quoteIds()).toEqual(["candidate", "cutoff", "published", "recent"]);
+    expect(sqlite.prepare("SELECT generation_id FROM dex_measured_execution_targets ORDER BY generation_id").all()
+      .map((row: Record<string, unknown>) => row.generation_id)).toEqual(["targets-candidate", "targets-cutoff", "targets-published", "targets-recent"]);
+    expect(sqlite.prepare("SELECT generation_id FROM surface_publication_generations ORDER BY generation_id").all()
+      .map((row: Record<string, unknown>) => row.generation_id)).toEqual([
+        "candidate", "cutoff", "published", "recent",
+        "targets-candidate", "targets-cutoff", "targets-published", "targets-recent",
+      ]);
   });
 
   it("reports cleanup errors without throwing after publication", async () => {

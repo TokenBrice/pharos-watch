@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { mergeRedemptionRouteStatus, REDEMPTION_ROUTE_STATUS_PRODUCER } from "../redemption-backstop/route-status";
-import { severeMarketEvidence } from "./redemption-backstop-sources.test-support";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
+import { mergeRedemptionRouteStatus } from "../redemption-backstop/route-status";
+import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
+import { route, snapshot, severeMarketEvidence } from "./redemption-backstop-sources.test-support";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const staticOpen = {
   routeStatus: "open" as const,
@@ -8,12 +12,30 @@ const staticOpen = {
 };
 
 describe("mergeRedemptionRouteStatus", () => {
-  it("documents the v4 D1-free producer choice", () => {
-    expect(REDEMPTION_ROUTE_STATUS_PRODUCER).toMatchObject({
-      model: "live-reserve-adapters-plus-static-policy",
-      fetchesDuringRedemptionSync: false,
-      freshness: "sync-redemption-backstops-snapshot",
+  it("constructs the merged entry from supplied metadata without external I/O", async () => {
+    const fetchMock = vi.fn(() => { throw new Error("Unexpected fetch"); });
+    vi.stubGlobal("fetch", fetchMock);
+    const db = mockD1Strict([]);
+    const now = 1_700_000_000;
+    const entry = await buildRedemptionBackstopEntry(db, "zchf-frankencoin", route({
+      capacityModel: { kind: "reserve-sync-metadata" },
+    }), 50_000_000, null, now, {
+      reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
+        redemption: {
+          capacityUsd: 5_000_000,
+          capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain",
+          sourceTimestamp: now - 120,
+          routeStatus: "paused",
+          routeStatusSource: "onchain",
+        },
+      }, { fetchedAt: now - 120 }),
     });
+    expect(entry).toMatchObject({
+      routeStatus: "paused", routeStatusSource: "onchain", resolutionState: "impaired", score: null,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("prioritizes live adapter route status over static status", () => {

@@ -131,12 +131,12 @@ describe("computePriceConsensus", () => {
 
   it("selects price closest to peg reference when diverging", () => {
     const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.05, weight: 1 },
-      { source: "pyth", price: 1.001, weight: 1 },
+      { source: "pyth", price: 1.05, weight: 1 },
+      { source: "redstone", price: 1.001, weight: 1 },
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.price).toBe(1.001);
-    expect(result!.source).toBe("pyth");
+    expect(result!.selectedSource).toBe("redstone");
   });
 
   it("uses majority when 3+ sources and 2 agree", () => {
@@ -201,12 +201,12 @@ describe("computePriceConsensus", () => {
 
   it("prefers higher-weight source when multiple agree", () => {
     const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.0001, weight: 1 },
+      { source: "pyth", price: 1.0001, weight: 1 },
       { source: "binance", price: 1.0002, weight: 2 },
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.price).toBe(1.00015);
-    expect(result!.source).toContain("binance");
+    expect(result!.selectedSource).toBe("binance");
   });
 
   it("returns null for empty sources", () => {
@@ -214,7 +214,7 @@ describe("computePriceConsensus", () => {
     expect(result).toBeNull();
   });
 
-  it("handles NAV tokens by defaulting to highest-weight source", () => {
+  it("uses the median price for agreeing NAV sources with equal weights", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.12, weight: 1 },
       { source: "defillama", price: 1.15, weight: 1 },
@@ -240,18 +240,17 @@ describe("computePriceConsensus", () => {
 
   it("breaks weight tie by choosing source closest to peg reference", () => {
     const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.003, weight: 2 },
-      { source: "binance", price: 1.001, weight: 2 },
+      { source: "pyth", price: 1.003, weight: 2 },
+      { source: "redstone", price: 1.001, weight: 2 },
       { source: "defillama", price: 1.002, weight: 1 },
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("high");
-    // Binance (1.001) is closer to peg 1.0 than CoinGecko (1.003), same weight
     expect(result!.price).toBe(1.002);
-    expect(result!.selectedSource).toBe("binance");
+    expect(result!.selectedSource).toBe("redstone");
   });
 
-  it("breaks weight tie for NAV tokens by choosing source closest to cluster median", () => {
+  it("resolves equal-weight NAV source selection by trust before distance", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.12, weight: 2 },
       { source: "binance", price: 1.1, weight: 2 },
@@ -260,17 +259,19 @@ describe("computePriceConsensus", () => {
     const result = computePriceConsensus(sources, null, 50);
     expect(result!.confidence).toBe("high");
     expect(result!.price).toBe(1.11);
-    expect(["coingecko", "binance"]).toContain(result!.selectedSource);
+    expect(result!.selectedSource).toBe("binance");
   });
 
-  it("agrees at exactly 50bps boundary (inclusive)", () => {
-    // 1.0000 and 1.0050 are exactly 50bps apart: |1.0050-1.0000|/1.0025 * 10000 ≈ 49.9 bps
-    const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.0, weight: 1 },
-      { source: "defillama", price: 1.005, weight: 1 },
-    ];
-    const result = computePriceConsensus(sources, 1.0, 50);
-    expect(result!.confidence).toBe("high");
+  it.each([
+    [400.999, "high"],
+    [401, "high"],
+    [401.001, "low"],
+  ] as const)("classifies midpoint divergence at price %s as %s", (price, confidence) => {
+    const result = computePriceConsensus([
+      { source: "coingecko", price: 399, weight: 1 },
+      { source: "defillama", price, weight: 1 },
+    ], 400, 50);
+    expect(result!.confidence).toBe(confidence);
   });
 
   it("includes all agree sources in the source label", () => {
@@ -297,5 +298,44 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("low");
+  });
+  it("publishes conservative cluster provenance without using an outlier's older timestamp", () => {
+    const result = computePriceConsensus([
+      { source: "pyth", price: 1, weight: 2, observedAt: 200, observedAtMode: "upstream" },
+      { source: "redstone", price: 1.001, weight: 1, observedAt: 100, observedAtMode: "local_fetch" },
+      { source: "binance", price: 1.1, weight: 1, observedAt: 50, observedAtMode: "unknown" },
+    ], 1, 50);
+    expect(result).toMatchObject({ observedAt: 100, observedAtMode: "local_fetch", selectedSource: "pyth" });
+    expect(result!.observedAtBySource).toEqual({ pyth: 200, redstone: 100, binance: 50 });
+  });
+
+  it("preserves mixed observation modes when repeated provider quotes collapse", () => {
+    const result = computePriceConsensus([
+      { source: "alchemy-address", price: 1, weight: 1, observedAt: 100, observedAtMode: "upstream" },
+      { source: "alchemy-address", price: 1.002, weight: 1, observedAt: 200, observedAtMode: "local_fetch" },
+    ], 1, 50);
+    expect(result).toMatchObject({
+      confidence: "single-source", observedAt: 100, observedAtMode: "unknown",
+      observedAtModeBySource: { "alchemy-address": "unknown" },
+    });
+  });
+
+  it("uses only the chosen source's provenance for low-confidence publication", () => {
+    expect(computePriceConsensus([
+      { source: "pyth", price: 0.98, weight: 1, observedAt: 200, observedAtMode: "upstream" },
+      { source: "binance", price: 1, weight: 1, observedAt: 100, observedAtMode: "local_fetch" },
+    ], 1, 50)).toMatchObject({
+      confidence: "low", selectedSource: "pyth", observedAt: 200, observedAtMode: "upstream",
+    });
+  });
+
+  it.each([
+    { name: "spread before peg distance", prices: [1, 1.002, 0.98, 0.98], peg: 1, expected: "charlie+delta" },
+    { name: "alphabetical label after equal spread and distance", prices: [99, 99, 101, 101], peg: 100, expected: "alpha+bravo" },
+  ])("resolves equal-size/weight/trust clusters by $name independently of input order", ({ prices, peg, expected }) => {
+    const sources = ["alpha", "bravo", "charlie", "delta"].map((source, index) => ({ source, price: prices[index]!, weight: 1 }));
+    for (const ordered of [sources, [...sources].reverse()]) {
+      expect(computePriceConsensus(ordered, peg, 50)!.source).toBe(expected);
+    }
   });
 });

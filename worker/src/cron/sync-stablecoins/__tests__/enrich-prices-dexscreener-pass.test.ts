@@ -14,6 +14,7 @@ import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDexScreenerPass } from "../enrich-prices-dexscreener-pass";
 import type { PeggedAsset } from "../enrich-prices";
+import { exactPool } from "./enrich-prices-dexscreener-pass.test-support";
 
 function makeMissingAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   return {
@@ -63,14 +64,7 @@ describe("runDexScreenerPass", () => {
 
   it("records thrown exact lookups as failed provider outcomes", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockRejectedValueOnce(new Error("dns failed"));
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = circuitClosedDb();
 
     const result = await runDexScreenerPass(
       [
@@ -125,14 +119,7 @@ describe("runDexScreenerPass", () => {
       error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
       hardRefusal: true,
     });
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = circuitClosedDb();
 
     const result = await runDexScreenerPass(
       [
@@ -174,14 +161,7 @@ describe("runDexScreenerPass", () => {
   it("does not wait indefinitely when an exact lookup never settles", async () => {
     vi.useFakeTimers();
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReturnValueOnce(new Promise(() => {}));
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = circuitClosedDb();
 
     const resultPromise = runDexScreenerPass(
       [
@@ -216,30 +196,8 @@ describe("runDexScreenerPass", () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
-        {
-          chainId: "base",
-          dexId: "uniswap",
-          pairAddress: "0xpair1",
-          baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
-          quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "0.99",
-          priceNative: null,
-          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-          pairCreatedAt: null,
-        },
-        {
-          chainId: "base",
-          dexId: "uniswap",
-          pairAddress: "0xpair2",
-          baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
-          quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1.01",
-          priceNative: null,
-          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-          pairCreatedAt: null,
-        },
+        exactPool("0xabc", "0xpair1", "0.99"),
+        exactPool("0xabc", "0xpair2", "1.01"),
       ],
     });
 
@@ -261,30 +219,8 @@ describe("runDexScreenerPass", () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
-        {
-          chainId: "base",
-          dexId: "aerodrome",
-          pairAddress: "0xpair-a",
-          baseToken: { address: "0xaaa", name: "Multi USD", symbol: "MULTI" },
-          quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1.00",
-          priceNative: null,
-          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-          pairCreatedAt: null,
-        },
-        {
-          chainId: "base",
-          dexId: "aerodrome",
-          pairAddress: "0xpair-b",
-          baseToken: { address: "0xbbb", name: "Single USD", symbol: "SINGLE" },
-          quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1.00",
-          priceNative: null,
-          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-          pairCreatedAt: null,
-        },
+        exactPool("0xaaa", "0xpair-a", "0.99"),
+        exactPool("0xbbb", "0xpair-b", "1.01"),
       ],
     });
 
@@ -306,6 +242,8 @@ describe("runDexScreenerPass", () => {
     const result = await runDexScreenerPass([multiChain, singleChain], undefined, undefined);
 
     expect(result.resolved).toBe(2);
+    expect(multiChain.price).toBe(0.99);
+    expect(singleChain.price).toBe(1.01);
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
       "base",

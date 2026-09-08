@@ -46,6 +46,10 @@ describe("operational history model", () => {
       target: "Partner reader (API key 7)",
       outcome: "ok",
     });
+    expect(view.entries[1].detail).toEqual({
+      adminAction: { apiKeyId: 7, path: "/api/api-keys/7/rotate", token: "[redacted]" },
+      credentialAudit: { name: "Partner reader", secret: "[redacted]" },
+    });
   });
 
   it("does not fuzzy-deduplicate different keys, lifecycle verbs, or distant timestamps", () => {
@@ -60,6 +64,35 @@ describe("operational history model", () => {
 
     expect(view.entries).toHaveLength(4);
     expect(view.deduplicatedCount).toBe(0);
+  });
+
+  it.each([5, 6])("deduplicates only within five seconds (offset %s)", (offset) => {
+    const view = buildOperationalActivityView(
+      [adminLifecycle],
+      [{ ...credentialLifecycle, createdAt: adminLifecycle.at + offset }],
+    );
+    expect(view.entries.map((entry) => entry.id)).toEqual(offset === 5
+      ? ["combined:admin-action:1:credential-audit:11"]
+      : ["credential-audit:11", "admin-action:1"]);
+  });
+
+  it("retains repeated lifecycle events from the same source", () => {
+    const view = buildOperationalActivityView(
+      [adminLifecycle, { ...adminLifecycle, id: 2, at: 1_001 }],
+      [],
+    );
+    expect(view.entries.map((entry) => entry.id)).toEqual(["admin-action:2", "admin-action:1"]);
+    expect(view.deduplicatedCount).toBe(0);
+  });
+
+  it("redacts normalized keys and array strings through both public adapters", () => {
+    const detail = { "Access_Token": "plain-secret", "api_key_id": 7, values: ["ph_live_hidden", "/api/status"] };
+    const view = buildOperationalActivityView(
+      [{ ...adminLifecycle, details: detail }],
+      [{ ...credentialLifecycle, detail }],
+    );
+    const safe = { "Access_Token": "[redacted]", "api_key_id": 7, values: ["[redacted]", "/api/status"] };
+    expect(view.entries[0].detail).toEqual({ adminAction: safe, credentialAudit: safe });
   });
 
   it("preserves canonical unknown outcomes instead of flattening them to errors", () => {

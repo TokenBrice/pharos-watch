@@ -73,6 +73,23 @@ describe("Liquity V1 shock simulator", () => {
       "skipped-insufficient-full-offset",
     );
   });
+
+  it("stops recovery-only liquidations after restoring normal mode", () => {
+    const scenario = simulateLiquityV1Scenario({
+      price: WAD, mcr: 11n * WAD / 10n, ccr: 15n * WAD / 10n,
+      protocolDebt: 300n * WAD, protocolCollateral: 440n * WAD,
+      stabilityPoolDeposits: 300n * WAD,
+      positions: [position("restore", 100, 105, 0), position("normal-safe", 100, 120, 1), position("survivor", 100, 215, 2)],
+    }, 0);
+    expect(scenario.actual.recoveryModeAtStart).toBe(true);
+    expect(scenario.actual.recoveryModeAtEnd).toBe(false);
+    expect(scenario.actual.poolOffsetDebt).toBe(100n * WAD);
+    expect(scenario.actual.outcomes.map(({ positionId, action }) => [positionId, action])).toEqual([
+      ["restore", "offset-and-redistribute"],
+      ["normal-safe", "not-liquidatable"],
+      ["survivor", "protected-last-position"],
+    ]);
+  });
 });
 
 describe("Liquity V2 shock simulator", () => {
@@ -199,6 +216,39 @@ describe("Liquity V2 shock simulator", () => {
       },
     ]);
   });
+
+  it("rejects incompatible branch scenarios and invalid shock fractions", () => {
+    const input: LiquityV2SimulationInput = {
+      price: WAD, mcr: 11n * WAD / 10n, ccr: 15n * WAD / 10n,
+      protocolDebt: 100n * WAD, protocolCollateral: 101n * WAD, stabilityPoolDeposits: WAD,
+      positions: [position("debt", 100, 100, 0), position("survivor", 0, 1, 1)],
+    };
+    const baseline = simulateLiquityV2Scenario(input, 0);
+    const shocked = simulateLiquityV2Scenario(input, 999_999);
+    expect(shocked.shockedPrice).toBe(WAD / 1_000_000n);
+    expect(() => aggregateShockScenarios([])).toThrow("empty branch set");
+    expect(() => aggregateShockScenarios([[baseline], [baseline, shocked]])).toThrow("same scenario count");
+    expect(() => aggregateShockScenarios([[baseline], [shocked]])).toThrow("Branch shock mismatch");
+    for (const fraction of [-1, 1_000_000, 0.5]) {
+      expect(() => simulateLiquityV1Scenario(input, fraction)).toThrow("Invalid shock fraction");
+      expect(() => simulateLiquityV2Scenario(input, fraction)).toThrow("Invalid shock fraction");
+    }
+  });
+
+  it.each([[WAD / 2n, 0n], [500n * WAD, 100n * WAD]])(
+    "clamps deposits %s to available debt %s after the reserve",
+    (stabilityPoolDeposits, expectedOffset) => {
+      const scenario = simulateLiquityV2Scenario({
+        price: WAD, mcr: 11n * WAD / 10n, ccr: 15n * WAD / 10n,
+        protocolDebt: 100n * WAD, protocolCollateral: 101n * WAD, stabilityPoolDeposits,
+        positions: [position("debt", 100, 100, 0), position("survivor", 0, 1, 1)],
+      }, 0);
+      expect(scenario.actual.startingPoolDebt).toBe(expectedOffset);
+      expect(scenario.actual.poolOffsetDebt).toBe(expectedOffset);
+      expect(scenario.actual.redistributedDebt).toBe(100n * WAD - expectedOffset);
+      expect(scenario.actual.endingPoolDebt).toBe(0n);
+    },
+  );
 });
 
 describe("shock measurement reconciliation", () => {

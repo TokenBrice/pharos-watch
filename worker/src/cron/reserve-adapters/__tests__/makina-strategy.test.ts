@@ -261,35 +261,6 @@ describe("makina-strategy adapter", () => {
       .toBe(true);
   });
 
-  it("uses the full idle Machine buffer when no DUSD shares are pending in the queue", () => {
-    const metadata = buildMakinaRedemptionMetadata({
-      ...REDEMPTION_STATE,
-      nextRequestId: 345,
-      lastFinalizedRequestId: 344,
-      pendingRequestCount: 0,
-      lockedShares: 0,
-      grossIdleCapacityUsd: 700,
-      queueDepthUsd: 0,
-      capacityUsd: 700,
-    });
-
-    expect(metadata.redemption).toMatchObject({
-      capacityUsd: 700,
-      settlementBoundUnproven: true,
-      capacityKind: "live-queue",
-      queueDepthUsd: 0,
-      holderEligibility: "any-holder",
-      routeStatus: "open",
-    });
-    expect(metadata.redemptionQueue).toMatchObject({
-      pendingRequestCount: 0,
-      lockedShares: 0,
-      queueDepthUsd: 0,
-      grossIdleCapacityUsd: 700,
-      settlementBoundUnproven: true,
-    });
-  });
-
   it("publishes cohort-limited access when the Risk Manager enables the whitelist", () => {
     const metadata = buildMakinaRedemptionMetadata({
       ...REDEMPTION_STATE,

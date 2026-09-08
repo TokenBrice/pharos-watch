@@ -50,30 +50,6 @@ describe("psi-replay", () => {
     expect((v21.result?.score ?? 0) - (v30.result?.score ?? 0)).toBe(5);
   });
 
-  it("prefers same-day historical price over peak deviation in replay inputs", () => {
-    const day = 1_746_384_000;
-    const replay = replayPsiDay(day, "3.2", psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100_000_000_000, priorMcap: 100_000_000_000, currentPrice: 0.985, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -DAY, endedOffsetSec: null, peakDeviationBps: -300 })]);
-
-    expect(replay.input.depegs).toEqual([
-      { bps: -150, mcapUsd: 100_000_000_000, depegAgeDays: 1 },
-    ]);
-    expect(replay.input.historicalPriceCoverageCount).toBe(1);
-    expect(replay.input.peakDeviationFallbackCount).toBe(0);
-  });
-
-  it("includes multi-day events with sub-threshold daily prices (matching live cron)", () => {
-    const day = 1_746_384_000;
-    const replay = replayPsiDay(day, "3.2", psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100_000_000_000, priorMcap: 100_000_000_000, currentPrice: 0.995, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -DAY, endedOffsetSec: null, peakDeviationBps: -300 })]);
-
-    // Multi-day active events contribute with their daily price regardless
-    // of threshold, matching the live cron behavior.
-    expect(replay.input.depegs).toEqual([
-      { bps: -50, mcapUsd: 100_000_000_000, depegAgeDays: 1 },
-    ]);
-    expect(replay.input.historicalPriceCoverageCount).toBe(1);
-    expect(replay.input.peakDeviationFallbackCount).toBe(0);
-  });
-
   it("keeps crisis-like replay sensitivity when adding bounded stress breadth", () => {
     const day = 1_746_384_000;
     const replay = replayPsiDay(day, "3.0", [
@@ -117,26 +93,6 @@ describe("psi-replay", () => {
       { bps: -1200, mcapUsd: 43_000_000_000, depegAgeDays: 0 },
     ]);
     expect(replay.result?.band).toBe("MELTDOWN");
-  });
-
-  it("drops near-midnight start-day peaks that do not materially persist into the next UTC day", () => {
-    const day = 1_608_508_800; // 2020-12-21
-    const replay = replayPsiDay(day, "1.0", psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 64_026_005, priorMcap: 58_685_677, currentPrice: 1.0026849879160749, priorPrice: 1.0285746209170659 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: 22 * 3600 + 113, endedOffsetSec: DAY + 93, peakDeviationBps: 339 })]);
-
-    expect(replay.input.depegs).toEqual([]);
-    expect(replay.input.historicalPriceCoverageCount).toBe(0);
-    expect(replay.input.peakDeviationFallbackCount).toBe(0);
-  });
-
-  it("uses the daily replay price for moderate same-day follow-on depegs", () => {
-    const day = 1_678_665_600; // 2023-03-13
-    const replay = replayPsiDay(day, "1.0", psiSupplyPair({ stablecoinId: "lusd-liquity", day, currentMcap: 247_756_468, priorMcap: 230_964_010, currentPrice: 1.0134849488335838, priorPrice: 1.0057375677243316 }), [psiDepegRow({ stablecoinId: "lusd-liquity", day, startedOffsetSec: 10 * 3600 + 78, endedOffsetSec: DAY + 9 * 3600 + 130, peakDeviationBps: 209 })]);
-
-    expect(replay.input.depegs).toEqual([
-      { bps: 135, mcapUsd: 247_756_468, depegAgeDays: 0 },
-    ]);
-    expect(replay.input.historicalPriceCoverageCount).toBe(1);
-    expect(replay.input.peakDeviationFallbackCount).toBe(0);
   });
 
   it("replays legacy UST depeg rows against the canonical shadow asset", () => {

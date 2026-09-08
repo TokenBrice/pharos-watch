@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { LlamaPool } from "../dex-liquidity/types";
 import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
+import { makeOrcaPair } from "./sync-dex-liquidity-filter.test-support";
 
 describe("filterPrimaryPoolsPreferDirectApi", () => {
   it("does not let an absurd direct-API pool suppress a healthy primary pool", () => {
@@ -50,46 +51,10 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 
-  it("deduplicates an Orca DL pool via optional wildcard identity when only fee metadata is missing", () => {
-    const pools: LlamaPool[] = [
-      {
-        pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
-        chain: "Solana",
-        project: "orca-dex",
-        symbol: "SOL-USDC",
-        tvlUsd: 29_000_000,
-        volumeUsd1d: 2_500_000,
-        volumeUsd7d: 17_000_000,
-        stablecoin: false,
-        underlyingTokens: [
-          "So11111111111111111111111111111111111111112",
-          "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
-        ],
-        apyBase: null,
-        apyReward: null,
-        apy: 0,
-        sigma: 0,
-        exposure: "multi",
-        count: 20,
-      },
-    ];
-    const directApiPools: DexApiPool[] = [
-      {
-        source: "orca",
-        chain: "solana",
-        poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
-        poolType: "orca-whirlpool",
-        tokens: [
-          { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
-          { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
-        ],
-        price: 150,
-        tvlUsd: 29_000_000,
-        volume24hUsd: 2_500_000,
-        feeRate: 0.0001,
-        balances: [100_000, 200_000],
-      },
-    ];
+  it("deduplicates an Orca DL pool via unique derived identity when fee metadata is missing", () => {
+    const { primary, direct } = makeOrcaPair();
+    const pools = [primary];
+    const directApiPools = [direct];
 
     const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
 
@@ -262,64 +227,50 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
   });
 
   it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {
-    const pools: LlamaPool[] = [
-      {
-        pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
-        chain: "Solana",
-        project: "orca-dex",
-        symbol: "SOL-USDC",
-        tvlUsd: 29_000_000,
-        volumeUsd1d: 2_500_000,
-        volumeUsd7d: 17_000_000,
-        stablecoin: false,
-        underlyingTokens: [
-          "So11111111111111111111111111111111111111112",
-          "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
-        ],
-        apyBase: null,
-        apyReward: null,
-        apy: 0,
-        sigma: 0,
-        exposure: "multi",
-        count: 20,
-      },
-    ];
-    const directApiPools: DexApiPool[] = [
-      {
-        source: "orca",
-        chain: "solana",
-        poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
-        poolType: "orca-whirlpool",
-        tokens: [
-          { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
-          { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
-        ],
-        price: 150,
-        tvlUsd: 29_000_000,
-        volume24hUsd: 2_500_000,
-        feeRate: 0.0001,
-        balances: [100_000, 200_000],
-      },
-      {
-        source: "orca",
-        chain: "solana",
-        poolAddress: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5",
-        poolType: "orca-whirlpool",
-        tokens: [
-          { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
-          { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
-        ],
-        price: 150,
-        tvlUsd: 500_000,
-        volume24hUsd: 50_000,
-        feeRate: 0.0005,
-        balances: [10_000, 20_000],
-      },
-    ];
+    const { primary, direct } = makeOrcaPair();
+    const pools = [primary];
+    const directApiPools = [direct, {
+      ...direct,
+      poolAddress: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5",
+      tvlUsd: 500_000, volume24hUsd: 50_000, feeRate: 0.0005, balances: [10_000, 20_000],
+    }];
 
     const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
 
     expect(result.filteredPools).toHaveLength(1);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+  });
+
+  it("uses optional wildcard matching for a stable pair without a direct stability hint", () => {
+    const { primary, direct } = makeOrcaPair();
+    const usds = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA";
+    primary.underlyingTokens = [usds, direct.tokens[0].address];
+    primary.symbol = "USDS-USDC";
+    primary.stablecoin = true;
+    direct.tokens[1] = { address: usds, symbol: "USDS", decimals: 6 };
+    direct.price = 1;
+    const unrelated = { ...primary, pool: "unrelated", underlyingTokens: ["another-token", "different-token"] };
+    const result = filterPrimaryPoolsPreferDirectApi([primary, unrelated], [direct]);
+    expect(result.filteredPools.map((pool) => pool.pool)).toEqual(["unrelated"]);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(1);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
+    expect(result.skippedByExactIdentity).toBe(0);
+  });
+
+  it("prefers a healthy exact-address direct pool", () => {
+    const { primary, direct } = makeOrcaPair();
+    const result = filterPrimaryPoolsPreferDirectApi([{ ...primary, pool: direct.poolAddress }], [direct]);
+    expect(result.filteredPools).toEqual([]);
+    expect(result.skippedByExactIdentity).toBe(1);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+  });
+
+  it("retains both primary pools when their derived identity is ambiguous", () => {
+    const { primary, direct } = makeOrcaPair();
+    const result = filterPrimaryPoolsPreferDirectApi([primary, { ...primary, pool: "second-primary" }], [direct]);
+    expect(result.filteredPools.map((pool) => pool.pool)).toEqual([primary.pool, "second-primary"]);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
     expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 });

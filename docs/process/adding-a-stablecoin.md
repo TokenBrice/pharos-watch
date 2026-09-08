@@ -134,9 +134,8 @@ Important current taxonomy note:
 
 Do the research manually, or use the maintained skills when they match the task:
 
-- `stablecoin-addition-orchestrator`: run the full phase checklist and coordinate the supporting skills.
+- `stablecoin-addition-orchestrator`: gather generic scalar metadata, run the full phase checklist, and coordinate the supporting skills.
 - `stablecoin-runtime-price-marketcap-gate`: prove the hard active-asset price and market-cap path from Phase 1a.
-- `stablecoin-addition-orchestrator`: gather generic scalar metadata and route the full phase checklist.
 - `stablecoin-identity-contracts`: verify `geckoId`, populate known deployments, or discover missing chain coverage.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
 - `compliance-research`: research `genius`, `mica`, or both into the compliance sidecar.
@@ -347,13 +346,13 @@ Required fields and their conditions:
 | `mintAuthority` coverage decision | new high-value active additions or pre-launch promotions (top-60 by canonical rank, market cap ≥ $50M, or issuer/operator has obvious mint control) | record an "intentional gap" line in Phase 5 coverage notes with the unresolved control path or source gap         |
 | `data/ai-summaries.json` entry    | every active coin                                                                                                                                   | record skip reason in Phase 5 coverage notes                                                                      |
 
-The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phase 3.5 step before saving the per-coin JSON. The maintainer can also run the gate manually by re-checking the fields against the rubric above.
+Run this gate before saving the per-coin JSON, working manually or through `stablecoin-addition-orchestrator` — the skill routes back to this document rather than carrying its own copy of the rubric, so the check is re-reading the fields against the table above.
 
 Automated backstops:
 
 - The ordinary noncritical test `scripts/__tests__/weekly-curation-digest.test.ts` fails if any active/pre-launch coin lacks a nonblank `oneLiner`.
 - The same test pins the archetype cohort snapshot exactly (currently 39/39 covered after frozen coins and then variants are excluded), so it fails if any cohort coin lacks an archetype, if the cohort size changes, or if the baseline contains an unknown coin ID.
-- The same test pins the attestor-tier snapshot exactly (currently 77/77), so it fails if any `independent-audit` coin lacks an attestor tier or if that count changes.
+- The same test pins the attestor-tier snapshot exactly (currently 72/72), so it fails if any `independent-audit` coin lacks an attestor tier or if that count changes.
 - The ordinary noncritical runtime-parser test `src/lib/__tests__/term-markup.test.ts` fails if AI-summary term markup references unknown glossary slugs or leaves raw opening/closing markers.
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.

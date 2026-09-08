@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { ContractDeployment } from "@shared/types/core";
 import type { DiscoveryMeta } from "../types";
@@ -252,7 +251,7 @@ describe("isEligibleThisRun", () => {
 
 describe("compareDiscoveryMeta", () => {
   it("sorts never-crawled coins before previously crawled coins", () => {
-    const coins = [{ id: "never" }, { id: "seen" }];
+    const coins = [{ id: "seen" }, { id: "never" }];
     const metaById = new Map<string, DiscoveryMeta>([
       ["seen", { stablecoinId: "seen", consecutiveMisses: 0, lastCrawlAt: 1000, lastHitAt: null }],
     ]);
@@ -263,7 +262,7 @@ describe("compareDiscoveryMeta", () => {
   });
 
   it("sorts older crawls before newer crawls", () => {
-    const coins = [{ id: "older" }, { id: "newer" }];
+    const coins = [{ id: "newer" }, { id: "older" }];
     const metaById = new Map<string, DiscoveryMeta>([
       ["older", { stablecoinId: "older", consecutiveMisses: 0, lastCrawlAt: 500, lastHitAt: null }],
       ["newer", { stablecoinId: "newer", consecutiveMisses: 0, lastCrawlAt: 1000, lastHitAt: null }],
@@ -277,18 +276,10 @@ describe("compareDiscoveryMeta", () => {
 
 describe("chain-aware routing", () => {
   it("discovery targets include traded contracts and preserve same-chain deployments", () => {
-    const usdt = ACTIVE_STABLECOINS.find((stablecoin) => stablecoin.id === "usdt-tether");
-    expect(usdt).toBeDefined();
-    expect(usdt?.tradedContracts?.length ?? 0).toBeGreaterThan(0);
-
-    const targets = getTrackedContracts(usdt!);
-
-    expect(targets.some((contract) =>
-      usdt?.tradedContracts?.some((traded) =>
-        traded.chain === contract.chain && traded.address === contract.address
-      )
-    )).toBe(true);
-    expect(targets.length).toBeGreaterThanOrEqual((usdt?.contracts?.length ?? 0) + (usdt?.tradedContracts?.length ?? 0) - 1);
+    const canonical = { chain: "ethereum", address: "0xaaa", decimals: 6 };
+    const traded = { chain: "ethereum", address: "0xbbb", decimals: 6 };
+    const targets = getTrackedContracts({ contracts: [canonical], tradedContracts: [traded, canonical] });
+    expect(targets).toEqual([canonical, traded]);
   });
 });
 

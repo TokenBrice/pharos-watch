@@ -101,10 +101,54 @@ describe("syncKinesisSupply", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
+  it("rejects pre-aborted work without provider calls or writes", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled"));
+    const { db, runFn } = makeDb();
+    await expect(syncKinesisSupply(db, controller.signal)).rejects.toThrow("cancelled");
+    expect(fetchTextWithRetry).not.toHaveBeenCalled();
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
+    expect(runFn).not.toHaveBeenCalled();
+  });
+
+  it("does not charge provider health or start the second chain after fetch cancellation", async () => {
+    const controller = new AbortController();
+    const failure = new Error("cancelled fetch");
+    vi.mocked(fetchTextWithRetry).mockImplementationOnce(async () => {
+      controller.abort(failure);
+      throw failure;
+    });
+    const { db, runFn } = makeDb();
+    await expect(syncKinesisSupply(db, controller.signal)).rejects.toBe(failure);
+    expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
+    expect(shouldAttemptFetch).toHaveBeenCalledTimes(1);
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
+    expect(runFn).not.toHaveBeenCalled();
+  });
+  it("rejects independently invalid parser fields and malformed bodies without publishing supply", async () => {
+    for (const body of [
+      '{"circulation":100,"mint":-1,"redemption":0}',
+      '{"circulation":100,"mint":"Infinity","redemption":0}',
+      '{"circulation":100,"mint":200,"redemption":-1}',
+      '{"circulation":100,"mint":200,"redemption":"NaN"}',
+      '{"records":[]}',
+      'malformed JSON',
+    ]) {
+      vi.mocked(recordOutcomeSafe).mockClear();
+      vi.mocked(fetchTextWithRetry).mockResolvedValue({ response: new Response(body), body });
+      const { db, runFn } = makeDb();
+      const result = await syncKinesisSupply(db, new AbortController().signal);
+      expect(result.itemCount).toBe(0);
+      expect(result.status).toBe("error");
+      expect(runFn).not.toHaveBeenCalled();
+      expect(vi.mocked(recordOutcomeSafe).mock.calls.map((call) => call[2])).toEqual([false, false]);
+    }
+  });
   it("syncs both chains on happy path", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     vi.mocked(fetchTextWithRetry).mockImplementation(async (url: string) => {
@@ -182,6 +226,7 @@ describe("syncKinesisSupply", () => {
   });
 
   it("retries D1 overloads when upserting onchain supply", async () => {
+    vi.useFakeTimers();
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     vi.spyOn(Math, "random").mockReturnValue(0);
     vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(kauResponse()));
@@ -192,7 +237,9 @@ describe("syncKinesisSupply", () => {
       .mockResolvedValue({ meta: { changes: 1 } });
 
     const { db, bindFn } = makeDb(runFn);
-    const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
+    const syncing = syncKinesisSupply(db, new AbortController().signal);
+    await vi.runAllTimersAsync();
+    const result = await syncing;
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(1);
@@ -237,6 +284,7 @@ describe("syncKinesisSupply", () => {
   });
 
   it("does not record provider failure when D1 persistence fails after a successful fetch", async () => {
+    vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -245,7 +293,9 @@ describe("syncKinesisSupply", () => {
     const runFn = vi.fn().mockRejectedValue(new Error("D1 DB storage operation exceeded timeout"));
 
     const { db } = makeDb(runFn);
-    const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
+    const syncing = syncKinesisSupply(db, new AbortController().signal);
+    await vi.runAllTimersAsync();
+    const result = await syncing;
 
     expect(result.status).toBe("error");
     expect(result.itemCount).toBe(0);

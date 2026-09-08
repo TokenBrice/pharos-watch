@@ -62,7 +62,7 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          workspace-cache: "true"
+          workspace-artifact: publish
 
   validation:
     name: ${{ matrix.lane }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shardCount) || '' }}
@@ -84,7 +84,7 @@ jobs:
           install-deps: "false"
           install-playwright-firefox: ${{ matrix.lane == 'static' && needs.preflight.outputs.playwright_firefox_required || 'false' }}
           static-cache: ${{ matrix.lane == 'static' && 'true' || 'false' }}
-          workspace-cache: "true"
+          workspace-artifact: restore
       - name: Run manifest lane
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -120,7 +120,7 @@ jobs:
         with:
           bootstrap-generated: "false"
           install-deps: "false"
-          workspace-cache: "true"
+          workspace-artifact: restore
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: critical-coverage-*

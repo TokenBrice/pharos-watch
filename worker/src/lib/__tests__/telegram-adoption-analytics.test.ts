@@ -1,6 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { beforeEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   loadTelegramAdoptionWeeklyReport,
   loadTelegramFirstMutationP50,
@@ -9,7 +8,7 @@ import {
   recordTelegramMiniAppFirstMutation,
   refreshTelegramAdoptionRetention,
 } from "../telegram/adoption-analytics";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const NOW = Math.floor(Date.parse("2026-08-20T12:00:00Z") / 1_000);
 
@@ -21,16 +20,14 @@ function dayStart(offset: number): number {
   return Math.floor(Date.parse(`${day(offset)}T00:00:00Z`) / 1_000);
 }
 
-function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
+const fixtures = createLatestSchemaFixtureTracker();
 
 describe("Telegram adoption analytics", () => {
   let sqlite: DatabaseSync;
   let db: D1Database;
 
-  beforeEach(() => ({ sqlite, db } = createHarness()));
+  beforeEach(() => ({ sqlite, db } = fixtures.open()));
+  afterEach(fixtures.closeAll);
 
   it("claims a first follow once while keeping chat_id out of the rollup", async () => {
     sqlite.prepare(

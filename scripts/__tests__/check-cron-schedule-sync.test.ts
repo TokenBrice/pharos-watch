@@ -113,47 +113,50 @@ describe("check-cron-schedule-sync", () => {
     expect(report.onlyInSharedSchedules).toEqual(["2 * * * *"]);
   });
 
-  it("prints actionable diagnostics with source owners for slot and job drift", () => {
+  it.each([
+    ["missingPlanKeys", { cronSchedules: { slotA: "1 * * * *", missing: "1 * * * *" } }, "missing"],
+    ["extraPlanKeys", { scheduledSlotPlans: {
+      slotA: { jobChains: [["job-a"]] },
+      extra: { schedule: "1 * * * *", jobChains: [] },
+    } }, "extra"],
+    ["missingRuntimeJobs", { cronJobDefinitions: [{ job: "job-a" }, { job: "missing" }] }, "missing"],
+    ["unknownRuntimeJobs", { cronJobDefinitions: [] }, "job-a"],
+    ["missingBudgetJobs", { cronConnectionBudgetEntries: [{ job: "job-a" }, { job: "missing" }] }, "missing"],
+    ["unknownBudgetJobs", { cronConnectionBudgetEntries: [] }, "job-a"],
+  ] as const)("fails independently for %s", (field, mutation, offender) => {
+    const valid = {
+      cronSchedules: { slotA: "1 * * * *" },
+      scheduledSlotPlans: { slotA: { jobChains: [["job-a"]] } },
+      cronJobDefinitions: [{ job: "job-a" }],
+      cronConnectionBudgetEntries: [{ job: "job-a" }],
+      wranglerCronTriggers: ["1 * * * *"],
+      growthPolicy: { maxPhysicalTriggersBeforeRebalance: 1 },
+    };
+    expect(evaluateCronScheduleSync(valid).failed).toBe(false);
+    const report = evaluateCronScheduleSync({ ...valid, ...mutation });
+    expect(report[field]).toEqual([offender]);
+    expect(report.failed).toBe(true);
+    for (const other of [
+      "missingPlanKeys", "extraPlanKeys", "missingRuntimeJobs", "unknownRuntimeJobs",
+      "missingBudgetJobs", "unknownBudgetJobs", "onlyInWranglerSchedules",
+      "onlyInSharedSchedules", "onlyInSlotPlanSchedules", "missingSlotPlanSchedules",
+    ] as const) {
+      if (other !== field) expect(report[other]).toEqual([]);
+    }
+  });
+
+  it("prints the offending job identifier", () => {
     const errors: string[] = [];
     vi.spyOn(console, "error").mockImplementation((message?: unknown) => {
       errors.push(String(message));
     });
-
-    const report = evaluateCronScheduleSync({
-      cronSchedules: {
-        slotA: "1 * * * *",
-        slotB: "2 * * * *",
-      },
-      scheduledSlotPlans: {
-        slotA: {
-          jobChains: [["job-a", "unknown-runtime-job"]],
-          budgetOnlyJobs: ["unknown-budget-sidecar"],
-        },
-        extraSlot: {
-          schedule: "3 * * * *",
-          jobChains: [],
-        },
-      },
-      cronJobDefinitions: [{ job: "job-a" }, { job: "job-b" }],
-      cronConnectionBudgetEntries: [{ job: "job-a" }, { job: "job-b" }, { job: "budget-b" }],
-      wranglerCronTriggers: ["1 * * * *", "9 * * * *"],
-    });
-
-    printCronScheduleSyncReport(report);
-
-    const output = errors.join("\n");
-    expect(output).toContain("Cron schedule mismatch detected!");
-    expect(output).toContain("worker/wrangler.toml [triggers.crons]");
-    expect(output).toContain(
-      "shared/lib/cron-jobs.ts [CRON_SCHEDULES/CRON_TRIGGER_SCHEDULES]",
-    );
-    expect(output).toContain("Missing from worker/wrangler.toml [triggers.crons]");
-    expect(output).toContain('slotB: "2 * * * *"');
-    expect(output).toContain('extraSlot: "3 * * * *"');
-    expect(output).toContain("Missing key in shared/lib/scheduled-runner-registry.ts [SCHEDULED_SLOT_PLANS]");
-    expect(output).toContain("job-b");
-    expect(output).toContain("unknown-runtime-job");
-    expect(output).toContain("budget-b");
-    expect(output).toContain("unknown-budget-sidecar");
+    printCronScheduleSyncReport(evaluateCronScheduleSync({
+      cronSchedules: {},
+      scheduledSlotPlans: {},
+      cronJobDefinitions: [{ job: "missing-runtime-sentinel" }],
+      cronConnectionBudgetEntries: [],
+      wranglerCronTriggers: [],
+    }));
+    expect(errors.join("\n")).toContain("missing-runtime-sentinel");
   });
 });

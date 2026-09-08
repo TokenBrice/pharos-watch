@@ -4,6 +4,32 @@ import type { SafetySnapshot } from "../telegram-alert-snapshots";
 
 describe("telegram alert change builders", () => {
   describe("buildSafetyChanges", () => {
+    it.each(["same", "missing-current", "missing-previous"] as const)(
+      "emits a real grade transition with %s methodology",
+      (methodology) => {
+        expect(buildSafetyChanges(
+          { alpha: { grade: "B", score: 72, methodologyVersion: methodology === "missing-current" ? null : "9.0" } },
+          { alpha: { grade: "A", score: 85, methodologyVersion: methodology === "missing-previous" ? null : "9.0" } },
+          (id) => id === "alpha" ? "ALPHA" : "WRONG",
+        )).toEqual({
+          changes: [{ stablecoinId: "alpha", symbol: "ALPHA", oldGrade: "A", newGrade: "B", oldScore: 85, newScore: 72 }],
+          suppressedMethodologyChanges: 0,
+        });
+      },
+    );
+
+    it("does not turn score-only movement or a new coin into a grade transition", () => {
+      expect(buildSafetyChanges(
+        { alpha: { grade: "A", score: 89, methodologyVersion: null }, newcomer: { grade: "B", score: 70, methodologyVersion: null } },
+        { alpha: { grade: "A", score: 85, methodologyVersion: null } },
+        () => "ALPHA",
+      )).toEqual({ changes: [], suppressedMethodologyChanges: 0 });
+    });
+
+    it("emits nothing when the current snapshot is unavailable", () => {
+      expect(buildSafetyChanges(null, { alpha: { grade: "A", score: 85, methodologyVersion: null } }, () => "ALPHA"))
+        .toEqual({ changes: [], suppressedMethodologyChanges: 0 });
+    });
     it("suppresses methodology-version-only grade changes", () => {
       const current: SafetySnapshot = {
         "usdc-circle": {

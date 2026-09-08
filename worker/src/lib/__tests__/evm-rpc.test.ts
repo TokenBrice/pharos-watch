@@ -32,10 +32,16 @@ const {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
   fetchEvmCodeStatusAtBlock,
+  fetchEvmStorageAtBlock,
   fetchEvmUint256AtBlock,
+  fetchJsonRpcHexAtUrl,
   parseUint256Hex,
   resolveClosestBlockAtOrBeforeTimestamp,
 } = await import("../evm-rpc");
+
+function rpcResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), { status: 200 });
+}
 
 function word(value: bigint | number): string {
   const bigintValue = typeof value === "bigint" ? value : BigInt(value);
@@ -64,6 +70,7 @@ function encodeAggregate3Return(results: Array<{ success: boolean; returnData: s
 describe("evm-rpc helpers", () => {
   afterEach(() => {
     fetchWithRetryMock.mockReset();
+    vi.restoreAllMocks();
   });
 
   it("parses uint256 hex values safely", () => {
@@ -75,7 +82,7 @@ describe("evm-rpc helpers", () => {
   it("fetches uint256 values from extra RPC URLs", async () => {
     fetchWithRetryMock.mockImplementation(async (url: string) => {
       if (url === "https://rpc.example") {
-        return new Response(JSON.stringify({ result: "0x64" }), { status: 200 });
+        return rpcResponse({ result: "0x64" });
       }
       return null;
     });
@@ -91,7 +98,7 @@ describe("evm-rpc helpers", () => {
   it("falls back to a later RPC URL when the first one fails", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not found" }), { status: 404 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0xc8" }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: "0xc8" }));
 
     const result = await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
       extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
@@ -105,7 +112,7 @@ describe("evm-rpc helpers", () => {
   it("falls back when an RPC returns a null result", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     fetchWithRetryMock.mockResolvedValue(
-      new Response(JSON.stringify({ result: null }), { status: 200 }),
+      rpcResponse({ result: null }),
     );
 
     await expect(
@@ -201,13 +208,10 @@ describe("evm-rpc helpers", () => {
   it("returns JSON-RPC batch results in request order", async () => {
     const controller = new AbortController();
     fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify([
-          { jsonrpc: "2.0", id: 2, result: "second" },
-          { jsonrpc: "2.0", id: 1, result: "first" },
-        ]),
-        { status: 200 },
-      ),
+      rpcResponse([
+        { jsonrpc: "2.0", id: 2, result: "second" },
+        { jsonrpc: "2.0", id: 1, result: "first" },
+      ]),
     );
     const calls = [
       { method: "eth_blockNumber", params: [] },
@@ -239,19 +243,13 @@ describe("evm-rpc helpers", () => {
   it("fails closed when JSON-RPC batch responses are malformed or error", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([null, { jsonrpc: "2.0", id: 2, result: "second" }]),
-          { status: 200 },
-        ),
+        rpcResponse([null, { jsonrpc: "2.0", id: 2, result: "second" }]),
       )
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([
-            { jsonrpc: "2.0", id: 1, result: "first" },
-            { jsonrpc: "2.0", id: 2, error: { code: -32_000, message: "failure" } },
-          ]),
-          { status: 200 },
-        ),
+        rpcResponse([
+          { jsonrpc: "2.0", id: 1, result: "first" },
+          { jsonrpc: "2.0", id: 2, error: { code: -32_000, message: "failure" } },
+        ]),
       )
       .mockRejectedValueOnce(new Error("RPC unavailable"));
 
@@ -269,17 +267,17 @@ describe("evm-rpc helpers", () => {
         },
       ),
     ).resolves.toBeNull();
+    expect(fetchWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://rpc.malformed", "https://rpc.error-envelope", "https://rpc.unavailable",
+    ]);
   });
 
   it("preserves per-call errors in detailed JSON-RPC batches", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify([
-          { jsonrpc: "2.0", id: 2, error: { code: 3, message: "execution reverted" } },
-          { jsonrpc: "2.0", id: 1, result: "0x2a" },
-        ]),
-        { status: 200 },
-      ),
+      rpcResponse([
+        { jsonrpc: "2.0", id: 2, error: { code: 3, message: "execution reverted" } },
+        { jsonrpc: "2.0", id: 1, result: "0x2a" },
+      ]),
     );
 
     await expect(
@@ -294,49 +292,17 @@ describe("evm-rpc helpers", () => {
     });
   });
 
-  it("fails closed across malformed detailed JSON-RPC batch fallbacks", async () => {
-    fetchWithRetryMock
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([null, { jsonrpc: "2.0", id: 2, result: "second" }]),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([
-            { jsonrpc: "2.0", id: 1, result: "first" },
-            { jsonrpc: "2.0", id: 1, result: "duplicate" },
-          ]),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([
-            { jsonrpc: "2.0", id: 1, result: "first" },
-            { jsonrpc: "2.0", id: 2 },
-          ]),
-          { status: 200 },
-        ),
-      )
-      .mockRejectedValueOnce(new Error("RPC unavailable"));
-
-    await expect(
-      fetchEvmRpcBatchDetailed(
-        "rootstock",
-        [{ method: "eth_call", params: ["first"] }, { method: "eth_call", params: ["second"] }],
-        {
-          extraRpcUrls: [
-            "https://rpc.malformed",
-            "https://rpc.duplicate",
-            "https://rpc.missing-result",
-            "https://rpc.unavailable",
-          ],
-          maxRetries: 0,
-        },
-      ),
-    ).resolves.toBeNull();
+  it.each([
+    ["null entry", [null, { jsonrpc: "2.0", id: 2, result: "second" }]],
+    ["duplicate identity", [{ jsonrpc: "2.0", id: 1, result: "first" }, { jsonrpc: "2.0", id: 1, result: "duplicate" }]],
+    ["missing result", [{ jsonrpc: "2.0", id: 1, result: "first" }, { jsonrpc: "2.0", id: 2 }]],
+  ])("rejects a detailed batch with %s", async (_label, payload) => {
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse(payload));
+    await expect(fetchEvmRpcBatchDetailed(
+      "rootstock",
+      [{ method: "eth_call", params: ["first"] }, { method: "eth_call", params: ["second"] }],
+      { extraRpcUrls: ["https://rpc.example"], maxRetries: 0 },
+    )).resolves.toBeNull();
   });
 
   it("decodes Multicall3 aggregate3 partial failures from the canonical contract", async () => {
@@ -355,15 +321,12 @@ describe("evm-rpc helpers", () => {
     ];
     const successReturnData = `0x${word(42)}`;
     fetchWithRetryMock.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          result: encodeAggregate3Return([
-            { success: true, returnData: successReturnData },
-            { success: false, returnData: "0x" },
-          ]),
-        }),
-        { status: 200 },
-      ),
+      rpcResponse({
+        result: encodeAggregate3Return([
+          { success: true, returnData: successReturnData },
+          { success: false, returnData: "0x" },
+        ]),
+      }),
     );
     const controller = new AbortController();
 
@@ -417,23 +380,17 @@ describe("evm-rpc helpers", () => {
     const thirdReturnData = `0x${word(3)}`;
     fetchWithRetryMock
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            result: encodeAggregate3Return([
-              { success: true, returnData: firstReturnData },
-              { success: true, returnData: secondReturnData },
-            ]),
-          }),
-          { status: 200 },
-        ),
+        rpcResponse({
+          result: encodeAggregate3Return([
+            { success: true, returnData: firstReturnData },
+            { success: true, returnData: secondReturnData },
+          ]),
+        }),
       )
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            result: encodeAggregate3Return([{ success: true, returnData: thirdReturnData }]),
-          }),
-          { status: 200 },
-        ),
+        rpcResponse({
+          result: encodeAggregate3Return([{ success: true, returnData: thirdReturnData }]),
+        }),
       );
 
     const result = await fetchEvmMulticall3Aggregate3AtBlock("ethereum", calls, "latest", {
@@ -463,7 +420,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("fetches raw hex call results from RPC URLs", async () => {
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
 
     const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
       extraRpcUrls: ["https://rpc.example"],
@@ -474,8 +431,8 @@ describe("evm-rpc helpers", () => {
 
   it("falls back when first eth_call result is empty hex", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x" }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
+      .mockResolvedValueOnce(rpcResponse({ result: "0x2a" }));
 
     const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
       extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
@@ -486,7 +443,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("includes gas in eth_call request body when provided", async () => {
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
 
     await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
       extraRpcUrls: ["https://rpc.example"],
@@ -500,7 +457,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("normalizes gas as a JSON-RPC quantity before sending eth_call", async () => {
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
 
     await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
       extraRpcUrls: ["https://rpc.example"],
@@ -515,8 +472,8 @@ describe("evm-rpc helpers", () => {
 
   it("falls back when eth_call returns an invalid hex result", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: "not-hex" }))
+      .mockResolvedValueOnce(rpcResponse({ result: "0x2a" }));
 
     const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
       extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
@@ -528,7 +485,7 @@ describe("evm-rpc helpers", () => {
 
   it("returns null when eth_call returns only invalid results", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }));
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "not-hex" }));
 
     const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
       extraRpcUrls: ["https://rpc.example"],
@@ -541,9 +498,9 @@ describe("evm-rpc helpers", () => {
 
   it("distinguishes absent bytecode from an unavailable code request", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x" }), { status: 200 }))
+      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x6000" }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: "0x6000" }));
 
     await expect(fetchEvmCodeStatusAtBlock(undefined, "0xPool", "latest", {
       extraRpcUrls: ["https://rpc.example"],
@@ -556,10 +513,48 @@ describe("evm-rpc helpers", () => {
     })).resolves.toBe("0x6000");
   });
 
+  it("reads contract storage at a block and rejects empty storage results", async () => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: `0x${word(7)}` }));
+
+    await expect(
+      fetchEvmStorageAtBlock(undefined, "0xContract", "0x0", 1_234, {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBe(`0x${word(7)}`);
+
+    const body = JSON.parse(String(fetchWithRetryMock.mock.calls[0]?.[1]?.body)) as {
+      method: string;
+      params: unknown[];
+    };
+    expect(body.method).toBe("eth_getStorageAt");
+    expect(body.params).toEqual(["0xContract", "0x0", "0x4d2"]);
+
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x" }));
+    await expect(
+      fetchEvmStorageAtBlock(undefined, "0xContract", "0x0", "latest", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("reads a raw JSON-RPC hex result from a specific URL", async () => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0xdeadbeef" }));
+
+    await expect(
+      fetchJsonRpcHexAtUrl("https://rpc.example", "eth_chainId", []),
+    ).resolves.toBe("0xdeadbeef");
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x" }));
+    await expect(
+      fetchJsonRpcHexAtUrl("https://rpc.example", "eth_chainId", []),
+    ).resolves.toBeNull();
+  });
+
   it("fetches block numbers and timestamps through the shared RPC path", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x10" }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x64" } }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: "0x10" }))
+      .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x64" } }));
 
     const blockNumber = await fetchEvmBlockNumber("ethereum", { extraRpcUrls: ["https://rpc.example"] });
     const blockTimestamp = await fetchEvmBlockTimestamp("ethereum", 16, { extraRpcUrls: ["https://rpc.example"] });
@@ -571,28 +566,22 @@ describe("evm-rpc helpers", () => {
   it("requires a numbered block header with its canonical hash", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            result: {
-              number: "0x10",
-              timestamp: "0x64",
-              hash: `0x${"A".repeat(64)}`,
-            },
-          }),
-          { status: 200 },
-        ),
+        rpcResponse({
+          result: {
+            number: "0x10",
+            timestamp: "0x64",
+            hash: `0x${"A".repeat(64)}`,
+          },
+        }),
       )
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            result: {
-              number: "0x11",
-              timestamp: "0x64",
-              hash: `0x${"b".repeat(64)}`,
-            },
-          }),
-          { status: 200 },
-        ),
+        rpcResponse({
+          result: {
+            number: "0x11",
+            timestamp: "0x64",
+            hash: `0x${"b".repeat(64)}`,
+          },
+        }),
       );
 
     await expect(
@@ -609,16 +598,13 @@ describe("evm-rpc helpers", () => {
 
   it("resolves an explicitly finalized block header without relabeling latest state", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          result: {
-            number: "0x10",
-            timestamp: "0x64",
-            hash: `0x${"c".repeat(64)}`,
-          },
-        }),
-        { status: 200 },
-      ),
+      rpcResponse({
+        result: {
+          number: "0x10",
+          timestamp: "0x64",
+          hash: `0x${"c".repeat(64)}`,
+        },
+      }),
     );
 
     await expect(
@@ -640,16 +626,13 @@ describe("evm-rpc helpers", () => {
 
   it("resolves a canonical block header at the safe tag", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          result: {
-            number: "0x20",
-            timestamp: "0x80",
-            hash: `0x${"D".repeat(64)}`,
-          },
-        }),
-        { status: 200 },
-      ),
+      rpcResponse({
+        result: {
+          number: "0x20",
+          timestamp: "0x80",
+          hash: `0x${"D".repeat(64)}`,
+        },
+      }),
     );
 
     await expect(
@@ -669,16 +652,13 @@ describe("evm-rpc helpers", () => {
 
   it("rejects a malformed safe block header", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          result: {
-            number: "not-hex",
-            timestamp: "0x80",
-            hash: "0xmalformed",
-          },
-        }),
-        { status: 200 },
-      ),
+      rpcResponse({
+        result: {
+          number: "not-hex",
+          timestamp: "0x80",
+          hash: "0xmalformed",
+        },
+      }),
     );
 
     await expect(
@@ -690,15 +670,12 @@ describe("evm-rpc helpers", () => {
 
   it("rejects a safe block header with a missing required field", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          result: {
-            number: "0x20",
-            hash: `0x${"e".repeat(64)}`,
-          },
-        }),
-        { status: 200 },
-      ),
+      rpcResponse({
+        result: {
+          number: "0x20",
+          hash: `0x${"e".repeat(64)}`,
+        },
+      }),
     );
 
     await expect(
@@ -726,9 +703,9 @@ describe("evm-rpc helpers", () => {
 
   it("resolves the closest block at or before a target timestamp", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x3b6" } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x398" } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x38e" } }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x3b6" } }))
+      .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x398" } }))
+      .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x38e" } }));
 
     const block = await resolveClosestBlockAtOrBeforeTimestamp(
       "ethereum",
@@ -748,8 +725,8 @@ describe("evm-rpc helpers", () => {
 
   it("brackets a near-tip scoring clock without probing pruned deep history", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x3e3" } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x3de" } }), { status: 200 }));
+      .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x3e3" } }))
+      .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x3de" } }));
 
     const block = await resolveClosestBlockAtOrBeforeTimestamp(
       "sei",
@@ -772,9 +749,7 @@ describe("evm-rpc helpers", () => {
 
   it("fetches proxy hex results from Etherscan", async () => {
     fetchWithRetryMock.mockResolvedValue(
-      new Response(JSON.stringify({ result: "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }), {
-        status: 200,
-      }),
+      rpcResponse({ result: "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }),
     );
 
     const result = await fetchEtherscanProxyHex({
@@ -789,7 +764,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("converts Etherscan proxy hex results to uint256", async () => {
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "0x12c" }), { status: 200 }));
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x12c" }));
 
     const result = await fetchEtherscanUint256AtBlock(1, "0xToken", "0x18160ddd", "latest", {
       apiKey: "etherscan-key",
@@ -801,7 +776,7 @@ describe("evm-rpc helpers", () => {
   it("logs summary when all RPCs fail for fetchEvmCallHexAtBlock", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     fetchWithRetryMock.mockResolvedValue(
-      new Response(JSON.stringify({ error: { code: -32000, message: "nope" } }), { status: 200 }),
+      rpcResponse({ error: { code: -32000, message: "nope" } }),
     );
 
     const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
@@ -827,7 +802,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("returns null on malformed Etherscan payloads", async () => {
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }));
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "not-hex" }));
 
     const result = await fetchEtherscanProxyHex({
       evmChainId: 1,

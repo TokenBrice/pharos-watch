@@ -56,14 +56,6 @@ describe("useMintBurnFlows", () => {
     const { result } = renderHook(() => useMintBurnFlows());
 
     expect(result.current.data).toBe(currentPayload);
-    expect(result.current.data?.gauge).toMatchObject({ score: -34, intensitySemantics: "signed-v2" });
-    expect(result.current.data?.coins[0]).toMatchObject({
-      flowIntensity: -42,
-      pressureShiftScore: -42,
-      pressureShiftState: "worsening",
-      netFlowDirection24h: "burning",
-      has24hActivity: true,
-    });
   });
 
   it("rejects midpoint-v1 payloads at the live response schema boundary", () => {

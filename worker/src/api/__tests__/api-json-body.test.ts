@@ -28,6 +28,53 @@ function streamedRequest(chunks: string[], headers: Record<string, string> = {})
 }
 
 describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
+  it("formats schema failures and preserves response options", async () => {
+    const response = await parseRequestJsonWithSchema(
+      makeJsonBodyRequest("https://api.pharos.watch/api/test", '{"ok":"yes"}'),
+      schema,
+      {
+        formatSchemaError: (issues) => `Invalid fields: ${issues.map((issue) => issue.path.join(".")).join(", ")}`,
+        responseOptions: { noStore: true, headers: { "X-Request-Id": "schema-error" }, retryAfterSec: 7 },
+      },
+    ) as Response;
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Request-Id")).toBe("schema-error");
+    expect(response.headers.get("Retry-After")).toBe("7");
+    await expect(response.json()).resolves.toEqual({ error: "Invalid fields: ok" });
+  });
+
+  it("counts UTF-8 bytes at the inclusive cap across chunks", async () => {
+    const text = '{"ok":true,"pad":"é"}';
+    const maxBytes = encoder.encode(text).byteLength;
+    await expect(parseRequestJsonWithSchema(streamedRequest([text]), schema, { maxBytes }))
+      .resolves.toEqual({ ok: true });
+    const response = await parseRequestJsonWithSchema(streamedRequest([text, " "]), schema, { maxBytes }) as Response;
+    expect(response.status).toBe(413);
+  });
+
+  it("returns 400 for a failed body stream rather than overflow", async () => {
+    const request = new Request("https://api.pharos.watch/api/test", {
+      method: "POST",
+      body: new ReadableStream({ start(controller) { controller.error(new Error("read failed")); } }),
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const response = await parseRequestJsonWithSchema(request, schema) as Response;
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("allows an empty optional POST and rejects non-objects without consuming the original", async () => {
+    for (const text of ["", "null", "[]"]) {
+      const request = makeJsonBodyRequest("https://api.pharos.watch/api/test", text);
+      const result = await parseOptionalRequestJsonObject(request);
+      if (text === "") expect(result).toEqual({});
+      else expect((result as Response).status).toBe(400);
+      expect(request.bodyUsed).toBe(false);
+      await expect(request.text()).resolves.toBe(text);
+    }
+  });
+
   it("accepts valid JSON under the byte cap", async () => {
     await expect(
       parseRequestJsonWithSchema(
@@ -53,10 +100,14 @@ describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
   });
 
   it("rejects oversized declared Content-Length before reading", async () => {
+    const request = makeJsonBodyRequest("https://api.pharos.watch/api/test", JSON.stringify({ ok: true }), {
+      headers: { "Content-Length": "65" },
+    });
+    Object.defineProperty(request, "body", {
+      get() { throw new Error("Oversized declared body must not be accessed"); },
+    });
     const response = await parseRequestJsonWithSchema(
-      makeJsonBodyRequest("https://api.pharos.watch/api/test", JSON.stringify({ ok: true }), {
-        headers: { "Content-Length": "65" },
-      }),
+      request,
       schema,
       { maxBytes: 64 },
     );

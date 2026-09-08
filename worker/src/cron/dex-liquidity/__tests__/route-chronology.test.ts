@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
-import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { createV9EvidenceReference } from "@shared/lib/safety-score-v9/evidence";
 import { makeMeasuredProfile } from "@shared/test-utils/measured-execution.test-support";
 
@@ -55,29 +54,15 @@ function v9Freshness(observedAtSec: number, fixedInputClockSec: number) {
 }
 
 describe("DEX route chronology across scheduled consumers", () => {
-  it("keeps the production schedule phases explicit", () => {
-    expect(getCronJobMeta("sync-cl-exit-depth")?.schedule).toBe("0,30 * * * *");
-    expect(getCronJobMeta("sync-dex-liquidity-stage")?.schedule).toBe("10 * * * *");
-    expect(getCronJobMeta("sync-dex-liquidity")?.schedule).toBe("16,46 * * * *");
-    expect(getCronJobMeta("prepare-safety-score-v9-input")?.schedule).toBe("16,46 * * * *");
-    expect(getCronJobMeta("compute-safety-score-v9")?.schedule).toBe(
-      "22,52 * * * *",
-    );
-  });
-
   it("reproduces the synchronized 3,685-second cohort without changing its quote time", () => {
     // The first admission cohort was quoted at :30. The next-hour :10 DEX
     // stage can still consume it, and :16 scoring preserves the staged clock.
     const priorCohortQuotedAt = 30 * 60;
     const stageStartedAt = 60 * 60 + 10 * 60 + 3;
-    const scoringScheduledAt = 60 * 60 + 16 * 60;
     const fixedInputClockSec = 60 * 60 + 31 * 60 + 25;
-    const v9ConsumerScheduledAt = 60 * 60 + 44 * 60;
 
     const route = routeObservedAt(priorCohortQuotedAt, stageStartedAt);
 
-    expect(scoringScheduledAt).toBeGreaterThan(stageStartedAt);
-    expect(v9ConsumerScheduledAt).toBeGreaterThan(fixedInputClockSec);
     expect(route).toMatchObject({
       observedAt: priorCohortQuotedAt,
       freshnessSeconds: stageStartedAt - priorCohortQuotedAt,

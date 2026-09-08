@@ -183,7 +183,9 @@ describe("cache-passthrough: handleStablecoins", () => {
 
   it("ignores stale response-ready stablecoins body and keeps canonical schema validation", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const responseReadyValue = JSON.stringify({ peggedAssets: [] });
+    const responseReadyValue = encodeResponseReadyCacheValue(
+      JSON.stringify({ peggedAssets: [] }), RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
+    );
     const db = mockD1([
       {
         match: "cache",

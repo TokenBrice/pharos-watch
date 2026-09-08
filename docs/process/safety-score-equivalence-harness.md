@@ -334,7 +334,7 @@ jq -r .clockSec agents/v9-captures/selftest-input.json
 ```
 
 ```
-1786233600
+1788566400
 ```
 
 Two independent replays of that input at one commit:
@@ -343,9 +343,9 @@ Two independent replays of that input at one commit:
 # The fixture's clock is frozen while curation advances, so the future-review
 # gate must be waived here — for this self-test only, never for a production capture.
 npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-a.json --published-at 1786233600 --allow-future-reviews
+  --output agents/v9-captures/selftest-a.json --published-at 1788566400 --allow-future-reviews
 npm run safety-score-v9:replay -- --input agents/v9-captures/selftest-input.json \
-  --output agents/v9-captures/selftest-b.json --published-at 1786233600 --allow-future-reviews
+  --output agents/v9-captures/selftest-b.json --published-at 1788566400 --allow-future-reviews
 jq '.pipeline.candidate.cards | length' agents/v9-captures/selftest-a.json
 ```
 

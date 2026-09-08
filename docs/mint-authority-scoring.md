@@ -15,7 +15,7 @@ Where the signals went:
 | Modules/guards evidence | `semantic.control.mintMergedSignals.modulesOrGuardsAdjustment` |
 | Native route-family pricing | Excluded by design — `capSemantics` already prices it (anti-double-counting) |
 | Bridge capabilities | Route-scoped Bridge Risk controls in V9 Economic Control |
-| `authorityPosture` | Validated annotation only; `npm run safety-score-v9:mint-posture-queue` |
+| `authorityPosture` | Validated annotation only; `npx tsx scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts --replay <path> --output <path>` |
 
 See [report-cards.md](./report-cards.md) for the live methodology.
 
@@ -62,7 +62,7 @@ These are posture qualities before quorum, custody, module, incident-decay, and 
 | `unbounded-reconciliation-unknown` | 35 | Exposed |
 | `unbounded-or-compromised` | 25 | Exposed |
 
-The published band is derived from the posture, never from the graded quality, and the prudential and attestation-only gradings apply to `unbounded-reconciled` and to a continuously reconciled `concentrated-admin`; an 80 or a 70 therefore publishes under whichever of those two bands its posture carries.
+The published band is derived from the posture, never from the graded quality. The prudential and attestation-only gradings apply only where the review recorded a `continuous` or `periodic` reconciliation, to an `unbounded-reconciled` or a `concentrated-admin` posture; an `unbounded-reconciled` posture reached through prudential supervision alone - reconciliation `none`, `not-applicable`, or `unknown` - keeps the base 55 rung. An 80 or a 70 therefore publishes under whichever of those two bands its posture carries.
 
 The reconciliation vocabulary records what the reviewer established, not interchangeable empty states:
 

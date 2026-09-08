@@ -10,8 +10,8 @@ import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { handleDonorKeyClaim } from "../donor-key-claims";
 
@@ -363,6 +363,49 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(201);
     expect(countApiKeys()).toBe(1);
     expect((sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_audit_log").get() as { n: number }).n).toBe(0);
+    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
+  });
+
+  it("rolls back an issuance outage and allows a clean retry", async () => {
+    let failed = false;
+    db = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (sql.includes("INSERT INTO api_key_donor_claims")) {
+          failed = true;
+          throw new Error("injected issuance failure");
+        }
+      },
+    });
+    expect((await claim(claimMessage(donorAccount))).status).toBe(503);
+    expect(failed).toBe(true);
+    expect(countApiKeys()).toBe(0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get()).toEqual({ n: 0 });
+    db = createSqliteD1(sqlite);
+    const response = await claim(claimMessage(donorAccount));
+    expect(response.status).toBe(201);
+    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
+  });
+
+  it("preserves the issued token when audit insertion fails", async () => {
+    let failed = false;
+    db = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (sql.includes("INSERT INTO api_key_audit_log")) {
+          failed = true;
+          throw new Error("injected audit failure");
+        }
+      },
+    });
+    const response = await claim(claimMessage(donorAccount));
+    expect(response.status).toBe(201);
+    expect(failed).toBe(true);
+    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
+    expect(countApiKeys()).toBe(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get()).toEqual({ n: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_audit_log").get()).toEqual({ n: 0 });
   });
 
   it("answers 503 when the rate limit binding throws", async () => {
@@ -468,11 +511,26 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects a body over the 4 KB cap", async () => {
-    const response = await claim(`${claimMessage(donorAccount)}\n${"x".repeat(5000)}`);
-
-    expect([400, 413]).toContain(response.status);
+  it.each(["declared", "streamed"])("rejects a %s body over the 4 KB cap before eligibility or issuance", async (mode) => {
+    const message = claimMessage(donorAccount);
+    const body = JSON.stringify({ message, signature: await donorAccount.signMessage({ message }), padding: "x".repeat(5000) });
+    const bytes = new TextEncoder().encode(body);
+    const request = new Request(CLAIM_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(mode === "declared" ? { "Content-Length": String(bytes.length) } : {}) },
+      body: mode === "declared" ? body : new ReadableStream({
+        start(controller) {
+          controller.enqueue(bytes.slice(0, 3000));
+          controller.enqueue(bytes.slice(3000));
+          controller.close();
+        },
+      }),
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const response = await handleDonorKeyClaim(db, request, { rateLimiter: allowLimiter, pepper: PEPPER }, NOW_SEC);
+    expect(response.status).toBe(413);
     expect(countApiKeys()).toBe(0);
+    expect(loadActiveSafetyScoreSource).not.toHaveBeenCalled();
   });
 
   it("answers 429 when the IP rate limiter denies the claim", async () => {

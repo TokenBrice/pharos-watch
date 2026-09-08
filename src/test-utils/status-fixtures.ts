@@ -6,6 +6,7 @@ import type {
   StatusSectionKey,
 } from "@shared/types";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 
 export const STATUS_FIXTURE_NOW_SECONDS = 1_700_000_000;
 export const STATUS_FIXTURE_NOW_MS = STATUS_FIXTURE_NOW_SECONDS * 1_000;
@@ -264,36 +265,7 @@ export function makeScheduledSlotEventMarkerQueryFailedStatusResponse(
   });
 }
 
-export function makeHealthyHealthResponse(): HealthResponse {
-  return {
-    status: "healthy",
-    timestamp: 1_700_000_000,
-    warnings: [],
-    caches: {},
-    blacklist: {
-      totalEvents: 0,
-      missingAmounts: 0,
-      recentMissingAmounts: 0,
-      recentWindowSec: 86_400,
-      missingRatio: 0,
-    },
-    mintBurn: {
-      totalEvents: 0,
-      latestEventTs: null,
-      latestHourlyTs: null,
-      freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
-      sync: {
-        lastSuccessfulSyncAt: null,
-        freshnessStatus: "fresh",
-        warning: null,
-        criticalLaneHealthy: true,
-      },
-    },
-    circuits: {},
-  };
-}
+export { makeHealthyHealthResponse };
 
 type ApiRequestAttributionResponseOverrides = {
   generatedAt?: number;

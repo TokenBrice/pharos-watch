@@ -215,10 +215,14 @@ describe("frontend API query descriptors", () => {
       history: [],
     });
 
-    expect(parsed).toEqual({
-      success: false,
-      error: { issues: [{ path: ["current", "components", "severity"], message: "Expected finite number" }] },
-    });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    // The issue path drives the caller's fallback; the wording is not a contract.
+    expect(parsed.error.issues.map((issue) => issue.path)).toContainEqual([
+      "current",
+      "components",
+      "severity",
+    ]);
   });
 
   it("keeps the lightweight PSI contract free of full-schema loaders", () => {

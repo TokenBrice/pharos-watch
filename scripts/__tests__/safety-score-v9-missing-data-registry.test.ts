@@ -5,7 +5,6 @@ import {
   likelyTouchpoints,
   mechanismResolutionMode,
   scoreProjectionResolutionMode,
-  workTypeDefinition,
   type V9MissingDataWorkType,
 } from "../maintenance/generate-safety-score-v9-missing-data-registry";
 
@@ -100,13 +99,6 @@ describe("Safety Score v9 missing-data work routing", () => {
   );
 
   it("directs mechanism review work to the overlay under the ratified evidence standard", () => {
-    const definition = workTypeDefinition("MECHANISM_REVIEW");
-    expect(definition.instructions).toContain("Fiat-cash, T-bill, and commodity-claim components");
-    expect(definition.instructions).toContain("ratified strict evidence standard");
-    expect(definition.instructions).toContain("unavailable disposition that remains bounded and non-scoring");
-    expect(definition.instructions).not.toContain("methodology capability");
-    expect(definition.completionCriteria).toContain("retains the bounded-unknown gap without changing score or grade");
-
     expect(
       likelyTouchpoints(
         "MECHANISM_REVIEW",

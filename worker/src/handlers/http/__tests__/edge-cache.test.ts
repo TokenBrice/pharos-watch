@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createEdgeCacheContext, writeEdgeCache } from "../edge-cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "../edge-cache";
 
 function makeContext() {
   return {
@@ -60,11 +60,46 @@ describe("createEdgeCacheContext", () => {
 
 describe("writeEdgeCache", () => {
   const put = vi.fn<(request: Request, response: Response) => Promise<void>>(async () => undefined);
+  const match = vi.fn();
 
   beforeEach(() => {
     vi.restoreAllMocks();
     put.mockReset();
-    vi.stubGlobal("caches", { default: { put } });
+    match.mockReset();
+    vi.stubGlobal("caches", { default: { put, match } });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("does not read or write excluded requests", async () => {
+    const context = { ...makeContext(), skipCache: true };
+    const ctx = makeExecutionContext();
+    await expect(readEdgeCache(context)).resolves.toBeNull();
+    writeEdgeCache(context, new Response("ok"), ctx);
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a miss and returns the matching stored response on a hit", async () => {
+    const context = makeContext();
+    match.mockResolvedValueOnce(undefined);
+    await expect(readEdgeCache(context)).resolves.toBeNull();
+    const cached = new Response("cached");
+    match.mockImplementationOnce(async (key: Request) => key.url === context.cacheKey.url ? cached : undefined);
+    await expect(readEdgeCache(context)).resolves.toBe(cached);
+  });
+
+  it("never stores error responses even with public cache control", () => {
+    const ctx = makeExecutionContext();
+    writeEdgeCache(makeContext(), new Response("unavailable", {
+      status: 503, headers: { "Cache-Control": "public, max-age=60" },
+    }), ctx);
+    expect(put).not.toHaveBeenCalled();
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 
   it("stores cacheable successful responses", async () => {
@@ -78,6 +113,8 @@ describe("writeEdgeCache", () => {
     await Promise.all(ctx.waitUntil.mock.calls.map(([promise]) => promise));
 
     expect(put).toHaveBeenCalledOnce();
+    await expect(put.mock.calls[0]![1].text()).resolves.toBe("{}");
+    await expect(response.text()).resolves.toBe("{}");
   });
 
   it("stores cacheable responses without dropping Vary metadata", async () => {

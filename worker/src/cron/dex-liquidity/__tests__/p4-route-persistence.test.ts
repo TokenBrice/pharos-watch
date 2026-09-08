@@ -95,7 +95,7 @@ describe("P4 route observation persistence envelope", () => {
     });
   });
 
-  it("preserves a still-fresh route set for one asset after unconfirmed capacity churn", () => {
+  function routeHoldFixture() {
     const observation = (
       routeId: string,
       executableUsd: number,
@@ -156,6 +156,11 @@ describe("P4 route observation persistence envelope", () => {
       exitRouteObservations: [previousObservation],
       exitRouteObservationCoverage: coverage,
     });
+    return { observation, coverage, nowSec, previousObservation, candidate, previousRaw };
+  }
+
+  it("preserves a still-fresh route set for one asset after unconfirmed capacity churn", () => {
+    const { candidate, previousRaw, nowSec, previousObservation, coverage } = routeHoldFixture();
 
     expect(
       selectStillFreshDexRouteSetHold(candidate, previousRaw, nowSec),
@@ -177,5 +182,65 @@ describe("P4 route observation persistence envelope", () => {
         nowSec,
       ),
     ).toBeNull();
+  });
+
+  it("does not retain falling capacity when route identities are unchanged", () => {
+    const { candidate, previousObservation, previousRaw, nowSec } = routeHoldFixture();
+    candidate.exitRouteObservations[0].routeId = previousObservation.routeId;
+    expect(selectStillFreshDexRouteSetHold(candidate, previousRaw, nowSec)).toBeNull();
+  });
+
+  it("fails closed for unavailable or invalid previous sets and empty candidates", () => {
+    const { candidate, previousRaw, nowSec } = routeHoldFixture();
+    for (const raw of [null, "{", "[]", JSON.stringify({
+      ...JSON.parse(previousRaw), exitRouteObservations: [{ routeId: "invalid" }],
+    }), JSON.stringify({ ...JSON.parse(previousRaw), exitRouteObservations: [] })]) {
+      expect(selectStillFreshDexRouteSetHold(candidate, raw, nowSec)).toBeNull();
+    }
+    candidate.exitRouteObservations = [];
+    expect(selectStillFreshDexRouteSetHold(candidate, previousRaw, nowSec)).toBeNull();
+  });
+
+  it("admits the exact freshness boundary but rejects expired or future observations", () => {
+    const { candidate, previousObservation, coverage, nowSec } = routeHoldFixture();
+    for (const [age, held] of [[3_600, true], [3_601, false], [-1, false]] as const) {
+      const raw = JSON.stringify({
+        exitRouteObservations: [{ ...previousObservation, observedAt: nowSec - age }],
+        exitRouteObservationCoverage: coverage,
+      });
+      expect(selectStillFreshDexRouteSetHold(candidate, raw, nowSec) !== null).toBe(held);
+    }
+  });
+
+  it("requires minimum prior capacity and includes exactly half candidate capacity", () => {
+    const { observation, candidate, coverage, nowSec } = routeHoldFixture();
+    for (const [prior, next, held] of [
+      [99_999, 1_000, false], [100_000, 50_000, true], [100_000, 50_001, false],
+    ] as const) {
+      const raw = JSON.stringify({
+        exitRouteObservations: [observation("old", prior, nowSec)],
+        exitRouteObservationCoverage: coverage,
+      });
+      candidate.exitRouteObservations = [observation("new", next, nowSec)];
+      expect(selectStillFreshDexRouteSetHold(candidate, raw, nowSec) !== null).toBe(held);
+    }
+  });
+
+  it("uses only the 25M/200bps curve point rather than headline capacity", () => {
+    const { candidate, previousObservation, coverage, nowSec } = routeHoldFixture();
+    previousObservation.executableUsd = 1;
+    candidate.exitRouteObservations[0].executableUsd = 25_000_000;
+    const raw = () => JSON.stringify({
+      exitRouteObservations: [previousObservation],
+      exitRouteObservationCoverage: coverage,
+    });
+    expect(selectStillFreshDexRouteSetHold(candidate, raw(), nowSec)).toMatchObject({
+      previousBestCapacityUsd: 24_600_000, candidateBestCapacityUsd: 1_000,
+    });
+    previousObservation.capacityCurve[0].maxCostBps = 100;
+    expect(selectStillFreshDexRouteSetHold(candidate, raw(), nowSec)).toBeNull();
+    previousObservation.capacityCurve[0].maxCostBps = 200;
+    previousObservation.capacityCurve[0].requestedNotionalUsd = 1_000_000;
+    expect(selectStillFreshDexRouteSetHold(candidate, raw(), nowSec)).toBeNull();
   });
 });

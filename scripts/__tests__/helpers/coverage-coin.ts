@@ -17,7 +17,7 @@ export function makeCoverageCoin(
     ...input,
     name: input.name ?? input.id,
     symbol: input.symbol ?? input.id.toUpperCase(),
-    flags: input.flags ?? DEFAULT_FLAGS,
+    flags: { ...(input.flags ?? DEFAULT_FLAGS) },
     collateral: input.collateral ?? "Fixture collateral",
     pegMechanism: input.pegMechanism ?? "Fixture mechanism",
     ...(options.defaultLinks

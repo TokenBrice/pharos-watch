@@ -5,6 +5,7 @@ import {
   buildWorkerRuntimeRegistryOutput,
   projectCoin,
   projectDetailCoin,
+  projectListCoin,
   projectBlacklistStatus,
   projectGeniusProfile,
   projectMintAuthoritySummary,
@@ -213,6 +214,42 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("Daily cap");
     expect(JSON.stringify(projected)).not.toContain("0x0000000000000000000000000000000000000001");
     expect(JSON.stringify(projected)).not.toContain("0x0000000000000000000000000000000000000002");
+  });
+
+  it.each([
+    { mintPath: "wrapped-or-variant-inherited", status: "inherited-authority", inheritedFrom: "parent" },
+    { mintPath: "bridge-or-oft-synthetic", status: "bridge-mint", inheritedFrom: undefined },
+    { mintPath: "issuer-direct-mint", status: "multisig-mint", inheritedFrom: undefined },
+  ])("publishes compact $status ahead of competing mint controls", ({ mintPath, status, inheritedFrom }) => {
+    const projected = projectListCoin({
+      id: "compact-mint",
+      mintAuthority: {
+        mintPath, authorityPosture: "bounded-admin", confidence: "verified", inheritedFrom,
+        review: { evidence: "Private evidence" },
+        controls: [{ authorityType: "safe", directMintAbility: "direct", threshold: 2, signerCount: 3 }],
+      },
+    }, readCanonicalClientFields(), "stablecoin") as StablecoinClientListMeta;
+    expect(projected.mintAuthorityStatus).toBe(status);
+    expect(projected.mintAuthoritySummary).toEqual({
+      mintPath, authorityPosture: "bounded-admin", confidence: "verified",
+      ...(inheritedFrom ? { inheritedFrom } : {}),
+    });
+    expect(projected).not.toHaveProperty("mintAuthority");
+  });
+
+  it.each([
+    { archetypeOverride: false, expected: "fiat-cash" },
+    { archetypeOverride: true, expected: "synthetic-delta-neutral" },
+  ])("publishes effective variant archetype with override=$archetypeOverride", ({ archetypeOverride, expected }) => {
+    const parent = { id: "parent", mechanismArchetype: "fiat-cash" };
+    const child = {
+      id: "child", variantOf: "parent", variantKind: "savings-passthrough",
+      ...(archetypeOverride ? { mechanismArchetype: "synthetic-delta-neutral" } : {}), archetypeOverride,
+    };
+    const projected = projectListCoin(child, readCanonicalClientFields(), "stablecoin-variant",
+      new Map<string, typeof parent | typeof child>([[parent.id, parent], [child.id, child]])) as StablecoinClientListMeta;
+    expect(projected.mechanismArchetype).toBe(expected);
+    expect(projected.variantOf).toBe("parent");
   });
 
   it("projects only the reviewed blacklist status and excludes review evidence", () => {

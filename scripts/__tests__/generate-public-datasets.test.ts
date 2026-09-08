@@ -3,10 +3,16 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
+import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
+import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
+
+beforeEach(() => {
+  vi.spyOn(depegSnapshot, "readDepegEventSnapshot").mockImplementation(() => [makeEvent(null), makeCoverageSentinel()]);
+});
 
 const execFileAsync = promisify(execFile);
 const tempRoots: string[] = [];
@@ -15,6 +21,7 @@ afterEach(async () => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
   await Promise.all(tempRoots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
 });
 
@@ -76,6 +83,7 @@ function makeEnvelope(snapshotDate: string) {
 function makeEvent(pendingReason: string | null) {
   return {
     id: 42,
+    slug: "usdc-circle-2026-05-14",
     stablecoinId: "usdc-circle",
     symbol: "USDC",
     pegType: "USD",
@@ -95,11 +103,11 @@ function makeEvent(pendingReason: string | null) {
   };
 }
 
-function makeCoverageSentinel(snapshotDate: string) {
+function makeCoverageSentinel() {
   return {
     ...makeEvent(null),
     id: 43,
-    startedAt: testExports.cutoffSecForSnapshotDate(snapshotDate) - 60,
+    startedAt: Date.parse("2026-02-13T23:59:00Z") / 1000,
   };
 }
 
@@ -119,7 +127,7 @@ describe("generate-public-datasets", () => {
   });
 
   it("fails closed when no API source is configured outside explicit stub mode", async () => {
-    const { stderr } = await execFileAsync(
+    await expect(execFileAsync(
       process.execPath,
       ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts"],
       {
@@ -132,19 +140,21 @@ describe("generate-public-datasets", () => {
           SMOKE_API_BASE: "",
         },
       },
-    ).catch((error: unknown) => {
-      const err = error as { stderr?: string };
-      return { stderr: err.stderr ?? "" };
+    )).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("No public dataset API source configured"),
     });
-
-    expect(stderr).toContain("No public dataset API source configured");
   });
 
   it("preserves checked-in mirrors during release when the configured live source is blocked", async () => {
+    const root = await makeRoot();
+    await copyDatasetWorkspace(root);
+    const before = await datasetBytes(root);
     const { stderr } = await execFileAsync(
       process.execPath,
       ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts"],
       {
+        cwd: root,
         env: {
           ...process.env,
           API_BASE_URL: "",
@@ -160,6 +170,7 @@ describe("generate-public-datasets", () => {
     );
 
     expect(stderr).toContain("preserving checked-in public dataset mirrors");
+    expect(await datasetBytes(root)).toEqual(before);
   });
 
   it("uses today's immutable snapshot when it is already sealed", async () => {
@@ -167,10 +178,6 @@ describe("generate-public-datasets", () => {
     vi.setSystemTime(new Date("2026-05-16T12:30:00.000Z"));
     mockFetchStrict([
       { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
-      {
-        match: "https://api.example.test/api/depeg-events?limit=1000",
-        body: { events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-16")] },
-      },
     ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
@@ -274,7 +281,7 @@ describe("generate-public-datasets", () => {
       expect.anything(),
     );
     expect(inputs.effectiveSnapshotDate).toBe("2026-05-16");
-    expect(inputs.depegEvents.length).toBeGreaterThan(1000);
+    expect(inputs.depegEvents.map((event) => event.id)).toEqual([42, 43]);
   });
 
   it("preserves snapshot report-card safety scores without reusing them as peg scores", () => {
@@ -290,6 +297,32 @@ describe("generate-public-datasets", () => {
     expect(scoreRows[0]?.pegScore).toBeNull();
     expect(scoreRows[0]?.safetyScore).toBe(88);
     expect(scoreRows[0]?.safetyGrade).toBe("B");
+  });
+
+  it("projects current cards and keeps zero ahead of missing scores without unmatched joins", () => {
+    const base = makeEnvelope("2026-05-16");
+    const envelope = {
+      ...base,
+      stablecoins: ["missing", "zero", "high"].map((id) => ({ ...base.stablecoins[0]!, id })),
+      reportCards: { cards: [{ id: "zero", score: 0, grade: "F" }, { id: "high", score: 88, grade: "B" }] },
+      dews: [{ stablecoinId: "high", score: 4, band: "normal" }, { stablecoinId: "unmatched", score: 99, band: "danger" }],
+      liquidity: [{ stablecoinId: "zero", liquidityScore: 0, coverageClass: "thin" }],
+    };
+    const rows = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((spec) => spec.topic === "scores-latest")?.rows;
+    expect(rows).toEqual([
+      { stablecoinId: "high", symbol: "USDC", pegScore: null, safetyScore: 88, safetyGrade: "B", dewsScore: 4, dewsBand: "normal", liquidityScore: null, coverageClass: null },
+      { stablecoinId: "zero", symbol: "USDC", pegScore: null, safetyScore: 0, safetyGrade: "F", dewsScore: null, dewsBand: null, liquidityScore: 0, coverageClass: "thin" },
+      { stablecoinId: "missing", symbol: "USDC", pegScore: null, safetyScore: null, safetyGrade: null, dewsScore: null, dewsBand: null, liquidityScore: null, coverageClass: null },
+    ]);
+  });
+
+  it("prefers explicit safety scores over legacy score and overall aliases", () => {
+    const envelope = {
+      ...makeEnvelope("2026-05-16"),
+      reportCards: { scores: { "usdc-circle": { safetyScore: 0, score: 88, overall: 99, safetyGrade: "F", grade: "A" } } },
+    };
+    expect(testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((spec) => spec.topic === "scores-latest")?.rows)
+      .toEqual([expect.objectContaining({ stablecoinId: "usdc-circle", safetyScore: 0, safetyGrade: "F" })]);
   });
 
   it("projects peg metadata and methodology versions from the snapshot envelope", () => {
@@ -337,6 +370,7 @@ describe("generate-public-datasets", () => {
   });
 
   it("loads depeg events from the full local shard corpus before projecting the rolling window", async () => {
+    vi.mocked(depegSnapshot.readDepegEventSnapshot).mockRestore();
     const fetchMock = mockFetchStrict([
       { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
     ]);
@@ -349,17 +383,6 @@ describe("generate-public-datasets", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it("does not make a depeg API request during local-shard loading", async () => {
-    const fetchMock = mockFetchStrict([
-      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
-    ]);
-
-    const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
-    const rows = testExports.projectDepegHistory(inputs.depegEvents, inputs.effectiveSnapshotDate);
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(rows.length).toBeGreaterThan(0);
-  });
 
   it("does not drop confirmed depeg events that retain pendingReason provenance", () => {
     const rows = testExports.projectDepegHistory([makeEvent("low-confidence")], "2026-05-16");
@@ -381,37 +404,17 @@ describe("generate-public-datasets", () => {
   it("uses source coverage instead of a volatile fixed floor for rolling depeg history", () => {
     expect(() => testExports.validateTopicRowFloor("depeg-history", [makeEvent(null)])).not.toThrow();
     expect(() =>
-      testExports.validateDepegHistoryCoverage([makeEvent(null), makeCoverageSentinel("2026-05-16")], "2026-05-16"),
+      testExports.validateDepegHistoryCoverage([makeEvent(null), makeCoverageSentinel()], "2026-05-16"),
     ).not.toThrow();
   });
 
-  it("accepts source coverage exactly at the rolling cutoff", () => {
-    const snapshotDate = "2026-05-16";
-    const eventAtCutoff = {
-      ...makeEvent(null),
-      startedAt: testExports.cutoffSecForSnapshotDate(snapshotDate),
-    };
-
-    expect(() => testExports.validateDepegHistoryCoverage([eventAtCutoff], snapshotDate)).not.toThrow();
-    expect(testExports.projectDepegHistory([eventAtCutoff], snapshotDate)).toHaveLength(1);
-  });
-
-  it("excludes depeg events that start after the UTC snapshot day", () => {
-    const snapshotDate = "2026-05-16";
-    const eventAtDayEnd = {
-      ...makeEvent(null),
-      id: 44,
-      startedAt: testExports.snapshotEndSecForDate(snapshotDate),
-    };
-    const eventAfterSnapshot = {
-      ...makeEvent(null),
-      id: 45,
-      startedAt: testExports.snapshotEndSecForDate(snapshotDate) + 1,
-    };
-
-    expect(
-      testExports.projectDepegHistory([eventAtDayEnd, eventAfterSnapshot], snapshotDate).map((row) => row.id),
-    ).toEqual([44]);
+  it("includes only the independently specified 90-day UTC window boundaries", () => {
+    const times = ["2026-02-14T23:59:59Z", "2026-02-15T00:00:00Z", "2026-02-15T00:00:01Z",
+      "2026-05-16T23:59:58Z", "2026-05-16T23:59:59Z", "2026-05-17T00:00:00Z"];
+    const events = times.map((time, id) => ({ ...makeEvent(null), id, startedAt: Date.parse(time) / 1000 }));
+    expect(testExports.projectDepegHistory(events, "2026-05-16").map((row) => row.id)).toEqual([4, 3, 2, 1]);
+    expect(() => testExports.validateDepegHistoryCoverage([events[1]!], "2026-05-16")).not.toThrow();
+    expect(() => testExports.validateDepegHistoryCoverage([events[2]!], "2026-05-16")).toThrow("does not cover");
   });
 
   it("rejects empty live-backed dataset rows and checked artifacts", async () => {

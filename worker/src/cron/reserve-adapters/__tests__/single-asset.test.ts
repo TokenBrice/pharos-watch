@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
@@ -21,7 +21,9 @@ import {
   probeOptionalRedemptionRateBps,
 } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
+const unexpectedRequests: string[] = [];
+afterEach(() => expect(unexpectedRequests.splice(0)).toEqual([]));
 
 function makeSingleAssetConfig(
   overrides: {
@@ -45,6 +47,7 @@ function makeCoin(contracts?: Array<{ chain: string; address: string }>): Stable
 }
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 
@@ -260,29 +263,15 @@ describe("fetchSingleAssetReserves", () => {
     });
   });
 
-  it.each([
-    {
-      name: "on-chain probe fails",
-      error: "single-asset could not find a ethereum contract for test-coin",
-      coin: makeCoin([{ chain: "arbitrum", address: "0xABCD" }]),
-      params: { label: "Collateral", risk: "medium" },
-      expected: "could not find a ethereum contract",
-    },
-    {
-      name: "on-chain probe returns zero supply",
-      error: "single-asset totalSupply probe failed for test-coin",
-      coin: makeCoin([{ chain: "ethereum", address: "0x1234" }]),
-      params: { label: "ETH collateral", risk: "low" },
-      expected: "totalSupply probe failed",
-    },
-  ])("throws when $name", async ({ error, coin, params, expected }) => {
-    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(new Error(error));
+  it("propagates a failed on-chain supply probe", async () => {
+    const error = new Error("RPC unavailable");
+    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(error);
     const config = makeSingleAssetConfig({
       primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      params,
+      params: { label: "Collateral", risk: "medium" },
     });
 
-    await expect(fetchSingleAssetReserves(coin, config, signal)).rejects.toThrow(expected);
+    await expect(fetchSingleAssetReserves(makeCoin(), config, signal)).rejects.toBe(error);
   });
 });
 
@@ -344,34 +333,46 @@ function mockCapacityCallers(overrides: {
   dailyUsed?: bigint | null;
   feeBps?: bigint | null;
 } = {}): void {
-  vi.mocked(makeOnchainCallers).mockReturnValue({
+  vi.mocked(makeOnchainCallers).mockImplementation((input) => {
+    if (input.chain !== "ethereum") {
+      unexpectedRequests.push(input.chain);
+      throw new Error(`unexpected chain ${input.chain}`);
+    }
+    return {
     raw: vi.fn(async (contract: string, data: string) => {
-      if (data === STABLECOIN_SELECTOR) {
+      if (contract.toLowerCase() === REDEEMER.toLowerCase() && data === STABLECOIN_SELECTOR) {
         return overrides.stablecoin === null ? null : addressWord(overrides.stablecoin ?? USDC);
       }
-      if (data === AID_SELECTOR) return overrides.aid === null ? null : addressWord(overrides.aid ?? AID);
-      if (data === IMPLEMENTATION_SELECTOR) {
+      if (contract.toLowerCase() === REDEEMER.toLowerCase() && data === AID_SELECTOR) return overrides.aid === null ? null : addressWord(overrides.aid ?? AID);
+      if (contract.toLowerCase() === BEACON.toLowerCase() && data === IMPLEMENTATION_SELECTOR) {
         return overrides.implementation === null ? null : addressWord(overrides.implementation ?? IMPLEMENTATION);
       }
+      unexpectedRequests.push(`${contract} ${data}`);
       throw new Error(`unexpected raw call ${contract} ${data}`);
     }),
     uint256: vi.fn(async (contract: string, data: string) => {
-      if (data.startsWith("0x70a08231")) {
+      if (contract.toLowerCase() === USDC.toLowerCase() && data === `0x70a08231${addressWord(REDEEMER).slice(2)}`) {
         return overrides.usdcBalance === undefined ? LIVE_USDC_BALANCE : overrides.usdcBalance;
       }
-      if (data === LIMIT_SELECTOR) return overrides.dailyLimit === undefined ? LIVE_DAILY_LIMIT : overrides.dailyLimit;
-      if (data.startsWith(USED_SELECTOR)) return overrides.dailyUsed === undefined ? 0n : overrides.dailyUsed;
-      if (data === FEE_SELECTOR) return overrides.feeBps === undefined ? 10n : overrides.feeBps;
+      if (contract.toLowerCase() === REDEEMER.toLowerCase()) {
+        if (data === LIMIT_SELECTOR) return overrides.dailyLimit === undefined ? LIVE_DAILY_LIMIT : overrides.dailyLimit;
+        if (data === `${USED_SELECTOR}${(20_677n).toString(16).padStart(64, "0")}`) return overrides.dailyUsed === undefined ? 0n : overrides.dailyUsed;
+        if (data === FEE_SELECTOR) return overrides.feeBps === undefined ? 10n : overrides.feeBps;
+      }
+      unexpectedRequests.push(`${contract} ${data}`);
       throw new Error(`unexpected uint256 call ${contract} ${data}`);
     }),
+    };
   });
 }
 
 describe("fetchSingleAssetReserves redemption capacity probe", () => {
   beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(20_677 * 86_400_000 + 12_345);
     vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1n);
     vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
   });
+  afterEach(() => vi.restoreAllMocks());
 
   it("emits live-direct-bounded capacity when every identity gate and read passes", async () => {
     mockCapacityCallers();

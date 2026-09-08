@@ -81,6 +81,10 @@ function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } =
 describe("completeMintBurnRun", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(setMintBurnRunState).mockResolvedValue(true);
+    vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
+    vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
+    vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
   });
 
   it("keeps apiErrors separate from validationFailures metadata", async () => {
@@ -188,5 +192,46 @@ describe("completeMintBurnRun", () => {
     expect(result.metadata.configBreakdownSummary).toMatchObject({ total: 127, attempted: 94, skipped: 33 });
     expect(result.metadata.configSamples).toHaveLength(12);
     expect(result.metadata.runDrilldownCacheKey).toBe("mint-burn:run-detail:sync-mint-burn");
+  });
+
+  it("escalates critical failures and resets the streak on recovery", async () => {
+    const input = buildRunInput({ apiErrors: 2 });
+    expect((await completeMintBurnRun(input)).status).toBe("ok");
+    input.runState.degradedStreak = 1;
+    expect((await completeMintBurnRun(input)).status).toBe("degraded");
+    input.runState.degradedStreak = 2;
+    vi.mocked(healNullPrices).mockClear();
+    vi.mocked(sweepRecentRoundtrips).mockClear();
+    expect((await completeMintBurnRun(input)).status).toBe("error");
+    expect(healNullPrices).not.toHaveBeenCalled();
+    expect(sweepRecentRoundtrips).not.toHaveBeenCalled();
+    input.phase.apiErrors = 0;
+    expect((await completeMintBurnRun(input)).status).toBe("ok");
+    expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
+  });
+
+  it("keeps extended failures degraded at the critical error threshold", async () => {
+    const input = buildRunInput({ apiErrors: 2 });
+    input.lane = "extended";
+    input.runState.degradedStreak = 2;
+    expect((await completeMintBurnRun(input)).status).toBe("degraded");
+  });
+
+  it("degrades healthy completion for each failed persistence surface", async () => {
+    for (const surface of ["state", "attempt", "drilldown"] as const) {
+      const input = buildRunInput();
+      vi.mocked(setMintBurnRunState).mockResolvedValue(surface !== "state");
+      input.attemptCoverage.persistenceFailed = surface === "attempt";
+      input.runDrilldown.persistenceFailed = surface === "drilldown";
+      expect((await completeMintBurnRun(input)).status, surface).toBe("degraded");
+    }
+  });
+
+  it("continues roundtrip maintenance after a recoverable healer failure", async () => {
+    vi.mocked(healNullPrices).mockRejectedValueOnce(new Error("healer unavailable"));
+    vi.mocked(sweepRecentRoundtrips).mockResolvedValueOnce({ reclassified: 7, affectedHours: new Map(), saturated: false });
+    const result = await completeMintBurnRun(buildRunInput());
+    expect(result.status).toBe("ok");
+    expect(result.metadata.roundtripSweepCount).toBe(7);
   });
 });

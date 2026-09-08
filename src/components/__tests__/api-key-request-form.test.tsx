@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { randomUUID } from "node:crypto";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
-import { PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
+import { clearPendingApiKey, PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
+const issuedTokens = new Set<string>();
+let caseId = 0;
+const randomUUID = () => `case${++caseId}`;
+
 afterEach(() => {
+  cleanup();
+  for (const token of issuedTokens) clearPendingApiKey(token);
+  issuedTokens.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
@@ -19,6 +25,7 @@ afterEach(() => {
 });
 
 function issuedResponse(suffix: string, token: string) {
+  issuedTokens.add(token);
   const keyPrefix = `prefix-${suffix}`;
   return {
     status: "issued",
@@ -147,7 +154,8 @@ describe("ApiKeyRequestForm", () => {
     window.sessionStorage.setItem("pharos:api-key-verify-token", `akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await screen.findByText(`ph_test_${suffix}_token`);
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(window.location.href).toContain("utm_source=email");
     expect(window.location.href).not.toContain(`akv_${suffix}`);
     expect(window.sessionStorage.getItem("pharos:api-key-verify-token")).toBeNull();
@@ -166,7 +174,8 @@ describe("ApiKeyRequestForm", () => {
     window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await screen.findByText(`ph_test_${suffix}_token`);
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(window.location.href).toContain("utm_source=email");
     expect(window.location.href).not.toContain(`verify=qs-${suffix}`);
     expect(window.location.href).not.toContain(`akv_${suffix}`);
@@ -181,7 +190,7 @@ describe("ApiKeyRequestForm", () => {
     window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email`);
     render(<ApiKeyRequestForm />);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await act(async () => {});
     expect(fetchMock).not.toHaveBeenCalled();
     expect(window.location.search).not.toContain(`verify=qs-${suffix}`);
     expect(window.location.search).toBe("?utm_source=email");

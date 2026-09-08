@@ -11,58 +11,20 @@ import {
   decodeEvmUint256,
   fetchReviewedDeploymentSolanaObservation,
   fetchSafetyScoreV9SolanaRpc,
-  safetyScoreV9EvmObservationOptions,
 } from "../safety-score-v9/supply-observation-primitives";
 
-const EVM_CHARACTERIZATION_VECTORS = [
-  {
-    assetId: "xaut-tether",
-    extraRpcUrls: undefined,
-  },
-  {
-    assetId: "wm-m0",
-    extraRpcUrls: ["https://rpc.plume.org"],
-  },
-  {
-    assetId: "jtrsy-anemoy",
-    extraRpcUrls: [
-      "https://rpc.monad.xyz",
-      "https://rpc1.monad.xyz",
-    ],
-  },
-] as const;
 
-function chainRpcs(): Map<string, ChainRpcConfig> {
-  return new Map([
-    [
-      "ethereum",
-      {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://ethereum.example",
-        explorerUrl: "https://etherscan.io",
-      },
-    ],
-  ]);
-}
 
 describe("Safety Score V9 supply observation primitives", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it.each(EVM_CHARACTERIZATION_VECTORS)(
-    "preserves $assetId EVM decoding and retry options",
-    ({ extraRpcUrls }) => {
+  it("decodes EVM supply and identity words", () => {
       const address = "0x1234567890abcdef1234567890abcdef12345678";
       const addressWord =
         `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
       const uintWord = `0x${"2a".padStart(64, "0")}` as `0x${string}`;
-      const options = safetyScoreV9EvmObservationOptions({
-        chainRpcs: chainRpcs(),
-        extraRpcUrls,
-      });
 
       expect(
         decodeEvmUint256({
@@ -82,17 +44,8 @@ describe("Safety Score V9 supply observation primitives", () => {
       expect(decodeEvmHexBytes("0x00ff")).toEqual(
         new Uint8Array([0, 255]),
       );
-      expect(options).toEqual({
-        chainRpcs: expect.any(Map),
-        ...(extraRpcUrls
-          ? { extraRpcUrls: [...extraRpcUrls] }
-          : {}),
-        signal: undefined,
-        timeoutMs: 10_000,
-        maxRetries: 1,
-      });
-    },
-  );
+  });
+
 
   it("preserves fail-closed decoding", () => {
     expect(

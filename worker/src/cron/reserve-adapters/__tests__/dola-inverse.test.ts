@@ -102,48 +102,20 @@ beforeEach(() => {
 });
 
 describe("resolveBaseSymbol", () => {
-  it("extracts asset from Yearn DOLA vault: yv-DOLA-sUSDe → sUSDe", () => {
-    expect(resolveBaseSymbol(makeMarket("yv-DOLA-sUSDe"))).toBe("sUSDe");
-  });
-
-  it("extracts asset from Yearn staked DOLA vault: yv-sDOLA-scrvUSD → scrvUSD", () => {
-    expect(resolveBaseSymbol(makeMarket("yv-sDOLA-scrvUSD"))).toBe("scrvUSD");
-  });
-
-  it("extracts asset from Yearn reUSD/staked-DOLA vault: yv-reUSD-sDOLA → reUSD", () => {
-    expect(resolveBaseSymbol(makeMarket("yv-reUSD-sDOLA"))).toBe("reUSD");
-  });
-
-  it("handles Yearn non-DOLA vault: yv-WETH → WETH", () => {
-    expect(resolveBaseSymbol(makeMarket("yv-WETH"))).toBe("WETH");
-  });
-
-  it("extracts asset from Curve CLP: DOLA-sUSDe clp → sUSDe", () => {
-    expect(resolveBaseSymbol(makeMarket("DOLA-sUSDe clp"))).toBe("sUSDe");
-  });
-
-  it("extracts asset from Curve LP: DOLA-wstUSR lp → wstUSR", () => {
-    expect(resolveBaseSymbol(makeMarket("DOLA-wstUSR lp"))).toBe("wstUSR");
-  });
-
-  it("extracts asset from staked-DOLA Curve CLP: sDOLA-scrvUSD clp → scrvUSD", () => {
-    expect(resolveBaseSymbol(makeMarket("sDOLA-scrvUSD clp"))).toBe("scrvUSD");
-  });
-
-  it("extracts asset from reUSD/staked-DOLA Curve CLP: reUSD-sDOLA clp → reUSD", () => {
-    expect(resolveBaseSymbol(makeMarket("reUSD-sDOLA clp"))).toBe("reUSD");
-  });
-
-  it("handles Yearn FraxPyUSD LP: yv-DOLA-FraxPyUSD lp → FraxPyUSD lp", () => {
-    expect(resolveBaseSymbol(makeMarket("yv-DOLA-FraxPyUSD lp"))).toBe("FraxPyUSD lp");
-  });
-
-  it("returns plain symbol unchanged: WBTC → WBTC", () => {
-    expect(resolveBaseSymbol(makeMarket("WBTC"))).toBe("WBTC");
-  });
-
-  it("returns non-DOLA prefix unchanged: INV → INV", () => {
-    expect(resolveBaseSymbol(makeMarket("INV"))).toBe("INV");
+  it.each([
+    ["yv-DOLA-sUSDe", "sUSDe"],
+    ["yv-sDOLA-scrvUSD", "scrvUSD"],
+    ["yv-reUSD-sDOLA", "reUSD"],
+    ["yv-WETH", "WETH"],
+    ["DOLA-sUSDe clp", "sUSDe"],
+    ["DOLA-wstUSR lp", "wstUSR"],
+    ["sDOLA-scrvUSD clp", "scrvUSD"],
+    ["reUSD-sDOLA clp", "reUSD"],
+    ["yv-DOLA-FraxPyUSD lp", "FraxPyUSD lp"],
+    ["WBTC", "WBTC"],
+    ["INV", "INV"],
+  ])("resolves %s to %s", (symbol, expected) => {
+    expect(resolveBaseSymbol(makeMarket(symbol))).toBe(expected);
   });
 });
 

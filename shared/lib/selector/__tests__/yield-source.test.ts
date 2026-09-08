@@ -49,8 +49,14 @@ describe("selectYieldSource ordering", () => {
   it("published source risk decides between rails, not APY", () => {
     const selected = selectYieldSource(
       makeRow([
-        candidate("safer-low-apy", { apy30d: 2.5, sourceRiskScore: 15 }),
-        candidate("riskier-high-apy", { apy30d: 40, sourceRiskScore: 20 }),
+        candidate("safer-low-apy", {
+          apy30d: 2.5, sourceRiskScore: 15, sourceDepthRatio: 0.1,
+          freshness: { capturedAt: 1, ageSeconds: 172_800 },
+        }),
+        candidate("riskier-high-apy", {
+          apy30d: 40, sourceRiskScore: 20, sourceDepthRatio: 1,
+          freshness: { capturedAt: 1, ageSeconds: 0 },
+        }),
       ]),
       lendInput,
     );
@@ -77,8 +83,8 @@ describe("selectYieldSource ordering", () => {
   it("falls through risk to depth, then freshness, then source key", () => {
     const byDepth = selectYieldSource(
       makeRow([
-        candidate("thin", { sourceDepthRatio: 0.2 }),
-        candidate("deep", { sourceDepthRatio: 0.9 }),
+        candidate("thin", { sourceDepthRatio: 0.2, freshness: { capturedAt: 1, ageSeconds: 0 } }),
+        candidate("deep", { sourceDepthRatio: 0.9, freshness: { capturedAt: 1, ageSeconds: 172_800 } }),
       ]),
       lendInput,
     );
@@ -109,5 +115,64 @@ describe("selectYieldSource ordering", () => {
       lendInput,
     );
     expect(selected?.sourceKey).toBe("low-tier");
+  });
+
+  it("uses the complete row fallback only when all required fields exist", () => {
+    const row = {
+      ...makeRow([]), yieldProtocolSlug: "fallback", yieldVenueChain: "Ethereum",
+      apy30d: 4, pharosYieldScore: 70, effectiveTvlUsd: 123_000,
+      venueRiskTier: "low" as const, deploymentPlace: "lending" as const,
+      yieldFreshness: { capturedAt: 123, ageSeconds: 45 },
+    };
+    const expected = {
+      sourceKey: "fallback:Ethereum", protocol: "fallback", chain: "Ethereum",
+      yieldType: null, apy30d: 4, pharosYieldScore: 70, sourceTvlUsd: 123_000,
+      sourceRiskTier: "low", freshness: { capturedAt: 123, ageSeconds: 45 },
+      selectionReason: "venue-preference",
+    };
+    expect(selectYieldSource(row, lendInput)).toEqual(expected);
+    expect(selectYieldSource({ ...row, yieldSources: undefined }, lendInput)).toEqual(expected);
+    for (const field of ["yieldProtocolSlug", "yieldVenueChain", "apy30d", "pharosYieldScore"] as const) {
+      expect(selectYieldSource({ ...row, [field]: null }, lendInput)).toBeNull();
+    }
+  });
+
+  it("fails closed when the winning rail has no chain rather than substituting a runner-up", () => {
+    const row = makeRow([
+      candidate("winner", { chain: null, sourceRiskScore: 1 }),
+      candidate("runner-up", { sourceRiskScore: 50 }),
+    ]);
+    expect(selectYieldSource(row, lendInput)).toBeNull();
+    expect(selectYieldSource(makeRow([
+      candidate("winner", { sourceRiskScore: 1 }),
+      candidate("runner-up", { sourceRiskScore: 50 }),
+    ]), lendInput)?.sourceKey).toBe("winner");
+  });
+
+  it("prefers wrapper rails only for wrap, not all or unsupported venue answers", () => {
+    const row = makeRow([
+      candidate("lending", { sourceRiskScore: 1 }),
+      candidate("wrapper", {
+        yieldType: "nav-appreciation", deploymentPlace: "native-wrapper", sourceRiskScore: 50,
+      }),
+    ]);
+    expect(selectYieldSource(row, makeInput({ profile: "yield", venuePreferences: ["wrap"] }))?.sourceKey)
+      .toBe("wrapper");
+    for (const venuePreferences of [["all"], ["cex"]] as const) {
+      expect(selectYieldSource(row, makeInput({
+        profile: "yield", venuePreferences: [...venuePreferences],
+      }))?.sourceKey).toBe("lending");
+    }
+  });
+
+  it("uses TVL without depth ratios and ranks unknown freshness above known stale data", () => {
+    expect(selectYieldSource(makeRow([
+      candidate("small", { sourceDepthRatio: null, sourceTvlUsd: 1_000 }),
+      candidate("large", { sourceDepthRatio: null, sourceTvlUsd: 100_000_000 }),
+    ]), lendInput)?.sourceKey).toBe("large");
+    expect(selectYieldSource(makeRow([
+      candidate("stale", { freshness: { capturedAt: 1, ageSeconds: 172_800 } }),
+      candidate("unknown", { freshness: null }),
+    ]), lendInput)?.sourceKey).toBe("unknown");
   });
 });

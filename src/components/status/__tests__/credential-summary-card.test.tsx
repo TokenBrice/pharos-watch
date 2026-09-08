@@ -2,7 +2,6 @@
 
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makeApiKeySummary } from "@/test-utils/api-key-fixtures";
 import { STATUS_FIXTURE_NOW_SECONDS } from "@/test-utils/status-fixtures";
 
 const { useCredentialLifecycleSummaryMock } = vi.hoisted(() => ({
@@ -17,16 +16,6 @@ import { CredentialSummaryCard } from "../credential-summary-card";
 
 const NOW = STATUS_FIXTURE_NOW_SECONDS;
 
-const KEYS = [
-  // Active, far-future expiry.
-  makeApiKeySummary(0, { isActive: true, expiresAt: NOW + 90 * 86_400 }),
-  // Active, expiring inside the 7-day window.
-  makeApiKeySummary(1, { isActive: true, expiresAt: NOW + 2 * 86_400 }),
-  // Active but already expired.
-  makeApiKeySummary(2, { isActive: true, expiresAt: NOW - 86_400 }),
-  // Non-expiring exception (inactive).
-  makeApiKeySummary(3, { isActive: false, expiresAt: null }),
-];
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -37,7 +26,7 @@ describe("CredentialSummaryCard", () => {
     useCredentialLifecycleSummaryMock.mockReturnValue({
       data: {
         generatedAt: NOW,
-        totalKeys: KEYS.length,
+        totalKeys: 4,
         active: 3,
         expiringSoon: 1,
         expired: 1,

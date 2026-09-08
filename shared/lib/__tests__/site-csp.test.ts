@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addNonceToInlineScripts, buildStaticContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
+import { addNonceToInlineScripts, buildContentSecurityPolicy, buildStaticContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
 
 describe("site CSP helpers", () => {
   it("adds a nonce to inline script tags", () => {
@@ -45,6 +45,23 @@ describe("isTelegramMiniAppPath", () => {
 });
 
 describe("buildStaticContentSecurityPolicy", () => {
+  it.each([
+    { telegramMiniApp: false, origin: "https://www.googletagmanager.com" },
+    { telegramMiniApp: true, origin: "https://telegram.org" },
+  ])("authorizes only the intended scripts with the matching nonce ($telegramMiniApp)", ({ telegramMiniApp, origin }) => {
+    const nonce = "dGVzdC1ub25jZQ==";
+    const directives = new Map(buildContentSecurityPolicy(nonce, { telegramMiniApp })
+      .split("; ").map((directive) => {
+        const [name, ...sources] = directive.split(" ");
+        return [name, sources] as const;
+      }));
+    expect(directives.get("script-src")).toEqual(["'self'", `'nonce-${nonce}'`, origin]);
+    expect(addNonceToInlineScripts("<script>run()</script>", nonce)).toContain(`nonce="${nonce}"`);
+    expect(directives.get("frame-ancestors")).toEqual(
+      telegramMiniApp ? ["https://telegram.org", "https://*.telegram.org"] : ["'none'"],
+    );
+  });
+
   it("standard path sets frame-ancestors to none", () => {
     const csp = buildStaticContentSecurityPolicy();
     expect(csp).toContain("frame-ancestors 'none'");

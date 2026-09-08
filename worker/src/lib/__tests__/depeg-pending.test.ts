@@ -9,7 +9,7 @@ import {
   isExtremeMovePending,
   parsePendingReason,
 } from "../depeg-helpers";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("pending reason helpers", () => {
@@ -83,48 +83,6 @@ describe("buildUpsertPendingDepegStmt", () => {
       },
     });
   }
-
-  it("generates an upsert that refreshes same-direction incidents and resets opposite-direction ones", () => {
-    const stmt = buildUpsertPendingDepegStmt(makePreparedStatementRecorder(), {
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      pegType: "peggedUSD",
-      direction: "below",
-      bps: -350,
-      seenAt: 1_700_000_900,
-      price: 0.965,
-      pegReference: 1,
-      reason: "large-cap",
-    }) as unknown as { sql: string; boundValues: unknown[] };
-
-    expect(stmt.sql).toContain("ON CONFLICT(stablecoin_id) DO UPDATE SET");
-    expect(stmt.sql).toContain(
-      `depeg_pending.direction = excluded.direction AND excluded.last_seen_at - depeg_pending.last_seen_at <= ${DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC}`,
-    );
-    expect(stmt.sql).toContain("THEN depeg_pending.first_seen_at");
-    expect(stmt.sql).toContain("ELSE excluded.first_seen_at");
-    expect(stmt.sql).toContain("last_seen_bps = excluded.last_seen_bps");
-    expect(stmt.sql).toContain("peak_seen_bps = CASE");
-    expect(stmt.sql).toContain("WHEN ABS(excluded.peak_seen_bps) > ABS(COALESCE(depeg_pending.peak_seen_bps, depeg_pending.first_seen_bps))");
-    expect(stmt.sql).toContain("peg_reference = CASE");
-    expect(stmt.boundValues).toEqual([
-      "usdt-tether",
-      "USDT",
-      "peggedUSD",
-      "below",
-      -350,
-      1_700_000_900,
-      0.965,
-      -350,
-      1_700_000_900,
-      0.965,
-      -350,
-      0.965,
-      1,
-      "large-cap",
-      1_700_000_900,
-    ]);
-  });
 
   it("refreshes same-direction rows and resets opposite-direction rows when executed", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;

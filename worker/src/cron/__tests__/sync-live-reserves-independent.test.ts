@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
@@ -10,6 +11,11 @@ import {
 } from "./live-reserves.test-support";
 
 describe("syncLiveReserves", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(() => {
+    fixtures.closeAll();
+    vi.restoreAllMocks();
+  });
   type ConfiguredCoin = (typeof ACTIVE_STABLECOINS)[number] & {
     liveReservesConfig: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>;
   };
@@ -79,18 +85,16 @@ describe("syncLiveReserves", () => {
   }
 
   function dbWithPreviousLiveReserveRows(rows: ReturnType<typeof buildPreviousLiveReserveRows>) {
-    return mockLiveReserveD1([
-      {
-        match: "FROM reserve_sync_state",
-        rows: [rows.syncState],
-        first: rows.syncState,
-      },
-      {
-        match: "FROM reserve_composition",
-        rows: [rows.composition],
-        first: rows.composition,
-      },
-    ]);
+    const { sqlite, db } = fixtures.open();
+    for (const [table, row] of [
+      ["reserve_sync_state", rows.syncState],
+      ["reserve_composition", rows.composition],
+    ] as const) {
+      const columns = Object.keys(row);
+      sqlite.prepare(`INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`)
+        .run(...Object.values(row));
+    }
+    return db;
   }
 
   async function expectFailureAttemptDoesNotRewriteLastSuccess(args: {
@@ -100,7 +104,12 @@ describe("syncLiveReserves", () => {
     previousLastSuccessAttemptId: string;
   }) {
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const db = mockLiveReserveD1();
+    const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
+      coin: args.coin,
+      lastStatus: "ok",
+      lastAttemptedAt: args.previousLastSuccessAt,
+      lastSuccessAt: args.previousLastSuccessAt,
+    }));
     const result = await syncReserveCoin({
       db,
       coin: args.coin,
@@ -129,21 +138,18 @@ describe("syncLiveReserves", () => {
     });
 
     expect(result.status).toBe("failed");
-    const finalizeFailure = db.getHistory().find((entry) => (
-      entry.sql.includes("UPDATE reserve_sync_state")
-      && entry.sql.includes("last_status = ?")
-      && entry.binds.includes("error")
-    ));
-    expect(finalizeFailure).toBeDefined();
-    expect(finalizeFailure!.sql).not.toMatch(/last_success_at\s*=/);
-    expect(finalizeFailure!.sql).not.toMatch(/last_success_attempt_id\s*=/);
+    const persisted = await db.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?")
+      .bind(args.coin.id).first();
+    expect(persisted).toEqual({
+      last_success_at: args.previousLastSuccessAt,
+      last_success_attempt_id: args.previousLastSuccessAttemptId,
+    });
+    return db;
   }
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.doUnmock("../../lib/live-reserves/store");
-    vi.resetModules();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
     recoverNoCandidateMock.mockClear();
@@ -153,23 +159,15 @@ describe("syncLiveReserves", () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 60 * 60;
-    await expectFailureAttemptDoesNotRewriteLastSuccess({
+    const db = await expectFailureAttemptDoesNotRewriteLastSuccess({
       coin,
       error: new Error("fetch failed: network unreachable"),
       previousLastSuccessAt: lastSuccessAt,
       previousLastSuccessAttemptId: `${coin.id}:previous-success`,
     });
 
-    const rows = buildPreviousLiveReserveRows({
-      coin,
-      lastStatus: "error",
-      lastAttemptedAt: now,
-      lastSuccessAt,
-      lastError: "fetch failed: network unreachable",
-      failureCategory: "network",
-    });
     const { resolveReserveResult } = await import("../../lib/live-reserves/store");
-    const resolved = await resolveReserveResult(dbWithPreviousLiveReserveRows(rows), coin.id, now);
+    const resolved = await resolveReserveResult(db, coin.id, now);
 
     expect(resolved?.mode).toBe("live");
     expect(resolved?.reserves).toEqual([{ name: "Prior verified reserves", pct: 100, risk: "low" }]);
@@ -187,23 +185,15 @@ describe("syncLiveReserves", () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 90 * 60;
-    await expectFailureAttemptDoesNotRewriteLastSuccess({
+    const db = await expectFailureAttemptDoesNotRewriteLastSuccess({
       coin,
       error: new Error("HTTP 503 from reserve source"),
       previousLastSuccessAt: lastSuccessAt,
       previousLastSuccessAttemptId: `${coin.id}:previous-success`,
     });
 
-    const rows = buildPreviousLiveReserveRows({
-      coin,
-      lastStatus: "error",
-      lastAttemptedAt: now,
-      lastSuccessAt,
-      lastError: "HTTP 503 from reserve source",
-      failureCategory: "upstream-http",
-    });
     const { resolveReserveResult } = await import("../../lib/live-reserves/store");
-    const resolved = await resolveReserveResult(dbWithPreviousLiveReserveRows(rows), coin.id, now);
+    const resolved = await resolveReserveResult(db, coin.id, now);
 
     expect(resolved?.mode).toBe("live");
     expect(resolved?.reserves).toEqual([{ name: "Prior verified reserves", pct: 100, risk: "low" }]);
@@ -222,10 +212,12 @@ describe("syncLiveReserves", () => {
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 30 * 60;
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const writeDb = mockLiveReserveD1();
+    const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
+      coin, lastStatus: "ok", lastAttemptedAt: lastSuccessAt, lastSuccessAt,
+    }));
     const previousLastSuccessAttemptId = `${coin.id}:previous-success`;
     const result = await syncReserveCoin({
-      db: writeDb,
+      db,
       coin,
       signal: new AbortController().signal,
       adapter: adapterForCoin(coin),
@@ -253,26 +245,18 @@ describe("syncLiveReserves", () => {
     });
     expect(result.status).toBe("failed");
 
-    const rows = buildPreviousLiveReserveRows({
-      coin,
-      lastStatus: "error",
-      lastAttemptedAt: now,
-      lastSuccessAt,
-      lastError: "Validation failed: Slice percentages sum to 80.0%",
-      failureCategory: "validation",
-    });
-    const db = dbWithPreviousLiveReserveRows(rows);
     const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 
     expect(resolved?.mode).toBe("live");
+    expect(resolved?.reserves).toEqual([{ name: "Prior verified reserves", pct: 100, risk: "low" }]);
     expect(resolved?.sync?.status).toBe("error");
     // The failed attempt wrote no snapshot. The prior one was validated when it
     // was observed and is still inside the freshness bound, so it keeps scoring;
     // only the bound retires it.
     expect(resolved?.provenance?.scoringEligible).toBe(true);
-    expect(scoringMap.has(coin.id)).toBe(true);
+    expect(scoringMap.get(coin.id)).toEqual([{ name: "Prior verified reserves", pct: 100, risk: "low" }]);
   });
 
   it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
@@ -589,6 +573,9 @@ describe("syncLiveReserves", () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 45 * 60;
+    const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
+      coin, lastStatus: "ok", lastAttemptedAt: lastSuccessAt, lastSuccessAt,
+    }));
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const runAdapter = vi.fn(async () => ({
       slices: [{ name: "Should not run", pct: 100, risk: "low" as const }],
@@ -596,7 +583,7 @@ describe("syncLiveReserves", () => {
     }));
 
     const result = await syncReserveCoin({
-      db: mockLiveReserveD1(),
+      db,
       coin,
       signal: new AbortController().signal,
       adapter: adapterForCoin(coin),
@@ -622,14 +609,6 @@ describe("syncLiveReserves", () => {
     expect(result.status).toBe("skipped");
     expect(runAdapter).not.toHaveBeenCalled();
 
-    const rows = buildPreviousLiveReserveRows({
-      coin,
-      lastStatus: "skipped",
-      lastAttemptedAt: now,
-      lastSuccessAt,
-      lastError: null,
-    });
-    const db = dbWithPreviousLiveReserveRows(rows);
     const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);

@@ -3,6 +3,7 @@ import {
   buildSafetyScoreV9InputIdentity,
 } from "@shared/lib/safety-score-v9-input-identity";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import type { NativeSafetyScoreV9Input } from "../../lib/safety-score-v9/native-input";
 
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
@@ -84,10 +85,13 @@ vi.mock("../../lib/safety-score-v9/publication-runner", () => ({
 
 const { computeSafetyScoreV9 } = await import("../compute-safety-score-v9");
 
+// Parsers/publication are mocked in gate cases; build the valid transport control only once.
+const validNativeInput = createNativeSafetyScoreV9FullRegistryInput();
+let fixedInput: NativeSafetyScoreV9Input;
 describe("computeSafetyScoreV9", () => {
   beforeEach(() => {
-    const fixedInput = {
-      ...createNativeSafetyScoreV9FullRegistryInput(),
+    fixedInput = {
+      ...validNativeInput,
       pegDataById: {},
     };
     const safetyScoreIdentity = buildSafetyScoreV9InputIdentity({
@@ -181,7 +185,7 @@ describe("computeSafetyScoreV9", () => {
 
   it("rejects a fixed input captured from an older stablecoin cache generation", async () => {
     mocks.getCacheUpdatedAt.mockResolvedValueOnce(
-      createNativeSafetyScoreV9FullRegistryInput().updatedAt + 900,
+      fixedInput.updatedAt + 900,
     );
 
     const result = await computeSafetyScoreV9({} as D1Database);
@@ -198,7 +202,7 @@ describe("computeSafetyScoreV9", () => {
       stage: "input-load",
       reason: "stablecoins-generation-mismatch",
       latestStablecoinsUpdatedAt:
-        createNativeSafetyScoreV9FullRegistryInput().updatedAt + 900,
+        fixedInput.updatedAt + 900,
     });
     expect(mocks.loadDexGeneration).not.toHaveBeenCalled();
     expect(mocks.runPublication).not.toHaveBeenCalled();
@@ -208,23 +212,27 @@ describe("computeSafetyScoreV9", () => {
     const actualNativeInput = await vi.importActual<
       typeof import("../../lib/safety-score-v9/native-input")
     >("../../lib/safety-score-v9/native-input");
-    mocks.parseFixedInput.mockImplementationOnce(
-      actualNativeInput.parseNativeV9InputCacheArtifact,
-    );
+    const validInput = validNativeInput;
+    const identity = buildSafetyScoreV9InputIdentity({
+      methodologyVersion: validInput.methodologyVersion,
+      baseInputGenerationId: validInput.baseInputGenerationId,
+      publicationGenerationId: validInput.sourceGeneration,
+    });
+    const entry = await actualNativeInput.buildNativeV9InputCacheEntry(validInput, identity);
+    expect(await actualNativeInput.parseNativeV9InputCacheArtifact(entry.value)).toMatchObject({
+      input: { baseInputGenerationId: validInput.baseInputGenerationId },
+      safetyScoreIdentity: identity,
+    });
+    const legacyEnvelope = { ...JSON.parse(entry.value), schemaVersion: 1 };
+    await expect(actualNativeInput.parseNativeV9InputCacheArtifact(JSON.stringify(legacyEnvelope)))
+      .rejects.toMatchObject({ issues: [{ path: ["schemaVersion"], code: "invalid_value", values: [2] }] });
+    mocks.parseFixedInput.mockImplementationOnce(actualNativeInput.parseNativeV9InputCacheArtifact);
     mocks.getCaches.mockResolvedValueOnce(
       new Map([
         [
           "report-cards:fixed-input:exact",
           {
-            value: JSON.stringify({
-              schemaVersion: 1,
-              kind: "report-cards-fixed-input-exact",
-              encoding: "gzip-base64",
-              sourceGeneration: "report-cards:9.06:1783891200",
-              payloadSha256: "a".repeat(64),
-              uncompressedBytes: 1,
-              payload: "x",
-            }),
+            value: JSON.stringify(legacyEnvelope),
           },
         ],
         [
@@ -299,7 +307,7 @@ describe("computeSafetyScoreV9", () => {
       status: "incompatible",
       generationId:
         `safety-score-v9-supply-attribution:v1:${"a".repeat(64)}`,
-      fixedInput: createNativeSafetyScoreV9FullRegistryInput(),
+      fixedInput,
       reason: "generation-stale",
     });
     mocks.runPublication.mockImplementationOnce(async (input: {
@@ -335,5 +343,73 @@ describe("computeSafetyScoreV9", () => {
         outcome: "clean",
       },
     });
+  });
+
+  it("fails closed when DEX publication advances or cannot be loaded", async () => {
+    for (const unavailable of [false, true]) {
+      if (unavailable) mocks.loadDexGeneration.mockRejectedValueOnce(new Error("DEX unavailable"));
+      else mocks.loadDexGeneration.mockResolvedValueOnce({ generationId: "dex-newer" });
+      const result = await computeSafetyScoreV9({} as D1Database);
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        reason: unavailable ? "latest-dex-generation-unavailable" : "dex-generation-advanced",
+      });
+      expect(mocks.runPublication).not.toHaveBeenCalled();
+      // The consumer removes loaded cache entries; each run needs its own map.
+      mocks.getCaches.mockResolvedValue(new Map([
+        ["report-cards:fixed-input:exact", { value: "fixed-input" }],
+        ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
+      ]));
+    }
+  });
+
+  it.each(["base", "seed"] as const)("rejects mismatched %s identity independently", async (owner) => {
+    const identity = buildSafetyScoreV9InputIdentity({
+      methodologyVersion: fixedInput.methodologyVersion,
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: fixedInput.sourceGeneration,
+    });
+    if (owner === "base") mocks.parseFixedInput.mockResolvedValueOnce({ input: fixedInput, safetyScoreIdentity: identity });
+    else mocks.parsePegSeed.mockReturnValueOnce({
+      sourceGeneration: fixedInput.sourceGeneration, clockSec: fixedInput.clockSec,
+      safetyScoreIdentity: identity, pegProvenanceById: {},
+    });
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "base-v9-exact-identity-mismatch" });
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("rejects seed clock or source drift despite matching identity objects", async () => {
+    for (const field of ["clockSec", "sourceGeneration"] as const) {
+      const seed = mocks.parsePegSeed.getMockImplementation()!();
+      mocks.parsePegSeed.mockReturnValueOnce({
+        ...seed, [field]: field === "clockSec" ? fixedInput.clockSec + 1 : "report-cards:other",
+      });
+      mocks.getCaches.mockResolvedValueOnce(new Map([
+        ["report-cards:fixed-input:exact", { value: "fixed-input" }],
+        ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
+      ]));
+      const result = await computeSafetyScoreV9({} as D1Database);
+      expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "base-v9-exact-identity-mismatch" });
+      expect(mocks.runPublication).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects missing, extra and equal-sized different provenance key sets", async () => {
+    fixedInput.pegDataById = { alpha: {} as never };
+    const seed = mocks.parsePegSeed.getMockImplementation()!();
+    for (const ids of [[], ["alpha", "extra"], ["other"]]) {
+      mocks.parsePegSeed.mockReturnValueOnce({ ...seed,
+        pegProvenanceById: Object.fromEntries(ids.map((id) => [id, {}])),
+      });
+      mocks.getCaches.mockResolvedValueOnce(new Map([
+        ["report-cards:fixed-input:exact", { value: "fixed-input" }],
+        ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
+      ]));
+      const result = await computeSafetyScoreV9({} as D1Database);
+      expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-peg-provenance-incomplete",
+        expectedCount: 1, presentCount: ids.length });
+      expect(mocks.runPublication).not.toHaveBeenCalled();
+    }
   });
 });

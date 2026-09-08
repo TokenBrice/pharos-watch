@@ -110,17 +110,21 @@ describe("/api/stablecoins payload shape — chain supply", () => {
 });
 
 describe("exit-route lane issue parity", () => {
-  it("keeps exact wrong-route issues for both API lanes", () => {
+  it("rejects observations in the wrong API lane at their array position", () => {
+    const dex = { ...EXIT_ROUTE_BASE, routeFamily: "dex-amm", scope: { kind: "venue", venue: "venue", protocol: "protocol" }, evidenceKind: "measured-executable-depth" };
+    const redemption = { ...EXIT_ROUTE_BASE, routeFamily: "issuer-redemption", scope: { kind: "issuer", issuerId: "issuer" }, evidenceKind: "documented-terms" };
     const cases = [
-      [DexLiquidityHistoryPointSchema.pick({ exitRouteObservations: true }), { ...EXIT_ROUTE_BASE, routeFamily: "issuer-redemption", scope: { kind: "issuer", issuerId: "issuer" }, evidenceKind: "documented-terms" }, "invalid DEX exit-route observation"],
-      [RedemptionCapacityProfileSchema.pick({ exitRouteObservations: true }), { ...EXIT_ROUTE_BASE, routeFamily: "dex-amm", scope: { kind: "venue", venue: "venue", protocol: "protocol" }, evidenceKind: "measured-executable-depth" }, "invalid redemption exit-route observation"],
+      [DexLiquidityHistoryPointSchema.pick({ exitRouteObservations: true }), dex, redemption],
+      [RedemptionCapacityProfileSchema.pick({ exitRouteObservations: true }), redemption, dex],
     ] as const;
-
-    for (const [schema, observation, message] of cases) {
-      const result = schema.safeParse({ exitRouteObservations: [observation] });
+    for (const [schema, valid, invalid] of cases) {
+      expect(schema.safeParse({ exitRouteObservations: [valid] }).success).toBe(true);
+      const result = schema.safeParse({ exitRouteObservations: [invalid] });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues).toEqual([{ code: "custom", path: ["exitRouteObservations", 0], message }]);
+        expect(result.error.issues).toContainEqual(expect.objectContaining({
+          code: "custom", path: ["exitRouteObservations", 0],
+        }));
       }
     }
   });

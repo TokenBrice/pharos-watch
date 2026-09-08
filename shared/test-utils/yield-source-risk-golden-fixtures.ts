@@ -112,20 +112,24 @@ export function buildSourceRiskGoldenFixture(
   };
 }
 
+/** Combine evidence; callers supply the independent expected penalty, never a derived oracle. */
 export function mergeSourceRiskGoldenFixtures(
   labels: readonly YieldSourceRiskGoldenCaseId[],
-  overrides: Partial<YieldSourceRisk> = {},
+  overrides: Partial<YieldSourceRisk> & Pick<YieldSourceRisk, "sourceRiskPenalty">,
 ): YieldSourceRisk {
-  const merged: Record<string, unknown> = {};
+  if (labels.length === 0) throw new Error("Cannot merge an empty source-risk selection");
+  const input: PysSourceRiskPenaltyInput = {};
+  const flags = new Set<string>();
   for (const label of labels) {
-    for (const [key, value] of Object.entries(buildSourceRiskGoldenFixture(label))) {
-      if (value != null) {
-        merged[key] = value;
-      }
-    }
+    const row = getSourceRiskGoldenRow(label);
+    Object.assign(input, row.input);
+    if (row.expectedDriverLabel) flags.add(row.label);
   }
   return {
-    ...merged,
+    ...buildSourceRiskGoldenFixture(labels[0]!),
+    ...input,
+    venueRiskTier: normalizeVenueRiskTier(input.venueRiskTier),
     ...overrides,
-  } as YieldSourceRisk;
+    investabilityFlags: [...new Set([...flags, ...(overrides.investabilityFlags ?? [])])],
+  };
 }

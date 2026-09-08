@@ -529,8 +529,7 @@ export async function loadTelegramTopFollowedCoins(
           WHERE ${ACTIVE_SUBSCRIPTION_FLAGS_SQL}
           GROUP BY stablecoin_id`,
       )
-      .all<ExplicitTopCoinRow>()
-      .catch(() => ({ results: [] as ExplicitTopCoinRow[] })),
+      .all<ExplicitTopCoinRow>(),
     loadActivePresetFollowerRows(db),
   ]);
   const presetImplied = await calculatePresetImpliedCoinFollows(db, presetRows);

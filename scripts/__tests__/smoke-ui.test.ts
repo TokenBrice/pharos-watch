@@ -14,7 +14,6 @@ import {
   hasGaConfigInit,
   hasAnyGaAnalyticsSignal,
   hasExpectedGaRuntimeState,
-  HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
   isAnalyticsCspViolation,
   isExpectedGaCollectAbort,
   isExpectedGaCollectUrl,
@@ -105,6 +104,17 @@ describe("isExpectedGaCollectUrl", () => {
         "G-6TS0KG8H04",
       ),
     ).toBe(false);
+  });
+
+  it.each([
+    "https://google-analytics.com.evil.test/g/collect?tid=G-6TS0KG8H04&en=page_view",
+    "https://evil.test/g/collect?host=google-analytics.com&tid=G-6TS0KG8H04&en=page_view",
+    "not a URL google-analytics.com/g/collect?tid=G-6TS0KG8H04&en=page_view",
+    "https://www.google-analytics.com/g/collect/other?tid=G-6TS0KG8H04&en=page_view",
+    "ftp://www.google-analytics.com/g/collect?tid=G-6TS0KG8H04&en=page_view",
+  ])("rejects spoofed, malformed, or non-collect analytics URLs: %s", (url) => {
+    expect(isExpectedGaCollectUrl(url, "G-6TS0KG8H04")).toBe(false);
+    expect(isExpectedGaPageViewCollectUrl(url, "G-6TS0KG8H04")).toBe(false);
   });
 });
 
@@ -461,78 +471,42 @@ describe("getExpectedGaNetworkSignals", () => {
 });
 
 describe("getBrowserLaunchOptions", () => {
-  it("uses the Playwright-managed browser by default outside GitHub Actions", () => {
-    withEnv("GITHUB_ACTIONS", undefined, () => {
-      withEnv("SMOKE_UI_BROWSER_CHANNEL", undefined, () => {
-        withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", undefined, () => {
-          expect(getBrowserLaunchOptions()).toEqual({ headless: true });
-        });
-      });
-    });
+  it("uses the Playwright-managed browser outside GitHub Actions", () => {
+    expect(getBrowserLaunchOptions({ NODE_ENV: "test" })).toEqual({ headless: true });
   });
 
   it("uses the system Chrome channel on GitHub Actions", () => {
-    withEnv("GITHUB_ACTIONS", "true", () => {
-      withEnv("SMOKE_UI_BROWSER_CHANNEL", undefined, () => {
-        withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", undefined, () => {
-          expect(getBrowserLaunchOptions()).toEqual({ channel: "chrome", headless: true });
-        });
-      });
-    });
+    expect(getBrowserLaunchOptions({ NODE_ENV: "test", GITHUB_ACTIONS: "true" })).toEqual({ channel: "chrome", headless: true });
   });
 
   it("allows an explicit browser channel override", () => {
-    withEnv("GITHUB_ACTIONS", "true", () => {
-      withEnv("SMOKE_UI_BROWSER_CHANNEL", "msedge", () => {
-        expect(getBrowserLaunchOptions()).toEqual({ channel: "msedge", headless: true });
-      });
-    });
+    expect(getBrowserLaunchOptions({ NODE_ENV: "test", GITHUB_ACTIONS: "true", SMOKE_UI_BROWSER_CHANNEL: "msedge" }))
+      .toEqual({ channel: "msedge", headless: true });
   });
 
   it("prefers an explicit executable path over browser channels", () => {
-    withEnv("SMOKE_UI_BROWSER_CHANNEL", "chrome", () => {
-      withEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", "/usr/bin/chromium", () => {
-        expect(getBrowserLaunchOptions()).toEqual({ executablePath: "/usr/bin/chromium", headless: true });
-      });
-    });
+    expect(getBrowserLaunchOptions({
+      NODE_ENV: "test",
+      SMOKE_UI_BROWSER_CHANNEL: "chrome",
+      SMOKE_UI_BROWSER_EXECUTABLE_PATH: "/usr/bin/chromium",
+    })).toEqual({ executablePath: "/usr/bin/chromium", headless: true });
   });
 });
 
 describe("getOverflowRoutes", () => {
   it("includes the public API access page in local smoke coverage", () => {
-    const previousRoutes = process.env.SMOKE_UI_OVERFLOW_ROUTES;
-    delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
-    try {
+    withEnv("SMOKE_UI_OVERFLOW_ROUTES", undefined, () => {
       expect(getOverflowRoutes("local")).toContain("/api/");
-    } finally {
-      if (previousRoutes == null) {
-        delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
-      } else {
-        process.env.SMOKE_UI_OVERFLOW_ROUTES = previousRoutes;
-      }
-    }
+    });
   });
 
   it("includes the public PharosWatchBot page in local and live canary coverage", () => {
-    const previousRoutes = process.env.SMOKE_UI_OVERFLOW_ROUTES;
-    const previousCanary = process.env.SMOKE_UI_CANARY_ROUTE;
-    delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
-    delete process.env.SMOKE_UI_CANARY_ROUTE;
-    try {
-      expect(getOverflowRoutes("local")).toContain("/pharoswatchbot/");
-      expect(getOverflowRoutes("live")).toContain("/pharoswatchbot/");
-    } finally {
-      if (previousRoutes == null) delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
-      else process.env.SMOKE_UI_OVERFLOW_ROUTES = previousRoutes;
-      if (previousCanary == null) delete process.env.SMOKE_UI_CANARY_ROUTE;
-      else process.env.SMOKE_UI_CANARY_ROUTE = previousCanary;
-    }
-  });
-});
-
-describe("HOMEPAGE_RECENT_EVENTS_SMOKE_PATH", () => {
-  it("checks the same same-origin site-data path used by the homepage tape", () => {
-    expect(HOMEPAGE_RECENT_EVENTS_SMOKE_PATH).toBe("/_site-data/events?limit=1");
+    withEnv("SMOKE_UI_OVERFLOW_ROUTES", undefined, () => {
+      withEnv("SMOKE_UI_CANARY_ROUTE", undefined, () => {
+        expect(getOverflowRoutes("local")).toContain("/pharoswatchbot/");
+        expect(getOverflowRoutes("live")).toContain("/pharoswatchbot/");
+      });
+    });
   });
 });
 

@@ -112,4 +112,56 @@ describe("retained measured-target resolution", () => {
       }),
     ).toBeNull();
   });
+
+  it("does not replace an exact pool's wrong adapter with a fingerprint candidate", () => {
+    const exact = target();
+    const sibling = { ...target("base:other"), adapterProfileId: "uniswap-v3-quoter-v2" as const };
+    expect(resolveDexMeasuredTargetForRetainedPool({
+      stablecoinId: exact.stablecoinId,
+      retainedPoolId: exact.poolId,
+      retainedTvlUsd: exact.retainedTvlUsd,
+      adapterProfileId: sibling.adapterProfileId,
+      exactTargets: new Map([[buildMeasuredPoolDirectionKey(exact.stablecoinId, exact.poolId), exact]]),
+      fingerprintTargets: buildDexMeasuredTargetFingerprintIndex([sibling]),
+    })).toBeNull();
+  });
+
+  it("includes the exact drift threshold and excludes its next representable value", () => {
+    const matching = target(POOL, 9);
+    const input = {
+      stablecoinId: matching.stablecoinId,
+      retainedPoolId: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
+      retainedTvlUsd: 8,
+      adapterProfileId: matching.adapterProfileId,
+      exactTargets: new Map(),
+      fingerprintTargets: buildDexMeasuredTargetFingerprintIndex([matching]),
+      maxTvlRelativeDrift: 0.125,
+    };
+    expect(resolveDexMeasuredTargetForRetainedPool(input)).toBe(matching);
+    matching.retainedTvlUsd = 9 + Number.EPSILON * 8;
+    expect(resolveDexMeasuredTargetForRetainedPool(input)).toBeNull();
+  });
+
+  it("rejects invalid retained TVL, candidate TVL, and drift independently", () => {
+    const matching = target(POOL, 8);
+    const input = {
+      stablecoinId: matching.stablecoinId,
+      retainedPoolId: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
+      retainedTvlUsd: 8,
+      adapterProfileId: matching.adapterProfileId,
+      exactTargets: new Map(),
+      fingerprintTargets: buildDexMeasuredTargetFingerprintIndex([matching]),
+    };
+    expect(resolveDexMeasuredTargetForRetainedPool(input)).toBe(matching);
+    for (const invalid of [0, -1, NaN, Infinity]) {
+      expect(resolveDexMeasuredTargetForRetainedPool({ ...input, retainedTvlUsd: invalid })).toBeNull();
+      matching.retainedTvlUsd = invalid;
+      expect(resolveDexMeasuredTargetForRetainedPool(input)).toBeNull();
+      matching.retainedTvlUsd = 8;
+    }
+    for (const invalid of [-1, NaN, Infinity]) {
+      expect(resolveDexMeasuredTargetForRetainedPool({ ...input, maxTvlRelativeDrift: invalid })).toBeNull();
+    }
+    expect(resolveDexMeasuredTargetForRetainedPool({ ...input, maxTvlRelativeDrift: 0 })).toBe(matching);
+  });
 });

@@ -976,7 +976,7 @@ describe("Safety Score v9 evidence responsibility", () => {
     expect(trace.boundedUncertaintyAttribution).toEqual([]);
   });
 
-  it("attributes a reviewed wrapper discount to measured local risk", () => {
+  it.each([true, false])("attributes reviewed local risk at the fallback equality boundary (complete=%s)", (factsComplete) => {
     const trace = scoreV9EvaluatedAsset(
       input({
         parent: {
@@ -987,9 +987,9 @@ describe("Safety Score v9 evidence responsibility", () => {
             schemaVersion: 1,
             parentScore: 50,
             form: "strategy-vault",
-            treatment: "local-facts",
+            treatment: factsComplete ? "local-facts" : "fallback-discount",
             localRiskDiscount: 5,
-            fallbackDiscount: 0,
+            fallbackDiscount: factsComplete ? 0 : 5,
             appliedDiscount: 5,
             riskTransfer: {
               disposition: "reviewed",
@@ -998,8 +998,11 @@ describe("Safety Score v9 evidence responsibility", () => {
               appliedCredit: 0,
             },
             limit: 45,
-            factsComplete: true,
-            missingFacts: [],
+            factsComplete,
+            missingFacts: factsComplete ? [] : [{
+              factClass: "custodyEscrow",
+              disposition: "issuer-undisclosed",
+            }],
             adjustments: [{
               factKey: "measuredUnwind",
               disposition: "reviewed",
@@ -1014,6 +1017,7 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
 
     expect(trace.finalGrade).toBe("D");
+    expect(trace.finalScore).toBe(45);
     expect(trace.adverseAttribution).toEqual([
       expect.objectContaining({
         source: "wrapper-local",

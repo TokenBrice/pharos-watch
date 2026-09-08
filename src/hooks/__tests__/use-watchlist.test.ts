@@ -113,4 +113,60 @@ describe("useWatchlist", () => {
     act(() => result.current.clear());
     expect(result.current.count).toBe(0);
   });
+
+  it("propagates mutations between concurrently mounted consumers", async () => {
+    const first = renderHook(() => useWatchlist());
+    const second = renderHook(() => useWatchlist());
+    await waitFor(() => expect(first.result.current.isHydrated).toBe(true));
+    await waitFor(() => expect(second.result.current.isHydrated).toBe(true));
+
+    act(() => first.result.current.add("usdc-circle"));
+
+    await waitFor(() => expect(second.result.current.has("usdc-circle")).toBe(true));
+    expect(second.result.current.count).toBe(1);
+
+    act(() => second.result.current.remove("usdc-circle"));
+    await waitFor(() => expect(first.result.current.has("usdc-circle")).toBe(false));
+    expect(first.result.current.count).toBe(0);
+  });
+
+  it("syncs every mounted consumer when another tab writes canonical storage", async () => {
+    const first = renderHook(() => useWatchlist());
+    const second = renderHook(() => useWatchlist());
+    await waitFor(() => expect(first.result.current.isHydrated).toBe(true));
+    await waitFor(() => expect(second.result.current.isHydrated).toBe(true));
+
+    const nextValue = JSON.stringify(["dai-mkr", "usdc-circle"]);
+    act(() => {
+      window.localStorage.setItem(WATCHLIST_STORAGE_KEY, nextValue);
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: WATCHLIST_STORAGE_KEY,
+        newValue: nextValue,
+        storageArea: window.localStorage,
+      }));
+    });
+
+    await waitFor(() => expect(first.result.current.ids).toEqual(["dai-mkr", "usdc-circle"]));
+    await waitFor(() => expect(second.result.current.ids).toEqual(["dai-mkr", "usdc-circle"]));
+  });
+
+  it("keeps the surviving subscriber notified after another consumer unmounts", async () => {
+    const survivor = renderHook(() => useWatchlist());
+    const unmounted = renderHook(() => useWatchlist());
+    await waitFor(() => expect(survivor.result.current.isHydrated).toBe(true));
+    await waitFor(() => expect(unmounted.result.current.isHydrated).toBe(true));
+    unmounted.unmount();
+
+    const nextValue = JSON.stringify(["tether-gold"]);
+    act(() => {
+      window.localStorage.setItem(WATCHLIST_STORAGE_KEY, nextValue);
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: WATCHLIST_STORAGE_KEY,
+        newValue: nextValue,
+        storageArea: window.localStorage,
+      }));
+    });
+
+    await waitFor(() => expect(survivor.result.current.ids).toEqual(["tether-gold"]));
+  });
 });

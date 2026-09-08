@@ -12,6 +12,16 @@ const gauge: MintBurnGauge = {
   trackedMcapUsd: 120_000_000_000,
 };
 
+function makeCoverage(
+  overrides: Partial<NonNullable<MintBurnCoinFlow["coverage"]>> = {},
+): NonNullable<MintBurnCoinFlow["coverage"]> {
+  return {
+    startBlock: 1, lastSyncedBlock: 10, lagBlocks: null, historyStartAt: 1_700_000_000,
+    has24hWindow: true, has30dWindow: true, has90dWindow: true, isPartial: false, status: "full",
+    ...overrides,
+  };
+}
+
 function makeCoin(overrides: Partial<MintBurnCoinFlow>): MintBurnCoinFlow {
   return {
     stablecoinId: overrides.stablecoinId ?? "usdc-circle",
@@ -46,17 +56,7 @@ describe("buildFlowPressureReceiptModel", () => {
         mintVolume24hUsd: 90_000_000,
         burnVolume24hUsd: 15_000_000,
         netFlow7dUsd: 120_000_000,
-        coverage: {
-          startBlock: 1,
-          lastSyncedBlock: 10,
-          lagBlocks: null,
-          historyStartAt: 1_700_000_000,
-          has24hWindow: true,
-          has30dWindow: true,
-          has90dWindow: true,
-          isPartial: false,
-          status: "full",
-        },
+        coverage: makeCoverage(),
       }),
       makeCoin({
         symbol: "DAI",
@@ -64,17 +64,10 @@ describe("buildFlowPressureReceiptModel", () => {
         mintVolume24hUsd: 3_000_000,
         burnVolume24hUsd: 25_000_000,
         netFlow7dUsd: -35_000_000,
-        coverage: {
-          startBlock: 1,
-          lastSyncedBlock: 9,
-          lagBlocks: 12,
-          historyStartAt: 1_700_000_000,
-          has24hWindow: true,
-          has30dWindow: false,
-          has90dWindow: false,
-          isPartial: true,
-          status: "partial-history",
-        },
+        coverage: makeCoverage({
+          lastSyncedBlock: 9, lagBlocks: 12, has30dWindow: false, has90dWindow: false,
+          isPartial: true, status: "partial-history",
+        }),
       }),
       makeCoin({
         symbol: "GHO",
@@ -82,17 +75,10 @@ describe("buildFlowPressureReceiptModel", () => {
         mintVolume24hUsd: 0,
         burnVolume24hUsd: 12_000_000,
         netFlow7dUsd: -10_000_000,
-        coverage: {
-          startBlock: 1,
-          lastSyncedBlock: 7,
-          lagBlocks: 300,
-          historyStartAt: null,
-          has24hWindow: true,
-          has30dWindow: false,
-          has90dWindow: false,
-          isPartial: true,
-          status: "lagging",
-        },
+        coverage: makeCoverage({
+          lastSyncedBlock: 7, lagBlocks: 300, historyStartAt: null,
+          has30dWindow: false, has90dWindow: false, isPartial: true, status: "lagging",
+        }),
       }),
     ];
     const weeklyHourly: MintBurnHourlyBucket[] = [
@@ -152,17 +138,7 @@ describe("buildFlowPressureReceiptModel", () => {
     const model = buildFlowPressureReceiptModel({
       gauge,
       coins: [makeCoin({
-        coverage: {
-          startBlock: 1,
-          lastSyncedBlock: 10,
-          lagBlocks: null,
-          historyStartAt: 1_700_000_000,
-          has24hWindow: true,
-          has30dWindow: true,
-          has90dWindow: true,
-          isPartial: true,
-          status: "unknown",
-        },
+        coverage: makeCoverage({ isPartial: true, status: "unknown" }),
       })],
     });
 

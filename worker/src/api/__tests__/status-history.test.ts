@@ -1,8 +1,12 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 
 stubCryptoForAuth();
 
@@ -163,42 +167,23 @@ describe("handleStatusHistoryRoute", () => {
     errorSpy.mockRestore();
   });
 
-  it("applies from/to transition filters when provided", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      { match: "FROM status_state", rows: [], first: null },
-      { match: "FROM status_probe_runs", rows: [], first: null },
-      { match: "FROM status_discrepancy_state", rows: [], first: null },
-      {
-        match: "FROM status_transitions",
-        rows: [{
-          id: 2,
-          scope: "global",
-          previous_status: "healthy",
-          next_status: "degraded",
-          raw_status: "degraded",
-          transition_type: "degrade",
-          reason: "raw-degraded-consecutive-threshold",
-          confidence: 0.9,
-          causes_json: "[]",
-          created_at: now - 60,
-        }],
-      },
-    ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
-
-    const seenSql: string[] = [];
-    const originalPrepare = db.prepare.bind(db);
-    db.prepare = ((sql: string) => {
-      seenSql.push(sql);
-      return originalPrepare(sql);
-    }) as typeof db.prepare;
-
+  it("filters transitions inclusively with parsed ISO and numeric timestamps", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO status_transitions
+      (id, scope, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+      VALUES (?, ?, 'healthy', 'healthy', 'init', 'fixture', 1, '[]', ?)`);
+    for (const [id, scope, timestamp] of [
+      [1, "global", 1735689599],
+      [2, "global", 1735689600],
+      [3, "global", 1735732800],
+      [4, "global", 1735776000],
+      [5, "global", 1735776001],
+      [6, "other", 1735732800],
+    ] as const) insert.run(id, scope, timestamp);
     const request = makeApiRequest("/api/status-history?from=2025-01-01T00:00:00Z&to=1735776000", { adminKey: "secret-key" });
     const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
-    expect(res.status).toBe(200);
-
-    const transitionsSql = seenSql.find((sql) => sql.includes("FROM status_transitions")) ?? "";
-    expect(transitionsSql).toContain("created_at >= ?");
-    expect(transitionsSql).toContain("created_at <= ?");
+    const body = await readJsonResponse(res, 200) as { transitions: Array<{ id: number }>; hasMore: boolean };
+    expect(body.transitions.map((row) => row.id)).toEqual([4, 3, 2]);
+    expect(body.hasMore).toBe(false);
   });
 });

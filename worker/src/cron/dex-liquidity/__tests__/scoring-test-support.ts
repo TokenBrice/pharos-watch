@@ -1,6 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../../lib/constants";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type { DexPriceObs, PoolEntry } from "../types";
 
 export const DEFAULT_DEX_SCORING_NOW_SEC = 1_700_000_000;

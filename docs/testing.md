@@ -16,7 +16,7 @@ Use `package.json` for the full live npm-script list. `scripts/lib/automation-re
 
 `check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
 
-`check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. Ownership references must name a section when the target has at least 400 lines or 50 KiB.
+`check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. A verified doc at or above 400 lines or 50 KB must include a top `> **Agent navigation**` block. (The separate requirement that a doc-ownership reference name a section for such a target is enforced by `scripts/__tests__/doc-ownership-registry.test.ts`, not by this check.)
 
 Changed-file classification retains deletions and both sides of cross-area renames. Ordinary Git selection failures stop the check instead of producing an empty plan. Test selection uses that same change set and removes nonexistent test files only before execution. Parallel command failures, including thrown callbacks or spawn errors, cancel and settle siblings before the runner returns; explicit continue-on-error mode retains independent results.
 
@@ -205,7 +205,7 @@ The suite is split into five `test.projects` (all `extends: true` from the root 
 - `node-isolated` — the few node-root suites that depend on per-file process isolation (module-level registry/env state); listed explicitly in `vitest.config.ts`. If a `node`-project test starts failing only in full runs, module-state leakage is the first suspect — fix the leak or move the file here.
 - `worker` — `worker/` suites with default per-file isolation (they lean on module-level state: circuit breakers, caches, D1 stubs; verified to fail without isolation).
 - `worker-threads` — the full-registry native Safety Score pipeline regression, isolated in a thread worker because V8 coverage can leave its otherwise-passing fork waiting during teardown.
-- `src` — `src/` suites with default isolation for jsdom/React state.
+- `src` — `src/` suites with default isolation and the `src/test/setup.ts` cleanup setup file. No project sets a Vitest `environment`, so all five run the default node environment; jsdom is a per-file opt-in via `// @vitest-environment jsdom`.
 
 `npm run test:all` is the full Vitest runner used by nightly/manual validation.
 
@@ -247,6 +247,13 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 
 For shared test-only fixtures, harness setup, and builders, use a sibling `*.test-support.ts` module next to the owning test family. Keep assertions and test cases in the owning test files; the reference case is `worker/src/lib/__tests__/cron-leases.test-support.ts`.
 
+Helpers used across test families live in the shared homes instead:
+
+- `shared/test-utils/` — runtime-neutral helpers shared by frontend, Pages Functions, script, and Worker tests (`mock-d1`, `mock-fetch`, `latest-schema-sqlite`, stablecoin builders)
+- `worker/src/test-helpers/__shared/` — Worker API/cron row fixtures, auth/request builders, and endpoint contracts
+- `scripts/__tests__/helpers/` — script-suite helpers
+- `functions/__tests__/helpers/` — Pages Functions helpers (`mock-kv`, Pages context)
+
 ### Frontend Test Setup Helpers (`src/test-utils/frontend.ts`)
 
 Frontend jsdom tests should use `installMatchMediaMock()`, `cleanupFrontendTest()`, `resetBrowserStorage()`, and `createNextLinkMock()` from `src/test-utils/frontend.ts` instead of hand-rolling `matchMedia`, browser-storage cleanup, or `next/link` mocks. Keep test-local mocks only when the test needs behavior that differs from the shared helper.
@@ -279,14 +286,30 @@ const db = mockD1([
 
 - `match` — substring to look for in the SQL query
 - `rows` — array of row objects for `.all()` results
-- `first` — optional single object for `.first()` results
+- `first` — explicit `.first()` result, object or `null`; a provided value wins over first-row and cache-key inference, so `{ first: null }` is an explicit empty result, not a request to infer one
 - `batch()` — executes each statement and returns an array of results (SELECT statements use `.all()`; writes use `.run()`, falling back to `.all()`/`.first()`)
-- Unmatched SQL throws by default; pass `mockD1(tables, { allowUnmatched: true })` for permissive suites (the `requireMatch` option is deprecated)
+- Unmatched SQL always throws — there is no permissive mode. Add a `{ match, rows }` entry (or `allowUnused: true` on a shared fallback entry you do not expect to fire) instead. The `requireMatch` option is deprecated and no longer changes behavior.
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
-- `mockD1(tables, { strict: true })` — shorthand for `requireMatch` + exact normalized SQL matching
-- `db.assertAllMatchesUsed()` — optional assertion that every configured match was exercised during the test
+- `mockD1(tables, { strict: true })` — exact normalized SQL matching (`mockD1Strict(tables)` is the shorthand). Matching is always required, so unlike the deprecated `requireMatch` this only tightens how SQL is compared.
+- `db.assertAllMatchesUsed()` — optional assertion that every configured match was actually selected at least once. Accounting counts selections, not SQL history: a fallback entry shadowed by a `matchBinds` entry stays unused, and `allowUnused: true` entries are exempt.
 
-Cross-runtime tests outside `worker/src` should use `scripts/test-utils/d1.ts` for minimal D1 and RemoteD1 mocks. `makeTestD1Database()` covers Pages Functions that need `prepare()`, `batch()`, and `getHistory()`, while `createRemoteD1Mock()` covers worker maintenance scripts that accept a `RemoteD1Client` dependency.
+Cross-runtime tests outside `worker/src` should use `createRemoteD1Mock()` from `scripts/test-utils/d1.ts` for worker maintenance scripts that accept a `RemoteD1Client` dependency. Pages Functions that need `prepare()`, `batch()`, and `getHistory()` use `makeTestD1Database()` from `@shared/test-utils/mock-d1`.
+
+### Latest-Schema SQLite Harness (`shared/test-utils/latest-schema-sqlite.ts`)
+
+When correctness depends on transactions, constraints, migrations, or SQL semantics, use real SQLite instead of treating substring-matched mocks as persistence proof. `createLatestSchemaFixtureTracker()` opens in-memory databases with every migration in `worker/migrations` applied and wrapped by `createSqliteD1` (`shared/test-utils/sqlite-d1.ts`), registers each handle immediately on open, and closes every tracked handle on `closeAll()` — reporting aggregate errors rather than stopping at the first failure. The required lifecycle is:
+
+```ts
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+// inside a test:
+const { sqlite, db } = fixtures.open();
+```
+
+Initialization failure closes the failed handle; `createLatestSchemaSqlite()` remains for a single untracked open.
 
 ### Mock Fetch (`shared/test-utils/mock-fetch.ts`)
 
@@ -305,11 +328,13 @@ const spy = mockFetch([
 - `body` — response body (auto-serialized to JSON)
 - `status` — HTTP status code (default: 200)
 - `headers` — additional response headers
+- Each matching call resolves its outcome into a freshly constructed `Response`, so consuming one call's body never affects the next call; scripted `outcomes` replay one entry per call, and a `{ response }` outcome is returned as given.
+- Abort signals are honoured: the effective request's signal (an `init.signal` overrides a passed `Request`'s own signal) is checked before routing, after each responder/predicate await, and around delays and stalls; a request aborted before its outcome resolves fails without consuming a scripted outcome.
 - Unmatched URLs return 404
 - `mockFetch(routes, { requireMatch: true })` — throws on unexpected outbound URLs
 - `mockFetch(routes, { strictUrl: true })` — matches the full request URL exactly instead of substring search
 - `spy.assertAllRoutesUsed()` — optional assertion that every configured route was exercised during the test
-- Call `vi.restoreAllMocks()` in `afterEach` to clean up
+- Call `vi.unstubAllGlobals()` (typically alongside `vi.restoreAllMocks()`) in `afterEach` to remove the installed spy
 
 ### Shared Fixtures (`worker/src/test-helpers/__shared/fixtures.ts`)
 
@@ -424,7 +449,7 @@ When adding tests, prefer colocating them near the module under test unless an e
 ### Default test boundaries
 
 - **Broad DOM-rendered React integration tests** — jsdom is available only when a test opts in via `// @vitest-environment jsdom` (for example `src/hooks/__tests__/use-chart-container-ready.test.tsx`). Most existing tests stay pure or use server rendering instead of full browser-like component integration.
-- **API/worker handlers** — use `mockD1()` for response-shape and branch tests. When correctness depends on transactions, constraints, migrations, concurrency, or SQL semantics, use the latest-schema SQLite harness `createLatestSchemaSqlite()` in `worker/src/test-helpers/latest-schema-sqlite.ts` rather than treating substring-matched mocks as persistence proof.
+- **API/worker handlers** — use `mockD1()` for response-shape and branch tests. When correctness depends on transactions, constraints, migrations, concurrency, or SQL semantics, use the latest-schema SQLite harness (`createLatestSchemaFixtureTracker()` with `afterEach(closeAll)`) in `shared/test-utils/latest-schema-sqlite.ts` rather than treating substring-matched mocks as persistence proof.
 - **React-rendering behavior inside hooks/components** — prefer pure derivation tests and mocked query tests unless there is high-value UI coupling.
 - **Full external-service integration for cron orchestrators** — orchestration tests should mock `fetch`/D1 boundaries and assert status/metadata contracts, not live upstream behavior.
 
@@ -460,6 +485,15 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 - Use `makeStablecoin()` / `makeStablecoinMeta()` from `shared/test-utils/stablecoin.ts` (see `shared/lib/__tests__/supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep tests focused: one assertion per `it` block when possible.
+
+### Test evidence rules
+
+The 2026 test audit enforced these rules across the suite; apply them to new and edited tests:
+
+- **Assert consumer-observable behavior.** A test earns its place by failing when something a consumer observes regresses — a return value, rendered output, or persisted state — not when an internal detail changes.
+- **No source-text, class-token, or prose pins.** Unit tests do not pin source strings, CSS class tokens, or editorial prose; such assertions churn on harmless edits while missing real regressions. Styling and layout claims belong in browser coverage, and source-structure scanning stays in its syntax-aware owner.
+- **`test.fails` only with an `// audit:` comment.** An `it.fails`/`test.fails` marker must carry an adjacent `// audit: <finding> — <explanation>` comment recording the disputed or policy-deferred production defect it reproduces; it pins known-wrong current behavior and is never a way to leave a broken assertion green.
+- **Deletions name a surviving owner.** A deleted test or fixture is removed only against a named surviving owner that defends the same behavior; consolidation never weakens coverage, and mere fixture relocation is not a deletion.
 
 ## Coverage
 
@@ -572,6 +606,7 @@ import { syncFxRates } from "../sync-fx-rates";
 describe("syncFxRates", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("falls back gracefully when frankfurter.dev returns 503", async () => {
@@ -604,7 +639,7 @@ describe("syncFxRates", () => {
 
 | Scope | Restriction |
 | ----- | ----------- |
-| `worker/src/**` | No bare `viem` or non-`viem/utils` subpaths; no `src/lib/*` / `@/lib/*` (ADR-2, worker→frontend half) |
+| `worker/src/**` | No bare `viem`; among viem subpaths only `viem/utils` and `viem/siwe` are allowed (worker tests additionally allow `viem/accounts`). The ADR-2 worker→frontend half is not in this block: the custom `pharos/worker-import-boundaries` rule rejects any specifier containing `@/` or `src/` |
 | `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). The sole reviewed waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` |
 | `shared/lib/**` (excluding its tests) | No `@shared/*` aliases — use relative imports |
 | `src/app/**`, `src/components/**`, `worker/src/api/**` | No `sumPegBuckets` from `@shared/lib/supply`; cached `StablecoinData` supply reads use `getCirculatingRaw()`. The three raw-bucket parsers under `worker/src/api/` that pre-date a `StablecoinData` object are listed as glob exceptions in the config |

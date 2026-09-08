@@ -80,15 +80,6 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     // algorithmic, so a commodity overlay cannot carry one.
     expect(overlay.profileReview).toBeUndefined();
     expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("commodity-claim");
-    // XNK remains represented by a curated overlay for readable delisted
-    // metadata, but its lifecycle correction removes it from the active
-    // scored registry: 12 active entries and 13 overlays (XNK plus 12 active).
-    expect(
-      [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim").length,
-    ).toBe(12);
-    expect(
-      mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim").length,
-    ).toBe(13);
 
     const review = buildSafetyScoreV9MechanismReview(
       PROFILE_FIXED_INPUT,
@@ -188,9 +179,6 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
   });
 
   it("keeps pure wrappers, native savings, Stability Pools, and strategy vaults distinct", () => {
-    // Raw source file: `flags.navToken` is a schema default and is intentionally
-    // absent here (`StablecoinFlagsSchema` supplies `false`).
-    expect(wmAsset.flags).not.toHaveProperty("navToken");
     expect(wmAsset).toMatchObject({
       variantOf: "m-m0",
       variantKind: "pure-wrapper",

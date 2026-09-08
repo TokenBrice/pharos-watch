@@ -4,7 +4,12 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
-function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "healthy", init?: RequestInit): Response {
+function buildProbeResponse(
+  input: unknown,
+  healthStatus: HealthProbeStatus = "healthy",
+  init?: RequestInit,
+  health: { body?: unknown; status?: number } = {},
+): Response {
   let rawUrl = "https://api.pharos.watch";
   if (typeof input === "string") {
     rawUrl = input;
@@ -28,8 +33,9 @@ function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "h
     return new Response("Forbidden", { status: 403 });
   }
   if (url.pathname === "/api/health") {
-    return new Response(JSON.stringify({ status: healthStatus }), {
-      status: 200,
+    const body = "body" in health ? health.body : { status: healthStatus };
+    return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+      status: health.status ?? 200,
       headers: { "content-type": "application/json" },
     });
   }
@@ -419,24 +425,7 @@ describe("runStatusSelfCheck", () => {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
-    fetchMock.mockImplementation(async (input: unknown, _init?: RequestInit) => {
-      const rawUrl =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input &&
-                typeof input === "object" &&
-                "url" in input &&
-                typeof (input as { url: unknown }).url === "string"
-              ? (input as { url: string }).url
-              : "https://api.pharos.watch";
-      const url = new URL(rawUrl);
-      if (url.hostname === "site-api.pharos.watch") {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      return buildProbeResponse(input);
-    });
+    fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input));
 
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "https://api.pharos.watch",
@@ -462,29 +451,9 @@ describe("runStatusSelfCheck", () => {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
-    fetchMock.mockImplementation(async (input: unknown) => {
-      let rawUrl = "https://api.pharos.watch";
-      if (typeof input === "string") {
-        rawUrl = input;
-      } else if (input instanceof URL) {
-        rawUrl = input.toString();
-      } else if (
-        input &&
-        typeof input === "object" &&
-        "url" in input &&
-        typeof (input as { url: unknown }).url === "string"
-      ) {
-        rawUrl = (input as { url: string }).url;
-      }
-      const url = new URL(rawUrl);
-      if (
-        (url.hostname === "api.pharos.watch" || url.hostname === "site-api.pharos.watch") &&
-        url.pathname === "/api/health"
-      ) {
-        return new Response("{}", { status: 503 });
-      }
-      return buildProbeResponse(input);
-    });
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
+      buildProbeResponse(input, "healthy", init, { body: {}, status: 503 }),
+    );
     buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
       hasDivergence: false,
       severityDelta: 0,
@@ -567,41 +536,10 @@ describe("health probe semantic classification", () => {
     }));
   });
 
-  function buildHealthResponseWithBody(body: unknown): Response {
-    return new Response(typeof body === "string" ? body : JSON.stringify(body), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
   function mockHealthBody(body: unknown): void {
-    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
-      let rawUrl = "https://api.pharos.watch";
-      if (typeof input === "string") {
-        rawUrl = input;
-      } else if (input instanceof URL) {
-        rawUrl = input.toString();
-      } else if (
-        input &&
-        typeof input === "object" &&
-        "url" in input &&
-        typeof (input as { url: unknown }).url === "string"
-      ) {
-        rawUrl = (input as { url: string }).url;
-      }
-      const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
-      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
-      if (url.hostname === "site-api.pharos.watch" && !headers.has("X-Pharos-Site-Proxy-Secret")) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      if (url.hostname === "ops-api.pharos.watch") {
-        return new Response("Forbidden", { status: 403 });
-      }
-      if (url.pathname === "/api/health") {
-        return buildHealthResponseWithBody(body);
-      }
-      return new Response("{}", { status: 200 });
-    });
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
+      buildProbeResponse(input, "healthy", init, { body }),
+    );
   }
 
   it("classifies invalid-health-payload (unparseable JSON) as stale semantic status", async () => {

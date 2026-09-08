@@ -310,15 +310,17 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect(sourceState.blacklistCounts.has("usda-anzens")).toBe(false);
   });
 
-  it("preserves replay, coverage, and state order when source reads settle out of order", async () => {
+  it("hydrates identical values when source reads settle in reverse order", async () => {
     type PendingCall = {
       label: string;
       kind: "all" | "first";
       resolve: (value: unknown) => void;
       reject: (error: Error) => void;
     };
+    async function load(reverse: boolean) {
     const pending: PendingCall[] = [];
-    const replayOrder: string[] = [];
+    const failures: string[] = [];
+    let wake: (() => void) | undefined;
 
     const labelSql = (sql: string, binds: unknown[]): string => {
       if (sql.includes("FROM dex_liquidity_history")) return "dex-liquidity-history";
@@ -344,6 +346,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       const enqueue = (kind: "all" | "first") => new Promise<unknown>((resolve, reject) => {
         const label = labelSql(sql, binds);
         pending.push({ label, kind, resolve, reject });
+        wake?.();
       });
       return {
         bind: (...args: unknown[]) => stmt(sql, args),
@@ -365,38 +368,45 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       db,
       nowSec,
       bootstrapPending: false,
-      registerSourceFailure: (source) => replayOrder.push(source),
+      registerSourceFailure: (source) => failures.push(source),
       registerMalformedPersistedInput: () => {},
     }).finally(() => {
       settled = true;
+      wake?.();
     });
 
-    await Promise.resolve();
-
     const failedReads = /^(dex-liquidity(?:-history)?|dex-prices|blacklist-events|previous-stress-latest|mint-burn-24h|yield-warnings|cache:yield-rankings|latest-psi-score)$/;
-    for (let guard = 0; !settled && guard < 10; guard++) {
+    while (!settled) {
+      if (pending.length === 0) {
+        await new Promise<void>((resolve) => { wake = resolve; });
+        wake = undefined;
+      }
       const batch = pending.splice(0);
-      for (const call of batch.reverse()) {
+      for (const call of reverse ? batch.reverse() : batch) {
         if (failedReads.test(call.label)) {
           call.reject(new Error(call.label));
+        } else if (call.label === "previous-stress-legacy") {
+          call.resolve({ results: [{
+            stablecoin_id: "usdc-circle", band: "CALM", computed_at: nowSec - 600,
+            signals_json: JSON.stringify({ supply: { value: 7, available: true } }),
+          }] });
         } else {
           call.resolve(call.kind === "first" ? null : { results: [] });
         }
       }
-      await Promise.resolve();
     }
 
-    const sourceState = await loadPromise;
-    expect({
-      replayOrder: replayOrder.join(","),
-      coverageKeys: Object.keys(sourceState.sourceCoverage).join(","),
-      stateKeys: Object.keys(sourceState).join(","),
-    }).toMatchInlineSnapshot(`
-      {
-        "coverageKeys": "dexLiquidity,dexLiquidityFreshRows,dexLiquidityStaleRows,dexPrices,dexLiquidityHistory,blacklistEvents,previousStressSignals,previousStressSignalsFreshRows,previousStressSignalsStaleRows,mintBurnHourly,mintBurnHourlyFreshRows,mintBurnHourlyStaleRows,yieldWarnings,yieldStructuredRows",
-        "replayOrder": "dex-liquidity,dex-prices,dex-liquidity-history,blacklist-events,stress-signals-latest,mint-burn-hourly,yield-data,yield-rankings,stability-index-samples",
-        "stateKeys": "dexLiqRows,dexLiqMap,dexLiqAgeSecById,dexLiqStaleIds,dexPriceMap,dexPriceAgeSecById,dexPriceStaleIds,liqHist7dMap,liqHistRowsRead,blacklistCounts,prevSignals,prevSignalStaleIds,mintBurnMap,mintBurnAgeSecById,mintBurnStaleIds,yieldWarnings,yieldSourceRisk,yieldRankChangeAttribution,latestPsiScore,sourceCoverage,dependencyDiagnostics",
-      }
-    `);
+    return { state: await loadPromise, failures: new Set(failures) };
+    }
+    const normal = await load(false);
+    const reversed = await load(true);
+    expect(reversed).toEqual(normal);
+    expect(reversed.state.prevSignals.get("usdc-circle")?.signals.supply).toEqual({
+      value: 7, available: true,
+    });
+    expect(reversed.failures).toEqual(new Set([
+      "dex-liquidity", "dex-prices", "dex-liquidity-history", "blacklist-events",
+      "stress-signals-latest", "mint-burn-hourly", "yield-data", "yield-rankings", "stability-index-samples",
+    ]));
   });
 });

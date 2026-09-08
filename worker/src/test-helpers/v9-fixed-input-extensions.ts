@@ -1,7 +1,6 @@
 import { computeReportCardsRegistryFingerprint } from "../lib/report-cards-fixed-input";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../lib/safety-score-v9/fact-set";
 import {
-  V9_FIXTURE_OBSERVED_AT_SEC,
   V9_FIXTURE_CLOCK_SEC,
 } from "./v9-fixed-input-observations";
 import {
@@ -12,16 +11,16 @@ import {
 
 /** A strong three-component fiat-cash mechanism review. */
 function v9MechanismReview() {
-  const component = {
+  const component = () => ({
     status: v9Status(),
     quality: "strong" as const,
     failureDomains: [{ kind: "reserve-issuer" as const, key: "issuer:alpha" }],
-  };
+  });
   return {
     archetype: "fiat-cash" as const,
-    claimAndSegregation: component,
-    custodyContinuity: component,
-    assuranceAndReconciliation: component,
+    claimAndSegregation: component(),
+    custodyContinuity: component(),
+    assuranceAndReconciliation: component(),
   };
 }
 // --------------------------------------------------------------------------
@@ -35,6 +34,7 @@ export function makeV9Extension(
     clockSec?: number;
     observedAtSec?: number;
     registryFingerprint?: string;
+    routeChain?: string;
   } = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const assetId = options.assetId ?? "alpha";
@@ -70,7 +70,7 @@ export function makeV9Extension(
         },
         reserveApplicability: { state: "required" },
         reserveClassifications: [],
-        routeReviews: [v9RouteReview("dex:primary", observedAtSec)],
+        routeReviews: [v9RouteReview("dex:primary", observedAtSec, options.routeChain)],
         retainedRoutes: [],
         controlReview: {
           state: "no-privileged-controls",
@@ -138,14 +138,17 @@ export type V9ExtensionDependencyEdge = NonNullable<
 
 /** Fan `makeV9Extension()` across a multi-asset capture, wiring reviewed roles. */
 export function makeV9RoleExtension(
-  fixed: { registryFingerprint: string; activeAssetIds: readonly string[] },
+  fixed: { registryFingerprint: string; activeAssetIds: readonly string[]; clockSec: number },
   edgesByAssetId: Readonly<Record<string, readonly V9ExtensionDependencyEdge[]>>,
-  observedAtSec = V9_FIXTURE_OBSERVED_AT_SEC,
+  observedAtSec = fixed.clockSec - 100,
 ): SafetyScoreV9FactSetExtensionV2 {
-  const base = makeV9Extension();
+  const base = makeV9Extension({
+    clockSec: fixed.clockSec,
+    observedAtSec,
+    registryFingerprint: fixed.registryFingerprint,
+  });
   return {
     ...base,
-    registryFingerprint: fixed.registryFingerprint,
     assets: fixed.activeAssetIds.map((assetId) => {
       const asset = structuredClone(base.assets[0]!);
       const edges = [...(edgesByAssetId[assetId] ?? [])];
@@ -166,7 +169,7 @@ export function makeV9RoleExtension(
             sccMemberAssetIds: [],
           },
         },
-        routeReviews: [v9RouteReview(assetId === "alpha" ? "dex:primary" : `dex:${assetId}`)],
+        routeReviews: [v9RouteReview(assetId === "alpha" ? "dex:primary" : `dex:${assetId}`, observedAtSec)],
         researchEvidence: hasDependencyEvidence
           ? [
               {

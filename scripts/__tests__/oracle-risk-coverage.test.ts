@@ -23,6 +23,40 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   } as StablecoinMeta;
 }
 
+type OracleRisk = NonNullable<StablecoinMeta["oracleRisk"]>;
+type OracleBranch = NonNullable<OracleRisk["branches"]>[number];
+
+function completeBranch(overrides: Partial<OracleBranch> = {}): OracleBranch {
+  return {
+    id: "eth", label: "ETH", tier: "standard-external", summary: "ETH branch feed path.",
+    feeds: [{ provider: "Chainlink", path: "ETH / USD", chain: "ethereum" }],
+    fallbackBehavior: "The branch shuts down and preserves its last good price.",
+    observedAt: "2026-07-13",
+    collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 110 }],
+    liquidationMechanism: "Immediate permissionless liquidation against a Stability Pool.",
+    liquidationDelaySec: 0,
+    backstop: "The Stability Pool offsets debt before same-branch redistribution.",
+    shutdownOrBadDebtBehavior: "Branch shutdown prevents new debt while residual bad debt remains with holders.",
+    sources: [{ label: "Docs", url: "https://example.com/docs" }],
+    ...overrides,
+  };
+}
+
+function reviewedMultiBranch(overrides: Partial<OracleRisk> = {}): OracleRisk {
+  return {
+    tier: "standard-external",
+    summary: "Multiple collateral markets are reviewed separately.",
+    branchApplicability: {
+      disposition: "branches-required", reviewedAt: "2026-07-13", reviewer: "test",
+      rationale: "Each collateral market has independent oracle and liquidation behavior.",
+      sources: [{ label: "Docs", url: "https://example.com/docs" }],
+    },
+    branchModel: "multi-branch", reviewedAt: "2026-07-13", reviewer: "test", confidence: "verified",
+    branches: [completeBranch()],
+    ...overrides,
+  };
+}
+
 describe("analyzeOracleRiskCoverage", () => {
   it("warns on active crypto-backed CDPs missing oracleRisk", () => {
     const result = analyzeOracleRiskCoverage([makeCoin()], { asOf: new Date("2026-06-12T00:00:00Z") });
@@ -107,44 +141,15 @@ describe("analyzeOracleRiskCoverage", () => {
 
   it("blocks missing branches and incomplete branch evidence for declared multi-branch systems", () => {
     const missingBranches = analyzeOracleRiskCoverage([
-      makeCoin({
-        oracleRisk: {
-          tier: "standard-external",
-          summary: "Multiple collateral markets are reviewed separately.",
-          branchApplicability: {
-            disposition: "branches-required",
-            reviewedAt: "2026-07-13",
-            reviewer: "test",
-            rationale: "Each collateral market has independent oracle and liquidation behavior.",
-            sources: [{ label: "Docs", url: "https://example.com/docs" }],
-          },
-          branchModel: "multi-branch",
-          reviewedAt: "2026-07-13",
-          reviewer: "test",
-          confidence: "verified",
-        },
-      }),
+      makeCoin({ oracleRisk: reviewedMultiBranch({ branches: undefined }) }),
     ]);
     expect(missingBranches.findings).toEqual([expect.objectContaining({ kind: "missing-branches" })]);
 
     const incomplete = analyzeOracleRiskCoverage([
       makeCoin({
-        oracleRisk: {
-          tier: "standard-external",
-          summary: "Multiple collateral markets are reviewed separately.",
-          branchApplicability: {
-            disposition: "branches-required",
-            reviewedAt: "2026-07-13",
-            reviewer: "test",
-            rationale: "Each collateral market has independent oracle and liquidation behavior.",
-            sources: [{ label: "Docs", url: "https://example.com/docs" }],
-          },
-          branchModel: "multi-branch",
-          reviewedAt: "2026-07-13",
-          reviewer: "test",
-          confidence: "verified",
+        oracleRisk: reviewedMultiBranch({
           branches: [{ id: "eth", label: "ETH", tier: "standard-external", summary: "ETH branch feed path." }],
-        },
+        }),
       }),
     ]);
     expect(incomplete.completeBranches).toBe(0);
@@ -157,39 +162,9 @@ describe("analyzeOracleRiskCoverage", () => {
     const result = analyzeOracleRiskCoverage(
       [
         makeCoin({
-          oracleRisk: {
-            tier: "standard-external",
-            summary: "Multiple collateral markets are reviewed separately.",
-            branchApplicability: {
-              disposition: "branches-required",
-              reviewedAt: "2026-07-13",
-              reviewer: "test",
-              rationale: "Each collateral market has independent oracle and liquidation behavior.",
-              sources: [{ label: "Docs", url: "https://example.com/docs" }],
-            },
-            branchModel: "multi-branch",
-            reviewedAt: "2026-07-13",
-            reviewer: "test",
-            confidence: "verified",
-            branches: [
-              {
-                id: "eth",
-                label: "ETH",
-                tier: "standard-external",
-                summary: "ETH branch feed path.",
-                feeds: [{ provider: "Chainlink", path: "ETH / USD", chain: "ethereum" }],
-                fallbackBehavior: "The branch shuts down and preserves its last good price.",
-                observedAt: "2026-01-01",
-                collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 110 }],
-                liquidationMechanism: "Immediate permissionless liquidation against a Stability Pool.",
-                liquidationDelaySec: 0,
-                backstop: "The Stability Pool offsets debt before same-branch redistribution.",
-                shutdownOrBadDebtBehavior:
-                  "Branch shutdown prevents new debt while residual bad debt remains with holders.",
-                sources: [{ label: "Docs", url: "https://example.com/docs" }],
-              },
-            ],
-          },
+          oracleRisk: reviewedMultiBranch({
+            branches: [completeBranch({ observedAt: "2026-01-01" })],
+          }),
         }),
       ],
       { asOf: new Date("2026-07-13T00:00:00Z"), staleDays: 180 },
@@ -244,39 +219,25 @@ describe("analyzeOracleRiskCoverage", () => {
   });
 
   describe("reviewed inoperable branch dispositions", () => {
-    const deadOracleBranch = {
-      id: "dead",
-      label: "Dead oracle market",
-      tier: "standard-external" as const,
-      summary: "The market's price feed reverts.",
-      feeds: [{ provider: "Chainlink", path: "ETH / USD", chain: "ethereum" }],
-      fallbackBehavior: "No fallback: the price read reverts.",
-      observedAt: "2026-07-13",
-      collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 150 }],
-      liquidationMechanism: "Permissionless liquidation that cannot execute while the oracle reverts.",
-      backstop: "None.",
-      shutdownOrBadDebtBehavior: "Debt is stranded with holders.",
-      sources: [{ label: "Docs", url: "https://example.com/docs" }],
-    };
+    function deadOracleBranch(overrides: Partial<OracleBranch> = {}): OracleBranch {
+      return completeBranch({
+        id: "dead", label: "Dead oracle market", summary: "The market's price feed reverts.",
+        fallbackBehavior: "No fallback: the price read reverts.",
+        collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 150 }],
+        liquidationMechanism: "Permissionless liquidation that cannot execute while the oracle reverts.",
+        liquidationDelaySec: undefined,
+        backstop: "None.",
+        shutdownOrBadDebtBehavior: "Debt is stranded with holders.",
+        ...overrides,
+      });
+    }
 
-    function coinWithDeadBranch(branchOverrides: Record<string, unknown> = {}) {
+    function coinWithDeadBranch(branchOverrides: Partial<OracleBranch> = {}) {
       return makeCoin({
-        oracleRisk: {
-          tier: "standard-external",
+        oracleRisk: reviewedMultiBranch({
           summary: "One market's oracle is dead.",
-          branchApplicability: {
-            disposition: "branches-required",
-            reviewedAt: "2026-07-13",
-            reviewer: "test",
-            rationale: "Each collateral market has independent oracle and liquidation behavior.",
-            sources: [{ label: "Docs", url: "https://example.com/docs" }],
-          },
-          branchModel: "multi-branch",
-          reviewedAt: "2026-07-13",
-          reviewer: "test",
-          confidence: "verified",
-          branches: [{ ...deadOracleBranch, ...branchOverrides }],
-        },
+          branches: [deadOracleBranch(branchOverrides)],
+        }),
       });
     }
 

@@ -141,19 +141,24 @@ describe("Safety Score v9 aggregation counterfactual", () => {
   });
 
   it("derives caps and their tie-breaking from the canonical score input", () => {
-    const input = replay();
+    const input = replay(90);
     const asset = input.pipeline.evaluatedSet.assets[0]!;
     asset.scoreInput.parent.required = true;
-    asset.scoreInput.parent.score = 60;
+    asset.scoreInput.parent.score = 79;
+    asset.scoreInput.trackRecordMonths = 3;
 
     expect(policyCandidate(input).assets[0]).toMatchObject({
-      score: 60,
-      grade: "C+",
+      score: 79,
+      grade: "B+",
       bindingCap: expect.objectContaining({
         source: "parent",
         kind: "parent",
-        limit: 60,
+        limit: 79,
       }),
+    });
+    asset.scoreInput.parent.required = false;
+    expect(policyCandidate(input).assets[0]?.bindingCap).toMatchObject({
+      source: "track-record", kind: "track-record:<6m", limit: 79,
     });
   });
 
@@ -201,5 +206,24 @@ describe("Safety Score v9 aggregation counterfactual", () => {
       typeof input.pipeline.evaluatedSet.assets[0]["scoreInput"]
     >).identity;
     expect(() => buildV9AggregationCounterfactual(input)).toThrow();
+  });
+  it("aggregates mixed rated and NR assets with deterministic equal-frequency pileups", () => {
+    const input = replay();
+    input.pipeline.evaluatedSet.assets = [80, 70, 80, 45, 70].map((score, index) => {
+      const asset = replay(score).pipeline.evaluatedSet.assets[0]!;
+      asset.assetId = `asset-${index}`;
+      asset.scoreInput.assetId = asset.assetId;
+      return asset;
+    });
+    const result = policyCandidate(input);
+    expect(result.ratedCount).toBe(4);
+    expect(result.histogram).toEqual({
+      "A+": 0, A: 0, "A-": 2, "B+": 0, B: 2, "B-": 0,
+      "C+": 0, C: 0, "C-": 0, D: 0, F: 0, NR: 1,
+    });
+    expect(result.exactScorePileups).toEqual([
+      { score: 70, count: 2, share: 0.5 },
+      { score: 80, count: 2, share: 0.5 },
+    ]);
   });
 });

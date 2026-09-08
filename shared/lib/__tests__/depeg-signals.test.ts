@@ -15,45 +15,22 @@ describe("relativeBps", () => {
       absRawBps: 312.5,
       absBps: 312,
     });
-    expect(relativeBps(1.010049, 1)).toEqual({
-      rawBps: 100.48999999999975,
-      bps: 100,
-      absRawBps: 100.48999999999975,
-      absBps: 100,
-    });
-    expect(relativeBps(1.010051, 1)).toEqual({
-      rawBps: 100.51000000000032,
-      bps: 101,
-      absRawBps: 100.51000000000032,
-      absBps: 101,
-    });
-    expect(relativeBps(0.989951, 1)).toEqual({
-      rawBps: -100.48999999999975,
-      bps: -100,
-      absRawBps: 100.48999999999975,
-      absBps: 100,
-    });
-    expect(relativeBps(0.989949, 1)).toEqual({
-      rawBps: -100.51000000000032,
-      bps: -101,
-      absRawBps: 100.51000000000032,
-      absBps: 101,
-    });
   });
 
-  it("uses the supplied non-USD reference", () => {
-    expect(relativeBps(2990, 3025)).toEqual({
-      rawBps: -115.7024793388428,
-      bps: -116,
-      absRawBps: 115.7024793388428,
-      absBps: 116,
-    });
-    expect(relativeBps(3060, 3025)).toEqual({
-      rawBps: 115.70247933884392,
-      bps: 116,
-      absRawBps: 115.70247933884392,
-      absBps: 116,
-    });
+  it.each([
+    [1.010049, 1, 100.49, 100],
+    [1.010051, 1, 100.51, 101],
+    [0.989951, 1, -100.49, -100],
+    [0.989949, 1, -100.51, -101],
+    [2990, 3025, -115.702479338843, -116],
+    [3060, 3025, 115.702479338843, 116],
+  ])("rounds %s relative to %s without pinning floating noise", (value, reference, raw, rounded) => {
+    const signal = relativeBps(value, reference)!;
+    expect(signal.bps).toBe(rounded);
+    expect(signal.absBps).toBe(Math.abs(rounded));
+    // 1e-8 bps tolerance is far below the 0.01 bps rounding margin.
+    expect(Math.abs(signal.rawBps - raw)).toBeLessThan(1e-8);
+    expect(Math.abs(signal.absRawBps - Math.abs(raw))).toBeLessThan(1e-8);
   });
 
   it.each([

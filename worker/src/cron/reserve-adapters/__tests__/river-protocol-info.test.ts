@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
@@ -28,6 +28,8 @@ const TROVE_MANAGER_BY_CHAIN: Record<string, string[]> = {
 const ONE = 10n ** 18n;
 const REDEMPTION_FEE_FLOOR = ONE / 200n; // 0.5%
 
+const unexpectedRequests: string[] = [];
+afterEach(() => expect(unexpectedRequests.splice(0)).toEqual([]));
 interface ChainState {
   debtToken?: string;
   totalDebt: bigint;
@@ -60,40 +62,57 @@ function defaultChainState(chain: string): ChainState {
   };
 }
 
-/**
- * Serve the two multicall phases per chain off a per-chain state object: the
- * probe resolves branch addresses in the first batch and reads them back in the
- * second, so the mock has to answer by label rather than by call order.
- */
+// Independent request identities: labels are returned but never choose values.
 function primeRiverChainMocks(overrides: Record<string, Partial<ChainState>> = {}) {
-  vi.mocked(fetchOnchainMulticall3).mockImplementation((args: unknown) => {
-    const { calls, chain } = args as { calls: Array<{ label: string }>; chain: string };
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls, chain }) => {
+    const apps: Record<string, string> = {
+      ethereum: "0xb8374e4dff99202292da2fe34425e1de665b67e6",
+      base: "0x9a3c724ee9603a7550499be73dc743b371811dd3",
+    };
+    if (chain === undefined || !apps[chain]) {
+      unexpectedRequests.push(String(chain));
+      throw new Error(`Unexpected chain ${chain}`);
+    }
     const state = { ...defaultChainState(chain), ...(overrides[chain] ?? {}) };
-    if (state.fail) return Promise.resolve(null);
+    if (state.fail) return null;
     const satUsd = state.debtToken ?? SATUSD_BY_CHAIN[chain];
-
-    return Promise.resolve(calls.map(({ label }) => {
-      const appIndex = label.match(/^app:trove-manager:(\d+)$/);
-      if (appIndex && Number(appIndex[1]) >= state.troveManagers.length) {
-        return { label, success: false, returnData: "0x" as const };
+    const appValues: Record<string, `0x${string}`> = {
+      "0xf8d89898": word(satUsd),
+      "0x716c53c2": `${word(ONE)}${word(state.totalDebt).slice(2)}`,
+      "0xb620115d": word(state.tcr),
+      "0x679df0d9": word(BigInt(state.troveManagers.length)),
+    };
+    return calls.map(({ label, contract, data }) => {
+      let returnData: `0x${string}` | undefined;
+      if (contract.toLowerCase() === apps[chain]) {
+        returnData = appValues[data];
+        if (/^0x3b707478[0-9a-f]{64}$/.test(data)) {
+          const index = Number(BigInt(`0x${data.slice(10)}`));
+          if (index >= 12) {
+            unexpectedRequests.push(`manager slot ${index}`);
+            throw new Error(`Unexpected manager slot ${index}`);
+          }
+          if (index >= state.troveManagers.length) return { label, success: false, returnData: "0x" as const };
+          returnData = word(state.troveManagers[index]);
+        }
+      } else {
+        const index = state.troveManagers.indexOf(contract.toLowerCase());
+        if (index >= 0) {
+          const branchValues: Record<string, `0x${string}`> = {
+            "0xf8d89898": word(state.branchDebtToken ?? satUsd),
+            "0xc52861f2": word(state.rates[index]),
+            "0x794e5724": word(state.mcrs[index]),
+            "0x9484fb8e": word(state.sunsetting[index]),
+          };
+          returnData = branchValues[data];
+        }
       }
-      const returnData = ((): `0x${string}` => {
-        if (label === "app:debt-token") return word(satUsd);
-        if (label === "app:balances") return `${word(ONE)}${word(state.totalDebt).slice(2)}` as `0x${string}`;
-        if (label === "app:tcr") return word(state.tcr);
-        if (label === "app:trove-manager-count") return word(BigInt(state.troveManagers.length));
-        const appIndex = label.match(/^app:trove-manager:(\d+)$/);
-        if (appIndex) return word(state.troveManagers[Number(appIndex[1])] ?? 0n);
-        const branch = label.match(/^branch:([a-z-]+):(\d+)$/);
-        if (!branch) return word(0n);
-        const index = Number(branch[2]);
-        if (branch[1] === "debt-token") return word(state.branchDebtToken ?? satUsd);
-        if (branch[1] === "rate") return word(state.rates[index]);
-        if (branch[1] === "mcr") return word(state.mcrs[index]);
-        return word(state.sunsetting[index]);
-      })();
+      if (!returnData) {
+        unexpectedRequests.push(`${chain} ${contract} ${data}`);
+        throw new Error(`Unexpected River call ${chain} ${contract} ${data}`);
+      }
       return { label, success: true, returnData };
-    }));
+    });
   });
 }
 
@@ -226,6 +245,36 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
       tvlData: [{ timestamp: 1_776_290_400, value: 250_000_000 }],
       circulatingData: [{ timestamp: 1_776_290_400, value: 159_000_000 }],
     } as never);
+  });
+
+  it("drops a chain with a mismatched branch debt token", async () => {
+    primeRiverChainMocks({ base: { branchDebtToken: "0x1111111111111111111111111111111111111111" } });
+    const result = await fetchRiverProtocolInfoReserves(makeCoin(), liveConfig, new AbortController().signal);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(100_000);
+    expect(result.metadata?.details).toMatchObject({ redeemRoute: { droppedChains: ["base"] } });
+  });
+
+  it("keeps verified capacity but omits fees if any chain reports a rate above 100%", async () => {
+    primeRiverChainMocks({ base: { rates: [ONE + 1n] } });
+    const result = await fetchRiverProtocolInfoReserves(makeCoin(), liveConfig, new AbortController().signal);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(9_100_000);
+    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
+  });
+
+  it("accepts TCR exactly equal to the deepest MCR", async () => {
+    primeRiverChainMocks({ base: { tcr: 3n * ONE, mcrs: [3n * ONE] } });
+    const result = await fetchRiverProtocolInfoReserves(makeCoin(), liveConfig, new AbortController().signal);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(9_100_000);
+  });
+
+  it("propagates RPC cancellation instead of emitting unreadable telemetry", async () => {
+    const controller = new AbortController();
+    const error = new DOMException("Cancelled", "AbortError");
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async () => {
+      controller.abort(error);
+      throw error;
+    });
+    await expect(fetchRiverProtocolInfoReserves(makeCoin(), liveConfig, controller.signal)).rejects.toBe(error);
   });
 
   it("ignores reverting unused manager slots while summing debt and bounding branch fees", async () => {

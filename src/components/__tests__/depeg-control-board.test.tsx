@@ -10,6 +10,8 @@ import {
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { makeDews } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
@@ -20,43 +22,28 @@ afterEach(() => {
 });
 
 function makeCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return {
+  return makePegSummaryCoin({
     id: "coin-a",
     symbol: "SUSD",
     name: "Synthetic USD",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
     governance: "decentralized",
     currentDeviationBps: -6899,
     pegScore: 0,
     pegPct: 62.1,
-    severityScore: 0,
-    spreadPenalty: 0,
     eventCount: 607,
     worstDeviationBps: -6988,
     activeDepeg: true,
     lastEventAt: 1_700_000_000,
     trackingSpanDays: 700,
-    methodologyVersion: "v1",
     dexPriceCheck: { agrees: false, dexPrice: 0.31, dexDeviationBps: -6900, sourcePools: 2, sourceTvl: 1_740_000 },
     ...overrides,
-  };
+  });
 }
 
-function makeDews(overrides: Partial<StressSignalEntry> = {}): StressSignalEntry {
-  return {
-    score: 43,
-    band: "ALERT",
-    signals: {},
-    computedAt: 1_700_000_000,
-    methodologyVersion: "v1",
-    ...overrides,
-  };
-}
 
 function makeRow(
   coinOverrides: Partial<PegSummaryCoin> = {},
-  dews: StressSignalEntry | null = makeDews(),
+  dews: StressSignalEntry | null = makeDews({ score: 43, band: "ALERT", computedAt: 1_700_000_000 }),
 ): DepegTrackerRow {
   return {
     coin: makeCoin(coinOverrides),

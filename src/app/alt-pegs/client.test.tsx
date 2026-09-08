@@ -42,65 +42,34 @@ vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
   ),
 }));
 
-vi.mock("@/components/non-usd-share-chart", () => ({
-  NonUsdShareChart: ({
-    initialRange,
-    isFocused,
-    onOpenFocus,
-    onCloseFocus,
-    onRangeChange,
-  }: {
-    initialRange?: string;
-    isFocused?: boolean;
-    onOpenFocus?: (value: string) => void;
-    onCloseFocus?: () => void;
-    onRangeChange?: (value: string) => void;
-  }) => (
-    <div data-testid="non-usd-share-chart">
-      share-chart {isFocused ? "focused" : "default"} {initialRange}
-      <button type="button" onClick={() => onOpenFocus?.("90d")}>
-        open-share
-      </button>
-      <button type="button" onClick={() => onOpenFocus?.("all")}>
-        open-share-all
-      </button>
-      <button type="button" onClick={() => onCloseFocus?.()}>
-        close-share
-      </button>
-      <button type="button" onClick={() => onRangeChange?.("30d")}>
-        range-share
-      </button>
+function ChartStub({
+  kind, initialRange, isFocused, onOpenFocus, onCloseFocus, onRangeChange,
+}: {
+  kind: "share" | "cohorts";
+  initialRange?: string;
+  isFocused?: boolean;
+  onOpenFocus?: (value: string) => void;
+  onCloseFocus?: () => void;
+  onRangeChange?: (value: string) => void;
+}) {
+  const share = kind === "share";
+  return (
+    <div data-testid={share ? "non-usd-share-chart" : "alt-peg-cohort-chart"}>
+      {share ? "share" : "cohort"}-chart {isFocused ? "focused" : "default"} {initialRange}
+      <button type="button" onClick={() => onOpenFocus?.("90d")}>open-{kind}</button>
+      {share && <button type="button" onClick={() => onOpenFocus?.("all")}>open-share-all</button>}
+      <button type="button" onClick={() => onCloseFocus?.()}>close-{kind}</button>
+      <button type="button" onClick={() => onRangeChange?.(share ? "30d" : "all")}>range-{kind}</button>
     </div>
-  ),
+  );
+}
+
+vi.mock("@/components/non-usd-share-chart", () => ({
+  NonUsdShareChart: (props: Omit<Parameters<typeof ChartStub>[0], "kind">) => <ChartStub {...props} kind="share" />,
 }));
 
 vi.mock("@/app/alt-pegs/alt-peg-cohort-history-chart", () => ({
-  AltPegCohortHistoryChart: ({
-    initialRange,
-    isFocused,
-    onOpenFocus,
-    onCloseFocus,
-    onRangeChange,
-  }: {
-    initialRange?: string;
-    isFocused?: boolean;
-    onOpenFocus?: (value: string) => void;
-    onCloseFocus?: () => void;
-    onRangeChange?: (value: string) => void;
-  }) => (
-    <div data-testid="alt-peg-cohort-chart">
-      cohort-chart {isFocused ? "focused" : "default"} {initialRange}
-      <button type="button" onClick={() => onOpenFocus?.("90d")}>
-        open-cohorts
-      </button>
-      <button type="button" onClick={() => onCloseFocus?.()}>
-        close-cohorts
-      </button>
-      <button type="button" onClick={() => onRangeChange?.("all")}>
-        range-cohorts
-      </button>
-    </div>
-  ),
+  AltPegCohortHistoryChart: (props: Omit<Parameters<typeof ChartStub>[0], "kind">) => <ChartStub {...props} kind="cohorts" />,
 }));
 
 function makeCoin(id: string, marketCap: number) {

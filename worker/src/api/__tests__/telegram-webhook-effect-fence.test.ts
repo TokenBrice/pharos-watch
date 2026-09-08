@@ -2,8 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   TelegramWebhookEffectFence,
   buildMutationOperations,
@@ -17,13 +16,13 @@ import { resumeStoredPendingClearIntent } from "../telegram-webhook-pending-gate
 const NOW = 1_700_000_000;
 
 function createFixture(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = createLatestSchemaSqlite().sqlite;
+  const { sqlite, db } = createLatestSchemaSqlite();
   sqlite.exec(`
     PRAGMA foreign_keys = ON;
     CREATE TABLE domain_state (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
     INSERT INTO domain_state (id, value) VALUES (1, 'before');
   `);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return { sqlite, db };
 }
 
 function insertClaim(sqlite: DatabaseSync, updateId: number, owner: string, generation = 1): void {

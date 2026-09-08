@@ -10,6 +10,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  // Restore jsdom's prototype getter if a test overrode document.visibilityState.
+  Reflect.deleteProperty(document, "visibilityState");
 });
 
 describe("FreshnessIndicator", () => {
@@ -135,5 +137,69 @@ describe("FreshnessIndicator", () => {
       />,
     );
     expect(screen.getByText(/Dashboard fetch: 30s ago/i)).toBeDefined();
+  });
+  it("gives compact chips a doubled staleness budget and noncompact chips the exact one", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    const updatedAtMs = 1_700_000_000_000 - 90_000;
+    const { rerender } = render(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} compact />);
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
+
+    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} />);
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+
+    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} compact />);
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
+    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs - 45_000} staleAfterMs={60_000} compact />);
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+  });
+
+  it("announces recovery when stale data is replaced by a fresh timestamp", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    const { rerender } = render(
+      <FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={120_000} />,
+    );
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+    expect(screen.getByRole("status").textContent).toBe("");
+
+    rerender(<FreshnessIndicator updatedAtMs={1_700_000_000_000} staleAfterMs={120_000} />);
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
+    expect(screen.getByRole("status").textContent).toBe("Data is current again.");
+  });
+
+  it("recovers to a live reading once an unavailable feed loads", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    const { rerender } = render(<FreshnessIndicator updatedAtMs={0} staleAfterMs={120_000} />);
+    expect(screen.getByText("not loaded")).toBeTruthy();
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("unavailable");
+
+    rerender(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
+    expect(screen.getByText("30s ago")).toBeTruthy();
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("current");
+    expect(screen.getByRole("status").textContent).toBe("Data is current again.");
+  });
+
+  it("pauses ticking while the document is hidden and catches up on visibility", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={600_000} />);
+    expect(screen.getByText("3m ago")).toBeTruthy();
+
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    expect(screen.getByText("3m ago")).toBeTruthy();
+
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(screen.getByText("13m ago")).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByText("14m ago")).toBeTruthy();
   });
 });

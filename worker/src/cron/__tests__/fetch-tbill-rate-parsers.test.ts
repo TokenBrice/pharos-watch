@@ -151,6 +151,32 @@ describe("parseBoeSoniaCompoundedIndexCsv", () => {
     expect(result?.recordDate).toBe("2026-04-01");
     expect(result?.rate).toBeCloseTo(4.05556, 5);
   });
+
+  it("selects the latest start on or before the cutoff from unsorted candidates", () => {
+    const result = parseBoeSoniaCompoundedIndexCsv(
+      "DATE,IUDZOS2\n01 Apr 2026,101\n30 Dec 2025,99\n02 Jan 2026,100.5\n01 Jan 2026,100\n",
+    );
+    expect(result?.recordDate).toBe("2026-04-01");
+    expect(result?.rate).toBeCloseTo(4.0555555556, 8);
+  });
+
+  it("annualizes a missing-date gap using 92 elapsed days", () => {
+    const result = parseBoeSoniaCompoundedIndexCsv("DATE,IUDZOS2\n30 Dec 2025,100\n01 Apr 2026,101\n");
+    expect(result?.recordDate).toBe("2026-04-01");
+    expect(result?.rate).toBeCloseTo(3.9673913043, 8);
+  });
+
+  it("returns null without an observation at least 90 days old", () => {
+    expect(parseBoeSoniaCompoundedIndexCsv("DATE,IUDZOS2\n02 Jan 2026,100\n01 Apr 2026,101\n")).toBeNull();
+  });
+
+  it("ignores invalid and nonpositive trailing index rows", () => {
+    const result = parseBoeSoniaCompoundedIndexCsv(
+      "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n02 Apr 2026,ND\n03 Apr 2026,0\n04 Apr 2026,-1\n",
+    );
+    expect(result?.recordDate).toBe("2026-04-01");
+    expect(result?.rate).toBeCloseTo(4.0555555556, 8);
+  });
 });
 
 describe("parseBojCallRateJson", () => {

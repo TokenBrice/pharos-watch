@@ -80,27 +80,6 @@ describe("psi-view-model", () => {
     });
   });
 
-  describe("getPsiCompletedDayPoint", () => {
-    it("resolves previous completed UTC days without counting today", () => {
-      const history = [
-        { date: todayMidnight, score: 80, band: "STEADY" },
-        { date: yesterday, score: 76, band: "STEADY" },
-        { date: twoDaysAgo, score: 74, band: "TREMOR" },
-      ];
-
-      expect(getPsiCompletedDayPoint(history, computedAt, 1)).toEqual({
-        date: yesterday,
-        score: 76,
-        band: "STEADY",
-      });
-      expect(getPsiCompletedDayPoint(history, computedAt, 2)).toEqual({
-        date: twoDaysAgo,
-        score: 74,
-        band: "TREMOR",
-      });
-    });
-  });
-
   describe("upsertPsiHistoryPoint", () => {
     it("replaces an existing entry for the same day instead of duplicating it", () => {
       const history = [

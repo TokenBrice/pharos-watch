@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   beginReserveSyncAttempt,
   pruneLiveReserveHistory,
@@ -66,7 +66,7 @@ describe("live-reserves-store", () => {
   });
 
   it("publishes neither canonical row past the deadline and both rows inside it", async () => {
-    const { createSqliteD1 } = await import("../../test-helpers/sqlite-d1");
+    const { createSqliteD1 } = await import("@shared/test-utils/sqlite-d1");
 
     const expiredSqlite = createLatestSchemaSqlite().sqlite;
     try {
@@ -189,23 +189,27 @@ describe("live-reserves-store", () => {
   });
 
   it("clears non-authoritative attempt fencing but guards an existing canonical success during deferral", async () => {
-    const db = mockD1();
-
-    await buildReserveSyncRecordDeferredStatement(db, {
-      stablecoinId: "iusd-infinifi",
-      adapterKey: "infinifi",
-      breakerKey: "live-reserves:infinifi",
-      attemptedAt: 1_700_000_000,
-      reason: "run-budget-exhausted",
-    }).run();
-
-    const statement = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_sync_state"));
-    expect(statement).toBeDefined();
-    expect(statement!.sql).toContain("last_attempt_id = NULL");
-    expect(statement!.sql).toContain("pending_attempt_id = NULL");
-    expect(statement!.sql).toContain("WHERE NOT EXISTS");
-    expect(statement!.sql).toContain("reserve_sync_state.last_attempt_id = c.attempt_id");
-    expect(statement!.sql).toContain("reserve_sync_state.last_success_attempt_id = c.attempt_id");
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const defer = () => buildReserveSyncRecordDeferredStatement(db, {
+        stablecoinId: "iusd-infinifi", adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi", attemptedAt: 2_000,
+        reason: "run-budget-exhausted",
+      }).run();
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("pending"));
+      await defer();
+      expect(sqlite.prepare("SELECT last_attempt_id, pending_attempt_id FROM reserve_sync_state").get())
+        .toEqual({ last_attempt_id: null, pending_attempt_id: null });
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("canonical"));
+      await expect(finalizeReserveSuccess(db, "canonical")).resolves.toEqual({ finalized: true, historyRecorded: true });
+      const before = sqlite.prepare("SELECT * FROM reserve_sync_state").get();
+      const composition = sqlite.prepare("SELECT * FROM reserve_composition").get();
+      await defer();
+      expect(sqlite.prepare("SELECT * FROM reserve_sync_state").get()).toEqual(before);
+      expect(sqlite.prepare("SELECT * FROM reserve_composition").get()).toEqual(composition);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("keeps authoritative success when non-authoritative history writes fail", async () => {
@@ -228,7 +232,7 @@ describe("live-reserves-store", () => {
   });
 
   it("preserves history rows referenced by the current attempt closure past the age cutoff", async () => {
-    const { createSqliteD1 } = await import("../../test-helpers/sqlite-d1");
+    const { createSqliteD1 } = await import("@shared/test-utils/sqlite-d1");
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
             // Suspended feed: current composition attempt is far older than the cutoff.

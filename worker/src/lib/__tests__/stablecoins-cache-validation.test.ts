@@ -32,6 +32,6 @@ describe("validateStablecoinEntry", () => {
   it("preserves all extra fields from upstream", () => {
     const entry = { id: "1", symbol: "USDT", name: "Tether", price: 1.0, pegType: "peggedUSD", circulating: {}, chains: ["Ethereum"], extraField: "kept" };
     const result = validateStablecoinEntry(entry);
-    expect(result).not.toBeNull();
+    expect(result).toMatchObject({ extraField: "kept", chains: ["Ethereum"] });
   });
 });

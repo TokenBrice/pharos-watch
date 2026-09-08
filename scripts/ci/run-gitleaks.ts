@@ -291,7 +291,7 @@ export async function runGitleaks({
     ...(worktreeMode ? { input: buildWorktreeInput() } : {}),
     stdio: worktreeMode ? ["pipe", "inherit", "inherit"] : "inherit",
   });
-  return { status: result.status ?? (result.error ? 1 : 0) };
+  return { status: result.status ?? 1 };
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

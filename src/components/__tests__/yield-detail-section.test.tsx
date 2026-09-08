@@ -7,9 +7,9 @@ import {
   buildSourceRiskGoldenFixture,
   mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
+import { makeAltYieldSource, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
-import { makeYieldDetailResponse } from "./yield-detail.test-support";
+import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, isMobileMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
@@ -79,41 +79,29 @@ vi.mock("@/components/methodology-hint", () => ({
 }));
 
 function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
-  return {
+  return makeYieldDetailRanking({
     id: "usdn-smardex",
     symbol: "USDN",
     name: "SmarDex USDN",
     currentApy: 0.053,
     apy7d: 0.051,
     apy30d: 0.05,
-    apyBase: null,
-    apyReward: null,
-    yieldSource: "Primary Source",
-    yieldSourceUrl: "https://example.com/primary",
     yieldType: "lending-vault",
     dataSource: "defillama",
     sourceTvlUsd: 1_000_000,
     pharosYieldScore: 72,
     safetyScore: 82,
     safetyGrade: "A",
-    yieldToRisk: 1.2,
     excessYield: 0.02,
     benchmarkLabel: "SOFR",
     benchmarkRate: 0.03,
-    benchmarkSelectionMode: "native",
-    benchmarkIsFallback: false,
     yieldStability: 0.85,
     apyVariance30d: 0.002,
     apyMin30d: 0.045,
     apyMax30d: 0.055,
-    warningSignals: [],
     altSources: [],
-    provenance: makeYieldProvenance({
-      sourceKey: "primary-source",
-      confidenceTier: "curated",
-    }),
     ...overrides,
-  };
+  });
 }
 
 function makeResponse(rankings: YieldRanking[] = []): YieldRankingsResponse {
@@ -264,23 +252,12 @@ describe("YieldDetailSection", () => {
             ["reward-heavy", "stale-source-age"],
             { sourceRiskPenalty: 1.8 },
           ),
-          provenance: {
-            sourceKey: "primary-source",
-            sourceObservedAt: 1_700_000_000,
-            sourceAgeSeconds: 8 * 60 * 60,
-            sourceFreshness: "stale",
-            confidenceTier: "curated",
-            selectionMethod: "confidence-weighted",
+          provenance: makeYieldProvenance({
+            sourceKey: "primary-source", sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 8 * 60 * 60, sourceFreshness: "stale",
             selectionReason: "Higher confidence than retained alternates.",
-            sourceSwitch: true,
-            previousBestSourceKey: "previous-source",
-            usedLegacyHistory: false,
-            usedDefaultSafety: false,
-            benchmarkRecordDate: null,
-            benchmarkIsFallback: false,
-            benchmarkFallbackMode: null,
-            anomalies: [],
-          },
+            sourceSwitch: true, previousBestSourceKey: "previous-source", benchmarkRecordDate: null,
+          }),
         }),
       ]),
       meta: null,
@@ -303,26 +280,14 @@ describe("YieldDetailSection", () => {
       data: makeResponse([
         makeRanking({
           altSources: [
-            {
-              sourceKey: "alt-source",
-              yieldSource: "Alt Source",
-              yieldSourceUrl: "https://example.com/alt",
-              yieldType: "lending-vault",
-              currentApy: 0.049,
-              apy30d: 0.048,
-              sourceTvlUsd: 750_000,
-              dataSource: "defillama",
-            },
-            {
-              sourceKey: "second-alt-source",
-              yieldSource: "Second Alt Source",
-              yieldSourceUrl: "https://example.com/alt-2",
-              yieldType: "lending-vault",
-              currentApy: 0.047,
-              apy30d: 0.046,
-              sourceTvlUsd: 600_000,
-              dataSource: "defillama",
-            },
+            makeAltYieldSource({
+              sourceKey: "alt-source", yieldSource: "Alt Source", yieldSourceUrl: "https://example.com/alt",
+              yieldType: "lending-vault", currentApy: 0.049, apy30d: 0.048, sourceTvlUsd: 750_000, dataSource: "defillama",
+            }),
+            makeAltYieldSource({
+              sourceKey: "second-alt-source", yieldSource: "Second Alt Source", yieldSourceUrl: "https://example.com/alt-2",
+              yieldType: "lending-vault", currentApy: 0.047, apy30d: 0.046, sourceTvlUsd: 600_000, dataSource: "defillama",
+            }),
           ],
         }),
       ]),
@@ -366,16 +331,10 @@ describe("YieldDetailSection", () => {
       data: makeResponse([
         makeRanking({
           altSources: [
-            {
-              sourceKey: "alt-source",
-              yieldSource: "Alt Source",
-              yieldSourceUrl: "https://example.com/alt",
-              yieldType: "lending-vault",
-              currentApy: 0.049,
-              apy30d: 0.048,
-              sourceTvlUsd: 750_000,
-              dataSource: "defillama",
-            },
+            makeAltYieldSource({
+              sourceKey: "alt-source", yieldSource: "Alt Source", yieldSourceUrl: "https://example.com/alt",
+              yieldType: "lending-vault", currentApy: 0.049, apy30d: 0.048, sourceTvlUsd: 750_000, dataSource: "defillama",
+            }),
           ],
         }),
       ]),
@@ -407,58 +366,14 @@ describe("YieldDetailSection", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
         makeRanking({
-          altSources: [
-            {
-              sourceKey: "alt-source-1",
-              yieldSource: "Alt Source 1",
-              yieldSourceUrl: "https://example.com/alt-1",
-              yieldType: "lending-vault",
-              currentApy: 0.049,
-              apy30d: 0.048,
-              sourceTvlUsd: 750_000,
-              dataSource: "defillama",
-            },
-            {
-              sourceKey: "alt-source-2",
-              yieldSource: "Alt Source 2",
-              yieldSourceUrl: "https://example.com/alt-2",
-              yieldType: "lending-vault",
-              currentApy: 0.048,
-              apy30d: 0.047,
-              sourceTvlUsd: 700_000,
-              dataSource: "defillama",
-            },
-            {
-              sourceKey: "alt-source-3",
-              yieldSource: "Alt Source 3",
-              yieldSourceUrl: "https://example.com/alt-3",
-              yieldType: "lending-vault",
-              currentApy: 0.047,
-              apy30d: 0.046,
-              sourceTvlUsd: 650_000,
-              dataSource: "defillama",
-            },
-            {
-              sourceKey: "alt-source-4",
-              yieldSource: "Alt Source 4",
-              yieldSourceUrl: "https://example.com/alt-4",
-              yieldType: "lending-vault",
-              currentApy: 0.046,
-              apy30d: 0.045,
-              sourceTvlUsd: 600_000,
-              dataSource: "defillama",
-            },
-            {
-              sourceKey: "alt-source-5",
-              yieldSource: "Alt Source 5",
-              yieldSourceUrl: "https://example.com/alt-5",
-              yieldType: "lending-vault",
-              currentApy: 0.045,
-              apy30d: 0.044,
-              sourceTvlUsd: 550_000,
-              dataSource: "defillama",
-            },
-          ],
+          altSources: Array.from({ length: 5 }, (_, index) => {
+            const n = index + 1;
+            return makeAltYieldSource({
+              sourceKey: `alt-source-${n}`, yieldSource: `Alt Source ${n}`, yieldSourceUrl: `https://example.com/alt-${n}`,
+              yieldType: "lending-vault", currentApy: 0.05 - n * 0.001, apy30d: 0.049 - n * 0.001,
+              sourceTvlUsd: 800_000 - n * 50_000, dataSource: "defillama",
+            });
+          }),
         }),
       ]),
       meta: null,
@@ -499,22 +414,10 @@ describe("YieldDetailSection", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
         makeRanking({
-          provenance: {
-            sourceKey: "primary-source",
-            sourceObservedAt: 1_700_000_000,
-            sourceAgeSeconds: 60,
-            confidenceTier: "curated",
-            selectionMethod: "confidence-weighted",
-            selectionReason: "legacy freeform selection reason",
-            sourceSwitch: false,
-            previousBestSourceKey: null,
-            usedLegacyHistory: false,
-            usedDefaultSafety: false,
-            benchmarkRecordDate: null,
-            benchmarkIsFallback: false,
-            benchmarkFallbackMode: null,
-            anomalies: [],
-          },
+          provenance: makeYieldProvenance({
+            sourceKey: "primary-source", sourceObservedAt: 1_700_000_000, sourceAgeSeconds: 60,
+            selectionReason: "legacy freeform selection reason", benchmarkRecordDate: null,
+          }),
           decisionLedger: {
             selectedReasonCode: "curated-over-discovered",
             sourceSwitch: false,

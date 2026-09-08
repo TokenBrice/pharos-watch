@@ -82,6 +82,8 @@ describe("adaptFlyingTulipFtUsd", () => {
   });
 
   it("ignores an inactive zero-TVL, zero-supply chain placeholder", () => {
+    const baseline = adaptFlyingTulipFtUsd(payload());
+    expect(baseline.metadata?.totalReserveUsd).toBeCloseTo(4_686_811.9099, 4);
     const withPlaceholder = payload();
     withPlaceholder.chains.push({
       chainId: 56,
@@ -91,7 +93,7 @@ describe("adaptFlyingTulipFtUsd", () => {
     } as (typeof withPlaceholder.chains)[number]);
 
     expect(adaptFlyingTulipFtUsd(withPlaceholder).metadata).toMatchObject({
-      totalReserveUsd: expect.closeTo(4_686_811.9099, 0.0001),
+      totalReserveUsd: baseline.metadata?.totalReserveUsd,
       supplyUsd: 4_685_378.1711,
     });
   });

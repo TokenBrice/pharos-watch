@@ -5,12 +5,7 @@ import type {
   V9ExitRouteFactV2,
 } from "../../types/safety-score-v9-facts";
 import { compileV9FactSetV3 } from "../safety-score-v9/compile";
-import { evaluateV9FactSet } from "../safety-score-v9/evaluate-set";
-import {
-  projectV9ExitEvaluationRoute,
-  resolveV9DistinctExitCapacity,
-  selectV9ExitStressRequest,
-} from "../safety-score-v9/exit";
+import { evaluateV9FactSet, type V9EvaluatedAsset } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   createV9EvidenceReference,
   createV9FactStatus,
@@ -350,8 +345,8 @@ function evaluatedAsset(factSet: CompiledV9FactSetV3) {
   return evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1).assets[0]!;
 }
 
-function persistentMarketDepthContribution(factSet: CompiledV9FactSetV3) {
-  return evaluatedAsset(factSet).operationalResilience?.contributions.find(
+function persistentMarketDepthContribution(asset: V9EvaluatedAsset) {
+  return asset.operationalResilience?.contributions.find(
     (contribution) => contribution.component === "persistent-market-depth",
   );
 }
@@ -381,7 +376,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
       rawSupplyRequestUsd: 5_000_000,
     });
     expect(asset.operationalResilience?.eligible).toBe(true);
-    expect(persistentMarketDepthContribution(factSet)).toBeUndefined();
+    expect(persistentMarketDepthContribution(asset)).toBeUndefined();
   });
 
   it("combines distinct measured routes and retains their causal evidence", () => {
@@ -398,11 +393,22 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
       }),
     ]);
 
-    expect(persistentMarketDepthContribution(factSet)).toMatchObject({
+    expect(persistentMarketDepthContribution(evaluatedAsset(factSet))).toMatchObject({
       component: "persistent-market-depth",
       points: 2,
       evidenceRefIds: ["evidence:route-a", "evidence:route-b"],
     });
+
+    const sharedRoutes = structuredClone(factSet.assets[0]!.exitRoutes);
+    sharedRoutes[1]!.physicalResourceKeys = ["pool:route-a"];
+    // Shared score-bearing resources are rejected before resilience evaluation.
+    expect(() => compiledFactSet(sharedRoutes)).toThrow();
+    sharedRoutes[1]!.scoreEligible = false;
+    const shared = compiledFactSet(sharedRoutes);
+    const evaluatedShared = evaluatedAsset(shared);
+    expect(evaluatedShared.operationalResilience?.eligible).toBe(true);
+    expect(evaluatedShared.operationalResilience?.pillarCredits.exit).toBe(0);
+    expect(persistentMarketDepthContribution(evaluatedShared)).toBeUndefined();
   });
 
   it("credits persistent measured depth without a bespoke operational overlay", () => {
@@ -429,7 +435,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
       },
       pillarCredits: { backing: 0, exit: 2, control: 0 },
     });
-    expect(persistentMarketDepthContribution(factSet)).toMatchObject({
+    expect(persistentMarketDepthContribution(evaluated)).toMatchObject({
       component: "persistent-market-depth",
       confidence: "measured",
       points: 2,
@@ -449,38 +455,6 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     });
   });
 
-  it("uses distinct physical capacity instead of summing shared resources twice", () => {
-    const request = selectV9ExitStressRequest(SUPPLY_USD, V9_CANDIDATE_POLICY_V1)!;
-    const first = measuredRoute({
-      routeId: "resource-a",
-      physicalResourceKey: "pool:shared",
-      executableUsdAtStress: 4_000_000,
-    });
-    const overlapping = measuredRoute({
-      routeId: "resource-b",
-      physicalResourceKey: "pool:shared",
-      executableUsdAtStress: 4_000_000,
-    });
-    const distinct = {
-      ...overlapping,
-      physicalResourceKeys: ["pool:distinct"],
-    };
-
-    expect(
-      resolveV9DistinctExitCapacity(
-        [first, distinct].map(projectV9ExitEvaluationRoute),
-        request,
-        V9_CANDIDATE_POLICY_V1,
-      ).valuedExecutableUsd,
-    ).toBe(8_000_000);
-    expect(
-      resolveV9DistinctExitCapacity(
-        [first, overlapping].map(projectV9ExitEvaluationRoute),
-        request,
-        V9_CANDIDATE_POLICY_V1,
-      ).valuedExecutableUsd,
-    ).toBe(4_000_000);
-  });
 
   it("takes observation maturity from the weakest included route", () => {
     const factSet = compiledFactSet([
@@ -498,7 +472,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
       }),
     ]);
 
-    expect(persistentMarketDepthContribution(factSet)).toBeUndefined();
+    expect(persistentMarketDepthContribution(evaluatedAsset(factSet))).toBeUndefined();
   });
 
   it("blocks resilience credit for ordinary and peg issuer opacity", () => {
@@ -509,7 +483,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
         executableUsdAtStress: 10_000_000,
       }),
     ]);
-    expect(persistentMarketDepthContribution(base)).toBeDefined();
+    expect(persistentMarketDepthContribution(evaluatedAsset(base))).toBeDefined();
 
     const ordinaryOpacity = mutateFactSet(base, (asset) => {
       const gap = createV9FactGapV3({

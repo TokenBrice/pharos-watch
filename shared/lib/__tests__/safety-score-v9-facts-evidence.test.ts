@@ -66,6 +66,36 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
     });
   });
 
+  it("keeps evidence current through maxAgeSec and expires it one second later", () => {
+    const source = {
+      evidenceId: "e:boundary", sourceId: "source", sourceGenerationId: "source:g1",
+      disposition: "observed" as const, observedAtSec: 800, maxAgeSec: 200,
+    };
+    expect(createV9EvidenceReference(source, 1_000).freshness).toEqual({
+      state: "current", ageSec: 200, maxAgeSec: 200,
+    });
+    expect(createV9EvidenceReference(source, 1_001).freshness).toEqual({
+      state: "stale", ageSec: 201, maxAgeSec: 200,
+    });
+  });
+
+  it("rejects future publication and rejection clocks independently of observation", () => {
+    const source = {
+      evidenceId: "e:clock", sourceId: "source", sourceGenerationId: "source:g1", observedAtSec: 900,
+    };
+    const published = { ...source, disposition: "published" as const, publishedAtSec: 1_000 };
+    const rejected = {
+      ...source, disposition: "rejected" as const,
+      rejection: { code: "conflict", reason: "Conflicting generation", rejectedAtSec: 1_000 },
+    };
+    expect(createV9EvidenceReference(published, 1_000).disposition).toBe("published");
+    expect(createV9EvidenceReference(rejected, 1_000).disposition).toBe("rejected");
+    expect(() => createV9EvidenceReference({ ...published, publishedAtSec: 1_001 }, 1_000)).toThrow();
+    expect(() => createV9EvidenceReference({
+      ...rejected, rejection: { ...rejected.rejection, rejectedAtSec: 1_001 },
+    }, 1_000)).toThrow();
+  });
+
   it("rejects future source times and contradictory source dispositions", () => {
     expect(() =>
       createV9EvidenceReference(
@@ -248,6 +278,25 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
     expect(createV9FactGapV3({
       ...gap,
       evidenceHistory: { publishedBy: "unknown", references: [expiredPublication] },
+    }).responsibility).toBe("issuer-undisclosed");
+    const observedOnly = createV9EvidenceReference({
+      evidenceId: "e:observed-only", sourceId: "issuer-reserve-report", sourceGenerationId: "report:g1",
+      disposition: "observed", observedAtSec: 700, maxAgeSec: 200,
+    }, 1_000);
+    const currentPublication = createV9EvidenceReference({
+      evidenceId: "e:current", sourceId: "issuer-reserve-report", sourceGenerationId: "report:g2",
+      disposition: "published", observedAtSec: 900, publishedAtSec: 910, maxAgeSec: 200,
+    }, 1_000);
+    for (const reference of [observedOnly, currentPublication]) {
+      expect(createV9FactGapV3({
+        ...gap,
+        evidenceHistory: { publishedBy: "issuer", references: [reference] },
+      }).responsibility).toBe("issuer-undisclosed");
+    }
+    expect(createV9FactGapV3({
+      ...gap,
+      observationState: "missing",
+      evidenceHistory: { publishedBy: "issuer", references: [expiredPublication] },
     }).responsibility).toBe("issuer-undisclosed");
   });
 });

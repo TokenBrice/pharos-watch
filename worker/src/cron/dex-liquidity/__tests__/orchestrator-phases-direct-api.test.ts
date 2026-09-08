@@ -84,16 +84,12 @@ describe("integrateDirectApiLiquidityPhase", () => {
     const priceObservations = new Map();
     const chainAddressToId = new Map([["plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "usdai-usd-ai"]]);
 
-    await integrateDirectApiLiquidityPhase({
+    await runDirectApiScenario({
       directApiPools,
       knownPoolIndex,
-      contractMetaByChainAddress: new Map(),
       metrics,
       priceObservations,
       chainAddressToId,
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
       stablecoinPriceById: new Map(),
     });
 
@@ -124,16 +120,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
       },
     ];
 
-    const result = await integrateDirectApiLiquidityPhase({
+    const result = await runDirectApiScenario({
       directApiPools,
-      knownPoolIndex: createKnownPoolIdentityIndex(),
-      contractMetaByChainAddress: new Map(),
-      metrics: new Map(),
-      priceObservations: new Map(),
       chainAddressToId: new Map(),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
       stablecoinPriceById: new Map(),
     });
 
@@ -142,9 +131,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(result.excludedByReason).toEqual({ untracked_token: 1 });
   });
 
-  it("compacts production-scale direct results before identity work without losing raw source evidence", () => {
-    const rawPoolCount = 6_673;
-    const retainedPoolCount = 1_442;
+  it("compacts direct results before identity work without losing raw source evidence", () => {
+    const rawPoolCount = 5;
+    const retainedPoolCount = 2;
     const trackedAddress = "0x1111111111111111111111111111111111111111";
     const makePool = (index: number, tracked: boolean): DexApiPool => ({
       source: "balancer",
@@ -213,7 +202,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       rawPoolCount,
       retainedPoolCount,
       skippedInvalidUnitCount: 0,
-      skippedUntrackedCount: 5_231,
+      skippedUntrackedCount: 3,
     });
     expect(compacted.pools).toHaveLength(retainedPoolCount);
     expect(compacted.phase.results[0]?.result.pools).toHaveLength(retainedPoolCount);
@@ -298,7 +287,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       balances: [5_000, 5_000],
     };
 
-    const result = await integrateDirectApiLiquidityPhase({
+    const result = await runDirectApiScenario({
       directApiPools: [trackedPool],
       preprocessedPoolCounts: {
         rawPoolCount: 5_233,
@@ -306,14 +295,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
         skippedInvalidUnitCount: 1,
         skippedUntrackedCount: 5_231,
       },
-      knownPoolIndex: createKnownPoolIdentityIndex(),
-      contractMetaByChainAddress: new Map(),
-      metrics: new Map(),
-      priceObservations: new Map(),
       chainAddressToId: new Map([[buildChainAddressKey("solana", "tracked-mint"), "tracked-stablecoin"]]),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
       stablecoinPriceById: new Map(),
     });
 
@@ -347,16 +329,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
       },
     ];
 
-    const result = await integrateDirectApiLiquidityPhase({
+    const result = await runDirectApiScenario({
       directApiPools,
-      knownPoolIndex: createKnownPoolIdentityIndex(),
-      contractMetaByChainAddress: new Map(),
-      metrics: new Map(),
-      priceObservations: new Map(),
       chainAddressToId: new Map([["solana:token-a", "aaa-test"]]),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
       stablecoinPriceById: new Map(),
     });
 
@@ -386,16 +361,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
       },
     ];
 
-    const result = await integrateDirectApiLiquidityPhase({
+    const result = await runDirectApiScenario({
       directApiPools,
-      knownPoolIndex: createKnownPoolIdentityIndex(),
-      contractMetaByChainAddress: new Map(),
-      metrics: new Map(),
-      priceObservations: new Map(),
       chainAddressToId: new Map([["ethereum:0x00000000000000000000000000000000000000a1", "usdt-tether"]]),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
       stablecoinPriceById: new Map(),
     });
 

@@ -21,6 +21,42 @@ function asset(
 }
 
 describe("derivePegRates", () => {
+  it("rejects invalid fallback rates consistently with and without fiat peers", () => {
+    for (const rate of [-1, Infinity]) {
+      const populated = derivePegRates([asset("eur", "peggedEUR", 1.2, 2_000_000)], undefined, { peggedEUR: rate });
+      expect(populated.rates.peggedEUR).toBe(1.2);
+      expect(populated.sources.peggedEUR).toBe("median");
+      const empty = derivePegRates([], undefined, { peggedEUR: rate });
+      expect(empty.rates.peggedEUR).toBeUndefined();
+      expect(empty.sources.peggedEUR).toBeUndefined();
+    }
+  });
+
+  it("excludes infinite candidate prices without discarding valid peers", () => {
+    const result = derivePegRates([
+      asset("invalid", "peggedEUR", Infinity, 2_000_000),
+      asset("valid", "peggedEUR", 1.2, 2_000_000),
+    ]);
+    expect(result.rates.peggedEUR).toBe(1.2);
+    expect(result.counts.peggedEUR).toBe(1);
+  });
+
+  it("includes exactly one million across circulating buckets but excludes one dollar less", () => {
+    const atBoundary = { ...asset("exact", "peggedEUR", 1.2, 0), circulating: { peggedUSD: 600_000, peggedEUR: 400_000 } };
+    const belowBoundary = { ...asset("below", "peggedEUR", 9, 0), circulating: { peggedUSD: 600_000, peggedEUR: 399_999 } };
+    const result = derivePegRates([atBoundary, belowBoundary]);
+    expect(result.rates.peggedEUR).toBe(1.2);
+    expect(result.counts.peggedEUR).toBe(1);
+  });
+
+  it("switches commodity fallback to peer median at three contributors", () => {
+    const peers = [2000, 2200, 2400].map((price, i) => asset(`gold-${i}`, "peggedGOLD", price, 2_000_000));
+    const thin = derivePegRates(peers.slice(0, 2), undefined, { peggedGOLD: 3000 });
+    expect([thin.rates.peggedGOLD, thin.sources.peggedGOLD, thin.counts.peggedGOLD]).toEqual([3000, "fallback", 2]);
+    const broad = derivePegRates(peers, undefined, { peggedGOLD: 3000 });
+    expect([broad.rates.peggedGOLD, broad.sources.peggedGOLD, broad.counts.peggedGOLD]).toEqual([2200, "median", 3]);
+  });
+
   it("computes the median for three candidates in a peg bucket", () => {
     const result = derivePegRates([
       asset("coin-a", "peggedUSD", 0.999, 2_000_000),
@@ -183,6 +219,13 @@ describe("normalizePegType", () => {
 });
 
 describe("getPegReference", () => {
+  it("rejects nonpositive and nonfinite references while accepting a positive rate", () => {
+    for (const rate of [0, -1, NaN, Infinity]) {
+      expect(getPegReference("peggedEUR", { peggedEUR: rate })).toBeNull();
+    }
+    expect(getPegReference("peggedEUR", { peggedEUR: 1.2 })).toBe(1.2);
+  });
+
   it("scales gold and silver references by commodity ounces", () => {
     expect(getPegReference("peggedGOLD", { peggedGOLD: 5000 }, 0.5)).toBe(2500);
     expect(getPegReference("peggedSILVER", { peggedSILVER: 100 }, 2)).toBe(200);

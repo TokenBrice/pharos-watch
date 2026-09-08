@@ -551,6 +551,8 @@ describe("handleDepegResolver", () => {
 
   it("keeps publication-retry-pending placeholders free of frozen payloads", async () => {
     const computedAt = 1_998_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(computedAt * 1000);
     const prediction = {
       ...basePredictionMeta(computedAt),
       state: "publication_retry_pending" as const,
@@ -578,10 +580,13 @@ describe("handleDepegResolver", () => {
       live: live(computedAt),
     };
 
-    expect(pendingRow.kind).toBe("pending");
-    expect(pendingRow.prediction.state).toBe("publication_retry_pending");
-    expect(pendingRow.frozen).toBeNull();
-    expect("resolution" in pendingRow).toBe(false);
-    expect("duration" in pendingRow).toBe(false);
+    const response = await handleDepegResolver(mockD1(cacheRows(snapshot(computedAt, computedAt + 3600, [pendingRow]))));
+    const body = await readJsonResponse<DdrResponse>(response, 200);
+    expect(body.rows).toHaveLength(1);
+    expect(body.rows[0].kind).toBe("pending");
+    expect(body.rows[0].prediction.state).toBe("publication_retry_pending");
+    expect(body.rows[0].frozen).toBeNull();
+    expect(body.rows[0]).not.toHaveProperty("resolution");
+    expect(body.rows[0]).not.toHaveProperty("duration");
   });
 });

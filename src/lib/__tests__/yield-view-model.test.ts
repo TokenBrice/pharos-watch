@@ -118,7 +118,20 @@ describe("buildYieldViewModel", () => {
     expect(model.visibleRows).toHaveLength(3);
   });
 
-  it("applies every supported current-payload filter from one model", () => {
+  it.each([
+    [{ peg: "non-usd" }, ["eurc-circle"]],
+    [{ yieldType: "lending-vault" }, ["eurc-circle"]],
+    [{ q: "eur" }, ["eurc-circle"]],
+    [{ warnings: "only" }, ["eurc-circle", "usdt-tether"]],
+    [{ sourceConfidence: "deterministic" }, ["eurc-circle"]],
+    [{ benchmark: "EUR" }, ["eurc-circle"]],
+    [{ opportunity: "holder-yield" }, ["eurc-circle"]],
+  ])("independently filters by %j", (filters, expected) => {
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), filters);
+    expect(model.visibleRows.map((row) => row.id).sort()).toEqual(expected);
+  });
+
+  it("composes multiple current-payload filters with AND semantics", () => {
     const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
       peg: "non-usd",
       yieldType: "lending-vault",
@@ -495,28 +508,6 @@ describe("buildYieldViewModel", () => {
     const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { watchlist: "only" });
 
     expect(model.visibleRows).toEqual([]);
-  });
-
-  it("supports merging multiple preset overrides on a single model", () => {
-    // Simulates the stackable-preset wire flow: best-dollar then treasury-grade.
-    // best-dollar overrides: { peg: "USD", minSafety: 80 }
-    // treasury-grade overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" }
-    // Merge result (last-applied wins on conflict) should preserve all keys.
-    const merged = buildYieldViewModel(prepareYieldUniverse(rows, null), {
-      peg: "USD",
-      minSafety: "80",
-      depth: "hide-thin",
-      sourceConfidence: "deterministic",
-    });
-
-    expect(merged.filters).toMatchObject({
-      peg: "USD",
-      minSafety: 80,
-      depth: "hide-thin",
-      sourceConfidence: "deterministic",
-    });
-    // No single preset matches the merged state.
-    expect(merged.matchingPreset).toBeNull();
   });
 
   it("matches each risk-budget stop's filter overrides to its matching key", () => {

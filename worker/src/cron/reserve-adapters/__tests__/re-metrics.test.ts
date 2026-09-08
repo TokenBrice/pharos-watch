@@ -7,7 +7,6 @@ import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
-const SAMPLE_HTML_INITIAL_TVL_DATA = SAMPLE_HTML;
 
 describe("adaptReMetrics", () => {
   it("maps the Re metrics payload into live reserve slices", () => {
@@ -49,20 +48,20 @@ describe("adaptReMetrics", () => {
     expectValidAdapterOutput("re-metrics", result);
   });
 
-  it("accepts the renamed initialTvlData payload used by the current site", () => {
-    const result = adaptReMetrics(SAMPLE_HTML_INITIAL_TVL_DATA);
-
-    expect(result.slices[0]).toEqual({
-      sourceKey: "re-metrics:offchain-capital",
-      name: "Off-chain insurance / reinsurance capital",
-      pct: 81.6,
-      risk: "medium",
-    });
-    expect(result.metadata).toMatchObject({
-      offchainCapitalUsd: 179595196.93262026,
-      sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
-      freshnessMode: "verified",
-    });
+  it.each(["series", "initialTvlData", "both"] as const)("parses %s with series taking precedence", (format) => {
+    const payload = {
+      initialChainBreakdowns: {
+        ethereum: { asOf: "2026-04-14", rows: [{ tokenSymbol: "usdc", valueWei: "100000000000000000000", valueKnown: true }] },
+      },
+      ...(format !== "initialTvlData" ? {
+        series: [{ seriesKey: "offchain_capital", stats: { current: 300 }, points: [{ date: "2026-04-14", value: 300 }] }],
+      } : {}),
+      ...(format !== "series" ? { initialTvlData: [{ date: "2026-04-14", offchain_capital: 100 }] } : {}),
+    };
+    const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
+    const result = adaptReMetrics(html);
+    expect(result.metadata?.offchainCapitalUsd).toBe(format === "initialTvlData" ? 100 : 300);
+    expect(result.slices.find(({ coinId }) => coinId === "usdc-circle")?.pct).toBe(format === "initialTvlData" ? 50 : 25);
   });
 
   it("maps liUSD 4w explicitly instead of degrading as an unmapped token", () => {
@@ -124,7 +123,7 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     expectValidAdapterOutput("re-metrics", result);
   });
 
-  it("parses large wei-denominated token values without raw Number conversion", () => {
+  it("normalizes large wei-denominated token values", () => {
     const html = `
 <html><body><script>
 self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000000123456\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);

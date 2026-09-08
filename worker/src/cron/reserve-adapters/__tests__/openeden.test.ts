@@ -1,9 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { fetchWithRetryMock, resetRpcMocks } from "./helpers/rpc-mock";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptOpenEdenUsdo, fetchOpenEdenUsdoReserves } from "../openeden";
-import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
+const forbiddenFetch = vi.fn(() => { throw new Error("Unexpected real network request"); });
+beforeEach(() => {
+  forbiddenFetch.mockClear();
+  vi.stubGlobal("fetch", forbiddenFetch);
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  expect(forbiddenFetch).not.toHaveBeenCalled();
+});
+
+  const payload = {
+    date: "2026-03-25T08:00:17.600Z",
+    usdoAmount: 100,
+    totalTbillAmountInUsd: 70,
+    usdcAmount: 15,
+    buidlAmount: 5,
+    vbillAmount: 10,
+    usycAmountInUsd: 0,
+    benjiAmount: 0,
+    reserveAssetsInUsd: 100,
+    ratio: 1,
+  };
 describe("adaptOpenEdenUsdo", () => {
   it("maps reserve composition fields into reserve slices", () => {
     const result = adaptOpenEdenUsdo({
@@ -69,22 +91,14 @@ describe("adaptOpenEdenUsdo", () => {
       coinId: "usdc-circle",
     });
     expect(result.metadata?.componentTotalUsd).toBeCloseTo(49_084_898.00, 2);
+    expect(result.metadata).toMatchObject({
+      immediateRedeemableUsd: 411_606.20,
+      redemption: { capacityUsd: 411_606.20 },
+    });
   });
 
   it("includes the RLUSD component in component-total validation and slices", () => {
-    const result = adaptOpenEdenUsdo({
-      date: "2026-03-25T08:00:17.600Z",
-      usdoAmount: 100,
-      totalTbillAmountInUsd: 70,
-      usdcAmount: 10,
-      rlusdAmount: 5,
-      buidlAmount: 5,
-      vbillAmount: 10,
-      usycAmountInUsd: 0,
-      benjiAmount: 0,
-      reserveAssetsInUsd: 100,
-      ratio: 1,
-    });
+    const result = adaptOpenEdenUsdo({ ...payload, usdcAmount: 10, rlusdAmount: 5 });
 
     expect(result.slices).toContainEqual({
       name: "RLUSD buffer",
@@ -94,78 +108,18 @@ describe("adaptOpenEdenUsdo", () => {
     });
   });
 
-  it("accepts decimal-scale ratio values as-is", () => {
-    const result = adaptOpenEdenUsdo({
-      date: "2026-03-25T08:00:17.600Z",
-      usdoAmount: 100,
-      totalTbillAmountInUsd: 70,
-      usdcAmount: 15,
-      buidlAmount: 5,
-      vbillAmount: 10,
-      usycAmountInUsd: 0,
-      benjiAmount: 0,
-      reserveAssetsInUsd: 100,
-      ratio: 1.005,
-    });
-    expect(result.metadata?.reserveRatio).toBe(1.005);
+  it.each([1.005, 100.5])("normalizes decimal and percentage ratio %s", (ratio) => {
+    expect(adaptOpenEdenUsdo({ ...payload, ratio }).metadata?.reserveRatio).toBe(1.005);
   });
 
-  it("divides percent-scale ratio values by 100", () => {
-    const result = adaptOpenEdenUsdo({
-      date: "2026-03-25T08:00:17.600Z",
-      usdoAmount: 100,
-      totalTbillAmountInUsd: 70,
-      usdcAmount: 15,
-      buidlAmount: 5,
-      vbillAmount: 10,
-      usycAmountInUsd: 0,
-      benjiAmount: 0,
-      reserveAssetsInUsd: 100,
-      ratio: 100.5,
-    });
-    expect(result.metadata?.reserveRatio).toBe(1.005);
-  });
-
-  it("throws for non-numeric or non-positive ratio values", () => {
-    const base = {
-      date: "2026-03-25T08:00:17.600Z",
-      usdoAmount: 100,
-      totalTbillAmountInUsd: 70,
-      usdcAmount: 15,
-      buidlAmount: 5,
-      vbillAmount: 10,
-      usycAmountInUsd: 0,
-      benjiAmount: 0,
-      reserveAssetsInUsd: 100,
-    };
-    expect(() => adaptOpenEdenUsdo({ ...base, ratio: Number.NaN })).toThrow(/ratio is non-numeric/);
-    expect(() => adaptOpenEdenUsdo({ ...base, ratio: 0 })).toThrow(/ratio is non-numeric/);
-    expect(() => adaptOpenEdenUsdo({ ...base, ratio: -1 })).toThrow(/ratio is non-numeric/);
+  it.each([Number.NaN, 0, -1])("rejects non-numeric or non-positive ratio %s", (ratio) => {
+    expect(() => adaptOpenEdenUsdo({ ...payload, ratio })).toThrow(/ratio is non-numeric/);
   });
 });
 
 describe("fetchOpenEdenUsdoReserves", () => {
   const coin = { id: "usdo-openeden" } as StablecoinMeta;
   const url = "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last";
-  // Mirrors the adapter's browser-style headers and 8s per-attempt timeout,
-  // both of which are embedded in the shared JSON request cache key.
-  const browserCacheKey = `json-get:${url}:8000:${JSON.stringify(
-    buildBrowserHeaders("https://openeden.com", "https://openeden.com/usdo/transparency"),
-  )}`;
-  const neutralCacheKey = `json-get:${url}:8000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
-  const defaultCacheKey = `json-get:${url}:8000:null`;
-  const payload = {
-    date: "2026-03-25T08:00:17.600Z",
-    usdoAmount: 100,
-    totalTbillAmountInUsd: 70,
-    usdcAmount: 15,
-    buidlAmount: 5,
-    vbillAmount: 10,
-    usycAmountInUsd: 0,
-    benjiAmount: 0,
-    reserveAssetsInUsd: 100,
-    ratio: 1,
-  };
 
   function makeConfig(): LiveReservesConfig {
     return {
@@ -176,82 +130,73 @@ describe("fetchOpenEdenUsdoReserves", () => {
     };
   }
 
-  it("fetches the reserve composition with browser-style headers and adapts it", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(browserCacheKey, Promise.resolve(payload));
+  beforeEach(resetRpcMocks);
 
-    const result = await fetchOpenEdenUsdoReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
-
-    expect(result.metadata?.reserveRatio).toBe(1);
-    expect(result.slices.length).toBeGreaterThan(0);
+  it.each([0.999, 1.001])("enforces the 1% component boundary: %s", (delta) => {
+    const candidate = { ...payload, usdcAmount: 15 + delta };
+    if (delta < 1) {
+      expect(adaptOpenEdenUsdo(candidate).metadata?.componentTotalUsd).toBeCloseTo(100.999, 6);
+    } else {
+      expect(() => adaptOpenEdenUsdo(candidate)).toThrow(/components sum/);
+    }
   });
 
-  it("falls back to neutral API headers when browser-style headers fail", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(browserCacheKey, Promise.reject(new Error("browser headers rejected")));
-    cache.set(neutralCacheKey, Promise.resolve(payload));
-
-    const result = await fetchOpenEdenUsdoReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
-
-    expect(result.metadata?.reserveRatio).toBe(1);
-    expect(result.slices.length).toBeGreaterThan(0);
+  it.each([0.01999, 0.02001])("enforces the 2% ratio boundary: %s", (delta) => {
+    const candidate = { ...payload, usdoAmount: 100 / (1 + delta) };
+    if (delta < 0.02) {
+      expect(adaptOpenEdenUsdo(candidate).metadata?.reserveRatio).toBe(1);
+    } else {
+      expect(() => adaptOpenEdenUsdo(candidate)).toThrow(/does not match derived ratio/);
+    }
+  });
+  it.each(["browser", "neutral", "default"])("recovers through the %s HTTP identity", async (successfulIdentity) => {
+    const observed: string[] = [];
+    const unexpected: string[] = [];
+    fetchWithRetryMock.mockImplementation(async (requested: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      const identity = headers.has("origin") ? "browser" : headers.has("accept-language") ? "neutral" : "default";
+      observed.push(identity);
+      if (requested !== url || headers.get("accept") !== "application/json"
+        || (identity === "browser" && (headers.get("origin") !== "https://openeden.com"
+          || headers.get("referer") !== "https://openeden.com/usdo/transparency"))) {
+        unexpected.push(requested);
+        return null;
+      }
+      return new Response(JSON.stringify(payload), { status: identity === successfulIdentity ? 200 : 403 });
+    });
+    const result = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, { requestCache: new Map() });
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 15 });
+    expect(result.slices).toContainEqual({ name: "OpenEden TBILL", pct: 70, risk: "very-low", coinId: "tbill-openeden" });
+    expect(observed).toEqual(["browser", "neutral", "default"].slice(0, ["browser", "neutral", "default"].indexOf(successfulIdentity) + 1));
+    expect(unexpected).toEqual([]);
   });
 
-  it("falls back to default adapter headers when both OpenEden header identities fail", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(browserCacheKey, Promise.reject(new Error("browser headers rejected")));
-    cache.set(neutralCacheKey, Promise.reject(new Error("neutral headers rejected")));
-    cache.set(defaultCacheKey, Promise.resolve(payload));
-
-    const result = await fetchOpenEdenUsdoReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
-
-    expect(result.metadata?.reserveRatio).toBe(1);
-    expect(result.slices.length).toBeGreaterThan(0);
+  it("reuses a successful request from an initially empty cache", async () => {
+    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify(payload)));
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const first = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, ctx);
+    const second = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, ctx);
+    expect(second).toEqual(first);
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
   });
 
-  it("labels fetch failures with the adapter and fetch identity", async () => {
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(browserCacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
-    cache.set(neutralCacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
-    cache.set(defaultCacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
-
-    await expect(fetchOpenEdenUsdoReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    )).rejects.toThrow(
-      `openeden-usdo reserve composition fetch failed: browser fetch failed: Fetch failed for ${url}; neutral fetch failed: Fetch failed for ${url}; default fetch failed: Fetch failed for ${url}`,
-    );
+  it("retains each failed HTTP cause and adapter identity", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      return new Response("denied", { status: headers.has("origin") ? 401 : headers.has("accept-language") ? 403 : 404 });
+    });
+    const error = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, { requestCache: new Map() }).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    for (const cause of ["openeden-usdo", "HTTP 401", "HTTP 403", "HTTP 404"]) {
+      expect((error as Error).message).toContain(cause);
+    }
   });
 
-  it("rethrows the original error untouched when the adapter attempt signal aborted", async () => {
+  it("rethrows the original abort without fallback", async () => {
     const abortError = new Error("adapter-timeout");
-    const cache = new Map<string, Promise<unknown>>();
-    cache.set(browserCacheKey, Promise.reject(abortError));
     const controller = new AbortController();
     controller.abort(abortError);
-
-    await expect(fetchOpenEdenUsdoReserves(
-      coin,
-      makeConfig(),
-      controller.signal,
-      { requestCache: cache } as never,
-    )).rejects.toBe(abortError);
+    await expect(fetchOpenEdenUsdoReserves(coin, makeConfig(), controller.signal, { requestCache: new Map() })).rejects.toBe(abortError);
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { assessPublicHealth } from "../public-health-assessment";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { makePriceCoverageMetadata } from "./public-health.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 /**
  * Minimal D1 mock that returns a stablecoins cache row and empty results for
@@ -65,7 +70,7 @@ function makeMintBurnAssessmentDb(
     latestSuccessfulSyncError?: unknown;
     rowCount?: number | null;
     rowCountError?: unknown;
-    sentinelAutoRepairCount?: number;
+    publicationMetadata?: Record<string, unknown>;
   } = {},
 ): D1Database {
   const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
@@ -121,32 +126,21 @@ function makeMintBurnAssessmentDb(
     ...(options.rowCountError
       ? { throwError: options.rowCountError }
       : {
-          first: rowCount == null
-            ? null
-            : options.sentinelAutoRepairCount == null
-              ? {
-                  job: "mint-burn-growth-watchdog",
-                  item_count: rowCount,
-                  metadata: JSON.stringify({ rowCount }),
-                }
-              : {
-                  job: "cron-sentinel",
-                  item_count: rowCount,
-                  metadata: JSON.stringify({
-                    mode: "daily",
-                    sources: {
-                      growth: { status: "ok", itemCount: rowCount },
-                      "repair-debt": {
-                        status: "ok",
-                        metadata: { autoRepairCount: options.sentinelAutoRepairCount },
-                      },
-                    },
-                  }),
-                },
+          first: rowCount == null ? null : {
+            job: "mint-burn-growth-watchdog",
+            item_count: rowCount,
+            metadata: JSON.stringify({ rowCount }),
+          },
         }),
   };
 
   return mockD1([
+    {
+      match: "job = 'sync-stablecoins'", rows: [],
+      first: options.publicationMetadata
+        ? { started_at: nowSec - 30, metadata: JSON.stringify(options.publicationMetadata) }
+        : null,
+    },
     { match: "SELECT 1", rows: [], first: { value: 1 } },
     { match: "cache WHERE key IN", rows: cacheRows },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
@@ -207,7 +201,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.caches.stablecoins?.upstreamProvider).toBe("DefiLlama");
   });
 
-  it("tags unknown cache keys with upstreamProvider = null", async () => {
+  it("attributes FX and ratings caches to their known upstream providers", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeMinimalDb(nowSec);
 
@@ -289,44 +283,12 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
-    const db = makeMinimalDb(nowSec, undefined, {
-      activePublicationCoverage: {
-        complete: true,
-        expectedActiveCount: activeIds.length,
-        presentActiveCount: activeIds.length,
-        waivedActiveCount: 0,
-        missingActiveIds: [],
-        waivedActiveIds: [],
-        expiredWaiverIds: [],
-      },
-      activePriceCoverage: {
-        complete: false,
-        expectedActiveCount: activeIds.length,
-        presentActiveCount: activeIds.length,
-        pricedActiveCount: activeIds.length - 1,
-        missingPriceCount: 1,
-        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
-        missingActiveIds: [missingId],
-        affectedMarketCapUsd: 88_000_000,
-        missingActiveAssets: [{
-          stablecoinId: missingId,
-          symbol: "MISS",
-          marketCapUsd: 88_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: 2,
-          lastAcceptedPrice: 1.001,
-          lastAcceptedSource: "pyth",
-          lastAcceptedObservedAt: nowSec - 1_800,
-          rejectionReason: "no-accepted-price",
-          alertEligible: true,
-        }],
-        alertEligibleCount: 1,
-        alertEligibleIds: [missingId],
-        maxConsecutiveMissingGenerations: 2,
-      },
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(baseline.overallStatus).toBe("healthy");
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, missingId),
     });
 
     const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
@@ -350,6 +312,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       alertEligible: true,
     });
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
+    expect(result.overallStatus).toBe("healthy");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
@@ -357,50 +320,18 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
-    const db = makeMinimalDb(nowSec, undefined, {
-      activePublicationCoverage: {
-        complete: true,
-        expectedActiveCount: activeIds.length,
-        presentActiveCount: activeIds.length,
-        waivedActiveCount: 0,
-        missingActiveIds: [],
-        waivedActiveIds: [],
-        expiredWaiverIds: [],
-      },
-      activePriceCoverage: {
-        complete: false,
-        expectedActiveCount: activeIds.length,
-        presentActiveCount: activeIds.length,
-        pricedActiveCount: activeIds.length - 1,
-        missingPriceCount: 1,
-        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
-        missingActiveIds: [missingId],
-        affectedMarketCapUsd: 88_000_000,
-        missingActiveAssets: [{
-          stablecoinId: missingId,
-          symbol: "MISS",
-          marketCapUsd: 88_000_000,
-          currentPrice: null,
-          currentSource: null,
-          currentObservedAt: null,
-          currentConfidence: null,
-          consecutiveMissingGenerations: 1,
-          lastAcceptedPrice: 1.001,
-          lastAcceptedSource: "pyth",
-          lastAcceptedObservedAt: nowSec - 900,
-          rejectionReason: "no-accepted-price",
-          alertEligible: false,
-        }],
-        alertEligibleCount: 0,
-        alertEligibleIds: [],
-        maxConsecutiveMissingGenerations: 1,
-      },
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(baseline.overallStatus).toBe("healthy");
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, missingId, 1, false),
     });
 
     const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
 
-    // Impact is gated on alert-eligibility: a single-cycle rotation miss does
-    // not degrade the public banner.
+    // Eligibility gates operator warnings, not the public availability status.
+    expect(result.overallStatus).toBe("healthy");
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.warnings.some((warning) => warning.startsWith("active-price-coverage-incomplete"))).toBe(false);
     // Observability preserved: the JSON payload still reports the exact miss.
@@ -417,30 +348,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
-    const db = makeMinimalDb(nowSec, undefined, {
-      activePriceCoverage: {
-        complete: false,
-        expectedActiveCount: activeIds.length,
-        presentActiveCount: activeIds.length,
-        pricedActiveCount: activeIds.length - 1,
-        missingPriceCount: 1,
-        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
-        missingActiveIds: [missingId],
-        affectedMarketCapUsd: 88_000_000,
-        missingActiveAssets: [],
-        missingActiveState: [[
-          missingId,
-          4,
-          0.999,
-          "redstone",
-          nowSec - 3_600,
-          "no-accepted-price",
-        ]],
-        alertEligibleCount: 1,
-        alertEligibleIds: [missingId],
-        maxConsecutiveMissingGenerations: 4,
-      },
-    });
+    const db = makeMinimalDb(nowSec, undefined, makePriceCoverageMetadata(nowSec, missingId, 4, true, true));
 
     const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
 
@@ -460,13 +368,24 @@ describe("assessPublicHealth upstream provider enrichment", () => {
 describe("assessPublicHealth mint/burn subquery failures", () => {
   it("reads growth and repair diagnostics from the daily sentinel row", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
-      rowCount: 7654,
-      sentinelAutoRepairCount: 3,
-    }), nowSec, { logPrefix: "test" });
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, 1, 'ok', ?, ?)");
+    insert.run("mint-burn-growth-watchdog", nowSec - 120, 111, "{}");
+    insert.run("cron-sentinel", nowSec - 60, 9, JSON.stringify({
+      mode: "daily",
+      sources: {
+        growth: { status: "ok", itemCount: 7654 },
+        "repair-debt": { metadata: { autoRepairCount: 3 } },
+      },
+    }));
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
 
     expect(result.mintBurn.totalEvents).toBe(7654);
     expect(result.repairRunnerAutoRepairCount).toBe(3);
+    insert.run("mint-burn-growth-watchdog", nowSec - 10, 8888, JSON.stringify({ rowCount: 222 }));
+    const watchdog = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    expect(watchdog.mintBurn.totalEvents).toBe(8888);
+    expect(watchdog.repairRunnerAutoRepairCount).toBeNull();
   });
 
   it("preserves timestamp lookup failures as mint/burn query errors", async () => {

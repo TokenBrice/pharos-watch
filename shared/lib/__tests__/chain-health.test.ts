@@ -111,15 +111,25 @@ describe("computePegStabilityScore", () => {
     // 90% weight at 100, 10% weight at 40 => 94
     expect(score).toBe(94);
   });
+  it("ignores nonpositive supply and treats unusable references neutrally", () => {
+    expect(computePegStabilityScore([
+      { price: 1, pegRef: 1, supplyUsd: 100 },
+      { price: 0.5, pegRef: 1, supplyUsd: -100 },
+      { price: 0.5, pegRef: 1, supplyUsd: 0 },
+    ])).toBe(100);
+    expect(computePegStabilityScore([{ price: 1, pegRef: 0, supplyUsd: 100 }])).toBe(50);
+    expect(computePegStabilityScore([{ price: 1, pegRef: 1, supplyUsd: 0 }])).toBe(50);
+    expect(computePegStabilityScore([])).toBe(50);
+  });
 });
 
 describe("computeQualityScore", () => {
-  it("returns supply-weighted average", () => {
-    const coins = [
-      { safetyScore: 80, supplyUsd: 500_000 },
-      { safetyScore: 60, supplyUsd: 500_000 },
-    ];
-    expect(computeQualityScore(coins, 0.5)).toBe(70);
+  it("weights unequal rated supplies while excluding unrated supply", () => {
+    expect(computeQualityScore([
+      { safetyScore: 80, supplyUsd: 600_000 },
+      { safetyScore: 40, supplyUsd: 200_000 },
+      { safetyScore: null, supplyUsd: 200_000 },
+    ], 0.5)).toBe(70);
   });
 
   it("returns null when coverage is below threshold", () => {
@@ -147,19 +157,19 @@ describe("computeQualityScore", () => {
     ];
     expect(computeQualityScore(coins, 0.5)).toBeNull();
   });
+  it("accepts exactly 50% rated supply and leaves empty or zero supply unrated", () => {
+    expect(computeQualityScore([
+      { safetyScore: 90, supplyUsd: 500 },
+      { safetyScore: null, supplyUsd: 500 },
+    ])).toBe(90);
+    expect(computeQualityScore([])).toBeNull();
+    expect(computeQualityScore([{ safetyScore: 90, supplyUsd: 0 }])).toBeNull();
+  });
 });
 
 describe("computeChainEnvironmentAssessment", () => {
-  it("returns 100 for tier 1", () => {
-    expect(computeChainEnvironmentAssessment(1).score).toBe(100);
-  });
-
-  it("returns 60 for tier 2", () => {
-    expect(computeChainEnvironmentAssessment(2).score).toBe(60);
-  });
-
-  it("returns 20 for tier 3", () => {
-    expect(computeChainEnvironmentAssessment(3).score).toBe(20);
+  it.each([[1, 100], [2, 60], [3, 20]] as const)("scores tier %s as %s", (tier, score) => {
+    expect(computeChainEnvironmentAssessment(tier).score).toBe(score);
   });
 
   it("uses L2BEAT chain-risk scoring for matched chains", () => {
@@ -250,22 +260,12 @@ describe("computeHealthScore", () => {
 });
 
 describe("getHealthBand", () => {
-  it("maps score ranges correctly", () => {
-    expect(getHealthBand(100)).toBe("robust");
-    expect(getHealthBand(80)).toBe("robust");
-    expect(getHealthBand(79)).toBe("healthy");
-    expect(getHealthBand(85)).toBe("robust");
-    expect(getHealthBand(60)).toBe("healthy");
-    expect(getHealthBand(59)).toBe("mixed");
-    expect(getHealthBand(65)).toBe("healthy");
-    expect(getHealthBand(40)).toBe("mixed");
-    expect(getHealthBand(39)).toBe("fragile");
-    expect(getHealthBand(45)).toBe("mixed");
-    expect(getHealthBand(20)).toBe("fragile");
-    expect(getHealthBand(19)).toBe("concentrated");
-    expect(getHealthBand(25)).toBe("fragile");
-    expect(getHealthBand(10)).toBe("concentrated");
-    expect(getHealthBand(null)).toBeNull();
+  it.each([
+    [100, "robust"], [80, "robust"], [79, "healthy"], [60, "healthy"],
+    [59, "mixed"], [40, "mixed"], [39, "fragile"], [20, "fragile"],
+    [19, "concentrated"], [null, null],
+  ] as const)("maps boundary %s to %s", (score, band) => {
+    expect(getHealthBand(score)).toBe(band);
   });
 });
 

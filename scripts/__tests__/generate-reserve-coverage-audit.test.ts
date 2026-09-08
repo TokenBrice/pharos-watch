@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
+import { reviewedReserve } from "./generate-reserve-coverage-audit.test-support";
 import {
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
   buildReserveCoverageAudit,
@@ -170,18 +171,10 @@ describe("generate-reserve-coverage-audit", () => {
           symbol: "PRO",
           custodyModel: "onchain",
           reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
-          reserveReview: {
-            reviewedAt: "2026-07-01",
-            reviewer: "Fixture reviewer",
-            confidence: "verified",
-            sources: [{ label: "Review", url: "https://example.com/review" }],
-            rationale: "Fixture review rationale",
-            compositionBasis: "Fixture disclosure",
-            compositionAsOf: "2026-07-01",
-            scope: "full-composition",
+          reserveReview: reviewedReserve({
             knownUnknownExposure: "No material known unknown exposure.",
             knownUnknownExposurePct: 0,
-          },
+          }),
           proofOfReserves: {
             type: "independent-audit",
             url: "https://example.com/proof",
@@ -213,18 +206,10 @@ describe("generate-reserve-coverage-audit", () => {
           id: "aup",
           symbol: "AUP",
           reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
-          reserveReview: {
-            reviewedAt: "2026-07-01",
-            reviewer: "Fixture reviewer",
-            confidence: "verified",
-            sources: [{ label: "Review", url: "https://example.com/review" }],
-            rationale: "Fixture review rationale",
-            compositionBasis: "Fixture disclosure",
-            compositionAsOf: "2026-07-01",
-            scope: "full-composition",
+          reserveReview: reviewedReserve({
             knownUnknownExposure: "No material known unknown exposure.",
             knownUnknownExposurePct: 0,
-          },
+          }),
           proofOfReserves: {
             type: "agreed-upon-procedures",
             url: "https://example.com/proof",
@@ -235,18 +220,10 @@ describe("generate-reserve-coverage-audit", () => {
           id: "attested",
           symbol: "ATT",
           reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
-          reserveReview: {
-            reviewedAt: "2026-07-01",
-            reviewer: "Fixture reviewer",
-            confidence: "verified",
-            sources: [{ label: "Review", url: "https://example.com/review" }],
-            rationale: "Fixture review rationale",
-            compositionBasis: "Fixture disclosure",
-            compositionAsOf: "2026-07-01",
-            scope: "full-composition",
+          reserveReview: reviewedReserve({
             knownUnknownExposure: "No material known unknown exposure.",
             knownUnknownExposurePct: 0,
-          },
+          }),
           proofOfReserves: {
             type: "attestation",
             url: "https://example.com/proof",

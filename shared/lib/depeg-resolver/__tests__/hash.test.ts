@@ -12,70 +12,7 @@ import {
   validateDdrPublicCacheContract,
 } from "../public-contract";
 
-function validPublicPredictionResponse() {
-  const baseRow = {
-    stablecoinId: "lusd-liquity",
-    symbol: "LUSD",
-    name: "Liquity USD",
-    pegCurrency: "USD",
-    governance: "decentralized",
-    status: null,
-    eventId: 1,
-    incidentKey: "ddr2:validator",
-    startedAt: 100,
-    direction: "below",
-    kind: "prediction",
-    prediction: {
-      state: "frozen",
-      publicPredictionId: 7,
-      incidentKey: "ddr2:validator",
-      eligibleAt: 200,
-      lockedAt: 200,
-      eventAgeAtLockSec: 100,
-      lockTiming: "on_time",
-      policyDelaySec: 100,
-      predictionPolicyVersion: "sticky-24h-v1",
-      predictionMethodologyVersion: "2.0",
-      predictionMethodologyVersionLabel: "v2.0",
-      resolutionRubricVersion: "resolution-v1",
-      durationModelVersion: "duration-v1",
-      incidentGroupingVersion: "incident-v1",
-      supportRulesVersion: "support-v1",
-      rowHash: null,
-    },
-    frozen: { resolution: { tier: "at_risk", factors: [] } },
-    live: {
-      currentEventId: 1,
-      ageSec: 100,
-      peakDeviationBps: -200,
-      currentDeviationBps: -150,
-      eventState: "active",
-      updatedAt: 250,
-      stale: false,
-      degradedReason: null,
-    },
-  };
-  const rowHash = computeDdrPublicRowHash(baseRow);
-  const row = attachDdrPublicRowHash(baseRow, rowHash);
-
-  return {
-    _meta: {
-      schemaVersion: 2,
-      snapshotGeneration: 2,
-      publicPredictionIds: [7],
-      publicPredictionRowHashes: { "7": rowHash },
-      basePayloadHash: null,
-      publicWarning: "warning",
-      resolutionRubricVersion: "resolution-v1",
-      durationModelVersion: "duration-v1",
-      incidentGroupingVersion: "incident-v1",
-      supportRulesVersion: "support-v1",
-      lineage: null,
-    },
-    rows: [row],
-    methodology: { version: "2.0" },
-  } as unknown as Parameters<typeof validateDdrPublicCacheContract>[0];
-}
+import { basePublicRow, validPublicPredictionResponse } from "./hash.test-support";
 
 describe("stableJsonStringifyV1", () => {
   it("sorts object keys and omits undefined object fields", () => {
@@ -83,11 +20,16 @@ describe("stableJsonStringifyV1", () => {
     expect(stableJsonStringifyV1({ nested: { z: null, a: "x" } })).toBe('{"nested":{"a":"x","z":null}}');
   });
 
-  it("keeps array order and domain-separates hashes", () => {
-    const payload = { a: [2, 1] };
+  it("preserves array order in serialization and same-domain hashes", () => {
+    expect(stableJsonStringifyV1({ a: [2, 1] })).toBe('{"a":[2,1]}');
+    expect(stableJsonHashV1(DDR_HASH_DOMAINS.publicPrediction, { a: [2, 1] })).not.toBe(
+      stableJsonHashV1(DDR_HASH_DOMAINS.publicPrediction, { a: [1, 2] }),
+    );
+  });
 
-    expect(stableJsonHashV1(DDR_HASH_DOMAINS.publicPrediction, payload)).not.toBe(
-      stableJsonHashV1(DDR_HASH_DOMAINS.publicNoCall, payload),
+  it("domain-separates identical payloads", () => {
+    expect(stableJsonHashV1(DDR_HASH_DOMAINS.publicPrediction, { a: [2, 1] })).not.toBe(
+      stableJsonHashV1(DDR_HASH_DOMAINS.publicNoCall, { a: [2, 1] }),
     );
   });
 
@@ -98,40 +40,14 @@ describe("stableJsonStringifyV1", () => {
     expect(() => stableJsonStringifyV1([undefined])).toThrow(/undefined array/);
   });
 
-  it("matches the SHA-256 output shape", () => {
-    expect(stableJsonHashV1(DDR_HASH_DOMAINS.publicPredictionIds, [1, 2, 3])).toMatch(/^[0-9a-f]{64}$/);
+  it("matches an independently calculated domain/payload SHA-256 vector", () => {
+    // Python hashlib.sha256 over the literal canonical domain/payload JSON.
+    expect(stableJsonHashV1(DDR_HASH_DOMAINS.publicPredictionIds, [1, 2, 3]))
+      .toBe("1660bb816963fbe2880304529159126fdefb666a762d41da12a35803d1372bca");
   });
 
   it("hashes public rows without volatile publication fields or the row hash itself", () => {
-    const row = {
-      stablecoinId: "lusd-liquity",
-      symbol: "LUSD",
-      name: "Liquity USD",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      status: null,
-      eventId: 1,
-      incidentKey: "ddr2:test",
-      startedAt: 100,
-      direction: "below",
-      kind: "prediction",
-      prediction: {
-        incidentKey: "ddr2:test",
-        eligibleAt: 200,
-        lockedAt: 200,
-        eventAgeAtLockSec: 100,
-        lockTiming: "on_time",
-        policyDelaySec: 100,
-        predictionPolicyVersion: "sticky-24h-v1",
-        predictionMethodologyVersion: "2.0",
-        predictionMethodologyVersionLabel: "v2.0",
-        resolutionRubricVersion: "resolution-v1",
-        durationModelVersion: "duration-v1",
-        incidentGroupingVersion: "incident-v1",
-        supportRulesVersion: "support-v1",
-      },
-      frozen: { resolution: { tier: "at_risk", factors: [] } },
-    };
+    const row = basePublicRow();
     const hash = computeDdrPublicRowHash(row);
     const published = attachDdrPublicRowHash({
       ...row,
@@ -177,32 +93,8 @@ describe("stableJsonStringifyV1", () => {
 
   it("hashes no-call rows with the same volatile-field exclusions as prediction rows", () => {
     const row = {
-      stablecoinId: "lusd-liquity",
-      symbol: "LUSD",
-      name: "Liquity USD",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      status: null,
-      eventId: 1,
-      incidentKey: "ddr2:nocall",
-      startedAt: 100,
-      direction: "below",
+      ...basePublicRow("ddr2:nocall"),
       kind: "no_call",
-      prediction: {
-        incidentKey: "ddr2:nocall",
-        eligibleAt: 200,
-        lockedAt: 200,
-        eventAgeAtLockSec: 100,
-        lockTiming: "on_time",
-        policyDelaySec: 100,
-        predictionPolicyVersion: "sticky-24h-v1",
-        predictionMethodologyVersion: "2.0",
-        predictionMethodologyVersionLabel: "v2.0",
-        resolutionRubricVersion: "resolution-v1",
-        durationModelVersion: "duration-v1",
-        incidentGroupingVersion: "incident-v1",
-        supportRulesVersion: "support-v1",
-      },
       noCall: {
         lockedAt: 200,
         eventAgeAtLockSec: 100,
@@ -250,32 +142,13 @@ describe("stableJsonStringifyV1", () => {
 
   it("includes forecast-readiness metadata in public row hashes when present", () => {
     const baseRow = {
-      stablecoinId: "lusd-liquity",
-      symbol: "LUSD",
-      name: "Liquity USD",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      status: null,
-      eventId: 1,
-      incidentKey: "ddr3:test",
-      startedAt: 100,
-      direction: "below",
-      kind: "prediction",
-      prediction: {
-        incidentKey: "ddr3:test",
-        eligibleAt: 200,
+      ...basePublicRow("ddr3:test", {
         lockedAt: 180,
         eventAgeAtLockSec: 80,
-        lockTiming: "on_time",
-        policyDelaySec: 100,
         predictionPolicyVersion: "readiness-72h-v1",
         predictionMethodologyVersion: "3.0",
         predictionMethodologyVersionLabel: "v3.0",
-        resolutionRubricVersion: "resolution-v1",
-        durationModelVersion: "duration-v1",
-        incidentGroupingVersion: "incident-v1",
-        supportRulesVersion: "support-v1",
-      },
+      }),
       frozen: { resolution: { tier: "recovery_likely", factors: [] } },
     };
     const readiness = {
@@ -332,59 +205,12 @@ describe("stableJsonStringifyV1", () => {
   });
 
   it("keeps legacy readiness defaults out of manifest base payloads", () => {
-    const response = {
-      _meta: {
-        schemaVersion: 2,
-        snapshotGeneration: 2,
-        publicPredictionIds: [7],
-        publicPredictionRowHashes: { "7": "a".repeat(64) },
-        publicWarning: "warning",
-        resolutionRubricVersion: "resolution-v1",
-        durationModelVersion: "duration-v1",
-        incidentGroupingVersion: "incident-v1",
-        supportRulesVersion: "support-v1",
-        lineage: null,
-      },
-      rows: [
-        {
-          stablecoinId: "lusd-liquity",
-          symbol: "LUSD",
-          name: "Liquity USD",
-          pegCurrency: "USD",
-          governance: "decentralized",
-          status: null,
-          eventId: 1,
-          incidentKey: "ddr3:test",
-          startedAt: 100,
-          direction: "below",
-          kind: "prediction",
-          prediction: {
-            state: "frozen",
-            publicPredictionId: 7,
-            incidentKey: "ddr3:test",
-            eligibleAt: 200,
-            lockedAt: 200,
-            eventAgeAtLockSec: 100,
-            lockTiming: "on_time",
-            lockTrigger: "scheduled_24h",
-            readiness: null,
-            backstop: null,
-          },
-          frozen: { resolution: { tier: "at_risk", factors: [] } },
-          live: {
-            currentEventId: 1,
-            ageSec: 100,
-            peakDeviationBps: 200,
-            currentDeviationBps: 150,
-            eventState: "active",
-            updatedAt: 200,
-            stale: false,
-            degradedReason: null,
-          },
-        },
-      ],
-      methodology: { version: "3.0" },
-    } as unknown as Parameters<typeof buildDdrManifestBasePayload>[0];
+    const response = validPublicPredictionResponse();
+    Object.assign(response.rows[0].prediction, {
+      lockTrigger: "scheduled_24h",
+      readiness: null,
+      backstop: null,
+    });
 
     const payload = buildDdrManifestBasePayload(response) as {
       rows: Array<{ prediction: Record<string, unknown> }>;
@@ -402,6 +228,41 @@ describe("validateDdrPublicCacheContract", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.basePayloadHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("validates numerically sorted IDs and hash keys independently of row order, excluding null IDs", () => {
+    const response = validPublicPredictionResponse();
+    const first = response.rows[0];
+    if (first.kind !== "prediction") throw new Error("fixture row must be a prediction row");
+    const second = {
+      ...first,
+      prediction: { ...first.prediction, publicPredictionId: 12, rowHash: "c".repeat(64) },
+    };
+    const unpublished = {
+      ...first,
+      prediction: { ...first.prediction, publicPredictionId: null, rowHash: null },
+    };
+    response.rows = [second, unpublished, first];
+    response._meta.publicPredictionIds = [7, 12];
+    response._meta.publicPredictionRowHashes = { "12": "c".repeat(64), "7": first.prediction.rowHash! };
+    expect(validateDdrPublicCacheContract(response)).toMatchObject({ ok: true });
+    response._meta.publicPredictionIds = [12, 7];
+    expect(validateDdrPublicCacheContract(response)).toEqual({
+      ok: false, reason: "public-prediction-id-set-mismatch",
+    });
+  });
+
+  it("accepts its saved base hash and rejects stable payload changes against it", () => {
+    const response = validPublicPredictionResponse();
+    const result = validateDdrPublicCacheContract(response);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+    response._meta.basePayloadHash = result.basePayloadHash;
+    expect(validateDdrPublicCacheContract(response)).toEqual(result);
+    response.rows[0].name = "Changed stable identity";
+    expect(validateDdrPublicCacheContract(response)).toEqual({
+      ok: false, reason: "base-payload-hash-mismatch",
+    });
   });
 
   it.each([

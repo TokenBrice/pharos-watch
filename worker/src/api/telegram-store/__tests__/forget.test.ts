@@ -1,13 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
-  return createLatestSchemaSqlite();
+  return fixtures.open();
 }
 
 function discoverTelegramChatIdTablesFromMigrations(): string[] {
@@ -101,25 +104,27 @@ function insertSchemaSentinelRow(
 }
 
 describe("unsubscribeAll", () => {
-  it("clears alert_snooze_until_ts so a re-subscribe is not silently muted", async () => {
-    const db = mockD1([]);
+  it("clears snooze and reserve preferences only for the unsubscribing chat", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    for (const chatId of ["42", "neighbor"]) {
+      insertRow(sqlite, "telegram_subscribers", {
+        chat_id: chatId, created_at: 100, last_active_at: 100,
+        alert_reserve: 1, global_alert_reserve: 1,
+        alert_snooze_until_ts: 2_000_000_000, preference_generation: 7,
+      });
+      insertRow(sqlite, "telegram_subscriptions", {
+        chat_id: chatId, stablecoin_id: "usdc-circle", alert_reserve: 1,
+      });
+    }
     await unsubscribeAll(db, "42");
-    const update = db
-      .getHistory()
-      .find((entry) => /UPDATE telegram_subscribers/.test(entry.sql));
-    expect(update).toBeDefined();
-    expect(update!.sql).toContain("alert_snooze_until_ts = NULL");
-  });
-
-  it("clears reserve flags with the other per-chat and global alert flags", async () => {
-    const db = mockD1([]);
-    await unsubscribeAll(db, "42");
-    const update = db
-      .getHistory()
-      .find((entry) => /UPDATE telegram_subscribers/.test(entry.sql));
-    expect(update).toBeDefined();
-    expect(update!.sql).toContain("alert_reserve = 0");
-    expect(update!.sql).toContain("global_alert_reserve = 0");
+    expect(sqlite.prepare(`
+      SELECT chat_id, alert_reserve, global_alert_reserve, alert_snooze_until_ts,
+             preference_generation FROM telegram_subscribers ORDER BY chat_id
+    `).all()).toEqual([
+      { chat_id: "42", alert_reserve: 0, global_alert_reserve: 0, alert_snooze_until_ts: null, preference_generation: 8 },
+      { chat_id: "neighbor", alert_reserve: 1, global_alert_reserve: 1, alert_snooze_until_ts: 2_000_000_000, preference_generation: 7 },
+    ]);
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_subscriptions").all()).toEqual([{ chat_id: "neighbor" }]);
   });
 });
 

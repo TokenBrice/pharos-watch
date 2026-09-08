@@ -29,6 +29,7 @@ import {
   type CurveMetapoolPolicy,
 } from "../curve-composite";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
+import { factoryMembershipProof, poolCoinProof, tokenDecimalsProof } from "./curve-proof.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -59,7 +60,6 @@ const MAIN_REGISTRY_ARRAY_ABI = parseAbi([
 const MAIN_REGISTRY_ABI = parseAbi([
   "function get_pool_from_lp_token(address lpToken) view returns (address)",
 ]);
-const ERC20_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const ERC4626_ABI = parseAbi([
   "function asset() view returns (address)",
   "function convertToAssets(uint256 shares) view returns (uint256)",
@@ -280,20 +280,11 @@ function commonBindingCalls(
   policy: CurveCompositePoolPolicy,
 ): DexMeasuredExecutionCurveCompositeProof["calls"] {
   return [
-    bindingCall(
-      "factory-pool-list",
-      policy.factoryAddress,
-      encodeFunctionData({
-        abi: FACTORY_ABI,
-        functionName: "pool_list",
-        args: [BigInt(policy.factoryPoolIndex)],
-      }),
-      encodeFunctionResult({
-        abi: FACTORY_ABI,
-        functionName: "pool_list",
-        result: policy.poolAddress,
-      }),
-    ),
+    {
+      role: "factory-pool-list",
+      target: policy.factoryAddress,
+      ...factoryMembershipProof(policy.factoryPoolIndex, policy.poolAddress),
+    },
     bindingCall(
       "factory-coins",
       policy.factoryAddress,
@@ -326,37 +317,16 @@ function commonBindingCalls(
           ),
         ]
       : []),
-    ...policy.poolTokens.map((token, index) =>
-      bindingCall(
-        `pool-coin-${index}`,
-        policy.poolAddress,
-        encodeFunctionData({
-          abi: POOL_ABI,
-          functionName: "coins",
-          args: [BigInt(index)],
-        }),
-        encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "coins",
-          result: token.address,
-        }),
-      )
-    ),
-    ...policy.executionTokens.map((token, index) =>
-      bindingCall(
-        `token-decimals-${index}`,
-        token.address,
-        encodeFunctionData({
-          abi: ERC20_ABI,
-          functionName: "decimals",
-        }),
-        encodeFunctionResult({
-          abi: ERC20_ABI,
-          functionName: "decimals",
-          result: token.decimals,
-        }),
-      )
-    ),
+    ...policy.poolTokens.map((token, index) => ({
+      role: `pool-coin-${index}`,
+      target: policy.poolAddress,
+      ...poolCoinProof(index, token.address),
+    })),
+    ...policy.executionTokens.map((token, index) => ({
+      role: `token-decimals-${index}`,
+      target: token.address,
+      ...tokenDecimalsProof(token.decimals),
+    })),
   ];
 }
 
@@ -1022,17 +992,35 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
     ]);
   });
 
-  it("revalidates every retained rate-bearing binding target and canonical calldata", () => {
-    const target = rateTarget();
+  it.each([
+    {
+      family: "rate-bearing", makeTarget: rateTarget,
+      policy: CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, makeEvidence: rateEvidence,
+      extraRoles: [
+        ["factory-asset-types", "rate-provider-proof-mismatch"],
+        ["rate-provider-asset", "rate-provider-proof-mismatch"],
+        ["rate-provider-convert", "rate-provider-proof-mismatch"],
+        ["pool-stored-rates", "rate-provider-proof-mismatch"],
+      ],
+    },
+    {
+      family: "metapool", makeTarget: metapoolTarget,
+      policy: CURVE_USD1_METAPOOL_POLICY, makeEvidence: metapoolEvidence,
+      extraRoles: [
+        ["token-decimals-2", "token-decimals-proof-mismatch"],
+        ["factory-base-pool", "metapool-path-proof-mismatch"],
+        ["factory-underlying-coins", "metapool-path-proof-mismatch"],
+        ["factory-underlying-decimals", "metapool-path-proof-mismatch"],
+        ["factory-is-meta", "metapool-path-proof-mismatch"],
+      ],
+    },
+  ])("revalidates every retained $family binding target and canonical calldata", ({ makeTarget, policy, makeEvidence, extraRoles }) => {
+    const target = makeTarget();
     expect(target).not.toBeNull();
-    const profile = compositeProfile(
-      target!,
-      CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
-      rateEvidence(),
-    );
+    const profile = compositeProfile(target!, policy, makeEvidence());
     expect(validateCurveCompositeProfileProof(profile)).toEqual([]);
 
-    const expectedIssueByRole = new Map<string, string>([
+    const expectedIssues = [
       ["factory-pool-list", "factory-pool-list-proof-mismatch"],
       ["factory-coins", "factory-coins-proof-mismatch"],
       ["factory-implementation", "implementation-proof-mismatch"],
@@ -1040,66 +1028,20 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       ["pool-coin-1", "pool-coins-proof-mismatch"],
       ["token-decimals-0", "token-decimals-proof-mismatch"],
       ["token-decimals-1", "token-decimals-proof-mismatch"],
-      ["factory-asset-types", "rate-provider-proof-mismatch"],
-      ["rate-provider-asset", "rate-provider-proof-mismatch"],
-      ["rate-provider-convert", "rate-provider-proof-mismatch"],
-      ["pool-stored-rates", "rate-provider-proof-mismatch"],
-    ]);
-    for (const [role, expectedIssue] of expectedIssueByRole) {
+      ...extraRoles,
+    ];
+    for (const [role, expectedIssue] of expectedIssues) {
       const calldataTampered = structuredClone(profile);
-      calldataTampered.curveCompositeProof!.calls.find((call) => call.role === role)!.callData =
-        "0x12345678";
+      calldataTampered.curveCompositeProof!.calls.find((call) => call.role === role)!.callData = "0x12345678";
       expect(validateCurveCompositeProfileProof(calldataTampered)).toContain(expectedIssue);
-
       const targetTampered = structuredClone(profile);
       targetTampered.curveCompositeProof!.calls.find((call) => call.role === role)!.target =
         "0x1111111111111111111111111111111111111111";
       expect(validateCurveCompositeProfileProof(targetTampered)).toContain(expectedIssue);
     }
-
     const extraCall = structuredClone(profile);
-    extraCall.curveCompositeProof!.calls.push({
-      ...extraCall.curveCompositeProof!.calls[0]!,
-      role: "unexpected-binding",
-    });
+    extraCall.curveCompositeProof!.calls.push({ ...extraCall.curveCompositeProof!.calls[0]!, role: "unexpected-binding" });
     expect(validateCurveCompositeProfileProof(extraCall)).toContain("binding-call-set-mismatch");
-  });
-
-  it("revalidates every retained metapool binding target and canonical calldata", () => {
-    const target = metapoolTarget();
-    expect(target).not.toBeNull();
-    const profile = compositeProfile(
-      target!,
-      CURVE_USD1_METAPOOL_POLICY,
-      metapoolEvidence(),
-    );
-    expect(validateCurveCompositeProfileProof(profile)).toEqual([]);
-
-    const expectedIssueByRole = new Map<string, string>([
-      ["factory-pool-list", "factory-pool-list-proof-mismatch"],
-      ["factory-coins", "factory-coins-proof-mismatch"],
-      ["factory-implementation", "implementation-proof-mismatch"],
-      ["pool-coin-0", "pool-coins-proof-mismatch"],
-      ["pool-coin-1", "pool-coins-proof-mismatch"],
-      ["token-decimals-0", "token-decimals-proof-mismatch"],
-      ["token-decimals-1", "token-decimals-proof-mismatch"],
-      ["token-decimals-2", "token-decimals-proof-mismatch"],
-      ["factory-base-pool", "metapool-path-proof-mismatch"],
-      ["factory-underlying-coins", "metapool-path-proof-mismatch"],
-      ["factory-underlying-decimals", "metapool-path-proof-mismatch"],
-      ["factory-is-meta", "metapool-path-proof-mismatch"],
-    ]);
-    for (const [role, expectedIssue] of expectedIssueByRole) {
-      const calldataTampered = structuredClone(profile);
-      calldataTampered.curveCompositeProof!.calls.find((call) => call.role === role)!.callData =
-        "0x12345678";
-      expect(validateCurveCompositeProfileProof(calldataTampered)).toContain(expectedIssue);
-
-      const targetTampered = structuredClone(profile);
-      targetTampered.curveCompositeProof!.calls.find((call) => call.role === role)!.target =
-        "0x1111111111111111111111111111111111111111";
-      expect(validateCurveCompositeProfileProof(targetTampered)).toContain(expectedIssue);
-    }
   });
 
   it("revalidates NXUSD legacy fixed-array factory proofs without accepting padded identities", () => {
@@ -1195,7 +1137,12 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
 
     expect(outcomes).toHaveLength(3);
     expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
-    expect(outcomes[0]!.point?.outputUsd).toBeGreaterThan(990);
+    expect(outcomes[0]!.point?.amountOutRaw).toBe("1000000000000000000000");
+    expect(outcomes[0]!.point?.outputUsd).toBeCloseTo(996, 8);
+    // Integer share sizing and micro-dollar valuation floor the actual input by $0.000001.
+    expect(outcomes[0]!.point?.amountInRaw).toBe("806451612903225806451");
+    expect(outcomes[0]!.point?.inputUsd).toBe(999.999999);
+    expect(outcomes[0]!.point?.costBps).toBeCloseTo((1 - 996 / 999.999999) * 10_000, 8);
     expect(outcomes[1]!.point?.outputUsd).toBe(999);
     expect(outcomes[2]!.point?.outputUsd).toBe(999);
     expect(executeMulticall).toHaveBeenCalledTimes(2);

@@ -52,6 +52,61 @@ describe("admin ops insights", () => {
     expect(forecast.detail).toContain("48 coin(s) remain deferred");
   });
 
+  it("prioritizes stale leases and cursor-tail failures over deferred catch-up", () => {
+    for (const blocker of ["lease", "cursor"]) {
+      const data = withReservePressure(makeHealthyStatusResponse());
+      if (blocker === "lease") {
+        data.crons["sync-live-reserves"].inFlight = { startedAt: 1, updatedAt: 1, stale: true };
+      } else {
+        data.reserveComposition.cursorTailError = "cursor write failed";
+      }
+      expect(buildReserveRecoveryForecast(data).state).toBe("blocked");
+      const checks = buildActionReadinessChecks({
+        data, healthData: makeHealthyHealthResponse(), clientDataStale: false, recommendedActions: [],
+      });
+      expect(checks.filter((check) => ["reserve-lane", "reserve-cursor"].includes(check.id))
+        .map(({ id, state }) => [id, state])).toEqual([
+        ["reserve-lane", "blocked"], ["reserve-cursor", "blocked"],
+      ]);
+    }
+  });
+
+  it("rounds throughput boundaries up to whole scheduled runs", () => {
+    const data = withReservePressure(makeHealthyStatusResponse());
+    for (const [deferred, runs] of [[52, 1], [53, 2]]) {
+      data.reserveComposition.deferredCoins = deferred;
+      expect(buildReserveRecoveryForecast(data).estimatedRunsToClear).toBe(runs);
+    }
+  });
+
+  it("leaves estimates unknown for zero or missing throughput", () => {
+    for (const throughput of [0, undefined]) {
+      const data = withReservePressure(makeHealthyStatusResponse());
+      data.crons["sync-live-reserves"].lastRun!.metadata = { synced: throughput };
+      data.crons["sync-live-reserves"].lastRun!.itemCount = throughput;
+      expect(buildReserveRecoveryForecast(data)).toMatchObject({
+        state: "catching-up", estimatedRunsToClear: null, lastThroughput: null,
+      });
+    }
+  });
+
+  it("distinguishes a clear queue from uncertain writes without backlog", () => {
+    const data = makeHealthyStatusResponse();
+    expect(buildReserveRecoveryForecast(data).state).toBe("clear");
+    data.reserveComposition.writeTimeoutUncertain = 1;
+    expect(buildReserveRecoveryForecast(data).state).toBe("watch");
+  });
+
+  it("fails closed for absent, degraded, and stale public health", () => {
+    for (const [status, expected] of [[null, "watch"], ["degraded", "watch"], ["stale", "blocked"]] as const) {
+      const healthData = status == null ? null : { ...makeHealthyHealthResponse(), status };
+      const checks = buildActionReadinessChecks({
+        data: makeHealthyStatusResponse(), healthData, clientDataStale: false, recommendedActions: [],
+      });
+      expect(checks.find((check) => check.id === "public-health")?.state).toBe(expected);
+    }
+  });
+
   it("marks writes and stale dashboard data as not ready for manual recovery", () => {
     const data = withReservePressure(makeHealthyStatusResponse());
     data.reserveComposition.writeTimeoutUncertain = 2;

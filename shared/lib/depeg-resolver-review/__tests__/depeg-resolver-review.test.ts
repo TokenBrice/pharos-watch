@@ -627,6 +627,27 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headline.operationalMissRatePct).toBe(1);
   });
 
+  // audit: s049-shared/B1 — disputed contract
+  it.fails("counts an incident once when its assigned state also has an operational cause", () => {
+    const { summary } = reviewDdrrV2Rows({
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:overlap",
+          predictionState: "data_quality_gap",
+          coverageCause: "data_quality_gap",
+          operationalCoverageCause: "cron_gap",
+          outcomeQualityState: "data_quality_gap",
+        }),
+        coverage({ incidentKey: "ddr2:resolved-control" }),
+      ],
+      nowSec: REVIEWED_AT,
+    });
+    expect(summary.headline.policyUniverseIncidentCount).toBe(2);
+    expect(summary.headline.dataQualityGapCount).toBe(1);
+    expect(summary.headline.missedLockDataQualityGapCount).toBe(1);
+    expect(summary.headline.stateAssignedPct).toBe(1);
+  });
+
   it("pins coverage state counts separately from operational-cause filters", () => {
     const { summary } = reviewDdrrV2Rows({
       coverageRows: [
@@ -740,7 +761,6 @@ describe("DDRR coverage metrics", () => {
       missedOperationalLockCount: summary.headline.missedOperationalLockCount,
       currentEligibleOpportunityCount: summary.headline.currentEligibleOpportunityCount,
       finalizedOpportunityCount: summary.headline.finalizedOpportunityCount,
-      stateAssignedPct: summary.headline.stateAssignedPct,
       finalizedCoveragePct: summary.headline.finalizedCoveragePct,
       operationalMissRatePct: summary.headline.operationalMissRatePct,
     }).toMatchInlineSnapshot(`
@@ -765,7 +785,6 @@ describe("DDRR coverage metrics", () => {
         "publicationFailedCount": 1,
         "publicationRetryPendingCount": 1,
         "resolvedBeforePredictionCount": 1,
-        "stateAssignedPct": 1.1666666666666667,
         "terminalBeforePredictionCount": 1,
       }
     `);

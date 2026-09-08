@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { withEnv } from "./helpers/test-state";
 
 import {
   assertRouteSummary,
@@ -49,39 +50,25 @@ describe("parseViewportList", () => {
 });
 
 describe("parseArgs", () => {
-  const ORIGINAL_SKIP = process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP;
-  const ORIGINAL_WORKERS = process.env.SMOKE_MOBILE_UI_WORKERS;
-
-  afterEach(() => {
-    if (ORIGINAL_SKIP === undefined) {
-      delete process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP;
-    } else {
-      process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP = ORIGINAL_SKIP;
-    }
-
-    if (ORIGINAL_WORKERS === undefined) {
-      delete process.env.SMOKE_MOBILE_UI_WORKERS;
-    } else {
-      process.env.SMOKE_MOBILE_UI_WORKERS = ORIGINAL_WORKERS;
-    }
-  });
-
   it("skips desktop by default unless explicitly enabled", () => {
-    delete process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP;
-    expect(parseArgs([]).skipDesktop).toBe(true);
-    expect(parseArgs(["--include-desktop"]).skipDesktop).toBe(false);
-    expect(parseArgs(["--include-desktop", "--skip-desktop"]).skipDesktop).toBe(true);
+    withEnv("SMOKE_MOBILE_UI_SKIP_DESKTOP", undefined, () => {
+      expect(parseArgs([]).skipDesktop).toBe(true);
+      expect(parseArgs(["--include-desktop"]).skipDesktop).toBe(false);
+      expect(parseArgs(["--include-desktop", "--skip-desktop"]).skipDesktop).toBe(true);
+    });
   });
 
   it("respects SMOKE_MOBILE_UI_SKIP_DESKTOP=0", () => {
-    process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP = "0";
-    expect(parseArgs([]).skipDesktop).toBe(false);
+    withEnv("SMOKE_MOBILE_UI_SKIP_DESKTOP", "0", () => {
+      expect(parseArgs([]).skipDesktop).toBe(false);
+    });
   });
 
   it("accepts worker overrides from env and argv", () => {
-    process.env.SMOKE_MOBILE_UI_WORKERS = "4";
-    expect(parseArgs([]).workers).toBe("4");
-    expect(parseArgs(["--workers", "3"]).workers).toBe("3");
+    withEnv("SMOKE_MOBILE_UI_WORKERS", "4", () => {
+      expect(parseArgs([]).workers).toBe("4");
+      expect(parseArgs(["--workers", "3"]).workers).toBe("3");
+    });
   });
 });
 
@@ -115,6 +102,26 @@ describe("console and table scan outcomes", () => {
     });
   });
 
+
+  it.each([
+    { status: 400 },
+    { textLength: 19 },
+    { overflowDelta: 2 },
+    { hasFrameworkOverlay: true },
+  ])("rejects each boundary independently: %j", (invalid) => {
+    const valid = {
+      status: 399,
+      textLength: 20,
+      hasFrameworkOverlay: false,
+      overflowDelta: 1,
+      scrollWidth: 392,
+      innerWidth: 390,
+      tableScan: { checked: 0, issues: [] },
+      touchScan: { violations: [] },
+    };
+    expect(assertRouteSummary(valid, { strictTouchTargets: true })).toEqual([]);
+    expect(assertRouteSummary({ ...valid, ...invalid }, { strictTouchTargets: true })).toHaveLength(1);
+  });
   it("surfaces table geometry issues as route failures", () => {
     const failures = assertRouteSummary(
       {
@@ -169,35 +176,6 @@ describe("isMeasurableTableRow", () => {
     expect(isMeasurableTableRow(dataRow)).toBe(true);
   });
 
-  it("skips geometry for skeleton-only tables and enforces it once real rows render", () => {
-    const baseSummary = {
-      status: 200,
-      textLength: 100,
-      hasFrameworkOverlay: false,
-      overflowDelta: 0,
-      touchScan: { violations: [] },
-    };
-
-    // Skeleton-only or empty tbodies are unmeasurable: the scan skips them.
-    expect(
-      assertRouteSummary({ ...baseSummary, tableScan: { checked: 0, issues: [] } }, { strictTouchTargets: true }),
-    ).toEqual([]);
-
-    // With at least one real row the scan runs, and geometry failures block
-    // the route — there is no upstream-failure-notice waiver anymore.
-    expect(
-      assertRouteSummary(
-        {
-          ...baseSummary,
-          tableScan: {
-            checked: 1,
-            issues: [{ kind: "too-few-visible-columns", detail: "0/5 header columns visible" }],
-          },
-        },
-        { strictTouchTargets: true },
-      ).join("\n"),
-    ).toContain("table geometry failures=1");
-  });
 });
 
 describe("isAllowedSmallTouchTarget", () => {

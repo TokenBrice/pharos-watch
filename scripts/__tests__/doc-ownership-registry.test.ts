@@ -46,8 +46,15 @@ function normalizeDoc(reference: DocReference): { anchor?: string; path: string 
   return typeof reference === "string" ? { path: reference } : reference;
 }
 
+const matcherCache = new Map<readonly string[], (file: string) => boolean>();
+
 function matchesAny(file: string, patterns: readonly string[]): boolean {
-  return patterns.some((pattern) => createOwnershipGlobMatcher(pattern)(file));
+  let match = matcherCache.get(patterns);
+  if (!match) {
+    match = getMappingMatcher(patterns);
+    matcherCache.set(patterns, match);
+  }
+  return match(file);
 }
 
 function getMappingMatcher(sources: readonly string[]): (file: string) => boolean {
@@ -164,18 +171,19 @@ describe("doc-ownership registry integrity", () => {
       ...mappings.flatMap((mapping) => mapping.sources),
       ...exclusions.flatMap((exclusion) => exclusion.sources),
     ];
-    const directories = new Set(
-      trackedFiles
-        .filter((file) => COVERAGE_ROOTS.some((root) => file.startsWith(root)))
-        .map((file) => {
-          const parts = file.split("/");
-          return parts.slice(0, Math.min(3, parts.length - 1)).join("/");
-        })
-        .filter((path) => path.includes("/")),
-    );
-    const uncoveredDirectories = [...directories].filter(
-      (directory) => !trackedFiles.some((file) => file.startsWith(`${directory}/`) && matchesAny(file, coveredPatterns)),
-    );
+    const filesByDirectory = new Map<string, string[]>();
+    for (const file of trackedFiles) {
+      if (!COVERAGE_ROOTS.some((root) => file.startsWith(root))) continue;
+      const parts = file.split("/");
+      const directory = parts.slice(0, Math.min(3, parts.length - 1)).join("/");
+      if (!directory.includes("/")) continue;
+      const group = filesByDirectory.get(directory) ?? [];
+      group.push(file);
+      filesByDirectory.set(directory, group);
+    }
+    const uncoveredDirectories = [...filesByDirectory].filter(
+      ([, files]) => !files.some((file) => matchesAny(file, coveredPatterns)),
+    ).map(([directory]) => directory);
     expect(uncoveredDirectories).toEqual([]);
   });
 
@@ -183,9 +191,9 @@ describe("doc-ownership registry integrity", () => {
     const inScope = trackedFiles.filter((file) => COVERAGE_ROOTS.some((root) => file.startsWith(root)));
     const specificMappings = mappings.filter((mapping) => mapping.tier !== "fallback");
     const fallbackMappings = mappings.filter((mapping) => mapping.tier === "fallback");
-    const specificMatchers = specificMappings.map((mapping) => getMappingMatcher(mapping.sources));
-    const fallbackMatchers = fallbackMappings.map((mapping) => getMappingMatcher(mapping.sources));
-    const exclusionMatchers = exclusions.map((exclusion) => getMappingMatcher(exclusion.sources));
+    const specificMatchers = specificMappings.map((mapping) => (file: string) => matchesAny(file, mapping.sources));
+    const fallbackMatchers = fallbackMappings.map((mapping) => (file: string) => matchesAny(file, mapping.sources));
+    const exclusionMatchers = exclusions.map((exclusion) => (file: string) => matchesAny(file, exclusion.sources));
     let specificallyCoveredCount = 0;
     const fallbackOnly: string[] = [];
     const uncovered: string[] = [];

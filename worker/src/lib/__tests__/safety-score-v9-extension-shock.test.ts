@@ -228,6 +228,33 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
     ).toThrow(/not in the committed registry/i);
   });
 
+  it("rejects altered stress metrics under a valid journal identity", () => {
+    const pinned = structuredClone(requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC));
+    pinned.stressLiquidationCoverageRatio = 0.75;
+    expect(() => hydrateSafetyScoreV9ShockCoverageExtension({
+      assets: [{ assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned }],
+    }, CAPTURE_9_CLOCK_SEC)).toThrow(/differs from its committed journal projection/);
+  });
+
+  it("admits a journal exactly at its block clock and rejects future pins", () => {
+    const blockClock = 1_784_279_255;
+    const pinned = requireMeasurement("bold-liquity", blockClock);
+    expect(requireMeasurement("bold-liquity", blockClock - 1).source?.block.number).toBe(25_546_976);
+    expect(pinned.source?.block.number).toBe(25_551_407);
+    expect(() => hydrateSafetyScoreV9ShockCoverageExtension({
+      assets: [{ assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned }],
+    }, blockClock - 1)).toThrow(/chronology-valid journal provenance/);
+  });
+
+  it("preserves an older valid pin after a newer journal becomes eligible", () => {
+    const pinned = requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC);
+    const input = { assets: [{ assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned }] };
+    const hydrated = hydrateSafetyScoreV9ShockCoverageExtension(input, POST_JULY_17_CLOCK_SEC) as typeof input;
+    expect(requireMeasurement("bold-liquity", POST_JULY_17_CLOCK_SEC).source?.block.number).toBe(25_551_407);
+    expect(hydrated.assets[0]!.cdpStressCoverage).toEqual(pinned);
+    expect(hydrated.assets[0]!.cdpStressCoverage.source?.block.number).toBe(25_546_976);
+  });
+
   it("selects the later LUSD and BOLD journals after the July 17 measurement clock", () => {
     const lusd = requireMeasurement("lusd-liquity", POST_JULY_17_CLOCK_SEC);
     const bold = requireMeasurement("bold-liquity", POST_JULY_17_CLOCK_SEC);

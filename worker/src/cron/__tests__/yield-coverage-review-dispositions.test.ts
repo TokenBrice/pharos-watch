@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   applyYieldCoverageReviewDispositions,
   buildYieldCoverageEvidenceFingerprint,
@@ -192,5 +192,73 @@ describe("yield coverage review dispositions", () => {
       publishedItemCount: 20,
       truncatedItemCount: 2,
     });
+  });
+
+  it("updates review evidence and windows without replacing creation time", async () => {
+    const { sqlite, db } = createDispositionDb();
+    const candidate = item("updated");
+    await upsertYieldCoverageReviewDisposition(db, { item: candidate, evidence: "old", nextReviewAt: 2_000 }, 1_000);
+    const changed = { ...candidate, pool: "new-pool" };
+    await upsertYieldCoverageReviewDisposition(db, {
+      item: changed, disposition: "accept", evidence: "new", reviewOwner: "reviewer",
+      reviewedAt: 1_500, nextReviewAt: 4_000, expiresAt: 5_000,
+    }, 1_600);
+    expect(sqlite.prepare("SELECT evidence, disposition, review_owner, reviewed_at, next_review_at, expires_at, created_at, updated_at FROM yield_coverage_review_dispositions").all()).toEqual([{
+      evidence: "new", disposition: "accept", review_owner: "reviewer", reviewed_at: 1_500,
+      next_review_at: 4_000, expires_at: 5_000, created_at: 1_000, updated_at: 1_600,
+    }]);
+    expect((await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 })).queue.headlineGaps).toEqual([]);
+    expect((await applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 2_000 })).queue.headlineGaps).toEqual([candidate]);
+  });
+
+  it("rejects invalid epochs, limits and inverted windows without changing durable evidence", async () => {
+    const { sqlite, db } = createDispositionDb();
+    const candidate = item("validated");
+    await upsertYieldCoverageReviewDisposition(db, { item: candidate, nextReviewAt: 5_000 }, 1_000);
+    const before = sqlite.prepare("SELECT * FROM yield_coverage_review_dispositions").all();
+    for (const invalid of [NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      await expect(upsertYieldCoverageReviewDisposition(db, { item: candidate, reviewedAt: invalid }, 1_000)).rejects.toBeInstanceOf(RangeError);
+      await expect(applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: invalid })).rejects.toBeInstanceOf(RangeError);
+      await expect(applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 1_000, publishedItemLimit: invalid })).rejects.toBeInstanceOf(RangeError);
+    }
+    await expect(applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 1_000, publishedItemLimit: 0 })).rejects.toBeInstanceOf(RangeError);
+    for (const window of [{ nextReviewAt: 999 }, { expiresAt: 999 }]) {
+      await expect(upsertYieldCoverageReviewDisposition(db, { item: candidate, reviewedAt: 1_000, ...window }, 1_000)).rejects.toBeInstanceOf(RangeError);
+    }
+    expect(sqlite.prepare("SELECT * FROM yield_coverage_review_dispositions").all()).toEqual(before);
+  });
+
+  it("reopens a changed queue kind separately from changed evidence", async () => {
+    const { db } = createDispositionDb();
+    const candidate = item("kind");
+    await upsertYieldCoverageReviewDisposition(db, { item: candidate, nextReviewAt: 5_000 }, 1_000);
+    const changed = { ...candidate, kind: "native-exact-pool" as const };
+    const result = await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 });
+    expect(result.queue.headlineGaps).toEqual([changed]);
+    expect(result.summary).toMatchObject({ kindChangedCount: 1, evidenceChangedCount: 0, suppressedItemCount: 0 });
+  });
+
+  it("limits both queue classes independently while aggregating all candidates", async () => {
+    const { db } = createDispositionDb();
+    const headlines = [item("h1"), item("h2"), item("h3")];
+    const recommendations = [item("r1"), item("r2"), item("r3"), item("r4")];
+    const result = await applyYieldCoverageReviewDispositions(db, queue(headlines, recommendations), { nowSec: 2_000, publishedItemLimit: 2 });
+    expect(result.queue.headlineGaps).toEqual(headlines.slice(0, 2));
+    expect(result.queue.recommendationCandidates).toEqual(recommendations.slice(0, 2));
+    expect(result.summary).toMatchObject({ candidateItemCount: 7, visibleItemCount: 7, publishedItemCount: 4, truncatedItemCount: 3, noDispositionCount: 7 });
+  });
+
+  it("normalizes evidence sets but reopens a genuinely different pool identity", async () => {
+    const { db } = createDispositionDb();
+    const candidate = item("sets", { pool: "POOL-A", stablecoinIds: ["USDC", "DAI"], examplePools: ["POOL-A", "POOL-B"], reasonCodes: ["ONE", "TWO"] });
+    await upsertYieldCoverageReviewDisposition(db, { item: candidate, nextReviewAt: 5_000 }, 1_000);
+    const normalized = { ...candidate, pool: " pool-a ", stablecoinIds: ["dai", "usdc", "DAI"], examplePools: ["pool-b", "pool-a"], reasonCodes: ["two", "one"] };
+    const unchanged = await applyYieldCoverageReviewDispositions(db, queue([normalized]), { nowSec: 2_000 });
+    expect(unchanged.queue.headlineGaps).toEqual([]);
+    expect(unchanged.summary.suppressedItemCount).toBe(1);
+    const changed = { ...normalized, pool: "pool-c" };
+    const reopened = await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 });
+    expect(reopened.queue.headlineGaps).toEqual([changed]);
+    expect(reopened.summary.evidenceChangedCount).toBe(1);
   });
 });

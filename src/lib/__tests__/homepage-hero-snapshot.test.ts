@@ -61,4 +61,22 @@ describe("selectHomepageHeroSnapshot", () => {
       snapshot: null,
     });
   });
+
+  it("accepts a fallback at the exact maximum age", () => {
+    const boundary = snapshot(new Date(nowMs - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS).toISOString(), 100);
+    expect(selectHomepageHeroSnapshot({ liveSnapshot: null, fallbackSnapshot: boundary, nowMs })).toEqual({
+      status: "available", source: "fallback", snapshot: boundary,
+    });
+  });
+
+  it.each([new Date(nowMs + 1).toISOString(), null, "invalid"])(
+    "rejects an unusable fallback timestamp %s",
+    (asOfISO) => {
+      expect(selectHomepageHeroSnapshot({
+        liveSnapshot: null,
+        fallbackSnapshot: { ...fallbackSnapshot, asOfISO },
+        nowMs,
+      })).toEqual({ status: "unavailable", source: "unavailable", snapshot: null });
+    },
+  );
 });

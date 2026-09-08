@@ -30,7 +30,7 @@ export class ScheduledFetchBudget {
   private peakAllocated = 0;
   private readonly waiters: AllocationWaiter[] = [];
 
-  constructor(capacity = CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt) {
+  constructor(capacity: number = CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt) {
     if (!Number.isInteger(capacity) || capacity < 1 || capacity >= CRON_CONNECTION_BUDGET.failAt) {
       throw new Error(
         `Scheduled fetch budget capacity must be an integer below ${CRON_CONNECTION_BUDGET.failAt}`,

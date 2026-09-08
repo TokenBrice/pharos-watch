@@ -17,6 +17,7 @@ import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonPolicy } from "../safety-score-v
 import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
 import { makeCompiledV9AssetInput } from "./safety-score-v9-score.test-support";
+import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet } from "./safety-score-v9-facts.fixture-support";
 
 /**
  * STAGE A invariant + adverse-anchor re-pins for the 2026-07-17 anchor-
@@ -208,7 +209,7 @@ describe("anchor-coherence invariants — active", () => {
     ]);
   });
 
-  it("serial non-dilution: sibling basket exposure never dilutes a required parent cap", () => {
+  it("serial-sibling independence: another serial child never changes a required parent cap", () => {
     const parent = compiledInput("parent", 50);
     const child = compiledInput("child", 90, { assetId: "parent", required: true, relationship: "wrapper" });
     const alone = scoreCompiledAssetSet([child, parent], V9_CANDIDATE_POLICY_V1).traces.find(
@@ -223,6 +224,35 @@ describe("anchor-coherence invariants — active", () => {
     )!;
     expect(withSibling.finalScore).toBe(alone.finalScore);
     expect(withSibling.bindingCap).toEqual(alone.bindingCap);
+  });
+
+  it("serial non-dilution: an actual basket exposure cannot average away the serial parent cap", () => {
+    const input = coreFixture();
+    const parent = input.assets.find((asset) => asset.assetId === "gamma")!;
+    parent.peg.pegScore = 10;
+    const result = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+    const child = result.assets.find((asset) => asset.assetId === "alpha")!;
+    const evaluatedParent = result.assets.find((asset) => asset.assetId === "gamma")!;
+    expect(child.dependencyInputs.basket).toEqual([
+      expect.objectContaining({ upstreamAssetId: "beta", weight: 0.4 }),
+    ]);
+    expect(child.dependencyInputs.serial).toEqual([
+      expect.objectContaining({ upstreamAssetId: "gamma", blocked: false }),
+    ]);
+    expect(evaluatedParent.trace.finalScore).not.toBeNull();
+    expect(child.trace.bindingCap).toMatchObject({ source: "parent", limit: evaluatedParent.trace.finalScore });
+    expect(child.trace.finalScore).toBe(evaluatedParent.trace.finalScore);
+
+    const withoutBasket = structuredClone(input);
+    const standalone = withoutBasket.assets.find((asset) => asset.assetId === "alpha")!;
+    standalone.dependencies.edges = standalone.dependencies.edges.filter((edge) => edge.economicRole !== "basket-exposure");
+    standalone.reserveExposures = standalone.reserveExposures.filter((entry) => entry.trackedAssetId === null)
+      .map((entry) => ({ ...entry, weight: 1 }));
+    standalone.dependencies.mappedLiveReserveWeight = 0;
+    const control = evaluateV9FactSet(compileNativeV3FactSet(withoutBasket), V9_CANDIDATE_POLICY_V1)
+      .assets.find((asset) => asset.assetId === "alpha")!;
+    expect(control.trace.bindingCap).toEqual(child.trace.bindingCap);
+    expect(control.trace.finalScore).toBe(child.trace.finalScore);
   });
 
   it("no double-charged uncertainty: dual-channel expression costs exactly the stronger single channel", () => {

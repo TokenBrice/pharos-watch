@@ -60,11 +60,6 @@ Endpoint sections below do not repeat the CLI header pair. Unless an endpoint sa
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
 
-**Preferred access:**
-
-- Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
-- CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
-
 **Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status/response.ts`, with `shared/types/status.ts` retained as its compatibility barrel. It currently includes diagnostics such as `summary.transitionsLast24h`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. This is an API response-shape change: public health diagnostics, including `alertBroker`, remain on `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
@@ -499,7 +494,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
 
-`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`, `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, or `persistentlyStaleIndependentCoins.length > 0`, and `healthy` otherwise.
+`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`; `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, `persistentlyStaleIndependentCoins.length > 0`, or reserve capacity pressure is present — `writeTimeoutUncertain > 0`, a `cursorTailState` of `recording` or `incomplete`, `runBudgetTruncationCount >= 2`, or a `runBudgetTruncated` run whose deferred share (`deferredCoins / configuredCoins`) is at least `0.25`; and `healthy` otherwise.
 
 `reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
 
@@ -1191,7 +1186,7 @@ Admin-only bounded remediation endpoint for recoverable blacklist rows.
 
 - `chainId?: string`
 - `stablecoin?: BlacklistStablecoin` from the shared `BLACKLIST_STABLECOINS` set
-- `limit?: number` default `25`, max `200`
+- `limit?: number` default `25`; max `200` in dry-run mode, max `100` in write mode (`dryRun: false`) so updates commit in one atomic D1 batch — a larger write-mode limit returns `400`
 - `dryRun?: boolean` default `true`
 - `onlyMissingProvenance?: boolean` default `false`; set `true` to restrict the pass to legacy rows missing contract/config provenance
 - `maxAttempts?: number` default `25`

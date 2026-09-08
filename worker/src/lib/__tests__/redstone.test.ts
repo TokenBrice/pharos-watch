@@ -96,6 +96,7 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("retries missing batch symbols individually", async () => {
+    vi.useFakeTimers();
     const fetchMock = mockFetch([{
       match: () => true,
       outcomes: [
@@ -116,7 +117,9 @@ describe("fetchRedstonePrices", () => {
       ],
     }]);
 
-    const outcome = await fetchRedstonePrices(["USDT", "USD1"]);
+    const pending = fetchRedstonePrices(["USDT", "USD1"]);
+    await vi.advanceTimersByTimeAsync(100);
+    const outcome = await pending;
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(outcome.value.get("usdt-tether")?.price).toBe(1);
@@ -124,9 +127,12 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("filters out symbols that are outside the tracked RedStone allowlist", async () => {
+    vi.useFakeTimers();
     const fetchMock = mockFetch([{ match: () => true, body: {} }]);
 
-    const outcome = await fetchRedstonePrices(["NOTREAL", REDSTONE_TRACKED_SYMBOL_ALLOWLIST[0]]);
+    const pending = fetchRedstonePrices(["NOTREAL", REDSTONE_TRACKED_SYMBOL_ALLOWLIST[0]]);
+    await vi.advanceTimersByTimeAsync(100);
+    const outcome = await pending;
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).not.toHaveBeenCalledWith(
@@ -136,8 +142,8 @@ describe("fetchRedstonePrices", () => {
     expect(outcome.value.size).toBe(0);
   });
 
-  it("rejects stale prices before they can enter consensus", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it.each([300, 301])("applies the freshness cutoff to a %s-second-old sample", async (ageSec) => {
+    vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-19T12:00:00Z"));
     mockFetch([{
       match: () => true,
@@ -145,18 +151,21 @@ describe("fetchRedstonePrices", () => {
         USDT: {
           value: 1.0,
           source: { binance: 1.0, coinbase: 1.0 },
-          timestamp: Date.now() - 301_000,
+          timestamp: Date.now() - ageSec * 1000,
         },
       },
     }]);
 
-    const outcome = await fetchRedstonePrices(["USDT"]);
+    const pending = fetchRedstonePrices(["USDT"]);
+    await vi.advanceTimersByTimeAsync(100);
+    const outcome = await pending;
 
-    expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.size).toBe(0);
+    expect(outcome.kind).toBe(ageSec === 300 ? "ok" : "upstream-error");
+    expect([...outcome.value.keys()]).toEqual(ageSec === 300 ? ["usdt-tether"] : []);
   });
 
   it("rejects entries that do not include a usable per-venue breakdown", async () => {
+    vi.useFakeTimers();
     mockFetch([{
       match: () => true,
       body: {
@@ -168,15 +177,20 @@ describe("fetchRedstonePrices", () => {
       },
     }]);
 
-    const outcome = await fetchRedstonePrices(["USDT"]);
+    const pending = fetchRedstonePrices(["USDT"]);
+    await vi.advanceTimersByTimeAsync(100);
+    const outcome = await pending;
 
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.size).toBe(0);
   });
 
   it("returns upstream-error outcome when every batch HTTP request fails", async () => {
+    vi.useFakeTimers();
     mockFetch([{ match: () => true, body: "server error", status: 503 }]);
-    const outcome = await fetchRedstonePrices(["USDT"]);
+    const pending = fetchRedstonePrices(["USDT"]);
+    await vi.advanceTimersByTimeAsync(100);
+    const outcome = await pending;
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.size).toBe(0);
   });
@@ -244,15 +258,42 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("bounds solo-retry budget to 5 requests when many batch symbols drop", async () => {
+    vi.useFakeTimers();
     const tenSymbols = REDSTONE_TRACKED_SYMBOL_ALLOWLIST.slice(0, 10);
     expect(tenSymbols.length).toBe(10);
 
     const fetchMock = mockFetch([{ match: () => true, body: {} }]);
 
-    await fetchRedstonePrices([...tenSymbols]);
+    const pending = fetchRedstonePrices([...tenSymbols]);
+    await vi.advanceTimersByTimeAsync(500);
+    await pending;
 
     // 1 batch fetch + at most 5 solo retries = 6 total fetch calls.
     expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+
+  it("rejects pre-aborted requests without fetching", async () => {
+    const fetchMock = mockFetch([], { requireMatch: true });
+    const controller = new AbortController();
+    const reason = new Error("cancelled before request");
+    controller.abort(reason);
+    await expect(fetchRedstonePrices(["USDT"], controller.signal)).rejects.toBe(reason);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects cancellation during the solo-retry delay without starting a retry", async () => {
+    vi.useFakeTimers();
+    const fetchMock = mockFetch([{ match: () => true, body: {} }]);
+    const controller = new AbortController();
+    const reason = new Error("cancelled during retry delay");
+    const pending = fetchRedstonePrices(["USDT"], controller.signal);
+    const rejected = expect(pending).rejects.toBe(reason);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    controller.abort(reason);
+    await rejected;
+    await vi.advanceTimersByTimeAsync(100);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("parses a real RedStone /prices USDT response (fixture)", async () => {

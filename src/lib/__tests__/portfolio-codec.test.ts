@@ -7,6 +7,7 @@ import {
   normalizePortfolioHolding,
   parsePortfolioUrlParam,
 } from "../portfolio-codec";
+import type { PortfolioHolding } from "../portfolio-codec";
 
 describe("portfolio codec", () => {
   it("parses and re-encodes canonical holdings", () => {
@@ -36,6 +37,36 @@ describe("portfolio codec", () => {
     ])).toEqual([
       { coinId: "usdt-tether", amount: 50 },
       { coinId: "usdc-circle", amount: 50 },
+    ]);
+  });
+
+  it("drops a coin whose duplicate amounts would overflow instead of emitting Infinity", () => {
+    const maxAmount = Number.MAX_VALUE;
+    expect(
+      migratePortfolioIds([
+        { coinId: "usdt-tether", amount: maxAmount },
+        { coinId: "usdt-tether", amount: maxAmount },
+      ]),
+    ).toEqual([]);
+    expect(parsePortfolioUrlParam(`usdt-tether:${maxAmount},usdt-tether:${maxAmount}`)).toEqual([]);
+    expect(
+      encodePortfolioHoldings([
+        { coinId: "usdt-tether", amount: maxAmount },
+        { coinId: "usdt-tether", amount: maxAmount },
+      ]),
+    ).toBe("");
+  });
+
+  it("merges duplicates without mutating caller-supplied holdings", () => {
+    const first: PortfolioHolding = { coinId: "usdt-tether", amount: 10 };
+    const second: PortfolioHolding = { coinId: "usdt-tether", amount: 40 };
+    Object.freeze(first);
+    Object.freeze(second);
+
+    expect(migratePortfolioIds([first, second])).toEqual([{ coinId: "usdt-tether", amount: 50 }]);
+    expect([first, second]).toEqual([
+      { coinId: "usdt-tether", amount: 10 },
+      { coinId: "usdt-tether", amount: 40 },
     ]);
   });
 

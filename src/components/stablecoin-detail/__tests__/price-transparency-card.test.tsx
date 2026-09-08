@@ -4,33 +4,24 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { resolvePriceTransparencySourceStatus } from "@/components/stablecoin-detail/price-transparency-status";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
 
 function makeCoinData(priceSource: string): StablecoinData {
-  return {
+  const freshSec = Math.floor(Date.now() / 1000) - 60;
+  return makeStablecoin({
     id: "test-coin",
     name: "Test Coin",
     symbol: "TEST",
-    geckoId: null,
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
-    price: 1,
     priceSource,
     priceConfidence: "high",
-    priceUpdatedAt: Math.floor(Date.now() / 1000) - 60,
-    priceObservedAt: Math.floor(Date.now() / 1000) - 60,
+    // Freshness copy reads every price timestamp, so all four stay explicit.
+    priceUpdatedAt: freshSec,
+    priceObservedAt: freshSec,
     priceObservedAtMode: "upstream",
-    priceSyncedAt: Math.floor(Date.now() / 1000) - 60,
-    consensusSources: [],
-    agreeSources: [],
-    supplySource: undefined,
-    circulating: { peggedUSD: 1_000_000 },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
+    priceSyncedAt: freshSec,
     chains: ["ethereum"],
-  };
+  });
 }
 
 

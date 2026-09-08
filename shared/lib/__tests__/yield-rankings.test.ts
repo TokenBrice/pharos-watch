@@ -1,33 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
-import type { YieldRanking } from "@shared/types";
 
-function makeRanking(overrides: Partial<YieldRanking>): YieldRanking {
+type Ranking = {
+  id: string;
+  currentApy: number;
+  pharosYieldScore: number | null;
+  apy30d: number;
+  sourceTvlUsd: number | null;
+  yieldSource: string;
+};
+
+function makeRanking(overrides: Partial<Ranking>): Ranking {
   return {
     id: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
     currentApy: 4.1,
-    apy7d: 4.1,
-    apy30d: 4.1,
-    apyBase: 4.1,
-    apyReward: null,
-    yieldSource: "Base source",
-    yieldType: "governance-set",
-    dataSource: "defillama",
-    sourceTvlUsd: 100_000_000,
     pharosYieldScore: 22,
-    safetyScore: 82,
-    safetyGrade: "A-",
-    yieldToRisk: 0.2,
-    excessYield: 0.1,
-    yieldStability: 0.9,
-    apyVariance30d: 0.2,
-    apyMin30d: 4.0,
-    apyMax30d: 4.3,
-    warningSignals: [],
-    altSources: [],
+    apy30d: 4.1,
+    sourceTvlUsd: 100_000_000,
+    yieldSource: "Base source",
     ...overrides,
   };
 }
@@ -37,30 +28,25 @@ describe("dedupeYieldRankings", () => {
     const rankings = dedupeYieldRankings([
       makeRanking({ id: "usdc-circle", currentApy: 4.2, yieldSource: "Lower" }),
       makeRanking({ id: "usdc-circle", currentApy: 4.7, yieldSource: "Higher" }),
-      makeRanking({ id: "usdt-tether", symbol: "USDT", name: "Tether", currentApy: 3.8, apy30d: 3.7 }),
+      makeRanking({ id: "usdt-tether", currentApy: 3.8, apy30d: 3.7 }),
     ]);
 
     expect(rankings).toHaveLength(2);
     expect(rankings.find((row) => row.id === "usdc-circle")?.yieldSource).toBe("Higher");
   });
 
-  it("handles rows with all null scores gracefully", () => {
-    const rankings = dedupeYieldRankings([
-      makeRanking({ id: "a", currentApy: 0, pharosYieldScore: null, apy30d: 0, sourceTvlUsd: null }),
-      makeRanking({ id: "a", currentApy: 0, pharosYieldScore: null, apy30d: 0, sourceTvlUsd: null }),
-    ]);
-    expect(rankings).toHaveLength(1);
+  it("keeps the first exact tie including unrelated payload", () => {
+    const first = { ...makeRanking({ pharosYieldScore: null, sourceTvlUsd: null }), payload: { venue: "first" } };
+    const second = { ...first, yieldSource: "Second", payload: { venue: "second" } };
+    expect(dedupeYieldRankings([first, second])).toEqual([first]);
   });
 
   it("returns a single row unchanged", () => {
-    const rankings = dedupeYieldRankings([
-      makeRanking({ id: "solo", currentApy: 5.0 }),
-    ]);
-    expect(rankings).toHaveLength(1);
-    expect(rankings[0].id).toBe("solo");
+    const row = makeRanking({ id: "solo", currentApy: 5.0 });
+    expect(dedupeYieldRankings([row])).toEqual([row]);
   });
 
-  it("uses PYS and TVL as tie-breakers when APY matches", () => {
+  it("prefers PYS over TVL when current APY matches", () => {
     const rankings = dedupeYieldRankings([
       makeRanking({
         id: "usdc-circle",
@@ -76,9 +62,35 @@ describe("dedupeYieldRankings", () => {
         sourceTvlUsd: 10_000_000,
         yieldSource: "Higher PYS",
       }),
-      makeRanking({ id: "usdt-tether", symbol: "USDT", name: "Tether", currentApy: 3.8, apy30d: 3.7 }),
+      makeRanking({ id: "usdt-tether", currentApy: 3.8, apy30d: 3.7 }),
     ]);
 
     expect(rankings.find((row) => row.id === "usdc-circle")?.yieldSource).toBe("Higher PYS");
+  });
+
+  it("prefers 30-day APY over TVL when current APY and PYS match", () => {
+    const lower = makeRanking({ apy30d: 4, sourceTvlUsd: 100_000_000, yieldSource: "Lower" });
+    const higher = makeRanking({ apy30d: 5, sourceTvlUsd: 1, yieldSource: "Higher" });
+    for (const rows of [[lower, higher], [higher, lower]]) {
+      expect(dedupeYieldRankings(rows)).toEqual([higher]);
+    }
+  });
+
+  it("prefers TVL when all earlier scores match", () => {
+    const lower = makeRanking({ sourceTvlUsd: 1, yieldSource: "Lower" });
+    const higher = makeRanking({ sourceTvlUsd: 2, yieldSource: "Higher" });
+    for (const rows of [[lower, higher], [higher, lower]]) {
+      expect(dedupeYieldRankings(rows)).toEqual([higher]);
+    }
+  });
+
+  it("prefers finite zero to null PYS and TVL", () => {
+    for (const field of ["pharosYieldScore", "sourceTvlUsd"] as const) {
+      const missing = makeRanking({ [field]: null, yieldSource: "Missing" });
+      const finite = makeRanking({ [field]: 0, yieldSource: "Finite" });
+      for (const rows of [[missing, finite], [finite, missing]]) {
+        expect(dedupeYieldRankings(rows)).toEqual([finite]);
+      }
+    }
   });
 });

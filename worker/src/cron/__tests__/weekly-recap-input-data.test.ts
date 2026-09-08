@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DigestEditorialCandidate, DigestInputData } from "@shared/types/digest";
 import { buildWeeklyInputData } from "../weekly-recap/input-data";
 import type { DailyDigestSourceRow } from "../weekly-recap/types";
+import { buildWeeklyPrompt } from "../weekly-recap/prompt";
 
 const START_SEC = 1_786_665_600;
 
@@ -49,6 +50,95 @@ function row(index: number, overrides: Partial<DigestInputData> = {}): DailyDige
 }
 
 describe("weekly recap canonical candidate aggregation", () => {
+  it("keeps a zero market-cap base undefined rather than inventing infinite growth", () => {
+    const weekly = buildWeeklyInputData(Array.from({ length: 5 }, (_, index) => row(index, {
+      totalMcapUsd: index * 1_000_000,
+    })));
+    expect(weekly?.mcapRange).toEqual({ start: 0, end: 4_000_000, netChange: 4_000_000, pctChange: null });
+    expect(buildWeeklyPrompt(weekly!)).toContain("(N/A)");
+    expect(buildWeeklyPrompt(weekly!)).not.toContain("Infinity");
+  });
+
+  it("computes prior-week deltas from independent daily values", () => {
+    const current = Array.from({ length: 5 }, (_, index) => row(index, { totalMcapUsd: 200_000_000 }));
+    const prior = Array.from({ length: 5 }, (_, index) => row(index - 7, {
+      totalMcapUsd: 100_000_000,
+      stabilityIndex: { score: 80, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } },
+    }));
+    expect(buildWeeklyInputData(current, prior)?.weekOverWeekDeltas).toMatchObject({
+      mcap: { current: 200_000_000, prior: 100_000_000, deltaPct: 100 },
+      psi: { current: 90, prior: 80, delta: 10 },
+      dataCoverage: { currentDays: 5, priorDays: 5 },
+    });
+  });
+
+  it("rejects malformed grade transitions while preserving comparable valid transitions", () => {
+    const identity = {
+      model: "v8" as const, schemaVersion: 1 as const, methodologyVersion: "8.17",
+      evaluationBuildDigest: "a".repeat(64), baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: "report-cards:v8:test",
+    };
+    const rows = Array.from({ length: 5 }, (_, index) => row(index));
+    const input = JSON.parse(rows[2]!.input_data);
+    input.gradeTransitions = [
+      { mcapUsd: 1_000_000 },
+      {
+        historyId: "history:usdt:1", recordedAt: rows[2]!.generated_at, model: "v8", safetyScoreIdentity: identity,
+        symbol: "USDT", fromGrade: "A", toGrade: "B", fromScore: 90, toScore: 80,
+        currentDimensions: { peg: 95, liq: 80, resilience: null, decentralization: null }, mcapUsd: 2_000_000,
+      },
+    ];
+    rows[2] = { ...rows[2]!, input_data: JSON.stringify(input) };
+    const weekly = buildWeeklyInputData(rows, [], {
+      status: "available", expectedModel: "v8", identity, publishedAt: START_SEC, reason: null,
+    });
+    expect(weekly?.weeklySignals.topGradeTransitions.map((entry) => entry.historyId)).toEqual(["history:usdt:1"]);
+    expect(weekly?.gradeTransitionCount).toBe(1);
+  });
+
+  it("ranks fresh criticals first but makes carried criticals compete on severity ahead of suppressed signals", () => {
+    const chronicStartedAt = START_SEC - 30 * 86_400;
+    const freshStartedAt = START_SEC + 86_400;
+    const rows = Array.from({ length: 5 }, (_, index) => row(index));
+    rows[2] = row(2, {
+      editorialCandidates: [
+        { ...candidate("liquidity:suppressed", "liquidity", 1_000_000_000, "SUP"), suppressReason: "known bad upstream quote" },
+        candidate("liquidity:large", "liquidity", 100_000_000, "BIG"),
+      ],
+      activeDepegCount: 2,
+      topDepegs: [
+        { stablecoinId: "chronic", symbol: "CHR", bps: -2500, mcapUsd: 75_000_000, startedAt: chronicStartedAt },
+        { stablecoinId: "fresh", symbol: "NEW", bps: -2500, mcapUsd: 75_000_000, startedAt: freshStartedAt },
+      ],
+    });
+    const weekly = buildWeeklyInputData(rows);
+    expect(weekly?.weeklySignals.riskLeaderboard.map((entry) => entry.id)).toEqual([
+      `weekly:depeg:fresh:${freshStartedAt}`,
+      "weekly:liquidity:large",
+      `weekly:depeg:chronic:${chronicStartedAt}`,
+      "weekly:liquidity:suppressed",
+    ]);
+    expect(weekly?.weeklySignals.riskLeaderboard[2]).toMatchObject({ critical: true, carriedOver: true });
+  });
+
+  it("orders depeg competitors by suppression, fresh criticality, severity, and impact", () => {
+    const startedAt = START_SEC + 86_400;
+    const rows = Array.from({ length: 5 }, (_, index) => row(index));
+    rows[2] = row(2, {
+      activeDepegCount: 3,
+      topDepegs: [
+        { stablecoinId: "suppressed-critical", symbol: "SUP", bps: -2500, mcapUsd: 3_000_000_000, startedAt, suppressReason: "known bad upstream quote" },
+        { stablecoinId: "noncritical-large", symbol: "BIG", bps: -900, mcapUsd: 5_000_000_000, startedAt },
+        { stablecoinId: "critical-small", symbol: "CRIT", bps: -2500, mcapUsd: 75_000_000, startedAt },
+      ],
+    });
+    expect(buildWeeklyInputData(rows)?.weeklySignals.riskLeaderboard.map((entry) => entry.id)).toEqual([
+      `weekly:depeg:critical-small:${startedAt}`,
+      `weekly:depeg:noncritical-large:${startedAt}`,
+      `weekly:depeg:suppressed-critical:${startedAt}`,
+    ]);
+  });
+
   it("deduplicates repeated observations by stable depeg event identity", () => {
     const chronicStartedAt = START_SEC - 86_400;
     const rows = Array.from({ length: 7 }, (_, index) => row(index, {

@@ -25,7 +25,7 @@ vi.mock("../helpers", async (importOriginal) => {
 import { fetchOnchainMulticall3, fetchOnchainRawCall } from "../helpers";
 import { adaptResupplyPairSnapshots, fetchResupplyPairsReserves } from "../resupply-pairs";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 const CURVE_PAIR = "0xC5184cccf85b81EDdc661330acB3E41bd89F34A1";
 const FRAX_PAIR = "0x3F2b20b8E8Ce30bb52239d3dFADf826eCFE6A5f7";
 const EMPTY_PAIR = "0x212589B06EBBA4d89d9deFcc8DDc58D80E141EA0";
@@ -92,6 +92,7 @@ const underlyings = [
 ];
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 

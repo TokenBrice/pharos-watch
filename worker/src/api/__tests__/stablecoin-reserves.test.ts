@@ -5,6 +5,7 @@ import { registerStablecoinParameterContract } from "../../test-helpers/__shared
 import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
+import { reserveCompositionRow, reserveSyncRow } from "./stablecoin-reserves.test-support";
 
 describe("handleStablecoinReserves", () => {
   it("keeps USDAI on the reserve endpoint with the curated stablecoin fallback until a validated snapshot is synced", async () => {
@@ -56,41 +57,22 @@ describe("handleStablecoinReserves", () => {
       {
         match: "reserve_composition",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(slices),
-          fetched_at: now,
-          source: "infinifi",
-          metadata: JSON.stringify({
-            freshnessMode: "not-applicable",
-            yieldBasisCollateralPct: 89.7,
-            redemption: {
-              sourceUrls: [
-                "https://stats.infinifi.xyz/",
-                "https://docs.infinifi.example/reserves",
-                "https://docs.infinifi.example/reserves",
-              ],
-            },
-          }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "independent",
-        },
+        first: reserveCompositionRow(now, { slices: JSON.stringify(slices), metadata: JSON.stringify({
+          freshnessMode: "not-applicable",
+          yieldBasisCollateralPct: 89.7,
+          redemption: {
+            sourceUrls: [
+              "https://stats.infinifi.xyz/",
+              "https://docs.infinifi.example/reserves",
+              "https://docs.infinifi.example/reserves",
+            ],
+          },
+        }) }),
       },
       {
         match: "reserve_sync_state",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+        first: reserveSyncRow(now),
       },
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
@@ -129,31 +111,12 @@ describe("handleStablecoinReserves", () => {
       {
         match: "reserve_composition",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: "not json",
-          fetched_at: now,
-          source: "infinifi",
-          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "independent",
-        },
+        first: reserveCompositionRow(now, { slices: "not json" }),
       },
       {
         match: "reserve_sync_state",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+        first: reserveSyncRow(now),
       },
     ]);
 
@@ -178,39 +141,20 @@ describe("handleStablecoinReserves", () => {
       {
         match: "reserve_composition",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]),
-          fetched_at: now,
-          source: "infinifi",
-          metadata: JSON.stringify({
-            freshnessMode: "not-applicable",
-            immediateRedeemableUsd: 500_000,
-            redemptionFeeBps: 50,
-            redemption: {
-              capacityUsd: "500000",
-              feeBps: null,
-            },
-          }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "independent",
-        },
+        first: reserveCompositionRow(now, { slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]), metadata: JSON.stringify({
+          freshnessMode: "not-applicable",
+          immediateRedeemableUsd: 500_000,
+          redemptionFeeBps: 50,
+          redemption: {
+            capacityUsd: "500000",
+            feeBps: null,
+          },
+        }) }),
       },
       {
         match: "reserve_sync_state",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+        first: reserveSyncRow(now),
       },
     ]);
 
@@ -242,18 +186,7 @@ describe("handleStablecoinReserves", () => {
       {
         match: "reserve_sync_state",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: null,
-          last_status: "error",
-          warning_count: 0,
-          warnings: null,
-          last_error: "HTTP 503 for https://api.example.com",
-          metadata: "{}",
-        },
+        first: reserveSyncRow(now, { last_success_at: null, last_status: "error", last_error: "HTTP 503 for https://api.example.com", metadata: "{}" }),
       },
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
@@ -272,22 +205,11 @@ describe("handleStablecoinReserves", () => {
       {
         match: "reserve_sync_state",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: null,
-          last_status: "error",
-          warning_count: 0,
-          warnings: null,
-          last_error: "D1 write timeout for iusd-infinifi",
-          metadata: JSON.stringify({
-            uncertainWrite: true,
-            failureCategory: "storage-write",
-            reason: "storage-write-timeout",
-          }),
-        },
+        first: reserveSyncRow(now, { last_success_at: null, last_status: "error", last_error: "D1 write timeout for iusd-infinifi", metadata: JSON.stringify({
+          uncertainWrite: true,
+          failureCategory: "storage-write",
+          reason: "storage-write-timeout",
+        }) }),
       },
     ]);
 
@@ -311,31 +233,12 @@ describe("handleStablecoinReserves", () => {
       {
         match: "reserve_composition",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]),
-          fetched_at: fetchedAt,
-          source: "infinifi",
-          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "independent",
-        },
+        first: reserveCompositionRow(fetchedAt, { slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]) }),
       },
       {
         match: "reserve_sync_state",
         rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: fetchedAt,
-          last_success_at: fetchedAt,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+        first: reserveSyncRow(fetchedAt),
       },
     ]);
 
@@ -345,17 +248,6 @@ describe("handleStablecoinReserves", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=1800, max-age=120");
   });
 
-  it("keeps curated-fallback mode on the short fallback cache-control tier", async () => {
-    // Existing behaviour: no live snapshot + curated reserves present -> curated-fallback.
-    const db = mockD1([
-      { match: "FROM reserve_composition", rows: [] },
-      { match: "FROM reserve_sync_state", rows: [] },
-    ]);
-    const res = await handleStablecoinReserves(db, "usdai-usd-ai");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
-    expect(body.mode).toBe("curated-fallback");
-    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-  });
 
   it.each<[ReservePresentationMode, string]>([
     ["live", "public, s-maxage=3600, max-age=300"],

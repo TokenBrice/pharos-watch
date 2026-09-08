@@ -7,6 +7,7 @@ import { packWatchlistDirectState } from "../../../lib/telegram/watchlist-token"
 import type { ConfirmBulkPayload } from "../../telegram-webhook-shared";
 import type { WebhookCommandContext } from "../context";
 import { buildV2PreviewMessageForTest, persistImportPreviewForTest } from "../import";
+import { makeCommandContext } from "./webhook-commands.test-support";
 import { BULK_CONFIRM_REPLY_MARKUP } from "../action-runner";
 import { sendAuditedTelegramReply } from "../../telegram-webhook-replies";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -30,11 +31,8 @@ function mockD1(
 }
 
 function context(db: D1Database, overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
-  return {
-    db,
+  return makeCommandContext(db, {
     chatId: "123",
-    chatType: "private",
-    username: "alice",
     actorUserId: "42",
     botToken: "token",
     operationNowSec: 1_783_680_000,
@@ -44,7 +42,7 @@ function context(db: D1Database, overrides: Partial<WebhookCommandContext> = {})
     replyToChat: async () => undefined,
     replyToChatWithMarkup: async () => undefined,
     ...overrides,
-  };
+  });
 }
 
 describe("watchlist import preview effect fencing", () => {

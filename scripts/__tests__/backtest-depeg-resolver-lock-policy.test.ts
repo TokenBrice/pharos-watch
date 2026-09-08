@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -223,8 +223,9 @@ describe("backtest-depeg-resolver-lock-policy", () => {
     });
   });
 
-  it("can run against an external fixture", async () => {
+  it("can run against an external fixture", async ({ onTestFinished }) => {
     const tmp = mkdtempSync(join(tmpdir(), "ddr-lock-policy-"));
+    onTestFinished(() => rmSync(tmp, { recursive: true, force: true }));
     const generatedAt = "2026-06-04T00:00:00.000Z";
     const fixtureRows: DdrLockPolicyBacktestRow[] = [{
       incidentKey: "ddr2:fixture",

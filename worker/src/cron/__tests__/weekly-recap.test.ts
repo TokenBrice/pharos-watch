@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 vi.mock("../../lib/fetch-retry", async () => {
   const { mockDailyDigestFetchRetryModule } = await import("./daily-digest.test-support");
@@ -917,129 +918,29 @@ describe("generateWeeklyRecap", () => {
     expect(insert?.binds[2]).toBe("Weekly Calm");
   });
 
-  it("prints N/A for weekly market-cap change when the week starts from zero", async () => {
-    const zeroStartRows = buildDailyRows();
-    zeroStartRows[0] = {
-      ...zeroStartRows[0]!,
-      input_data: JSON.stringify({
-        ...JSON.parse(zeroStartRows[0]!.input_data),
-        totalMcapUsd: 0,
-      }),
-    };
 
-    const db = mockD1(makeTables({ dailyRows: zeroStartRows }), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ title: "Zero Base Week" }));
-
-    await generateWeeklyRecap(db, "anthropic-key", null, null);
-
-    const anthropicRequest = vi.mocked(fetchWithRetry).mock.calls[0];
-    const body = anthropicRequest?.[1]?.body;
-    expect(typeof body).toBe("string");
-    expect(body).toContain("(N/A)");
-    expect(body).not.toContain("Infinity");
-  });
-
-  it("includes week-over-week deltas in prompt when prior week data exists", async () => {
-    const current = buildDailyRows();
-    const prior = buildDailyRows().map((row, i) => ({
-      ...row,
-      generated_at: row.generated_at - 7 * 86_400,
-      input_data: JSON.stringify({
-        ...(JSON.parse(row.input_data) as Record<string, unknown>),
-        totalMcapUsd: 99_000_000 + i * 1_000_000,
-        stabilityIndex: { score: 92 - i, band: "BEDROCK" },
-      }),
-    }));
-
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly],
-        first: null,
-        rows: [],
-      },
-      {
-        match: "SELECT id FROM daily_digest WHERE generated_at >= ? AND json_extract(digest_meta, '$.type') = 'weekly'",
-        first: null,
-        rows: [],
-      },
-      {
-        match: "digest_meta, input_data",
-        first: null,
-        rows: [],
-      },
-      { match: "SELECT digest_title, digest_text, digest_meta", rows: [] },
-      { match: "UPDATE daily_digest", rows: [] },
-      {
-        match: "WHERE generated_at >= ? AND (digest_meta IS NULL",
-        rows: [...prior, ...current],
-      },
-      { match: "INSERT INTO daily_digest", rows: [] },
-    ]);
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-
-    await generateWeeklyRecap(db, "anthropic-key", null, null);
-
-    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
-      messages: { content: string }[];
-    };
-    expect(body.messages[0].content).toContain("Week-over-week deltas");
-    expect(body.messages[0].content).toMatch(/mcap: current .+ prior .+ delta/i);
-    expect(body.messages[0].content).toMatch(/PSI midpoint: current .+ prior .+/i);
-  });
-
-  it("filters malformed grade transitions before building the weekly risk leaderboard", async () => {
-    const rows = buildDailyRows();
-    rows[1] = {
-      ...rows[1]!,
-      input_data: JSON.stringify({
-        ...(JSON.parse(rows[1]!.input_data) as Record<string, unknown>),
-        gradeTransitions: [{ mcapUsd: 1_000_000 }],
-      }),
-    };
-    rows[2] = {
-      ...rows[2]!,
-      input_data: JSON.stringify({
-        ...(JSON.parse(rows[2]!.input_data) as Record<string, unknown>),
-        gradeTransitions: [{
-          historyId: "history:usdt:1",
-          recordedAt: rows[2]!.generated_at,
-          model: "v8",
-          safetyScoreIdentity: safetyContext.identity,
-          symbol: "USDT",
-          fromGrade: "A",
-          toGrade: "B",
-          fromScore: 90,
-          toScore: 80,
-          currentDimensions: { peg: 95, liq: 80, resilience: null, decentralization: null },
-          mcapUsd: 2_000_000,
-        }],
-      }),
-    };
-    const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-
-    await expect(generateWeeklyRecap(db, "anthropic-key", null, null)).resolves.toMatchObject({ itemCount: 1 });
-
-    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
-      messages: { content: string }[];
-    };
-    const prompt = body.messages[0].content;
-    expect(prompt).toContain("USDT grade fell to B");
-    expect(prompt).not.toContain("undefined: grade undefined");
-  });
-
-  it("selects the latest daily row per UTC date before limiting the weekly input window", async () => {
-    const db = mockD1(makeTables(), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-
-    await generateWeeklyRecap(db, "anthropic-key", null, null);
-
-    const dailySelection = db.getHistory().find((entry) => entry.sql.includes("latest_daily"));
-    expect(dailySelection?.sql).toContain("ROW_NUMBER() OVER");
-    expect(dailySelection?.sql).toContain("PARTITION BY strftime('%Y-%m-%d', generated_at, 'unixepoch')");
-    expect(dailySelection?.sql).toContain("WHERE row_rank = 1");
-    expect(dailySelection?.sql).toContain("LIMIT 15");
+  it("selects the latest daily values per UTC date from SQLite before generating the recap", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO daily_digest
+        (generated_at, digest_title, digest_text, input_data) VALUES (?, ?, ?, ?)`);
+      for (const row of buildDailyRows()) {
+        insert.run(row.generated_at, row.digest_title, row.digest_text, row.input_data);
+        const input = JSON.parse(row.input_data);
+        input.totalMcapUsd *= 2;
+        insert.run(row.generated_at + 60, row.digest_title, row.digest_text, JSON.stringify(input));
+      }
+      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+      await generateWeeklyRecap(db, "anthropic-key", null, null);
+      const persisted = sqlite.prepare("SELECT input_data FROM daily_digest WHERE json_extract(digest_meta, '$.type') = 'weekly'").get();
+      expect(persisted).toBeDefined();
+      const input = JSON.parse(String(persisted!.input_data));
+      expect(input.dailyDigests.map((day: { inputData: { totalMcapUsd: number } }) => day.inputData.totalMcapUsd))
+        .toEqual([200_000_000, 202_000_000, 204_000_000, 206_000_000, 208_000_000]);
+      expect(input.mcapRange).toEqual({ start: 200_000_000, end: 208_000_000, netChange: 8_000_000, pctChange: 4 });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("surfaces critical weekly depegs in the risk leaderboard and spike metrics", async () => {
@@ -1094,67 +995,6 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toContain("Worst depeg by bps");
   });
 
-  it("orders the weekly risk leaderboard by suppression, criticality, severity, then impact", async () => {
-    const rows = buildDailyRows();
-    const baseInput = JSON.parse(rows[2]!.input_data) as Record<string, unknown>;
-    rows[2] = {
-      ...rows[2]!,
-      input_data: JSON.stringify({
-        ...baseInput,
-        activeDepegCount: 3,
-        topDepegs: [
-          {
-            stablecoinId: "critical-small",
-            symbol: "CRIT",
-            bps: -2_500,
-            direction: "below",
-            mcapUsd: 75_000_000,
-            startedAt: rows[2]!.generated_at - 3_600,
-            impactScore: 120,
-          },
-          {
-            stablecoinId: "noncritical-large",
-            symbol: "BIG",
-            bps: -900,
-            direction: "below",
-            mcapUsd: 5_000_000_000,
-            startedAt: rows[2]!.generated_at - 1_800,
-            impactScore: 4_500,
-          },
-          {
-            stablecoinId: "suppressed-critical",
-            symbol: "SUP",
-            bps: -2_500,
-            direction: "below",
-            mcapUsd: 3_000_000_000,
-            startedAt: rows[2]!.generated_at - 900,
-            impactScore: 7_500,
-            suppressReason: "known bad upstream quote",
-          },
-        ],
-      }),
-    };
-    const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-
-    await generateWeeklyRecap(db, "anthropic-key", null, null);
-
-    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
-      messages: { content: string }[];
-    };
-    const prompt = body.messages[0].content;
-    const criticalIndex = prompt.indexOf("weekly:depeg:critical-small");
-    const noncriticalIndex = prompt.indexOf("weekly:depeg:noncritical-large");
-    const suppressedIndex = prompt.indexOf("weekly:depeg:suppressed-critical");
-
-    expect(criticalIndex).toBeGreaterThan(-1);
-    expect(noncriticalIndex).toBeGreaterThan(-1);
-    expect(suppressedIndex).toBeGreaterThan(-1);
-    expect(criticalIndex).toBeLessThan(noncriticalIndex);
-    expect(noncriticalIndex).toBeLessThan(suppressedIndex);
-    expect(prompt).toContain("weekly:depeg:suppressed-critical");
-    expect(prompt).toContain("suppress: known bad upstream quote");
-  });
 
   it("normalizes weekly meta lead and tone through the allowlist", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });

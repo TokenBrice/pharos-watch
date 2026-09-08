@@ -18,7 +18,7 @@ import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
 import { MethodologyHint } from "@/components/methodology-hint";
 
-export { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
+export { type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
 
 interface LiquidityTableProps {
   rows: LiquidityRow[];

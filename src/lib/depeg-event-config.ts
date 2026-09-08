@@ -37,7 +37,7 @@ export const DEPEG_ARCHIVE_EPOCH_SECONDS = 1_767_225_600;
  * Pinned events are unioned into both the static page set and the indexable
  * set. Post-epoch events no longer need pinning — permanence is structural.
  */
-export const PINNED_DEPEG_EVENT_SLUGS = ["usdc-2023-03-11"] as const;
+const PINNED_DEPEG_EVENT_SLUGS = ["usdc-2023-03-11"] as const;
 
 interface DepegEventIndexCandidate {
   slug: string;

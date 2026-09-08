@@ -10,126 +10,32 @@ const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-l
 });
 
 describe("resolveCapacityBasis", () => {
-  describe("reserve-sync-metadata model", () => {
-    it("returns live-direct-telemetry when capacity confidence is live-direct", () => {
-      expect(
-        resolveCapacityBasis("stablecoin-redeem", { kind: "reserve-sync-metadata" }, "live-direct"),
-      ).toBe("live-direct-telemetry");
-    });
-
-    it("returns live-proxy-buffer when capacity confidence is live-proxy", () => {
-      expect(
-        resolveCapacityBasis("collateral-redeem", { kind: "reserve-sync-metadata" }, "live-proxy"),
-      ).toBe("live-proxy-buffer");
-    });
-
-    it("returns the explicit model.basis when confidence is neither live-direct nor live-proxy", () => {
-      expect(
-        resolveCapacityBasis(
-          "stablecoin-redeem",
-          { kind: "reserve-sync-metadata", basis: "hot-buffer" },
-          "dynamic",
-        ),
-      ).toBe("hot-buffer");
-    });
-
-    it("falls back to route-family basis when confidence is other and no basis is set", () => {
-      expect(
-        resolveCapacityBasis("stablecoin-redeem", { kind: "reserve-sync-metadata" }, "dynamic"),
-      ).toBe("hot-buffer");
-      expect(
-        resolveCapacityBasis("psm-swap", { kind: "reserve-sync-metadata" }, "documented-bound"),
-      ).toBe("psm-balance-share");
-      expect(
-        resolveCapacityBasis("queue-redeem", { kind: "reserve-sync-metadata" }, "heuristic"),
-      ).toBe("strategy-buffer");
-    });
-  });
-
-  describe("explicit model.basis on non-reserve models", () => {
-    it("returns model.basis verbatim for supply-full", () => {
-      expect(
-        resolveCapacityBasis("stablecoin-redeem", {
-          kind: "supply-full",
-          basis: "daily-limit",
-        }),
-      ).toBe("daily-limit");
-    });
-
-    it("returns model.basis verbatim for supply-ratio", () => {
-      expect(
-        resolveCapacityBasis("psm-swap", {
-          kind: "supply-ratio",
-          ratio: 0.1,
-          basis: "strategy-buffer",
-        }),
-      ).toBe("strategy-buffer");
-    });
-
-    it("returns fixed-buffer for fixed USD capacity without an explicit basis", () => {
-      expect(
-        resolveCapacityBasis("psm-swap", {
-          kind: "fixed-usd",
-          amountUsd: 5_000_000,
-        }),
-      ).toBe("fixed-buffer");
-    });
-  });
-
-  describe("supply-full fallbacks (no explicit basis)", () => {
-    it("returns issuer-term-redemption for offchain-issuer route family", () => {
-      expect(resolveCapacityBasis("offchain-issuer", { kind: "supply-full" })).toBe("issuer-term-redemption");
-    });
-
-    it("returns issuer-term-redemption for stablecoin-redeem route family", () => {
-      expect(resolveCapacityBasis("stablecoin-redeem", { kind: "supply-full" })).toBe("issuer-term-redemption");
-    });
-
-    it("returns full-system-eventual for other route families", () => {
-      expect(resolveCapacityBasis("basket-redeem", { kind: "supply-full" })).toBe("full-system-eventual");
-      expect(resolveCapacityBasis("collateral-redeem", { kind: "supply-full" })).toBe("full-system-eventual");
-      expect(resolveCapacityBasis("queue-redeem", { kind: "supply-full" })).toBe("full-system-eventual");
-      expect(resolveCapacityBasis("psm-swap", { kind: "supply-full" })).toBe("full-system-eventual");
-    });
-
-    it("returns full-system-eventual when routeFamily is null (reserve-sync call-site pattern)", () => {
-      expect(resolveCapacityBasis(null, { kind: "supply-full" })).toBe("full-system-eventual");
-    });
-  });
-
-  describe("supply-ratio fallbacks (no explicit basis)", () => {
-    it("returns psm-balance-share for psm-swap route family", () => {
-      expect(
-        resolveCapacityBasis("psm-swap", { kind: "supply-ratio", ratio: 0.2 }),
-      ).toBe("psm-balance-share");
-    });
-
-    it("returns strategy-buffer for queue-redeem route family", () => {
-      expect(
-        resolveCapacityBasis("queue-redeem", { kind: "supply-ratio", ratio: 0.05 }),
-      ).toBe("strategy-buffer");
-    });
-
-    it("returns hot-buffer for any other route family", () => {
-      expect(
-        resolveCapacityBasis("collateral-redeem", { kind: "supply-ratio", ratio: 0.1 }),
-      ).toBe("hot-buffer");
-      expect(
-        resolveCapacityBasis("stablecoin-redeem", { kind: "supply-ratio", ratio: 0.1 }),
-      ).toBe("hot-buffer");
-      expect(
-        resolveCapacityBasis("basket-redeem", { kind: "supply-ratio", ratio: 0.1 }),
-      ).toBe("hot-buffer");
-      expect(
-        resolveCapacityBasis("offchain-issuer", { kind: "supply-ratio", ratio: 0.1 }),
-      ).toBe("hot-buffer");
-    });
-
-    it("returns hot-buffer when routeFamily is null", () => {
-      expect(
-        resolveCapacityBasis(null, { kind: "supply-ratio", ratio: 0.1 }),
-      ).toBe("hot-buffer");
-    });
+  it.each([
+    ["stablecoin-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "live-direct", "live-direct-telemetry"],
+    ["collateral-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "live-proxy", "live-proxy-buffer"],
+    ["stablecoin-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "dynamic", "daily-limit"],
+    ["stablecoin-redeem", { kind: "reserve-sync-metadata" }, "dynamic", "hot-buffer"],
+    ["psm-swap", { kind: "reserve-sync-metadata" }, "documented-bound", "psm-balance-share"],
+    ["queue-redeem", { kind: "reserve-sync-metadata" }, "heuristic", "strategy-buffer"],
+    ["stablecoin-redeem", { kind: "supply-full", basis: "daily-limit" }, undefined, "daily-limit"],
+    ["psm-swap", { kind: "supply-ratio", ratio: 0.1, basis: "strategy-buffer" }, undefined, "strategy-buffer"],
+    ["psm-swap", { kind: "fixed-usd", amountUsd: 5_000_000 }, undefined, "fixed-buffer"],
+    ["offchain-issuer", { kind: "supply-full" }, undefined, "issuer-term-redemption"],
+    ["stablecoin-redeem", { kind: "supply-full" }, undefined, "issuer-term-redemption"],
+    ["basket-redeem", { kind: "supply-full" }, undefined, "full-system-eventual"],
+    ["collateral-redeem", { kind: "supply-full" }, undefined, "full-system-eventual"],
+    ["queue-redeem", { kind: "supply-full" }, undefined, "full-system-eventual"],
+    ["psm-swap", { kind: "supply-full" }, undefined, "full-system-eventual"],
+    [null, { kind: "supply-full" }, undefined, "full-system-eventual"],
+    ["psm-swap", { kind: "supply-ratio", ratio: 0.2 }, undefined, "psm-balance-share"],
+    ["queue-redeem", { kind: "supply-ratio", ratio: 0.05 }, undefined, "strategy-buffer"],
+    ["collateral-redeem", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
+    ["stablecoin-redeem", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
+    ["basket-redeem", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
+    ["offchain-issuer", { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
+    [null, { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
+  ] as const)("resolves %s with %j and %s to %s", (route, model, confidence, expected) => {
+    expect(resolveCapacityBasis(route, model, confidence)).toBe(expected);
   });
 });
 

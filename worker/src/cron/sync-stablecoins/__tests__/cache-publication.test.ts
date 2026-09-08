@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
 import { normalizeStablecoinsPayload } from "../shared";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { getCache, getPriceCache } from "../../../lib/db-cache";
+import { makePeggedAsset } from "./_fixtures";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 describe("validateAndWriteStablecoinsCache", () => {
   it("writes byte-identical canonical and replay-price payloads for main and fallback policies", async () => {
@@ -20,12 +26,8 @@ describe("validateAndWriteStablecoinsCache", () => {
       agreeSources: ["coingecko"],
       consensusSources: ["coingecko"],
     }];
-    const makeDb = () => mockD1([
-      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
-      { match: "price_cache", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const mainDb = makeDb();
-    const fallbackDb = makeDb();
+    const mainDb = fixtures.open().db;
+    const fallbackDb = fixtures.open().db;
 
     for (const [db, validationContext, stagePrefix] of [
       [mainDb, "main", undefined],
@@ -48,14 +50,54 @@ describe("validateAndWriteStablecoinsCache", () => {
       });
     }
 
-    const stablecoinsBody = (db: ReturnType<typeof makeDb>) => db.getHistory()
-      .find((entry) => entry.binds[0] === "stablecoins")?.binds[1];
-    const priceCacheWrites = (db: ReturnType<typeof makeDb>) => db.getHistory()
-      .filter((entry) => entry.sql.includes("price_cache"))
-      .map((entry) => ({ sql: entry.sql, binds: entry.binds }));
-    expect(stablecoinsBody(mainDb)).toBe(stablecoinsBody(fallbackDb));
-    expect(stablecoinsBody(mainDb)).toBe(JSON.stringify({ peggedAssets: [], fxFallbackRates }));
-    expect(priceCacheWrites(mainDb)).toEqual(priceCacheWrites(fallbackDb));
+    for (const db of [mainDb, fallbackDb]) {
+      expect(await getCache(db, "stablecoins")).toEqual({
+        value: JSON.stringify({ peggedAssets: [], fxFallbackRates }), updatedAt: syncStartSec,
+      });
+      expect([...(await getPriceCache(db))]).toEqual([["fixture-usd", {
+        price: 1, source: "coingecko", confidence: "single-source",
+        updatedAt: syncStartSec - 30, observedAt: syncStartSec - 30,
+        observedAtMode: "upstream", syncedAt: syncStartSec,
+        agreeSources: ["coingecko"], consensusSources: ["coingecko"],
+      }]]);
+    }
+  });
+
+  it.each(["invalid", "newer", "aborted"] as const)("preserves published generations when %s blocks publication", async (gate) => {
+    const { db, sqlite } = fixtures.open();
+    const companionKey = getResponseReadyCacheKey("stablecoins");
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("stablecoins", "prior", 200);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(companionKey, "companion", 50);
+    const result = await validateAndWriteStablecoinsCache({
+      db, assets: gate === "invalid" ? [makePeggedAsset({ name: 42 as never })] : [],
+      syncStartSec: gate === "newer" ? 100 : 300, validationContext: "main",
+      returnIfAborted: () => gate === "aborted" ? { aborted: true, metadata: "aborted" } : null,
+      abortResult: () => ({ aborted: true, metadata: "aborted" }),
+    }, () => ({ metadata: "blocked" }));
+    expect(await getCache(db, "stablecoins")).toEqual({ value: "prior", updatedAt: 200 });
+    expect(await getCache(db, companionKey)).toEqual({ value: "companion", updatedAt: 50 });
+    if (gate === "invalid") {
+      expect(result).toMatchObject({ written: false, blockedResult: { metadata: "blocked" } });
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key NOT IN (?, ?)").all("stablecoins", companionKey))
+        .toEqual([expect.objectContaining({ key: expect.stringContaining("invalid") })]);
+    } else if (gate === "newer") {
+      expect(result).toMatchObject({ written: false, skippedBecauseNewer: true });
+    } else {
+      expect(result).toMatchObject({ aborted: true });
+    }
+  });
+
+  it("preserves the replay generation when cancellation blocks persistence", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO price_cache (asset_id, price, updated_at, synced_at) VALUES (?, ?, ?, ?)")
+      .run("fixture-usd", 0.99, 100, 100);
+    const before = await getPriceCache(db);
+    const result = await commitReplayPriceCache({
+      db, entries: [{ id: "fixture-usd", price: 1, syncedAt: 200 }],
+      returnIfAborted: () => ({ aborted: true, metadata: "aborted" }),
+    });
+    expect(result).toMatchObject({ aborted: true });
+    expect(await getPriceCache(db)).toEqual(before);
   });
 
   it("normalizes every unusable price to explicit missing provenance", () => {

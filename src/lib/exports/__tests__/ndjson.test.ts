@@ -1,19 +1,8 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildNdjsonWithPreamble, downloadNdjsonWithPreamble } from "@/lib/exports/ndjson";
-import type { ExportPreamble } from "@/lib/exports/preamble";
-
-const PREAMBLE: ExportPreamble = {
-  endpoint: "stablecoins",
-  asOfISO: "2026-05-16T12:00:00.000Z",
-  sourceUrl: "https://pharos.watch/",
-  methodologyLabel: "safety-score v7.25",
-};
-
-function expectBlob(value: Blob | MediaSource | undefined): asserts value is Blob {
-  expect(value).toBeInstanceOf(Blob);
-}
+import { PREAMBLE, expectBlob, useDownloadHarness } from "./exports.test-support";
 
 describe("buildNdjsonWithPreamble", () => {
   it("emits one `_meta` line followed by one JSON object per row", () => {
@@ -55,28 +44,8 @@ describe("buildNdjsonWithPreamble", () => {
 });
 
 describe("downloadNdjsonWithPreamble", () => {
-  const createObjectURL = vi.fn<(object: Blob | MediaSource) => string>(() => "blob:pharos-ndjson");
-  const revokeObjectURL = vi.fn();
-  let clickSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-16T12:00:00.000Z"));
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL,
-      revokeObjectURL,
-    });
-    clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    clickSpy.mockRestore();
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    createObjectURL.mockClear();
-    revokeObjectURL.mockClear();
-  });
+  const harness = useDownloadHarness("blob:pharos-ndjson");
+  const { createObjectURL, revokeObjectURL } = harness;
 
   it("triggers a download with the expected MIME type and dated filename", async () => {
     downloadNdjsonWithPreamble(
@@ -96,8 +65,8 @@ describe("downloadNdjsonWithPreamble", () => {
         '{"Name":"USDC"}',
       ].join("\n"),
     );
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
+    expect(harness.clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = harness.clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
     expect(anchor?.download).toBe("stablecoins-2026-05-16.ndjson");
     expect(revokeObjectURL).not.toHaveBeenCalled();
 
@@ -107,7 +76,7 @@ describe("downloadNdjsonWithPreamble", () => {
   });
 
   it("still revokes the object URL when the anchor click throws", async () => {
-    clickSpy.mockImplementation(() => {
+    harness.clickSpy.mockImplementation(() => {
       throw new Error("click blocked by browser policy");
     });
 

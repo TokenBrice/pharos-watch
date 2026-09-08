@@ -97,7 +97,9 @@ describe("L2BEAT audit helpers", () => {
     );
 
     expect(matches.map((protocol) => protocol.id)).toContain("cctpv2");
-    expect(matches.map((protocol) => protocol.id)).not.toEqual(expect.arrayContaining(["base", "ink", "layerzero", "relay"]));
+    for (const forbiddenId of ["base", "ink", "layerzero", "relay"]) {
+      expect(matches.map((protocol) => protocol.id)).not.toContain(forbiddenId);
+    }
   });
 
   it("still matches explicit protocol phrases for ambiguous one-token protocol names", () => {

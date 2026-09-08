@@ -2,6 +2,7 @@
 
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { deriveBaseCriticalOwnership } from "../lib/critical-ownership.mts";
 import {
   createExecutionUnit,
   createSpawnCommand,
@@ -324,7 +325,9 @@ export async function runPrChecks(
 
   const resolvedBaseSha = await resolveBaseSha(base, env, runCommandImpl, now, { log, warn });
   const changedFiles = collectChangedFiles({ base, head });
-  const classification = classifyChangedFiles(changedFiles);
+  const classification = classifyChangedFiles(changedFiles, {
+    baseOwnership: deriveBaseCriticalOwnership(base, changedFiles),
+  });
   const lanes = buildPrCheckPlan(changedFiles, classification, flags);
 
   if (classification.criticalCoverageChanged && flags.skipCoverage) {

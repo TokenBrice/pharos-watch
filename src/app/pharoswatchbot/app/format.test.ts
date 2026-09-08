@@ -53,8 +53,15 @@ describe("computeEffectiveSource", () => {
   });
 
   it("ignores presets for the launch type (presets do not cover launch)", () => {
-    const result = computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true })]);
-    expect(result.launch).toBe("global");
+    expect(computeEffectiveSource(makeCoin({}, { dews: true, launch: true }), NO_GLOBAL, [makePreset({ dews: true })])).toEqual({
+      dews: "off-override",
+      depeg: "global",
+      safety: "global",
+      launch: "global",
+      reserve: "global",
+      freeze: "global",
+    });
+    expect(computeEffectiveSource(makeCoin({}, { launch: true }), { ...NO_GLOBAL, launch: true }, []).launch).toBe("off-override");
   });
 
   it("classifies Reserve-only rows as per-coin", () => {
@@ -63,12 +70,14 @@ describe("computeEffectiveSource", () => {
   });
 
   it("ignores presets for the reserve type (presets do not cover reserve)", () => {
-    const result = computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true, depeg: true, safety: true })]);
-    expect(result.reserve).toBe("global");
+    expect(computeEffectiveSource(makeCoin({}, { dews: true, reserve: true }), NO_GLOBAL, [makePreset({ dews: true })]).reserve).toBe("global");
+    expect(computeEffectiveSource(makeCoin({}, { reserve: true }), { ...NO_GLOBAL, reserve: true }, []).reserve).toBe("off-override");
   });
 
   it("classifies freeze-only rows as direct and never inherits freeze from presets", () => {
     expect(computeEffectiveSource(makeCoin({ freeze: true }), NO_GLOBAL, []).freeze).toBe("per-coin");
-    expect(computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true })]).freeze).toBe("global");
+    expect(computeEffectiveSource(makeCoin({}, { dews: true, freeze: true }), NO_GLOBAL, [makePreset({ dews: true })]).freeze).toBe("global");
+    expect(computeEffectiveSource(makeCoin({}, { freeze: true }), { ...NO_GLOBAL, freeze: true }, []).freeze).toBe("off-override");
   });
+
 });

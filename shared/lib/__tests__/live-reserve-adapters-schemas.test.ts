@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
@@ -48,20 +48,27 @@ const INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES = {
 
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 
-function readCoinSource(id: string): {
-  liveReservesConfig?: {
-    scoring?: {
-      maxSourceAgeSec?: number;
-    };
-  };
-} {
-  return JSON.parse(readFileSync(join(COIN_SOURCE_DIR, `${id}.json`), "utf8")) as {
-    liveReservesConfig?: {
-      scoring?: {
-        maxSourceAgeSec?: number;
-      };
-    };
-  };
+interface CoinSource {
+  liveReservesConfig?: { scoring?: { maxSourceAgeSec?: number } };
+}
+
+let coinSources: Map<string, CoinSource> | undefined;
+
+function getCoinSources(): Map<string, CoinSource> {
+  return coinSources ??= new Map(
+    readdirSync(COIN_SOURCE_DIR)
+      .filter((fileName) => fileName.endsWith(".json"))
+      .map((fileName) => [
+        fileName.slice(0, -5),
+        JSON.parse(readFileSync(join(COIN_SOURCE_DIR, fileName), "utf8")) as CoinSource,
+      ]),
+  );
+}
+
+function readCoinSource(id: string): CoinSource {
+  const source = getCoinSources().get(id);
+  if (!source) throw new Error(`Missing coin source: ${id}`);
+  return source;
 }
 
 describe("baseLiveReserveConfigSchema", () => {
@@ -251,50 +258,9 @@ describe("LiveReservesConfigSchema URL validation", () => {
     ).toThrow(/fullConfidenceCpiTrackerAgeSec/);
   });
 
-  it("accepts configured live reserve URLs", () => {
-    const failures: string[] = [];
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      if (!coin.liveReservesConfig) continue;
-      const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
-      if (!parsed.success) {
-        failures.push(
-          `${coin.id}: ${parsed.error.issues[0]?.path.join(".") ?? "config"} ${parsed.error.issues[0]?.message ?? "invalid"}`,
-        );
-      }
-    }
-
-    expect(failures).toEqual([]);
-  });
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
-  it("requires independent-assurance coins to pin the declaration source-age cap", () => {
-    const failures: string[] = [];
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      const config = coin.liveReservesConfig;
-      if (!config || !(config.adapter in INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES)) continue;
-
-      const expectedCap =
-        INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES[
-          config.adapter as keyof typeof INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES
-        ];
-      const declarationCap = (
-        LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter] as {
-          validation?: { maxSourceAgeSec?: number };
-        }
-      ).validation?.maxSourceAgeSec;
-      const sourceConfig = readCoinSource(coin.id).liveReservesConfig;
-      if (declarationCap !== expectedCap || sourceConfig?.scoring?.maxSourceAgeSec !== expectedCap) {
-        failures.push(
-          `${coin.id}: declaration=${String(declarationCap)} coin=${String(sourceConfig?.scoring?.maxSourceAgeSec)} expected=${expectedCap}`,
-        );
-      }
-    }
-
-    expect(failures).toEqual([]);
-  });
 
   it("classifies reviewed issuer feeds without changing their score-bearing evidence class", () => {
     const issuerAdapters = [
@@ -340,7 +306,48 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
   });
 });
 
-describe("late-monthly disclosure source-age policy", () => {
+describe("live reserve catalog integrity", () => {
+  it("accepts configured live reserve URLs", () => {
+    const failures: string[] = [];
+
+    for (const coin of ACTIVE_STABLECOINS) {
+      if (!coin.liveReservesConfig) continue;
+      const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
+      if (!parsed.success) {
+        failures.push(
+          `${coin.id}: ${parsed.error.issues[0]?.path.join(".") ?? "config"} ${parsed.error.issues[0]?.message ?? "invalid"}`,
+        );
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+  it("requires independent-assurance coins to pin the declaration source-age cap", () => {
+    const failures: string[] = [];
+
+    for (const coin of ACTIVE_STABLECOINS) {
+      const config = coin.liveReservesConfig;
+      if (!config || !(config.adapter in INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES)) continue;
+
+      const expectedCap =
+        INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES[
+          config.adapter as keyof typeof INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES
+        ];
+      const declarationCap = (
+        LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter] as {
+          validation?: { maxSourceAgeSec?: number };
+        }
+      ).validation?.maxSourceAgeSec;
+      const sourceConfig = readCoinSource(coin.id).liveReservesConfig;
+      if (declarationCap !== expectedCap || sourceConfig?.scoring?.maxSourceAgeSec !== expectedCap) {
+        failures.push(
+          `${coin.id}: declaration=${String(declarationCap)} coin=${String(sourceConfig?.scoring?.maxSourceAgeSec)} expected=${expectedCap}`,
+        );
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
   it("keeps reviewed late-monthly source-age overrides tied to the named policy", () => {
     const failures = LATE_MONTHLY_SOURCE_AGE_IDS.flatMap((id) => {
       const maxSourceAgeSec = readCoinSource(id).liveReservesConfig?.scoring?.maxSourceAgeSec;
@@ -353,17 +360,12 @@ describe("late-monthly disclosure source-age policy", () => {
   });
 
   it("does not leave late-monthly-ish caps outside the named policy value", () => {
-    const adHocCaps = readdirSync(COIN_SOURCE_DIR)
-      .filter((fileName) => fileName.endsWith(".json"))
-      .flatMap((fileName) => {
-        const source = JSON.parse(readFileSync(join(COIN_SOURCE_DIR, fileName), "utf8")) as {
-          liveReservesConfig?: { scoring?: { maxSourceAgeSec?: number } };
-        };
+    const adHocCaps = [...getCoinSources()].flatMap(([id, source]) => {
         const maxSourceAgeSec = source.liveReservesConfig?.scoring?.maxSourceAgeSec;
         const isLateMonthlyRange =
           maxSourceAgeSec != null && maxSourceAgeSec >= 3_900_000 && maxSourceAgeSec <= 4_100_000;
         return isLateMonthlyRange && maxSourceAgeSec !== LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
-          ? [`${fileName}: ${maxSourceAgeSec}`]
+          ? [`${id}.json: ${maxSourceAgeSec}`]
           : [];
       });
 

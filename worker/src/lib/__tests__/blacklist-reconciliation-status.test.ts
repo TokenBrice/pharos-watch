@@ -17,7 +17,7 @@ describe("loadBlacklistReconciliationStatus", () => {
     });
   });
 
-  it("requires every expected Arbitrum config and exact event parity", async () => {
+  it("returns recorded event parity and safe-head status for a verified run", async () => {
     const db = mockD1([
       {
         match: "blacklist-reconciliation-status-latest",
@@ -37,6 +37,38 @@ describe("loadBlacklistReconciliationStatus", () => {
       tronAtSafeHead: true,
       arbitrumAtSafeHead: true,
     });
+  });
+
+  it("requires each safe-head conjunct independently", async () => {
+    const cases = [
+      { cursor: null, head: 100, expected: false },
+      { cursor: 100, head: null, expected: false },
+      { cursor: 99, head: 100, expected: false },
+      { cursor: 100, head: 100, expected: true },
+    ];
+    for (const { cursor, head, expected } of cases) {
+      const row = {
+        ...makeBlacklistReconciliationStatusRow(),
+        tron_cursor_after: cursor, tron_safe_head: head,
+        arbitrum_min_cursor: cursor, arbitrum_min_safe_head: head,
+        arbitrum_expected_config_count: 2, arbitrum_at_safe_head_count: 2,
+      };
+      const status = await loadBlacklistReconciliationStatus(mockD1([
+        { match: "blacklist-reconciliation-status-latest", rows: [row] },
+      ]));
+      expect([status.tronAtSafeHead, status.arbitrumAtSafeHead]).toEqual([expected, expected]);
+    }
+    for (const [expectedCount, actualCount] of [[0, 0], [2, 1]]) {
+      const row = {
+        ...makeBlacklistReconciliationStatusRow(),
+        arbitrum_min_cursor: 100, arbitrum_min_safe_head: 100,
+        arbitrum_expected_config_count: expectedCount, arbitrum_at_safe_head_count: actualCount,
+      };
+      const status = await loadBlacklistReconciliationStatus(mockD1([
+        { match: "blacklist-reconciliation-status-latest", rows: [row] },
+      ]));
+      expect(status.arbitrumAtSafeHead).toBe(false);
+    }
   });
 
   it("redacts legacy run IDs that embedded the D1 Time Travel bookmark", async () => {

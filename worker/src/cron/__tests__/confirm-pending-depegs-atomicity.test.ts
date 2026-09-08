@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetchRetry } from "../../test-helpers/cron";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   insertDexPrice,
   insertPendingDepeg,
@@ -80,14 +80,16 @@ function instrumentBatches(sqlite: DatabaseSync): { db: D1Database; batchSizes: 
   return { db, batchSizes };
 }
 
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 describe("confirmPendingDepegs atomic candidate transitions", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    sqliteFixtures.closeAll();
   });
 
   it("keeps every three-statement promotion intact beyond the 100-statement boundary", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
-    const { sqlite } = createLatestSchemaSqlite();
+    const { sqlite } = sqliteFixtures.open();
     const { db, batchSizes } = instrumentBatches(sqlite);
     const assets: ReturnType<typeof makePromotionAsset>[] = [];
 
@@ -113,12 +115,11 @@ describe("confirmPendingDepegs atomic candidate transitions", () => {
     expect(pendingCount.count).toBe(0);
     expect(outcomeCount.count).toBe(51);
     expect(eventCount.count).toBe(51);
-    sqlite.close();
   });
 
   it("rolls back a failing later candidate without undoing earlier candidates", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
-    const { sqlite } = createLatestSchemaSqlite();
+    const { sqlite } = sqliteFixtures.open();
     sqlite.exec(`
       CREATE TRIGGER fail_atomic_pending_outcome
       BEFORE INSERT ON depeg_pending_outcomes
@@ -151,6 +152,5 @@ describe("confirmPendingDepegs atomic candidate transitions", () => {
       { stablecoin_id: "atomic-confirm-1" },
       { stablecoin_id: "atomic-confirm-2" },
     ]);
-    sqlite.close();
   });
 });

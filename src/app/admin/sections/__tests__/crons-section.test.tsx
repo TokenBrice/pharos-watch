@@ -402,23 +402,25 @@ describe("CronsSection", () => {
     expect(screen.getAllByText("Scheduled slot")).toHaveLength(2);
   });
 
-  it("reports unreported item counts as unavailable", () => {
+  it.each([undefined, 0])("distinguishes an item count of %s from unavailable", (itemCount) => {
     renderCrons({
       groups: [
         makeGroup([
           [
             "snapshot-supply",
             makeCronStatus({
-              lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded" },
-              recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded" }],
+              lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded", itemCount },
+              recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded", itemCount }],
             }),
           ],
         ]),
       ],
     });
 
-    expect(screen.getByText("Last completed")).toBeTruthy();
-    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+    const row = screen.getByRole("row", { name: /Supply snapshot/ });
+    const itemsColumn = screen.getAllByRole("columnheader").findIndex((header) => header.textContent === "Items");
+    expect(itemsColumn).toBeGreaterThanOrEqual(0);
+    expect(within(row).getAllByRole("cell")[itemsColumn].textContent).toBe(itemCount === undefined ? "N/A" : "0");
   });
 
   it("renders budget-only trigger groups from top-level telemetry with outcome, counts, duration, and budget", async () => {
@@ -455,19 +457,4 @@ describe("CronsSection", () => {
     expect(screen.getByText("No budget-only surface telemetry was reported. State is unknown.")).toBeTruthy();
   });
 
-  it("keeps the cron header sticky inside a locally bounded viewport", () => {
-    renderCrons({ groups: [makeGroup([["sync-stablecoins", makeCronStatus({ healthy: false })]])] });
-
-    const tableShell = screen.getByTestId("cron-lane-table");
-    const viewport = tableShell.querySelector('[data-slot="table-viewport"]');
-    const detail = screen.getByRole("complementary", { name: "Details for Stablecoin sync" });
-    expect(tableShell.className).toContain("table-header-sticky");
-    expect(tableShell.className).toContain("rounded-lg");
-    expect(tableShell.className).not.toContain("rounded-xl");
-    expect(detail.className).toContain("rounded-lg");
-    expect(detail.className).not.toContain("rounded-xl");
-    expect(viewport?.className).toContain("overflow-x-auto");
-    expect(viewport?.className).toContain("overflow-y-auto");
-    expect(viewport?.className).toContain("max-h-[min(70vh,44rem)]");
-  });
 });

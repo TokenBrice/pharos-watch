@@ -33,7 +33,6 @@ describe("worker HTTP probes", () => {
       respond: (request) => {
         const path = new URL(request.url).pathname;
         const response = Response.json({ path }, { status: path === "/api/status-history" ? 206 : 200 });
-        if (path === "/api/status-history") Object.defineProperty(response, "ok", { value: false });
         return response;
       },
     }], { requireMatch: true });
@@ -47,7 +46,7 @@ describe("worker HTTP probes", () => {
       statusHistory: {
         url: "https://ops.example.test/api/status-history",
         status: 206,
-        ok: false,
+        ok: true,
         payload: { path: "/api/status-history" },
       },
     });
@@ -62,15 +61,16 @@ describe("worker HTTP probes", () => {
   });
 
   it("returns bounded text payloads and network errors without throwing", async () => {
+    const text = "not-json:".repeat(150);
     mockFetch([{
       match: "https://api.example.test/api/health",
-      body: "not-json",
+      body: text,
       status: 502,
     }], { requireMatch: true });
     await expect(fetchJsonProbe(args, "/api/health")).resolves.toMatchObject({
       status: 502,
       ok: false,
-      payload: "not-json",
+      payload: text.slice(0, 1000),
     });
 
     mockFetch([{
@@ -82,5 +82,45 @@ describe("worker HTTP probes", () => {
       ok: false,
       error: "offline",
     });
+  });
+
+  it("normalizes unsuccessful JSON and empty responses", async () => {
+    mockFetch([{
+      match: "https://api.example.test/api/health",
+      respond: () => Response.json({ error: "unavailable" }, { status: 503 }),
+    }], { requireMatch: true });
+    await expect(fetchJsonProbe(args, "/api/health")).resolves.toMatchObject({
+      status: 503, ok: false, payload: { error: "unavailable" },
+    });
+    mockFetch([{
+      match: "https://api.example.test/api/health",
+      respond: () => new Response(null, { status: 204 }),
+    }], { requireMatch: true });
+    await expect(fetchJsonProbe(args, "/api/health")).resolves.toMatchObject({
+      status: 204, ok: true, payload: null,
+    });
+  });
+
+  it("makes no requests when all probes are disabled", async () => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    await expect(collectWorkerHttpProbes(args, {
+      includeHealth: false, includeStatus: false, includeStatusHistory: false,
+    })).resolves.toEqual({});
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("requests only status history and defaults its origin to the public API", async () => {
+    const fetchSpy = mockFetch([{
+      match: "https://api.example.test/api/status-history",
+      body: { events: [] },
+    }], { requireMatch: true });
+    const probes = await collectWorkerHttpProbes({ apiUrl: args.apiUrl }, {
+      includeHealth: false, includeStatus: false, includeStatusHistory: true,
+    });
+    expect(Object.keys(probes)).toEqual(["statusHistory"]);
+    expect(probes.statusHistory).toMatchObject({
+      url: "https://api.example.test/api/status-history", status: 200, ok: true, payload: { events: [] },
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

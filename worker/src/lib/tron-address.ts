@@ -67,8 +67,8 @@ function decodeBase58(value: string): Uint8Array | null {
 
 function normalizeTronHexAddress(address: string): string | null {
   const normalized = address.trim().toLowerCase();
-  if (normalized.startsWith("0x") && normalized.length === 42) return normalized;
-  if (normalized.startsWith("41") && normalized.length === 42) return `0x${normalized.slice(2)}`;
+  if (/^0x[0-9a-f]{40}$/.test(normalized)) return normalized;
+  if (/^41[0-9a-f]{40}$/.test(normalized)) return `0x${normalized.slice(2)}`;
   return null;
 }
 

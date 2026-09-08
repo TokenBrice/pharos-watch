@@ -1,7 +1,6 @@
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import {
@@ -17,6 +16,10 @@ import {
   type ReviewedRedemptionCoverageDisposition,
 } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import { makeCoverageCoin } from "./helpers/coverage-coin";
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const roots = createTempRepoTracker("redemption-coverage-audit");
+afterEach(() => roots.cleanup());
 
 const coin = (input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">) =>
   makeCoverageCoin(input, { defaultLinks: true });
@@ -282,7 +285,7 @@ describe("generate-redemption-coverage-audit", () => {
   });
 
   it("strict CLI mode accepts durably reviewed active gaps", () => {
-    const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-"));
+    const cwd = roots.makeRoot();
     const reviewedGapAudit = () =>
       generateRedemptionCoverageAudit({
         trackedCoins: [coin({ id: "reviewed-coin" })],
@@ -299,7 +302,7 @@ describe("generate-redemption-coverage-audit", () => {
   });
 
   it("writes the full report and exits non-zero when multiple reviewed rows are invalid", () => {
-    const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-invalid-"));
+    const cwd = roots.makeRoot();
     const invalidAudit = () =>
       generateRedemptionCoverageAudit({
         trackedCoins: [coin({ id: "stale-alpha" }), coin({ id: "stale-beta" }), coin({ id: "reviewed-gap" })],
@@ -334,7 +337,7 @@ describe("generate-redemption-coverage-audit", () => {
   });
 
   it("writes nested CLI reports with the selected output format", () => {
-    const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-report-"));
+    const cwd = roots.makeRoot();
     const status = runCli(["--json", "--report", "nested/reports/audit.json"], cwd, () =>
       generateRedemptionCoverageAudit({
         trackedCoins: [coin({ id: "usdc-circle" })],

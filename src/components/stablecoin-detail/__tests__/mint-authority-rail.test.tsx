@@ -46,18 +46,19 @@ describe("MintAuthorityRail", () => {
     expect(html).toContain("Unbounded, supervised &amp; reconciled");
   });
 
-  it("draws one signer dot per signer with the threshold filled", () => {
+  it("states the multisig threshold accessibly alongside the signer dots", () => {
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl()]} />);
-    expect(html.match(/bg-foreground\/80/g)?.length).toBe(3);
-    expect(html.match(/bg-muted-foreground\/25/g)?.length).toBe(3);
+    expect(html).toContain('title="3 of 6 signers required"');
+    expect(html).toContain("3/6");
   });
 
-  it("falls back to a numeric threshold past the dot budget", () => {
+  it("falls back to a bare numeric threshold past the dot budget", () => {
     const html = renderToStaticMarkup(
       <MintAuthorityRail {...BASE_PROPS} controls={[makeControl({ threshold: 5, signerCount: 11 })]} />,
     );
     expect(html).toContain("5/11");
-    expect(html).not.toContain("bg-foreground/80");
+    // Past the budget the dot row is dropped entirely, so its signer title goes too.
+    expect(html).not.toContain("signers required");
   });
 
   it("gives EOA controls the caution tone and short label", () => {
@@ -79,9 +80,27 @@ describe("MintAuthorityRail", () => {
   });
 
   it("caps rail controls at three and points to the disclosure for the rest", () => {
-    const controls = [0, 1, 2, 3, 4].map((index) => makeControl({ key: `control-${index}` }));
+    const controls = [0, 1, 2, 3, 4].map((index) =>
+      makeControl({ key: `control-${index}`, authorityTypeLabel: `Ctl-${index}` }),
+    );
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} />);
+
+    expect(html).toContain(">Ctl-0<");
+    expect(html).toContain(">Ctl-1<");
+    expect(html).toContain(">Ctl-2<");
+    expect(html).not.toContain("Ctl-3");
+    expect(html).not.toContain("Ctl-4");
     expect(html).toContain("+2 more in Primary controls");
+  });
+
+  it("renders every control with no overflow notice at exactly the cap", () => {
+    const controls = [0, 1, 2].map((index) =>
+      makeControl({ key: `control-${index}`, authorityTypeLabel: `Ctl-${index}` }),
+    );
+    const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} />);
+
+    expect(html).toContain(">Ctl-2<");
+    expect(html).not.toContain("more in Primary controls");
   });
 
   it("renders nothing without controls or with an unknown mint path", () => {

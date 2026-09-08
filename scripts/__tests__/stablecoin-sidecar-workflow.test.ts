@@ -1,10 +1,14 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { migrateStablecoinSidecar } from "../lib/stablecoin-sidecar-workflow";
 import { parseStablecoinSidecarMigrationArgs } from "../maintenance/migrate-stablecoin-sidecar";
 import { createTempRepoTracker } from "./helpers/test-state";
+import {
+  makeCoin as makeCatalogCoin, makeReserveReview, makeCustodyProfile,
+  makeMintAuthority, makeGeniusProfile, makeRiskReview,
+} from "./stablecoin-catalog.test-support";
 
 const { cleanup, makeRoot: makeTempRoot, writeJson } = createTempRepoTracker("stablecoin-sidecar-workflow");
 
@@ -13,75 +17,14 @@ function readJson(rootDir: string, relativePath: string): Record<string, unknown
 }
 
 function makeCoin(id: string, overrides: Record<string, unknown>): Record<string, unknown> {
-  return {
-    id,
-    name: `${id} Coin`,
-    symbol: "SIDE",
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: true,
-      navToken: false,
-    },
-    ...overrides,
-  };
+  const coin = makeCatalogCoin(id);
+  return { ...coin, symbol: "SIDE", flags: { ...coin.flags, rwa: true }, ...overrides };
 }
 
-const mintAuthority = {
-  mintPath: "unknown",
-  authorityPosture: "unknown",
-  confidence: "unknown",
-  summary: "The fixture mint authority remains unresolved.",
-  review: {
-    sourceFreeRationale: "Workflow fixture without external research.",
-    evidence: "The fixture records enough evidence text for strict schema validation.",
-    reviewer: "test",
-    reviewedAt: "2026-07-09",
-  },
-};
-
-const genius = {
-  applicability: "unclear",
-  authorizationStatus: "unknown",
-  issuerPathway: "unknown",
-  reviewer: "test",
-  reviewedAt: "2026-07-09",
-};
-
-const blacklistabilityReview = {
-  reviewedStatus: true,
-  sourceFreeRationale: "Workflow fixture without external research.",
-  evidence: "The fixture models a direct blacklistability control surface.",
-  reviewer: "test",
-  reviewedAt: "2026-07-09",
-};
-
-const reserveReview = {
-  reviewedAt: "2026-07-12",
-  reviewer: "test",
-  confidence: "verified",
-  sources: [{ label: "Reserve report", url: "https://example.com/reserves" }],
-  rationale: "The fixture reserve composition was reviewed.",
-  compositionBasis: "issuer disclosure",
-  scope: "full-composition",
-  knownUnknownExposure: "None identified in the fixture.",
-  knownUnknownExposurePct: 0,
-};
-
-const custodyProfile = {
-  providers: [{ name: "Fixture Bank", role: "bank", sharePct: 100, jurisdiction: "US" }],
-  segregation: "segregated",
-  bankruptcyRemoteness: "contractual-only",
-  rehypothecation: "prohibited",
-  reviewedAt: "2026-07-12",
-  reviewer: "test",
-  confidence: "verified",
-  sources: [{ label: "Custody report", url: "https://example.com/custody" }],
-  uncertainty: "No material custody allocation is unresolved in the fixture.",
-  knownUnknownExposurePct: 0,
-};
+const mintAuthority = makeMintAuthority();
+const genius = makeGeniusProfile();
+const reserveReview = makeReserveReview(null);
+const custodyProfile = makeCustodyProfile();
 
 afterEach(cleanup);
 
@@ -108,21 +51,7 @@ describe("stablecoin sidecar migration workflow", () => {
     },
     {
       domain: "risk-review" as const,
-      fields: {
-        blacklistabilityReview,
-        oracleRisk: {
-          tier: "opaque-or-unknown",
-          summary: "The fixture oracle design remains unknown.",
-        },
-        bridgeRouteRisk: {
-          tier: "opaque-or-unknown",
-          summary: "The fixture bridge route remains unknown.",
-          reviewedAt: "2026-07-09",
-          reviewer: "test",
-          confidence: "unknown",
-          sourceFreeRationale: "Workflow fixture without external research.",
-        },
-      },
+      fields: makeRiskReview(),
       expectedFields: ["blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
     },
   ];
@@ -151,6 +80,50 @@ describe("stablecoin sidecar migration workflow", () => {
       expect(() => migrateStablecoinSidecar({ check: true, domain: migrationCase.domain, id, rootDir })).not.toThrow();
     });
   }
+
+  it("migrates another domain over existing reserves without changing either projection or sidecar bytes", () => {
+    const rootDir = makeTempRoot();
+    const id = "layered-usd";
+    const baseFile = `shared/data/stablecoins/coins/${id}.json`;
+    const reservesFile = `shared/data/stablecoins/domains/reserves/${id}.json`;
+    const original = makeCoin(id, {
+      mintAuthority,
+      liveReservesConfig: {
+        adapter: "curated-validated", version: 1, semantics: "attestation-mix",
+        breakerScope: id,
+        display: { url: "https://example.com/reserves", label: "Reserves" },
+        inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      },
+    });
+    const reserves = [{ name: "Cash", pct: 100, risk: "very-low" }];
+    writeJson(rootDir, baseFile, original);
+    writeJson(rootDir, reservesFile, { id, reserves });
+    const bytes = readFileSync(join(rootDir, reservesFile), "utf8");
+    const before = loadPerCoinStablecoinEntries(rootDir)[0]?.coin;
+
+    migrateStablecoinSidecar({ domain: "mint-authority", id, rootDir });
+
+    expect(loadPerCoinStablecoinEntries(rootDir)[0]?.coin).toEqual(before);
+    expect(readFileSync(join(rootDir, reservesFile), "utf8")).toBe(bytes);
+    expect(readJson(rootDir, baseFile)).not.toHaveProperty("mintAuthority");
+    expect(readJson(rootDir, `shared/data/stablecoins/domains/mint-authority/${id}.json`))
+      .toEqual({ id, mintAuthority });
+  });
+
+  it("leaves base bytes and destination untouched when the merged projection is invalid", () => {
+    const rootDir = makeTempRoot();
+    const id = "invalid-merged-usd";
+    const baseFile = `shared/data/stablecoins/coins/${id}.json`;
+    const destination = join(rootDir, `shared/data/stablecoins/domains/mint-authority/${id}.json`);
+    writeJson(rootDir, baseFile, makeCoin(id, { mintAuthority }));
+    writeJson(rootDir, `shared/data/stablecoins/domains/reserves/${id}.json`, { id, reserveReview });
+    const bytes = readFileSync(join(rootDir, baseFile), "utf8");
+
+    expect(() => migrateStablecoinSidecar({ domain: "mint-authority", id, rootDir }))
+      .toThrow(/reserveReview requires a reserve composition/);
+    expect(readFileSync(join(rootDir, baseFile), "utf8")).toBe(bytes);
+    expect(existsSync(destination)).toBe(false);
+  });
 
   it("keeps dry runs read-only", () => {
     const rootDir = makeTempRoot();

@@ -27,7 +27,7 @@ function normalizeFallbackRates(fallbackRates: Record<string, number> | undefine
   const normalized: Record<string, number> = {};
   for (const [pegType, rate] of Object.entries(fallbackRates ?? {})) {
     const peg = normalizePegType(pegType);
-    if (!peg) continue;
+    if (!peg || typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) continue;
     normalized[peg] = rate;
   }
   return normalized;
@@ -75,7 +75,7 @@ export function derivePegRates(
   for (const a of assets) {
     const peg = normalizePegType(a.pegType);
     let price = a.price;
-    if (!peg || price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
+    if (!peg || price == null || typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
 
     // Only use coins with meaningful supply to avoid garbage data
     const supply = getCirculatingRaw(a);
@@ -135,7 +135,6 @@ export function derivePegRates(
 
   for (const [peg, fallback] of Object.entries(mergedFallbacks)) {
     if (peg in rates) continue;
-    if (typeof fallback !== "number" || !Number.isFinite(fallback) || fallback <= 0) continue;
     rates[peg] = fallback;
     sources[peg] = peg === "peggedGOLD" || peg === "peggedSILVER" ? "fallback" : "fx";
     counts[peg] = 0;

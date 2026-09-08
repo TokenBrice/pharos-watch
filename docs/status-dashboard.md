@@ -24,7 +24,7 @@ The operator dashboard combines ten signals:
 The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
-- The public health payload is the status self-check's 15-minute snapshot projection; `/api/health` performs a live assessment only when the snapshot is missing or unusable. Operator-only Telegram lifecycle and alert-broker diagnostics live on `/api/status`.
+- The public health payload is the status self-check's 15-minute snapshot projection; `/api/health` performs a live assessment only when the snapshot is missing or unusable. Operator-only Telegram lifecycle diagnostics live on `/api/status`.
 - `/admin/`: Triage workspace
 - `/admin/pipeline/`: data-quality, market, reserve, yield, storage, and integrity workbench
 - `/admin/reliability/`: endpoint, dependency, demand, and cache reliability workbench
@@ -107,7 +107,7 @@ The active frontend operator mode is now:
   - Calls `GET /api/public-status-history` through same-origin `/_site-data/public-status-history` on website hosts
   - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
   - The public page binds one fixed `30d` query for the runway and a separate user-selected query for the transition log, so the hero summary and history table no longer fight over the same state
-  - **Public-impact filter (2026-04-13, active-price coverage adjusted 2026-07-19):** `/api/public-status-history` filters the state-machine transitions down to public-impact incidents whose causes include at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `cache_warning`, `fx_cached_fallback`, `mint_burn_public_*`, `mint_burn_health_query_failed`, `active_price_coverage_unknown`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Producer-only source freshness causes such as `fx_source_*`, active-price coverage misses (`active_price_coverage_incomplete`), aggregate/admin missing-price ratio causes (`missing_prices_*`), and other admin-only data-quality causes (`blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) remain excluded from opening a public incident. Exact active-price coverage is still recorded for operator diagnostics: unreadable coverage evidence writes a public-impacting `active_price_coverage_unknown` cause, while incomplete coverage writes a warning-only `active_price_coverage_incomplete` cause. Coverage reads use the newest `sync-stablecoins` run that actually persisted both exact coverage reports; synthetic abandoned or no-write rows remain visible to cron health but do not replace the last publication evidence with `unknown`. The capped persisted cause list reserves capacity for both exact active-price cause codes so concurrent diagnostics cannot hide the active-price triage row. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when the recovery rows only carry info-level causes. The endpoint sources its `currentStatus` field from `assessPublicHealth` (matching `/api/health`) instead of the hysteresis-smoothed admin `status_state.current_status`. `lastChangedAt` comes only from the newest retained public transition when that transition ends in the live public status; otherwise it is `null`. The public uptime rail overlays live health onto today, and without retained transitions it leaves earlier days unknown rather than backfilling the entire window with the current state.
+  - **Public-impact filter (2026-04-13, active-price coverage adjusted 2026-07-19):** `/api/public-status-history` filters the state-machine transitions down to public-impact incidents whose causes include at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `cache_warning`, `fx_cached_fallback`, `mint_burn_public_*`, `mint_burn_health_query_failed`, `active_price_coverage_unknown`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). A cause counts only when its severity is `warning` or `critical` (`shared/lib/status-public-impact.ts`); info-severity causes never open a public incident regardless of code. `cache_freshness_query_failed`, `cache_warning`, `circuit_query_failed`, and `mint_burn_health_query_failed` are currently emitted only at info severity, so they sit in the allowlist but cannot open an incident on their own, and `fx_cached_fallback` reaches warning only after four consecutive fallback runs. Producer-only source freshness causes such as `fx_source_*`, active-price coverage misses (`active_price_coverage_incomplete`), aggregate/admin missing-price ratio causes (`missing_prices_*`), and other admin-only data-quality causes (`blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) remain excluded from opening a public incident. Exact active-price coverage is still recorded for operator diagnostics: unreadable coverage evidence writes a public-impacting `active_price_coverage_unknown` cause, while incomplete coverage writes a warning-only `active_price_coverage_incomplete` cause. Coverage reads use the newest `sync-stablecoins` run that actually persisted both exact coverage reports; synthetic abandoned or no-write rows remain visible to cron health but do not replace the last publication evidence with `unknown`. The capped persisted cause list reserves capacity for both exact active-price cause codes so concurrent diagnostics cannot hide the active-price triage row. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when the recovery rows only carry info-level causes. The endpoint sources its `currentStatus` field from `assessPublicHealth` (matching `/api/health`) instead of the hysteresis-smoothed admin `status_state.current_status`. `lastChangedAt` comes only from the newest retained public transition when that transition ends in the live public status; otherwise it is `null`. The public uptime rail overlays live health onto today, and without retained transitions it leaves earlier days unknown rather than backfilling the entire window with the current state.
 - `src/hooks/admin-api-hooks.ts` — `useStatusHistory()`
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
@@ -365,7 +365,7 @@ Additional response fields:
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`)
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
-- Public health diagnostics such as `alertBroker` remain on `/api/health`; `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and duplicate `alertBroker` projection
+- `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The alert-broker summary is no longer published on any surface: `assessPublicHealth` keeps an empty compatibility object (only `alertBrokerImpactStatus` still feeds status evaluation) and `buildPublicHealthResponse` does not serialize it to `/api/health`
 
 ### Cron error escalation
 
@@ -464,8 +464,13 @@ The `/status` payload now includes a `telegramBot` block derived from:
 
 - `telegram_subscribers`
 - `telegram_subscriptions`
+- `telegram_preset_subscriptions` (global all-stablecoin follows)
 - `telegram_pending_disambiguation`
 - `telegram_pending_alerts`
+- `telegram_processed_updates` (webhook effect-state backlog)
+- `telegram_recap_preferences` and `telegram_recap_targets` (recap telemetry)
+
+It also folds in the lifecycle snapshot and delivery-SLI rollups (`telegram_alert_source_events`, `telegram_alert_job_targets`, `telegram_alert_dead_letters`) plus `cron_runs` (inactive-subscriber cleanup) and cached preset query-failure counters; `worker/src/lib/status/telegram-bot-stats.ts` is authoritative. Mini App usage (`telegram_usage_daily`) is not part of this block — it is served by `/api/telegram-pulse`.
 
 The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata` to show:
 
@@ -582,7 +587,7 @@ Manual actions are rendered from `getStatusPageActions()` and executed only on u
 
 ## Guarded Admin Actions
 
-Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints/`). The catalog is every endpoint carrying `statusPageAction` in `shared/lib/api-endpoints/definitions.ts`; that registry is canonical for risk, scope, prerequisites, dry-run support, and audit ownership.
+Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints/`). The catalog is every endpoint carrying `statusPageAction` in `shared/lib/api-endpoints/definitions.ts`.
 
 The UI uses these actions in two ways:
 

@@ -25,7 +25,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 function makeSignal(): AbortSignal {
-  return AbortSignal.timeout(5_000);
+  return new AbortController().signal;
 }
 
 beforeEach(() => {

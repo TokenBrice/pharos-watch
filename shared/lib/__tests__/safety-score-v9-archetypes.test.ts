@@ -1,73 +1,46 @@
 import { describe, expect, it } from "vitest";
-import type { V9FactGapV2, V9FactStatusV2, V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9FactGapV2 } from "../../types/safety-score-v9-facts";
 import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing";
 import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../types/stablecoin-taxonomy";
 import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
-const knownStatus = (id: string): V9FactStatusV2 => ({
-  applicability: { state: "required", policyRuleId: "mechanism.required", rationale: null, gapId: null },
-  observationState: "known",
-  evidenceRefIds: [`evidence:${id}`],
-  gapIds: [],
-});
+import { asset as backingAsset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
 
 const strongFact = (id: string): V9MechanismFactV1 => ({
-  status: knownStatus(id),
+  status: knownStatus(`evidence:${id}`, "mechanism.required"),
   quality: "strong",
   failureDomains: [{ kind: "reserve-issuer", key: id }],
 });
 
 const weakObservedFact = (id: string): V9MechanismFactV1 => ({
-  status: knownStatus(id),
+  status: knownStatus(`evidence:${id}`, "mechanism.required"),
   quality: "weak",
   failureDomains: [{ kind: "reserve-issuer", key: id }],
 });
 
-const reserveExposure = (key: string): V9ReserveExposureFactV2 => ({
-  exposureKey: key,
-  classificationKey: `class:${key}`,
-  sourceGenerationId: "reserves:test",
-  provenance: "curated",
-  evidenceClass: "independent",
-  status: knownStatus(key),
-  name: key,
-  weight: 0.25,
-  trackedAssetId: null,
-  assetClass: "cash",
-  issuerOrObligorKey: null,
-  riskFactors: [],
-  liquidityHorizon: "immediate",
-  maturityDaysMax: null,
-  failureDomains: [{ kind: "reserve-custodian", key: `custodian:${key}` }],
-});
+const reserveExposure = (key: string) => exposure({ key, weight: 0.25, policyRuleId: "mechanism.required" });
 
 function asset(gaps: readonly V9FactGapV2[] = []): V9BackingAssetInput {
-  return {
-    assetId: "asset",
-    reserveStatus: knownStatus("reserves"),
-    reserveExposures: ["a", "b", "c", "d"].map(reserveExposure),
-    resolvedUpstreamExposures: [],
-    gaps,
-  };
+  return backingAsset(["a", "b", "c", "d"].map(reserveExposure), gaps, knownStatus("evidence:reserves", "mechanism.required"));
 }
 
-const reviews: readonly V9MechanismRiskReview[] = [
-  {
+const reviews: { [A in V9MechanismRiskReview["archetype"]]: Extract<V9MechanismRiskReview, { archetype: A }> } = {
+  "fiat-cash": {
     archetype: "fiat-cash",
     claimAndSegregation: strongFact("claim"),
     custodyContinuity: strongFact("custody"),
     assuranceAndReconciliation: strongFact("assurance"),
   },
-  {
+  tbill: {
     archetype: "tbill",
     fundClaimAndSeniority: strongFact("fund-claim"),
     navValuation: strongFact("nav"),
     durationAndLiquidity: strongFact("duration"),
     lossRecoveryDesign: strongFact("loss-recovery"),
   },
-  {
+  cdp: {
     archetype: "cdp",
     collateralizationRatio: 1.5,
     liquidationCapacityRatio: 1,
@@ -82,7 +55,7 @@ const reviews: readonly V9MechanismRiskReview[] = [
     shutdownAndBadDebt: strongFact("shutdown"),
     structuralRedemption: strongFact("psm"),
   },
-  {
+  "synthetic-delta-neutral": {
     archetype: "synthetic-delta-neutral",
     hedgeCoverageRatio: 1,
     marginBufferPct: 10,
@@ -95,7 +68,7 @@ const reviews: readonly V9MechanismRiskReview[] = [
     unwindCapacity: strongFact("unwind"),
     lossAbsorption: strongFact("insurance"),
   },
-  {
+  algorithmic: {
     archetype: "algorithmic",
     exogenousBackingShare: 1,
     reflexiveBackingShare: 0,
@@ -106,7 +79,7 @@ const reviews: readonly V9MechanismRiskReview[] = [
     emergencyRecovery: strongFact("emergency"),
     lossRecovery: strongFact("algorithmic-recovery"),
   },
-  {
+  "rwa-credit-fund": {
     archetype: "rwa-credit-fund",
     weightedAverageMaturityDays: 90,
     valuationCadenceDays: 7,
@@ -118,20 +91,18 @@ const reviews: readonly V9MechanismRiskReview[] = [
     custody: strongFact("rwa-custody"),
     recovery: strongFact("recovery"),
   },
-  // Appended, never inserted: earlier cases index into `reviews` positionally.
-  {
+  "commodity-claim": {
     archetype: "commodity-claim",
     titleAndAllocation: strongFact("title"),
     custodyContinuity: strongFact("vault-custody"),
     assuranceAndReconciliation: strongFact("bar-list"),
     physicalRedemption: strongFact("delivery"),
   },
-];
+};
 
 describe("Safety Score v9 archetype backing adapters", () => {
   it("validates and canonicalizes the discriminated mechanism review contract", () => {
-    const review = reviews[3];
-    expect(review.archetype).toBe("synthetic-delta-neutral");
+    const review = reviews["synthetic-delta-neutral"];
     const parsed = V9MechanismRiskReviewSchema.parse({
       ...review,
       venueShares: [
@@ -143,51 +114,32 @@ describe("Safety Score v9 archetype backing adapters", () => {
       ["a", "z"],
     );
     expect(() =>
-      V9MechanismRiskReviewSchema.parse({ ...reviews[4], reflexiveBackingShare: 0.5, exogenousBackingShare: 0.6 }),
+      V9MechanismRiskReviewSchema.parse({ ...reviews.algorithmic, reflexiveBackingShare: 0.5, exogenousBackingShare: 0.6 }),
     ).toThrow();
   });
 
   it("routes every supported archetype to exactly one rateable adapter", () => {
-    const results = reviews.map((review) => evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1));
-    expect(results.map((result) => result.archetype)).toEqual(reviews.map((review) => review.archetype));
+    const results = Object.values(reviews).map((review) => evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1));
+    expect(results.map((result) => result.archetype)).toEqual(Object.keys(reviews));
     expect(results.every((result) => result.rateability === "rateable" && result.score !== null)).toBe(true);
     expect(new Set(results.map((result) => result.traceDigest)).size).toBe(7);
   });
 
   describe("commodity-claim (v9.14)", () => {
-    const commodityReview = reviews.find(
-      (review): review is Extract<V9MechanismRiskReview, { archetype: "commodity-claim" }> =>
-        review.archetype === "commodity-claim",
-    )!;
+    const commodityReview = reviews["commodity-claim"];
 
-    it("locks the four-component set against the policy rubric", () => {
-      expect(commodityReview).toBeDefined();
-      // The evaluator throws when the adapter's component keys and the policy's
-      // weighted keys disagree, so a passing evaluation is itself the contract
-      // check; this asserts the intended vocabulary explicitly.
-      expect(Object.keys(commodityReview).sort()).toEqual([
-        "archetype",
-        "assuranceAndReconciliation",
-        "custodyContinuity",
-        "physicalRedemption",
-        "titleAndAllocation",
-      ]);
-      const rubric = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["commodity-claim"];
-      expect(rubric.reserveWeight).toBe(0.55);
-      expect(rubric.componentWeights).toEqual({
-        "title-and-allocation": 0.15,
-        "custody-continuity": 0.1,
-        "assurance-and-reconciliation": 0.13,
-        "physical-redemption": 0.07,
-      });
-      // Physical redemption is deliberately non-serial: a claim on allocated
-      // metal is still a claim when delivery is unreachable, and the Exit
-      // pillar owns exitability.
-      expect([...rubric.serialComponentKeys].sort()).toEqual(["custody-continuity", "title-and-allocation"]);
-      expect(Object.keys(rubric.structuralComponents).sort()).toEqual([
-        "custody-continuity",
-        "title-and-allocation",
-      ]);
+    it("weights distinct commodity component qualities in the evaluated backing score", () => {
+      const result = evaluateV9Backing(asset(), {
+        ...commodityReview,
+        titleAndAllocation: { ...strongFact("title"), quality: "adequate" },
+        custodyContinuity: { ...strongFact("custody"), quality: "limited" },
+        assuranceAndReconciliation: weakObservedFact("assurance"),
+        physicalRedemption: { ...strongFact("delivery"), quality: "failed" },
+      }, V9_CANDIDATE_POLICY_V1);
+      // Four equal cash slices yield 97.355 reserve quality. Component grades
+      // 87 / 60 / 35 / 10 carry weights .15 / .10 / .13 / .07.
+      expect(result.rateability).toBe("rateable");
+      expect(result.score).toBeCloseTo(77.84525, 8);
     });
 
     it("publishes one mechanism contribution per component under the commodity archetype", () => {
@@ -207,26 +159,9 @@ describe("Safety Score v9 archetype backing adapters", () => {
     });
 
     it("fails closed on a missing title claim but stays rateable without redemption evidence", () => {
-      const gap: V9FactGapV2 = {
-        gapId: "gap:title",
-        reasonCode: "critical-unresolved",
-        ownerDomain: "backing",
-        policyRuleId: "commodity.title.required",
-        observationState: "missing",
-        path: { kind: "local-component", componentKey: "title-and-allocation" },
-        message: "Title to allocated metal is unresolved",
-        evidenceRefIds: [],
-      };
-      const missing: V9MechanismFactV1 = {
-        status: {
-          applicability: { state: "required", policyRuleId: "commodity.title.required", rationale: null, gapId: null },
-          observationState: "missing",
-          evidenceRefIds: [],
-          gapIds: [gap.gapId],
-        },
-        quality: null,
-        failureDomains: [],
-      };
+      const { gap, fact: missing } = missingMechanism(
+        "title-and-allocation", "gap:title", "commodity.title.required", "Title to allocated metal is unresolved",
+      );
 
       expect(
         evaluateV9Backing(asset([gap]), { ...commodityReview, titleAndAllocation: missing }, V9_CANDIDATE_POLICY_V1)
@@ -282,26 +217,9 @@ describe("Safety Score v9 archetype backing adapters", () => {
   });
 
   it("makes a missing non-substitutable claim NR", () => {
-    const gap: V9FactGapV2 = {
-      gapId: "gap:claim",
-      reasonCode: "critical-unresolved",
-      ownerDomain: "backing",
-      policyRuleId: "fiat.claim.required",
-      observationState: "missing",
-      path: { kind: "local-component", componentKey: "claim-and-segregation" },
-      message: "The direct reserve claim is unresolved",
-      evidenceRefIds: [],
-    };
-    const missingClaim: V9MechanismFactV1 = {
-      status: {
-        applicability: { state: "required", policyRuleId: "fiat.claim.required", rationale: null, gapId: null },
-        observationState: "missing",
-        evidenceRefIds: [],
-        gapIds: [gap.gapId],
-      },
-      quality: null,
-      failureDomains: [],
-    };
+    const { gap, fact: missingClaim } = missingMechanism(
+      "claim-and-segregation", "gap:claim", "fiat.claim.required", "The direct reserve claim is unresolved",
+    );
     const result = evaluateV9Backing(
       asset([gap]),
       {
@@ -333,10 +251,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       quality: null,
       failureDomains: [],
     };
-    const review = { ...reviews[1], durationAndLiquidity: notApplicable } as Extract<
-      V9MechanismRiskReview,
-      { archetype: "tbill" }
-    >;
+    const review = { ...reviews.tbill, durationAndLiquidity: notApplicable };
     const result = evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1);
 
     expect(result.rateability).toBe("rateable");
@@ -344,7 +259,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
   });
 
   it("requires explicit evidenced N/A metrics and skips only their CDP threshold signals", () => {
-    const base = reviews[2] as Extract<V9MechanismRiskReview, { archetype: "cdp" }>;
+    const base = reviews.cdp;
     const measured = evaluateV9Backing(
       asset(),
       { ...base, collateralizationRatio: 0.5, liquidationCapacityRatio: 0 },
@@ -390,8 +305,8 @@ describe("Safety Score v9 archetype backing adapters", () => {
   });
 
   it("fires structural signals for unavailable sdn/rwa metrics and skips evidenced N/A ones", () => {
-    const sdnBase = reviews[3] as Extract<V9MechanismRiskReview, { archetype: "synthetic-delta-neutral" }>;
-    const rwaBase = reviews[5] as Extract<V9MechanismRiskReview, { archetype: "rwa-credit-fund" }>;
+    const sdnBase = reviews["synthetic-delta-neutral"];
+    const rwaBase = reviews["rwa-credit-fund"];
 
     const sdnFull = evaluateV9Backing(asset(), sdnBase, V9_CANDIDATE_POLICY_V1);
     const sdnUnavailable = V9MechanismRiskReviewSchema.parse({
@@ -483,7 +398,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
   });
 
   it("emits the algorithmic reflexivity ceiling independently of strong components", () => {
-    const base = reviews[4] as Extract<V9MechanismRiskReview, { archetype: "algorithmic" }>;
+    const base = reviews.algorithmic;
     const result = evaluateV9Backing(
       asset(),
       {
@@ -514,7 +429,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     };
     const result = evaluateV9Backing(
       { ...asset(), reserveExposures: [directCrypto] },
-      reviews[2],
+      reviews.cdp,
       V9_CANDIDATE_POLICY_V1,
     );
     expect(result.rateability).toBe("rateable");
@@ -523,7 +438,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
 });
 
 describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
-  const cdpBase = reviews[2] as Extract<V9MechanismRiskReview, { archetype: "cdp" }>;
+  const cdpBase = reviews.cdp;
   const collateralizationReason = (result: ReturnType<typeof evaluateV9Backing>) =>
     result.structuralReasons.find((reason) => reason.pathKey === "mechanism:collateralization-parameters");
 

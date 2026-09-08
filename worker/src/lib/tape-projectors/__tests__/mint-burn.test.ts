@@ -1,4 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectMintBurnLargeFlows } from "../mint-burn";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
@@ -71,16 +75,49 @@ describe("mint_burn projector", () => {
     expect(title).toMatch(/USDC burned \$50\.0M.*polygon/);
   });
 
-  it("is idempotent on rerun (event_id is stable for the same source row)", async () => {
-    const row = makeFlow({ id: "ethereum-0xdup-0", amount_usd: 20_000_000 });
-    const db1 = mockTapeD1(withRows([row])) as MockD1Database;
-    await projectMintBurnLargeFlows(db1);
-    const id1 = tapeInsertBindsForType(db1, "mint_burn.large_mint")[0]?.[0] as string;
+  it("persists only economic flows at exact severity boundaries and keeps reruns durable", async () => {
+    const { db, sqlite } = fixtures.open();
+    const rows = [
+      makeFlow({ id: "below", amount_usd: 9_999_999 }),
+      makeFlow({ id: "notice", amount_usd: 10_000_000 }),
+      makeFlow({ id: "warning", amount_usd: 25_000_000 }),
+      makeFlow({ id: "severe", amount_usd: 100_000_000, direction: "burn", burn_type: "effective_burn" }),
+      makeFlow({ id: "bridge", amount_usd: 100_000_000, flow_type: "bridge_transfer" }),
+      makeFlow({ id: "review", amount_usd: 100_000_000, direction: "burn", burn_type: "review_required" }),
+      makeFlow({ id: "unpriced", amount_usd: null }),
+    ];
+    for (const row of rows) {
+      sqlite.prepare(`INSERT INTO mint_burn_events
+        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, counterparty, timestamp, flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, '0xtest', 1, 'https://example.com')`)
+        .run(row.id as string, row.stablecoin_id as string, row.symbol as string, row.chain_id as string,
+          row.direction as string, row.amount_usd as number | null, row.counterparty as null,
+          row.timestamp as number, row.flow_type as string, row.burn_type as string | null);
+    }
+    await projectMintBurnLargeFlows(db);
+    const select = sqlite.prepare("SELECT event_id, source_row_id, type, severity FROM tape_events ORDER BY source_row_id");
+    const events = select.all();
+    expect(events).toEqual([
+      { event_id: expect.any(String), source_row_id: "notice", type: "mint_burn.large_mint", severity: "notice" },
+      { event_id: expect.any(String), source_row_id: "severe", type: "mint_burn.large_burn", severity: "severe" },
+      { event_id: expect.any(String), source_row_id: "warning", type: "mint_burn.large_mint", severity: "warning" },
+    ]);
+    const cursor = sqlite.prepare("SELECT value FROM cache WHERE key = 'tape-projector:cursor:mint_burn.large_flow'");
+    expect(cursor.get()).toEqual({ value: String(SEC) });
+    await projectMintBurnLargeFlows(db);
+    await projectMintBurnLargeFlows(db, { since: 0 });
+    expect(select.all()).toEqual(events);
+    expect(cursor.get()).toEqual({ value: String(SEC) });
+  });
 
-    const db2 = mockTapeD1(withRows([row])) as MockD1Database;
-    await projectMintBurnLargeFlows(db2);
-    const id2 = tapeInsertBindsForType(db2, "mint_burn.large_mint")[0]?.[0] as string;
-    expect(id1).toEqual(id2);
+  it("derives the same nonempty event identity independently of persistence", async () => {
+    const first = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
+    const second = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
+    await projectMintBurnLargeFlows(first);
+    await projectMintBurnLargeFlows(second);
+    const firstIds = tapeInsertBindsForType(first, "mint_burn.large_mint").map((binds) => binds[0]);
+    expect(firstIds).toEqual([expect.stringMatching(/\S+/)]);
+    expect(tapeInsertBindsForType(second, "mint_burn.large_mint").map((binds) => binds[0])).toEqual(firstIds);
   });
 
   it("expands a full batch to include all rows at the cutoff timestamp before advancing", async () => {

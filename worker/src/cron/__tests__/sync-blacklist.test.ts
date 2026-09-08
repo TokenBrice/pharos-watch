@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 function installFetch(implementation: (request: Request) => Response | Promise<Response>) {
   return mockFetch([{ match: () => true, respond: implementation }]);
@@ -287,6 +291,7 @@ describe("syncBlacklist", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    sqliteFixtures.closeAll();
   });
 
   it("processes events and writes to DB on normal path", async () => {
@@ -573,7 +578,14 @@ describe("syncBlacklist", () => {
   });
 
   it("reapplies the Tron ledger mirror after refreshing current balances", async () => {
-    const db = makeDb();
+    const { sqlite } = sqliteFixtures.open();
+    const history: string[] = [];
+    const db = createSqliteD1(sqlite, {
+      onRun: (sql) => history.push(sql),
+      onAll: (sql) => history.push(sql),
+    });
+    const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
@@ -621,16 +633,17 @@ describe("syncBlacklist", () => {
     });
     await syncBlacklist(buildTestOpts({ db }));
 
-    const history = db.getHistory();
-    const tronLedgerMirrorRuns = history.filter((entry) =>
-      entry.sql.includes("blacklist-tron-ledger-backfill-candidates"),
-    );
-    const currentBalanceUpserts = history.filter((entry) =>
-      entry.sql.includes("INSERT INTO blacklist_current_balances"),
-    );
-
-    expect(currentBalanceUpserts.length).toBeGreaterThan(0);
-    expect(tronLedgerMirrorRuns).toHaveLength(1);
+    const refreshIndex = history.findIndex((sql) => sql.includes("INSERT INTO blacklist_current_balances"));
+    const mirrorIndex = history.findIndex((sql) => sql.includes("blacklist-tron-ledger-backfill-candidates"));
+    expect(refreshIndex).toBeGreaterThanOrEqual(0);
+    expect(mirrorIndex).toBeGreaterThan(refreshIndex);
+    expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE tx_hash = 'tx-tron-ledger-1'").all()).toEqual([{
+      amount_native: 1, amount_usd_at_event: 1,
+      amount_source: "current_balance_snapshot", amount_status: "resolved",
+    }]);
+    expect(sqlite.prepare("SELECT amount_native, amount_usd FROM blacklist_current_balances WHERE chain_id = 'tron'").all()).toEqual([{
+      amount_native: 1, amount_usd: 1,
+    }]);
   });
 
   it("returns zero events when all APIs return empty", async () => {

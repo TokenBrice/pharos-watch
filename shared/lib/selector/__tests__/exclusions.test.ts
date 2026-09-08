@@ -74,14 +74,15 @@ describe("universal exclusions", () => {
     expect(evaluateExclusions(makeRow({ supplyUsd: 5_500_000 }), makeInput())).toBeNull();
   });
 
-  it("active-depeg scales with depegTolerance (zero=50bps)", () => {
-    const tight = makeRow({ activeDepeg: true, currentDeviationBps: 60 });
-    expect(evaluateExclusions(tight, makeInput({ depegTolerance: "zero" }))).toEqual(
-      expect.objectContaining({ reason: "active-depeg" }),
-    );
-    const within = makeRow({ activeDepeg: true, currentDeviationBps: 40 });
-    expect(evaluateExclusions(within, makeInput({ depegTolerance: "zero" }))).toBeNull();
-  });
+  it.each([["zero", 50], ["tight", 100], ["moderate", 200]] as const)(
+    "active-depeg boundary for %s",
+    (depegTolerance, threshold) => {
+      const input = makeInput({ depegTolerance });
+      expect(evaluateExclusions(makeRow({ activeDepeg: true, currentDeviationBps: threshold }), input)).toBeNull();
+      expect(evaluateExclusions(makeRow({ activeDepeg: true, currentDeviationBps: threshold + 1 }), input))
+        .toEqual(expect.objectContaining({ reason: "active-depeg" }));
+    },
+  );
 
   it("active-depeg uses absolute current deviation", () => {
     const offPegBelow = makeRow({ activeDepeg: true, currentDeviationBps: -60 });
@@ -90,23 +91,6 @@ describe("universal exclusions", () => {
     );
   });
 
-  it("active-depeg scales with depegTolerance (tight=100bps)", () => {
-    const over = makeRow({ activeDepeg: true, currentDeviationBps: 110 });
-    expect(evaluateExclusions(over, makeInput({ depegTolerance: "tight" }))).toEqual(
-      expect.objectContaining({ reason: "active-depeg" }),
-    );
-    const under = makeRow({ activeDepeg: true, currentDeviationBps: 90 });
-    expect(evaluateExclusions(under, makeInput({ depegTolerance: "tight" }))).toBeNull();
-  });
-
-  it("active-depeg scales with depegTolerance (moderate=200bps)", () => {
-    const over = makeRow({ activeDepeg: true, currentDeviationBps: 210 });
-    expect(evaluateExclusions(over, makeInput({ depegTolerance: "moderate" }))).toEqual(
-      expect.objectContaining({ reason: "active-depeg" }),
-    );
-    const under = makeRow({ activeDepeg: true, currentDeviationBps: 190 });
-    expect(evaluateExclusions(under, makeInput({ depegTolerance: "moderate" }))).toBeNull();
-  });
 
   it("F grade always excluded", () => {
     expect(evaluateExclusions(makeRow({ safetyGrade: "F" }), makeInput())).toEqual(
@@ -284,29 +268,15 @@ describe("yield exclusions", () => {
     );
   });
 
-  it("peg-score-floor scales with depegTolerance (zero=65)", () => {
-    const zero = makeInput({ profile: "yield", depegTolerance: "zero" });
-    expect(evaluateExclusions(makeRow({ pegScore: 60 }), zero)).toEqual(
-      expect.objectContaining({ reason: "peg-score-floor" }),
-    );
-    expect(evaluateExclusions(makeRow({ pegScore: 70 }), zero)).toBeNull();
-  });
-
-  it("peg-score-floor scales with depegTolerance (tight=55)", () => {
-    const tight = makeInput({ profile: "yield", depegTolerance: "tight" });
-    expect(evaluateExclusions(makeRow({ pegScore: 50 }), tight)).toEqual(
-      expect.objectContaining({ reason: "peg-score-floor" }),
-    );
-    expect(evaluateExclusions(makeRow({ pegScore: 60 }), tight)).toBeNull();
-  });
-
-  it("peg-score-floor scales with depegTolerance (moderate=45)", () => {
-    const moderate = makeInput({ profile: "yield", depegTolerance: "moderate" });
-    expect(evaluateExclusions(makeRow({ pegScore: 40 }), moderate)).toEqual(
-      expect.objectContaining({ reason: "peg-score-floor" }),
-    );
-    expect(evaluateExclusions(makeRow({ pegScore: 50 }), moderate)).toBeNull();
-  });
+  it.each([["zero", 65], ["tight", 55], ["moderate", 45]] as const)(
+    "peg-score-floor boundary for %s",
+    (depegTolerance, floor) => {
+      const input = makeInput({ profile: "yield", depegTolerance });
+      expect(evaluateExclusions(makeRow({ pegScore: floor }), input)).toBeNull();
+      expect(evaluateExclusions(makeRow({ pegScore: floor - 1 }), input))
+        .toEqual(expect.objectContaining({ reason: "peg-score-floor" }));
+    },
+  );
 });
 
 describe("trading exclusions", () => {
@@ -326,30 +296,15 @@ describe("trading exclusions", () => {
     expect(evaluateExclusions(makeRow({ pegScore: 80 }), input)).toBeNull();
   });
 
-  it("dews-ceiling × 1h: 36 excluded, 30 passes", () => {
-    const fast = makeInput({ profile: "trading", exitSpeed: "1h" });
-    expect(
-      evaluateExclusions(makeRow({ dewsScore: 36, effectiveTvlUsd: 50_000_000, liquidityScore: 70 }), fast),
-    ).toEqual(expect.objectContaining({ reason: "dews-ceiling" }));
-    expect(
-      evaluateExclusions(makeRow({ dewsScore: 30, effectiveTvlUsd: 50_000_000, liquidityScore: 70 }), fast),
-    ).toBeNull();
-  });
-
-  it("dews-ceiling × 24h: 46 excluded, 40 passes", () => {
-    const day = makeInput({ profile: "trading", exitSpeed: "24h" });
-    expect(evaluateExclusions(makeRow({ dewsScore: 46 }), day)).toEqual(
-      expect.objectContaining({ reason: "dews-ceiling" }),
-    );
-    expect(evaluateExclusions(makeRow({ dewsScore: 40 }), day)).toBeNull();
-  });
-
-  it("dews-ceiling × any: 56 excluded, 50 passes", () => {
-    expect(evaluateExclusions(makeRow({ dewsScore: 56 }), input)).toEqual(
-      expect.objectContaining({ reason: "dews-ceiling" }),
-    );
-    expect(evaluateExclusions(makeRow({ dewsScore: 50 }), input)).toBeNull();
-  });
+  it.each([["1h", 35], ["24h", 45], ["any", 55]] as const)(
+    "dews-ceiling boundary for %s",
+    (exitSpeed, ceiling) => {
+      const input = makeInput({ profile: "trading", exitSpeed });
+      expect(evaluateExclusions(makeRow({ dewsScore: ceiling, liquidityScore: 70 }), input)).toBeNull();
+      expect(evaluateExclusions(makeRow({ dewsScore: ceiling + 1, liquidityScore: 70 }), input))
+        .toEqual(expect.objectContaining({ reason: "dews-ceiling" }));
+    },
+  );
 
   it("supply-tvl-floor-1h: <$25M effective TVL excluded under 1h", () => {
     const fast = makeInput({ profile: "trading", exitSpeed: "1h" });

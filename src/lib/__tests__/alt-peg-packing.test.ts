@@ -25,6 +25,7 @@ describe("arrangeClusterCoins", () => {
   it("produces no center-to-center overlaps within a cluster", () => {
     const sizes = [100, 80, 60, 50, 45, 40, 35, 32, 30, 28, 28, 26, 26];
     const placed = arrangeClusterCoins(anchor, input(sizes));
+    expect(placed.map((coin) => coin.id).sort()).toEqual(input(sizes).map((coin) => coin.id).sort());
     const FRAME_W = 900;
     const FRAME_H = 460;
     for (let i = 0; i < placed.length; i++) {
@@ -32,16 +33,17 @@ describe("arrangeClusterCoins", () => {
         const dx = (placed[i].x - placed[j].x) * (FRAME_W / 100);
         const dy = (placed[i].y - placed[j].y) * (FRAME_H / 100);
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = ((placed[i].sizePx + placed[j].sizePx) / 2) * 0.9;
-        expect(dist).toBeGreaterThanOrEqual(minDist);
+        const minDist = (placed[i].sizePx + placed[j].sizePx) / 2;
+        expect(dist).toBeGreaterThanOrEqual(minDist - 1e-6);
       }
     }
   });
 
   it("returns coins sorted largest-first", () => {
     const placed = arrangeClusterCoins(anchor, input([30, 100, 50, 80]));
-    const sizes = placed.map((p) => p.sizePx);
-    expect(sizes).toEqual([...sizes].sort((a, b) => b - a));
+    expect(placed.map(({ id, sizePx }) => [id, sizePx])).toEqual([
+      ["c1", 100], ["c3", 80], ["c2", 50], ["c0", 30],
+    ]);
   });
 
   it("returns empty array for empty input", () => {
@@ -56,6 +58,7 @@ describe("arrangeClusterCoins", () => {
     ];
 
     const placed = resolvePackedCoinOverlaps(coins, { paddingPx: 6 });
+    expect(placed.map((coin) => coin.id).sort()).toEqual(["chf-leader", "eur-leader", "gbp-leader"]);
 
     for (let i = 0; i < placed.length; i++) {
       for (let j = i + 1; j < placed.length; j++) {

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { getPriceCache, readCacheWithPolicy, savePriceCache, setCacheIfAbsent } from "../db-cache";
+import { getCache, getPriceCache, readCacheWithPolicy, savePriceCache, setCacheIfAbsent, type CachePolicy } from "../db-cache";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 interface FullPriceCacheRow {
   asset_id: string;
@@ -18,14 +21,13 @@ interface FullPriceCacheRow {
 
 describe("setCacheIfAbsent", () => {
   it("preserves the first value and timestamp on a key conflict", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = fixtures.open();
 
     expect(await setCacheIfAbsent(db, "write-once", "first", 100)).toBe(true);
     expect(await setCacheIfAbsent(db, "write-once", "second", 200)).toBe(false);
     expect(sqlite.prepare(
       "SELECT value, updated_at FROM cache WHERE key = 'write-once'",
     ).get()).toEqual({ value: "first", updated_at: 100 });
-    sqlite.close();
   });
 });
 
@@ -151,6 +153,48 @@ describe("getPriceCache", () => {
 });
 
 describe("readCacheWithPolicy", () => {
+  const policy: CachePolicy<{ count: number }> = {
+    key: "policy-test", storage: "d1-kv", schemaId: "count:v1", ttlSec: 30,
+    maxEntries: 1, stale: "reject", invalid: "retain",
+    decode: JSON.parse, encode: JSON.stringify,
+  };
+
+  it("accepts the exact TTL and applies stale accept versus reject one second later", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(policy.key, '{"count":4}', 100);
+    expect(await readCacheWithPolicy(db, policy, 130))
+      .toEqual({ state: "fresh", value: { count: 4 }, updatedAt: 100, usable: true });
+    expect(await readCacheWithPolicy(db, policy, 131))
+      .toEqual({ state: "stale", value: { count: 4 }, updatedAt: 100, usable: false });
+    expect(await readCacheWithPolicy(db, { ...policy, stale: "accept" }, 131))
+      .toEqual({ state: "stale", value: { count: 4 }, updatedAt: 100, usable: true });
+  });
+
+  it.each(["throw", "null"] as const)("applies retain versus delete when decoding returns %s", async (mode) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(policy.key, "invalid", 100);
+    const decode = () => {
+      if (mode === "throw") throw new Error("invalid payload");
+      return null;
+    };
+    for (const invalid of ["retain", "delete"] as const) {
+      expect(await readCacheWithPolicy(db, { ...policy, decode, invalid }, 101))
+        .toEqual({ state: "invalid", value: null, updatedAt: 100, usable: false });
+      expect(await getCache(db, policy.key)).toEqual(invalid === "retain"
+        ? { value: "invalid", updatedAt: 100 } : null);
+    }
+  });
+
+  it("returns missing without decoding an absent key", async () => {
+    const { db } = fixtures.open();
+    const decode = vi.fn(() => { throw new Error("absent"); });
+    expect(await readCacheWithPolicy(db, { ...policy, decode }, 100))
+      .toEqual({ state: "missing", value: null, updatedAt: null, usable: false });
+    expect(decode).not.toHaveBeenCalled();
+  });
+
   it("returns a stale fallback value without presenting it as fresh", async () => {
     const db = makeNoopD1({
       prepare: () => ({
@@ -209,16 +253,7 @@ describe("savePriceCache", () => {
   });
 
   it("uses synced_at as the monotonic conflict guard while preserving observed_at as updated_at", async () => {
-    const statements: Array<{ sql: string; bindings: unknown[] }> = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...bindings: unknown[]) => {
-          statements.push({ sql, bindings });
-          return { sql, bindings };
-        },
-      }),
-      batch: async () => [{ success: true, meta: { changes: 1 }, results: [] }],
-    });
+    const { db } = fixtures.open();
 
     await savePriceCache(db, [{
       id: "usdc-circle",
@@ -232,10 +267,22 @@ describe("savePriceCache", () => {
       consensusSources: ["coingecko", "pyth"],
     }]);
 
-    expect(statements).toHaveLength(1);
-    expect(statements[0].sql).toContain("ON CONFLICT(asset_id) DO UPDATE");
-    expect(statements[0].sql).toContain("excluded.synced_at");
-    expect(statements[0].bindings[2]).toBe(1800000000);
-    expect(statements[0].bindings[7]).toBe(1800000100);
+    const expected = {
+      price: 0.9999, updatedAt: 1800000000, source: "coingecko+pyth", confidence: "high",
+      observedAt: 1800000000, observedAtMode: "upstream", syncedAt: 1800000100,
+      agreeSources: ["coingecko", "pyth"], consensusSources: ["coingecko", "pyth"],
+    };
+    await savePriceCache(db, [{
+      id: "usdc-circle", price: 0.8, source: "older", observedAt: 1800000050, syncedAt: 1800000099,
+    }]);
+    expect((await getPriceCache(db)).get("usdc-circle")).toEqual(expected);
+    await savePriceCache(db, [{
+      id: "usdc-circle", price: 1.01, source: "equal", observedAt: 1799999999, syncedAt: 1800000100,
+    }]);
+    expect((await getPriceCache(db)).get("usdc-circle")).toEqual({
+      price: 1.01, updatedAt: 1799999999, source: "equal", confidence: null,
+      observedAt: 1799999999, observedAtMode: null, syncedAt: 1800000100,
+      agreeSources: [], consensusSources: [],
+    });
   });
 });

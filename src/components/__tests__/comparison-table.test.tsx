@@ -111,6 +111,18 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
 const PEG_RATES: Record<string, number> = { USD: 1 };
 
 describe("ComparisonTable", () => {
+  it("does not frame unequal directional activity as a universal best value", () => {
+    const minting = makeCoin("usdt", "USDT");
+    const burning = makeCoin("usdc", "USDC");
+    burning.flow = { ...burning.flow!, netFlow24hUsd: -2_000_000, pressureShiftScore: -28 };
+    const html = renderToStaticMarkup(
+      <ComparisonTable coins={[minting, burning]} pegRates={PEG_RATES} logos={{}} />,
+    );
+    expect(html).toContain("+$1.00M");
+    expect(html).toContain("-$2.00M");
+    expect(html).not.toMatch(/\bbest\b/i);
+  });
+
   it("renders the complete grouped comparison matrix", () => {
     const html = renderToStaticMarkup(
       <ComparisonTable coins={[makeCoin("usdt", "USDT")]} pegRates={PEG_RATES} logos={{}} />,
@@ -146,15 +158,6 @@ describe("ComparisonTable", () => {
     expect(html).toContain('tabindex="0"');
     expect(html).toContain('data-slot="table-viewport"');
     expect(html).toContain('data-slot="table"');
-  });
-
-  it("does not frame directional activity as a universal best value", () => {
-    const html = renderToStaticMarkup(
-      <ComparisonTable coins={[makeCoin("usdt", "USDT"), makeCoin("usdc", "USDC")]} pegRates={PEG_RATES} logos={{}} />,
-    );
-
-    expect(html).not.toContain("text-green-600");
-    expect(html).not.toContain("BEST_CLASS");
   });
 
   it("keeps basis-point values rounded to whole numbers", () => {

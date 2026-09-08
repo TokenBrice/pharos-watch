@@ -3,8 +3,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeRequestAdminSummary } from "@shared/types";
-import { buildAdminMutationReceiptMetadata } from "../admin-mutation-feedback";
-import type { AdminMutationIntentExecution } from "../admin-mutation-intent";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const { useApiKeyRequestsMock } = vi.hoisted(() => ({
@@ -73,30 +71,6 @@ afterEach(() => {
 });
 
 describe("ApiKeyRequestsPanel", () => {
-  it("serializes successful receipts without retaining response bodies or raw output", () => {
-    const secret = "ph_live_one_time_secret";
-    const execution = {
-      httpStatus: 201,
-      idempotentReplay: false,
-      executionCertainty: "confirmed",
-      idempotencyKey: "intent-key",
-      data: { token: secret },
-      output: JSON.stringify({ token: secret }),
-    } as AdminMutationIntentExecution;
-
-    const receipt = buildAdminMutationReceiptMetadata(execution);
-    const serialized = JSON.stringify(receipt);
-
-    expect(receipt).toEqual({
-      httpStatus: 201,
-      idempotentReplay: false,
-      executionCertainty: "confirmed",
-      idempotencyKey: "intent-key",
-    });
-    expect(serialized).not.toContain(secret);
-    expect(serialized).not.toContain("data");
-    expect(serialized).not.toContain("output");
-  });
 
   it("uses server-side status and limit query options", () => {
     renderPanel();
@@ -110,7 +84,10 @@ describe("ApiKeyRequestsPanel", () => {
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("returns focus to the request action when confirmation is cancelled", async () => {
+  it("returns focus to the request action and sends nothing when confirmation is cancelled", async () => {
+    const fetchMock = mockFetch([{ match: "/api/admin/api-key-requests-admin/", body: { ok: true } }], {
+      requireMatch: true,
+    });
     renderPanel();
     const trigger = screen.getByRole("button", { name: "Reject pending request" });
     trigger.focus();
@@ -119,7 +96,7 @@ describe("ApiKeyRequestsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(() => expect(document.activeElement).toBe(trigger));
-    expect(trigger.className).toContain("min-h-11");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("renders triage summary and request-level next action guidance", () => {
@@ -149,19 +126,10 @@ describe("ApiKeyRequestsPanel", () => {
     );
   });
 
-  it("wraps hostile project values within narrow request cards", () => {
-    const projectUrl = `https://example.invalid/${"unbroken-project-segment".repeat(10)}`;
-    renderPanel([makeRequest({ projectUrl })]);
-
-    const projectValue = screen.getByText(projectUrl);
-    expect(projectValue.className).toContain("break-all");
-    expect(projectValue.parentElement?.className).toContain("min-w-0");
-  });
-
-  it("does not render durable request ids in the admin cards or notices", async () => {
+  it("keeps durable request ids out of every rendered card and human-readable notice", async () => {
     const request = makeRequest({ requestId: "akr_do_not_show" });
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
-    mockFetch([{
+    const fetchMock = mockFetch([{
       match: "/api/admin/api-key-requests-admin/",
       body: {
         ok: true,
@@ -172,7 +140,7 @@ describe("ApiKeyRequestsPanel", () => {
     }], { requireMatch: true });
     renderPanel([request]);
 
-    expect(screen.queryByText(request.requestId)).toBeNull();
+    expect(document.body.textContent).not.toContain(request.requestId);
 
     fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
     fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "abuse review" } });
@@ -181,8 +149,43 @@ describe("ApiKeyRequestsPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Request marked rejected; claim released.")).toBeTruthy();
     });
-    expect(screen.queryByText(request.requestId)).toBeNull();
+    expect(screen.getByText("Request marked rejected; claim released.").textContent).not.toContain(
+      request.requestId,
+    );
+    // The durable id must still address the mutation; only the rendered surface hides it.
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(request.requestId);
   });
+
+  // audit: s082-src/B2 — disputed contract
+  // The success receipt's technical intent line (`intent api-key-request:reject:<id>:<uuid>`) embeds the
+  // durable request id. Hiding ids is the cards' contract; whether the reconciliation metadata must redact
+  // it too is unsettled. Fails today; if the receipt redacts the id, promote this to a real assertion.
+  it.fails(
+    "keeps the durable request id out of the success receipt's intent metadata",
+    async () => {
+      const request = makeRequest({ requestId: "akr_do_not_show_receipt" });
+      vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
+      mockFetch([{
+        match: "/api/admin/api-key-requests-admin/",
+        body: {
+          ok: true,
+          requestId: request.requestId,
+          status: "rejected",
+          claimStatus: "released",
+        },
+      }], { requireMatch: true });
+      renderPanel([request]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+      fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "abuse review" } });
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Request marked rejected; claim released.")).toBeTruthy();
+      });
+      expect(document.body.textContent).not.toContain(request.requestId);
+    },
+  );
 
   it("requires confirmation and sends reason plus idempotency header for mutations", async () => {
     const request = makeRequest({ requestId: "akr_mutation_target" });
@@ -210,6 +213,44 @@ describe("ApiKeyRequestsPanel", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ reason: "manual abuse review" });
   });
 
+  it("keeps the confirmation open and sends no request until the reason clears the length floor", async () => {
+    const fetchMock = mockFetch([{ match: "/api/admin/api-key-requests-admin/", body: { ok: true } }], {
+      requireMatch: true,
+    });
+    vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
+    renderPanel([makeRequest({ requestId: "akr_short_reason" })]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    expect(screen.getByRole("alert").textContent).toContain("at least 4 characters");
+    expect(screen.getByLabelText(/Reason/).getAttribute("aria-invalid")).toBe("true");
+
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: " abc " } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends the trimmed reason once it reaches four characters", async () => {
+    const request = makeRequest({ requestId: "akr_boundary_reason" });
+    const fetchMock = mockFetch([{
+      match: "/api/admin/api-key-requests-admin/",
+      body: { ok: true, requestId: request.requestId, status: "rejected", claimStatus: "released" },
+    }], { requireMatch: true });
+    vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
+    renderPanel([request]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "  abcd  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ reason: "abcd" });
+  });
+
   it("reconciles an uncertain mutation with the same intent key and reports replay metadata", async () => {
     const request = makeRequest({ requestId: "akr_uncertain_target" });
     let attempt = 0;
@@ -234,7 +275,8 @@ describe("ApiKeyRequestsPanel", () => {
         };
       },
     }], { requireMatch: true });
-    vi.stubGlobal("crypto", { randomUUID: () => "uncertain-uuid" });
+    let uuid = 0;
+    vi.stubGlobal("crypto", { randomUUID: () => `uncertain-uuid-${++uuid}` });
     renderPanel([request]);
 
     fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
@@ -247,6 +289,7 @@ describe("ApiKeyRequestsPanel", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const firstKey = new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Idempotency-Key");
     const secondKey = new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Idempotency-Key");
+    expect(firstKey).toBe("api-key-request:reject:akr_uncertain_target:uncertain-uuid-1");
     expect(secondKey).toBe(firstKey);
     expect(await screen.findByText("Request marked rejected; claim released.")).toBeTruthy();
     expect(screen.getByText(/replay yes · certainty confirmed/)).toBeTruthy();

@@ -42,8 +42,9 @@ import {
 } from "../curve-stableswap-ng";
 import {
   makeCurve3PoolPacket,
-  makeUniswapV3Target,
+  makeV3Target,
 } from "./measured-execution.test-support";
+import { makeJoinPool, makeJoinQuote } from "./join.test-support";
 
 function curveStableSwapNgRoute() {
   const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
@@ -116,7 +117,7 @@ function curveStableSwapNgRoute() {
 
 describe("measured execution join AMM invariants", () => {
   it("keeps an independent exact AMM fallback available after a quote failure", () => {
-    const measuredTarget = makeUniswapV3Target();
+    const measuredTarget = makeV3Target();
     const pool: PoolEntry = {
       poolId: measuredTarget.poolId,
       project: measuredTarget.protocol,
@@ -202,11 +203,8 @@ describe("measured execution join AMM invariants", () => {
         referencePriceSource: "source-token-usd" as const,
       })),
     };
-    const pool: PoolEntry = {
+    const pool = makeJoinPool(measuredTarget, {
       poolId: "defillama-usdg-ng-row",
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: measuredTarget.retainedTvlUsd,
       symbol: "USDG-USDC",
       volumeUsd1d: 10_000_000,
       poolType: "curve-stableswap-high-a",
@@ -215,16 +213,8 @@ describe("measured execution join AMM invariants", () => {
         measuredExecutionTarget: measuredTarget,
         ammExecutionModel: reserveModel,
       },
-    };
-    const quote = (completeCycles: number, successfulCycles: number) => ({
-      quotedTarget: measuredTarget,
-      status: "measured" as const,
-      failureReason: null,
-      profile,
-      quoteGenerationId: "curve-ng-quote-generation",
-      targetGenerationId: "curve-ng-target-generation",
-      resolution: "latest" as const,
-      latestFailureReason: null,
+    });
+    const quote = (completeCycles: number, successfulCycles: number) => makeJoinQuote(measuredTarget, profile, {
       observationHistory: {
         completeProducerCycleCount: completeCycles,
         successfulObservationCount: successfulCycles,
@@ -385,9 +375,9 @@ describe("measured execution join AMM invariants", () => {
     expect(pool.extra?.measuredExecutionProfiles).toBeUndefined();
     expect(pool.extra?.ammExecutionModel).toBeDefined();
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    expect(pool.extra?.measuredExecutionDiagnostics?.every(
-      (diagnostic) => diagnostic.detail === "atomic-direction-missing",
-    )).toBe(true);
+    expect(pool.extra?.measuredExecutionDiagnostics).toEqual(targets.map((target) =>
+      expect.objectContaining({ targetId: target.targetId, detail: "atomic-direction-missing" }),
+    ));
     expect(diagnostics).toMatchObject({ targetCount: 2, measuredCount: 0, gatedCount: 2 });
   });
 });

@@ -5,6 +5,7 @@ import {
   computeBlacklistActiveSummaryStats,
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
+  type BlacklistActiveRecord,
 } from "../blacklist-active-records";
 import type { BlacklistEvent } from "../../types/market";
 
@@ -25,13 +26,30 @@ function makeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
     timestamp: 1_770_000_000,
     methodologyVersion: "3.3",
     contractAddress: "0xcontract",
-    configKey: "ethereum-0xcontract",
+    configKey: "ethereum-primary",
     eventSignature: "Blacklisted(address)",
     eventTopic0: "0xtopic",
     suppressionReason: null,
     explorerTxUrl: "https://etherscan.io/tx/0xtx",
     explorerAddressUrl: "https://etherscan.io/address/0xabc",
     ...overrides,
+  };
+}
+
+function makeSnapshot(overrides: Partial<BlacklistCurrentBalanceSnapshot>): BlacklistCurrentBalanceSnapshot {
+  return {
+    stablecoin: "USDT", chainId: "ethereum", address: "0x1",
+    amountNative: 100, amountUsd: 100, status: "resolved",
+    source: "current_balance", observedAt: 20, ...overrides,
+  };
+}
+
+function makeActiveRecord(overrides: Partial<BlacklistActiveRecord> = {}): BlacklistActiveRecord {
+  return {
+    id: "1", stablecoin: "USDT", chainId: "ethereum", chainName: "Ethereum",
+    address: "0x1", blacklistedAt: 10, blacklistTxHash: "0x1",
+    destroyedAt: null, destroyTxHash: null, frozenAmountNative: 100,
+    frozenAmountUsd: 100, amountStatus: "resolved", amountSource: "event", ...overrides,
   };
 }
 
@@ -68,16 +86,7 @@ describe("buildBlacklistActiveRecords", () => {
     const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
       [
         "USDT:tron:0x1234",
-        {
-          stablecoin: "USDT",
-          chainId: "tron",
-          address: "0x1234",
-          amountNative: 500,
-          amountUsd: 500,
-          status: "resolved",
-          source: "current_balance",
-          observedAt: 20,
-        },
+        makeSnapshot({ chainId: "tron", address: "0x1234", amountNative: 500, amountUsd: 500 }),
       ],
     ]);
 
@@ -122,16 +131,7 @@ describe("buildBlacklistActiveRecords", () => {
     const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
       [
         "USDT:ethereum:0x9999",
-        {
-          stablecoin: "USDT",
-          chainId: "ethereum",
-          address: "0x9999",
-          amountNative: 250,
-          amountUsd: 250,
-          status: "resolved",
-          source: "current_balance",
-          observedAt: 20,
-        },
+        makeSnapshot({ address: "0x9999", amountNative: 250, amountUsd: 250 }),
       ],
     ]);
 
@@ -148,7 +148,7 @@ describe("buildBlacklistActiveRecords", () => {
       chainId: "optimism",
       chainName: "Optimism",
       address: "0x8888",
-      configKey: "optimism-0xnew",
+      configKey: "optimism-new",
       contractAddress: "0xnew",
       timestamp: 10,
     });
@@ -157,31 +157,14 @@ describe("buildBlacklistActiveRecords", () => {
     const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
       [
         "USDT:optimism:0x8888",
-        {
-          stablecoin: "USDT",
-          chainId: "optimism",
-          address: "0x8888",
-          amountNative: 100,
-          amountUsd: 100,
-          status: "resolved",
-          source: "current_balance",
-          observedAt: 20,
-        },
+        makeSnapshot({ chainId: "optimism", address: "0x8888", amountNative: 100, amountUsd: 100 }),
       ],
       [
         scopedKey,
-        {
-          stablecoin: "USDT",
-          chainId: "optimism",
-          address: "0x8888",
-          configKey: "optimism-0xnew",
-          contractAddress: "0xnew",
-          amountNative: 250,
-          amountUsd: 250,
-          status: "resolved",
-          source: "current_balance",
-          observedAt: 21,
-        },
+        makeSnapshot({
+          chainId: "optimism", address: "0x8888", configKey: "optimism-new",
+          contractAddress: "0xnew", amountNative: 250, amountUsd: 250, observedAt: 21,
+        }),
       ],
     ]);
 
@@ -196,7 +179,7 @@ describe("buildBlacklistActiveRecords", () => {
       chainId: "optimism",
       chainName: "Optimism",
       address: "0xshared",
-      configKey: "optimism-0xlegacy",
+      configKey: "optimism-old",
       contractAddress: "0xlegacy",
       timestamp: 10,
     });
@@ -205,7 +188,7 @@ describe("buildBlacklistActiveRecords", () => {
       chainId: "optimism",
       chainName: "Optimism",
       address: "0xshared",
-      configKey: "optimism-0xupgraded",
+      configKey: "optimism-v2",
       contractAddress: "0xupgraded",
       timestamp: 11,
     });
@@ -221,7 +204,7 @@ describe("buildBlacklistActiveRecords", () => {
       chainId: "optimism",
       chainName: "Optimism",
       address: "0xshared",
-      configKey: "optimism-0xcontract",
+      configKey: "optimism-primary",
       contractAddress: "0xcontract",
       timestamp: 10,
       txHash: "0xolder",
@@ -231,7 +214,7 @@ describe("buildBlacklistActiveRecords", () => {
       chainId: "optimism",
       chainName: "Optimism",
       address: "0xshared",
-      configKey: "optimism-0xcontract",
+      configKey: "optimism-primary",
       contractAddress: "0xcontract",
       timestamp: 11,
       txHash: "0xnewer",
@@ -244,28 +227,29 @@ describe("buildBlacklistActiveRecords", () => {
     expect(records[0]?.blacklistTxHash).toBe("0xnewer");
   });
 
-  it("dedupes unblacklist lookup keys across scoped and legacy identities", () => {
-    const scopedBlacklist = makeEvent({
-      id: "1",
-      chainId: "optimism",
-      chainName: "Optimism",
-      address: "0xshared",
-      configKey: "optimism-0xcontract",
-      contractAddress: "0xcontract",
-      timestamp: 10,
-    });
-    const scopedUnblacklist = makeEvent({
-      id: "2",
-      eventType: "unblacklist",
-      chainId: "optimism",
-      chainName: "Optimism",
-      address: "0xshared",
-      configKey: "optimism-0xcontract",
-      contractAddress: "0xcontract",
-      timestamp: 11,
-    });
+  it("removes both legacy and matching scoped identities without removing another contract", () => {
+    const legacy = makeEvent({ id: "legacy", configKey: null, contractAddress: null, timestamp: 1 });
+    const scoped = makeEvent({ id: "scoped", timestamp: 2 });
+    const other = makeEvent({ id: "other", configKey: "ethereum-other", contractAddress: "0xother", timestamp: 3 });
+    const events = [legacy, scoped, other];
+    expect(buildBlacklistActiveRecords(events).map((record) => record.contractAddress))
+      .toEqual(["0xother", "0xcontract", null]);
+    const removal = makeEvent({ id: "remove", eventType: "unblacklist", timestamp: 4 });
+    expect(buildBlacklistActiveRecords([...events, removal]))
+      .toEqual([expect.objectContaining({ contractAddress: "0xother", blacklistedAt: 3 })]);
+  });
 
-    expect(buildBlacklistActiveRecords([scopedBlacklist, scopedUnblacklist])).toHaveLength(0);
+  it("clears destruction metadata when a removed identity is blacklisted again in scrambled input", () => {
+    const blacklist = makeEvent({ id: "1", timestamp: 1 });
+    const destroy = makeEvent({ id: "2", eventType: "destroy", timestamp: 2, txHash: "0xdestroy" });
+    const remove = makeEvent({ id: "3", eventType: "unblacklist", timestamp: 3 });
+    const renewed = makeEvent({ id: "4", timestamp: 4, txHash: "0xrenewed", amountNative: 25, amountUsdAtEvent: 25 });
+    expect(buildBlacklistActiveRecords([renewed, destroy, blacklist, remove])).toEqual([
+      expect.objectContaining({
+        blacklistedAt: 4, blacklistTxHash: "0xrenewed", destroyedAt: null, destroyTxHash: null,
+        frozenAmountNative: 25, frozenAmountUsd: 25, amountSource: "event",
+      }),
+    ]);
   });
 
   it("falls back to event-time EVM amounts when current balance refresh fails", () => {
@@ -287,16 +271,7 @@ describe("buildBlacklistActiveRecords", () => {
     const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
       [
         "USDT:ethereum:0x8888",
-        {
-          stablecoin: "USDT",
-          chainId: "ethereum",
-          address: "0x8888",
-          amountNative: null,
-          amountUsd: null,
-          status: "provider_failed",
-          source: "current_balance",
-          observedAt: 20,
-        },
+        makeSnapshot({ address: "0x8888", amountNative: null, amountUsd: null, status: "provider_failed" }),
       ],
     ]);
 
@@ -317,38 +292,24 @@ describe("buildBlacklistActiveRecords", () => {
 });
 
 describe("computeBlacklistActiveSummaryStats", () => {
+  it("counts a destroyed unresolved address without adding a frozen amount or gap", () => {
+    const records = buildBlacklistActiveRecords([
+      makeEvent({ timestamp: 1 }),
+      makeEvent({ id: "destroy", eventType: "destroy", timestamp: 2, amountNative: null, amountUsdAtEvent: null }),
+    ]);
+    expect(computeBlacklistActiveSummaryStats(records)).toEqual({
+      activeAddressCount: 1, activeFrozenTotal: 0, activeAmountGapCount: 0,
+    });
+  });
+
   it("excludes destroyed records from activeFrozenTotal", () => {
     const records = [
-      {
-        id: "1",
-        stablecoin: "USDT" as const,
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        address: "0x1",
-        blacklistedAt: 10,
-        blacklistTxHash: "0x1",
-        destroyedAt: null,
-        destroyTxHash: null,
-        frozenAmountNative: 100,
-        frozenAmountUsd: 100,
-        amountStatus: "resolved" as const,
-        amountSource: "event",
-      },
-      {
-        id: "2",
-        stablecoin: "USDT" as const,
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        address: "0x2",
-        blacklistedAt: 11,
-        blacklistTxHash: "0x2",
-        destroyedAt: 12,
-        destroyTxHash: "0x3",
-        frozenAmountNative: 500,
-        frozenAmountUsd: 500,
-        amountStatus: "resolved" as const,
-        amountSource: "destroy_event",
-      },
+      makeActiveRecord({ frozenAmountNative: 100, frozenAmountUsd: 100 }),
+      makeActiveRecord({
+        id: "2", address: "0x2", blacklistedAt: 11, blacklistTxHash: "0x2",
+        destroyedAt: 12, destroyTxHash: "0x3", frozenAmountNative: 500,
+        frozenAmountUsd: 500, amountSource: "destroy_event",
+      }),
     ];
 
     const stats = computeBlacklistActiveSummaryStats(records);
@@ -360,36 +321,12 @@ describe("computeBlacklistActiveSummaryStats", () => {
 
   it("sums frozen totals and counts gaps", () => {
     const records = [
-      {
-        id: "1",
-        stablecoin: "USDT" as const,
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        address: "0x1",
-        blacklistedAt: 10,
-        blacklistTxHash: "0x1",
-        destroyedAt: null,
-        destroyTxHash: null,
-        frozenAmountNative: 100,
-        frozenAmountUsd: 100,
-        amountStatus: "resolved" as const,
-        amountSource: "event",
-      },
-      {
-        id: "2",
-        stablecoin: "USDT" as const,
-        chainId: "tron",
-        chainName: "Tron",
-        address: "0x2",
-        blacklistedAt: 11,
-        blacklistTxHash: "0x2",
-        destroyedAt: null,
-        destroyTxHash: null,
-        frozenAmountNative: null,
-        frozenAmountUsd: null,
-        amountStatus: "provider_failed" as const,
-        amountSource: "current_balance",
-      },
+      makeActiveRecord({ frozenAmountNative: 100, frozenAmountUsd: 100 }),
+      makeActiveRecord({
+        id: "2", chainId: "tron", chainName: "Tron", address: "0x2",
+        blacklistedAt: 11, blacklistTxHash: "0x2", frozenAmountNative: null,
+        frozenAmountUsd: null, amountStatus: "provider_failed", amountSource: "current_balance",
+      }),
     ];
 
     expect(computeBlacklistActiveSummaryStats(records)).toEqual({
@@ -405,29 +342,14 @@ describe("computeBlacklistTrackedSummaryStats", () => {
     const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
       [
         "USDT:ethereum:0x1",
-        {
-          stablecoin: "USDT",
-          chainId: "ethereum",
-          address: "0x1",
-          amountNative: 100,
-          amountUsd: 100,
-          status: "resolved",
-          source: "kyc_rip_bootstrap",
-          observedAt: 10,
-        },
+        makeSnapshot({ amountNative: 100, amountUsd: 100, source: "kyc_rip_bootstrap", observedAt: 10 }),
       ],
       [
         "USDT:tron:0x2",
-        {
-          stablecoin: "USDT",
-          chainId: "tron",
-          address: "0x2",
-          amountNative: null,
-          amountUsd: null,
-          status: "provider_failed",
-          source: "current_balance",
-          observedAt: 11,
-        },
+        makeSnapshot({
+          chainId: "tron", address: "0x2", amountNative: null, amountUsd: null,
+          status: "provider_failed", observedAt: 11,
+        }),
       ],
     ]);
 
@@ -442,33 +364,14 @@ describe("computeBlacklistTrackedSummaryStats", () => {
     const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
       [
         "USDT:optimism:0x1",
-        {
-          id: "snapshot-1",
-          stablecoin: "USDT",
-          chainId: "optimism",
-          address: "0x1",
-          amountNative: 100,
-          amountUsd: 100,
-          status: "resolved",
-          source: "current_balance",
-          observedAt: 10,
-        },
+        makeSnapshot({ id: "snapshot-1", chainId: "optimism", amountNative: 100, amountUsd: 100, observedAt: 10 }),
       ],
       [
-        "USDT:optimism:optimism-0xcontract:0xcontract:0x1",
-        {
-          id: "snapshot-1",
-          stablecoin: "USDT",
-          chainId: "optimism",
-          address: "0x1",
-          configKey: "optimism-0xcontract",
-          contractAddress: "0xcontract",
-          amountNative: 100,
-          amountUsd: 100,
-          status: "resolved",
-          source: "current_balance",
-          observedAt: 11,
-        },
+        "USDT:optimism:optimism-primary:0xcontract:0x1",
+        makeSnapshot({
+          id: "snapshot-1", chainId: "optimism", configKey: "optimism-primary",
+          contractAddress: "0xcontract", amountNative: 100, amountUsd: 100, observedAt: 11,
+        }),
       ],
     ]);
 

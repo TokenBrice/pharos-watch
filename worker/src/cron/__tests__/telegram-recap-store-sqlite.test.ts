@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   cancelQueuedTelegramRecapsForRollout,
   getTelegramRecapPreference,
@@ -268,24 +268,31 @@ describe("telegram recap store on latest SQLite schema", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM recap_side_effects").get()).toEqual({ count: 0 });
   });
 
-  it("prunes aggregate rows at 30 days and every terminal outcome at 90 days", async () => {
+  it("prunes only eligible statuses strictly beyond their 30-day and 90-day updated-at cutoffs", async () => {
     const { sqlite, db } = setup();
-    sqlite.prepare(`INSERT INTO telegram_recap_targets
+    const insert = sqlite.prepare(`INSERT INTO telegram_recap_targets
       (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation, watchlist_fingerprint, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 0, 'x', ?, ?, ?)`).run("old-skip", "1", "2026-06-01", 1, 2, "skipped_no_changes", 1, NOW - 86400);
-    sqlite.prepare(`INSERT INTO telegram_recap_targets
-      (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation, watchlist_fingerprint, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 0, 'x', ?, ?, ?)`).run("old-unknown", "2", "2026-06-01", 1, 2, "execution_unknown", 1, NOW - 31 * 86400);
-    sqlite.prepare(`INSERT INTO telegram_recap_targets
-      (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation, watchlist_fingerprint, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 0, 'x', ?, ?, ?)`).run("very-old-unknown", "3", "2026-06-01", 1, 2, "execution_unknown", 1, NOW - 91 * 86400);
-    for (const [key, status] of [["old-cancelled", "cancelled"], ["old-expired", "expired"]] as const) {
-      sqlite.prepare(`INSERT INTO telegram_recap_targets
-        (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation, watchlist_fingerprint, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 0, 'x', ?, ?, ?)`).run(key, key, "2026-06-01", 1, 2, status, 1, NOW - 91 * 86400);
+      VALUES (?, ?, '2026-06-01', 1, 2, 0, 'x', ?, 1, ?)`);
+    const survivors: string[] = [];
+    for (const [days, statuses] of [
+      [30, ["sent", "skipped_no_changes", "skipped_paused", "skipped_stale"]],
+      [90, ["cancelled", "expired", "execution_unknown", "failed_permanent"]],
+    ] as const) {
+      for (const status of statuses) {
+        for (const offset of [-1, 0, 1]) {
+          const key = `${status}:${offset}`;
+          insert.run(key, key, status, NOW - days * 86400 + offset);
+          if (offset >= 0) survivors.push(key);
+        }
+      }
     }
-    await expect(pruneTelegramRecapTargets(db, NOW)).resolves.toEqual({ deletedTargets: 3, cappedAtLimit: false });
-    expect(sqlite.prepare("SELECT recap_key FROM telegram_recap_targets ORDER BY recap_key").all()).toEqual([{ recap_key: "old-skip" }, { recap_key: "old-unknown" }]);
+    for (const status of ["planned", "queued"]) {
+      insert.run(status, status, status, NOW - 100 * 86400);
+      survivors.push(status);
+    }
+    await expect(pruneTelegramRecapTargets(db, NOW)).resolves.toEqual({ deletedTargets: 8, cappedAtLimit: false });
+    expect(sqlite.prepare("SELECT recap_key FROM telegram_recap_targets ORDER BY recap_key").all())
+      .toEqual(survivors.sort().map((recap_key) => ({ recap_key })));
   });
 
   it("caps recap target pruning to the requested batch size", async () => {

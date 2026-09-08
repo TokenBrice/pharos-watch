@@ -117,6 +117,29 @@ describe("contagion graph helpers", () => {
     );
   });
 
+  it("stops at the hop boundary without including the next edge", () => {
+    const result = computeRippleState("usdc", makeResolvedLinks(), 2);
+    expect(result.nodeDistance).toEqual(new Map([["usdc", 0], ["usdt", 1], ["usde", 2]]));
+    expect(result.connectedEdges).toEqual(new Set([0, 1]));
+  });
+
+  it("terminates cycles and preserves shortest distances", () => {
+    const links = resolveGraphLinks([
+      ...LINKS,
+      { source: "usdc", target: "susde", weight: 1, type: "collateral" },
+      { source: "susde", target: "usdc", weight: 1, type: "collateral" },
+    ], new Map());
+    const result = computeRippleState("usdc", links);
+    expect(result.nodeDistance).toEqual(new Map([["usdc", 0], ["usdt", 1], ["susde", 1], ["usde", 2]]));
+    expect(result.connectedEdges).toEqual(new Set([0, 1, 2, 3, 4]));
+  });
+
+  it("includes direct outbound neighbors without walking further outbound", () => {
+    const result = computeRippleState("usde", makeResolvedLinks());
+    expect(result.nodeDistance).toEqual(new Map([["usde", 0], ["usdt", 1], ["susde", 1]]));
+    expect(result.connectedEdges).toEqual(new Set([1, 2]));
+  });
+
   it("finds the best connected node in the requested arrow direction", () => {
     const bestId = findDirectionalNeighbor({
       nodeId: "usdt",

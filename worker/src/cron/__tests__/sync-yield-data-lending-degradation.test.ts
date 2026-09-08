@@ -17,6 +17,7 @@ import {
   fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -26,20 +27,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
-            {
-              pool: "pool-placeholder",
-              chain: "Ethereum",
-              project: "aave-v3",
-              symbol: "USDC",
-              tvlUsd: 5_000_000,
-              apy: 3.25,
-              apyBase: 3.25,
-              apyReward: null,
-              apyMean30d: 3.25,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-placeholder", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
           ], nowSec - 60),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -83,20 +71,7 @@ describe("syncYieldData", () => {
             ],
       }, nowSec),
       "dl-stablecoin-pools": dlPoolsCacheRow([
-            {
-              pool: "pool-placeholder",
-              chain: "Ethereum",
-              project: "aave-v3",
-              symbol: "USDC",
-              tvlUsd: 5_000_000,
-              apy: 3.25,
-              apyBase: 3.25,
-              apyReward: null,
-              apyMean30d: 3.25,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-placeholder", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
       ], nowSec - 60),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -224,20 +199,7 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 100_000_000,
-              apy: 4.5,
-              apyBase: 4.5,
-              apyReward: null,
-              apyMean30d: 4.4,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-native", project: "maker", symbol: "sDAI", tvlUsd: 100_000_000, apy: 4.5, apyBase: 4.5, apyMean30d: 4.4 }),
             {
               pool: "pool-lusd-aave",
               chain: "Ethereum",
@@ -322,20 +284,7 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
-            {
-              pool: "pool-sdai-cached",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 900_000_000,
-              apy: 4.8,
-              apyBase: 4.8,
-              apyReward: null,
-              apyMean30d: 4.7,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ pool: "pool-sdai-cached", project: "maker", symbol: "sDAI", tvlUsd: 900_000_000, apy: 4.8, apyBase: 4.8, apyMean30d: 4.7 }),
           ], nowSec),
       risk_free_rate: cacheRow({
             rate: 4.0,

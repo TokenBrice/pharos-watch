@@ -13,6 +13,11 @@ import {
   getSourceRiskGoldenRow,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { publishedYieldCache } from "./yield-history.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 function mockD1(
   tables: Parameters<typeof baseMockD1>[0] = [],
@@ -77,6 +82,78 @@ describe("handleYieldHistory", () => {
   });
 
   const row = makeYieldHistoryRow();
+
+  it.each(["best", "source"])("executes %s selection across raw/daily overlap and publication boundaries", async (mode) => {
+    vi.useFakeTimers();
+    const publishedAt = Date.UTC(2026, 5, 1) / 1000;
+    vi.setSystemTime(publishedAt * 1000);
+    const day = 86400;
+    const { db, sqlite } = fixtures.open();
+    const cache = publishedYieldCache(publishedAt);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(cache.key, cache.value, cache.updated_at);
+    const insertRaw = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_generation_id, publication_state)
+      VALUES (?, ?, ?, ?, ?, 'defillama', 'generation', ?)`);
+    const insertDaily = sqlite.prepare(`INSERT INTO yield_history_daily
+      (stablecoin_id, source_key, recorded_at, snapshot_date, is_best, apy, data_source, publication_generation_id, publication_state)
+      VALUES ('usdt-tether', 'selected', ?, ?, 1, ?, 'defillama', 'generation', 'published')`);
+    const old = publishedAt - 32 * day;
+    insertRaw.run("usdt-tether", "selected", old + 100, 1, 99, "published");
+    insertDaily.run(old + 200, old, 1);
+    insertRaw.run("usdt-tether", "selected", old + day + 100, 1, 2, "published");
+    insertRaw.run("usdt-tether", "selected", publishedAt - 30 * day, 1, 3, "published");
+    insertDaily.run(publishedAt - 30 * day, publishedAt - 30 * day, 99);
+    insertRaw.run("usdt-tether", "selected", publishedAt, 1, 4, "published");
+    insertRaw.run("usdt-tether", "selected", publishedAt - 100, 0, 5, "published");
+    insertRaw.run("usdt-tether", "alternate", publishedAt - 200, 0, 90, "published");
+    insertRaw.run("usdc-circle", "selected", publishedAt, 1, 91, "published");
+    insertRaw.run("usdt-tether", "selected", publishedAt - 300, 1, 92, "staged");
+    insertRaw.run("usdt-tether", "selected", publishedAt - 400, 1, 93, "failed");
+    insertRaw.run("usdt-tether", "selected", publishedAt + 1, 1, 94, "published");
+    const res = await handleYieldHistory(db, new URL(
+      `https://x/api/yield-history?stablecoin=usdt-tether&days=60&mode=${mode}${mode === "source" ? "&sourceKey=selected" : ""}`,
+    ));
+    const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
+    expect(body.history.map((point) => [point.date, point.apy])).toEqual([
+      [old + 200, 1], [old + day + 100, 2], [publishedAt - 30 * day, 3],
+      ...(mode === "source" ? [[publishedAt - 100, 5]] : []), [publishedAt, 4],
+    ]);
+  });
+
+  it("isolates selected and alternate risk by coin, source and row generation ahead of the root generation", async () => {
+    const publishedAt = SOURCE_RISK_GOLDEN_UPDATED_AT;
+    const cache = publishedYieldCache(publishedAt, [{
+      id: "usdt-tether", publicationGenerationId: "row-generation",
+      provenance: { sourceKey: "selected" }, sourceRisk: { sourceRiskScore: 71 },
+      altSources: [{ sourceKey: "alternate", sourceRisk: { sourceRiskScore: 42 } }],
+    }, {
+      id: "usdc-circle", publicationGenerationId: "row-generation",
+      provenance: { sourceKey: "other-coin-only" }, sourceRisk: { sourceRiskScore: 99 },
+    }], "root-generation");
+    const rows = [
+      ["selected", "row-generation"], ["alternate", "row-generation"], ["selected", "root-generation"],
+      ["other-coin-only", "row-generation"], ["missing-source", "row-generation"],
+    ].map(([source_key, publication_generation_id], index) => ({
+      ...makeYieldHistoryRow({ recorded_at: publishedAt - 5 + index, source_key }), publication_generation_id,
+    }));
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [cache] },
+      { match: "yield_history", rows },
+    ]);
+    const body = await readJsonResponse(await handleYieldHistory(db,
+      new URL("https://x/api/yield-history?stablecoin=usdt-tether")), 200) as YieldHistoryResponse;
+    expect(body.history.map((point) => point.sourceRisk)).toEqual([
+      { sourceRiskScore: 71 }, { sourceRiskScore: 42 }, undefined, undefined, undefined,
+    ]);
+  });
+
+  it.each(["mode=invalid", "mode=source"])("rejects %s before accessing storage", async (query) => {
+    const db = mockD1();
+    const response = await handleYieldHistory(db, new URL(`https://x/api/yield-history?stablecoin=usdt-tether&${query}`));
+    expect(response.status).toBe(400);
+    expect(db.getHistory()).toEqual([]);
+  });
 
   it("returns 200 with history envelope", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
@@ -207,7 +284,7 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]?.sourceKey).toBe("aave-v3:usdt");
   });
 
-  it("filters on-chain bootstrap seed rows from best-mode history", async () => {
+  it.each(["best", "source"])("filters on-chain bootstrap seed rows from %s-mode history", async (mode) => {
     const bootstrapRow = makeYieldHistoryRow({
       apy: 0,
       apy_base: null,
@@ -230,7 +307,9 @@ describe("handleYieldHistory", () => {
     });
     const db = mockD1([{ match: "yield_history", rows: [bootstrapRow, liveRow] }]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await handleYieldHistory(db, new URL(
+      `https://x/api/yield-history?stablecoin=usdt-tether${mode === "source" ? "&sourceKey=onchain%3Ausdt-tether" : ""}`,
+    ));
 
     const body = (await readJsonResponse(res, 200)) as {
       current: { apy: number } | null;
@@ -241,42 +320,6 @@ describe("handleYieldHistory", () => {
     expect(body.current?.apy).toBe(4.2);
   });
 
-  it("filters on-chain bootstrap seed rows from source-mode history", async () => {
-    const bootstrapRow = makeYieldHistoryRow({
-      apy: 0,
-      apy_base: null,
-      data_source: "onchain",
-      exchange_rate: 1.001,
-      recorded_at: 1_771_000_000,
-      source_key: "onchain:usdt-tether",
-      yield_source: "On-chain seed",
-      yield_type: "nav-appreciation",
-    });
-    const liveRow = makeYieldHistoryRow({
-      apy: 4.2,
-      apy_base: null,
-      data_source: "onchain",
-      exchange_rate: 1.005,
-      recorded_at: 1_771_086_400,
-      source_key: "onchain:usdt-tether",
-      yield_source: "On-chain live",
-      yield_type: "nav-appreciation",
-    });
-    const db = mockD1([{ match: "yield_history", rows: [bootstrapRow, liveRow] }]);
-
-    const res = await handleYieldHistory(
-      db,
-      new URL("https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=onchain%3Ausdt-tether"),
-    );
-
-    const body = (await readJsonResponse(res, 200)) as {
-      current: { apy: number } | null;
-      history: Array<{ apy: number }>;
-    };
-    expect(body.history).toHaveLength(1);
-    expect(body.history[0]?.apy).toBe(4.2);
-    expect(body.current?.apy).toBe(4.2);
-  });
 
   it("marks the transition from legacy-best to a source-aware row as a source switch", async () => {
     const legacyRow = makeYieldHistoryRow({
@@ -384,6 +427,8 @@ describe("handleYieldHistory", () => {
   });
 
   it("uses the post-V9 yield freshness budget for history responses", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
     const updatedAt = Math.floor(Date.now() / 1000) - 1_700;
     const historyRow = makeYieldHistoryRow({ recorded_at: updatedAt });
     const db = mockD1([{ match: "yield_history", rows: [historyRow] }]);
@@ -434,21 +479,7 @@ describe("handleYieldHistory", () => {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["yield-rankings"],
         rows: [
-          {
-            key: "yield-rankings",
-            value: JSON.stringify({
-              updatedAt: publishedAt,
-              publication: {
-                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                updatedAt: publishedAt,
-                cutoffAt: publishedAt,
-                schemaVersion: 1,
-                status: "published",
-              },
-              rankings: [],
-            }),
-            updated_at: publishedAt,
-          },
+          publishedYieldCache(publishedAt, [], SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID),
         ],
       },
       { match: "yield_history", rows: [generatedRow] },
@@ -526,28 +557,14 @@ describe("handleYieldHistory", () => {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["yield-rankings"],
         rows: [
-          {
-            key: "yield-rankings",
-            value: JSON.stringify({
-              updatedAt: publishedAt,
-              publication: {
-                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                updatedAt: publishedAt,
-                cutoffAt: publishedAt,
-                schemaVersion: 1,
-                status: "published",
-              },
-              rankings: [
-                {
-                  id: "usdt-tether",
-                  publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                  provenance: { sourceKey: "aave-v3:usdt" },
-                  sourceRisk: rewardHeavyRisk,
-                },
-              ],
-            }),
-            updated_at: publishedAt,
-          },
+          publishedYieldCache(publishedAt, [
+            {
+              id: "usdt-tether",
+              publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+              provenance: { sourceKey: "aave-v3:usdt" },
+              sourceRisk: rewardHeavyRisk,
+            },
+          ], SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID),
         ],
       },
       { match: "yield_history", rows: [generatedRow] },
@@ -619,38 +636,24 @@ describe("handleYieldHistory", () => {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["yield-rankings"],
         rows: [
-          {
-            key: "yield-rankings",
-            value: JSON.stringify({
-              updatedAt: publishedAt,
-              publication: {
-                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                updatedAt: publishedAt,
-                cutoffAt: publishedAt,
-                schemaVersion: 1,
-                status: "published",
-              },
-              rankings: [
-                {
-                  id: "usdt-tether",
-                  publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                  provenance: { sourceKey: "aave-v3:usdt" },
-                  sourceRisk: {
-                    sourceRiskPenalty: 1.2,
-                    venueRiskScores: { audits: 2, centralization: "bad" },
-                    venueRiskWeighted: 2.4,
-                    dependencyConcentration: {
-                      ecosystem: "Sky",
-                      severity: "unsupported",
-                      note: "Malformed legacy shorthand should not poison the whole object.",
-                      reviewedAt: "2026-05-15",
-                    },
-                  },
+          publishedYieldCache(publishedAt, [
+            {
+              id: "usdt-tether",
+              publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+              provenance: { sourceKey: "aave-v3:usdt" },
+              sourceRisk: {
+                sourceRiskPenalty: 1.2,
+                venueRiskScores: { audits: 2, centralization: "bad" },
+                venueRiskWeighted: 2.4,
+                dependencyConcentration: {
+                  ecosystem: "Sky",
+                  severity: "unsupported",
+                  note: "Malformed legacy shorthand should not poison the whole object.",
+                  reviewedAt: "2026-05-15",
                 },
-              ],
-            }),
-            updated_at: publishedAt,
-          },
+              },
+            },
+          ], SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID),
         ],
       },
       { match: "yield_history", rows: [generatedRow] },
@@ -678,28 +681,14 @@ describe("handleYieldHistory", () => {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["yield-rankings"],
         rows: [
-          {
-            key: "yield-rankings",
-            value: JSON.stringify({
-              updatedAt: publishedAt,
-              publication: {
-                generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                updatedAt: publishedAt,
-                cutoffAt: publishedAt,
-                schemaVersion: 1,
-                status: "published",
-              },
-              rankings: [
-                {
-                  id: "usdt-tether",
-                  publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
-                  provenance: { sourceKey: "aave-v3:usdt" },
-                  sourceRiskPenalty: rewardHeavyRow.expectedDerivedPenalty,
-                },
-              ],
-            }),
-            updated_at: publishedAt,
-          },
+          publishedYieldCache(publishedAt, [
+            {
+              id: "usdt-tether",
+              publicationGenerationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
+              provenance: { sourceKey: "aave-v3:usdt" },
+              sourceRiskPenalty: rewardHeavyRow.expectedDerivedPenalty,
+            },
+          ], SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID),
         ],
       },
       { match: "yield_history", rows: [generatedRow] },

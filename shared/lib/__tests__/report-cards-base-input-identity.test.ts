@@ -129,10 +129,6 @@ describe("report-card base-input identity", () => {
     );
   });
 
-  it("keeps the generation stable for inputs that agree on aggregate supply", () => {
-    expect(deriveReportCardsBaseInputGenerationId(source())).toBe(deriveReportCardsBaseInputGenerationId(source()));
-  });
-
   it("projects a pre-field capture deterministically as an empty aggregate map", () => {
     const absent = source();
     delete absent.aggregateCirculatingById;
@@ -144,7 +140,6 @@ describe("report-card base-input identity", () => {
     expect(deriveReportCardsBaseInputGenerationId(absent)).toBe(
       deriveReportCardsBaseInputGenerationId(explicitlyEmpty),
     );
-    expect(deriveReportCardsBaseInputGenerationId(absent)).toBe(deriveReportCardsBaseInputGenerationId(absent));
     expect(deriveReportCardsBaseInputGenerationId(absent)).not.toBe(deriveReportCardsBaseInputGenerationId(source()));
   });
 

@@ -1,28 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
-import { route, ROUTER_STATIC_PATHS } from "../../router";
+import { route, resolveRoute, ROUTER_STATIC_PATHS } from "../../router";
+import { getRouteMatch } from "../../routes/registry";
 import type { FullRouteContext } from "../../routes/shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-
-mockFetch([{
-  match: () => true,
-  body: {
-    tokens: [],
-    prices: [],
-    market_caps: [],
-    tvl: [],
-  },
-}], { requireMatch: true });
 
 // This suite verifies route registration and method/auth behavior. Handler-level
 // D1 contracts are covered by the dedicated endpoint suites, so D1 is incidental
 // setup for this broad router sweep.
 const db = mockD1([{ match: "", rows: [], allowUnused: true }]);
+const pendingWork: Promise<unknown>[] = [];
+afterEach(async () => {
+  await Promise.all(pendingWork.splice(0));
+});
 const execCtx = {
-  waitUntil: (_promise: Promise<unknown>) => {},
+  waitUntil: (promise: Promise<unknown>) => { pendingWork.push(promise); },
   passThroughOnException: () => {},
 } as unknown as ExecutionContext;
 
@@ -31,30 +25,13 @@ function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): Full
   return { db, execCtx, request: defaultRequest, trustedAdmin: false, ...overrides };
 }
 
-// Cache-backed public snapshots have dedicated handler tests; this broad route
-// sweep only needs to prove they stay registered.
-const REGISTRATION_ONLY_PATHS = new Set([
-  "/api/report-cards/v9",
-  "/api/depeg-resolver",
-  "/api/depeg-resolver-review",
-]);
 
 describe("router contract: strict frontend paths are routable", () => {
-  it("routes all strict contract paths", async () => {
+  it("registers all strict contract paths without executing their handlers", () => {
     for (const path of STRICT_CONTRACT_PATHS_LIST) {
-      if (REGISTRATION_ONLY_PATHS.has(path)) {
-        expect(ROUTER_STATIC_PATHS, `expected static route for ${path}`).toContain(path);
-        continue;
-      }
-
-      const result = route(makeRouteCtx({ url: new URL(`https://api.pharos.watch${path}`) }));
-      expect(result, `expected route for ${path}`).not.toBeNull();
-
-      const response = await result!;
-      expect(response.status, `unexpected 404 for ${path}`).not.toBe(404);
-      expect(response.status, `unexpected 500 for ${path}`).not.toBe(500);
+      expect(getRouteMatch(path), `expected route for ${path}`).not.toBeNull();
     }
-  }, 15_000);
+  });
 
   it("returns null for unknown paths", () => {
     const result = route(makeRouteCtx({ url: new URL("https://api.pharos.watch/api/definitely-not-real") }));
@@ -159,10 +136,6 @@ describe("router contract: strict frontend paths are routable", () => {
       if (endpoint.path.includes(":") && !endpoint.probePath) {
         continue;
       }
-      if (REGISTRATION_ONLY_PATHS.has(endpoint.path)) {
-        expect(ROUTER_STATIC_PATHS, `expected static route for ${endpoint.path}`).toContain(endpoint.path);
-        continue;
-      }
 
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
@@ -170,17 +143,18 @@ describe("router contract: strict frontend paths are routable", () => {
           method,
           headers: method === "POST" ? { "X-Pharos-Admin": "1" } : undefined,
         });
-        const expectedPublicStatuses = endpoint.path === "/api/telegram-webhook"
-            ? [200, 400, 501, 502, 503]
-            : endpoint.path === "/api/api-key-requests" || endpoint.path === "/api/donor-key-claims"
-              // 403 while the self-serve / donor claim switch is false (closed before body parsing).
-              ? [200, 400, 403, 502, 503]
-              : [200, 400, 502, 503];
+        const url = new URL(`https://api.pharos.watch${path}`);
+        const resolved = resolveRoute(url, method);
+        expect(resolved, `expected route for ${method} ${path}`).not.toBeNull();
+        const sentinel = vi.fn(async () => new Response(null, { status: 204 }));
+        if (resolved && !endpoint.adminRequired) {
+          resolved.routeMatch = { ...resolved.routeMatch, handle: sentinel };
+        }
 
         const response = await route(makeRouteCtx({
-          url: new URL(`https://api.pharos.watch${path}`),
+          url,
           request,
-        }));
+        }), resolved);
         expect(response, `expected route for ${method} ${path}`).not.toBeNull();
 
         if (
@@ -192,11 +166,12 @@ describe("router contract: strict frontend paths are routable", () => {
         } else if (endpoint.adminRequired) {
           expect(response!.status).toBe(401);
         } else {
-          expect(expectedPublicStatuses).toContain(response!.status);
+          expect(response!.status).toBe(204);
+          expect(sentinel).toHaveBeenCalledOnce();
         }
       }
     }
-  }, 15_000);
+  });
 
   it("enforces mutating admin GET restrictions with path-specific preview exceptions", async () => {
     for (const endpoint of ENDPOINT_DEFINITIONS.filter((item) => item.mutatingAdmin)) {

@@ -148,4 +148,59 @@ describe("useBrowserFullscreen", () => {
 
     expect(stub.exitSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("does not re-request fullscreen when the target already owns it", async () => {
+    const { result, rerender } = renderHook(({ open }) => useBrowserFullscreen(open), {
+      initialProps: { open: false },
+    });
+    const el = document.createElement("div");
+    result.current.current = el;
+    stub.element = el;
+
+    await act(async () => {
+      rerender({ open: true });
+    });
+
+    expect(stub.requestSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not exit fullscreen on unmount when another element owns it", async () => {
+    const { result, rerender, unmount } = renderHook(({ open }) => useBrowserFullscreen(open), {
+      initialProps: { open: false },
+    });
+    const el = document.createElement("div");
+    result.current.current = el;
+
+    await act(async () => {
+      rerender({ open: true });
+    });
+    const other = document.createElement("div");
+    stub.element = other;
+
+    unmount();
+
+    expect(stub.exitSpy).not.toHaveBeenCalled();
+    expect(stub.element).toBe(other);
+  });
+
+  it("swallows a rejected exitFullscreen promise without throwing", async () => {
+    Object.defineProperty(document, "exitFullscreen", {
+      configurable: true,
+      value: () => Promise.reject(new TypeError("exit denied")),
+    });
+    const { result, rerender } = renderHook(({ open }) => useBrowserFullscreen(open), {
+      initialProps: { open: false },
+    });
+    const el = document.createElement("div");
+    result.current.current = el;
+
+    await expect(
+      act(async () => {
+        rerender({ open: false });
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      }),
+    ).resolves.not.toThrow();
+  });
 });

@@ -7,7 +7,7 @@ import {
   type ReportCardEvidenceJournalV1,
   type ReportCardEvidenceJournalV1Payload,
 } from "@shared/lib/report-card-evidence-journal";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   REPORT_CARD_EVIDENCE_JOURNAL_STORE_RETENTION_SEC,
   loadReportCardEvidenceJournalByIdV1,

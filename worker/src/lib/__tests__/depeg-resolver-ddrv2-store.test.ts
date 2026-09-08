@@ -52,20 +52,54 @@ function eventInput(eventId: number, startedAt: number, peakDeviationBps = -350,
 }
 
 describe("DDRv2 storage contract cases", () => {
-  it("keeps split public-prediction triggers and immutable incident links", async () => withSqliteD1(async (db) => {
+  it("keeps incident event links append-only", async () => withSqliteD1(async (db) => {
     await ensureIncident(db);
-    const names = new Set(rows<{ name: string }>(db, `SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'depeg_resolver_public_predictions'`).map(({ name }) => name));
-    expect(names.has("trg_ddr_public_predictions_assessment_guard")).toBe(false);
-    expect([...names]).toEqual(expect.arrayContaining([
-      "trg_ddr_public_predictions_relational_guard",
-      "trg_ddr_public_predictions_version_guard",
-      "trg_ddr_public_predictions_payload_identity_guard",
-      "trg_ddr_public_predictions_payload_prediction_guard",
-      "trg_ddr_public_predictions_prediction_kind_guard",
-      "trg_ddr_public_predictions_no_call_kind_guard",
-      "trg_ddr_public_predictions_lock_policy_guard",
-    ]));
     expect(() => db.sqlite.exec("UPDATE depeg_resolver_incident_event_links SET relation = 'merged' WHERE event_id = 1")).toThrow(/append-only/);
+  }));
+
+  it.each<[string, Record<string, string | number>, RegExp]>([
+    ["assessment relationship", { event_id: -1 }, /linked public_prediction assessment/],
+    ["assessment version", { prediction_methodology_version_label: "vOTHER" }, /assessment versions/],
+    ["prediction metadata", { lock_timing: "late_freeze" }, /payload prediction fields/],
+    ["no-call kind", { outcome_kind: "no_call" }, /no-call payload kind/],
+  ])("rejects invalid %s on insert without altering the sealed row", async (_label, mutation, error) => withSqliteD1(async (db) => {
+    const { prediction } = await sealPredictionFixture(db);
+    const original = row<Record<string, string | number | null>>(db, "SELECT * FROM depeg_resolver_public_predictions WHERE id = ?", prediction.id);
+    const candidate = { ...original, ...mutation };
+    delete candidate.id;
+    const columns = Object.keys(candidate);
+    expect(() => db.sqlite.prepare(
+      `INSERT INTO depeg_resolver_public_predictions (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+    ).run(...Object.values(candidate))).toThrow(error);
+    expect(rows(db, "SELECT * FROM depeg_resolver_public_predictions")).toEqual([original]);
+  }));
+
+  it.each<[string, string, RegExp]>([
+    ["stablecoinId", "usdc-circle", /payload identity/],
+    ["kind", "no_call", /payload kind must match prediction outcome/],
+  ])("rejects inconsistent assessment payload %s", async (field, value, error) => withSqliteD1(async (db) => {
+    const { prediction } = await sealPredictionFixture(db);
+    const assessment = row<Record<string, string | number | null>>(db, "SELECT * FROM depeg_resolver_assessments WHERE id = ?", prediction.assessmentId);
+    const original = row<Record<string, string | number | null>>(db, "SELECT * FROM depeg_resolver_public_predictions WHERE id = ?", prediction.id);
+    await withSqliteD1(async (target) => {
+    insertOpenEvent(target);
+    await ensureIncident(target);
+    const payload = JSON.parse(String(assessment.row_json));
+    payload[field] = value;
+    assessment.row_json = JSON.stringify(payload);
+    delete assessment.id;
+    const assessmentColumns = Object.keys(assessment);
+    const inserted = target.sqlite.prepare(
+      `INSERT INTO depeg_resolver_assessments (${assessmentColumns.join(", ")}) VALUES (${assessmentColumns.map(() => "?").join(", ")})`,
+    ).run(...Object.values(assessment));
+    const candidate: Record<string, string | number | null> = { ...original, assessment_id: Number(inserted.lastInsertRowid), sealed_payload_json: assessment.row_json };
+    delete candidate.id;
+    const columns = Object.keys(candidate);
+    expect(() => target.sqlite.prepare(
+      `INSERT INTO depeg_resolver_public_predictions (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+    ).run(...Object.values(candidate))).toThrow(error);
+    expect(rows(target, "SELECT * FROM depeg_resolver_public_predictions")).toEqual([]);
+    });
   }));
 
   it("bootstraps incidents, policy membership, lock audit state, and idempotent reads", async () => withSqliteD1(async (db) => {

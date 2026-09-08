@@ -13,8 +13,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare:
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - uses: ./.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
+          workspace-artifact: publish
   full-static:
     name: Full lint and typecheck
+    needs: prepare
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
@@ -23,19 +37,28 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
+        id: workspace
         with:
-          bootstrap-history: "true"
+          install-deps: "false"
           static-cache: "true"
-          static-cache-save: "true"
+          workspace-artifact: restore
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
       - run: npm run typecheck:tests
       - run: npm run typecheck:worker
       - run: npm run check:structural
+      - uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .cache/eslint
+            *.tsbuildinfo
+            worker/*.tsbuildinfo
+          key: ${{ steps.workspace.outputs.static-cache-key }}
 
   full-tests:
     name: Full test suite (${{ matrix.shard }}/2)
+    needs: prepare
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
@@ -49,11 +72,12 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
-          bootstrap-history: "true"
+          install-deps: "false"
+          workspace-artifact: restore
       - run: npm run test:all -- --shard=${{ matrix.shard }}/2
 
   node26-proof:
-    name: Node 26 compatibility
+    name: Node 26 advisory typecheck compatibility
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true

@@ -251,4 +251,36 @@ describe("Safety Score v9 scoped risk", () => {
     expect(lower.finalScore).toBe(50);
     expect(higher.finalScore).toBe(50);
   });
+
+  it("rejects invalid shares and missing failure domains independently", () => {
+    expect(resolveV9ScopedRisk(80, [deployment()]).finalScore).toBe(76);
+    for (const exposureShare of [NaN, Infinity, -0.01, 1.01]) {
+      expect(() => resolveV9ScopedRisk(80, [deployment({ exposureShare })])).toThrow(/exposure share/);
+    }
+    expect(() => resolveV9ScopedRisk(80, [deployment({ failureDomainKeys: [] })])).toThrow(/failure domain/);
+  });
+
+  it("does not penalize zero exposure or reward quality above the base", () => {
+    for (const signal of [deployment({ exposureShare: 0 }), deployment({ exposedScore: 90 })]) {
+      const result = resolveV9ScopedRisk(80, [signal]);
+      expect(result.finalScore).toBe(80);
+      expect(result.adjustments.map((adjustment) => adjustment.adjustmentPoints)).toEqual([0]);
+    }
+  });
+
+  it("normalizes selected losses using maximum shares from all competing events", () => {
+    const result = resolveV9ScopedRisk(100, [
+      deployment({ signalKey: "a-deep", riskEventKey: "deep", exposureShare: 0.4, exposedScore: 0 }),
+      deployment({ signalKey: "a-wide", riskEventKey: "wide", exposureShare: 0.8, exposedScore: 90 }),
+      deployment({
+        signalKey: "b", exposureKey: "deployment:b", riskEventKey: "other",
+        exposureShare: 0.8, exposedScore: 50,
+      }),
+    ]);
+    expect(result.finalScore).toBe(50);
+    expect(result.adjustments).toEqual([
+      expect.objectContaining({ signalKey: "b", exposureShare: 0.5, adjustmentPoints: 25 }),
+      expect.objectContaining({ signalKey: "a-deep", exposureShare: 0.25, adjustmentPoints: 25 }),
+    ]);
+  });
 });

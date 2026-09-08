@@ -84,12 +84,20 @@ export function migratePortfolioIds(
       changed = true;
     }
 
-    const existing = migrated.find(
+    const existingIndex = migrated.findIndex(
       (migratedHolding) => migratedHolding.coinId === normalized.coinId,
     );
-    if (existing) {
-      existing.amount += normalized.amount;
+    if (existingIndex >= 0) {
+      const existing = migrated[existingIndex]!;
+      const amount = existing.amount + normalized.amount;
       changed = true;
+      if (!Number.isFinite(amount)) {
+        // An overflowed accumulation can no longer satisfy the finite-amount
+        // invariant; drop the coin rather than emit an unrepresentable holding.
+        migrated.splice(existingIndex, 1);
+        continue;
+      }
+      existing.amount = amount;
       continue;
     }
 

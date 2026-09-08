@@ -135,7 +135,7 @@ export function handleRequestSourceStats({ db, trustedAdmin, request }: AdminRou
              GROUP BY route_key, route_path
            ) AS combined
            GROUP BY route_key, route_path
-           ORDER BY (COALESCE(site_requests, 0) + COALESCE(external_requests, 0)) DESC, route_key ASC
+           ORDER BY (COALESCE(SUM(site_requests), 0) + COALESCE(SUM(external_requests), 0)) DESC, route_key ASC
            LIMIT ?`,
         )
           .bind(from, to, from, to, routeLimit)

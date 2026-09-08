@@ -4,6 +4,42 @@ import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
 
 describe("adaptSolsticeAttestation", () => {
+  it("selects the newest unsorted point and computes rather than trusts the published ratio", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        collateralization: 9,
+        reserves: { timeline: [
+          { ts: 1_776_000_000, reserves: 90, supply: 100 },
+          { ts: 1_778_000_000, reserves: 120, supply: 100 },
+          { ts: 1_777_000_000, reserves: 110, supply: 100 },
+        ] },
+      },
+    });
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_778_000_000, totalReserveUsd: 120, supplyUsd: 100,
+      collateralizationRatio: 1.2, publishedCollateralizationRatio: 9,
+    });
+  });
+
+  it("does not reuse older reserves when the newest point is malformed", () => {
+    expect(() => adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: { timeline: [
+        { ts: 1_776_000_000, reserves: 100, supply: 90 },
+        { ts: 1_778_000_000, supply: 100 },
+      ] } },
+    })).toThrow(/missing reserve\/supply/);
+  });
+
+  it("uses the selected point date when neither envelope nor point has a timestamp", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: { timeline: [{ date: "2026-04-15", reserves: 120, supply: 100 }] } },
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-04-15") / 1000);
+  });
+
   it("maps aggregate Solstice reserve proof as a non-scoring high-risk proof slice", () => {
     const result = adaptSolsticeAttestation({
       res: "ok",

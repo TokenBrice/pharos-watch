@@ -318,13 +318,16 @@ describe("syncStablecoins", () => {
     const now = Math.floor(Date.now() / 1000);
     const data = makeDlResponse(60);
     Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", price: 0, priceConfidence: null, circulating: { peggedUSD: 100_000_000 } });
-    const validate = vi.spyOn(apiUtils, "validatePayloadWithSchema");
     const db = makeSyncDb([{ match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache", rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: now - updatedAt, source, confidence, observed_at: source ? now - updatedAt : null, observed_at_mode: source ? "upstream" : null, synced_at: source ? now - updatedAt : null, agree_sources_json: source ? '["coingecko"]' : null, consensus_sources_json: source ? '["coingecko"]' : null }] }]);
+    const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
-    const asset = finalValidationPayload(validate).find((candidate) => candidate.id === "usdt-tether");
-    expect(asset?.priceSource).not.toBe("cached");
-    expect(asset?.price).not.toBe(0.999);
+    const published = writes.find((write) => write.key === "stablecoins");
+    expect(published).toBeDefined();
+    const asset = (JSON.parse(published!.value) as { peggedAssets: PeggedAsset[] })
+      .peggedAssets.find((candidate) => candidate.id === "usdt-tether");
+    expect(asset).toMatchObject({ id: "usdt-tether", price: null, priceSource: "missing" });
+    expect(asset!.priceObservedAt).not.toBe(now - updatedAt);
   });
 
   it("accepts a deep JPY price when the FX cache is stale", async () => {
@@ -338,30 +341,28 @@ describe("syncStablecoins", () => {
     expect(finalValidationPayload(validate).find((asset) => asset.id === "jpyc-jpyc")?.price).toBe(0.0005);
   });
 
-  it("retries parse failures, then falls back after the retry budget, without retrying HTTP errors", async () => {
-    vi.useRealTimers();
+  it.each([
+    { mode: "recovery", attempts: 2, error: null },
+    { mode: "exhausted parse budget", attempts: 3, error: /DefiLlama response body parse failed/ },
+    { mode: "HTTP termination", attempts: 1, error: /DefiLlama stablecoins API failed/ },
+  ])("handles intake $mode without real backoff", async ({ mode, attempts, error }) => {
     const cg = mockFetchWithRetry([{ match: "api.coingecko.com", body: {} }, { match: "coins.llama.fi/prices", body: { coins: {} } }]) as unknown as (url: string) => Promise<Response>;
     let dlAttempts = 0;
     fetchWithRetryMock.mockImplementation(async (url: string) => {
-      if (url.includes("/stablecoins?includePrices=true")) return dlAttempts++ === 0 ? throwingDlResponse() : new Response(JSON.stringify(makeDlResponse(60)), { headers: { "Content-Type": "application/json" } });
-      return cg(url);
+      if (!url.includes("/stablecoins?includePrices=true")) return cg(url);
+      dlAttempts++;
+      if (mode === "HTTP termination") return new Response("", { status: 502 });
+      if (mode !== "recovery" || dlAttempts === 1) return throwingDlResponse();
+      return new Response(JSON.stringify(makeDlResponse(60)), { headers: { "Content-Type": "application/json" } });
     });
-    await syncStablecoins(makeSyncDb());
-    expect(dlAttempts).toBe(2);
-    expect(recordOutcome).not.toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_STABLECOINS, false);
-
-    vi.mocked(recordOutcome).mockClear();
-    dlAttempts = 0;
-    fetchWithRetryMock.mockImplementation(async (url: string) => { if (url.includes("/stablecoins?includePrices=true")) { dlAttempts++; return throwingDlResponse(); } return cg(url); });
-    await expect(syncStablecoins(makeSyncDb())).rejects.toThrow(/DefiLlama response body parse failed/);
-    expect(dlAttempts).toBe(3);
-    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_STABLECOINS, false);
-
-    vi.mocked(recordOutcome).mockClear();
-    dlAttempts = 0;
-    fetchWithRetryMock.mockImplementation(async (url: string) => { if (url.includes("/stablecoins?includePrices=true")) { dlAttempts++; return new Response("", { status: 502 }); } return cg(url); });
-    await expect(syncStablecoins(makeSyncDb())).rejects.toThrow(/DefiLlama stablecoins API failed/);
-    expect(dlAttempts).toBe(1);
+    const pending = syncStablecoins(makeSyncDb());
+    const assertion = error
+      ? expect(pending).rejects.toThrow(error)
+      : expect(pending).resolves.toMatchObject({ itemCount: 60 });
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(dlAttempts).toBe(attempts);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_STABLECOINS, error === null);
   });
 });
 

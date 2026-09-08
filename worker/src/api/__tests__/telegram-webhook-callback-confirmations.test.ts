@@ -1,3 +1,4 @@
+import { makeBulkPendingRow } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
@@ -152,22 +153,12 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "unsubscribe",
-            presetIds: [],
-            coinIds: [],
-            unsubscribeAll: true,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makeBulkPendingRow({
+          kind: "unsubscribe",
+          presetIds: [],
+          coinIds: [],
+          unsubscribeAll: true,
+        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
       },
     ]);
 
@@ -184,22 +175,12 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "unsubscribe",
-            presetIds: [],
-            coinIds: [],
-            unsubscribeAll: true,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makeBulkPendingRow({
+          kind: "unsubscribe",
+          presetIds: [],
+          coinIds: [],
+          unsubscribeAll: true,
+        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
       },
     ]);
 
@@ -216,23 +197,13 @@ describe("handleTelegramWebhook", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "subscribe",
-            alertTypes: ["dews"],
-            presetIds: [],
-            coinIds: [],
-            subscribeAll: true,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makeBulkPendingRow({
+          kind: "subscribe",
+          alertTypes: ["dews"],
+          presetIds: [],
+          coinIds: [],
+          subscribeAll: true,
+        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
       },
     ]);
 
@@ -244,23 +215,13 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("pending confirm-bulk nudges only the initiating user in groups", async () => {
-    const pendingRow = {
-      action_type: "confirm-bulk",
-      action_payload: JSON.stringify({
-        kind: "subscribe",
-        alertTypes: ["dews"],
-        presetIds: [],
-        coinIds: [],
-        subscribeAll: true,
-      }),
-      alert_types: JSON.stringify([]),
-      resolved_ids: JSON.stringify([]),
-      ambiguous_ticker: "",
-      candidates: JSON.stringify([]),
-      remaining_tickers: JSON.stringify([]),
-      expires_at: Math.floor(Date.now() / 1000) + 60,
-      initiator_user_id: "999",
-    };
+    const pendingRow = makeBulkPendingRow({
+      kind: "subscribe",
+      alertTypes: ["dews"],
+      presetIds: [],
+      coinIds: [],
+      subscribeAll: true,
+    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" });
     const nonInitiatorDb = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",

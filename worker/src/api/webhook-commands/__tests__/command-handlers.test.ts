@@ -20,11 +20,7 @@ import { handleUnmuteHours } from "../unmutehours";
 import { handleUnsnooze } from "../unsnooze";
 import { handleUnsubscribe } from "../unsubscribe";
 
-type InlineButton = {
-  text?: string;
-  callback_data?: string;
-  web_app?: { url?: string };
-};
+import { makeCommandContext, buttonsFromMarkup, expectMiniAppButton, type InlineButton } from "./webhook-commands.test-support";
 
 type TelegramSendBody = {
   text?: string;
@@ -57,37 +53,18 @@ function mockD1(
 }
 
 function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
-  return {
-    db: mockD1(),
-    chatId: "42",
-    chatType: "private",
-    username: "alice",
-    actorUserId: "99",
-    botToken: "bot-token",
-    replyToChat: vi.fn().mockResolvedValue(undefined),
-    replyToChatWithMarkup: vi.fn().mockResolvedValue(undefined),
-    ...overrides,
-  };
+  return makeCommandContext(mockD1(), overrides);
 }
 
 function latestSendMessageBody(): TelegramSendBody {
   return lastSendMessageBody(fetchSpy);
 }
 
-function buttonsFromMarkup(markup: unknown): InlineButton[] {
-  const typed = markup as { inline_keyboard?: InlineButton[][] } | undefined;
-  return (typed?.inline_keyboard ?? []).flat();
-}
 
 function buttonsFromBody(body: TelegramSendBody): InlineButton[] {
   return buttonsFromMarkup(body.reply_markup);
 }
 
-function expectMiniAppButton(buttons: InlineButton[], text: string, startapp: string): void {
-  expect(buttons.some((button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`))).toBe(
-    true,
-  );
-}
 
 function subscriptionRow(overrides: Record<string, unknown> = {}) {
   return {

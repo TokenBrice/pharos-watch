@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { encodeFunctionResult, parseAbi } from "viem/utils";
+import { encodeFunctionResult, parseAbi, toFunctionSelector } from "viem/utils";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -20,16 +20,16 @@ import {
   adaptYamatoStates,
   decodeYamatoGetStates,
   fetchYamatoReserves,
-  PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR,
-  PRIORITY_REGISTRY_YAMATO_SELECTOR,
-  YAMATO_GET_PRICE_SELECTOR,
-  YAMATO_GET_STATES_SELECTOR,
-  YAMATO_PAUSED_SELECTOR,
-  YAMATO_PRICE_FEED_SELECTOR,
-  YAMATO_PRIORITY_REGISTRY_SELECTOR,
 } from "../yamato";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
+const YAMATO_GET_STATES_SELECTOR = toFunctionSelector("getStates()");
+const YAMATO_PRICE_FEED_SELECTOR = toFunctionSelector("priceFeed()");
+const YAMATO_GET_PRICE_SELECTOR = toFunctionSelector("getPrice()");
+const YAMATO_PAUSED_SELECTOR = toFunctionSelector("paused()");
+const YAMATO_PRIORITY_REGISTRY_SELECTOR = toFunctionSelector("priorityRegistry()");
+const PRIORITY_REGISTRY_YAMATO_SELECTOR = toFunctionSelector("yamato()");
+const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = toFunctionSelector("getRedeemablesCap()");
 const coin = { id: "cjpy-yamato" } as StablecoinMeta;
 const YAMATO_ADDRESS = "0x1111111111111111111111111111111111111111" as const;
 const PRICE_FEED_ADDRESS = "0x2222222222222222222222222222222222222222" as const;
@@ -118,9 +118,21 @@ function mockOnchainCalls(overrides: Record<string, `0x${string}` | null> = {}):
     [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(0n),
     ...overrides,
   };
-  vi.mocked(fetchOnchainRawCall).mockImplementation(
-    async ({ data }: { data: string }) => responses[data] ?? null,
-  );
+  const targets: Record<string, string> = {
+    [YAMATO_GET_STATES_SELECTOR]: YAMATO_ADDRESS,
+    [YAMATO_PRICE_FEED_SELECTOR]: YAMATO_ADDRESS,
+    [YAMATO_GET_PRICE_SELECTOR]: PRICE_FEED_ADDRESS,
+    [YAMATO_PAUSED_SELECTOR]: YAMATO_ADDRESS,
+    [YAMATO_PRIORITY_REGISTRY_SELECTOR]: YAMATO_ADDRESS,
+    [PRIORITY_REGISTRY_YAMATO_SELECTOR]: PRIORITY_REGISTRY_ADDRESS,
+    [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: PRIORITY_REGISTRY_ADDRESS,
+  };
+  vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data, contract, chain }) => {
+    if (chain !== "ethereum" || targets[data] !== contract.toLowerCase() || !(data in responses)) {
+      throw new Error(`Unexpected Yamato call: ${chain}/${contract}/${data}`);
+    }
+    return responses[data];
+  });
 }
 
 function makeConfig(params: Record<string, unknown> = { yamatoAddress: YAMATO_ADDRESS }): LiveReservesConfig {
@@ -315,6 +327,7 @@ describe("adaptYamatoStates", () => {
 describe("fetchYamatoReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    signal = new AbortController().signal;
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["ETH", 3_000]]));
   });
 

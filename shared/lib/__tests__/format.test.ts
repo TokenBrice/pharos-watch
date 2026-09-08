@@ -61,17 +61,13 @@ describe("formatScore", () => {
 });
 
 describe("formatPercent", () => {
-  it("formats positive value", () => {
-    expect(formatPercent(12.345)).toBe("12.35%");
-  });
-  it("formats zero", () => {
-    expect(formatPercent(0)).toBe("0.00%");
-  });
-  it("formats negative value", () => {
-    expect(formatPercent(-5.1)).toBe("-5.10%");
-  });
-  it("respects custom decimals", () => {
-    expect(formatPercent(12.345, 1)).toBe("12.3%");
+  it.each([
+    [12.345, undefined, "12.35%"],
+    [0, undefined, "0.00%"],
+    [-5.1, undefined, "-5.10%"],
+    [12.345, 1, "12.3%"],
+  ])("formats %s with decimals %s as %s", (value, decimals, expected) => {
+    expect(formatPercent(value, decimals)).toBe(expected);
   });
   it("returns dash for nullish", () => {
     expect(formatPercent(null)).toBe("-");
@@ -97,17 +93,13 @@ describe("formatDecimal", () => {
 });
 
 describe("formatSignedPercent", () => {
-  it("adds + prefix for positive", () => {
-    expect(formatSignedPercent(5.5)).toBe("+5.50%");
-  });
-  it("keeps - prefix for negative", () => {
-    expect(formatSignedPercent(-3.2)).toBe("-3.20%");
-  });
-  it("formats zero without sign", () => {
-    expect(formatSignedPercent(0)).toBe("0.00%");
-  });
-  it("returns dash for nullish", () => {
-    expect(formatSignedPercent(null)).toBe("-");
+  it.each([
+    [5.5, "+5.50%"],
+    [-3.2, "-3.20%"],
+    [0, "0.00%"],
+    [null, "-"],
+  ])("formats %s as %s", (value, expected) => {
+    expect(formatSignedPercent(value)).toBe(expected);
   });
   it("returns fallback for non-finite values", () => {
     expect(formatSignedPercent(Infinity)).toBe("-");
@@ -116,23 +108,15 @@ describe("formatSignedPercent", () => {
 });
 
 describe("formatElapsedSeconds", () => {
-  it("formats seconds", () => {
-    expect(formatElapsedSeconds(45)).toBe("45s");
-  });
-  it("formats minutes", () => {
-    expect(formatElapsedSeconds(300)).toBe("5m");
-  });
-  it("formats hours and minutes", () => {
-    expect(formatElapsedSeconds(5400)).toBe("1h 30m");
-  });
-  it("formats hours without extra minutes", () => {
-    expect(formatElapsedSeconds(7200)).toBe("2h");
-  });
-  it("formats days", () => {
-    expect(formatElapsedSeconds(172800)).toBe("2d");
-  });
-  it("returns 0s for zero", () => {
-    expect(formatElapsedSeconds(0)).toBe("0s");
+  it.each([
+    [45, "45s"],
+    [300, "5m"],
+    [5400, "1h 30m"],
+    [7200, "2h"],
+    [172800, "2d"],
+    [0, "0s"],
+  ])("formats %s seconds as %s", (value, expected) => {
+    expect(formatElapsedSeconds(value)).toBe(expected);
   });
 });
 
@@ -203,16 +187,12 @@ describe("formatCompactUsdWithOptions", () => {
 });
 
 describe("formatSignedCurrency", () => {
-  it("adds a plus sign for positive values", () => {
-    expect(formatSignedCurrency(1.25e9)).toBe("+$1.25B");
-  });
-
-  it("preserves the negative sign for negative values", () => {
-    expect(formatSignedCurrency(-250_000_000)).toBe("-$250.00M");
-  });
-
-  it("does not add a sign for zero", () => {
-    expect(formatSignedCurrency(0)).toBe("$0.00");
+  it.each([
+    [1.25e9, "+$1.25B"],
+    [-250_000_000, "-$250.00M"],
+    [0, "$0.00"],
+  ])("formats %s as %s", (value, expected) => {
+    expect(formatSignedCurrency(value)).toBe(expected);
   });
 
   it("returns N/A for non-finite values", () => {
@@ -596,8 +576,6 @@ describe("non-finite formatter fallbacks", () => {
       formatElapsedSeconds(Infinity),
     ];
 
-    expect(outputs).not.toContain("Infinity");
-    expect(outputs).not.toContain("NaN");
     expect(outputs).toEqual(["N/A", "N/A", "N/A", "N/A", "N/A"]);
   });
 });

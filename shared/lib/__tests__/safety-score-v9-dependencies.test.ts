@@ -233,6 +233,7 @@ describe("buildV9DependencyEvaluationPlan", () => {
         exitRoutes: [{ routeKey: "canonical-route", failureDomains: [canonicalDomain] }],
       }),
     ];
+    const before = structuredClone(assets);
 
     const plan = buildV9DependencyEvaluationPlan({ activeAssetIds: ["canonical", "display"], assets });
     expect(plan.commonModeGroups).toEqual([
@@ -244,7 +245,8 @@ describe("buildV9DependencyEvaluationPlan", () => {
         ],
       },
     ]);
-    expect(assets[0]!.exitRoutes[0]!.failureDomains[0]).toBe(displayDomain);
+    expect(displayDomain).toEqual({ kind: "chain", key: "Hyperliquid L1" });
+    expect(assets).toEqual(before);
   });
 
   it("joins unresolved chain case variants while collapsing same-path canonical collisions", () => {

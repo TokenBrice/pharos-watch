@@ -1,13 +1,29 @@
 // @vitest-environment jsdom
 
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { EventCard } from "@/components/tape/event-card";
 import type { TapeEvent } from "@shared/types/tape-event";
 
+let restoreClipboard: (() => void) | null = null;
+
+function stubClipboard(writeText: Mock) {
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+  restoreClipboard = () => {
+    restoreClipboard = null;
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+    else delete (navigator as { clipboard?: unknown }).clipboard;
+  };
+}
+
 afterEach(() => {
   vi.useRealTimers();
+  restoreClipboard?.();
 });
 
 function makeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
@@ -41,25 +57,124 @@ function makeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
   };
 }
 
+// One builder per enrichment class; overrides stay visible at the scenario.
+function scoreEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
+  return makeEvent({
+    type: "score.downgraded",
+    severity: "warning",
+    title: "USDX grade B → C+",
+    summary: "Safety grade downgraded from B to C+.",
+    coinId: "usdx-issuer",
+    payload: { prevGrade: "B", newGrade: "C+", prevScore: 70, newScore: 65 },
+    sourceUrl: "/stablecoin/usdx-issuer/#report-card",
+    ...overrides,
+  });
+}
+
+function methodologyEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
+  return makeEvent({
+    type: "methodology.bumped:pricing-pipeline",
+    severity: "info",
+    coinId: null,
+    title: "Pricing Pipeline v6.03: XOF secondary FX peg support",
+    summary: "West African CFA franc pegs now have explicit XOF metadata.",
+    payload: {
+      domain: "pricing-pipeline",
+      version: "6.03",
+      title: "XOF secondary FX peg support",
+      date: "2026-05-14",
+      effectiveAt: 1778769294,
+      impact: [],
+    },
+    sourceUrl: "/methodology/pricing-pipeline-changelog/",
+    ...overrides,
+  });
+}
+
+function freezeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
+  return makeEvent({
+    type: "freeze.unblocked",
+    severity: "info",
+    coinId: null,
+    chain: "Ethereum",
+    title: "USDT address unfrozen · Ethereum",
+    summary: "Issuer removed an address from the blacklist.",
+    payload: {
+      stablecoin: "USDT",
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      amountUsdAtEvent: 0,
+      sourceEventId: "ethereum-0xabc-0x1cf",
+    },
+    sourceUrl: "/freezewatch/",
+    ...overrides,
+  });
+}
+
+function cemeteryEvent(causeOfDeath: string, overrides: Partial<TapeEvent> = {}): TapeEvent {
+  return makeEvent({
+    type: "cemetery.entry.added",
+    severity: "notice",
+    title: "USDH entered cemetery (peak $14.0M)",
+    summary: "First Solana CDP, last one standing.",
+    coinId: "usdh-hubble-2026-05",
+    payload: {
+      symbol: "USDH",
+      name: "Hubble USDH",
+      causeOfDeath,
+      deathDate: "2026-05",
+      peakMcap: 14_000_000,
+      sourceUrl: "https://www.coingecko.com/en/coins/usdh",
+      sourceLabel: "CoinGecko",
+    },
+    sourceUrl: "/cemetery/",
+    ...overrides,
+  });
+}
+
+function lifecycleEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
+  return makeEvent({
+    type: "lifecycle.tracked.frozen",
+    severity: "notice",
+    title: "USDX archived",
+    summary: "Archived after issuer wind-down.",
+    coinId: "usdx-issuer",
+    payload: {
+      symbol: "USDX",
+      name: "USD Issuer",
+      frozenAt: "2026-04-30",
+      causeOfDeath: "regulatory",
+      sourceUrl: null,
+      sourceLabel: null,
+    },
+    sourceUrl: "/stablecoin/usdx-issuer/",
+    ...overrides,
+  });
+}
+
 describe("EventCard enrichment", () => {
   it("clears the permalink-copy feedback timer on unmount", async () => {
     vi.useFakeTimers();
-    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText: vi.fn().mockResolvedValue(undefined) },
-    });
+    stubClipboard(vi.fn().mockResolvedValue(undefined));
 
     const { unmount } = render(<EventCard event={makeEvent()} />);
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy permalink to this event" }));
       await Promise.resolve();
     });
+    // The copy landed, and copying scheduled exactly one 1.5s feedback reset.
+    expect(screen.getByRole("button", { name: "Permalink copied" })).toBeTruthy();
+    const resetCallIndex = setTimeoutSpy.mock.calls.findIndex((args) => args[1] === 1500);
+    expect(resetCallIndex).toBeGreaterThanOrEqual(0);
+    const feedbackTimerId = setTimeoutSpy.mock.results[resetCallIndex]!.value;
+
     unmount();
 
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-    clearTimeoutSpy.mockRestore();
+    // Unmount clears exactly the pending feedback timer, not an unrelated handle.
+    expect(clearTimeoutSpy.mock.calls.some((args) => args[0] === feedbackTimerId)).toBe(true);
   });
 
   it("depeg.opened renders signed bps text and an SR-only directional description", () => {
@@ -107,21 +222,7 @@ describe("EventCard enrichment", () => {
   });
 
   it("score.downgraded renders both grade pills and numeric score delta", () => {
-    const event = makeEvent({
-      type: "score.downgraded",
-      severity: "warning",
-      title: "USDX grade B → C+",
-      summary: "Safety grade downgraded from B to C+.",
-      coinId: "usdx-issuer",
-      payload: {
-        prevGrade: "B",
-        newGrade: "C+",
-        prevScore: 70,
-        newScore: 65,
-      },
-      sourceUrl: "/stablecoin/usdx-issuer/#report-card",
-    });
-    render(<EventCard event={event} />);
+    render(<EventCard event={scoreEvent()} />);
     // Grade pills render as separate siblings (not within the title).
     const grades = screen.getAllByText(/^(B|C\+)$/);
     expect(grades.length).toBeGreaterThanOrEqual(2);
@@ -130,19 +231,12 @@ describe("EventCard enrichment", () => {
   });
 
   it("score.upgraded with null prevScore omits the numeric delta but keeps the pills", () => {
-    const event = makeEvent({
+    const event = scoreEvent({
       type: "score.upgraded",
       severity: "info",
       title: "USDX grade C → B",
       summary: "Safety grade upgraded from C to B.",
-      coinId: "usdx-issuer",
-      payload: {
-        prevGrade: "C",
-        newGrade: "B",
-        prevScore: null,
-        newScore: 70,
-      },
-      sourceUrl: "/stablecoin/usdx-issuer/#report-card",
+      payload: { prevGrade: "C", newGrade: "B", prevScore: null, newScore: 70 },
     });
     render(<EventCard event={event} />);
     expect(screen.getByText(/^C$/)).toBeTruthy();
@@ -151,12 +245,7 @@ describe("EventCard enrichment", () => {
   });
 
   it("methodology.bumped renders up to two impact bullets and truncates the rest", () => {
-    const event = makeEvent({
-      type: "methodology.bumped:pricing-pipeline",
-      severity: "info",
-      coinId: null,
-      title: "Pricing Pipeline v6.03: XOF secondary FX peg support",
-      summary: "West African CFA franc pegs now have explicit XOF metadata.",
+    const event = methodologyEvent({
       payload: {
         domain: "pricing-pipeline",
         version: "6.03",
@@ -170,7 +259,6 @@ describe("EventCard enrichment", () => {
           "Fourth impact bullet should be hidden",
         ],
       },
-      sourceUrl: "/methodology/pricing-pipeline-changelog/",
     });
     render(<EventCard event={event} />);
     expect(screen.getByText("First impact bullet about XOF tracking")).toBeTruthy();
@@ -180,208 +268,179 @@ describe("EventCard enrichment", () => {
   });
 
   it("methodology.bumped with empty impact renders no bullet container", () => {
-    const event = makeEvent({
-      type: "methodology.bumped:safety-score",
-      severity: "info",
-      coinId: null,
-      title: "Safety Score v7.24: Tweak",
-      summary: "Tweak.",
-      payload: {
-        domain: "safety-score",
-        version: "7.24",
-        title: "Tweak",
-        date: "2026-05-10",
-        effectiveAt: 0,
-        impact: [],
-      },
-      sourceUrl: "/methodology/scoring-changelog/",
-    });
-    const { container } = render(<EventCard event={event} />);
+    const { container } = render(<EventCard event={methodologyEvent()} />);
     expect(container.querySelector("ul")).toBeNull();
   });
 
-  it("freeze.unblocked renders a USD badge when amount > 0", () => {
-    const event = makeEvent({
-      type: "freeze.unblocked",
-      severity: "info",
-      coinId: null,
-      chain: "Ethereum",
-      title: "USDT address unfrozen · Ethereum",
-      summary: "Issuer removed an address from the blacklist.",
-      payload: {
-        stablecoin: "USDT",
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        amountUsdAtEvent: 839738,
-        sourceEventId: "ethereum-0xabc-0x1cf",
-      },
-      sourceUrl: "/freezewatch/",
-    });
-    render(<EventCard event={event} />);
-    expect(screen.getByText("$840K")).toBeTruthy();
-    // Body badge says "unfrozen"; the sr-only row label uses the humanized
-    // type slug ("freeze unblocked"), so we assert both signals separately.
-    expect(screen.getByText(/^unfrozen$/)).toBeTruthy();
-    expect(screen.getByText(/freeze unblocked/)).toBeTruthy();
+  it.each([
+    {
+      action: "unblocked",
+      amountUsdAtEvent: 839_738,
+      badge: "$840K",
+    },
+    {
+      action: "unblocked",
+      amountUsdAtEvent: 0,
+      badge: null,
+    },
+    {
+      action: "blocked",
+      amountUsdAtEvent: 343_007,
+      badge: "$343K",
+    },
+  ])("freeze.$action with amount $amountUsdAtEvent renders action and badge signals", ({ action, amountUsdAtEvent, badge }) => {
+    const blocked = action === "blocked";
+    render(
+      <EventCard
+        event={freezeEvent({
+          type: blocked ? "freeze.blocked" : "freeze.unblocked",
+          severity: blocked ? "notice" : "info",
+          chain: blocked ? "Tron" : "Ethereum",
+          title: blocked ? "USDT freeze $343k · Tron" : "USDT address unfrozen · Ethereum",
+          payload: {
+            stablecoin: "USDT",
+            chainId: blocked ? "tron" : "ethereum",
+            chainName: blocked ? "Tron" : "Ethereum",
+            amountUsdAtEvent,
+            sourceEventId: blocked ? "tron-0xdef-1" : "ethereum-0xabc-0x1cf",
+          },
+        })}
+      />,
+    );
+    if (badge === null) {
+      // Zero-amount freezes render no body enrichment at all — no badge and
+      // no action label.
+      expect(screen.queryByText(/^\$\d/)).toBeNull();
+      expect(screen.queryByText("unfrozen")).toBeNull();
+      expect(screen.queryByText("frozen")).toBeNull();
+    } else {
+      expect(screen.getByText(badge)).toBeTruthy();
+      expect(screen.getByText(blocked ? "frozen" : "unfrozen")).toBeTruthy();
+      expect(screen.getByText((content) => content.includes(`freeze ${action}`))).toBeTruthy();
+    }
   });
 
-  it("freeze.unblocked with zero amount renders no body badge", () => {
-    const event = makeEvent({
-      type: "freeze.unblocked",
-      severity: "info",
-      coinId: null,
-      chain: "Ethereum",
-      title: "USDT address unfrozen · Ethereum",
-      summary: "Issuer removed an address from the blacklist.",
-      payload: {
-        stablecoin: "USDT",
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        amountUsdAtEvent: 0,
-        sourceEventId: "ethereum-0xabc-0x1cf",
-      },
-      sourceUrl: "/freezewatch/",
-    });
-    render(<EventCard event={event} />);
-    // Amount badge not rendered when amount is 0; the word still appears in
-    // the title which we cannot scope away here.
-    expect(screen.queryByText(/^\$\d/)).toBeNull();
-  });
-
-  it("freeze.blocked renders a USD badge labeled 'frozen'", () => {
-    const event = makeEvent({
-      type: "freeze.blocked",
-      severity: "notice",
-      coinId: null,
-      chain: "Tron",
-      title: "USDT freeze $343k · Tron",
-      summary: "Issuer froze $343k of USDT on Tron.",
-      payload: {
-        stablecoin: "USDT",
-        chainId: "tron",
-        chainName: "Tron",
-        amountUsdAtEvent: 343007,
-        sourceEventId: "tron-0xdef-1",
-      },
-      sourceUrl: "/freezewatch/",
-    });
-    render(<EventCard event={event} />);
-    expect(screen.getByText("$343K")).toBeTruthy();
-    expect(screen.getByText(/frozen/)).toBeTruthy();
-  });
-
-  it("cemetery renders the cause-of-death pill", () => {
-    const event = makeEvent({
-      type: "cemetery.entry.added",
-      severity: "notice",
-      title: "USDH entered cemetery (peak $14.0M)",
-      summary: "First Solana CDP, last one standing.",
-      coinId: "usdh-hubble-2026-05",
-      payload: {
-        symbol: "USDH",
-        name: "Hubble USDH",
-        causeOfDeath: "abandoned",
-        deathDate: "2026-05",
-        peakMcap: 14_000_000,
-        sourceUrl: "https://www.coingecko.com/en/coins/usdh",
-        sourceLabel: "CoinGecko",
-      },
-      sourceUrl: "/cemetery/",
-    });
-    render(<EventCard event={event} />);
-    expect(screen.getByText("abandoned")).toBeTruthy();
-  });
-
-  it("cemetery falls back to malformed prototype-key cause strings", () => {
-    const event = makeEvent({
-      type: "cemetery.entry.added",
-      severity: "notice",
-      title: "USDH entered cemetery (peak $14.0M)",
-      summary: "First Solana CDP, last one standing.",
-      coinId: "usdh-hubble-2026-05",
-      payload: {
-        symbol: "USDH",
-        name: "Hubble USDH",
-        causeOfDeath: "constructor",
-        deathDate: "2026-05",
-        peakMcap: 14_000_000,
-        sourceUrl: "https://www.coingecko.com/en/coins/usdh",
-        sourceLabel: "CoinGecko",
-      },
-      sourceUrl: "/cemetery/",
-    });
-    render(<EventCard event={event} />);
-    expect(screen.getByText("constructor")).toBeTruthy();
+  it.each(["abandoned", "constructor"])("cemetery renders the %s cause-of-death pill", (causeOfDeath) => {
+    render(<EventCard event={cemeteryEvent(causeOfDeath)} />);
+    expect(screen.getByText(causeOfDeath)).toBeTruthy();
   });
 
   it("lifecycle renders the cause pill and the frozen date in absolute form", () => {
-    const event = makeEvent({
-      type: "lifecycle.tracked.frozen",
-      severity: "notice",
-      title: "USDX archived",
-      summary: "Archived after issuer wind-down.",
-      coinId: "usdx-issuer",
-      payload: {
-        symbol: "USDX",
-        name: "USD Issuer",
-        frozenAt: "2026-04-30",
-        causeOfDeath: "regulatory",
-        sourceUrl: null,
-        sourceLabel: null,
-      },
-      sourceUrl: "/stablecoin/usdx-issuer/",
-    });
-    render(<EventCard event={event} />);
+    render(<EventCard event={lifecycleEvent()} />);
     expect(screen.getByText("regulatory")).toBeTruthy();
     expect(screen.getByText(/Archived Apr 30, 2026/)).toBeTruthy();
   });
 
-  it("lifecycle without payload renders neither pill nor date", () => {
+  it("drops the cause pill and archived date when the lifecycle payload clears", () => {
+    const { rerender } = render(<EventCard event={lifecycleEvent()} />);
+    expect(screen.getByText("regulatory")).toBeTruthy();
+    expect(screen.getByText(/Archived Apr 30, 2026/)).toBeTruthy();
+
+    rerender(
+      <EventCard
+        event={lifecycleEvent({
+          payload: {
+            symbol: "USDX",
+            name: "USD Issuer",
+            frozenAt: null,
+            causeOfDeath: null,
+            sourceUrl: null,
+            sourceLabel: null,
+          },
+        })}
+      />,
+    );
+    expect(screen.queryByText("regulatory")).toBeNull();
+    expect(screen.queryByText(/Archived Apr 30, 2026/)).toBeNull();
+  });
+
+  it("psi.band.shifted_up renders band pills with one-decimal score delta", () => {
     const event = makeEvent({
-      type: "lifecycle.tracked.frozen",
-      severity: "notice",
-      title: "USDX archived",
-      summary: "",
+      type: "psi.band.shifted_up",
+      severity: "info",
+      title: "USDX band B → A",
+      summary: "Safety band improved.",
       coinId: "usdx-issuer",
-      payload: {
-        symbol: "USDX",
-        name: "USD Issuer",
-        frozenAt: null,
-        causeOfDeath: null,
-        sourceUrl: null,
-        sourceLabel: null,
-      },
-      sourceUrl: "/stablecoin/usdx-issuer/",
+      payload: { prevBand: "B", newBand: "A", prevScore: 62.5, newScore: 64.3 },
+      sourceUrl: "/stablecoin/usdx-issuer/#report-card",
     });
     render(<EventCard event={event} />);
-    expect(screen.queryByText(/Frozen /)).toBeNull();
+    expect(screen.getByText(/^B$/)).toBeTruthy();
+    expect(screen.getByText(/^A$/)).toBeTruthy();
+    expect(screen.getByText("62.5 → 64.3")).toBeTruthy();
+    expect(screen.getByText("(+1.8)")).toBeTruthy();
+  });
+
+  it("yield.pys_dropped rounds fractional PYS scores in the pills and delta", () => {
+    const event = makeEvent({
+      type: "yield.pys_dropped",
+      severity: "warning",
+      title: "USDX PYS dropped",
+      summary: "PYS fell below threshold.",
+      coinId: "usdx-issuer",
+      payload: { prevScore: 81.6, newScore: 74.4 },
+      sourceUrl: "/stablecoin/usdx-issuer/#yields",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.getByText(/^82$/)).toBeTruthy();
+    expect(screen.getByText(/^74$/)).toBeTruthy();
+    expect(screen.getByText("(-7)")).toBeTruthy();
+  });
+
+  it("yield.warning_emitted prefers newSignals and truncates after three pills", () => {
+    const event = makeEvent({
+      type: "yield.warning_emitted",
+      severity: "warning",
+      title: "USDX yield warnings",
+      summary: "New yield signals emitted.",
+      coinId: "usdx-issuer",
+      payload: {
+        newSignals: ["depeg_watch", "liquidity_drop", "oracle_stale", "utilization_spike"],
+        signals: ["legacy_signal"],
+      },
+      sourceUrl: "/stablecoin/usdx-issuer/#yields",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.getByText("depeg_watch")).toBeTruthy();
+    expect(screen.getByText("liquidity_drop")).toBeTruthy();
+    expect(screen.getByText("oracle_stale")).toBeTruthy();
+    expect(screen.getByText("+1 more")).toBeTruthy();
+    // Only newSignals is shown: the superseded legacy signal list must not leak.
+    expect(screen.queryByText("utilization_spike")).toBeNull();
+    expect(screen.queryByText("legacy_signal")).toBeNull();
+  });
+
+  it.each([
+    { direction: "mint", amountUsd: 2_500_000, badge: "$2.5M", verb: "minted" },
+    { direction: "burn", amountUsd: 750_000, badge: "$750K", verb: "burned" },
+    { direction: "mint", amountUsd: 0, badge: null, verb: null },
+  ])("mint_burn $direction of $amountUsd renders the flow enrichment", ({ direction, amountUsd, badge, verb }) => {
+    const event = makeEvent({
+      type: "mint_burn.flow_detected",
+      severity: "info",
+      title: "USDC treasury flow detected",
+      summary: "Net treasury flow detected.",
+      coinId: "usdc-circle",
+      payload: { amountUsd, direction },
+      sourceUrl: "/stablecoin/usdc-circle/",
+    });
+    render(<EventCard event={event} />);
+    if (badge === null || verb === null) {
+      // Zero-amount flows render no enrichment at all.
+      expect(screen.queryByText(/^\$\d/)).toBeNull();
+      expect(screen.queryByText("minted")).toBeNull();
+      expect(screen.queryByText("burned")).toBeNull();
+    } else {
+      expect(screen.getByText(badge)).toBeTruthy();
+      expect(screen.getByText(verb)).toBeTruthy();
+    }
   });
 
   it("preserves a single anchor wrapper across all enrichment paths", () => {
     const cases: TapeEvent[] = [
       makeEvent(),
-      makeEvent({
-        type: "score.downgraded",
-        severity: "warning",
-        title: "USDX grade B → C+",
-        coinId: "usdx-issuer",
-        payload: { prevGrade: "B", newGrade: "C+", prevScore: 70, newScore: 65 },
-        sourceUrl: "/stablecoin/usdx-issuer/#report-card",
-      }),
-      makeEvent({
-        type: "methodology.bumped:pricing-pipeline",
-        coinId: null,
-        title: "Pricing Pipeline v6.03",
-        payload: {
-          domain: "pricing-pipeline",
-          version: "6.03",
-          title: "X",
-          date: "2026-05-14",
-          effectiveAt: 0,
-          impact: ["one", "two"],
-        },
-        sourceUrl: "/methodology/pricing-pipeline-changelog/",
-      }),
+      scoreEvent(),
+      methodologyEvent(),
     ];
     for (const event of cases) {
       const { container, unmount } = render(<EventCard event={event} />);

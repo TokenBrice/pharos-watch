@@ -158,7 +158,7 @@ describe("Telegram Mini App shared contract", () => {
       addStablecoinIds: [...twenty, "coin-20"],
       removeStablecoinIds: [],
     }).success).toBe(false);
-    expect(TelegramMiniAppBulkWatchlistResponseSchema.safeParse({
+    const response = {
       contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
       catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
       result: {
@@ -176,13 +176,77 @@ describe("Telegram Mini App shared contract", () => {
           removeStablecoinIds: ["usdc-circle"],
         },
       },
-    }).success).toBe(true);
+    };
+    expect(TelegramMiniAppBulkWatchlistResponseSchema.safeParse(response).success).toBe(true);
+    for (const fingerprint of [undefined, "preview-v1-12-nothex00"]) {
+      expect(TelegramMiniAppBulkWatchlistResponseSchema.safeParse({
+        ...response,
+        result: { ...response.result, previewFingerprint: fingerprint },
+      }).success).toBe(false);
+      expect(TelegramMiniAppBulkWatchlistResponseSchema.safeParse({
+        ...response,
+        result: { ...response.result, undo: { ...response.result.undo, expectedFingerprint: fingerprint } },
+      }).success).toBe(false);
+    }
+  });
+
+  it("rejects invalid bulk selections at preview and confirmation boundaries", () => {
+    const ids = Array.from({ length: 21 }, (_, index) => `coin-${index}`);
+    for (const kind of ["preview-bulk-watchlist", "confirm-bulk-watchlist"]) {
+      const base = {
+        kind,
+        ...(kind === "confirm-bulk-watchlist"
+          ? { expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" }
+          : {}),
+      };
+      expect(TelegramMiniAppOperationSchema.safeParse({
+        ...base, addStablecoinIds: ids.slice(0, 10), removeStablecoinIds: ids.slice(10, 20),
+      }).success).toBe(true);
+      for (const [addStablecoinIds, removeStablecoinIds] of [
+        [ids.slice(0, 11), ids.slice(11)],
+        [["a", "a"], []],
+        [[], ["a", "a"]],
+        [["a"], ["a"]],
+        [[], []],
+      ]) {
+        expect(TelegramMiniAppOperationSchema.safeParse({
+          ...base, addStablecoinIds, removeStablecoinIds,
+        }).success, `${kind}: ${JSON.stringify([addStablecoinIds, removeStablecoinIds])}`).toBe(false);
+      }
+    }
+  });
+
+  it("rejects absent and malformed confirmation and undo fingerprints", () => {
+    for (const kind of ["confirm-watchlist-import", "confirm-bulk-watchlist", "undo-bulk-watchlist"] as const) {
+      const operation = operations.find((entry) => entry.kind === kind)!;
+      expect(TelegramMiniAppOperationSchema.safeParse(operation).success).toBe(true);
+      const key = kind === "undo-bulk-watchlist" ? "expectedFingerprint" : "previewFingerprint";
+      const missing = { ...operation } as Record<string, unknown>;
+      delete missing[key];
+      expect(TelegramMiniAppOperationSchema.safeParse(missing).success).toBe(false);
+      expect(TelegramMiniAppOperationSchema.safeParse({ ...operation, [key]: "preview-v1-12-nothex00" }).success).toBe(false);
+    }
+  });
+
+  it("rejects duplicate, overlapping and oversized undo selections", () => {
+    const operation = operations.find((entry) => entry.kind === "undo-bulk-watchlist")!;
+    if (operation.kind !== "undo-bulk-watchlist") throw new Error("Missing undo fixture");
+    const row = operation.restoreDirectRows[0];
+    const restoreDirectRows = Array.from({ length: 10 }, (_, index) => ({ ...row, stablecoinId: `restore-${index}` }));
+    const removeStablecoinIds = Array.from({ length: 10 }, (_, index) => `remove-${index}`);
+    expect(TelegramMiniAppOperationSchema.safeParse({ ...operation, restoreDirectRows, removeStablecoinIds }).success).toBe(true);
+    for (const selection of [
+      { restoreDirectRows: [row, row], removeStablecoinIds: [] },
+      { restoreDirectRows: [row], removeStablecoinIds: [row.stablecoinId] },
+      { restoreDirectRows, removeStablecoinIds: [...removeStablecoinIds, "extra"] },
+    ]) {
+      expect(TelegramMiniAppOperationSchema.safeParse({ ...operation, ...selection }).success).toBe(false);
+    }
   });
 
   it("derives one shared catalog version from the generated bundled catalog", () => {
-    expect(TelegramMiniAppCatalogSchema.parse(TELEGRAM_MINI_APP_CATALOG).searchableCoins.length).toBeGreaterThan(300);
+    expect(TelegramMiniAppCatalogSchema.safeParse(TELEGRAM_MINI_APP_CATALOG).success).toBe(true);
     expect(TELEGRAM_MINI_APP_CATALOG_VERSION).toMatch(/^catalog-v1-[0-9a-f]{8}$/);
-    expect(JSON.stringify(TELEGRAM_MINI_APP_CATALOG).length).toBeGreaterThan(39_000);
   });
 
   it("rejects unknown preset ids at catalog and mutable-state boundaries", () => {

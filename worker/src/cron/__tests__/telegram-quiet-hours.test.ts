@@ -6,12 +6,15 @@ import {
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
 } from "../../lib/telegram/quiet-hours";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
+const { open, closeAll } = createLatestSchemaFixtureTracker();
 
 afterEach(() => {
   resetQuietHoursFallbackTelemetryForTests();
+  closeAll();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -27,6 +30,7 @@ describe("isQuietHoursActive", () => {
 
   it("handles same-day quiet windows", () => {
     expect(isQuietHoursActive(hour(10), true, 9, 17)).toBe(true);
+    expect(isQuietHoursActive(hour(9), true, 9, 17)).toBe(true);
     expect(isQuietHoursActive(hour(17), true, 9, 17)).toBe(false);
     expect(isQuietHoursActive(hour(8), true, 9, 17)).toBe(false);
   });
@@ -47,6 +51,32 @@ describe("isQuietHoursActive", () => {
     // Same instant, UTC interpretation only matches 12.
     expect(isQuietHoursActive(noonUtcWinter, true, 13, 14, null)).toBe(false);
     expect(isQuietHoursActive(noonUtcWinter, true, 12, 13, null)).toBe(true);
+  });
+
+  it("follows the spring-forward offset and both occurrences of the fall-back hour", () => {
+    const active = (iso: string, start: number, end: number) =>
+      isQuietHoursActive(Date.parse(iso) / 1000, true, start, end, "America/New_York");
+    expect(active("2026-03-08T06:59:59Z", 3, 4)).toBe(false);
+    expect(active("2026-03-08T07:00:00Z", 3, 4)).toBe(true);
+    expect(active("2026-11-01T05:00:00Z", 1, 2)).toBe(true);
+    expect(active("2026-11-01T06:00:00Z", 1, 2)).toBe(true);
+    expect(active("2026-11-01T07:00:00Z", 1, 2)).toBe(false);
+  });
+
+  it("resumes fallback telemetry exactly one hour after the previous log", () => {
+    vi.useFakeTimers();
+    const start = Date.UTC(2026, 0, 15, 12);
+    vi.setSystemTime(start);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const evaluate = () => isQuietHoursActive(start / 1000, true, 12, 13, "Mars/Olympus_Mons");
+    expect(evaluate()).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(start + 3_600_000 - 1);
+    expect(evaluate()).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(start + 3_600_000);
+    expect(evaluate()).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 
   it("falls back to UTC when the timezone is rejected by ICU", () => {
@@ -99,45 +129,16 @@ interface DisambiguationRow {
   expires_at: number;
 }
 
-function createStubDb(rows: DisambiguationRow[]): D1Database {
-  function prepare(sql: string): D1PreparedStatement {
-    let bound: unknown[] = [];
-    const stmt = {
-      bind: (...args: unknown[]) => {
-        bound = args;
-        return stmt as unknown as D1PreparedStatement;
-      },
-      run: async () => {
-        if (sql.includes("DELETE FROM telegram_pending_disambiguation") && sql.includes("ORDER BY expires_at ASC")) {
-          const [cutoff, limit] = bound as [number, number];
-          let removed = 0;
-          const doomed = rows
-            .map((row, index) => ({ row, index }))
-            .filter(({ row }) => row.expires_at < cutoff)
-            .sort((a, b) => a.row.expires_at - b.row.expires_at)
-            .slice(0, limit)
-            .map(({ index }) => index)
-            .sort((a, b) => b - a);
-          for (const index of doomed) {
-            rows.splice(index, 1);
-            removed += 1;
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        return { success: true, meta: { changes: 0 } };
-      },
-      first: async () => null,
-      all: async () => ({ results: [], success: true, meta: {} }),
-    };
-    return stmt as unknown as D1PreparedStatement;
-  }
-
-  return makeNoopD1({
-    prepare,
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  });
+function setupDisambiguations(rows: DisambiguationRow[]) {
+  const { sqlite, db } = open();
+  const insert = sqlite.prepare(`INSERT INTO telegram_pending_disambiguation
+    (chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at)
+    VALUES (?, '[]', '[]', 'USD', '[]', '[]', ?)`);
+  for (const row of rows) insert.run(row.chat_id, row.expires_at);
+  const remaining = () => sqlite.prepare(
+    "SELECT chat_id FROM telegram_pending_disambiguation ORDER BY chat_id",
+  ).all().map((row) => row.chat_id);
+  return { db, remaining };
 }
 
 describe("cleanExpiredDisambiguations", () => {
@@ -155,12 +156,12 @@ describe("cleanExpiredDisambiguations", () => {
 
   it("throws before any D1 work when the signal is already aborted", async () => {
     const rows: DisambiguationRow[] = [{ chat_id: "1", expires_at: NOW_SEC - GRACE_SEC - 60 }];
-    const db = createStubDb(rows);
+    const { db, remaining } = setupDisambiguations(rows);
     const controller = new AbortController();
     controller.abort(new Error("aborted"));
 
     await expect(cleanExpiredDisambiguations(db, controller.signal)).rejects.toThrow("aborted");
-    expect(rows).toHaveLength(1);
+    expect(remaining()).toEqual(["1"]);
   });
 
   it("removes rows whose expires_at is older than the grace window", async () => {
@@ -168,11 +169,11 @@ describe("cleanExpiredDisambiguations", () => {
       { chat_id: "old", expires_at: NOW_SEC - GRACE_SEC - 60 },
       { chat_id: "older", expires_at: NOW_SEC - GRACE_SEC - 3600 },
     ];
-    const db = createStubDb(rows);
+    const { db, remaining } = setupDisambiguations(rows);
 
     const result = await cleanExpiredDisambiguations(db);
 
-    expect(rows).toHaveLength(0);
+    expect(remaining()).toEqual([]);
     expect(result.itemCount).toBe(2);
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata!) as {
@@ -191,13 +192,14 @@ describe("cleanExpiredDisambiguations", () => {
       { chat_id: "fresh-expired", expires_at: NOW_SEC - 30 },
       // Expired exactly at the cutoff boundary — strict `<` keeps it.
       { chat_id: "boundary", expires_at: NOW_SEC - GRACE_SEC },
+      { chat_id: "past-cutoff", expires_at: NOW_SEC - GRACE_SEC - 1 },
     ];
-    const db = createStubDb(rows);
+    const { db, remaining } = setupDisambiguations(rows);
 
     const result = await cleanExpiredDisambiguations(db);
 
-    expect(rows.map((row) => row.chat_id)).toEqual(["active", "fresh-expired", "boundary"]);
-    expect(result.itemCount).toBe(0);
+    expect(remaining()).toEqual(["active", "boundary", "fresh-expired"]);
+    expect(result.itemCount).toBe(1);
   });
 
   it("deletes expired rows in bounded batches", async () => {
@@ -205,11 +207,11 @@ describe("cleanExpiredDisambiguations", () => {
       chat_id: `old-${index}`,
       expires_at: NOW_SEC - GRACE_SEC - 60 - index,
     }));
-    const db = createStubDb(rows);
+    const { db, remaining } = setupDisambiguations(rows);
 
     const result = await cleanExpiredDisambiguations(db);
 
-    expect(rows).toHaveLength(0);
+    expect(remaining()).toEqual([]);
     expect(result.itemCount).toBe(501);
     const metadata = JSON.parse(result.metadata!) as {
       batches: number;
@@ -224,11 +226,11 @@ describe("cleanExpiredDisambiguations", () => {
       chat_id: `old-${index}`,
       expires_at: NOW_SEC - GRACE_SEC - 60 - index,
     }));
-    const db = createStubDb(rows);
+    const { db, remaining } = setupDisambiguations(rows);
 
     const result = await cleanExpiredDisambiguations(db);
 
-    expect(rows).toHaveLength(1);
+    expect(remaining()).toEqual(["old-0"]);
     expect(result.itemCount).toBe(5_000);
     const metadata = JSON.parse(result.metadata!) as {
       batches: number;
@@ -239,7 +241,7 @@ describe("cleanExpiredDisambiguations", () => {
   });
 
   it("reports zero cleaned when the table is empty", async () => {
-    const db = createStubDb([]);
+    const { db } = setupDisambiguations([]);
 
     const result = await cleanExpiredDisambiguations(db);
 

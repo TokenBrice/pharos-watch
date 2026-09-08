@@ -17,9 +17,17 @@ describe("scoreToRadius", () => {
   it("returns outerR when score is at band maximum", () => {
     expect(scoreToRadius(35, "WATCH")).toBeCloseTo(208);
   });
-  it("returns midpoint for mid-band score", () => {
-    expect(scoreToRadius(25, "WATCH")).toBeGreaterThan(178);
-    expect(scoreToRadius(25, "WATCH")).toBeLessThan(208);
+  it("interpolates linearly, placing the true midpoint score at the mid radius", () => {
+    // WATCH spans scores 16..35 over radii 178..208, so 25.5 is the exact midpoint.
+    expect(scoreToRadius(25.5, "WATCH")).toBeCloseTo(193);
+    const lowerStep = scoreToRadius(25, "WATCH") - scoreToRadius(20, "WATCH");
+    const upperStep = scoreToRadius(30, "WATCH") - scoreToRadius(25, "WATCH");
+    expect(lowerStep).toBeGreaterThan(0);
+    expect(lowerStep).toBeCloseTo(upperStep);
+  });
+  it("clamps scores outside the band to the band's radial zone", () => {
+    expect(scoreToRadius(10, "WATCH")).toBeCloseTo(178);
+    expect(scoreToRadius(90, "WATCH")).toBeCloseTo(208);
   });
   it("returns innerR for ALERT minimum", () => {
     expect(scoreToRadius(36, "ALERT")).toBeCloseTo(143);
@@ -46,7 +54,7 @@ describe("deterministicOffset", () => {
     expect(deterministicOffset("42")).toBe(deterministicOffset("42"));
   });
   it("returns different values for different ids", () => {
-    // "1" has charSum=49, "999" has charSum=147 — different modular offsets
+    // Distinct ids must land on distinct angular offsets.
     expect(deterministicOffset("1")).not.toBe(deterministicOffset("999"));
   });
   it("returns a finite number in [0, π/6)", () => {
@@ -73,13 +81,19 @@ describe("deterministicRadiusOffset", () => {
   it("returns 0 for empty string", () => {
     expect(deterministicRadiusOffset("", 26)).toBe(0);
   });
-  it("uses the same charCode sum as deterministicOffset", () => {
-    // "1" has charSum=49; 49 % 26 = 23
-    expect(deterministicRadiusOffset("1", 26)).toBe(23);
-  });
-  it("respects the zoneWidth parameter", () => {
-    // "1" charSum=49; 49 % 10 = 9
-    expect(deterministicRadiusOffset("1", 10)).toBe(9);
+  it("keeps representative ids deterministic and inside every zone width", () => {
+    const ids = ["1", "999", "usdc-circle", "dai-maker"];
+    for (const width of [10, 26, 45]) {
+      const offsets = ids.map((id) => deterministicRadiusOffset(id, width));
+      for (const offset of offsets) {
+        expect(Number.isInteger(offset)).toBe(true);
+        expect(offset).toBeGreaterThanOrEqual(0);
+        expect(offset).toBeLessThan(width);
+      }
+      // Distinct ids must not collapse onto one radius inside the zone.
+      expect(new Set(offsets).size).toBe(ids.length);
+      expect(offsets).toEqual(ids.map((id) => deterministicRadiusOffset(id, width)));
+    }
   });
   it("returns 0 for zoneWidth of 0", () => {
     expect(deterministicRadiusOffset("abc", 0)).toBe(0);

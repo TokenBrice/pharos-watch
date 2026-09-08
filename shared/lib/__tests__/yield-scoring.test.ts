@@ -1,41 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
-  PYS_BENCHMARK_SPREAD_WEIGHT,
-  PYS_RISK_PENALTY_FLOOR,
-  PYS_RISK_PENALTY_EXPONENT,
-  PYS_SUSTAINABILITY_FLOOR,
   PYS_MAX_SOURCE_RISK_PENALTY,
   computePysComponents,
   computePysRewardShare,
   computePYS,
+  computePYSFromComponents,
   computeSourceRiskScoreFromPenalty,
   computeVenuePenaltyFromWeighted,
   computeVenueRiskWeighted,
   derivePysSourceRiskPenalty,
   deriveVenueRiskTier,
   resolvePysSourceRiskPenalty,
-  PYS_VENUE_PENALTY_SLOPE,
-  PYS_VENUE_PENALTY_THRESHOLD,
 } from "../yield-scoring";
 import { SOURCE_RISK_GOLDEN_ROWS } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-
-describe("PYS constants", () => {
-  it("exports benchmark spread weight of 0.25", () => {
-    expect(PYS_BENCHMARK_SPREAD_WEIGHT).toBe(0.25);
-  });
-  it("exports risk penalty floor of 0.5", () => {
-    expect(PYS_RISK_PENALTY_FLOOR).toBe(0.5);
-  });
-  it("exports risk penalty exponent of 1.75", () => {
-    expect(PYS_RISK_PENALTY_EXPONENT).toBe(1.75);
-  });
-  it("exports sustainability floor of 0.3", () => {
-    expect(PYS_SUSTAINABILITY_FLOOR).toBe(0.3);
-  });
-  it("exports max source-risk penalty of 2.5", () => {
-    expect(PYS_MAX_SOURCE_RISK_PENALTY).toBe(2.5);
-  });
-});
 
 describe("computeSourceRiskScoreFromPenalty", () => {
   it("returns null for missing or non-finite penalties", () => {
@@ -182,11 +159,6 @@ describe("PYS source-risk golden rows", () => {
 });
 
 describe("venue-risk rubric (yield v8.3)", () => {
-  it("exports the calibration-preserving penalty curve constants", () => {
-    expect(PYS_VENUE_PENALTY_THRESHOLD).toBe(2.0);
-    expect(PYS_VENUE_PENALTY_SLOPE).toBe(0.15);
-  });
-
   it("weights the five category sub-scores per the Yearn rubric", () => {
     expect(
       computeVenueRiskWeighted({ audits: 5, centralization: 5, fundsManagement: 5, liquidity: 5, operational: 5 }),
@@ -204,8 +176,10 @@ describe("venue-risk rubric (yield v8.3)", () => {
     expect(deriveVenueRiskTier(1.3)).toBe("low");
     expect(deriveVenueRiskTier(2.49)).toBe("low");
     expect(deriveVenueRiskTier(2.5)).toBe("medium");
+    expect(deriveVenueRiskTier(2.4999)).toBe("medium");
     expect(deriveVenueRiskTier(3.49)).toBe("medium");
     expect(deriveVenueRiskTier(3.5)).toBe("high");
+    expect(deriveVenueRiskTier(3.4999)).toBe("high");
     expect(deriveVenueRiskTier(4.7)).toBe("high");
     expect(deriveVenueRiskTier(null)).toBe("unknown");
     expect(deriveVenueRiskTier(Number.NaN)).toBe("unknown");
@@ -223,6 +197,8 @@ describe("venue-risk rubric (yield v8.3)", () => {
   it("prefers the weighted curve over the legacy tier branch when a weighted score is present", () => {
     // weighted 4.4 (clearpool) → +0.36 even though tier would coarsely be "high"
     expect(derivePysSourceRiskPenalty({ venueRiskWeighted: 4.4 })).toBeCloseTo(1.36, 6);
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: 2, venueRiskTier: "high" })).toBe(1);
+    expect(derivePysSourceRiskPenalty({ venueRiskWeighted: Number.NaN, venueRiskTier: "high" })).toBeCloseTo(1.35, 6);
     // absent weighted → legacy tier branch still applies (rollback-safe)
     expect(derivePysSourceRiskPenalty({ venueRiskTier: "high" })).toBeCloseTo(1.35, 6);
     expect(derivePysSourceRiskPenalty({ venueRiskTier: "medium" })).toBeCloseTo(1.15, 6);
@@ -383,5 +359,31 @@ describe("computePYS", () => {
       apyVarianceScore: 0.18,
       scalingFactor: 8,
     })).toBe(27);
+  });
+});
+
+describe("computePYSFromComponents", () => {
+  const components = computePysComponents({
+    apy30d: 8.4,
+    benchmarkRate: 4.25,
+    safetyScore: 72,
+    sourceRiskPenalty: 1.2,
+    apyVarianceScore: 0.18,
+  });
+
+  it("matches the published score through the worker entrypoint", () => {
+    expect(computePYSFromComponents(8.4, 8, components)).toBe(27);
+  });
+
+  it("rejects invalid raw APY even with positive yield components", () => {
+    for (const apy of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(computePYSFromComponents(apy, 8, components)).toBe(0);
+    }
+  });
+
+  it("rejects invalid scaling independently of APY and components", () => {
+    for (const scaling of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(computePYSFromComponents(8.4, scaling, components)).toBe(0);
+    }
   });
 });

@@ -3,107 +3,31 @@ import { CRON_CONNECTION_BUDGET_ENTRIES } from "@shared/lib/cron-jobs";
 import { evaluateCronConnectionBudget } from "./check-cron-connection-budget";
 
 describe("check-cron-connection-budget", () => {
-  it("models sync-stablecoins at the bounded provider fanout peak", () => {
-    const report = evaluateCronConnectionBudget();
-    const quarterHourly = report.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly");
-    const syncStablecoins = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "sync-stablecoins");
-
-    expect(syncStablecoins?.maxConnections).toBe(4);
-    expect(quarterHourly?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
-    expect(quarterHourly?.chains).toEqual([
-      {
-        chainKey: "chain-1",
-        jobs: [
-          "sync-fx-rates",
-          "sync-stablecoins",
-          "snapshot-supply",
-          "snapshot-chain-supply",
-        ],
-        peak: 4,
-      },
-    ]);
-    expect(quarterHourly?.totalConnections).toBe(4);
-    expect(report.failed).toBe(false);
+  const reviewedReport = evaluateCronConnectionBudget();
+  it("keeps the reviewed registry within its budget", () => {
+    expect(reviewedReport.failed).toBe(false);
+    expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
+    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset")?.totalConnections).toBe(5);
+    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
   });
 
-  it("models the V9 supply and publication lanes without adding publication connection pressure", () => {
-    const report = evaluateCronConnectionBudget();
-    const v9Supply = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9SupplyAttributionOffset");
-    const depegResolver = report.triggerReports.find((trigger) => trigger.scheduleKey === "depegResolverOffset");
-    const v9Publication = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9PublicationOffset");
-    const ddr = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-depeg-resolver");
-    const compiler = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-safety-score-v9");
-
-    expect(ddr?.maxConnections).toBe(0);
-    expect(v9Supply?.chains).toEqual([
-      {
-        chainKey: "chain-1",
-        jobs: ["sync-v9-supply-attribution"],
-        peak: 3,
-      },
-    ]);
-    expect(v9Supply?.totalConnections).toBe(3);
-    expect(depegResolver?.chains).toEqual([
-      {
-        chainKey: "chain-1",
-        jobs: ["compute-depeg-resolver"],
-        peak: 0,
-      },
-    ]);
-    expect(depegResolver?.totalConnections).toBe(0);
-    expect(compiler?.maxConnections).toBe(0);
-    expect(v9Publication?.chains).toEqual([
-      {
-        chainKey: "chain-1",
-        jobs: ["compute-safety-score-v9"],
-        peak: 0,
-      },
-    ]);
-    expect(v9Publication?.totalConnections).toBe(0);
-    expect(report.triggerReports).toHaveLength(24);
-    expect(report.failed).toBe(false);
+  it.each([
+    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply"], 4],
+    ["v9SupplyAttributionOffset", ["sync-v9-supply-attribution"], 3],
+    ["depegResolverOffset", ["compute-depeg-resolver"], 0],
+    ["v9PublicationOffset", ["compute-safety-score-v9"], 0],
+    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 3],
+  ] as const)("preserves reviewed %s serial topology", (scheduleKey, jobs, peak) => {
+    const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
+    expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);
+    expect(trigger?.totalConnections).toBe(peak);
   });
 
-  it("models sync-dex-liquidity-stage at its nested direct-API peak", () => {
-    const report = evaluateCronConnectionBudget();
-    const halfHourlyOffset = report.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset");
-    const syncDexLiquidityStage = CRON_CONNECTION_BUDGET_ENTRIES.find(
-      (entry) => entry.job === "sync-dex-liquidity-stage",
-    );
-
-    expect(syncDexLiquidityStage?.maxConnections).toBe(5);
-    expect(halfHourlyOffset?.totalConnections).toBe(5);
-    expect(report.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
-    expect(report.failed).toBe(false);
-  });
-
-  it("models transfer materiality in the serial charts lane without increasing the peak for the D1-only sentinel rule", () => {
-    const report = evaluateCronConnectionBudget();
-    const halfHourlyCharts = report.triggerReports.find(
-      (trigger) => trigger.scheduleKey === "halfHourlyChartsOffset",
-    );
-    const prepareV9Input = CRON_CONNECTION_BUDGET_ENTRIES.find(
-      (entry) => entry.job === "prepare-safety-score-v9-input",
-    );
-    expect(prepareV9Input?.maxConnections).toBe(3);
-    expect(halfHourlyCharts?.chains).toEqual([
-      {
-        chainKey: "chain-1",
-        jobs: [
-          "sync-dex-liquidity",
-          "cron-sentinel",
-          "prepare-safety-score-v9-input",
-          "sync-stablecoin-charts",
-        ],
-        peak: 3,
-      },
-    ]);
-    expect(halfHourlyCharts?.totalConnections).toBe(3);
-    // The shared sentinel remains globally fetch-capable because its status-mode
-    // digest source probes the Safety Score map manifest. Its charts-lane
-    // turnover source is D1-only and does not raise this serial chain's peak.
-    expect(report.fetchCapableEntryCount).toBe(29);
-    expect(report.failed).toBe(false);
+  it.each([
+    ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
+    ["sync-dex-liquidity-stage", 5], ["prepare-safety-score-v9-input", 3],
+  ] as const)("preserves reviewed %s job pressure", (job, peak) => {
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === job)?.maxConnections).toBe(peak);
   });
 
   it("sums independent parallel chains even when they share a connection group", () => {
@@ -172,35 +96,79 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
-  it("requires a consolidation decision before growing the reviewed fetch topology", () => {
-    const report = evaluateCronConnectionBudget({
-      budget: {
-        maxPerTrigger: 3,
-        failAt: 3,
-        fullForNewFetchHeavyWorkAt: 2,
-      },
-      growthPolicy: {
-        maxFetchCapableEntriesBeforeRebalance: 1,
-        maxHeadroomFullTriggersBeforeRebalance: 1,
-        queuesOrWorkflowsReview: {
-          connectionPressureAt: 2,
-          fanoutPerRun: 100,
-          p95DurationMs: 60_000,
-        },
-      },
-      entries: [
-        { job: "full-a", maxConnections: 2, scheduleKey: "slot-a", statusTracked: true },
-        { job: "full-b", maxConnections: 2, scheduleKey: "slot-b", statusTracked: true },
-      ],
-      schedules: { "slot-a": "1 * * * *", "slot-b": "2 * * * *" },
-      slotPlans: {
-        "slot-a": { jobChains: [["full-a"]] },
-        "slot-b": { jobChains: [["full-b"]] },
-      },
+  it("fails independently for a missing schedule plan or job", () => {
+    const missingPlan = evaluateCronConnectionBudget({ entries: [], schedules: { slot: "*" }, slotPlans: {} });
+    expect(missingPlan).toMatchObject({ failed: true, missingBudgetScheduleKeys: ["slot"], missingBudgetJobs: [] });
+    const missingJob = evaluateCronConnectionBudget({
+      entries: [], schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["absent"]] } },
     });
+    expect(missingJob).toMatchObject({ failed: true, missingBudgetScheduleKeys: [], missingBudgetJobs: ["slot:absent"] });
+  });
 
-    expect(report.fetchCapableEntryLimitExceeded).toBe(true);
-    expect(report.headroomFullTriggerLimitExceeded).toBe(true);
-    expect(report.failed).toBe(true);
+  it("prefers the same schedule and accepts only unambiguous cross-schedule budgets", () => {
+    const entry = (scheduleKey: string, maxConnections: number) => ({ job: "job", scheduleKey, maxConnections, statusTracked: true });
+    const evaluate = (entries: { job: string; scheduleKey: string; maxConnections: number; statusTracked: boolean }[]) => evaluateCronConnectionBudget({
+      entries, schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
+    });
+    const local = evaluate([entry("other", 5), entry("slot", 2)]);
+    expect(local.failed).toBe(false);
+    expect(local.triggerReports[0].totalConnections).toBe(2);
+    const unique = evaluate([entry("other", 3)]);
+    expect(unique.failed).toBe(false);
+    expect(unique.triggerReports[0].totalConnections).toBe(3);
+    expect(evaluate([entry("other", 2), entry("another", 3)])).toMatchObject({
+      failed: true, missingBudgetJobs: ["slot:job (ambiguous budget entry)"],
+    });
+  });
+
+  it("competes budget-only pressure against parallel pressure instead of adding it", () => {
+    for (const budgetOnlyPeak of [1, 4]) {
+      const report = evaluateCronConnectionBudget({
+        entries: [
+          { job: "a", scheduleKey: "slot", maxConnections: 1, statusTracked: true },
+          { job: "b", scheduleKey: "slot", maxConnections: 2, statusTracked: true },
+          { job: "budget", scheduleKey: "slot", maxConnections: budgetOnlyPeak, statusTracked: false },
+        ],
+        schedules: { slot: "*" },
+        slotPlans: { slot: { jobChains: [["a"], ["b"]], budgetOnlyJobs: ["budget"] } },
+      });
+      expect(report.triggerReports[0]).toMatchObject({
+        parallelConnections: 3, totalConnections: budgetOnlyPeak === 1 ? 3 : 4,
+      });
+      expect(report.failed).toBe(false);
+    }
+  });
+
+  it("warns at exact headroom and fails at exact capacity with failure taking precedence", () => {
+    for (const [peak, failed, warnings] of [[4, false, []], [5, false, ["slot"]], [6, true, []]] as const) {
+      const report = evaluateCronConnectionBudget({
+        budget: { maxPerTrigger: 6, failAt: 6, fullForNewFetchHeavyWorkAt: 5 },
+        entries: [{ job: "job", scheduleKey: "slot", maxConnections: peak, statusTracked: true }],
+        schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
+      });
+      expect(report.failed).toBe(failed);
+      expect(report.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toEqual(warnings);
+    }
+  });
+
+  it("allows exact growth limits and fails each independent exceedance", () => {
+    for (const [entryLimit, triggerLimit, entryExceeded, triggerExceeded] of [
+      [1, 1, false, false], [0, 1, true, false], [1, 0, false, true],
+    ] as const) {
+      const report = evaluateCronConnectionBudget({
+        budget: { maxPerTrigger: 6, failAt: 6, fullForNewFetchHeavyWorkAt: 5 },
+        growthPolicy: {
+          maxFetchCapableEntriesBeforeRebalance: entryLimit,
+          maxHeadroomFullTriggersBeforeRebalance: triggerLimit,
+          queuesOrWorkflowsReview: { connectionPressureAt: 5, fanoutPerRun: 100, p95DurationMs: 60_000 },
+        },
+        entries: [{ job: "job", scheduleKey: "slot", maxConnections: 5, statusTracked: true }],
+        schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
+      });
+      expect(report).toMatchObject({
+        fetchCapableEntryLimitExceeded: entryExceeded, headroomFullTriggerLimitExceeded: triggerExceeded,
+        failed: entryExceeded || triggerExceeded,
+      });
+    }
   });
 });

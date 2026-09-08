@@ -1,16 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ApiReferenceMobileNav } from "@/components/api-reference-mobile-nav";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
 
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div data-testid="sheet">{children}</div> : null,
-  SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
 
 const MOCK_SECTIONS: SidebarSection[] = [
   { id: "surface-split", label: "Surface Split", subsections: [] },
@@ -47,14 +40,25 @@ describe("ApiReferenceMobileNav", () => {
     expect(screen.getByText("/api/stablecoins")).toBeTruthy();
   });
 
-  it("renders a menu button", () => {
-    render(
-      <ApiReferenceMobileNav
-        sections={MOCK_SECTIONS}
-        activeId=""
-        onNavigate={() => {}}
-      />,
-    );
-    expect(screen.getByRole("button", { name: /open.*navigation/i })).toBeTruthy();
+  it("opens endpoint navigation and closes after selecting an endpoint", async () => {
+    const onNavigate = vi.fn();
+    render(<ApiReferenceMobileNav sections={MOCK_SECTIONS} activeId="" onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open API navigation" }));
+    const panel = screen.getByRole("dialog");
+    fireEvent.click(within(panel).getByRole("button", { name: "Public Endpoints" }));
+    fireEvent.click(within(panel).getByRole("button", { name: /GET.*\/api\/stablecoins/i }));
+    expect(onNavigate).toHaveBeenCalledExactlyOnceWith("get-api-stablecoins");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("dismisses with Escape and restores trigger focus", async () => {
+    render(<ApiReferenceMobileNav sections={MOCK_SECTIONS} activeId="" onNavigate={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "Open API navigation" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 });

@@ -21,7 +21,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptReserveProtocolDtfRows, fetchReserveProtocolDtfReserves } from "../reserve-protocol-dtf";
 import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 
 const coin = {
   id: "usd3-reserve-protocol",
@@ -82,7 +82,7 @@ function normalizeAddress(address: string): string {
   return address.toLowerCase();
 }
 
-function createOnchainConfig(): LiveReservesConfig {
+function createOnchainConfig(twoComponents = false): LiveReservesConfig {
   return {
     adapter: "reserve-protocol-dtf",
     version: 1,
@@ -113,7 +113,7 @@ function createOnchainConfig(): LiveReservesConfig {
           coinId: "usdc-circle",
           depType: "collateral",
         },
-        {
+        ...(!twoComponents ? [{
           address: STATIC_AAVE_USDC,
           name: "Static Aave Ethereum USDC",
           risk: "medium",
@@ -126,7 +126,7 @@ function createOnchainConfig(): LiveReservesConfig {
           risk: "medium",
           coinId: "steakusdc-steakhouse",
           depType: "collateral",
-        },
+        }] : []),
       ],
     },
   };
@@ -139,6 +139,7 @@ interface MockReserveProtocolOnchainOptions {
   fullyCollateralized?: boolean;
   basketStatus?: bigint | null;
   unreadableValuationAsset?: string;
+  pluginPricesOnly?: boolean;
   quoteEntries?: Array<{ address: `0x${string}`; quantity: bigint }>;
 }
 
@@ -159,6 +160,7 @@ function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions =
   } = options;
   vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
     const normalizedContract = normalizeAddress(contract);
+    if (options.pluginPricesOnly && [ERC4626_ASSET_SELECTOR, UNDERLYING_COMET_SELECTOR].includes(data)) return null;
     if (normalizedContract === RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(MAIN);
     if (normalizedContract === MAIN && data === ASSET_REGISTRY_SELECTOR) return encodeAddressResult(ASSET_REGISTRY);
     if (normalizedContract === MAIN && data === BASKET_HANDLER_SELECTOR) return encodeAddressResult(BASKET_HANDLER);
@@ -235,6 +237,7 @@ function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions =
 }
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 
@@ -321,79 +324,12 @@ describe("reserve-protocol-dtf adapter", () => {
   });
 
   it("reads Reserve Protocol quote and asset plugin prices directly onchain", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "reserve-protocol-dtf",
-      version: 1,
-      semantics: "collateral-mix",
-      breakerScope: "usd3-reserve-protocol",
-      display: {
-        url: "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378",
-        label: "Reserve Protocol",
-      },
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      },
-      params: {
-        rpcUrl: "https://ethereum-rpc.publicnode.com",
-        fallbackRpcUrl: "https://eth.llamarpc.com",
-        assets: [
-          {
-            address: SUSDS,
-            name: "Savings USDS",
-            risk: "low",
-            coinId: "susds-sky",
-            depType: "collateral",
-          },
-          {
-            address: WCUSDCV3,
-            name: "Wrapped Compound USDCv3",
-            risk: "medium",
-            coinId: "usdc-circle",
-            depType: "collateral",
-          },
-        ],
-      },
-    };
-
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      const normalizedContract = normalizeAddress(contract);
-      if (normalizedContract === RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(MAIN);
-      if (normalizedContract === MAIN && data === ASSET_REGISTRY_SELECTOR) return encodeAddressResult(ASSET_REGISTRY);
-      if (normalizedContract === MAIN && data === BASKET_HANDLER_SELECTOR) return encodeAddressResult(BASKET_HANDLER);
-      if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR)
-        return encodeBoolResult(true);
-      if (normalizedContract === BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
-        return encodeAbiParameters(
-          [{ type: "address[]" }, { type: "uint256[]" }],
-          [
-            [SUSDS, WCUSDCV3],
-            [50n * ONE, 50_000_000n],
-          ],
-        );
-      }
-      if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(SUSDS)}`) {
-        return encodeAddressResult(SUSDS_ASSET);
-      }
-      if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(WCUSDCV3)}`) {
-        return encodeAddressResult(WCUSDCV3_ASSET);
-      }
-      if ((normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) && data === PRICE_SELECTOR) {
-        return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]);
-      }
-      return null;
-    });
-
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      const normalizedContract = normalizeAddress(contract);
-      if (normalizedContract === RTOKEN && data === BASKETS_NEEDED_SELECTOR) return 100n * ONE;
-      if (normalizedContract === SUSDS && data === DECIMALS_SELECTOR) return 18n;
-      if (normalizedContract === WCUSDCV3 && data === DECIMALS_SELECTOR) return 6n;
-      if (
-        (normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) &&
-        data === COLLATERAL_STATUS_SELECTOR
-      )
-        return 0n;
-      return null;
+    const config = createOnchainConfig(true);
+    mockReserveProtocolOnchain({
+      quoteEntries: [{ address: SUSDS, quantity: 50n * ONE }, { address: WCUSDCV3, quantity: 50_000_000n }],
+      redemptionAvailable: null,
+      totalSupply: null,
+      pluginPricesOnly: true,
     });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, config, signal);
@@ -417,14 +353,6 @@ describe("reserve-protocol-dtf adapter", () => {
         basketHandler: BASKET_HANDLER,
         quoteAmount: (100n * ONE).toString(),
       },
-    });
-    expect(result.metadata?.details).toMatchObject({
-      proofKind: "reserve-protocol-dtf-direct-onchain",
-      rTokenAddress: RTOKEN,
-      mainAddress: MAIN,
-      assetRegistry: ASSET_REGISTRY,
-      basketHandler: BASKET_HANDLER,
-      quoteAmount: (100n * ONE).toString(),
     });
   });
 

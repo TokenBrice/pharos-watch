@@ -1,5 +1,4 @@
 import { vi } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
@@ -256,10 +255,6 @@ export function makeDailyDigestTables(): MockTableConfig[] {
   ];
   const empty = (match: string): MockTableConfig => ({ match, rows: [] });
   const first = (match: string, value: Record<string, unknown> | null): MockTableConfig => ({ match, rows: [], first: value });
-  const cacheFirst = (key: string, value: Record<string, unknown> | null): MockTableConfig => ({
-    match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: [key], rows: [], first: value,
-  });
   return [
     ...makePublishedDewsTables(dewsRows),
     first("SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1", null),
@@ -310,9 +305,6 @@ export function makeDailyDigestTables(): MockTableConfig[] {
     }),
     first("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?", { avg: 90.6 }),
     first("FROM stability_index WHERE computed_at = ?", { score: 89.5, band: "STEADY" }),
-    first("SELECT score, band, components, computed_at as stored_at FROM stability_index", {
-      score: 89.5, band: "STEADY", components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }), stored_at: todayTs,
-    }),
     empty("FROM blacklist_events"),
     {
       match: "FROM supply_history WHERE stablecoin_id IN",
@@ -326,19 +318,6 @@ export function makeDailyDigestTables(): MockTableConfig[] {
       ],
     },
     empty("WHERE ended_at IS NOT NULL AND ended_at >= ?"),
-    cacheFirst("report_card_cache", {
-        value: JSON.stringify({
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-          scores: {
-            "usdt-tether": { score: 80, grade: "A" },
-            "usdc-circle": { score: 78, grade: "A" },
-            "paxg-paxos": { score: 45, grade: "D" },
-            "xaut-tether": { score: 48, grade: "D" },
-          },
-          updatedAt: nowSec,
-        }),
-        updated_at: nowSec,
-      }),
   ];
 }
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { act } from "react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -54,6 +54,7 @@ describe("TableExportMenu", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
     downloadCsvWithPreambleMock.mockReset();
     downloadNdjsonWithPreambleMock.mockReset();
@@ -116,9 +117,11 @@ describe("TableExportMenu", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Download CSV" }));
     fireEvent.click(screen.getByRole("button", { name: "Download NDJSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
 
     expect(downloadCsvWithPreambleMock).not.toHaveBeenCalled();
     expect(downloadNdjsonWithPreambleMock).not.toHaveBeenCalled();
+    expect(copyMarkdownWithPreambleMock).not.toHaveBeenCalled();
   });
 
   it("dispatches the NDJSON writer when the NDJSON action fires", () => {
@@ -159,28 +162,43 @@ describe("TableExportMenu", () => {
     expect(screen.getByText("Copied!")).toBeTruthy();
   });
 
-  it("clears the markdown feedback timer on unmount", async () => {
-    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
-
+  it("restarts feedback expiry after a second copy and clears it on unmount", async () => {
+    const baseline = vi.getTimerCount();
     const { unmount } = render(
-      <TableExportMenu
-        data={ROWS}
-        columns={COLUMNS}
-        filename="stablecoins"
-        endpoint="stablecoins"
-        methodologyLabel="safety-score v7.25"
-      />,
+      <TableExportMenu data={ROWS} columns={COLUMNS} filename="stablecoins"
+        endpoint="stablecoins" methodologyLabel="safety-score v7.25" />,
     );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    const copy = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
+      });
+    };
+    await copy();
+    act(() => vi.advanceTimersByTime(1500));
+    await copy();
+    act(() => vi.advanceTimersByTime(1999));
+    expect(screen.getByText("Copied!")).toBeTruthy();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText("Copied!")).toBeNull();
+    expect(screen.getByText("Export")).toBeTruthy();
+    await copy();
+    expect(vi.getTimerCount()).toBe(baseline + 1);
     unmount();
+    expect(vi.getTimerCount()).toBe(baseline);
+  });
 
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-    clearTimeoutSpy.mockRestore();
+  it("does not schedule feedback when pending copy completes after unmount", async () => {
+    let finish!: (ok: boolean) => void;
+    copyMarkdownWithPreambleMock.mockReturnValueOnce(new Promise<boolean>((resolve) => { finish = resolve; }));
+    const { unmount } = render(
+      <TableExportMenu data={ROWS} columns={COLUMNS} filename="stablecoins"
+        endpoint="stablecoins" methodologyLabel="safety-score v7.25" />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
+    unmount();
+    const baseline = vi.getTimerCount();
+    await act(async () => { finish(true); });
+    expect(vi.getTimerCount()).toBe(baseline);
   });
 
   it("shows a failure label when markdown copy is rejected", async () => {

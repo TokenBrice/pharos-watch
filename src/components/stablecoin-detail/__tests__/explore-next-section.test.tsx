@@ -39,7 +39,7 @@ describe("ExploreNextSection", () => {
     expect(screen.queryByRole("link", { name: /watchlist.*preset/i })).toBeNull();
   });
 
-  it("links static comparison tiles to the crawlable brief, not only the live tool", () => {
+  it("links a static comparison tile to the crawlable brief and omits the overflow line under the cap", () => {
     render(
       <ExploreNextSection
         coin={coin}
@@ -62,9 +62,10 @@ describe("ExploreNextSection", () => {
     expect(
       screen.getByRole("link", { name: "Open static comparison brief: TCDP vs USDC" }).getAttribute("href"),
     ).toBe("/compare/test-cdp-dollar-vs-usdc-circle/");
+    expect(screen.queryByText(/more comparison briefs/)).toBeNull();
   });
 
-  it("keeps comparison briefs past the fourth in the DOM, hidden below lg", () => {
+  it("renders every brief, unhidden through the fourth and hidden below lg past it", () => {
     const pages = Array.from({ length: 6 }, (_, i) => ({
       href: `/compare/test-cdp-dollar-vs-peer-${i}/`,
       shortTitle: `TCDP vs P${i}`,
@@ -77,39 +78,24 @@ describe("ExploreNextSection", () => {
 
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={pages} logos={{}} />);
 
-    const tiles = pages.map((page) =>
-      screen.getByRole("link", { name: `Open static comparison brief: ${page.shortTitle}` }),
+    // Counted from the DOM, not from the input array: a dropped tile must fail.
+    const tiles = screen.getAllByRole("link", { name: /^Open static comparison brief:/ });
+    expect(tiles.map((tile) => tile.getAttribute("aria-label"))).toEqual(
+      pages.map((page) => `Open static comparison brief: ${page.shortTitle}`),
     );
 
-    expect(tiles).toHaveLength(6);
-    expect(tiles.slice(0, 4).every((tile) => tile.className.includes("hidden"))).toBe(false);
-    expect(tiles.slice(4).every((tile) => tile.className.includes("hidden lg:flex"))).toBe(true);
+    // Every tile up to the cap renders unhidden; each one past it keeps the
+    // link in the DOM behind `hidden lg:flex` so it stays crawlable. Asserted
+    // per tile, so hiding any single card inside the cap fails.
+    for (const tile of tiles.slice(0, 4)) {
+      expect(tile.className).not.toContain("hidden");
+    }
+    for (const tile of tiles.slice(4)) {
+      expect(tile.className).toContain("hidden lg:flex");
+    }
 
-    const more = screen.getByRole("link", { name: /\+2 more comparison briefs/ });
-    expect(more.getAttribute("href")).toBe("/stablecoins/usd/");
-    expect(more.className).toContain("lg:hidden");
-  });
-
-  it("omits the mobile overflow line when every brief fits the cap", () => {
-    render(
-      <ExploreNextSection
-        coin={coin}
-        related={[]}
-        staticComparisonPages={[
-          {
-            href: "/compare/test-cdp-dollar-vs-usdc-circle/",
-            shortTitle: "TCDP vs USDC",
-            leftId: "test-cdp-dollar",
-            rightId: "usdc-circle",
-            counterpartId: "usdc-circle",
-            counterpartSymbol: "USDC",
-            counterpartName: "USD Coin",
-          },
-        ]}
-        logos={{}}
-      />,
+    expect(screen.getByRole("link", { name: /\+2 more comparison briefs/ }).getAttribute("href")).toBe(
+      "/stablecoins/usd/",
     );
-
-    expect(screen.queryByText(/more comparison briefs/)).toBeNull();
   });
 });

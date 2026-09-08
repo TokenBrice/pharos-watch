@@ -221,8 +221,10 @@ describe("smoke-api depeg resolver review assertion", () => {
 describe("smoke-api path scopes", () => {
   it("keeps canary paths as a strict subset of the full strict path set", () => {
     const full = new Set(STRICT_CONTRACT_SMOKE_PATHS);
-    expect(CANARY_CONTRACT_SMOKE_PATHS.length).toBeGreaterThan(0);
-    for (const path of CANARY_CONTRACT_SMOKE_PATHS) {
+    const canary = new Set(CANARY_CONTRACT_SMOKE_PATHS);
+    expect(canary.size).toBeGreaterThan(0);
+    expect(canary.size).toBeLessThan(full.size);
+    for (const path of canary) {
       expect(full.has(path)).toBe(true);
     }
   });

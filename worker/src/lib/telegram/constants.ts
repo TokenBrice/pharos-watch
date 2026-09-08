@@ -58,7 +58,7 @@ export const TELEGRAM_MESSAGE_CHUNK_LIMIT = 4000;
  * splitting logic (boundaries, repair, ordering) changes in a way that would
  * alter the chunks produced from the same canonical body.
  */
-export const TELEGRAM_SPLIT_VERSION = 1;
+export const TELEGRAM_SPLIT_VERSION = 2;
 
 // ---------- Delivery policy ----------
 

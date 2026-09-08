@@ -23,22 +23,26 @@ function activeRedirectLines(): string[] {
     .filter((line) => line && !line.startsWith("#"));
 }
 
+function effectiveRedirect(path: string) {
+  for (const line of activeRedirectLines()) {
+    const [source, target, status] = line.split(/\s+/);
+    const wildcard = source.indexOf("*");
+    if (source === path || (wildcard >= 0 && path.startsWith(source.slice(0, wildcard)))) {
+      return { target: target.replace(":splat", wildcard < 0 ? "" : path.slice(wildcard)), status: Number(status) };
+    }
+  }
+  return null;
+}
+
 describe("Pages function routes", () => {
   it("routes document responses through middleware so nonce CSP is applied", () => {
     expect(routes.include).toContain("/*");
   });
 
   it("does not exclude static HTML route families from middleware nonce handling", () => {
-    expect(routes.exclude).not.toEqual(
-      expect.arrayContaining([
-        "/chains/*",
-        "/stablecoin/*",
-        "/stablecoins/*",
-        "/compare/*",
-        "/docs/*",
-        "/methodology/*",
-      ]),
-    );
+    for (const path of ["/chains/*", "/stablecoin/*", "/stablecoins/*", "/compare/*", "/docs/*", "/methodology/*"]) {
+      expect(routes.exclude).not.toContain(path);
+    }
   });
 
   it("keeps static asset prefixes out of function routing", () => {
@@ -77,6 +81,18 @@ describe("Pages static headers", () => {
 });
 
 describe("Pages legacy redirects", () => {
+  it.each([
+    ["/report-cards", "/safety-scores/"],
+    ["/report-cards/usdc/", "/safety-scores/usdc/"],
+    ["/risk-lab/", "/safety-scores/"],
+    ["/stability-index-alt", "/stability-index/"],
+    ["/mica", "/compliance/"],
+    ["/mica/", "/compliance/"],
+    ["/mica/archive/", "/compliance/archive/"],
+  ])("resolves the first active redirect for %s", (path, target) => {
+    expect(effectiveRedirect(path)).toEqual({ target, status: 301 });
+  });
+
   it("normalizes retired report-card and stability routes to slash canonical targets", () => {
     const lines = activeRedirectLines();
 
@@ -93,13 +109,9 @@ describe("Pages legacy redirects", () => {
         "/stability-index-alt/* /stability-index/:splat 301",
       ]),
     );
-    expect(lines).not.toEqual(
-      expect.arrayContaining([
-        "/report-cards /safety-scores 301",
-        "/risk-lab /safety-scores 301",
-        "/stability-index-alt /stability-index 301",
-      ]),
-    );
+    for (const line of ["/report-cards /safety-scores 301", "/risk-lab /safety-scores 301", "/stability-index-alt /stability-index 301"]) {
+      expect(lines).not.toContain(line);
+    }
   });
 
   it("redirects retired MiCA tracker URLs to the canonical compliance page", () => {
@@ -112,12 +124,9 @@ describe("Pages legacy redirects", () => {
         "/mica /compliance/ 301",
       ]),
     );
-    expect(lines).not.toEqual(
-      expect.arrayContaining([
-        "/mica /compliance 301",
-        "/mica/ /compliance 301",
-      ]),
-    );
+    for (const line of ["/mica /compliance 301", "/mica/ /compliance 301"]) {
+      expect(lines).not.toContain(line);
+    }
   });
 
   it("redirects retired Tape URLs to the canonical timeline page", () => {

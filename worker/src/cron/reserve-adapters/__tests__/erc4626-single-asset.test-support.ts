@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, expect } from "vitest";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -8,6 +9,15 @@ import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 const MULTICALL3_ABI = parseAbi([
   "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[] returnData)",
 ]);
+
+const unexpectedRequests: string[] = [];
+beforeEach(() => { unexpectedRequests.length = 0; });
+afterEach(() => { expect(unexpectedRequests).toEqual([]); });
+
+function rejectUnexpectedRequest(message: string): never {
+  unexpectedRequests.push(message);
+  throw new Error(message);
+}
 
 type Erc4626Call = { to?: string; data: string };
 
@@ -20,12 +30,13 @@ type Erc4626RpcContext = {
 type Erc4626RpcHandler = (context: Erc4626RpcContext) => Response | null | undefined;
 
 type Erc4626RpcFixture = {
+  vault?: string;
   asset?: string | null;
-  totalAssets?: bigint | number;
-  totalSupply?: bigint | number;
-  convertedAssets?: bigint | number;
-  idleBalance?: bigint | number;
-  decimals?: bigint | number;
+  totalAssets?: bigint | number | null;
+  totalSupply?: bigint | number | null;
+  convertedAssets?: bigint | number | null;
+  idleBalance?: bigint | number | null;
+  decimals?: bigint | number | null;
   paused?: bigint | number;
   shutdown?: bigint | number;
   extraHandlers?: Erc4626RpcHandler[];
@@ -36,6 +47,7 @@ function uint256Result(value: bigint | number): string {
 }
 
 export function mockErc4626Rpc({
+  vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
   asset = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   totalAssets = 100_000_000n,
   totalSupply = 100_000_000n,
@@ -56,7 +68,10 @@ export function mockErc4626Rpc({
         const response = handler(context);
         if (response !== undefined) return response;
       }
-      return null;
+      return rejectUnexpectedRequest(`Unexpected non-RPC request ${url}`);
+    }
+    if (body.method !== "eth_call" || (body.params as unknown[])[1] !== "latest") {
+      return rejectUnexpectedRequest(`Unexpected RPC method or block ${JSON.stringify(body)}`);
     }
 
     const resolveCall = async (nestedCall: Erc4626Call): Promise<Response | null> => {
@@ -66,34 +81,41 @@ export function mockErc4626Rpc({
         if (response !== undefined) return response;
       }
 
-      if (nestedCall.data === "0x38d52e0f") {
-        return asset == null ? jsonResponse({ result: "0x" }) : jsonResponse({ result: `0x${asset.replace(/^0x/i, "").padStart(64, "0")}` });
+      const to = nestedCall.to?.toLowerCase();
+      const data = nestedCall.data.toLowerCase();
+      const vaultAddress = vault.toLowerCase();
+      const underlying = asset?.toLowerCase();
+      if (to === underlying && data === `0x70a08231${vaultAddress.slice(2).padStart(64, "0")}`) {
+        return idleBalance == null ? null : jsonResponse({ result: uint256Result(idleBalance) });
       }
-      if (nestedCall.data === "0x01e1d114" && totalAssets !== undefined) {
-        return jsonResponse({ result: uint256Result(totalAssets) });
+      if (to === underlying && data === "0x313ce567") {
+        return decimals == null ? null : jsonResponse({ result: uint256Result(decimals) });
       }
-      if (nestedCall.data === "0x18160ddd" && totalSupply !== undefined) {
-        return jsonResponse({ result: uint256Result(totalSupply) });
+      if (to === vaultAddress) {
+        if (data === "0x38d52e0f") {
+          return asset == null ? jsonResponse({ result: "0x" }) : jsonResponse({ result: `0x${asset.replace(/^0x/i, "").padStart(64, "0")}` });
+        }
+        const values: Record<string, bigint | number | null | undefined> = {
+          "0x01e1d114": totalAssets,
+          "0x18160ddd": totalSupply,
+          "0x5c975abb": paused,
+          "0xbf86d690": shutdown,
+        };
+        if (data in values) {
+          const value = values[data];
+          return value == null ? null : jsonResponse({ result: uint256Result(value) });
+        }
+        if (totalSupply != null && data === `0x07a2d13a${BigInt(totalSupply).toString(16).padStart(64, "0")}`) {
+          return convertedAssets == null ? null : jsonResponse({ result: uint256Result(convertedAssets) });
+        }
       }
-      if (nestedCall.data.startsWith("0x07a2d13a") && convertedAssets !== undefined) {
-        return jsonResponse({ result: uint256Result(convertedAssets) });
-      }
-      if (nestedCall.data.startsWith("0x70a08231") && idleBalance !== undefined) {
-        return jsonResponse({ result: uint256Result(idleBalance) });
-      }
-      if (nestedCall.data === "0x313ce567" && decimals !== undefined) {
-        return jsonResponse({ result: uint256Result(decimals) });
-      }
-      if (nestedCall.data === "0x5c975abb" && paused !== undefined) {
-        return jsonResponse({ result: uint256Result(paused) });
-      }
-      if (nestedCall.data === "0xbf86d690" && shutdown !== undefined) {
-        return jsonResponse({ result: uint256Result(shutdown) });
-      }
-      return null;
+      return rejectUnexpectedRequest(`Unexpected ERC4626 call ${to} ${data}`);
     };
 
     if (!call.data.startsWith("0x82ad56cb")) return resolveCall(call);
+    if (call.to?.toLowerCase() !== "0xca11bde05977b3631167028862be2a173976ca11") {
+      return rejectUnexpectedRequest(`Unexpected multicall target ${call.to}`);
+    }
 
     const decoded = decodeFunctionData({
       abi: MULTICALL3_ABI,

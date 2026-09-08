@@ -10,7 +10,7 @@ import {
 const CLOCK_SEC = Date.parse("2026-08-10T00:00:00.000Z") / 1_000;
 
 function review(
-  deployments: { chainId: string; contractOrTokenId: string; posture: "permissionless" | "restrictable" }[],
+  deployments: { chainId: string; contractOrTokenId: string; posture: "permissionless" | "restrictable" | "permissioned" }[],
   reviewedAt = "2026-08-08",
 ): SafetyScoreV9ReviewedTransferFact {
   return {
@@ -112,5 +112,57 @@ describe("resolveSafetyScoreV9ReviewedTransferFact — non-contract-native appli
       }),
     );
     expect(resolved).toEqual({ observationState: "known", posture: "restrictable" });
+  });
+  it("excludes additional-only material coverage and non-authoritative extras", () => {
+    const key = safetyScoreV9TransferDeploymentKey("ethereum", "0xABC");
+    const materialScope = scope({
+      authoritativeDeploymentKeys: [key], materialDeploymentKeys: [key],
+      materialDeploymentScopeComplete: true, deploymentModel: "contract-addressable",
+    });
+    const current = review([{ chainId: "ethereum", contractOrTokenId: "0xABC", posture: "permissionless" }]);
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, materialScope)).toEqual({
+      observationState: "known", posture: "permissionless",
+    });
+    const additional = structuredClone(current);
+    additional.deployments[0]!.scope = "additional";
+    expect(resolveSafetyScoreV9ReviewedTransferFact(additional, CLOCK_SEC, materialScope)).toEqual({
+      observationState: "bounded-unknown", posture: null,
+    });
+    const extra = structuredClone(current);
+    extra.deployments.push({ ...current.deployments[0]!, contractOrTokenId: "0xDEF", scope: "additional" });
+    expect(resolveSafetyScoreV9ReviewedTransferFact(extra, CLOCK_SEC, materialScope)).toEqual({
+      observationState: "bounded-unknown", posture: null,
+    });
+  });
+
+  it("reduces mixed postures to permissioned independently of deployment order", () => {
+    const current = review([
+      { chainId: "ethereum", contractOrTokenId: "0xA", posture: "permissionless" },
+      { chainId: "ethereum", contractOrTokenId: "0xB", posture: "permissioned" },
+      { chainId: "ethereum", contractOrTokenId: "0xC", posture: "restrictable" },
+    ]);
+    const keys = ["0xA", "0xB", "0xC"].map((id) => safetyScoreV9TransferDeploymentKey("ethereum", id));
+    const materialScope = scope({
+      authoritativeDeploymentKeys: keys, materialDeploymentKeys: keys,
+      materialDeploymentScopeComplete: true, deploymentModel: "contract-addressable",
+    });
+    for (let index = 0; index < 3; index++) {
+      expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, materialScope)).toEqual({
+        observationState: "known", posture: "permissioned",
+      });
+      current.deployments.push(current.deployments.shift()!);
+    }
+  });
+
+  it("admits the exact review-age limit but rejects stale and future reviews", () => {
+    const current = review([{ chainId: "zano", contractOrTokenId: "native", posture: "permissionless" }]);
+    const reviewedAt = Date.parse("2026-08-08T00:00:00Z") / 1_000;
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, reviewedAt + V9_ACCESS_EVIDENCE_MAX_AGE_SEC, scope())).toMatchObject({
+      observationState: "known", posture: "permissionless",
+    });
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, reviewedAt + V9_ACCESS_EVIDENCE_MAX_AGE_SEC + 1, scope())).toEqual({
+      observationState: "stale", posture: null,
+    });
+    expect(() => resolveSafetyScoreV9ReviewedTransferFact(current, reviewedAt - 1, scope())).toThrow(/future-dated/);
   });
 });

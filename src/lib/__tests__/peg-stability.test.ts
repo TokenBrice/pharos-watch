@@ -133,14 +133,17 @@ describe("computePegStability", () => {
     expect(result!.eventCount).toBe(2);
   });
 
-  it("falls back to earliest event when earliestDate is null", () => {
+  it("falls back to the earliest event when earliestDate is null", () => {
+    // Deliberately reversed: the later event must not anchor the window.
     const events = [
-      makeEvent({ startedAt: NOW - 200 * DAY_SECONDS, endedAt: NOW - 195 * DAY_SECONDS, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 50 * DAY_SECONDS, endedAt: NOW - 45 * DAY_SECONDS, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 200 * DAY_SECONDS, endedAt: NOW - 195 * DAY_SECONDS, peakDeviationBps: -300 }),
     ];
     const result = computeStability(events, null);
     expect(result).not.toBeNull();
-    // Tracking starts from the event's startedAt
-    expect(result!.pegPct).toBeGreaterThan(0);
+    // The earliest start (NOW - 200d) anchors the span: 10 depeg days / 200 days.
+    expect(result!.pegPct).toBeCloseTo(95, 10);
+    expect(result!.trackingSpan).toBe("6mo");
   });
 
   it("handles fully depegged scenario (depeg spans entire window)", () => {
@@ -180,8 +183,8 @@ describe("computePegStability", () => {
     const earliestDate = NOW - (2 * 365 + 90) * DAY_SECONDS;
     const result = computeStability([], earliestDate);
     expect(result).not.toBeNull();
-    // (2*365+90) = 820 days, 820/30.44 ~ 26.9 months, 26/12 = 2 years, 26%12 = 2 remaining
-    expect(result!.trackingSpan).toMatch(/^2y/);
+    // (2*365+90) = 820 days → floor(820/30.44) = 26 months → 2y 2mo.
+    expect(result!.trackingSpan).toBe("2y 2mo");
   });
 
   it("formats tracking span as years only when no remaining months", () => {

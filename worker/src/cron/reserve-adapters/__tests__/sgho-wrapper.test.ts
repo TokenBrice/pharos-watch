@@ -3,6 +3,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeUint256 } from "../../../lib/evm-selectors";
 import { fetchSghoWrapperReserves } from "../sgho-wrapper";
+import { fetchOnchainRawCall } from "../helpers";
 
 vi.mock("../helpers", async () => {
   const actual = await vi.importActual<typeof import("../helpers")>("../helpers");
@@ -42,6 +43,41 @@ const CONFIG: LiveReservesConfig = {
 };
 
 describe("sgho-wrapper adapter", () => {
+  it("rejects an absent configured chain", async () => {
+    await expect(fetchSghoWrapperReserves({ ...COIN, contracts: [] }, CONFIG, new AbortController().signal))
+      .rejects.toThrow(/No ethereum contract/);
+  });
+
+  it("rejects unavailable or zero supply", async () => {
+    for (const value of [null, "0x0"]) {
+      vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(value);
+      await expect(fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal))
+        .rejects.toThrow(/totalSupply/);
+    }
+  });
+
+  it("rejects unavailable or zero redemption preview", async () => {
+    for (const value of [null, "0x0"]) {
+      vi.mocked(fetchOnchainRawCall)
+        .mockResolvedValueOnce(`0x${(1000n * 10n ** 18n).toString(16)}`)
+        .mockResolvedValueOnce(value);
+      await expect(fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal))
+        .rejects.toThrow(/previewRedeem/);
+    }
+  });
+
+  it("preserves a positive backing shortfall without clamping upward", async () => {
+    vi.mocked(fetchOnchainRawCall)
+      .mockResolvedValueOnce(`0x${(1000n * 10n ** 18n).toString(16)}`)
+      .mockResolvedValueOnce(`0x${(800n * 10n ** 18n).toString(16)}`);
+    const result = await fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal);
+    expect(result.metadata).toMatchObject({
+      collateralizationRatio: 0.8,
+      immediateRedeemableUsd: 800,
+      redemption: { capacityUsd: 800, capacityRatioOfSupply: 0.8 },
+    });
+  });
+
   it("uses previewRedeem(totalSupply) as same-run backing evidence", async () => {
     const result = await fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal);
 

@@ -4,6 +4,8 @@ import {
   CACHE_AVAILABILITY_MAX_AGE_SEC,
   CACHE_FRESHNESS_LANES,
   FRESHNESS_SENTINEL_CACHE_KEYS,
+  getCacheFreshnessLane,
+  isFreshnessWarningHeader,
 } from "../api-freshness";
 import { CRON_INTERVALS } from "../cron-jobs";
 
@@ -36,5 +38,34 @@ describe("api-freshness", () => {
       expect(sentinelKey).toBe(`freshness:${cacheKey}`);
       expect(lane?.producerJob).toBeTruthy();
     }
+  });
+});
+
+describe("getCacheFreshnessLane", () => {
+  it("returns the freshness lane registered for a cache key", () => {
+    expect(getCacheFreshnessLane("dex-liquidity")).toBe(CACHE_FRESHNESS_LANES.dexLiquidity);
+    expect(getCacheFreshnessLane("dews")?.producerJob).toBe("compute-dews");
+  });
+
+  it("returns null for cache keys without a freshness lane", () => {
+    expect(getCacheFreshnessLane("not-a-lane")).toBeNull();
+  });
+});
+
+describe("isFreshnessWarningHeader", () => {
+  it("flags warn-code 110 at the start of any comma-separated Warning element", () => {
+    expect(isFreshnessWarningHeader('110 - "Revalidation failed"')).toBe(true);
+    expect(isFreshnessWarningHeader('199 - "Misc", 110 - "Revalidation failed"')).toBe(true);
+  });
+
+  it("flags the shared degraded/stale warning texts case-insensitively", () => {
+    expect(isFreshnessWarningHeader('Response is stale')).toBe(true);
+    expect(isFreshnessWarningHeader('Response is DEGRADED')).toBe(true);
+  });
+
+  it("ignores other warn codes and unrelated warning text", () => {
+    expect(isFreshnessWarningHeader('199 - "Misc warning"')).toBe(false);
+    expect(isFreshnessWarningHeader('1100 - "not warn-code 110"')).toBe(false);
+    expect(isFreshnessWarningHeader("Response is fresh")).toBe(false);
   });
 });

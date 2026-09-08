@@ -5,6 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildEntryFixture,
   dusdOpenQueueMetadata,
+  fpiControllerState,
   route,
   severeMarketEvidence,
   snapshot,
@@ -190,6 +191,12 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
     );
+    const unconstrained = await buildEntry(
+      "test-coin",
+      route({ capacityModel: { kind: "supply-ratio", ratio: 1, confidence: "documented-bound" } }),
+      100_000_000,
+      null,
+    );
 
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.capacityProfile).toMatchObject({
@@ -199,7 +206,8 @@ describe("buildRedemptionBackstopEntry", () => {
       modeledExitSizeUsd: 5_000_000,
       scoringHorizon: "daily",
     });
-    expect(entry.score).not.toBeNull();
+    expect(unconstrained.score).toBeTypeOf("number");
+    expect(entry.score).toBeLessThan(unconstrained.score!);
   });
 
   it("applies explicit total score caps after component scoring", async () => {
@@ -232,8 +240,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacityProfile?.scoringHorizon).toBe("eventual");
   });
 
-  it("scores fixed 0 bps fee as 100", async () => {
-    const { feeBps, expectedScore } = fixedFeeCases[0];
+  it.each(fixedFeeCases)("scores fixed $feeBps bps fee as $expectedScore", async ({ feeBps, expectedScore }) => {
     const entry = await buildEntry("test-coin", route({
       costModel: { kind: "fee-bps", feeBps },
     }), 100_000_000, null);
@@ -241,34 +248,6 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.costScore).toBe(expectedScore);
     expect(entry.feeBps).toBe(feeBps);
     expect(entry.feeConfidence).toBe("fixed");
-  });
-
-  it("scores fixed 25 bps fee as 80", async () => {
-    const { feeBps, expectedScore } = fixedFeeCases[1];
-    const entry = await buildEntry("test-coin", route({
-      costModel: { kind: "fee-bps", feeBps },
-    }), 100_000_000, null);
-
-    expect(entry.costScore).toBe(expectedScore);
-    expect(entry.feeBps).toBe(feeBps);
-  });
-
-  it("scores fixed 75 bps fee as 60", async () => {
-    const { feeBps, expectedScore } = fixedFeeCases[2];
-    const entry = await buildEntry("test-coin", route({
-      costModel: { kind: "fee-bps", feeBps },
-    }), 100_000_000, null);
-
-    expect(entry.costScore).toBe(expectedScore);
-  });
-
-  it("scores fixed 200 bps fee as 40", async () => {
-    const { feeBps, expectedScore } = fixedFeeCases[3];
-    const entry = await buildEntry("test-coin", route({
-      costModel: { kind: "fee-bps", feeBps },
-    }), 100_000_000, null);
-
-    expect(entry.costScore).toBe(expectedScore);
   });
 
   it("scores formula-confidence dynamic fees as 60", async () => {
@@ -1053,6 +1032,7 @@ describe("buildRedemptionBackstopEntry", () => {
     );
 
     expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.score).toBeNull();
   });
 
   it("preserves reviewed fee and docs metadata on failed reserve-sync routes", () => {
@@ -1193,7 +1173,7 @@ describe("buildRedemptionBackstopEntry", () => {
     const entry = await buildEntry(
       "zchf-frankencoin",
       route({
-        capacityModel: { kind: "reserve-sync-metadata" },
+        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
         costModel: { kind: "fee-bps", feeBps: 0 },
       }),
       50_000_000,
@@ -1255,6 +1235,8 @@ describe("buildRedemptionBackstopEntry", () => {
             capacityKind: "live-direct",
             freshnessKind: "same-run-onchain",
             sourceTimestamp: now - 7_200,
+            routeStatus: "open",
+            routeStatusSource: "onchain",
           },
         }, { fetchedAt: now - 7_200 }),
         routeAvailability: severeMarketEvidence({
@@ -1529,49 +1511,7 @@ describe("buildRedemptionBackstopEntry", () => {
   it("adds the accepted FPI controller route without changing legacy entry fields", async () => {
     const config = getRedemptionBackstopConfig("fpi-frax");
     expect(config).toBeDefined();
-    const state = {
-      kind: "fpi-controller-v1",
-      chain: "ethereum",
-      controllerAddress: "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51",
-      controllerCodeHash: "0x8f8968ffbb928926343d4217667f094cc938f359e253ef25ff33ee7b85ec1132",
-      blockNumber: 25_600_682,
-      blockTimestamp: now - 20,
-      inputTokenAddress: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
-      outputTokenAddress: "0x853d955acef822db058eb8505911ed77f175b99e",
-      outputTrackedAssetId: "frax-frax",
-      fraxPriceFeedAddress: "0xb9e1e3a9feff48998e45fa90847ed4d467e8bcfd",
-      fraxPriceFeedCodeHash: "0xbd6f524cdc4268b6bd1bb6f77a8821faeea9c52ee9e0afa0b6d948ce82c966c2",
-      fraxPriceFeedRoundId: "36893488147419121260",
-      fraxPriceFeedUpdatedAt: now - 120,
-      fraxPriceFeedAgeSec: 100,
-      fpiPriceFeedAddress: "0x59985d79e1e69f659f4ab97db07a35ce73d9174b",
-      fpiPriceFeedCodeHash: "0x2b165ff401e6d9ee29c0ef100b238ecb2fb7c89715104dde46b95547cea302fb",
-      fpiPriceFeedRoundId: "0",
-      fpiPriceFeedUpdatedAt: now - 20,
-      fpiPriceFeedAgeSec: 0,
-      maxPriceFeedAgeSec: 7_200,
-      cpiTrackerAddress: "0x66b7dff2ac66dc4d6fbb3db1cb627bbb01ff3146",
-      cpiTrackerCodeHash: "0xb989d68e59e9df4ef6d1782d56efe24f44bbb1d9e015c523c6e30adde9a7821d",
-      cpiTrackerUpdatedAt: now - 90 * 86_400,
-      cpiTrackerAgeSec: 90 * 86_400 - 20,
-      fullConfidenceCpiTrackerAgeSec: 62 * 86_400,
-      maxCpiTrackerAgeSec: 366 * 86_400,
-      cpiTrackerFreshness: "stale-bounded",
-      modelConfidence: "medium",
-      feeBps: 30,
-      pegPriceUsd: 1.157936,
-      fpiPriceUsd: 1.153952,
-      pegDifferenceBps: 34.52,
-      pegBandBps: 500,
-      quoteInputFpi: 1,
-      quoteOutputFrax: 1.154462,
-      outputPriceUsd: 0.98839875,
-      allInCostBps: (1 - (1.154462 * 0.98839875) / 1.157936) * 10_000,
-      controllerOutputBalance: 621_116.75,
-      maxRedeemableFpi: 537_994.25,
-      capacityUsd: 537_994.25 * 1.157936,
-      sourceUrls: ["https://docs.frax.finance/frax-price-index/fpi-controller-pool"],
-    };
+    const state = fpiControllerState(now, 20);
     const reserveSnapshot = (v9RouteAttempt?: Record<string, unknown>) => ({
       stablecoinId: "fpi-frax",
       fetchedAt: now - 30,

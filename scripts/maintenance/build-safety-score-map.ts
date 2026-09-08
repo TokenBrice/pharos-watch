@@ -1833,8 +1833,9 @@ interface PreparedMapData {
 async function fetchAndValidateMapData(
   apiKey: string,
   baseUrl: string,
+  io: SafetyScoreMapCliIo,
 ): Promise<PreparedMapData> {
-  console.log(`[safety-score-map] Fetching canonical data from ${baseUrl}`);
+  io.log(`[safety-score-map] Fetching canonical data from ${baseUrl}`);
   const [reportCardsResult, listResult, psiResult] = await Promise.all([
     fetchJson(API_PATHS.reportCardsV9(), apiKey, baseUrl),
     fetchJson(API_PATHS.stablecoins(), apiKey, baseUrl),
@@ -1863,7 +1864,7 @@ async function fetchAndValidateMapData(
     const mcap = row ? getCirculatingRaw(row) : 0;
     if (!row || !(mcap > 0)) {
       unjoined.push(card.id);
-      console.warn(`[safety-score-map] ${card.id}: ${row ? "zero circulating supply" : "no list row"} — drawn at the size floor`);
+      io.warn(`[safety-score-map] ${card.id}: ${row ? "zero circulating supply" : "no list row"} — drawn at the size floor`);
     }
     graded.push({ id: card.id, symbol: row?.symbol ?? card.id.toUpperCase(), grade: card.grade, score: card.score as number, tier, mcap });
   }
@@ -1883,9 +1884,9 @@ async function fetchAndValidateMapData(
     logos.set(bubble.coin.id, path ? await loadLogoDataUri(path, Math.ceil(bubble.r * 2)) : null);
   }));
   const missingLogos = allBubbles.filter((bubble) => !logos.get(bubble.coin.id));
-  if (missingLogos.length > 0) console.warn(`[safety-score-map] No logo for ${missingLogos.length} coins: ${missingLogos.slice(0, 12).map((b) => b.coin.id).join(", ")}${missingLogos.length > 12 ? ", …" : ""}`);
+  if (missingLogos.length > 0) io.warn(`[safety-score-map] No logo for ${missingLogos.length} coins: ${missingLogos.slice(0, 12).map((b) => b.coin.id).join(", ")}${missingLogos.length > 12 ? ", …" : ""}`);
 
-  console.log(`[safety-score-map] Render input graded=${graded.length} notRated=${notRatedCount} missingLogos=${missingLogos.length}`);
+  io.log(`[safety-score-map] Render input graded=${graded.length} notRated=${notRatedCount} missingLogos=${missingLogos.length}`);
   return { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos };
 }
 
@@ -1927,13 +1928,25 @@ function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number
   );
 }
 
-async function main(): Promise<void> {
-  const { out, edition, issue } = parseCliArgs(process.argv.slice(2));
-  unsupportedGlyphs.clear();
-  const apiKey = loadApiKey();
-  const baseUrl = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
+export interface SafetyScoreMapCliIo {
+  log: (message: string) => void;
+  warn: (message: string) => void;
+  error: (message: string) => void;
+}
 
-  const prepared = await fetchAndValidateMapData(apiKey, baseUrl);
+async function buildMap(options: {
+  argv: readonly string[];
+  apiKey?: string;
+  baseUrl?: string;
+  io: SafetyScoreMapCliIo;
+}): Promise<void> {
+  const { argv, apiKey: apiKeyOverride, baseUrl: baseUrlOverride, io } = options;
+  const { out, edition, issue } = parseCliArgs(argv);
+  unsupportedGlyphs.clear();
+  const apiKey = apiKeyOverride ?? loadApiKey();
+  const baseUrl = baseUrlOverride?.trim() || process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
+
+  const prepared = await fetchAndValidateMapData(apiKey, baseUrl, io);
   const { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos } = prepared;
   const totalMcap = graded.reduce((sum, coin) => sum + coin.mcap, 0);
   const floorMcapByTier: FloorMcapByTier = {
@@ -2122,13 +2135,48 @@ async function main(): Promise<void> {
     )}\n`,
   );
 
-  console.log(`[safety-score-map] Wrote ${pngPath} (${rendered.width}x${rendered.height}, ${graded.length} graded coins)`);
-  console.log(`\n--- alt text ---\n${altText}\n`);
-  console.log(`--- per-tier table ---\n${table}\n`);
+  io.log(`[safety-score-map] Wrote ${pngPath} (${rendered.width}x${rendered.height}, ${graded.length} graded coins)`);
+  io.log(`\n--- alt text ---\n${altText}\n`);
+  io.log(`--- per-tier table ---\n${table}\n`);
 }
+
+/**
+ * In-process entrypoint with the CLI's process semantics: a guard failure
+ * surfaces through `io.error` with the `[safety-score-map]` prefix and
+ * reports exit code 1, success reports 0. `apiKey`/`baseUrl` override the
+ * environment so tests can drive a fixture API without spawning a child
+ * process or loading `.env.local`; the direct-run block below stays the
+ * real-process owner of the exit contract.
+ */
+export async function runSafetyScoreMapCli(
+  options: {
+    argv?: readonly string[];
+    apiKey?: string;
+    baseUrl?: string;
+    io?: SafetyScoreMapCliIo;
+  } = {},
+): Promise<number> {
+  const io: SafetyScoreMapCliIo = options.io ?? {
+    log: (message) => process.stdout.write(`${message}\n`),
+    warn: (message) => process.stderr.write(`${message}\n`),
+    error: (message) => process.stderr.write(`${message}\n`),
+  };
+  try {
+    await buildMap({
+      argv: options.argv ?? process.argv.slice(2),
+      apiKey: options.apiKey,
+      baseUrl: options.baseUrl,
+      io,
+    });
+    return 0;
+  } catch (error) {
+    io.error(`[safety-score-map] ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  main().catch((err: unknown) => {
-    console.error(`[safety-score-map] ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
+  void runSafetyScoreMapCli().then((status) => {
+    if (status !== 0) process.exit(status);
   });
 }

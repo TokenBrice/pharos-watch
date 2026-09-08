@@ -35,6 +35,7 @@ import {
   replayTarget,
   type EvmV2ReplayCase,
 } from "./fixtures/evm-v2-fixtures";
+import { captureRpcs, replayTokenLookups } from "./constant-product-v2.test-support";
 
 const U = "0xce24439f2d9c6a2289f741120fe202248b666666" as const;
 const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c" as const;
@@ -136,18 +137,7 @@ async function runV2PriceLegScenario({
     chainAddressToId,
     contractMetaByChainAddress: new Map(),
     stablecoinPriceById,
-    chainRpcs: new Map([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://rpc.example",
-          explorerUrl: "https://example.com",
-        },
-      ],
-    ]),
+    chainRpcs: captureRpcs("ethereum", "Ethereum"),
     dependencies: {
       fetchBlockNumber: vi.fn(async () => 21_000_000),
       fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
@@ -177,30 +167,7 @@ async function runV2PriceLegScenario({
 }
 
 function targetForReplay(replay: EvmV2ReplayCase): DexMeasuredExecutionTarget {
-  const chainAddressToId = new Map([
-    [canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress), replay.assetId],
-    [canonicalExitRouteAssetKey("bsc", replay.counterAddress), replay.counterAssetId],
-  ]);
-  const contractMetaByChainAddress = new Map([
-    [
-      canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress),
-      {
-        stablecoinId: replay.assetId,
-        symbol: replay.stablecoinSymbol,
-        decimals: replay.stablecoinDecimals,
-        source: "contract" as const,
-      },
-    ],
-    [
-      canonicalExitRouteAssetKey("bsc", replay.counterAddress),
-      {
-        stablecoinId: replay.counterAssetId,
-        symbol: replay.counterSymbol,
-        decimals: replay.counterDecimals,
-        source: "contract" as const,
-      },
-    ],
-  ]);
+  const { chainAddressToId, contractMetaByChainAddress } = replayTokenLookups(replay);
   const output = buildEvmV2RegisteredExecutionTarget({
     context: {
       chainAddressToId,
@@ -245,30 +212,7 @@ async function runReplay(
   const metric = initMetrics(replay.assetId, replay.stablecoinSymbol);
   const pool = replayPool(replay, candidate);
   metric.topPools.push(pool);
-  const chainAddressToId = new Map([
-    [canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress), replay.assetId],
-    [canonicalExitRouteAssetKey("bsc", replay.counterAddress), replay.counterAssetId],
-  ]);
-  const contractMetaByChainAddress = new Map([
-    [
-      canonicalExitRouteAssetKey("bsc", replay.stablecoinAddress),
-      {
-        stablecoinId: replay.assetId,
-        symbol: replay.stablecoinSymbol,
-        decimals: replay.stablecoinDecimals,
-        source: "contract" as const,
-      },
-    ],
-    [
-      canonicalExitRouteAssetKey("bsc", replay.counterAddress),
-      {
-        stablecoinId: replay.counterAssetId,
-        symbol: replay.counterSymbol,
-        decimals: replay.counterDecimals,
-        source: "contract" as const,
-      },
-    ],
-  ]);
+  const { chainAddressToId, contractMetaByChainAddress } = replayTokenLookups(replay);
   const pinnedBlock = options.blockNumber ?? EVM_V2_REPLAY_BLOCK;
   const fetchBlockNumber = vi.fn(async () => pinnedBlock);
   const fetchCodeAtBlock = vi.fn(async () => "0x6000" as const);
@@ -296,18 +240,7 @@ async function runReplay(
       [replay.assetId, 1],
       [replay.counterAssetId, 1],
     ]),
-    chainRpcs: new Map([
-      [
-        "bsc",
-        {
-          chainId: "bsc",
-          chainName: "BSC",
-          type: "evm",
-          rpcUrl: "https://rpc.example",
-          explorerUrl: "https://example.com",
-        },
-      ],
-    ]),
+    chainRpcs: captureRpcs("bsc", "BSC"),
     dependencies: {
       fetchBlockNumber,
       fetchCodeAtBlock,
@@ -553,18 +486,7 @@ describe("constant-product V2 execution", () => {
         ],
       ]),
       stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
-      chainRpcs: new Map([
-        [
-          "bsc",
-          {
-            chainId: "bsc",
-            chainName: "BSC",
-            type: "evm",
-            rpcUrl: "https://rpc.example",
-            explorerUrl: "https://example.com",
-          },
-        ],
-      ]),
+      chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
         fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
@@ -738,18 +660,7 @@ describe("constant-product V2 execution", () => {
       ]),
       contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map([["usdc-circle", 1]]),
-      chainRpcs: new Map([
-        [
-          "bsc",
-          {
-            chainId: "bsc",
-            chainName: "BSC",
-            type: "evm",
-            rpcUrl: "https://rpc.example",
-            explorerUrl: "https://example.com",
-          },
-        ],
-      ]),
+      chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
         fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
@@ -994,18 +905,7 @@ describe("constant-product V2 execution", () => {
         ],
       ]),
       stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
-      chainRpcs: new Map([
-        [
-          "base",
-          {
-            chainId: "base",
-            chainName: "Base",
-            type: "evm",
-            rpcUrl: "https://rpc.example",
-            explorerUrl: "https://example.com",
-          },
-        ],
-      ]),
+      chainRpcs: captureRpcs("base", "Base"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 33_000_000),
         fetchCodeAtBlock: fetchCodeAtBlock as never,
@@ -1068,18 +968,7 @@ describe("constant-product V2 execution", () => {
       chainAddressToId: new Map(),
       contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map(),
-      chainRpcs: new Map([
-        [
-          "base",
-          {
-            chainId: "base",
-            chainName: "Base",
-            type: "evm",
-            rpcUrl: "https://rpc.example",
-            explorerUrl: "https://example.com",
-          },
-        ],
-      ]),
+      chainRpcs: captureRpcs("base", "Base"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 33_000_000),
         fetchCodeAtBlock: vi.fn(async (_chain, address) =>

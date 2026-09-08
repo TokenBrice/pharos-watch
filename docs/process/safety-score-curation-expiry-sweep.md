@@ -139,7 +139,7 @@ npm run safety-score-v9:missing-data-registry -- \
 
 The registry's `workType`, `resolutionMode`, `claimGroupId`, evidence action,
 touchpoints, current context, and disappearance sentinels are the routing contract.
-Do not build another classifier from the evidence queue's four-value `action` field.
+Do not build another classifier from the evidence queue's coarse `action` field.
 Task rows, claim groups, and dispatch reachability are routing counts, not estimates of
 closable facts. No registry row closes a fact mechanically.
 
@@ -172,6 +172,8 @@ Triage by the registry's typed `workType`:
 | `ACCESS_REVIEW`, `DEPLOYMENT_CONTROLS`, `MINT_AUTHORITY` | Exact contract/proxy and role scope, current authority, upgrade path, and dated primary/explorer evidence. |
 | `ORACLE_BRANCH`, `ORACLE_PROFILE`, `PEG_INPUT` | Configured branch, source freshness, runtime availability, and fail-closed behavior. |
 | `PARENT_RATEABILITY` | Canonical parent/dependency identity and proof that the score projection consumes it. |
+| `CHAIN_SUPPLY` | Provider identity, price path, contracts and chain coverage for a current score-eligible circulating-USD observation; use `getCirculatingRaw()` and never add manual/on-chain/CMC/DEX supply overrides. |
+| `IMPLEMENTATION_DATE` | Launch date of the currently scored mechanism boundary; conservative range end for fuzzy dates, cited source, and no predecessor launch when the mechanism was materially replaced. |
 
 For a new work type, read its embedded definition and emitting code before deciding;
 do not infer a resolution from its name. Resolution mode describes the work shape,

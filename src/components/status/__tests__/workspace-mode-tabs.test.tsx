@@ -18,7 +18,7 @@ const MODES: WorkspaceModeSummary<TestMode>[] = [
 
 
 describe("WorkspaceModeTabs", () => {
-  it("applies workspace configuration to the shared tab strip", () => {
+  it("labels every mode tab with its issue load and wires the selected panel relationship", () => {
     const ids = createWorkspaceModeIds("pipeline");
     render(
       <WorkspaceModeTabs
@@ -32,21 +32,24 @@ describe("WorkspaceModeTabs", () => {
       />,
     );
 
-    const tablist = screen.getByRole("tablist", { name: "Pipeline views" });
+    expect(screen.getByRole("tablist", { name: "Pipeline views" })).toBeTruthy();
+    const tabs = screen.getAllByRole("tab");
     const qualityTab = screen.getByRole("tab", { name: /Quality/ });
-    expect(tablist.className).toContain("w-full");
-    expect(tablist.className).toContain("min-w-0");
-    expect(tablist.className).toContain("max-w-full");
-    expect(tablist.className).toContain("overflow-x-auto");
-    expect(tablist.firstElementChild?.className).toContain("min-w-max");
-    expect(screen.getAllByRole("tab")).toHaveLength(MODES.length);
-    expect(qualityTab.className).toContain("min-h-11");
-    expect(qualityTab.className).toContain("min-w-[6.5rem]");
+    expect(tabs).toHaveLength(MODES.length);
+    expect(tabs.map((tab) => tab.getAttribute("aria-selected"))).toEqual(["true", "false", "false"]);
+    // Severity and issue count reach assistive tech, not only the pill colour.
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      "Quality1 issues, watch",
+      "Markets0 issues, healthy",
+      "Reserves2 issues, critical",
+    ]);
     expect(qualityTab.id).toBe("pipeline-tab-quality");
     expect(qualityTab.getAttribute("aria-controls")).toBe("pipeline-panel-quality");
+    // Unselected tabs own no panel, so no dangling aria-controls target exists.
+    expect(tabs.slice(1).map((tab) => tab.hasAttribute("aria-controls"))).toEqual([false, false]);
   });
 
-  it("preserves reliability sizing and shared roving-tab keyboard controls", () => {
+  it("keeps shared roving-tab keyboard controls under a second workspace prefix", () => {
     const onModeChange = vi.fn();
     render(
       <WorkspaceModeTabs
@@ -59,11 +62,11 @@ describe("WorkspaceModeTabs", () => {
       />,
     );
 
-    const tablist = screen.getByRole("tablist", { name: "Reliability views" });
+    expect(screen.getByRole("tablist", { name: "Reliability views" })).toBeTruthy();
     const qualityTab = screen.getByRole("tab", { name: /Quality/ });
     const reservesTab = screen.getByRole("tab", { name: /Reserves/ });
-    expect(tablist.className.split(/\s+/)).not.toContain("w-full");
-    expect(qualityTab.className).toContain("min-w-[7.5rem]");
+    expect(qualityTab.tabIndex).toBe(0);
+    expect(reservesTab.tabIndex).toBe(-1);
     expect(qualityTab.id).toBe("reliability-tab-quality");
 
     qualityTab.focus();

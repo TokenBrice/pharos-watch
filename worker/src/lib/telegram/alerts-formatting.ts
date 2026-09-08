@@ -587,8 +587,16 @@ export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT)
         continue;
       }
 
-      for (let index = 0; index < line.length; index += limit) {
-        parts.push(repairBrokenHtml(line.slice(index, index + limit)));
+      for (let index = 0; index < line.length;) {
+        let end = Math.min(index + limit, line.length);
+        let repaired = repairBrokenHtml(line.slice(index, end));
+        // Balancing tags consumes part of the same limit as the original text.
+        while (repaired.length > limit) {
+          end -= repaired.length - limit;
+          repaired = repairBrokenHtml(line.slice(index, end));
+        }
+        if (repaired) parts.push(repaired);
+        index = end;
       }
     }
 

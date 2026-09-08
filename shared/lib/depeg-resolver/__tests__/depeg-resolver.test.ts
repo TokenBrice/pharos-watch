@@ -5,7 +5,6 @@ import {
   computeDuration,
   candidateStrata,
   depthBucket,
-  DURATION_LABEL_MERGE_GAP_SEC,
   groupDurationLabelIncidents,
   groupIncidents,
   quarantinedCoins,
@@ -68,6 +67,27 @@ const coin = (over: Partial<DdrCoinStructural> = {}): DdrCoinStructural => ({
   governance: "decentralized",
   ...over,
 });
+
+function incident(
+  stablecoinId: string,
+  startedAt: number,
+  durationSec: number | null,
+  over: Partial<DdrIncident> = {},
+): DdrIncident {
+  return {
+    stablecoinId,
+    direction: "below",
+    peakDeviationBps: -500,
+    depth: "moderate",
+    currency: "USD",
+    structural: "robust",
+    startedAt,
+    endedAt: durationSec == null ? null : startedAt + durationSec,
+    durationSec,
+    recovered: durationSec != null,
+    ...over,
+  };
+}
 
 describe("depthBucket", () => {
   it("matches spike thresholds", () => {
@@ -188,7 +208,7 @@ describe("DDR curated-posture set membership — pinned", () => {
     expect(anchorFor("bounded-admin")).toBeNull();
   });
 
-  it("keeps the immutable and governed mint paths ahead of the mint-scoped rung", () => {
+  it("keeps the immutable mint path strong and the governed mint path weak", () => {
     const anchorFor = (patch: Partial<DdrCoinStructural>) =>
       resolveOutlook(
         event({ direction: "below", peakDeviationBps: -300 }),
@@ -200,7 +220,6 @@ describe("DDR curated-posture set membership — pinned", () => {
     expect(anchorFor({ mintPath: "immutable-user-collateralized" })).toMatchObject({ severity: "strong" });
     expect(anchorFor({ mintPath: "user-collateralized-governed" })).toMatchObject({
       severity: "weak",
-      label: "User-collateralized supply (governance-bounded)",
     });
   });
 });
@@ -421,12 +440,11 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
       lockAt,
     );
 
-    expect(r.factors).toContainEqual({
+    expect(r.factors).toContainEqual(expect.objectContaining({
       code: "K6_wind_down",
       kind: "kill",
       severity: "severe",
-      label: `Issuer announced wind-down on ${announcementDate}`,
-    });
+    }));
     expect(r.tier).toBe("recovery_unlikely");
   });
 
@@ -444,7 +462,6 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
           code: "K6_wind_down",
           kind: "kill",
           severity: "elevated",
-          label: expect.stringContaining("wind-down fingerprint"),
         }),
       ]),
     );
@@ -511,7 +528,6 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
         expect.objectContaining({
           code: "K6_wind_down",
           severity: "elevated",
-          label: expect.stringContaining("30-day DEX volume fell 40%"),
         }),
       ]),
     );
@@ -535,7 +551,6 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
           code: "K6_wind_down",
           kind: "kill",
           severity: "elevated",
-          label: expect.stringContaining("only $89 DEX volume / 24h"),
         }),
       ]),
     );
@@ -993,17 +1008,44 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
 
 describe("incident grouping + quarantine", () => {
   const usd = () => "USD";
-  const incidentForQuarantine = (stablecoinId: string, durationSec: number, i: number): DdrIncident => ({
-    stablecoinId,
-    direction: "below",
-    peakDeviationBps: -120,
-    depth: "minor",
-    currency: "USD",
-    structural: "fragile",
-    startedAt: i * 10000,
-    endedAt: i * 10000 + durationSec,
-    durationSec,
-    recovered: true,
+  const incidentForQuarantine = (stablecoinId: string, durationSec: number, i: number) =>
+    incident(stablecoinId, i * 10000, durationSec, { peakDeviationBps: -120, depth: "minor", structural: "fragile" });
+
+  it.each([6, 24])("uses a strict %ih merge gap with shuffled, direction-separated fragments", (hours) => {
+    const fragments: DdrHistoricalEvent[] = [
+      { stablecoinId: "a", direction: "below", startedAt: 0, endedAt: 60, peakDeviationBps: -300, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "below", startedAt: hours * 3600 + 59, endedAt: hours * 3600 + 119, peakDeviationBps: -500, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "below", startedAt: 2 * hours * 3600 + 119, endedAt: 2 * hours * 3600 + 179, peakDeviationBps: -300, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "above", startedAt: 30, endedAt: 90, peakDeviationBps: 300, recoveryPrice: null, closeReason: "recovered-native" },
+    ];
+    const live = groupIncidents([fragments[2], fragments[1], fragments[3], fragments[0]], usd);
+    const groups = hours === 6 ? live : groupDurationLabelIncidents(live);
+    expect(groups.map(({ direction, startedAt, endedAt, recovered }) => ({ direction, startedAt, endedAt, recovered }))).toEqual([
+      { direction: "below", startedAt: 0, endedAt: hours * 3600 + 119, recovered: true },
+      { direction: "below", startedAt: 2 * hours * 3600 + 119, endedAt: 2 * hours * 3600 + 179, recovered: true },
+      { direction: "above", startedAt: 30, endedAt: 90, recovered: true },
+    ]);
+  });
+
+  it.each([null, "superseded-direction"] as const)("uses the final fragment's closure (%s) and rebases depth history", (closeReason) => {
+    const raw: DdrHistoricalEvent[] = [
+      { stablecoinId: "a", direction: "below", startedAt: 100, endedAt: 3700, peakDeviationBps: -300, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "below", startedAt: 43300, endedAt: 46900, peakDeviationBps: -500, recoveryPrice: null, closeReason: "recovered-native" },
+      { stablecoinId: "a", direction: "below", startedAt: 47000, endedAt: closeReason == null ? null : 48000, peakDeviationBps: -700, recoveryPrice: null, closeReason },
+    ];
+    const live = groupIncidents(raw, usd);
+    expect(live.map(({ recovered }) => recovered)).toEqual([true, false]);
+    const labels = groupDurationLabelIncidents(live);
+    expect(labels).toEqual([expect.objectContaining({
+      startedAt: 100, endedAt: closeReason == null ? null : 48000,
+      durationSec: closeReason == null ? null : 47900, recovered: false,
+      fragments: [
+        { offsetSec: 0, peakDeviationBps: -300 },
+        { offsetSec: 43200, peakDeviationBps: -500 },
+        { offsetSec: 46900, peakDeviationBps: -700 },
+      ],
+    })]);
+    expect(buildDurationTrainingCorpus(live, new Set())).toEqual([]);
   });
 
   it("keeps live grouping at 6h while duration labels use 24h stickiness", () => {
@@ -1104,20 +1146,34 @@ describe("incident grouping + quarantine", () => {
 
 describe("computeDuration", () => {
   const makeStratum = (n: number, durationSec: number, coinPrefix: string): DdrIncident[] =>
-    Array.from({ length: n }, (_, i) => ({
-      stablecoinId: `${coinPrefix}-${i % 12}`,
-      direction: "below" as const,
-      peakDeviationBps: -500,
-      depth: "moderate" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      startedAt: i * 100000,
-      endedAt: i * 100000 + durationSec,
-      durationSec,
-      recovered: true,
-    }));
+    Array.from({ length: n }, (_, i) => incident(`${coinPrefix}-${i % 12}`, i * 100000, durationSec));
 
   const key: DdrStratumKey = { direction: "below", depth: "moderate", structural: "robust", currency: "USD" };
+
+  it.each(["exact", "episodes", "coins", "closures", "nonclosures"] as const)(
+    "publishes benchmarked support only when all floors hold: %s", (boundary) => {
+      const episodes = Array.from({ length: 30 }, (_, i) => {
+        const coinIndex = i % 10;
+        const closes = coinIndex < 5;
+        const duration = (boundary === "closures" && i === 0) ? 12 * 3600
+          : (boundary === "nonclosures" && i === 5) ? 6 * 3600
+          : (closes ? 6 : 12) * 3600;
+        return incident(`benchmark-${boundary === "coins" && coinIndex === 9 ? 8 : coinIndex}`,
+          i * 72 * 3600, duration);
+      });
+      if (boundary === "episodes") episodes.pop();
+      const d = computeDuration(key, 0, episodes, new Set());
+      const h6 = d.horizons.find((h) => h.horizon === "6h")!;
+      expect(d.suppressed).toBe(false);
+      expect(h6.state).toBe(boundary === "exact" ? "benchmarked" : "thin_support");
+      expect(h6.probabilityInterval).not.toBeNull();
+      if (boundary === "exact") {
+        expect(h6).toMatchObject({ probability: 0.5, rawAtRisk: 30, uniqueCoins: 10, intervalClosures: 15, intervalNonClosures: 15 });
+        // Wilson 90% interval for five coin-weighted closures out of ten (z = 1.64).
+        expect(h6.probabilityInterval).toMatchObject({ lower: expect.closeTo(0.2698, 4), upper: expect.closeTo(0.7302, 4) });
+      }
+    },
+  );
 
   it("emits candidate strata in most-dependable-first order", () => {
     expect(candidateStrata({ ...key, depth: "severe" })).toEqual([
@@ -1153,16 +1209,17 @@ describe("computeDuration", () => {
     ]);
   });
 
-  it("returns a supported median + monotonic horizon probabilities with enough data", () => {
+  it("publishes a 24h median while hiding the zero-closure 6h probability", () => {
     // 40 incidents across 12 coins, total duration ~24h
     const incidents = makeStratum(40, 24 * 3600, "c");
     const d = computeDuration(key, 0, incidents, new Set());
     expect(d.suppressed).toBe(false);
-    expect(d.medianSec).toBeGreaterThan(0);
+    expect(d.medianSec).toBe(24 * 3600);
     const p6 = d.horizons.find((h) => h.horizon === "6h")!;
     const p7d = d.horizons.find((h) => h.horizon === "7d")!;
-    // by 7d everything (all 24h incidents) has resolved; by 6h none have
-    expect(p7d.intervalClosures).toBeGreaterThanOrEqual(p6.intervalClosures);
+    expect(d.iqrSec).toEqual([24 * 3600, 24 * 3600]);
+    expect(p6).toMatchObject({ state: "no_comparable_closures", intervalClosures: 0, probability: null, probabilityInterval: null });
+    expect(p7d).toMatchObject({ state: "thin_support", intervalClosures: 40, probability: 1 });
   });
 
   it("suppresses the band when support is too thin", () => {
@@ -1181,18 +1238,7 @@ describe("computeDuration", () => {
   });
 
   it("publishes the p15/p85 typical range", () => {
-    const incidents: DdrIncident[] = Array.from({ length: 20 }, (_, i) => ({
-      stablecoinId: `quantile-${i}`,
-      direction: "below" as const,
-      peakDeviationBps: -500,
-      depth: "moderate" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      startedAt: i * 3 * 86400,
-      endedAt: i * 3 * 86400 + (i + 1) * 3600,
-      durationSec: (i + 1) * 3600,
-      recovered: true,
-    }));
+    const incidents = Array.from({ length: 20 }, (_, i) => incident(`quantile-${i}`, i * 3 * 86400, (i + 1) * 3600));
 
     const d = computeDuration(key, 0, incidents, new Set());
 
@@ -1200,30 +1246,8 @@ describe("computeDuration", () => {
   });
 
   it("coin-deduplicates the published median and typical range", () => {
-    const flapper = Array.from({ length: 20 }, (_, i): DdrIncident => ({
-      stablecoinId: "flapper",
-      direction: "below",
-      peakDeviationBps: -500,
-      depth: "moderate",
-      currency: "USD",
-      structural: "robust",
-      startedAt: i * 48 * 3600,
-      endedAt: i * 48 * 3600 + 3600,
-      durationSec: 3600,
-      recovered: true,
-    }));
-    const otherCoins = [20, 30, 40, 50].map((hours, i): DdrIncident => ({
-      stablecoinId: `other-${i}`,
-      direction: "below",
-      peakDeviationBps: -500,
-      depth: "moderate",
-      currency: "USD",
-      structural: "robust",
-      startedAt: (i + 20) * 48 * 3600,
-      endedAt: (i + 20) * 48 * 3600 + hours * 3600,
-      durationSec: hours * 3600,
-      recovered: true,
-    }));
+    const flapper = Array.from({ length: 20 }, (_, i) => incident("flapper", i * 48 * 3600, 3600));
+    const otherCoins = [20, 30, 40, 50].map((hours, i) => incident(`other-${i}`, (i + 20) * 48 * 3600, hours * 3600));
 
     const d = computeDuration(key, 0, [...flapper, ...otherCoins], new Set());
 
@@ -1233,58 +1257,30 @@ describe("computeDuration", () => {
   });
 
   it("does not borrow minor-depth clocks for a severe active event", () => {
-    const minorIncidents: DdrIncident[] = Array.from({ length: 40 }, (_, i) => ({
-      stablecoinId: `m-${i % 12}`,
-      direction: "below" as const,
-      peakDeviationBps: -120,
-      depth: "minor" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      startedAt: i * 100000,
-      endedAt: i * 100000 + 3600,
-      durationSec: 3600,
-      recovered: true,
-    }));
+    const minorIncidents = Array.from({ length: 40 }, (_, i) =>
+      incident(`m-${i % 12}`, i * 100000, 3600, { peakDeviationBps: -120, depth: "minor" }));
     const d = computeDuration({ ...key, depth: "severe" }, 0, minorIncidents, new Set());
     expect(d.suppressed).toBe(true);
     expect(d.stratum).toContain("severe");
   });
 
   it("matches historical depth as observed at landmark age, not final peak", () => {
-    const incidents: DdrIncident[] = Array.from({ length: 12 }, (_, i) => ({
-      stablecoinId: `coin-${i}`,
-      direction: "below" as const,
-      peakDeviationBps: -2000,
-      depth: "severe" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      startedAt: i * 100000,
-      endedAt: i * 100000 + 12 * 3600,
-      durationSec: 12 * 3600,
-      recovered: true,
-      fragments: [
-        { offsetSec: 0, peakDeviationBps: -500 },
-        { offsetSec: 8 * 3600, peakDeviationBps: -2000 },
-      ],
-    }));
+    const incidents = Array.from({ length: 12 }, (_, i) =>
+      incident(`coin-${i}`, i * 100000, 12 * 3600, {
+        peakDeviationBps: -2000, depth: "severe",
+        fragments: [
+          { offsetSec: 0, peakDeviationBps: -500 },
+          { offsetSec: 8 * 3600, peakDeviationBps: -2000 },
+        ],
+      }));
     const d = computeDuration({ ...key, depth: "severe" }, 2 * 3600, incidents, new Set());
     expect(d.stratum).not.toBe("below · severe · robust · USD");
     expect(d.stratum).toContain("moderate+severe+catastrophic");
   });
 
   it("selects the structural-preserving broad stratum before dropping structure", () => {
-    const incidents: DdrIncident[] = Array.from({ length: 12 }, (_, i) => ({
-      stablecoinId: `broad-${i}`,
-      direction: "below" as const,
-      peakDeviationBps: -500,
-      depth: "moderate" as const,
-      currency: i % 2 === 0 ? ("USD" as const) : ("non-USD" as const),
-      structural: "robust" as const,
-      startedAt: i * 100000,
-      endedAt: i * 100000 + 14 * 3600,
-      durationSec: 14 * 3600,
-      recovered: true,
-    }));
+    const incidents = Array.from({ length: 12 }, (_, i) =>
+      incident(`broad-${i}`, i * 100000, 14 * 3600, { currency: i % 2 === 0 ? "USD" : "non-USD" }));
 
     const d = computeDuration({ ...key, depth: "severe" }, 0, incidents, new Set());
 
@@ -1297,31 +1293,9 @@ describe("computeDuration", () => {
     // "dominant" coin: 10 incidents all closing within 6h (durationSec = 6h).
     // 4 other coins: 1 incident each, very long duration (never closes at 6h horizon).
     // Without per-coin cap: 10/14 ≈ 0.71. With cap: 1.0/5 = 0.20.
-    const dominantIncidents: DdrIncident[] = Array.from({ length: 10 }, (_, i) => ({
-      stablecoinId: "dominant",
-      direction: "below" as const,
-      peakDeviationBps: -500,
-      depth: "moderate" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      // Keep these as distinct training labels under the intentional 24h stickiness.
-      startedAt: i * 48 * 3600,
-      endedAt: i * 48 * 3600 + 6 * 3600,
-      durationSec: 6 * 3600,
-      recovered: true,
-    }));
-    const otherIncidents: DdrIncident[] = Array.from({ length: 4 }, (_, i) => ({
-      stablecoinId: `other-${i}`,
-      direction: "below" as const,
-      peakDeviationBps: -500,
-      depth: "moderate" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      startedAt: 1_000_000 + i * 1000,
-      endedAt: 1_000_000 + i * 1000 + 30 * 86400,
-      durationSec: 30 * 86400,
-      recovered: true,
-    }));
+    // The 48h spacing preserves separate labels under 24h stickiness.
+    const dominantIncidents = Array.from({ length: 10 }, (_, i) => incident("dominant", i * 48 * 3600, 6 * 3600));
+    const otherIncidents = Array.from({ length: 4 }, (_, i) => incident(`other-${i}`, 1_000_000 + i * 1000, 30 * 86400));
     const d = computeDuration(key, 0, [...dominantIncidents, ...otherIncidents], new Set());
     // Support gate: 14 incidents, 5 unique coins — passes thin_support threshold.
     const h6 = d.horizons.find((h) => h.horizon === "6h")!;
@@ -1333,19 +1307,8 @@ describe("computeDuration", () => {
   it("marks a horizon as not displayable when effectiveN is below the thin-support floor", () => {
     // 4 unique coins × 4 incidents each = 16 incidents, but effectiveN = 4 < THIN_SUPPORT_MIN_EFFECTIVE_N (5).
     // All close within 6h so there ARE closures, but the per-coin support gate should block display.
-    const incidents: DdrIncident[] = Array.from({ length: 16 }, (_, i) => ({
-      stablecoinId: `coin-${i % 4}`,
-      direction: "below" as const,
-      peakDeviationBps: -500,
-      depth: "moderate" as const,
-      currency: "USD" as const,
-      structural: "robust" as const,
-      // Keep each coin's four episodes distinct after duration-label regrouping.
-      startedAt: Math.floor(i / 4) * 48 * 3600,
-      endedAt: Math.floor(i / 4) * 48 * 3600 + 6 * 3600,
-      durationSec: 6 * 3600,
-      recovered: true,
-    }));
+    const incidents = Array.from({ length: 16 }, (_, i) =>
+      incident(`coin-${i % 4}`, Math.floor(i / 4) * 48 * 3600, 6 * 3600));
     const d = computeDuration(key, 0, incidents, new Set());
     const h6 = d.horizons.find((h) => h.horizon === "6h")!;
     // effectiveN = 4 < 5 → cannot reach thin_support; probability must be null.
@@ -1356,30 +1319,8 @@ describe("computeDuration", () => {
 
   it("uses fractional coin weights for Wilson intervals", () => {
     const incidents = Array.from({ length: 5 }, (_, i) => [
-      {
-        stablecoinId: `coin-${i}`,
-        direction: "below" as const,
-        peakDeviationBps: -500,
-        depth: "moderate" as const,
-        currency: "USD" as const,
-        structural: "robust" as const,
-        startedAt: i * 100 * 86400,
-        endedAt: i * 100 * 86400 + 6 * 3600,
-        durationSec: 6 * 3600,
-        recovered: true,
-      },
-      {
-        stablecoinId: `coin-${i}`,
-        direction: "below" as const,
-        peakDeviationBps: -500,
-        depth: "moderate" as const,
-        currency: "USD" as const,
-        structural: "robust" as const,
-        startedAt: i * 100 * 86400 + 48 * 3600,
-        endedAt: i * 100 * 86400 + 48 * 3600 + 30 * 86400,
-        durationSec: 30 * 86400,
-        recovered: true,
-      },
+      incident(`coin-${i}`, i * 100 * 86400, 6 * 3600),
+      incident(`coin-${i}`, i * 100 * 86400 + 48 * 3600, 30 * 86400),
     ]).flat();
 
     const h6 = computeDuration(key, 0, incidents, new Set()).horizons.find((h) => h.horizon === "6h")!;
@@ -1390,203 +1331,72 @@ describe("computeDuration", () => {
   });
 
   it("interpolates p99 for chronic-tail detection", () => {
-    const durations = [1, 2, 3, 100].map((hours, i): DdrIncident => ({
-      stablecoinId: `tail-${i}`,
-      direction: "below",
-      peakDeviationBps: -500,
-      depth: "moderate",
-      currency: "USD",
-      structural: "robust",
-      startedAt: i * 200 * 3600,
-      endedAt: i * 200 * 3600 + hours * 3600,
-      durationSec: hours * 3600,
-      recovered: true,
-    }));
+    const durations = [1, 2, 3, 100].map((hours, i) => incident(`tail-${i}`, i * 200 * 3600, hours * 3600));
 
     expect(computeDuration(key, 98 * 3600, durations, new Set()).ageStatus).toBe("chronic_tail");
   });
 });
 
 describe("duration training corpus", () => {
-  const trainingIncident = (
-    stablecoinId: string,
-    startedAt: number,
-    endedAt: number,
-  ): DdrIncident => ({
-    stablecoinId,
-    direction: "below",
-    peakDeviationBps: -300,
-    depth: "moderate",
-    currency: "USD",
-    structural: "fragile",
-    startedAt,
-    endedAt,
-    durationSec: endedAt - startedAt,
-    recovered: true,
-  });
-
-  it("pins the 24h-stickiness replay trainable count at 4,986", () => {
-    // ref/ev_0.json + ref/ev_12000.json, compacted as
-    // [6h-group count, 6h-trainable count, 24h-trainable, occurrence count].
-    const referenceCorpusShape = [
-      [1, 0, 0, 59],
-      [1, 1, 1, 3465],
-      [2, 0, 0, 2],
-      [2, 0, 1, 8],
-      [2, 1, 0, 3],
-      [2, 1, 1, 15],
-      [2, 2, 1, 734],
-      [3, 1, 1, 1],
-      [3, 2, 1, 4],
-      [3, 3, 1, 308],
-      [4, 1, 1, 1],
-      [4, 2, 1, 1],
-      [4, 3, 1, 3],
-      [4, 4, 1, 157],
-      [5, 3, 1, 2],
-      [5, 5, 1, 84],
-      [6, 4, 1, 1],
-      [6, 5, 1, 4],
-      [6, 6, 1, 57],
-      [7, 6, 1, 1],
-      [7, 7, 1, 30],
-      [8, 8, 1, 26],
-      [9, 9, 1, 23],
-      [10, 8, 1, 1],
-      [10, 9, 0, 1],
-      [10, 10, 1, 9],
-      [11, 11, 1, 12],
-      [12, 11, 1, 1],
-      [12, 12, 1, 8],
-      [13, 13, 1, 4],
-      [14, 14, 1, 6],
-      [15, 15, 1, 4],
-      [16, 16, 1, 1],
-      [17, 16, 1, 1],
-      [17, 17, 1, 2],
-      [18, 18, 1, 3],
-      [19, 19, 1, 1],
-      [20, 20, 1, 1],
-      [21, 21, 1, 2],
-      [22, 22, 1, 3],
-      [30, 30, 1, 1],
-      [37, 37, 1, 1],
-    ] as const;
-    const corpus: DdrIncident[] = [];
-    let groupIndex = 0;
-    let inputTrainableCount = 0;
-
-    for (const [fragmentCount, trainableCount, labelTrainable, occurrences] of referenceCorpusShape) {
-      for (let occurrence = 0; occurrence < occurrences; occurrence += 1) {
-        let startedAt = groupIndex * 100 * DURATION_LABEL_MERGE_GAP_SEC;
-        for (let fragment = 0; fragment < fragmentCount; fragment += 1) {
-          const trainable = fragment < trainableCount;
-          const durationSec = trainable ? 3600 : 60;
-          const incident = trainingIncident(`reference-group-${groupIndex}`, startedAt, startedAt + durationSec);
-          incident.peakDeviationBps = trainable ? -300 : -100;
-          incident.depth = trainable ? "moderate" : "minor";
-          if (!labelTrainable && fragment === fragmentCount - 1) incident.recovered = false;
-          corpus.push(incident);
-          if (trainable) inputTrainableCount += 1;
-          startedAt = incident.endedAt! + 12 * 3600;
-        }
-        groupIndex += 1;
-      }
-    }
-
-    expect(corpus).toHaveLength(8_950);
-    expect(inputTrainableCount).toBe(8_823);
-    expect(groupDurationLabelIncidents(corpus)).toHaveLength(5_051);
-    expect(buildDurationTrainingCorpus(corpus, new Set())).toHaveLength(4_986);
-  });
-
-  it("pins reviewed sticky duration labels from the reference event fixture", () => {
-    const fixtures: Array<{ eventId: number; expectedHours: number; incident: DdrIncident }> = [
-      {
-        eventId: 90635,
-        expectedHours: 103.5,
-        incident: {
-          ...trainingIncident("krwq-iq", 1783938776, 1784311438),
-          direction: "above",
-          peakDeviationBps: 200,
-          depth: "minor",
-          currency: "non-USD",
-          fragments: [
-            { offsetSec: 0, peakDeviationBps: 200 },
-            { offsetSec: 1784310476 - 1783938776, peakDeviationBps: 150 },
-          ],
-        },
-      },
-      {
-        eventId: 90508,
-        expectedHours: 235.7,
-        incident: {
-          ...trainingIncident("zarp-zarp", 1782754527, 1783603173),
-          peakDeviationBps: -442,
-          depth: "moderate",
-          currency: "non-USD",
-          structural: "robust",
-          fragments: [
-            { offsetSec: 0, peakDeviationBps: -256 },
-            { offsetSec: 1783599578 - 1782754527, peakDeviationBps: -159 },
-          ],
-        },
-      },
-      {
-        eventId: 90285,
-        expectedHours: 561.5,
-        incident: {
-          ...trainingIncident("usda-alpha-partner", 1780627004, 1782648326),
-          peakDeviationBps: -626,
-          depth: "moderate",
-          fragments: [
-            { offsetSec: 0, peakDeviationBps: -504 },
-            { offsetSec: 1782029942 - 1780627004, peakDeviationBps: -397 },
-          ],
-        },
-      },
+  it("regroups separate shallow fragments before deciding trainability", () => {
+    const fragments = [
+      incident("sticky", 0, 60, { peakDeviationBps: -100, depth: "minor" }),
+      incident("sticky", 12 * 3600, 60, { peakDeviationBps: -150, depth: "minor" }),
+      incident("short", 0, 60, { peakDeviationBps: -100, depth: "minor" }),
+      incident("deep", 0, 60, { peakDeviationBps: -300 }),
+      incident("quarantined", 0, 3600),
     ];
-
-    const labels = buildDurationTrainingCorpus(fixtures.map((fixture) => fixture.incident), new Set());
-
-    for (const fixture of fixtures) {
-      const label = labels.find((incident) => incident.stablecoinId === fixture.incident.stablecoinId);
-      expect(label?.durationSec, `ev${fixture.eventId}`).toBeDefined();
-      expect((label!.durationSec as number) / 3600, `ev${fixture.eventId}`).toBeCloseTo(fixture.expectedHours, 1);
-    }
+    expect(buildDurationTrainingCorpus(fragments, new Set(["quarantined"]))).toEqual([
+      expect.objectContaining({
+        stablecoinId: "sticky", startedAt: 0, endedAt: 43260, durationSec: 43260, recovered: true,
+        fragments: [{ offsetSec: 0, peakDeviationBps: -100 }, { offsetSec: 43200, peakDeviationBps: -150 }],
+      }),
+      expect.objectContaining({ stablecoinId: "deep", durationSec: 60, recovered: true }),
+    ]);
   });
 });
 
 describe("resolveDepeg orchestration", () => {
-  it("suppresses duration for a terminal verdict", () => {
-    const row = resolveDepeg({
-      active: event({ stablecoinId: "usr-resolv", direction: "below", peakDeviationBps: -9025 }),
-      coin: coin({
-        authorityPosture: "unbounded-or-compromised",
-        mintPath: "offchain-attested-minter",
-        governance: "centralized",
-      }),
-      supply: baseSupply({ mintSurge: true, change7dPct: 40 }),
-      live: baseLive({ liquidityScore: 15, tvlChange7d: -60 }),
-      nowSec: 1_000_000 + 3600,
-      incidents: Array.from({ length: 20 }, (_, i) => ({
-        stablecoinId: `c-${i}`,
-        direction: "below" as const,
-        peakDeviationBps: -500,
-        depth: "moderate" as const,
-        currency: "USD" as const,
-        structural: "fragile" as const,
-        startedAt: i * 100000,
-        endedAt: i * 100000 + 24 * 3600,
-        durationSec: 24 * 3600,
-        recovered: true,
-      })),
-      quarantined: new Set(),
+  const input = () => ({
+    active: event(),
+    coin: coin({ authorityPosture: "reviewed-non-risky" }),
+    supply: baseSupply(),
+    live: baseLive(),
+    nowSec: 1_000_000 + 3600,
+    incidents: Array.from({ length: 20 }, (_, i) =>
+      incident(`c-${i}`, i * 100000, 24 * 3600, { structural: "fragile" })),
+    quarantined: new Set<string>(),
+  });
+
+  it.each([
+    ["terminal", "recovery_unlikely", "verdict_terminal"],
+    ["missing-supply", "insufficient_signal", "insufficient_signal"],
+  ] as const)("clears every public duration field for %s", (mode, tier, reason) => {
+    const controlInput = input();
+    const control = resolveDepeg(controlInput);
+    expect(control.resolution.tier).not.toBe("insufficient_signal");
+    expect(control.duration).toMatchObject({
+      suppressed: false, stratum: "below · moderate · fragile · USD",
+      medianSec: 23 * 3600, iqrSec: [23 * 3600, 23 * 3600], ageStatus: "ordinary",
     });
-    expect(row.resolution.tier).toBe("recovery_unlikely");
-    expect(row.duration.suppressed).toBe(true);
-    expect(row.duration.suppressedReason).toBe("verdict_terminal");
-    expect(row.duration.horizons).toEqual([]);
+    expect(control.duration.horizons).toHaveLength(4);
+    const row = resolveDepeg({
+      ...controlInput,
+      ...(mode === "terminal"
+        ? { coin: coin({ authorityPosture: "reviewed-non-risky", status: "dead" }) }
+        : { supply: baseSupply({ covered: false }) }),
+    });
+    expect(row.resolution.tier).toBe(tier);
+    expect(row.duration).toEqual({
+      suppressed: true, suppressedReason: reason, stratum: null, medianSec: null,
+      iqrSec: null, ageStatus: null, horizons: [],
+    });
     expect(row.ageSec).toBe(3600);
+  });
+
+  it("clamps future-start age to zero and retains the supported duration", () => {
+    const row = resolveDepeg({ ...input(), nowSec: 999999 });
+    expect(row.ageSec).toBe(0);
+    expect(row.duration).toMatchObject({ suppressed: false, medianSec: 24 * 3600 });
   });
 });

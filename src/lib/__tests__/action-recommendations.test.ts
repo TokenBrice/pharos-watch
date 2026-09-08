@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import { deriveStatusActionRecommendations } from "../status/action-recommendations";
 import type { StatusResponse } from "@shared/types/status";

@@ -4,9 +4,10 @@ import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-de
 import { HeroPriceCard } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import type {
   DexLiquidityData,
+  Infrastructure,
   PegSummaryCoin,
   StablecoinData,
   StablecoinMeta,
@@ -380,14 +381,12 @@ describe("HeroCard", () => {
     expect(html).not.toContain("peg-gauge:350");
   });
 
-  it("keeps the subject case study callout docked inside the hero card", () => {
+  it("renders the subject case study callout with its destination and outcome", () => {
     const html = renderHero({ reportCard: null });
 
     expect(html).toContain('href="/learn/case-studies/usdc-svb-2023/"');
     expect(html).toContain("Read the case study: USDC and the Silicon Valley Bank weekend");
     expect(html).toContain("Survived");
-    expect(html).toContain("sm:justify-between");
-    expect(html).not.toContain("-mb-4");
   });
 
   it("uses the reviewed registry blacklist status for inherited-risk coins", () => {
@@ -419,8 +418,14 @@ describe("HeroCard", () => {
   });
 
   it("renders the tracked parent chip for variant detail pages", () => {
-    const parentCoin = CLIENT_TRACKED_META_BY_ID.get("usds-sky");
-    expect(parentCoin).toBeDefined();
+    // Local parent fixture: the chip only reads id/name/symbol, so the case
+    // does not depend on the live client registry keeping a usds-sky row.
+    const parentCoin = {
+      id: "usds-sky",
+      name: "Sky Dollar",
+      symbol: "USDS",
+      listingClass: "core-stablecoin",
+    } as StablecoinClientMeta;
 
     const html = renderHero({
       coin: {
@@ -438,11 +443,12 @@ describe("HeroCard", () => {
       gaugeDeviationBps: 0,
       pegScoreResult: null,
       reportCard: null,
-      variantParent: parentCoin!,
+      variantParent: parentCoin,
       variantKind: "savings-passthrough",
     });
 
     expect(html).toContain("Wraps USDS");
+    expect(html).toContain('href="/stablecoin/usds-sky/"');
   });
 
   it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {
@@ -491,46 +497,25 @@ describe("HeroCard", () => {
     expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
   });
 
-  it("renders an M0 infrastructure badge for M0-built stablecoins", () => {
-    const html = renderHero({
-      coin: { id: "usdsc-startale", name: "Startale USD", symbol: "USDSC", infrastructures: ["m0"] },
-      coinData: { id: "usdsc-startale", name: "Startale USD", symbol: "USDSC" },
-      logoSrc: "/logos/usdsc.svg",
-      mcap: 4_100_232,
-      supply: 4_100_232,
-      prevDay: 4_000_000,
-      prevWeek: 3_900_000,
-      prevMonth: 3_500_000,
-      yieldRanking: null,
-      stressSignal: null,
-      reportCard: null,
-    });
+  // Infrastructure membership is the only axis these cases vary: everything
+  // else stays on the shared hero baseline, so nothing but the badge row can
+  // move the assertions.
+  it.each([
+    { label: "one infrastructure", infrastructures: ["m0"], present: ["M0"], absent: ["Liquity v2"] },
+    {
+      label: "several infrastructures",
+      infrastructures: ["liquity-v2", "m0"],
+      present: ["Liquity v2", "M0"],
+      absent: [],
+    },
+  ] satisfies Array<{ label: string; infrastructures: Infrastructure[]; present: string[]; absent: string[] }>)(
+    "renders one infrastructure badge per membership ($label)",
+    ({ infrastructures, present, absent }) => {
+      const html = renderHero({ coin: { infrastructures } });
 
-    expect(html).toContain("Infrastructure");
-    expect(html).toContain("M0");
-  });
-
-  it("renders multiple infrastructure badges when a coin belongs to more than one", () => {
-    const html = renderHero({
-      coin: {
-        id: "hypothetical-dual",
-        name: "Hypothetical Dual",
-        symbol: "HYP",
-        infrastructures: ["liquity-v2", "m0"],
-      },
-      coinData: { id: "hypothetical-dual", name: "Hypothetical Dual", symbol: "HYP" },
-      logoSrc: "/logos/hyp.svg",
-      mcap: 1_000_000,
-      supply: 1_000_000,
-      prevDay: 995_000,
-      prevWeek: 990_000,
-      prevMonth: 985_000,
-      yieldRanking: null,
-      stressSignal: null,
-      reportCard: null,
-    });
-
-    expect(html).toContain("Liquity v2");
-    expect(html).toContain("M0");
-  });
+      expect(html).toContain("Infrastructure");
+      for (const label of present) expect(html).toContain(label);
+      for (const label of absent) expect(html).not.toContain(label);
+    },
+  );
 });

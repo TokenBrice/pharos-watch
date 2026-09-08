@@ -74,19 +74,52 @@ function mockHealthyReads(
     decimals: 6,
     project_uri: "https://www.agora.finance",
   },
+  supply = IUSD_SUPPLY,
 ): void {
   vi.mocked(fetchJsonPostWithRetry).mockResolvedValue({ data: JSON.stringify(vaultBalance), events: [], gas_used: "7553" });
   vi.mocked(fetchJsonWithRetry)
-    .mockResolvedValueOnce({ amount: { denom: IUSD_DENOM, amount: IUSD_SUPPLY } })
+    .mockResolvedValueOnce({ amount: { denom: IUSD_DENOM, amount: supply } })
     .mockResolvedValueOnce(resource(IUSD_METADATA, MOVE_OBJECT_CORE_TYPE, { owner: VAULT_OWNER }))
     .mockResolvedValueOnce(resource(AUSD0_METADATA, MOVE_METADATA_TYPE, ausd0Metadata));
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 describe("fetchInitiaWrapperVaultReserves", () => {
+  it("rejects one raw unit of underbacking", async () => {
+    mockHealthyReads((BigInt(IUSD_SUPPLY) - 1n).toString());
+    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
+      .rejects.toThrow("vault balance is under iUSD supply");
+  });
+
+  it.each([4_999_999n, 5_000_000n])("preserves a tolerated %s raw-unit surplus", async (surplus) => {
+    const balance = BigInt(IUSD_SUPPLY) + surplus;
+    mockHealthyReads(balance.toString());
+    const result = await fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal);
+    expect(result.metadata?.collateralizationRatio).toBe(Number(balance) / 2519552759503);
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "reserve-overcollateralized-dust", effect: "info" }),
+    ]);
+  });
+
+  it("rejects one raw unit above the dust tolerance", async () => {
+    mockHealthyReads((BigInt(IUSD_SUPPLY) + 5_000_001n).toString());
+    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
+      .rejects.toThrow("surplus exceeds");
+  });
+
+  it("rejects zero balance and zero supply independently", async () => {
+    for (const [balance, supply] of [["0", IUSD_SUPPLY], [IUSD_SUPPLY, "0"]]) {
+      vi.resetAllMocks();
+      mockHealthyReads(balance, undefined, supply);
+      await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
+        .rejects.toThrow(balance === "0" ? "vault AUSD0 balance is zero" : "iUSD bank supply is zero");
+    }
+  });
+
   it("reads the recorded Initia responses and emits one 100% parent slice", async () => {
     mockHealthyReads();
 

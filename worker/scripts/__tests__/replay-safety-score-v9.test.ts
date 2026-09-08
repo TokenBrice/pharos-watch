@@ -3,7 +3,6 @@ import { gzipSync } from "node:zlib";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -12,7 +11,6 @@ import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9/nati
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import {
   buildReportCardsFixedInputCacheEntry,
-  createReportCardsFixedInput,
 } from "../../src/lib/report-cards-fixed-input";
 import {
   findFutureDatedCuratedReviews,
@@ -27,74 +25,18 @@ import {
 import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements-client";
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
+import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 
 const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
 const PUBLISHED_AT_ISO = new Date(PUBLISHED_AT_SEC * 1_000).toISOString();
 
-function writeTestFile(path: string, value: string): void {
-  writeFileSync(path, value);
-}
-
-function readTestFile(path: string): string {
-  return readFileSync(path, "utf8");
-}
+const nativeInput = createNativeSafetyScoreV9FullRegistryInput();
 
 function exactFixedInput() {
-  return createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    activeAssetIds: ["usdc-circle"],
-    capturedAt: new Date(CLOCK_SEC * 1_000).toISOString(),
+  return createReplayFixedInput(CLOCK_SEC, {
     sourceGeneration: "report-cards:fixture:v9-replay",
-    dexGenerationId: `dex-liquidity-${CLOCK_SEC - 100}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
     registryRevision: "registry:fixture",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: CLOCK_SEC,
-    updatedAt: CLOCK_SEC,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: CLOCK_SEC - 100, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {},
-    activeDepegPeakBpsById: {},
-    dexLiqMap: {
-      "usdc-circle": {
-        liquidityScore: 90,
-        concentrationHhi: 0.5,
-        poolCount: 1,
-        chainCount: 1,
-        coverageClass: "primary",
-        coverageConfidence: 1,
-        liquidityEvidenceClass: "measured",
-        hasMeasuredLiquidityEvidence: true,
-        effectiveTvlUsd: 1_000_000,
-        balanceMeasuredTvlUsd: 1_000_000,
-        organicMeasuredTvlUsd: 1_000_000,
-        methodologyVersion: "dex:fixture-v1",
-        updatedAt: CLOCK_SEC - 100,
-      },
-    },
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: { "usdc-circle": false },
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: {
-      "usdc-circle": {
-        ethereum: {
-          current: 10_000_000,
-          circulatingPrevDay: 10_000_000,
-          circulatingPrevWeek: 10_000_000,
-          circulatingPrevMonth: 10_000_000,
-        },
-      },
-    },
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
   });
 }
 
@@ -109,7 +51,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
   });
 
   it("parses the native v4 capture and its v2 cache envelope through equivalent paths", async () => {
-    const native = createNativeSafetyScoreV9FullRegistryInput();
+    const native = structuredClone(nativeInput);
     const cacheEntry = await buildNativeV9InputCacheEntry(
       native,
       buildSafetyScoreV9InputIdentity({
@@ -126,7 +68,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
 
   it("keeps the two capture generations on their own parsers", async () => {
     const legacy = exactFixedInput();
-    const native = createNativeSafetyScoreV9FullRegistryInput();
+    const native = structuredClone(nativeInput);
     const legacyEnvelope = JSON.parse((await buildReportCardsFixedInputCacheEntry(legacy)).value) as {
       schemaVersion: number;
     };
@@ -203,9 +145,9 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       const extensionPath = resolve(dir, "extension.json");
       const rawOutput = resolve(dir, "raw-output.json");
       const envelopeOutput = resolve(dir, "envelope-output.json");
-      writeTestFile(rawPath, JSON.stringify(fixedInput));
-      writeTestFile(envelopePath, cacheEntry.value);
-      writeTestFile(extensionPath, JSON.stringify(buildSafetyScoreV9BaselineExtension(fixedInput)));
+      writeFileSync(rawPath, JSON.stringify(fixedInput));
+      writeFileSync(envelopePath, cacheEntry.value);
+      writeFileSync(extensionPath, JSON.stringify(buildSafetyScoreV9BaselineExtension(fixedInput)));
 
       const commonArgs = ["--published-at", PUBLISHED_AT_ISO, "--allow-future-reviews"];
       await runSafetyScoreV9ReplayCli([
@@ -219,7 +161,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       ]);
       await runSafetyScoreV9ReplayCli(["--input", envelopePath, "--output", envelopeOutput, ...commonArgs]);
 
-      expect(readTestFile(envelopeOutput)).toBe(readTestFile(rawOutput));
+      expect(readFileSync(envelopeOutput, "utf8")).toBe(readFileSync(rawOutput, "utf8"));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -260,7 +202,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     try {
       const input = resolve(dir, "stale-registry.json");
       const output = resolve(dir, "output.json");
-      writeTestFile(input, JSON.stringify(staleCapture));
+      writeFileSync(input, JSON.stringify(staleCapture));
       const args = [
         "--input",
         input,
@@ -276,7 +218,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       );
 
       await runSafetyScoreV9ReplayCli([...args, "--allow-registry-mismatch"]);
-      const replayed = JSON.parse(readTestFile(output)) as {
+      const replayed = JSON.parse(readFileSync(output, "utf8")) as {
         pipeline: {
           extension: { registryFingerprint: string };
           candidate: { cards: { id: string }[] };
@@ -302,7 +244,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     try {
       const input = resolve(dir, "fixed.json");
       const output = resolve(dir, "output.json");
-      writeTestFile(input, JSON.stringify(exactFixedInput()));
+      writeFileSync(input, JSON.stringify(exactFixedInput()));
       await runSafetyScoreV9ReplayCli([
         "--input",
         input,
@@ -314,7 +256,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         "--release-candidate-id",
         "v9-rc-2",
       ]);
-      expect(JSON.parse(readTestFile(output)).pipeline.candidate.candidateId).toBe("v9-rc-2");
+      expect(JSON.parse(readFileSync(output, "utf8")).pipeline.candidate.candidateId).toBe("v9-rc-2");
 
       await expect(
         runSafetyScoreV9ReplayCli([

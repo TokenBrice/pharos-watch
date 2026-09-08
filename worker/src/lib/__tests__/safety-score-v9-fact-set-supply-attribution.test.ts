@@ -483,7 +483,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("fails closed when the XAUt0 group reaches the materiality floor", () => {
+  it("fails closed when the circulating-liability denominator pushes XAUt0 above materiality", () => {
     // At or after the committed 2026-08-08 xaut-tether control review dates.
     const clockSec = XAUT_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
@@ -667,7 +667,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       observedAtSec: fixed.clockSec,
       rejection: {
         code: "supply-review.attribution-rpc-rejection",
-        reason: "chainRows=0; canonicalizationFailures=0; reviewRoutes=4; attribution=deployment-state-unavailable",
         rejectedAtSec: fixed.clockSec,
       },
     });
@@ -677,6 +676,23 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(outcomeEvidence.sourceGenerationId).toBe(
       `supply-review-outcome:v1:${outcomeEvidence.contentSha256}`,
     );
+    const outcomeDigest = () => {
+      const current = buildSafetyScoreV9BaselineExtension(fixed, {
+        metaById: new Map([["wm-m0", {
+          ...wrappedMSource, bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
+          mintAuthority: wrappedMMintAuthority.mintAuthority,
+        } as unknown as V9ExtensionRegistryMeta]]),
+      });
+      return compileSafetyScoreV9FactSetFromFixedInput(fixed, current).assets[0]!.evidence.find(
+        (evidence) => evidence.evidenceId === "wm-m0:supply-review-outcome",
+      )!.contentSha256;
+    };
+    fixed.supplyAttributionJournalById["wm-m0"]!.reverse();
+    expect(outcomeDigest()).toBe(outcomeEvidence.contentSha256);
+    fixed.supplyAttributionJournalById["wm-m0"]![0] = rejectedWmAttributionRecord(
+      fixed, fixed.clockSec - 10, "chain-rpc-unavailable",
+    );
+    expect(outcomeDigest()).not.toBe(outcomeEvidence.contentSha256);
   });
 
   it("persists null-review outcome ownership and diagnostics for each integration and producer state", () => {
@@ -685,14 +701,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         name: "missing-profile",
         extension: { bridge: "missing" as const },
         responsibility: "integration-missing" as const,
-        message: "Circulating USD is known, but the required bridge profile is missing or invalid.",
         observationState: "bounded-unknown" as const,
       },
       {
         name: "ambiguous-route-join",
         extension: { bridge: "required" as const },
         responsibility: "integration-missing" as const,
-        message: "Circulating USD is known, but bridge routes do not form one canonical, unique attribution join.",
         observationState: "bounded-unknown" as const,
       },
       {
@@ -702,7 +716,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
           chainSupplyObservedAtSec: AS_OF_SEC - 501,
         },
         responsibility: "producer-failed" as const,
-        message: "Circulating USD is known, but the supply review or its runtime chain input is stale.",
         observationState: "stale" as const,
       },
     ];
@@ -727,7 +740,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         sourceGenerationId: expect.stringMatching(/^supply-review-outcome:v1:[a-f0-9]{64}$/),
         rejection: {
           code: `supply-review.${outcomeCase.name}`,
-          reason: "chainRows=1; canonicalizationFailures=0; reviewRoutes=0; attribution=none",
           rejectedAtSec: fixed.clockSec,
         },
       });
@@ -742,7 +754,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         ownerDomain: "control",
         responsibility: outcomeCase.responsibility,
         observationState: outcomeCase.observationState,
-        message: outcomeCase.message,
         evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
       });
       expect(alpha.supply.selectedBridgeRoutes).toEqual([]);

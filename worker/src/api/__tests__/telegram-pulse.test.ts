@@ -1,5 +1,22 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { cachedPulse as buildCachedPulse, pulseAggregate, pulseCacheTables } from "./telegram-pulse.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
+function persistedPulseDb() {
+  const fixture = fixtures.open();
+  fixture.sqlite.exec(`
+    INSERT INTO telegram_watcher_lifecycle_daily (day, snapshot_at, active_watchers, new_watchers, churned_watchers, reactivated_watchers)
+    VALUES ('2027-01-13', 1799840000, 0, 0, 0, 0), ('2027-01-14', 1799926400, 0, 0, 0, 0);
+  `);
+  return fixture;
+}
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 import {
   mockD1 as baseMockD1,
   type MockD1Database,
@@ -122,18 +139,7 @@ describe("handleTelegramPulse", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 9,
-          new_watchers: 0,
-          explicit_coin_follows: 12,
-          active_preset_followers: 0,
-          active_dews_opt_ins: 9,
-          active_depeg_opt_ins: 9,
-          active_safety_opt_ins: 0,
-          active_launch_opt_ins: 0,
-          active_all_types_opt_ins: 0,
-          quiet_hours_enabled_chats: 0,
-        },
+        first: pulseAggregate({ active_watchers: 9, new_watchers: 0, explicit_coin_follows: 12, active_preset_followers: 0, active_dews_opt_ins: 9, active_depeg_opt_ins: 9, active_safety_opt_ins: 0, active_launch_opt_ins: 0, active_all_types_opt_ins: 0, quiet_hours_enabled_chats: 0 }),
         rows: [],
       },
       {
@@ -232,177 +238,33 @@ describe("handleTelegramPulse", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_watcher_lifecycle_daily"))).toBe(false);
   });
 
-  it("returns launch-aware public pulse metrics from active subscription rows", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_watcher_lifecycle_daily",
-        rows: [
-          {
-            day: "2026-04-01",
-            snapshot_at: 1_775_002_000,
-            active_watchers: 2,
-            new_watchers: 2,
-            churned_watchers: 0,
-            reactivated_watchers: 0,
-          },
-          {
-            day: "2026-04-03",
-            snapshot_at: 1_775_174_800,
-            active_watchers: 5,
-            new_watchers: 3,
-            churned_watchers: 1,
-            reactivated_watchers: 1,
-          },
-        ],
-      },
-      {
-        match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 5,
-          new_watchers: 2,
-          explicit_coin_follows: 7,
-          active_preset_followers: 2,
-          active_dews_opt_ins: 4,
-          active_depeg_opt_ins: 3,
-          active_safety_opt_ins: 2,
-          active_launch_opt_ins: 1,
-          active_all_types_opt_ins: 1,
-          quiet_hours_enabled_chats: 2,
-        },
-        rows: [],
-      },
-      {
-        match: "ORDER BY day DESC",
-        first: {
-          day: "2026-05-12",
-          snapshot_at: 1_778_608_800,
-          active_watchers: 2,
-          new_watchers: 0,
-          churned_watchers: 0,
-          reactivated_watchers: 0,
-        },
-        rows: [],
-      },
-      {
-        match: "FROM telegram_preset_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [
-          { stablecoin_id: "usdpt-western-union", subscribers: 5 },
-          { stablecoin_id: "usdc-circle", subscribers: 2 },
-        ],
-      },
-      {
-        match: "FROM telegram_pending_alerts",
-        first: { pending_count: 3 },
-        rows: [],
-      },
-    ]);
-
-    const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as {
-      activeWatchers: number;
-      coinSubscriptions: number;
-      explicitCoinSubscriptions: number;
-      presetImpliedCoinSubscriptions: number;
-      activePresetFollowers: number;
-      newWatchersToday: number;
-      churnedWatchersToday: number;
-      reactivatedWatchersToday: number;
-      historySource: string;
-      topCoins: string[];
-      pendingDeliveries: number | null;
-      currentSnapshotAt: number;
-      lifecycleHistoryUpdatedAt: number | null;
-      lifecycleHistoryEverySeconds: number;
-      quality: { status: string; unavailableFields: string[] };
-      privacy: { exactActiveWatchers: boolean; lowCardinalityThreshold: number; suppressedFields: string[] };
-      updatedAt: number;
-      updatedEverySeconds: number;
-      watcherHistory: Array<{
-        date: string;
-        timestamp: number;
-        snapshotAt?: number | null;
-        newWatchers?: number | null;
-        activeWatchers: number;
-        churnedWatchers?: number | null;
-        reactivatedWatchers?: number | null;
-      }>;
-    };
-
-    const history = db.getHistory();
-    const aggregateQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscribers s"));
-    const topCoinsQuery = history.find(
-      (entry) =>
-        entry.sql.includes("FROM telegram_subscriptions") &&
-        entry.sql.includes("GROUP BY stablecoin_id"),
-    );
-    const watcherHistoryQuery = history.find((entry) => entry.sql.includes("ORDER BY day ASC"));
-
-    expect(aggregateQuery?.sql).toContain("global_alert_launch");
-    expect(aggregateQuery?.sql).toContain("alert_launch = 1");
-    expect(aggregateQuery?.sql).toContain("SUM(COALESCE(sub.active_sub_count, 0)) AS explicit_coin_follows");
-    expect(aggregateQuery?.sql).toContain("quiet_hours_enabled_chats");
-    expect(aggregateQuery?.sql).toContain("active_all_types_opt_ins");
-    expect(topCoinsQuery?.sql).toContain("alert_launch = 1");
-    expect(watcherHistoryQuery?.sql).toContain("telegram_watcher_lifecycle_daily");
-    expect(body).toEqual({
-      activeWatchers: 5,
-      coinSubscriptions: 7,
-      explicitCoinSubscriptions: 7,
-      presetImpliedCoinSubscriptions: 0,
-      activePresetFollowers: 2,
-      newWatchersToday: null,
-      churnedWatchersToday: 0,
-      reactivatedWatchersToday: null,
-      historySource: "snapshot",
-      topCoins: ["USDPT", "USDC"],
-      pendingDeliveries: null,
-      miniAppSessionsToday: 0,
-      miniAppMutationsToday: 0,
-      miniAppDeniedToday: 0,
-      miniAppReplayClaimsToday: 0,
-      miniAppOpenToFirstMutationP50Sec: null,
-      currentSnapshotAt: expect.any(Number),
-      lifecycleHistoryUpdatedAt: 1775174800,
-      lifecycleHistoryEverySeconds: 900,
+  it("counts launch-only, overlapping preset, global-only and inert watchers using real SQL", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const addSubscriber = sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_launch) VALUES (?, ?, ?, ?)");
+    for (const id of ["launch", "overlap", "global", "inert"]) {
+      addSubscriber.run(id, now - 86400, now, id === "global" ? 1 : 0);
+    }
+    sqlite.exec(`
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch)
+      VALUES ('launch', 'usdpt-western-union', 0, 0, 0, 1),
+             ('overlap', 'usdc-circle', 1, 0, 0, 0),
+             ('inert', 'usdt-tether', 0, 0, 0, 0);
+      INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
+      VALUES ('overlap', 'mcap-ge-1b', 1, 0, 0, 1, 1);
+    `);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)").run(JSON.stringify({
+      peggedAssets: [{ id: "usdc-circle", symbol: "USDC", name: "USD Coin", circulating: { peggedUSD: 1_000_000_000 } }],
+    }), now);
+    const body = await readJsonResponse(await handleTelegramPulse(db), 200);
+    expect(body).toMatchObject({
+      activeWatchers: 3,
+      explicitCoinSubscriptions: 2,
+      presetImpliedCoinSubscriptions: 1,
+      coinSubscriptions: 3,
+      activePresetFollowers: 1,
+      topCoins: ["USDC", "USDPT"],
       quality: { status: "complete", unavailableFields: [] },
-      privacy: {
-        exactActiveWatchers: true,
-        lowCardinalityThreshold: 5,
-        suppressedFields: [
-          "newWatchersToday",
-          "pendingDeliveries",
-          "reactivatedWatchersToday",
-          "watcherHistory.churnedWatchers",
-          "watcherHistory.newWatchers",
-          "watcherHistory.reactivatedWatchers",
-        ],
-      },
-      updatedAt: expect.any(Number),
-      updatedEverySeconds: 300,
-      watcherHistory: [
-        {
-          date: "2026-04-01",
-          timestamp: 1775001600000,
-          snapshotAt: 1775002000,
-          newWatchers: null,
-          activeWatchers: 2,
-          churnedWatchers: 0,
-          reactivatedWatchers: 0,
-        },
-        {
-          date: "2026-04-03",
-          timestamp: 1775174400000,
-          snapshotAt: 1775174800,
-          newWatchers: null,
-          activeWatchers: 5,
-          churnedWatchers: null,
-          reactivatedWatchers: null,
-        },
-      ],
     });
   });
 
@@ -414,18 +276,7 @@ describe("handleTelegramPulse", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 12,
-          new_watchers: 0,
-          explicit_coin_follows: 12,
-          active_preset_followers: 0,
-          active_dews_opt_ins: 12,
-          active_depeg_opt_ins: 8,
-          active_safety_opt_ins: 7,
-          active_launch_opt_ins: 6,
-          active_all_types_opt_ins: 6,
-          quiet_hours_enabled_chats: 0,
-        },
+        first: pulseAggregate(),
         rows: [],
       },
       {
@@ -480,18 +331,7 @@ describe("handleTelegramPulse", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 12,
-          new_watchers: 0,
-          explicit_coin_follows: 12,
-          active_preset_followers: 0,
-          active_dews_opt_ins: 12,
-          active_depeg_opt_ins: 8,
-          active_safety_opt_ins: 7,
-          active_launch_opt_ins: 6,
-          active_all_types_opt_ins: 6,
-          quiet_hours_enabled_chats: 0,
-        },
+        first: pulseAggregate(),
         rows: [],
       },
       {
@@ -558,18 +398,7 @@ describe("handleTelegramPulse", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 519,
-          new_watchers: 305,
-          explicit_coin_follows: 3080,
-          active_preset_followers: 43,
-          active_dews_opt_ins: 216,
-          active_depeg_opt_ins: 479,
-          active_safety_opt_ins: 86,
-          active_launch_opt_ins: 9,
-          active_all_types_opt_ins: 5,
-          quiet_hours_enabled_chats: 6,
-        },
+        first: pulseAggregate({ active_watchers: 519, new_watchers: 305, explicit_coin_follows: 3080, active_preset_followers: 43, active_dews_opt_ins: 216, active_depeg_opt_ins: 479, active_safety_opt_ins: 86, active_launch_opt_ins: 9, active_all_types_opt_ins: 5, quiet_hours_enabled_chats: 6 }),
         rows: [],
       },
       {
@@ -653,18 +482,7 @@ describe("handleTelegramPulse", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 540,
-          new_watchers: 0,
-          explicit_coin_follows: 3233,
-          active_preset_followers: 48,
-          active_dews_opt_ins: 222,
-          active_depeg_opt_ins: 500,
-          active_safety_opt_ins: 87,
-          active_launch_opt_ins: 9,
-          active_all_types_opt_ins: 5,
-          quiet_hours_enabled_chats: 6,
-        },
+        first: pulseAggregate({ active_watchers: 540, new_watchers: 0, explicit_coin_follows: 3233, active_preset_followers: 48, active_dews_opt_ins: 222, active_depeg_opt_ins: 500, active_safety_opt_ins: 87, active_launch_opt_ins: 9, active_all_types_opt_ins: 5, quiet_hours_enabled_chats: 6 }),
         rows: [],
       },
       {
@@ -731,18 +549,7 @@ describe("handleTelegramPulse", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 519,
-          new_watchers: 305,
-          explicit_coin_follows: 3080,
-          active_preset_followers: 43,
-          active_dews_opt_ins: 216,
-          active_depeg_opt_ins: 479,
-          active_safety_opt_ins: 86,
-          active_launch_opt_ins: 9,
-          active_all_types_opt_ins: 5,
-          quiet_hours_enabled_chats: 6,
-        },
+        first: pulseAggregate({ active_watchers: 519, new_watchers: 305, explicit_coin_follows: 3080, active_preset_followers: 43, active_dews_opt_ins: 216, active_depeg_opt_ins: 479, active_safety_opt_ins: 86, active_launch_opt_ins: 9, active_all_types_opt_ins: 5, quiet_hours_enabled_chats: 6 }),
         rows: [],
       },
       {
@@ -791,34 +598,8 @@ describe("handleTelegramPulse", () => {
 describe("publishTelegramPulseSnapshot", () => {
   it("reuses heavy public sections on the slower pulse cadence", async () => {
     const nowSec = Math.floor(Date.parse("2026-05-12T12:00:00.000Z") / 1000);
-    const cachedPulse = {
-      activeWatchers: 8,
-      coinSubscriptions: 13,
-      explicitCoinSubscriptions: 10,
-      presetImpliedCoinSubscriptions: 3,
-      activePresetFollowers: 2,
-      newWatchersToday: 5,
-      churnedWatchersToday: 0,
-      reactivatedWatchersToday: 0,
-      historySource: "live-fallback",
-      topCoins: ["USDC"],
-      pendingDeliveries: 5,
-      miniAppSessionsToday: 7,
-      miniAppMutationsToday: 6,
-      miniAppDeniedToday: 2,
-      miniAppReplayClaimsToday: 1,
-      miniAppOpenToFirstMutationP50Sec: null,
-      currentSnapshotAt: nowSec - 600,
+    const cachedPulse = buildCachedPulse(nowSec - 600, {
       lifecycleHistoryUpdatedAt: nowSec - 3_600,
-      lifecycleHistoryEverySeconds: 900,
-      quality: { status: "complete", unavailableFields: [] },
-      privacy: {
-        exactActiveWatchers: true,
-        lowCardinalityThreshold: 5,
-        suppressedFields: [],
-      },
-      updatedAt: nowSec - 600,
-      updatedEverySeconds: 300,
       watcherHistory: [
         {
           date: "2026-05-10",
@@ -839,37 +620,12 @@ describe("publishTelegramPulseSnapshot", () => {
           reactivatedWatchers: 0,
         },
       ],
-    };
+    });
     const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "telegram:pulse:snapshot",
-            value: JSON.stringify(cachedPulse),
-            updated_at: nowSec - 600,
-          },
-          {
-            key: "telegram:pulse:heavy-sections-updated-at",
-            value: String(nowSec - 600),
-            updated_at: nowSec - 600,
-          },
-        ],
-      },
+      ...pulseCacheTables(cachedPulse, nowSec - 600),
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 12,
-          new_watchers: 6,
-          explicit_coin_follows: 18,
-          active_preset_followers: 2,
-          active_dews_opt_ins: 10,
-          active_depeg_opt_ins: 9,
-          active_safety_opt_ins: 8,
-          active_launch_opt_ins: 7,
-          active_all_types_opt_ins: 6,
-          quiet_hours_enabled_chats: 6,
-        },
+        first: pulseAggregate({ new_watchers: 6, explicit_coin_follows: 18, active_preset_followers: 2, active_dews_opt_ins: 10, active_depeg_opt_ins: 9, active_safety_opt_ins: 8, active_launch_opt_ins: 7, quiet_hours_enabled_chats: 6 }),
         rows: [],
       },
       {
@@ -910,34 +666,11 @@ describe("publishTelegramPulseSnapshot", () => {
   it("reloads daily Mini App counters across UTC midnight", async () => {
     const nowSec = Math.floor(Date.parse("2026-05-12T00:05:00.000Z") / 1000);
     const previousDaySec = Math.floor(Date.parse("2026-05-11T23:55:00.000Z") / 1000);
-    const cachedPulse = {
-      activeWatchers: 8,
-      coinSubscriptions: 13,
-      explicitCoinSubscriptions: 10,
-      presetImpliedCoinSubscriptions: 3,
-      activePresetFollowers: 2,
-      newWatchersToday: 5,
-      churnedWatchersToday: 0,
-      reactivatedWatchersToday: 0,
-      historySource: "live-fallback",
-      topCoins: ["USDC"],
-      pendingDeliveries: 5,
+    const cachedPulse = buildCachedPulse(previousDaySec, {
       miniAppSessionsToday: 99,
       miniAppMutationsToday: 98,
       miniAppDeniedToday: 97,
       miniAppReplayClaimsToday: 96,
-      miniAppOpenToFirstMutationP50Sec: null,
-      currentSnapshotAt: previousDaySec,
-      lifecycleHistoryUpdatedAt: previousDaySec,
-      lifecycleHistoryEverySeconds: 900,
-      quality: { status: "complete", unavailableFields: [] },
-      privacy: {
-        exactActiveWatchers: true,
-        lowCardinalityThreshold: 5,
-        suppressedFields: [],
-      },
-      updatedAt: previousDaySec,
-      updatedEverySeconds: 300,
       watcherHistory: [
         {
           date: "2026-05-10",
@@ -958,37 +691,12 @@ describe("publishTelegramPulseSnapshot", () => {
           reactivatedWatchers: 0,
         },
       ],
-    };
+    });
     const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "telegram:pulse:snapshot",
-            value: JSON.stringify(cachedPulse),
-            updated_at: previousDaySec,
-          },
-          {
-            key: "telegram:pulse:heavy-sections-updated-at",
-            value: String(previousDaySec),
-            updated_at: previousDaySec,
-          },
-        ],
-      },
+      ...pulseCacheTables(cachedPulse, previousDaySec),
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 12,
-          new_watchers: 6,
-          explicit_coin_follows: 18,
-          active_preset_followers: 2,
-          active_dews_opt_ins: 10,
-          active_depeg_opt_ins: 9,
-          active_safety_opt_ins: 8,
-          active_launch_opt_ins: 7,
-          active_all_types_opt_ins: 6,
-          quiet_hours_enabled_chats: 6,
-        },
+        first: pulseAggregate({ new_watchers: 6, explicit_coin_follows: 18, active_preset_followers: 2, active_dews_opt_ins: 10, active_depeg_opt_ins: 9, active_safety_opt_ins: 8, active_launch_opt_ins: 7, quiet_hours_enabled_chats: 6 }),
         rows: [],
       },
       { match: "ORDER BY day DESC", first: null, rows: [] },
@@ -1017,6 +725,51 @@ describe("publishTelegramPulseSnapshot", () => {
     expect(pulse.miniAppDeniedToday).toBe(2);
     expect(pulse.miniAppReplayClaimsToday).toBe(1);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_usage_daily"))).toBe(true);
+  });
+
+  it.each([300, 301])("serves cache through age 300, rebuilding at age %i", async (age) => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue((now - age) * 1000);
+    const { db, sqlite } = persistedPulseDb();
+    await publishTelegramPulseSnapshot(db, now - age);
+    clock.mockReturnValue(now * 1000);
+    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_launch) VALUES ('new', ?, ?, 1)").run(now, now);
+    const body = await readJsonResponse(await handleTelegramPulse(db), 200);
+    expect(body).toMatchObject({ activeWatchers: age === 300 ? 0 : 1 });
+  });
+
+  it.each([899, 900])("reuses heavy sections strictly below 900 seconds (age %i)", async (age) => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = persistedPulseDb();
+    await publishTelegramPulseSnapshot(db, now - age);
+    const outcome = await publishTelegramPulseSnapshotWithOutcome(db, now);
+    expect(outcome.heavySectionsRecomputed).toBe(age === 900);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'telegram:pulse:heavy-sections-updated-at'").get())
+      .toEqual({ value: String(age === 900 ? now : now - age) });
+  });
+
+  it("preserves unavailable heavy metrics on reuse and clears quality after recovery", async () => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = persistedPulseDb();
+    let injected = false;
+    const failingDb = createSqliteD1(sqlite, { onAll(sql) {
+      if (sql.includes("GROUP BY stablecoin_id")) {
+        injected = true;
+        throw new Error("top coins unavailable");
+      }
+    } });
+    const failed = await publishTelegramPulseSnapshotWithOutcome(failingDb, now);
+    expect(injected).toBe(true);
+    expect(failed.status).toBe("degraded");
+    expect(failed.pulse.quality).toEqual({ status: "partial", unavailableFields: ["topCoins"] });
+    expect(failed.pulse.privacy.suppressedFields).not.toContain("topCoins");
+    const reused = await publishTelegramPulseSnapshotWithOutcome(db, now + 899);
+    expect(reused.heavySectionsRecomputed).toBe(false);
+    expect(reused.pulse.quality).toEqual({ status: "partial", unavailableFields: ["topCoins"] });
+    const recovered = await publishTelegramPulseSnapshotWithOutcome(db, now + 900);
+    expect(recovered.heavySectionsRecomputed).toBe(true);
+    expect(recovered.status).toBe("ok");
+    expect(recovered.pulse.quality).toEqual({ status: "complete", unavailableFields: [] });
   });
 });
 
@@ -1056,18 +809,7 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
       },
       {
         match: "FROM telegram_subscribers s",
-        first: {
-          active_watchers: 12,
-          new_watchers: 0,
-          explicit_coin_follows: 12,
-          active_preset_followers: 0,
-          active_dews_opt_ins: 12,
-          active_depeg_opt_ins: 8,
-          active_safety_opt_ins: 7,
-          active_launch_opt_ins: 6,
-          active_all_types_opt_ins: 6,
-          quiet_hours_enabled_chats: 0,
-        },
+        first: pulseAggregate(),
         rows: [],
       },
       {

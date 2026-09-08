@@ -1,93 +1,60 @@
-import { describe, expect, it, vi } from "vitest";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import type { DatabaseSync } from "node:sqlite";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 
-vi.mock("../db", () => ({
-  batchExecute: vi.fn().mockResolvedValue(0),
-}));
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
-vi.mock("../mint-burn-pipeline/persistence", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../mint-burn-pipeline/persistence")>();
-  return {
-    ...actual,
-    recalcAffectedHours: vi.fn().mockResolvedValue(undefined),
-  };
-});
+function seedPair(sqlite: DatabaseSync, tx: string, burnAmount = 1000, timestamp = 1700000000, coin = "usdc-circle") {
+  const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+    (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, burn_type, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+    VALUES (?, ?, 'USDC', 'ethereum', ?, ?, ?, ?, ?, 1, ?, '', 'standard')`);
+  insert.run(`${tx}-mint`, coin, "mint", 1000, 1000, null, tx, timestamp);
+  insert.run(`${tx}-burn`, coin, "burn", burnAmount, burnAmount, "effective_burn", tx, timestamp);
+}
 
 describe("sweepRecentRoundtrips", () => {
-  it("returns 0 when no cross-run roundtrips exist", async () => {
-    const db = makeNoopD1({
-      prepare: vi.fn().mockReturnValue({
-        bind: vi.fn().mockReturnValue({
-          all: vi.fn().mockResolvedValue({ results: [] }),
-        }),
-      }),
-    });
-
-    const result = await sweepRecentRoundtrips(db, Math.floor(Date.now() / 1000));
-    expect(result.reclassified).toBe(0);
-    expect(result.affectedHours.size).toBe(0);
+  it("returns no affected hours when no roundtrips exist", async () => {
+    const { db } = fixtures.open();
+    expect(await sweepRecentRoundtrips(db, 1700001000)).toEqual({ reclassified: 0, affectedHours: new Map(), saturated: false });
   });
 
-  it("reclassifies cross-run roundtrips and returns affected hours", async () => {
-    const mockAll = vi.fn().mockResolvedValue({
-      results: [
-        { tx_hash: "0xaaa", stablecoin_id: "usdc-circle", chain_id: "ethereum", min_ts: 1700000000 },
-      ],
-    });
-    const mockBind = vi.fn().mockReturnValue({
-      all: mockAll,
-      run: vi.fn().mockResolvedValue({ meta: { changes: 2 } }),
-    });
-    const prepare = vi.fn().mockReturnValue({ bind: mockBind });
-    const db = makeNoopD1({ prepare });
-
-    // Mock batchExecute to return the number of changes
-    const { batchExecute } = await import("../db");
-    vi.mocked(batchExecute).mockResolvedValue(2);
-
+  it("reclassifies persisted cross-run rows and recomputes the exact affected bucket", async () => {
+    const { db, sqlite } = fixtures.open();
+    seedPair(sqlite, "0xaaa");
     const result = await sweepRecentRoundtrips(db, 1700001000);
     expect(result.reclassified).toBe(2);
-    expect(result.affectedHours.size).toBe(1);
-
-    const updateSql = prepare.mock.calls
-      .map((call) => call[0] as string)
-      .find((sql) => sql.includes("UPDATE mint_burn_events"));
-    expect(updateSql).toContain("chain_id = ?");
-    expect(mockBind).toHaveBeenCalledWith("0xaaa", "usdc-circle", "ethereum");
+    expect([...result.affectedHours]).toEqual([["usdc-circle-ethereum-1699999200", {
+      stablecoinId: "usdc-circle", chainId: "ethereum", hourTs: 1699999200,
+    }]]);
+    expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events ORDER BY id").all()).toEqual([
+      { flow_type: "atomic_roundtrip" }, { flow_type: "atomic_roundtrip" },
+    ]);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
+      stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1699999200,
+      mint_count: 0, burn_count: 0, mint_volume_usd: 0, burn_volume_usd: 0, net_flow_usd: 0,
+    });
   });
 
-  it("selects roundtrip candidates in deterministic oldest-first order", async () => {
-    const prepare = vi.fn().mockReturnValue({
-      bind: vi.fn().mockReturnValue({
-        all: vi.fn().mockResolvedValue({ results: [] }),
-      }),
-    });
-    const db = makeNoopD1({ prepare });
-
-    await sweepRecentRoundtrips(db, 1700001000);
-
-    const sql = prepare.mock.calls[0]?.[0] as string;
-    expect(sql).toContain("ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC");
+  it("includes exactly 0.5% mismatch but excludes just outside tolerance", async () => {
+    const { db, sqlite } = fixtures.open();
+    seedPair(sqlite, "boundary", 995);
+    seedPair(sqlite, "outside", 994.999);
+    expect((await sweepRecentRoundtrips(db, 1700001000)).reclassified).toBe(2);
+    expect(sqlite.prepare("SELECT tx_hash, flow_type FROM mint_burn_events WHERE direction = 'burn' ORDER BY tx_hash").all()).toEqual([
+      { tx_hash: "boundary", flow_type: "atomic_roundtrip" }, { tx_hash: "outside", flow_type: "standard" },
+    ]);
   });
 
-  // Drift guard: the SQL HAVING clause must enforce the same 0.5% mint/burn
-  // amount tolerance as the in-memory detector. The constant lives in
-  // `roundtrip-detection.ts` (ROUNDTRIP_AMOUNT_TOLERANCE); SQL can't import it,
-  // so we assert the literal and the CASE-WHEN max pattern are present.
-  it("HAVING clause requires mint/burn totals match within the same 0.5% tolerance as the in-memory detector", async () => {
-    const prepare = vi.fn().mockReturnValue({
-      bind: vi.fn().mockReturnValue({
-        all: vi.fn().mockResolvedValue({ results: [] }),
-      }),
-    });
-    const db = makeNoopD1({ prepare });
-
-    await sweepRecentRoundtrips(db, 1700001000);
-
-    const sql = prepare.mock.calls[0]?.[0] as string;
-    expect(sql).toContain("0.005");
-    // Verifies the CASE WHEN max pattern (not scalar MAX(a,b))
-    expect(sql).toMatch(/CASE\s+WHEN[\s\S]+>=[\s\S]+THEN[\s\S]+ELSE[\s\S]+END/);
+  it("bounds oldest-first selection and resolves tied timestamps by coin then transaction", async () => {
+    const { db, sqlite } = fixtures.open();
+    seedPair(sqlite, "newest", 1000, 1700000001);
+    seedPair(sqlite, "aaa", 1000, 1700000000, "usdt-tether");
+    for (let index = 200; index >= 0; index--) seedPair(sqlite, `tx-${String(index).padStart(3, "0")}`);
+    const result = await sweepRecentRoundtrips(db, 1700001000);
+    expect(result).toMatchObject({ reclassified: 400, saturated: true });
+    expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events WHERE direction = 'mint' AND flow_type = 'standard' ORDER BY tx_hash").all())
+      .toEqual([{ tx_hash: "aaa" }, { tx_hash: "newest" }, { tx_hash: "tx-200" }]);
   });
 });

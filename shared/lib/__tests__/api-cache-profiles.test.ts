@@ -51,10 +51,11 @@ describe("API cache profiles", () => {
       noStore: "no-store",
     };
 
+    const rows = [...docs.matchAll(/^\| ([\w-]+)\s*\| `([^`]+)`\s*\|/gm)];
     for (const key of API_CACHE_PROFILE_DOCUMENTED_KEYS) {
       const profileName = documentedProfileNames[key];
-      expect(docs).toContain(`| ${profileName}`);
-      expect(docs).toContain(API_CACHE_PROFILES[key]);
+      expect(rows.filter((row) => row[1] === profileName).map((row) => row[2]))
+        .toEqual([API_CACHE_PROFILES[key]]);
     }
   });
 });

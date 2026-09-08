@@ -135,9 +135,16 @@ describe("generateDailyDigest publication contract", () => {
     vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "identity mismatch", snapshot: null });
     const blocked = await invoke(); expect(blocked.status).toBe("degraded"); expect(bindJson(scenario.db as MockD1Database, 3).safetyScores).toBeUndefined(); expect(bindJson(scenario.db as MockD1Database, 5)).toMatchObject({ qualityGate: "blocked" }); expect(fetchWithRetry).toHaveBeenCalledTimes(2); expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     const clean = JSON.parse(ANTHROPIC_OK_TEXT) as { extended: string }; clean.extended = VALID_DAILY_EXTENDED.replace("Safety scores stayed A for USDT and USDC, ", "The fixture's primary risk inputs were unchanged, ");
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue(scenario.safetySource);
+    vi.clearAllMocks();
+    const repairDb = makeDailyDigestScenario().db;
     vi.mocked(fetchWithRetry).mockReset().mockResolvedValueOnce(makeStreamResponse(ANTHROPIC_OK_TEXT)).mockResolvedValueOnce(makeStreamResponse(JSON.stringify({ ...JSON.parse(ANTHROPIC_OK_TEXT), extended: clean.extended })));
-    const repaired = await invoke(); const digestWrites = (scenario.db as MockD1Database).getHistory().filter((row) => row.sql.includes("INSERT INTO daily_digest")); const lastDigestWrite = digestWrites[digestWrites.length - 1]; expect(repaired.itemCount).toBe(1); expect(JSON.parse(String(lastDigestWrite?.binds[5]))).not.toMatchObject({ qualityGate: "blocked" });
+    const repaired = await invoke(repairDb);
+    expect(repaired.itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(getInsertDigestBinds(repairDb)?.[4]).toBe(clean.extended);
+    expect(bindJson(repairDb, 5)).not.toMatchObject({ qualityGate: "blocked" });
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(repairDb, expect.objectContaining({ extended: clean.extended }), undefined);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
 
   it("keeps persistence when collectors, wrappers, or social channels degrade", async () => {

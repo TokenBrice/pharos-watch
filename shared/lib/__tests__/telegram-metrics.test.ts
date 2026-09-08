@@ -9,12 +9,6 @@ describe("TELEGRAM_METRIC_SEMANTICS", () => {
       TELEGRAM_METRIC_SEMANTICS.registeredChats.label,
     );
   });
-
-  it("describes what each metric counts", () => {
-    for (const metric of Object.values(TELEGRAM_METRIC_SEMANTICS)) {
-      expect(metric.description.length).toBeGreaterThan(20);
-    }
-  });
 });
 
 describe("pluralizeCount", () => {

@@ -21,26 +21,19 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 const envelope = V9_CANDIDATE_POLICY_V1;
 
 describe("the one exit request, two denominators", () => {
-  it("derives both requests from the same clamped supply share", () => {
-    for (const circulatingUsd of [1_000, 500_000, 4_000_000, 120_000_000, 900_000_000, 40_000_000_000]) {
-      const raw = resolveExitRequestSupplyNotionalUsd(circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request);
-      const supplyDenominator = resolveExitScoringRequest(
-        "supply-denominator",
-        circulatingUsd,
-        EXIT_ROUTE_SCORING_TABLES.request,
-      );
-      const stress = resolveExitScoringRequest("stress-grid", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request);
-
-      expect(raw).not.toBeNull();
-      expect(supplyDenominator?.rawSupplyRequestUsd).toBe(raw);
-      expect(stress?.rawSupplyRequestUsd).toBe(raw);
-
-      // The supply-denominator request is the raw share; the stress request
-      // snaps it up to the reviewed notional grid.
-      expect(supplyDenominator?.requestedNotionalUsd).toBe(raw);
-      expect(stress!.requestedNotionalUsd).toBeGreaterThanOrEqual(raw!);
-      expect(EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd).toContain(stress!.requestedNotionalUsd);
-    }
+  it.each([
+    [1_000, 100_000, 100_000],
+    [120_000_000, 6_000_000, 10_000_000],
+    [900_000_000, 25_000_000, 25_000_000],
+    [40_000_000_000, 25_000_000, 25_000_000],
+  ])("resolves supply %s to the reviewed request and smallest qualifying grid point", (supply, raw, grid) => {
+    expect(resolveExitRequestSupplyNotionalUsd(supply, EXIT_ROUTE_SCORING_TABLES.request)).toBe(raw);
+    expect(resolveExitScoringRequest("supply-denominator", supply, EXIT_ROUTE_SCORING_TABLES.request))
+      .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: raw });
+    expect(resolveExitScoringRequest("stress-grid", supply, EXIT_ROUTE_SCORING_TABLES.request))
+      .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: grid });
+    expect(computeModeledExitSizeUsd(supply)).toBe(raw);
+    expect(selectV9ExitStressRequest(supply, envelope)?.requestedNotionalUsd).toBe(grid);
   });
 
   it("rejects a missing or non-positive supply on both requests", () => {
@@ -50,18 +43,6 @@ describe("the one exit request, two denominators", () => {
     }
   });
 
-  it("keeps each published view's request resolver on the shared engine", () => {
-    for (const circulatingUsd of [250_000, 12_000_000, 3_000_000_000]) {
-      expect(computeModeledExitSizeUsd(circulatingUsd)).toBe(
-        resolveExitScoringRequest("supply-denominator", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request)!
-          .requestedNotionalUsd,
-      );
-      expect(selectV9ExitStressRequest(circulatingUsd, envelope)!.requestedNotionalUsd).toBe(
-        resolveExitScoringRequest("stress-grid", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request)!
-          .requestedNotionalUsd,
-      );
-    }
-  });
 });
 
 describe("shared breakpoint interpolation", () => {
@@ -78,12 +59,8 @@ describe("shared breakpoint interpolation", () => {
 
   it("returns the fractional value the pillar consumes, unrounded", () => {
     const raw = interpolateExitBreakpointScore(0.061, EXIT_ROUTE_SCORING_TABLES.coverageRatioBreakpoints);
-    expect(Number.isInteger(raw)).toBe(false);
-    // The redemption domain view rounds at its own boundary; both read the
-    // same ladder.
-    expect(computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.061 }).coverageRatioScore).toBe(
-      Math.round(raw),
-    );
+    expect(raw).toBeCloseTo(44.4, 10);
+    expect(computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.061 }).coverageRatioScore).toBe(44);
   });
 });
 
@@ -155,7 +132,7 @@ describe("shared component composition", () => {
       cost: 50,
     };
     const shared = composeExitComponentScore(components, EXIT_ROUTE_SCORING_TABLES.componentWeights);
-
+    expect(shared).toBe(76.25);
     // The redemption domain view's public entry point, on an uncapped route
     // family, is the same weighted ladder rounded to a whole score.
     const domain = computeRedemptionBackstopScore({
@@ -167,10 +144,10 @@ describe("shared component composition", () => {
       outputAssetQualityScore: components.outputAssetQuality,
       costScore: components.cost,
     });
-    expect(domain.score).toBe(Math.round(shared));
+    expect(domain.score).toBe(76);
 
     // The V9 pillar reads the same weights out of the validated policy
     // envelope, so the ladder is bit-identical on both sides.
-    expect(composeExitComponentScore(components, envelope.policy.semantic.exit.componentWeights)).toBe(shared);
+    expect(composeExitComponentScore(components, envelope.policy.semantic.exit.componentWeights)).toBe(76.25);
   });
 });

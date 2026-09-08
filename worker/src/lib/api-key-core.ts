@@ -306,7 +306,11 @@ function normalizeOptionalExpiresAt(
     if (!/^-?\d+$/.test(trimmed)) {
       return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
     }
-    return Number.parseInt(trimmed, 10);
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed)) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    return parsed;
   }
   return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
 }

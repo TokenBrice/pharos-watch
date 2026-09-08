@@ -6,7 +6,7 @@ import {
   type ApiKeyInventoryQuery,
   type ApiKeyInventoryStatus,
 } from "../api-key-admin-view-model";
-import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
+import { makeApiKeySummary, makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
 import { STATUS_FIXTURE_NOW_SECONDS } from "@/test-utils/status-fixtures";
 
 const NOW_SECONDS = STATUS_FIXTURE_NOW_SECONDS;
@@ -388,5 +388,33 @@ describe("API key inventory workbench model", () => {
       pageWasCorrected: true,
     });
     expect(view.keys.map((key) => key.id)).toEqual([12]);
+  });
+
+  it("returns exact, non-overlapping page membership for middle and last pages", () => {
+    const names = ["Alpha key", "Bravo key", "Charlie key", "Delta key", "Echo key"];
+    const keys = names.map((name, index) =>
+      makeApiKeySummary(index, { name, isActive: true, expiresAt: NOW_SECONDS + 30 * DAY_SECONDS }),
+    );
+    const pageAt = (page: number) =>
+      buildApiKeyInventoryView(keys, NOW_SECONDS, {
+        status: "all",
+        sort: { field: "name", direction: "asc" },
+        page,
+        pageSize: 2,
+      });
+
+    expect(pageAt(1).keys.map((key) => key.id)).toEqual([1, 2]);
+    expect(pageAt(2).keys.map((key) => key.id)).toEqual([3, 4]);
+    expect(pageAt(2)).toMatchObject({
+      page: 2,
+      totalPages: 3,
+      firstItemNumber: 3,
+      lastItemNumber: 4,
+      pageWasCorrected: false,
+    });
+    expect(pageAt(3).keys.map((key) => key.id)).toEqual([5]);
+
+    const surfaced = [1, 2, 3].flatMap((page) => pageAt(page).keys.map((key) => key.id));
+    expect(new Set(surfaced).size).toBe(keys.length);
   });
 });

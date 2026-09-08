@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
@@ -21,8 +21,8 @@ vi.mock("../helpers", async (importOriginal) => {
 });
 
 import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
-import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
-import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
+import { adaptReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
+import { runReservoir, reservoirSnapshot } from "./reservoir.test-support";
 
 const PSM_ADDRESS = "0x4809010926aec940b550d34a46a52739f996d75d";
 const USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -81,16 +81,12 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   totalLiabilities: "95",
   equity: "5",
 };
-const RESERVOIR_TEST_URL = "https://example.com/reservoir";
-const RESERVOIR_BROWSER_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON.stringify(
-  buildBrowserHeaders("https://app.reservoir.xyz", "https://app.reservoir.xyz/reserves"),
-)}`;
-const RESERVOIR_NEUTRAL_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
 
 beforeEach(() => {
   vi.clearAllMocks();
   primePsmMocks({});
 });
+afterEach(() => vi.unstubAllGlobals());
 
 describe("adaptReservoirReserves", () => {
   it("declares the timestamp-less balance-sheet API as unverified freshness", () => {
@@ -282,24 +278,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("emits unverified freshness for timestamp-less protocol API telemetry", async () => {
-    const result = await fetchReservoirReserves(
-      { id: "r" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map([
-          [
-            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
-            Promise.resolve(SAMPLE_RESPONSE),
-          ],
-        ]),
-      } as never,
-    );
+    const { result } = await runReservoir("r", SAMPLE_RESPONSE);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
@@ -322,17 +301,7 @@ describe("adaptReservoirReserves", () => {
 
   it("binds redemption capacity to the same-run USDC PSM balance and reports the route open", async () => {
     primePsmMocks({ balance: 4_000000n, paused: false });
-    const result = await fetchReservoirReserves(
-      { id: "srusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata).toMatchObject({
       psmUnderlyingBalanceRaw: "4000000",
@@ -357,17 +326,7 @@ describe("adaptReservoirReserves", () => {
     // 134/1e6 is a 1.34 bps multiplicative exit fee; rounding to an integer bps
     // at the adapter would understate it by a quarter.
     primePsmMocks({ redeemFee: 134n });
-    const result = await fetchReservoirReserves(
-      { id: "srusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata?.redemptionFeeBps).toBeCloseTo(1.34, 10);
     expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
@@ -375,17 +334,7 @@ describe("adaptReservoirReserves", () => {
 
   it("does not attribute the SavingModule exit fee to rUSD, which redeems straight at the PSM", async () => {
     primePsmMocks({ redeemFee: 134n });
-    const result = await fetchReservoirReserves(
-      { id: "rusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata?.redemptionFeeBps).toBeUndefined();
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
@@ -395,17 +344,7 @@ describe("adaptReservoirReserves", () => {
 
   it("omits fee telemetry when redeemFee() breaches the contract's own 1e6 bound", async () => {
     primePsmMocks({ redeemFee: 1_000_000n });
-    const result = await fetchReservoirReserves(
-      { id: "srusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
     // The unreadable fee must not take the capacity surface down with it.
@@ -414,17 +353,7 @@ describe("adaptReservoirReserves", () => {
 
   it("reports the route paused when the PSM paused() read returns true", async () => {
     primePsmMocks({ paused: true });
-    const result = await fetchReservoirReserves(
-      { id: "srusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "paused",
@@ -434,17 +363,7 @@ describe("adaptReservoirReserves", () => {
 
   it("withholds redemption telemetry when the PSM underlying() is not the pinned USDC address", async () => {
     primePsmMocks({ underlying: word("0x1111111111111111111111111111111111111111") });
-    const result = await fetchReservoirReserves(
-      { id: "srusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
@@ -457,17 +376,7 @@ describe("adaptReservoirReserves", () => {
 
   it("withholds redemption telemetry when the PSM balance read fails", async () => {
     primePsmMocks({ balance: null });
-    const result = await fetchReservoirReserves(
-      { id: "srusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
@@ -476,32 +385,8 @@ describe("adaptReservoirReserves", () => {
   it("scores the PSM-bound route capacity as live-direct through the backstop entry", async () => {
     const now = 1_800_000_000;
     primePsmMocks({ balance: 4_000000n, paused: false });
-    const result = await fetchReservoirReserves(
-      { id: "wsrusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]),
-      } as never,
-    );
-    if (!result.metadata) throw new Error("Reservoir fixture did not emit metadata");
-
-    const reserveSnapshot = {
-      stablecoinId: "wsrusd-reservoir",
-      fetchedAt: now,
-      source: "reservoir",
-      metadata: result.metadata,
-      warningCount: 0,
-      warnings: [],
-      sourceModel: "dynamic-mix" as const,
-      evidenceClass: "independent" as const,
-      syncStatus: "ok" as const,
-    };
+    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE);
+    const reserveSnapshot = reservoirSnapshot(result, now);
     const liveMetadata = readRedemptionBackstopLiveMetadata("wsrusd-reservoir", reserveSnapshot, now);
 
     expect(liveMetadata.canUseCapacity).toBe(true);
@@ -543,30 +428,8 @@ describe("adaptReservoirReserves", () => {
     // undisclosed-fee route it saw before this adapter published a live fee.
     const now = 1_800_000_000;
     primePsmMocks({ balance: 4_000000n, paused: false, redeemFee: null });
-    const result = await fetchReservoirReserves(
-      { id: "wsrusd-reservoir" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
-    );
-    if (!result.metadata) throw new Error("Reservoir fixture did not emit metadata");
-
-    const reserveSnapshot = {
-      stablecoinId: "wsrusd-reservoir",
-      fetchedAt: now,
-      source: "reservoir",
-      metadata: result.metadata,
-      warningCount: 0,
-      warnings: [],
-      sourceModel: "dynamic-mix" as const,
-      evidenceClass: "independent" as const,
-      syncStatus: "ok" as const,
-    };
+    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE);
+    const reserveSnapshot = reservoirSnapshot(result, now);
     const entry = await buildRedemptionBackstopEntry(
       {} as D1Database,
       "wsrusd-reservoir",
@@ -585,57 +448,28 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("falls back to neutral API headers when browser-style headers fail", async () => {
-    const result = await fetchReservoirReserves(
-      { id: "r" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map([
-          [RESERVOIR_BROWSER_CACHE_KEY, Promise.reject(new Error("browser headers rejected"))],
-          [RESERVOIR_NEUTRAL_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)],
-        ]),
-      } as never,
-    );
+    const { result, requests } = await runReservoir("r", SAMPLE_RESPONSE, true);
 
     expect(result.metadata).toMatchObject({
       totalAssetsUsd: 100,
       totalLiabilitiesUsd: 95,
       collateralizationRatio: 100 / 95,
     });
+    expect(requests.map((request) => ({ url: request.url, origin: request.headers.origin ?? null, referer: request.headers.referer ?? null }))).toEqual([
+      { url: "https://example.com/reservoir", origin: "https://app.reservoir.xyz", referer: "https://app.reservoir.xyz/reserves" },
+      { url: "https://example.com/reservoir", origin: null, referer: null },
+    ]);
   });
 
   it("aggregates unknown exposure into one warning instead of one warning per position", async () => {
-    const result = await fetchReservoirReserves(
-      { id: "r" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map([
-          [
-            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
-            Promise.resolve({
-              ...SAMPLE_RESPONSE,
-              assets: [
-                ...SAMPLE_RESPONSE.assets,
-                { label: "Mystery Adapter A", totalBalanceValue: "3" },
-                { label: "Mystery Adapter B", totalBalanceValue: "2" },
-              ],
-              totalAssets: "105",
-            }),
-          ],
-        ]),
-      } as never,
-    );
+    const { result } = await runReservoir("r", {
+      ...SAMPLE_RESPONSE,
+      assets: [...SAMPLE_RESPONSE.assets,
+        { label: "Mystery Adapter A", totalBalanceValue: "3" },
+        { label: "Mystery Adapter B", totalBalanceValue: "2" },
+      ],
+      totalAssets: "105",
+    });
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -651,27 +485,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("emits a degraded warning when totalAssets exceeds disclosed asset rows", async () => {
-    const result = await fetchReservoirReserves(
-      { id: "r" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map([
-          [
-            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
-            Promise.resolve({
-              ...SAMPLE_RESPONSE,
-              totalAssets: "125",
-            }),
-          ],
-        ]),
-      } as never,
-    );
+    const { result } = await runReservoir("r", { ...SAMPLE_RESPONSE, totalAssets: "125" });
 
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "source-total-gap", effect: "degraded" })]),
@@ -682,29 +496,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("emits a degraded warning when total liabilities exceed total assets", async () => {
-    const result = await fetchReservoirReserves(
-      { id: "r" } as never,
-      {
-        adapter: "reservoir",
-        version: 1,
-        semantics: "protocol-reserve",
-        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map([
-          [
-            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
-            Promise.resolve({
-              ...SAMPLE_RESPONSE,
-              totalAssets: "100",
-              totalLiabilities: "120",
-              equity: "-20",
-            }),
-          ],
-        ]),
-      } as never,
-    );
+    const { result } = await runReservoir("r", { ...SAMPLE_RESPONSE, totalAssets: "100", totalLiabilities: "120", equity: "-20" });
 
     expect(result.warnings).toEqual(
       expect.arrayContaining([

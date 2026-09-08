@@ -10,13 +10,6 @@ import { runAsCli } from "../lib/source-files.mts";
 import { getScriptKind } from "../lib/ts-ast.mts";
 
 const SOURCE_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-const STRICT_PARSER_CALL_PATTERN = /\bparseStrictCliArgs\s*\(/;
-const STRICT_WRAPPER_IMPORT_PATTERN = /\bfrom\s+["'][^"']*cli-args\.mjs["']/;
-const RELATIVE_IMPORT_PATTERNS = [
-  /\bfrom\s+["'](\.{1,2}\/[^"']+)["']/g,
-  /\bimport\s+["'](\.{1,2}\/[^"']+)["']/g,
-  /\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g,
-];
 
 interface CliPolicyPathEntry {
   path?: unknown;
@@ -78,16 +71,35 @@ function isCanonicalRepoPath(path: unknown): path is string {
   );
 }
 
-function collectRelativeImportSpecifiers(source: string): string[] {
+function inspectParserSource(source: string, path: string) {
+  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, getScriptKind(path));
   const imports = new Set<string>();
-  for (const pattern of RELATIVE_IMPORT_PATTERNS) {
-    pattern.lastIndex = 0;
-    for (const match of source.matchAll(pattern)) {
-      const specifier = match[1];
-      if (specifier?.startsWith(".")) imports.add(specifier);
+  let importsWrapper = false;
+  let callsParser = false;
+  function visit(node: ts.Node): void {
+    if (
+      (ts.isImportDeclaration(node) && !node.importClause?.isTypeOnly) ||
+      (ts.isExportDeclaration(node) && !node.isTypeOnly)
+    ) {
+      const specifier = node.moduleSpecifier;
+      if (specifier && ts.isStringLiteralLike(specifier)) {
+        if (specifier.text.startsWith(".")) imports.add(specifier.text);
+        if (ts.isImportDeclaration(node) && importCandidates(path, specifier.text).includes("scripts/lib/cli-args.mjs")) {
+          importsWrapper = true;
+        }
+      }
     }
+    if (ts.isCallExpression(node)) {
+      if (node.expression.kind === ts.SyntaxKind.ImportKeyword && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])) {
+        const specifier = node.arguments[0].text;
+        if (specifier.startsWith(".")) imports.add(specifier);
+      }
+      if (ts.isIdentifier(node.expression) && node.expression.text === "parseStrictCliArgs") callsParser = true;
+    }
+    ts.forEachChild(node, visit);
   }
-  return [...imports];
+  visit(sourceFile);
+  return { imports, importsWrapper, callsParser };
 }
 
 function importCandidates(fromPath: string, specifier: string): string[] {
@@ -139,7 +151,7 @@ function entrypointReachesParser(entrypointPath: string, parserPath: string, rea
 
     const source = readSource(current);
     if (source === null) continue;
-    for (const specifier of collectRelativeImportSpecifiers(source)) {
+    for (const specifier of inspectParserSource(source, current).imports) {
       const importedPath = importCandidates(current, specifier).find((candidate) => readSource(candidate) !== null);
       if (!importedPath) continue;
       if (importedPath === parserPath) return true;
@@ -220,7 +232,8 @@ export function evaluateCliArgsPolicy({
       errors.push(`Strict parser source is missing: ${entry.parserPath}`);
       continue;
     }
-    if (!STRICT_WRAPPER_IMPORT_PATTERN.test(parserSource) || !STRICT_PARSER_CALL_PATTERN.test(parserSource)) {
+    const parser = inspectParserSource(parserSource, entry.parserPath);
+    if (!parser.importsWrapper || !parser.callsParser) {
       errors.push(
         `Strict parser ${entry.parserPath} must import scripts/lib/cli-args.mjs and call parseStrictCliArgs().`,
       );

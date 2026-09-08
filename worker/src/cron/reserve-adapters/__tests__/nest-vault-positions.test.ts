@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import nopal from "@shared/data/stablecoins/coins/nopal-nest.json";
+import inalpha from "@shared/data/stablecoins/coins/inalpha-nest.json";
+import type { StablecoinMeta } from "@shared/types/core";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -81,7 +83,7 @@ describe("fetchNestVaultPositionsReserves", () => {
         },
       });
 
-    const coin = TRACKED_META_BY_ID.get("nopal-nest");
+    const coin = nopal as unknown as StablecoinMeta;
     expect(coin?.liveReservesConfig).toBeDefined();
 
     const result = await fetchNestVaultPositionsReserves(
@@ -166,7 +168,7 @@ describe("fetchNestVaultPositionsReserves", () => {
         },
       });
 
-    const coin = TRACKED_META_BY_ID.get("inalpha-nest");
+    const coin = inalpha as unknown as StablecoinMeta;
     const result = await fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
@@ -237,7 +239,7 @@ describe("fetchNestVaultPositionsReserves", () => {
         },
       });
 
-    const coin = TRACKED_META_BY_ID.get("nopal-nest");
+    const coin = nopal as unknown as StablecoinMeta;
     await expect(fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,

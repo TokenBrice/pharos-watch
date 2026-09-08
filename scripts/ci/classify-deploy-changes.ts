@@ -12,17 +12,23 @@ import {
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths, splitNullDelimited } from "../lib/changed-files.mts";
-import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
+import { CRITICAL_FILES, selectChangedCriticalSources } from "../lib/critical-coverage.mjs";
+import { deriveBaseCriticalOwnership, type CriticalOwnership } from "../lib/critical-ownership.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 
 const ZERO_SHA: RegExp = /^0+$/;
 const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
+  ".github/actions/setup-workspace/action.yml",
   ".github/workflows/pull-request-checks.yml",
   "scripts/ci/check-critical-coverage.ts",
   "scripts/lib/critical-coverage.mjs",
   "scripts/lib/critical-test-files.mts",
   "scripts/lib/critical-ownership.mts",
+  "scripts/lib/pr-lanes.mts",
+  "scripts/lib/pr-test-selection.mts",
+  "scripts/maintenance/generate-pr-workflow-matrix.ts",
+  "scripts/maintenance/run-pr-tests.ts",
   "scripts/maintenance/merge-critical-coverage.ts",
   "scripts/maintenance/run-critical-coverage-shard.ts",
   "scripts/maintenance/run-critical-coverage.ts",
@@ -76,7 +82,7 @@ export function normalizeChangedFiles(rawOutput: string): string[] {
 
 export function classifyChangedFiles(
   changedFiles: readonly string[],
-  { reason }: { reason?: string } = {},
+  { reason, baseOwnership }: { reason?: string; baseOwnership?: CriticalOwnership } = {},
 ): DeployClassification {
   const normalizedFiles = [...new Set(changedFiles.map((file) => normalizeRepoPath(file)))].sort();
   const pagesChanged = hasPagesDeployImpact(normalizedFiles);
@@ -88,7 +94,7 @@ export function classifyChangedFiles(
     changedFiles: normalizedFiles,
     criticalCoverageChanged: normalizedFiles.some(
       (file) => CRITICAL_FILES.includes(file) || CRITICAL_COVERAGE_INFRA_PATHS.has(file),
-    ),
+    ) || selectChangedCriticalSources(normalizedFiles, baseOwnership).length > 0,
     deployRequired: hasDeployImpact(normalizedFiles),
     docsChanged: normalizedFiles.some((file) => hasOnlyInternalDocsImpact([file])),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
@@ -145,6 +151,7 @@ export function classifyDeployChanges({
   }
 
   return classifyChangedFiles(changedFiles, {
+    baseOwnership: deriveBaseCriticalOwnership(baseSha, changedFiles, execFile),
     reason:
       changedFiles.length > 0
         ? `Detected ${changedFiles.length} changed file(s) in push range`

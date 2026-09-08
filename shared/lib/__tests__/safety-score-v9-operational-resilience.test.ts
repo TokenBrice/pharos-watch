@@ -41,7 +41,7 @@ const MEASURED_DEPTH: V9OperationalResilienceMeasuredMarketDepth = {
   evidenceRefIds: ["depth-window"],
 };
 
-function facts(): V9OperationalResilienceFact {
+function facts(overrides: Partial<V9OperationalResilienceFact> = {}): V9OperationalResilienceFact {
   return {
     schemaVersion: 1,
     reviewedAtSec: 1_750_000_000,
@@ -128,6 +128,7 @@ function facts(): V9OperationalResilienceFact {
       evidenceRefIds: ["incident-review"],
       incidents: [],
     },
+    ...overrides,
   };
 }
 
@@ -180,10 +181,7 @@ describe("Safety Score v9 operational resilience", () => {
   });
 
   it("uses live history only as an eligibility gate", () => {
-    const input = facts();
-    input.redemptionThroughput = null;
-    input.stressEpisodes = [];
-    input.reserveReconciliation = null;
+    const input = facts({ redemptionThroughput: null, stressEpisodes: [], reserveReconciliation: null });
     const eligible = evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS);
     expect(eligible.eligible).toBe(true);
     expect(eligible.contributions).toEqual([]);
@@ -286,9 +284,7 @@ describe("Safety Score v9 operational resilience", () => {
   });
 
   it("evaluates cumulative and stress redemption claims independently", () => {
-    const input = facts();
-    input.stressEpisodes = [];
-    input.reserveReconciliation = null;
+    const input = facts({ stressEpisodes: [], reserveReconciliation: null });
     input.redemptionThroughput!.cumulativeLifetimeRedeemedSupplyRatio = null;
     input.redemptionThroughput!.stressWindows[0]!.confidence = "issuer-reported";
 
@@ -324,6 +320,133 @@ describe("Safety Score v9 operational resilience", () => {
     ]);
   });
 
+  it("selects stress redemption by confidence before volume regardless of input order", () => {
+    const input = facts();
+    const strongest = input.redemptionThroughput!.stressWindows[0]!;
+    const larger = {
+      ...strongest,
+      episodeKey: "larger",
+      redeemedUsdLowerBound: 20_000_000_000,
+      redeemedSupplyRatioLowerBound: 0.2,
+      confidence: "issuer-reported" as const,
+      evidenceRefIds: ["larger"],
+    };
+    for (const windows of [[larger, strongest], [strongest, larger]]) {
+      input.redemptionThroughput!.stressWindows = windows;
+      expect(evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS).contributions)
+        .toContainEqual(expect.objectContaining({
+          component: "stress-redemption", points: 3, evidenceRefIds: ["redemption-stress"],
+        }));
+    }
+  });
+
+  it("retains the valid runner-up when the strongest stress window is unsupported", () => {
+    const input = facts();
+    const strongest = input.redemptionThroughput!.stressWindows[0]!;
+    const runnerUp = {
+      ...strongest,
+      episodeKey: "runner-up",
+      confidence: "issuer-reported" as const,
+      evidenceRefIds: ["runner-up"],
+    };
+    for (const invalid of [
+      { ...strongest, settlement: { state: "not-settled-in-full" as const, verification: "independently-verified" as const } },
+      { ...strongest, evidenceRefIds: [] },
+      { ...strongest, redeemedSupplyRatioLowerBound: 0.0499 },
+    ]) {
+      input.redemptionThroughput!.stressWindows = [invalid, runnerUp];
+      expect(evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS).contributions
+        .filter(({ component }) => component === "stress-redemption")).toEqual([
+        expect.objectContaining({ points: 1.5, evidenceRefIds: ["runner-up"] }),
+      ]);
+    }
+  });
+
+  it("includes the stress-redemption ratio threshold but excludes just below it", () => {
+    const input = facts();
+    for (const [ratio, points] of [[0.05, 3], [0.0499, 0]]) {
+      input.redemptionThroughput!.stressWindows[0]!.redeemedSupplyRatioLowerBound = ratio!;
+      const contributions = evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS)
+        .contributions.filter(({ component }) => component === "stress-redemption");
+      expect(contributions).toEqual(points === 0 ? [] : [
+        expect.objectContaining({ points, evidenceRefIds: ["redemption-stress"] }),
+      ]);
+    }
+  });
+
+  it("does not count discontinued, unrecovered, or overlong episodes toward recovery credit", () => {
+    const input = facts();
+    const [first, second] = input.stressEpisodes;
+    for (const invalid of [
+      { ...second!, redemptionContinued: false },
+      { ...second!, recoveredWithinSec: null },
+      { ...second!, recoveredWithinSec: 604_801 },
+    ]) {
+      input.stressEpisodes = [first!, invalid];
+      expect(evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS).contributions
+        .filter(({ component }) => component === "stress-recovery")).toEqual([]);
+    }
+  });
+
+  it("credits the required recoveries exactly at the maximum duration", () => {
+    const input = facts();
+    input.stressEpisodes.forEach((episode) => { episode.recoveredWithinSec = 604_800; });
+    expect(evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS).contributions)
+      .toContainEqual(expect.objectContaining({
+        component: "stress-recovery", points: 2, evidenceRefIds: ["stress-1", "stress-2"],
+      }));
+  });
+
+  it("requires implementation evidence to qualify depth without an overlay", () => {
+    const result = evaluateV9OperationalResilience(null, MEASURED_DEPTH, POLICY, NO_BLOCKERS, {
+      minimumLiveHistoryMonths: 120,
+      evidenceRefIds: [],
+    });
+    expect(result.eligible).toBe(false);
+    expect(result.contributions).toEqual([]);
+  });
+
+  it("requires measured evidence even when depth otherwise qualifies", () => {
+    expect(evaluateV9OperationalResilience(
+      facts(), { ...MEASURED_DEPTH, evidenceRefIds: [] }, POLICY, NO_BLOCKERS,
+    ).contributions.filter(({ component }) => component === "persistent-market-depth")).toEqual([]);
+  });
+
+  it("rejects impossible successful-observation histories", () => {
+    expect(evaluateV9OperationalResilience(
+      facts(), { ...MEASURED_DEPTH, successfulObservationCount: 7 }, POLICY, NO_BLOCKERS,
+    ).contributions.filter(({ component }) => component === "persistent-market-depth")).toEqual([]);
+  });
+
+  it("includes the measured completion threshold but excludes just below it", () => {
+    for (const [ratio, points] of [[0.8, 2], [0.7999, 0]]) {
+      const result = evaluateV9OperationalResilience(
+        facts(), { ...MEASURED_DEPTH, conservativeCompletionRatio: ratio! }, POLICY, NO_BLOCKERS,
+      );
+      expect(result.contributions.filter(({ component }) => component === "persistent-market-depth"))
+        .toEqual(points === 0 ? [] : [
+          expect.objectContaining({ points, evidenceRefIds: ["depth-window"] }),
+        ]);
+    }
+  });
+
+  it("throws for invalid measured counts and completion ratios on an eligible path", () => {
+    for (const invalid of [
+      { completeProducerCycleCount: -1 },
+      { completeProducerCycleCount: 3.5 },
+      { successfulObservationCount: -1 },
+      { successfulObservationCount: 3.5 },
+      { conservativeCompletionRatio: Number.NaN },
+      { conservativeCompletionRatio: Number.POSITIVE_INFINITY },
+      { conservativeCompletionRatio: -0.1 },
+      { conservativeCompletionRatio: 1.1 },
+    ]) {
+      expect(() => evaluateV9OperationalResilience(
+        facts(), { ...MEASURED_DEPTH, ...invalid }, POLICY, NO_BLOCKERS,
+      )).toThrow();
+    }
+  });
+
   it("awards no credit to unknown-confidence claims", () => {
     const input = facts();
     input.redemptionThroughput!.cumulativeLifetimeRedeemedSupplyRatio!.confidence = "unknown";
@@ -339,10 +462,7 @@ describe("Safety Score v9 operational resilience", () => {
   });
 
   it("requires enough successful measured observations, not merely complete cycles", () => {
-    const input = facts();
-    input.redemptionThroughput = null;
-    input.stressEpisodes = [];
-    input.reserveReconciliation = null;
+    const input = facts({ redemptionThroughput: null, stressEpisodes: [], reserveReconciliation: null });
     const sparse = {
       ...MEASURED_DEPTH,
       completeProducerCycleCount: 10,
@@ -366,9 +486,7 @@ describe("Safety Score v9 operational resilience", () => {
   });
 
   it("uses the strongest sufficient set of documented stress recoveries", () => {
-    const input = facts();
-    input.redemptionThroughput = null;
-    input.reserveReconciliation = null;
+    const input = facts({ redemptionThroughput: null, reserveReconciliation: null });
     input.stressEpisodes.push(
       {
         episodeKey: "stress-3",
@@ -404,9 +522,7 @@ describe("Safety Score v9 operational resilience", () => {
   });
 
   it("requires a known clean reconciliation history, procedures, and assurance", () => {
-    const input = facts();
-    input.redemptionThroughput = null;
-    input.stressEpisodes = [];
+    const input = facts({ redemptionThroughput: null, stressEpisodes: [] });
 
     input.reserveReconciliation!.latestAssurance.confidence = "independent-assurance";
     const qualified = evaluateV9OperationalResilience(input, null, POLICY, NO_BLOCKERS);
@@ -431,9 +547,7 @@ describe("Safety Score v9 operational resilience", () => {
         value.reserveReconciliation!.latestAssurance.confidence = "unknown";
       },
     ]) {
-      const unqualified = facts();
-      unqualified.redemptionThroughput = null;
-      unqualified.stressEpisodes = [];
+      const unqualified = facts({ redemptionThroughput: null, stressEpisodes: [] });
       mutate(unqualified);
       expect(
         evaluateV9OperationalResilience(unqualified, null, POLICY, NO_BLOCKERS)
@@ -458,55 +572,26 @@ describe("Safety Score v9 operational resilience", () => {
     expect(result.blockerCodes).toEqual([blocker]);
   });
 
-  it("treats a reviewed active material incident as a blocker", () => {
+  it.each([
+    { state: "active", resolvedAt: null, eligible: false, blockers: ["activeMaterialIncident"], credits: { backing: 0, exit: 0, control: 0 } },
+    { state: "resolved", resolvedAt: "2026-01-10", eligible: true, blockers: [], credits: { backing: 3, exit: 8, control: 3 } },
+  ] as const)("handles a reviewed $state material incident", ({ state, resolvedAt, eligible, blockers, credits }) => {
     const input = facts();
     if (input.incidentReview.state !== "reviewed") throw new Error("Expected reviewed facts");
-    input.incidentReview.incidents = [
-      {
-        incidentKey: "active-control",
-        name: "Active control incident",
-        category: "control",
-        state: "active",
-        occurredAt: "2026-01-01",
-        resolvedAt: null,
-        confidence: "independent-assurance",
-        evidenceRefIds: ["incident"],
-      },
-    ];
-    const result = evaluateV9OperationalResilience(
-      input,
-      MEASURED_DEPTH,
-      POLICY,
-      NO_BLOCKERS,
-    );
-    expect(result.eligible).toBe(false);
-    expect(result.contributions).toEqual([]);
-    expect(result.blockerCodes).toEqual(["activeMaterialIncident"]);
-  });
-
-  it("retains resolved incident history without masquerading as an active blocker", () => {
-    const input = facts();
-    if (input.incidentReview.state !== "reviewed") throw new Error("Expected reviewed facts");
-    input.incidentReview.incidents = [
-      {
-        incidentKey: "resolved-control",
-        name: "Resolved control incident",
-        category: "control",
-        state: "resolved",
-        occurredAt: "2025-01-01",
-        resolvedAt: "2025-01-10",
-        confidence: "independent-assurance",
-        evidenceRefIds: ["incident"],
-      },
-    ];
-    const result = evaluateV9OperationalResilience(
-      input,
-      MEASURED_DEPTH,
-      POLICY,
-      NO_BLOCKERS,
-    );
-    expect(result.eligible).toBe(true);
-    expect(result.blockerCodes).toEqual([]);
-    expect(result.pillarCredits).toEqual({ backing: 3, exit: 8, control: 3 });
+    input.incidentReview.incidents = [{
+      incidentKey: "control-incident",
+      name: "Control incident",
+      category: "control",
+      state,
+      occurredAt: "2026-01-01",
+      resolvedAt,
+      confidence: "independent-assurance",
+      evidenceRefIds: ["incident"],
+    }];
+    const result = evaluateV9OperationalResilience(input, MEASURED_DEPTH, POLICY, NO_BLOCKERS);
+    expect(result.eligible).toBe(eligible);
+    expect(result.blockerCodes).toEqual(blockers);
+    expect(result.pillarCredits).toEqual(credits);
+    if (!eligible) expect(result.contributions).toEqual([]);
   });
 });

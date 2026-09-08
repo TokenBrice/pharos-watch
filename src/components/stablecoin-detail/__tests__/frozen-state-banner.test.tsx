@@ -22,25 +22,12 @@ const obituary: StablecoinObituary = {
 };
 
 describe("FrozenStateBanner", () => {
-
-  it("renders the epitaph headline", () => {
+  it("renders the epitaph, cause, and both destinations from one obituary", () => {
     render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);
+
     expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
-  });
-
-  it("renders the cause-of-death label", () => {
-    render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);
     expect(screen.getByText(/Abandoned/i)).toBeTruthy();
-  });
-
-  it("links to the cemetery", () => {
-    render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);
-    const link = screen.getByRole("link", { name: /cemetery/i });
-    expect(link.getAttribute("href")).toBe("/cemetery/");
-  });
-
-  it("links to the obituary source", () => {
-    render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);
+    expect(screen.getByRole("link", { name: /cemetery/i }).getAttribute("href")).toBe("/cemetery/");
     expect(screen.getByRole("link", { name: /Resolv announcement/i }).getAttribute("href")).toBe(obituary.sourceUrl);
   });
 });

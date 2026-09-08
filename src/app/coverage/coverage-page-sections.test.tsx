@@ -129,11 +129,8 @@ describe("CoverageMatrixCard", () => {
     const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
     const view = within(container);
 
-    const matrixSurface = view.getByTestId("coverage-matrix-table");
     const matrixTable = view.getByRole("table", { name: /Per-coin feature availability/ });
 
-    expect(matrixSurface.getAttribute("data-table-id")).toBe("coverage-matrix");
-    expect(matrixTable.getAttribute("data-slot")).toBe("table");
     expect(screen.getAllByText("Coin 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("C1").length).toBeGreaterThan(0);
     expect(within(matrixTable).getByRole("rowheader", { name: /Coin 1/ })).toBeTruthy();

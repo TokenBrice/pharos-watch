@@ -123,19 +123,89 @@ describe("smoke-runtime CLI helpers", () => {
     expect(closeBrowser).toHaveBeenCalledOnce();
   });
 
-  it("runs bounded route workers, retries, and aggregates normalized results", async () => {
-    const active = { count: 0, maximum: 0 };
-    const results = await runBoundedWorkerPool(["/", "/yield/", "/flows/"], 2, async (route: string) => {
-      active.count += 1;
-      active.maximum = Math.max(active.maximum, active.count);
-      await Promise.resolve();
-      active.count -= 1;
-      return { route, failures: route === "/flows/" ? ["overflow"] : [], screenshotPath: route === "/flows/" ? "flows.png" : null };
+  it.each(["callback", "newContext", "context.close"])("closes owned resources when %s fails", async (stage) => {
+    const failure = new Error(stage);
+    const closed: string[] = [];
+    const context = {
+      close: async () => {
+        closed.push("context");
+        if (stage === "context.close") throw failure;
+      },
+    };
+    const browser = {
+      newContext: async () => {
+        if (stage === "newContext") throw failure;
+        return context;
+      },
+      close: async () => { closed.push("browser"); },
+    };
+    const launch = (async () => browser) as typeof launchChromiumBrowser;
+    await expect(withBrowserContext({ chromium: undefined, contextOptions: undefined, launch }, async () => {
+      if (stage === "callback") throw failure;
+      return "ok";
+    })).rejects.toBe(failure);
+    expect(closed).toEqual(stage === "newContext" ? ["browser"] : ["context", "browser"]);
+  });
+
+  it.each([
+    { env: { NODE_ENV: "test" as const }, message: "browser crashed" },
+    { env: { NODE_ENV: "test" as const, SMOKE_UI_BROWSER_EXECUTABLE_PATH: "/explicit/chromium" }, message: "Executable doesn't exist" },
+  ])("does not hide launch failures with fallback: $message $env", async ({ env, message }) => {
+    const failure = new Error(message);
+    const launch = vi.fn().mockRejectedValue(failure);
+    const chromium = { launch } as Parameters<typeof launchChromiumBrowser>[0];
+    await expect(launchChromiumBrowser(chromium, { env, log: vi.fn() })).rejects.toBe(failure);
+    expect(launch).toHaveBeenCalledOnce();
+  });
+
+  it("runs two workers concurrently and preserves input order despite reversed completion", async () => {
+    const gates = Array.from({ length: 3 }, () => Promise.withResolvers<string>());
+    const thirdStarted = Promise.withResolvers<void>();
+    const started: number[] = [];
+    const pool = runBoundedWorkerPool(["first", "second", "third"], 2, async (_item: string, index: number) => {
+      started.push(index);
+      if (index === 2) thirdStarted.resolve();
+      return gates[index].promise;
     });
-    expect(active.maximum).toBeLessThanOrEqual(2);
-    expect(aggregateRouteResults(results)).toEqual({
+    expect(started).toEqual([0, 1]);
+    gates[1].resolve("second result");
+    await thirdStarted.promise;
+    expect(started).toEqual([0, 1, 2]);
+    gates[2].resolve("third result");
+    gates[0].resolve("first result");
+    await expect(pool).resolves.toEqual(["first result", "second result", "third result"]);
+    expect(started).toEqual([0, 1, 2]);
+  });
+
+  it("propagates a worker rejection", async () => {
+    const failure = new Error("route failed");
+    await expect(runBoundedWorkerPool(["/"], 1, async () => { throw failure; })).rejects.toBe(failure);
+  });
+
+  it.each([
+    { retryable: true, attempts: 3, sleeps: 2 },
+    { retryable: false, attempts: 1, sleeps: 0 },
+  ])("bounds failed retries when retryable=$retryable", async ({ retryable, attempts, sleeps }) => {
+    const failure = new Error("original failure");
+    const operation = vi.fn().mockRejectedValue(failure);
+    const sleepImpl = vi.fn().mockResolvedValue(undefined);
+    await expect(retrySmokeOperation(operation, {
+      retries: 2, shouldRetry: (() => retryable) as () => true, sleepImpl,
+    })).rejects.toBe(failure);
+    expect(operation).toHaveBeenCalledTimes(attempts);
+    expect(sleepImpl).toHaveBeenCalledTimes(sleeps);
+  });
+
+  it("aggregates route failures and screenshots and recovers transient retries", async () => {
+    expect(aggregateRouteResults([
+      { route: "/", failures: [], screenshotPath: null },
+      { route: "/flows/", failures: ["overflow"], screenshotPath: "flows.png" },
+    ])).toEqual({
       failures: ["overflow"],
-      results,
+      results: [
+        { route: "/", failures: [], screenshotPath: null },
+        { route: "/flows/", failures: ["overflow"], screenshotPath: "flows.png" },
+      ],
       screenshots: ["flows.png"],
     });
 

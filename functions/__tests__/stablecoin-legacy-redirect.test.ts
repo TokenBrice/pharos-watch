@@ -71,8 +71,12 @@ describe("stablecoin legacy redirects", () => {
   it.each(["999999", "411"])("passes unreviewed numeric stablecoin %s through to static 404 handling", async (id) => {
     const request = new Request(`https://pharos.watch/stablecoin/${id}/`);
     const ctx = makeContext(request);
+    ctx.assetsFetch.mockResolvedValueOnce(new Response("not found", { status: 404 }));
 
-    await onRequest(ctx);
+    const response = await onRequest(ctx);
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("not found");
+    expect(response.headers.has("Location")).toBe(false);
 
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
   });
@@ -114,6 +118,67 @@ describe("stablecoin legacy redirects", () => {
     expect(response.headers.get("Location")).toBe(
       "https://pharos.watch/yield/?days=90&compare=usdc-circle&from=detail-fallback&workbenchFallback=usdc-circle",
     );
+  });
+
+  it.each([
+    ["/stablecoin/343/", 200],
+    ["/stablecoin/usdc-circle/yield/", 404],
+  ])("preserves the asset response for POST %s", async (path, status) => {
+    const request = new Request(`https://pharos.watch${path}`, { method: "POST" });
+    const ctx = makeContext(request);
+    ctx.assetsFetch.mockResolvedValueOnce(new Response("asset post", { status }));
+    const response = await onRequest(ctx);
+    expect(response.status).toBe(status);
+    expect(await response.text()).toBe("asset post");
+    expect(response.headers.has("Location")).toBe(false);
+    expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
+  });
+
+  it("redirects HEAD for a missing known yield workbench", async () => {
+    const ctx = makeContext(new Request("https://pharos.watch/stablecoin/usdc-circle/yield/", { method: "HEAD" }));
+    ctx.assetsFetch.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    const response = await onRequest(ctx);
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "https://pharos.watch/yield/?compare=usdc-circle&from=detail-fallback&workbenchFallback=usdc-circle",
+    );
+    expect(await response.text()).toBe("");
+  });
+
+  it("waits for discarded asset stream cancellation before returning the redirect", async () => {
+    let finishCancellation!: () => void;
+    const cancellation = new Promise<void>((resolve) => { finishCancellation = resolve; });
+    const cancel = vi.fn(() => cancellation);
+    const ctx = makeContext(new Request("https://pharos.watch/stablecoin/usdc-circle/yield/"));
+    ctx.assetsFetch.mockResolvedValueOnce(new Response(new ReadableStream({ cancel }), { status: 404 }));
+    let settled = false;
+    const pending = onRequest(ctx).then((response) => {
+      settled = true;
+      return response;
+    });
+    try {
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(settled).toBe(false);
+    } finally {
+      finishCancellation();
+    }
+    expect((await pending).status).toBe(302);
+  });
+
+  it("preserves an available yield workbench response", async () => {
+    const ctx = makeContext(new Request("https://pharos.watch/stablecoin/usdc-circle/yield/"));
+    ctx.assetsFetch.mockResolvedValueOnce(new Response("workbench", {
+      status: 200,
+      headers: { "Content-Type": "text/html", "Cache-Control": "public, max-age=60" },
+    }));
+    const response = await onRequest(ctx);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("workbench");
+    expect(response.headers.get("Content-Type")).toBe("text/html");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(response.headers.has("Location")).toBe(false);
   });
 
   it("preserves existing yield state while binding the notice to the requested coin", () => {

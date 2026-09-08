@@ -1,13 +1,13 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { analyzeGscCoverageInputs, renderGscCoverageReport, runCli } from "../maintenance/analyze-gsc-coverage.mjs";
 import { writeStoredZip } from "./helpers/gsc-zip";
 
-function fixtureDir() {
-  return mkdtempSync(join(tmpdir(), "pharos-gsc-coverage-"));
-}
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { makeRoot: fixtureDir, cleanup } = createTempRepoTracker("pharos-gsc-coverage");
+afterEach(cleanup);
 
 describe("analyze-gsc-coverage", () => {
   it("maps drilldown zips to issue rows and groups URLs by path/query key", async () => {

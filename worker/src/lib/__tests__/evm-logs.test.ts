@@ -238,6 +238,7 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   const noopLimiter = <T>(fn: () => Promise<T>) => fn();
@@ -257,10 +258,13 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
   });
 
   it("marks the scan incomplete on HTTP error", async () => {
+    vi.useFakeTimers();
     mockFetch([{ match: () => true, body: "Server Error", status: 500 }]);
 
     const budget = createBudget(10);
-    const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
+    const pending = fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
+    await vi.runAllTimersAsync();
+    const result = await pending;
 
     expect(result.complete).toBe(false);
     expect(result.logs).toEqual([]);
@@ -301,34 +305,74 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("recursively splits when result count >= 1000", async () => {
-    // First call returns 1000 results (triggers split)
-    const lotsOfLogs = Array.from({ length: 1000 }, (_, i) => ({
+  function logAt(block: number, index = 0) {
+    return {
       address: "0x123", topics: ["0xabc"], data: "0x",
-      blockNumber: `0x${i.toString(16)}`, timeStamp: "1000",
-      transactionHash: `0xhash${i}`, logIndex: `0x${i.toString(16)}`,
-    }));
+      blockNumber: `0x${block.toString(16)}`, timeStamp: "1000",
+      transactionHash: `0xhash${block}`, logIndex: `0x${index.toString(16)}`,
+    };
+  }
 
-    // First half returns 5 logs, second half returns 3 logs
-    const firstHalf = lotsOfLogs.slice(0, 5);
-    const secondHalf = lotsOfLogs.slice(0, 3);
-
-    mockFetch([
-      {
-        match: () => true,
-        outcomes: [
-          { body: { status: "1", message: "OK", result: lotsOfLogs } },
-          { body: { status: "1", message: "OK", result: firstHalf } },
-          { body: { status: "1", message: "OK", result: secondHalf } },
-        ],
+  const cappedLogs = Array.from({ length: 1000 }, (_, index) => logAt(0, index));
+  function range(from: number, to: number, result: typeof cappedLogs, message = "OK") {
+    return {
+      match: (request: Request) => {
+        const params = new URL(request.url).searchParams;
+        return params.get("fromBlock") === String(from) && params.get("toBlock") === String(to);
       },
-    ]);
+      body: { status: message === "OK" ? "1" : "0", message, result },
+    };
+  }
 
+  it("recursively splits into disjoint contiguous ranges", async () => {
+    const first = [logAt(1), logAt(50)];
+    const second = [logAt(51), logAt(100)];
+    const fetchSpy = mockFetch([
+      range(0, 100, cappedLogs),
+      range(0, 50, first),
+      range(51, 100, second),
+    ], { requireMatch: true });
     const budget = createBudget(10);
     const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
+    expect(result).toEqual({
+      logs: [...first, ...second], complete: true, scannedToBlock: 100,
+      calls: 3, maxDepth: 1, failureReason: undefined,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(budget.count).toBe(3);
+  });
 
-    expect(result.complete).toBe(true);
-    expect(result.logs).toHaveLength(8); // 5 + 3
-    expect(budget.count).toBe(3); // 3 API calls
+  it("does not advance past a capped unsplittable block", async () => {
+    mockFetch([range(0, 0, cappedLogs)], { requireMatch: true });
+    const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 0, 0, noopLimiter, createBudget(10));
+    expect(result).toEqual({
+      logs: cappedLogs, complete: false, scannedToBlock: -1, calls: 1,
+      maxDepth: 0, failureReason: "etherscan-result-cap-unsplittable",
+    });
+  });
+
+  it("propagates nested first-child failure without requesting later ranges", async () => {
+    const fetchSpy = mockFetch([
+      range(0, 100, cappedLogs),
+      range(0, 50, cappedLogs),
+      range(0, 25, [], "NOTOK"),
+    ], { requireMatch: true });
+    const budget = createBudget(10);
+    expect(await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget)).toEqual({
+      logs: [], complete: false, scannedToBlock: -1, calls: 3, maxDepth: 2, failureReason: "NOTOK",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(budget.count).toBe(3);
+  });
+
+  it("retains the first child's logs and contiguous watermark when the second exhausts its budget", async () => {
+    const first = [logAt(50)];
+    const fetchSpy = mockFetch([range(0, 100, cappedLogs), range(0, 50, first)], { requireMatch: true });
+    const budget = createBudget(2);
+    expect(await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget)).toEqual({
+      logs: first, complete: false, scannedToBlock: 50, calls: 2, maxDepth: 1, failureReason: "budget-exhausted",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(budget.count).toBe(2);
   });
 });

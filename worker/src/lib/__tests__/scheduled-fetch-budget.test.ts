@@ -72,4 +72,62 @@ describe("ScheduledFetchBudget", () => {
     expect(peakFetches).toBe(5);
     expect(activeFetches).toBe(0);
   });
+
+  it("releases a failed callback and completes its queued successor", async () => {
+    const budget = new ScheduledFetchBudget(1);
+    const failure = new Error("transport failed");
+    let reject!: (error: Error) => void;
+    const gate = new Promise<never>((_resolve, rejectGate) => { reject = rejectGate; });
+    const running = budget.run(1, undefined, () => gate);
+    const rejected = expect(running).rejects.toBe(failure);
+    const queued = budget.run(1, undefined, async () => "completed");
+    expect(budget.snapshot()).toMatchObject({ allocated: 1, waiting: 1 });
+    reject(failure);
+    await rejected;
+    await expect(queued).resolves.toBe("completed");
+    expect(budget.snapshot()).toMatchObject({ allocated: 0, waiting: 0 });
+  });
+
+  it("ignores a second release without admitting excess work", async () => {
+    const budget = new ScheduledFetchBudget(1);
+    const release = await budget.acquire(1);
+    const next = budget.acquire(1);
+    release();
+    const releaseNext = await next;
+    release();
+    const last = budget.acquire(1);
+    expect(budget.snapshot()).toMatchObject({ allocated: 1, waiting: 1 });
+    releaseNext();
+    (await last)();
+    expect(budget.snapshot().allocated).toBe(0);
+  });
+
+  it("preserves FIFO until aborting a heavy head drains a lighter waiter", async () => {
+    const budget = new ScheduledFetchBudget(3);
+    const release = await budget.acquire(2);
+    const controller = new AbortController();
+    const failure = new Error("head cancelled");
+    const head = budget.acquire(2, controller.signal);
+    const rejected = expect(head).rejects.toBe(failure);
+    const light = budget.acquire(1);
+    expect(budget.snapshot()).toMatchObject({ allocated: 2, waiting: 2 });
+    controller.abort(failure);
+    await rejected;
+    const releaseLight = await light;
+    expect(budget.snapshot()).toMatchObject({ allocated: 3, waiting: 0 });
+    releaseLight();
+    release();
+  });
+
+  it("keeps capacity unchanged for zero and invalid allocations", async () => {
+    const budget = new ScheduledFetchBudget(3);
+    const release = await budget.acquire(3);
+    const before = budget.snapshot();
+    (await budget.acquire(0))();
+    for (const weight of [-1, 0.5, 4, NaN]) {
+      await expect(budget.acquire(weight)).rejects.toThrow();
+      expect(budget.snapshot()).toEqual(before);
+    }
+    release();
+  });
 });

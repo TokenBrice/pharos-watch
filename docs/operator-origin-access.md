@@ -108,7 +108,7 @@ The current proxy now fails closed on its own trust boundary:
 ### Proxy contract
 
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints/` (for example `/api/api-keys/:id/update`).
-- HTTP method rules are enforced through the shared endpoint validators (`validateRouteMatchMethod()` in the Worker router, backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
+- HTTP method rules are enforced through the shared endpoint validators (`validateEndpointMethod()` in the proxy and `validateRouteMatchMethod()` in the Worker router, both backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`. Only `POST` reaches that check in practice: the shared method validator runs first and rejects `PUT`, `PATCH`, and `DELETE` with `405` and `Allow: GET, POST`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
@@ -145,8 +145,9 @@ For the site-data proxy:
 Optional active overrides (the proxy has production defaults for these already):
 
 - `OPS_UI_ORIGIN`
-- `OPS_API_ORIGIN`
 - `SITE_ORIGIN`
+
+`OPS_API_ORIGIN` is optional but not an override: it is pinned to the canonical `https://ops-api.pharos.watch`, and any other value is a fatal `ops-api-origin-invalid` configuration error that makes ops-host `/api/admin/*` requests return `500`.
 
 Set the required Pages bindings before deploying the ops-host frontend, otherwise `/api/admin/*` will fail closed with a configuration error.
 

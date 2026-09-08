@@ -90,7 +90,7 @@ export function makeCurve3PoolPacket() {
   return { targets, profiles };
 }
 
-export function makeUniswapV3Target(options: { chain?: string } = {}): DexMeasuredExecutionTarget {
+export function makeV3Target(options: Partial<Omit<DexMeasuredExecutionTarget, "targetId">> = {}): DexMeasuredExecutionTarget {
   const chain = options.chain ?? "ethereum";
   const input = {
     schemaVersion: "dex-measured-target-v1" as const,
@@ -121,6 +121,7 @@ export function makeUniswapV3Target(options: { chain?: string } = {}): DexMeasur
     retainedTvlUsd: 100_000,
     retainedPoolPriceUsd: 1,
     capturedAt: 1_000,
+    ...options,
   };
   return {
     ...input,
@@ -134,6 +135,7 @@ export function makeUniswapV3Target(options: { chain?: string } = {}): DexMeasur
       tokenOutAddress: input.tokenOut.address,
       poolTokenAddresses: input.poolTokenAddresses,
       feePips: input.feePips,
+      tickSpacing: input.tickSpacing,
     }),
   };
 }

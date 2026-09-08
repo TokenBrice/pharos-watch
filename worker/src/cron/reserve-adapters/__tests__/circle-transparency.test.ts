@@ -18,17 +18,6 @@ const AMBIGUOUS_NEAR_PERCENT_HTML = `
 `;
 
 describe("adaptCircleTransparency", () => {
-  it("extracts USDC reserve slices from HTML", () => {
-    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
-    expect(result.slices.length).toBe(4);
-    const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
-    expect(total).toBeCloseTo(100, 10);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
-    });
-  });
-
   it("uses Circle's reserve disclosure date when the page exposes one", () => {
     const result = adaptCircleTransparency(`${CIRCLE_HTML}<div>As of Aug 06, 2026</div>`, "usdc");
 
@@ -45,23 +34,13 @@ describe("adaptCircleTransparency", () => {
     });
   });
 
-  it("maps USDC slices to very-low risk", () => {
-    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
-    for (const slice of result.slices) {
-      expect(slice.risk).toBe("very-low");
-    }
-  });
-
-  it("extracts EURC reserve slices from HTML", () => {
-    const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
-    expect(result.slices.length).toBe(2);
-    const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
-    expect(total).toBe(100);
-  });
-
   it("normalizes current absolute-value USDC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     expect(result.metadata?.valueMode).toBe("absolute");
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
+    });
     expect(result.slices).toEqual([
       { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 71.9, risk: "very-low" },
       { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 13.9, risk: "very-low" },
@@ -125,21 +104,11 @@ describe("adaptCircleTransparency", () => {
         freshnessSource: "html-disclosure",
       },
     });
-  });
-
-  it("emits a circle-disclosure-timestamp-ambiguous warning when multiple unique 'As of' dates appear outside the disclosure window", () => {
-    const htmlWithoutLocalDate = CIRCLE_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
-    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
-    const result = adaptCircleTransparency(
-      `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}${farPadding}<p>As of Apr 01, 2026</p>`,
-      "eurc",
-    );
-
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" })]),
-    );
-    expect(result.slices.length).toBeGreaterThan(0);
-    expect(result.metadata).toMatchObject({ freshnessMode: "unverified" });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" }));
+    expect(result.slices).toEqual([
+      { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
+      { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
+    ]);
   });
 
   it("throws layout-changed when a data-usdc-* attribute carries a multi-dot value like '4.7.18'", () => {

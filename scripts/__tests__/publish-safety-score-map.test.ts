@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  buildSafetyMapSummary,
   planSafetyMapPublication,
   publishSafetyMapPublication,
   renderSafetyMapPublication,
@@ -204,18 +203,5 @@ describe("Safety Map publication CLI", () => {
       "safety-map:2026-07-27.png",
     ]);
     expect(adapter.puts.some(({ key }) => key === "safety-map:latest.json")).toBe(false);
-  });
-
-  it("renders the published-key summary with the commit marker called out last", () => {
-    const directory = temporaryDirectory();
-    const state = JSON.parse(readFileSync(writeRenderedState(directory), "utf8")) as SafetyMapPublishState;
-    state.phase = "published";
-
-    const summary = buildSafetyMapSummary(state, "success");
-
-    expect(summary).toContain("## Safety Map refresh — success");
-    expect(summary).toContain("| Safety Score source | `held` |");
-    expect(summary).toContain("`safety-map:2026-07-27.png` — the URL the digest embeds");
-    expect(summary.trimEnd().endsWith("`safety-map:latest.json` — manifest, written last")).toBe(true);
   });
 });
