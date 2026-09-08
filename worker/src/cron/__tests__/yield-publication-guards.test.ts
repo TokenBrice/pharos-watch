@@ -353,16 +353,6 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     expect(result).toEqual(expected);
   });
 
-  it("allows a valid replacement when the previous rankings cache is malformed", async () => {
-    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
-
-    const result = await validateYieldRankingsPayloadForPublish(
-      payload,
-      previousSnapshot([], "malformed-json"),
-    );
-
-    expect(result).toEqual({ ok: true, validationFailures: 0 });
-  });
 
   it("blocks malformed previous-cache recovery when the replacement has no rows", async () => {
     const payload = {

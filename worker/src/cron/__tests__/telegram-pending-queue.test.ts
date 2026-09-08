@@ -4,7 +4,7 @@ import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils
 import {
   serializePendingMarkupPolicy,
 } from "../../lib/telegram/pending-provenance";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
   insertPendingSqlite,

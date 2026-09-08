@@ -31,7 +31,8 @@ import { fetchJsonAdapterInput, fetchOnchainRawCall, fetchOnchainUint256 } from 
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
+beforeEach(() => { signal = new AbortController().signal; });
 const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574E4C5Ce33f8e8306Be057fD7341";
 const GEM_SELECTOR = "0x7bd2bea7";

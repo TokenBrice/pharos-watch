@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockLiveReserveAdapterRegistry, shouldAttemptFetchMock, recordOutcomeSafeMock } from "./live-reserves.test-support";
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: ["shared-a", "shared-b", "control"].map((id) => ({

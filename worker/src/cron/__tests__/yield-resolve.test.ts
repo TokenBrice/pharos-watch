@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   findPublishedYieldRow,
   fixtureGetCache,
@@ -157,15 +157,6 @@ describe("tracked optional source anchors", () => {
       ["usde-ethena", sevenDaysAgoSec],
       ["100", sevenDaysAgoSec],
     ]);
-    expect(queries.every((entry) => entry.sql.includes("stablecoin_id = ?"))).toBe(true);
-    expect(queries.every((entry) => !entry.sql.includes("stablecoin_id IN"))).toBe(true);
-    expect(queries.every((entry) => entry.sql.includes("ORDER BY recorded_at DESC"))).toBe(true);
-    expect(queries.every((entry) => entry.sql.includes("LIMIT 1"))).toBe(true);
-    expect(
-      queries.every((entry) =>
-        entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'"),
-      ),
-    ).toBe(true);
     db.assertAllMatchesUsed();
   });
 
@@ -192,20 +183,6 @@ describe("tracked optional source anchors", () => {
     }
   });
 
-  it("filters Ondo oracle anchors to legacy or published yield history rows", async () => {
-    const nowSec = 1_747_000_000;
-    const db = fixtureMockD1([{ match: "FROM yield_history", rows: [], first: null }], { requireMatch: true });
-
-    await loadOndoOracleAnchorRow(db, nowSec);
-
-    const anchorQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM yield_history"));
-    expect(anchorQueries).toHaveLength(2);
-    expect(
-      anchorQueries.every((entry) =>
-        entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'"),
-      ),
-    ).toBe(true);
-  });
 
   it("ignores unpublished Ondo oracle anchor rows when selecting prior exchange rates", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;

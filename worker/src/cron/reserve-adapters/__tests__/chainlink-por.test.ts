@@ -43,6 +43,7 @@ import {
 } from "../helpers";
 
 import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+import { makePorCoin, makePorSupply } from "./chainlink-por.test-support";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -150,18 +151,7 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
-      {
-        contributions: [
-          {
-            chain: "ethereum",
-            tokenAddress: "0x0000000000000000000000000000000000000001",
-            raw: 1000_000000000000000000n,
-            decimals: 18,
-          },
-        ],
-        omittedNonEvmChains: [],
-        omittedReadFailureChains: [],
-      },
+      makePorSupply(),
     );
 
     expect(result.metadata?.collateralizationRatio).toBe(0.99);
@@ -173,18 +163,7 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 160_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
-      {
-        contributions: [
-          {
-            chain: "ethereum",
-            tokenAddress: "0x0000000000000000000000000000000000000001",
-            raw: 1000_000000000000000000n,
-            decimals: 18,
-          },
-        ],
-        omittedNonEvmChains: [],
-        omittedReadFailureChains: [],
-      },
+      makePorSupply(),
     );
 
     // reserves = 1600 USD / supply = 1000 tokens -> ratio = 1.6
@@ -197,18 +176,7 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 100_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
-      {
-        contributions: [
-          {
-            chain: "ethereum",
-            tokenAddress: "0x0000000000000000000000000000000000000001",
-            raw: 1000_000000000000000000n,
-            decimals: 18,
-          },
-        ],
-        omittedNonEvmChains: ["tron"],
-        omittedReadFailureChains: [],
-      },
+      makePorSupply({ omittedNonEvmChains: ["tron"] }),
     );
 
     const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
@@ -221,18 +189,7 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 100_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
-      {
-        contributions: [
-          {
-            chain: "ethereum",
-            tokenAddress: "0x0000000000000000000000000000000000000001",
-            raw: 1000_000000000000000000n,
-            decimals: 18,
-          },
-        ],
-        omittedNonEvmChains: [],
-        omittedReadFailureChains: ["bsc"],
-      },
+      makePorSupply({ omittedReadFailureChains: ["bsc"] }),
     );
 
     expect(result.metadata).toMatchObject({
@@ -459,18 +416,7 @@ describe("fetchChainlinkPorReserves", () => {
   it("sums totalSupply across all configured EVM chains plus Tron for the ratio denominator", async () => {
     // TUSD-style: ethereum + tron + avalanche + bsc + solana (solana is the only
     // chain still unreadable and omitted; tron is now included in the aggregate).
-    const coin: StablecoinMeta = {
-      id: "tusd-test",
-      name: "TUSD Test",
-      symbol: "TUSDT",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+    const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
         { chain: "tron", address: "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4", decimals: 18 },
@@ -478,7 +424,7 @@ describe("fetchChainlinkPorReserves", () => {
         { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
         { chain: "solana", address: "5Wb2QwGNH5MQdBjrpqSCJk8QgKzhkjaEqE9BUmQqYuTM", decimals: 6 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
 
@@ -532,25 +478,14 @@ describe("fetchChainlinkPorReserves", () => {
   });
 
   it("degrades instead of silently reporting EVM-only coverage when the Tron totalSupply() read fails", async () => {
-    const coin: StablecoinMeta = {
-      id: "tusd-test",
-      name: "TUSD Test",
-      symbol: "TUSDT",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+    const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
         { chain: "tron", address: "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4", decimals: 18 },
         { chain: "avalanche", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
         { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
@@ -580,23 +515,15 @@ describe("fetchChainlinkPorReserves", () => {
   });
 
   it("does not call the Tron reader or change behavior for coins without a tron contract", async () => {
-    const coin: StablecoinMeta = {
+    const coin = makePorCoin({
       id: "bib01-test",
       name: "BIB01 Test",
       symbol: "BIB01T",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
         { chain: "base", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
@@ -614,23 +541,12 @@ describe("fetchChainlinkPorReserves", () => {
   });
 
   it("skips a contract supply probe when catalog decimals are missing", async () => {
-    const coin: StablecoinMeta = {
-      id: "tusd-test",
-      name: "TUSD Test",
-      symbol: "TUSDT",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+    const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376" } as unknown as NonNullable<StablecoinMeta["contracts"]>[number],
         { chain: "base", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
@@ -646,23 +562,12 @@ describe("fetchChainlinkPorReserves", () => {
   });
 
   it("throws when all EVM chain supply reads return null", async () => {
-    const coin: StablecoinMeta = {
-      id: "tusd-test",
-      name: "TUSD Test",
-      symbol: "TUSDT",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+    const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
         { chain: "avalanche", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
@@ -715,23 +620,12 @@ describe("fetchChainlinkPorReserves", () => {
   });
 
   it("omits registry-typed non-EVM chains like NEAR instead of firing EVM reads at them", async () => {
-    const coin: StablecoinMeta = {
-      id: "tusd-test",
-      name: "TUSD Test",
-      symbol: "TUSDT",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
+    const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
         { chain: "near", address: "tusd.near", decimals: 18 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
@@ -749,23 +643,15 @@ describe("fetchChainlinkPorReserves", () => {
   });
 
   it("treats a zero totalSupply read as a valid empty deployment, not a read failure", async () => {
-    const coin: StablecoinMeta = {
+    const coin = makePorCoin({
       id: "bib01-test",
       name: "BIB01 Test",
       symbol: "BIB01T",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
         { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
       ],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
@@ -783,20 +669,12 @@ describe("fetchChainlinkPorReserves", () => {
 
   it("wires the issuer circulation probe through the fetch path", async () => {
     const tokenAddress = "0xca30c93b02514f86d5c86a6e375e3a330b435fb5";
-    const coin: StablecoinMeta = {
+    const coin = makePorCoin({
       id: "bib01-test",
       name: "BIB01 Test",
       symbol: "BIB01T",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: false,
-        navToken: false,
-      },
       contracts: [{ chain: "ethereum", address: tokenAddress, decimals: 18 }],
-    };
+    });
 
     const now = 1_700_000_000;
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);

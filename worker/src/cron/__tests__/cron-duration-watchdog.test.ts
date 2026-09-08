@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import coin from "@shared/data/stablecoins/coins/stusd-stoneyield.json";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type * as Onchain from "../onchain";
 import type { AdapterResult } from "../types";
@@ -79,32 +80,44 @@ function strategyResult(address: string, active = true, weightBps = 10_000n): `0
   ].join("")}`;
 }
 
-function mockStoneyieldRpc(routerAsset = USDC, strategyAddress = VENUS_VAULT): void {
-  vi.mocked(fetchOnchainMulticall3).mockResolvedValue([
-    { label: "stusd-total-supply", success: true, returnData: uint256Result(STUSD_SUPPLY) },
-    { label: "susdc-total-supply", success: true, returnData: uint256Result(SUSDC_SUPPLY) },
-    { label: "susdc-idle-usdc", success: true, returnData: uint256Result(SUSDC_IDLE) },
-    { label: "usdc-decimals", success: true, returnData: uint256Result(18n) },
-    { label: "router-idle-usdc", success: true, returnData: uint256Result(ROUTER_IDLE) },
-    { label: "router-total-managed-assets", success: true, returnData: uint256Result(ROUTER_MANAGED) },
-    { label: "router-asset", success: true, returnData: addressResult(routerAsset) },
-    { label: "router-strategy-0", success: true, returnData: strategyResult(strategyAddress) },
-    { label: "router-strategy-count", success: true, returnData: uint256Result(1n) },
-    { label: "venus-vault-asset", success: true, returnData: addressResult(VUSDC) },
-    { label: "venus-vtoken-balance", success: true, returnData: uint256Result(VUSDC_BALANCE) },
-    { label: "venus-exchange-rate", success: true, returnData: uint256Result(VUSDC_RATE) },
-    { label: "venus-vtoken-decimals", success: true, returnData: uint256Result(8n) },
-  ]);
+function mockStoneyieldRpc(
+  routerAsset = USDC,
+  strategyAddress = VENUS_VAULT,
+  overrides: { active?: boolean; count?: bigint; managed?: bigint; rate?: bigint; stusdSupply?: bigint; susdcSupply?: bigint; balance?: bigint } = {},
+): void {
+  const balanceOf = (owner: string) => `0x70a08231${owner.slice(2).padStart(64, "0")}`;
+  const rows: Array<[string, string, `0x${string}`]> = [
+    [STUSD, "0x18160ddd", uint256Result(overrides.stusdSupply ?? STUSD_SUPPLY)],
+    [SUSDC, "0x18160ddd", uint256Result(overrides.susdcSupply ?? SUSDC_SUPPLY)],
+    [USDC, balanceOf(SUSDC), uint256Result(SUSDC_IDLE)],
+    [USDC, "0x313ce567", uint256Result(18n)],
+    [USDC, balanceOf(ROUTER), uint256Result(ROUTER_IDLE)],
+    [ROUTER, "0x05b2bfb0", uint256Result(overrides.managed ?? ROUTER_MANAGED)],
+    [ROUTER, "0x38d52e0f", addressResult(routerAsset)],
+    [ROUTER, `0xd574ea3d${"0".repeat(64)}`, strategyResult(strategyAddress, overrides.active ?? true)],
+    [ROUTER, "0x22068b44", uint256Result(overrides.count ?? 1n)],
+    [VENUS_VAULT, "0x38d52e0f", addressResult(VUSDC)],
+    [VUSDC, balanceOf(VENUS_VAULT), uint256Result(overrides.balance ?? VUSDC_BALANCE)],
+    [VUSDC, "0x182df0f5", uint256Result(overrides.rate ?? VUSDC_RATE)],
+    [VUSDC, "0x313ce567", uint256Result(8n)],
+  ];
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ chain, calls }) => {
+    if (chain !== "bsc") throw new Error(`Unexpected chain ${chain}`);
+    return calls.map(({ label, contract, data }) => {
+      const row = rows.find(([target, calldata]) => target === contract.toLowerCase() && calldata === data.toLowerCase());
+      if (!row) throw new Error(`Unexpected call ${contract} ${data}`);
+      return { label, success: true, returnData: row[2] };
+    });
+  });
 }
 
 async function runTracked(
   configTransform?: (config: LiveReservesConfig) => LiveReservesConfig,
 ): Promise<AdapterResult> {
-  const coin = TRACKED_META_BY_ID.get("stusd-stoneyield");
-  if (!coin) throw new Error("Missing stUSD metadata");
+  const trackedCoin = coin as unknown as StablecoinMeta;
   const config = configTransform ? configTransform(TEST_CONFIG) : TEST_CONFIG;
   return fetchStoneyieldRouterPoolReserves(
-    coin,
+    trackedCoin,
     config,
     new AbortController().signal,
     { chainRpcs: testChainRpcs },
@@ -164,8 +177,6 @@ describe("fetchStoneyieldRouterPoolReserves", () => {
       capacity: "none",
       fee: "none",
     });
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(13);
   });
 
   it("fails closed when the router's pinned asset identity changes", async () => {
@@ -173,5 +184,52 @@ describe("fetchStoneyieldRouterPoolReserves", () => {
 
     await expect(runTracked()).rejects.toThrow(/router\.asset\(\).*expected/);
     expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects inactive, unpinned, and additional strategies", async () => {
+    mockStoneyieldRpc(USDC, VENUS_VAULT, { active: false });
+    await expect(runTracked()).rejects.toThrow(/inactive/);
+    mockStoneyieldRpc(USDC, STUSD);
+    await expect(runTracked()).rejects.toThrow(/strategies\(0\).*expected/);
+    mockStoneyieldRpc(USDC, VENUS_VAULT, { count: 2n });
+    await expect(runTracked()).rejects.toThrow(/exactly one/);
+  });
+
+  it("rejects impossible managed accounting and a funded zero-rate position", async () => {
+    mockStoneyieldRpc(USDC, VENUS_VAULT, { managed: ROUTER_IDLE - 1n });
+    await expect(runTracked()).rejects.toThrow(/below router idle/);
+    mockStoneyieldRpc(USDC, VENUS_VAULT, { rate: 0n });
+    await expect(runTracked()).rejects.toThrow(/not positive for a funded/);
+  });
+
+  it("permits exactly 1% divergence but degrades above it in either direction", async () => {
+    for (const [router, venus, warned] of [[990n, 1000n, false], [989n, 1000n, true], [1000n, 990n, false], [1000n, 989n, true]] as const) {
+      mockStoneyieldRpc(USDC, VENUS_VAULT, {
+        managed: ROUTER_IDLE + router * 10n ** 18n,
+        balance: venus * 10n ** 8n,
+        rate: 10n ** 28n,
+      });
+      const result = await runTracked();
+      expect((result.warnings ?? []).filter((warning) => warning.code === "router-nav-divergence"))
+        .toEqual(warned ? [expect.objectContaining({ effect: "degraded" })] : []);
+    }
+  });
+
+  it("distinguishes STUSD and sUSDC coverage shortfalls", async () => {
+    for (const [stusdSupply, susdcSupply, code] of [
+      [2n * STUSD_SUPPLY, SUSDC_SUPPLY, "reserve-undercollateralized"],
+      [STUSD_SUPPLY, 2n * SUSDC_SUPPLY, "susdc-supply-shortfall"],
+    ] as const) {
+      mockStoneyieldRpc(USDC, VENUS_VAULT, { stusdSupply, susdcSupply });
+      const result = await runTracked();
+      expect(result.warnings).toEqual([expect.objectContaining({ code, effect: "degraded" })]);
+    }
+  });
+
+  it("reports unavailable sUSDC coverage without losing STUSD backing", async () => {
+    mockStoneyieldRpc(USDC, VENUS_VAULT, { susdcSupply: 0n });
+    const result = await runTracked();
+    expect(result.metadata?.collateralizationRatio).toBe(1);
+    expect(result.warnings).toEqual([expect.objectContaining({ code: "susdc-supply-unavailable", effect: "degraded" })]);
   });
 });

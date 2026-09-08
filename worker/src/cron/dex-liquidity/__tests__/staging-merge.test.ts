@@ -93,48 +93,15 @@ function makeAuthoritativeConfirmationIndex(
 }
 
 describe("stagedPoolConfidence", () => {
-  it("returns 1.0 for freshly refreshed pool", () => {
-    expect(stagedPoolConfidence(confidenceCases[0].ageHours)).toBe(confidenceCases[0].expected);
-  });
-
-  it("returns 0.75 for 12-hour-old pool", () => {
-    expect(stagedPoolConfidence(confidenceCases[1].ageHours)).toBe(confidenceCases[1].expected);
-  });
-
-  it("returns 0.5 for 24-hour-old pool", () => {
-    expect(stagedPoolConfidence(confidenceCases[2].ageHours)).toBe(confidenceCases[2].expected);
-  });
-
-  it("returns 0 for pool older than 24h", () => {
-    expect(stagedPoolConfidence(confidenceCases[3].ageHours)).toBe(confidenceCases[3].expected);
-  });
-
-  it("returns 0 just past the 24h horizon (60s read-window grace makes the skip guard reachable)", () => {
-    // The DB read window extends to nowSec - DAY_SECONDS - 60, so a row aged
-    // just over 24h can be fetched; it must score 0 so the stale_confidence_zero
-    // skip guard in mergeStagedPools actually fires.
-    expect(stagedPoolConfidence(confidenceCases[4].ageHours)).toBe(confidenceCases[4].expected);
-  });
-
-  it("clamps negative age to 0 (clock skew protection)", () => {
-    expect(stagedPoolConfidence(confidenceCases[5].ageHours)).toBe(confidenceCases[5].expected);
+  it.each(confidenceCases)("scores age $ageHours hours as $expected", ({ ageHours, expected }) => {
+    expect(stagedPoolConfidence(ageHours)).toBe(expected);
   });
 });
 
 describe("stagedPoolMaturityDays", () => {
-  it("computes days since discovery", () => {
+  it.each(maturityCases)("bounds discovery offset $discoveredOffset to $expected days", ({ discoveredOffset, expected }) => {
     const now = 1710000000;
-    expect(stagedPoolMaturityDays(now - maturityCases[0].discoveredOffset, now)).toBe(maturityCases[0].expected);
-  });
-
-  it("caps at 30 days", () => {
-    const now = 1710000000;
-    expect(stagedPoolMaturityDays(now - maturityCases[1].discoveredOffset, now)).toBe(maturityCases[1].expected);
-  });
-
-  it("returns 0 for future discovery (clock skew)", () => {
-    const now = 1710000000;
-    expect(stagedPoolMaturityDays(now - maturityCases[2].discoveredOffset, now)).toBe(maturityCases[2].expected);
+    expect(stagedPoolMaturityDays(now - discoveredOffset, now)).toBe(expected);
   });
 });
 
@@ -255,30 +222,19 @@ describe("mergeStagedPools", () => {
     const now = 1_710_000_000;
     const rowCount = 4_357;
     const poolAddress = (index: number) => `0x${(index + 1).toString(16).padStart(40, "0")}`;
-    const rows = Array.from({ length: rowCount }, (_, index) => ({
+    const rows = Array.from({ length: rowCount }, (_, index) => (makeStagedPoolRow({
       pool_id: `ethereum:${poolAddress(index)}`,
-      stablecoin_id: "usdt-tether",
-      source: "gecko_terminal",
-      chain: "ethereum",
-      protocol: "uniswap-v3",
-      dex_id: "uniswap-v3",
-      symbol: "USDT/USDC",
       tvl_usd: 100_000 + index,
-      volume_24h: 50_000,
-      quality_multiplier: 0.85,
-      pool_type: "gt-concentrated",
       fee_tier: null,
       balance_ratio: null,
-      is_stable: 1,
       base_token: baseToken,
       quote_token: quoteToken,
-      quote_symbol: "USDC",
       price_usd: null,
       locked_liq_pct: null,
       raw_json: null,
       discovered_at: now - 86_400,
       refreshed_at: now,
-    }));
+    })));
     let nextReleasedIndex = 0;
     let releasedInOrder = true;
     const trackedRows = new Proxy<Array<(typeof rows)[number] | undefined>>(rows, {
@@ -314,7 +270,6 @@ describe("mergeStagedPools", () => {
         protocol: "pancakeswap-v3",
         base_token: baseToken,
         quote_token: quoteToken,
-        refreshed_at: 1710000000,
       }),
     ]);
     const metrics = new Map();
@@ -341,7 +296,6 @@ describe("mergeStagedPools", () => {
       makeStagedPoolRow({
         pool_id: `ethereum:${newPoolAddress}`,
         source: "cg_onchain",
-        protocol: "uniswap-v3",
         symbol: "USDT/WETH",
         tvl_usd: STAGED_POOL_MAX_TVL_USD + 1,
         pool_type: "cg-cl-30bp",
@@ -350,7 +304,6 @@ describe("mergeStagedPools", () => {
         base_token: baseToken,
         quote_token: quoteToken,
         quote_symbol: "WETH",
-        refreshed_at: 1710000000,
       }),
     ]);
     const metrics = new Map();
@@ -387,7 +340,6 @@ describe("mergeStagedPools", () => {
         quote_token: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
         quote_symbol: null,
         price_usd: 76259889535.2567,
-        refreshed_at: 1710000000,
       }),
     ]);
     const metrics = new Map();
@@ -413,10 +365,8 @@ describe("mergeStagedPools", () => {
         protocol: "pancakeswap",
         dex_id: "pancakeswap-v3",
         quality_multiplier: 0.5,
-        pool_type: "gt-concentrated",
         base_token: baseToken,
         quote_token: quoteToken,
-        refreshed_at: 1710000000,
       }),
     ]);
     const metrics = new Map();
@@ -447,19 +397,11 @@ describe("mergeStagedPools", () => {
     const mockDb = createMockDb([
       makeStagedPoolRow({
         pool_id: `ethereum:${newPoolAddress}`,
-        stablecoin_id: "usdt-tether",
-        source: "gecko_terminal",
-        chain: "ethereum",
         protocol: "pancakeswap",
         dex_id: "pancakeswap-v3",
-        symbol: "USDT/USDC",
-        tvl_usd: 100000,
-        volume_24h: 50000,
         quality_multiplier: 0.5,
-        pool_type: "gt-concentrated",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: baseToken,
         quote_token: quoteToken,
         discovered_at: now - 100000,
@@ -467,19 +409,11 @@ describe("mergeStagedPools", () => {
       }),
       makeStagedPoolRow({
         pool_id: `ethereum:${stalePoolAddress}`,
-        stablecoin_id: "usdt-tether",
-        source: "gecko_terminal",
-        chain: "ethereum",
         protocol: "pancakeswap",
         dex_id: "pancakeswap-v3",
-        symbol: "USDT/USDC",
-        tvl_usd: 100000,
-        volume_24h: 50000,
         quality_multiplier: 0.5,
-        pool_type: "gt-concentrated",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: baseToken,
         quote_token: quoteToken,
         discovered_at: now - 100000,
@@ -535,7 +469,6 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: baseToken,
         quote_token: quoteToken,
-        quote_symbol: "USDC",
         price_usd: 1.001,
         discovered_at: now - 3600,
         refreshed_at: now,
@@ -576,11 +509,10 @@ describe("mergeStagedPools", () => {
   it("keeps staged exact-pool-id same-pair pools when the incoming wildcard bucket is ambiguous", async () => {
     const now = 1710000000;
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: "ethereum:0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
         stablecoin_id: "bold-liquity",
         source: "cg_onchain",
-        chain: "ethereum",
         protocol: "uniswap-v4",
         dex_id: "uniswap-v4-ethereum",
         symbol: "BOLD / USDC 0.05%",
@@ -593,17 +525,16 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: baseToken,
         quote_token: quoteToken,
-        quote_symbol: "USDC",
         price_usd: 1.001,
         locked_liq_pct: null,
         discovered_at: now - 3600,
         refreshed_at: now,
-      },
-      {
+        raw_json: undefined,
+      }),
+      makeStagedPoolRow({
         pool_id: "ethereum:0x395f91b34aa34a477ce3bc6505639a821b286a62b1a164fc1887fa3a5ef713a5",
         stablecoin_id: "bold-liquity",
         source: "cg_onchain",
-        chain: "ethereum",
         protocol: "uniswap-v4",
         dex_id: "uniswap-v4-ethereum",
         symbol: "BOLD / USDC 0.01%",
@@ -616,12 +547,12 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: baseToken,
         quote_token: quoteToken,
-        quote_symbol: "USDC",
         price_usd: 1.0005,
         locked_liq_pct: null,
         discovered_at: now - 3600,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
     const knownPoolIndex = createKnownPoolIdentityIndex();
@@ -704,7 +635,7 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const poolId = "328306d8d623aa358415f29fca051afbbe8f0c591c28bbcb78e80907deffb2a7";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `stellar:${poolId}`,
         stablecoin_id: "eurc-circle",
         source: "horizon",
@@ -721,13 +652,12 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
         quote_token: "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
-        quote_symbol: "USDC",
         price_usd: 1.1,
         locked_liq_pct: null,
         raw_json: null,
         discovered_at: now,
         refreshed_at: now,
-      },
+      }),
     ]);
     const metrics = new Map();
 
@@ -793,21 +723,18 @@ describe("mergeStagedPools", () => {
     ] as const;
     const makeFixtureRow = (fixture: (typeof fixtures)[number]) => {
       const isSolana = fixture.chain === "solana";
-      return {
+      return makeStagedPoolRow({
         pool_id: `${fixture.chain}:${fixture.poolAddress}`,
         stablecoin_id: fixture.stablecoinId,
-        source: "gecko_terminal",
         chain: fixture.chain,
         protocol: isSolana ? "orca" : "uniswap-v3",
         dex_id: isSolana ? "orca" : "uniswap-v3",
         symbol: isSolana ? "FIXTURE/USDC" : "FIXTURE/USDT",
         tvl_usd: 180000,
         volume_24h: 90000,
-        quality_multiplier: 0.85,
         pool_type: isSolana ? "orca-whirlpool" : "gt-concentrated",
         fee_tier: isSolana ? 1 : 5,
         balance_ratio: null,
-        is_stable: 1,
         base_token: isSolana ? "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1" : baseToken,
         quote_token: isSolana ? "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus" : quoteToken,
         quote_symbol: isSolana ? "USDC" : "USDT",
@@ -816,7 +743,7 @@ describe("mergeStagedPools", () => {
         raw_json: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      };
+      });
     };
     const knownPoolIndex = makeKnownPoolIndex([
       `ethereum:${evmPoolAddress}`,
@@ -856,18 +783,6 @@ describe("mergeStagedPools", () => {
       now,
     );
 
-    expect(fixtures.map((fixture) => fixture.stablecoinId)).toEqual([
-      "aznd-mu-digital",
-      "cgusd-cygnus-finance",
-      "eur0-usual",
-      "ggbr-goldfish-gold",
-      "isc-international-stable-currency",
-      "qcad-stablecorp",
-      "susd-solayer",
-      "usdn-smardex",
-      "usdv-solomon",
-      "xnk-kinka",
-    ]);
     expect(result.mergedCount).toBe(fixtures.length);
     expect(result.skippedByExactIdentityCount).toBe(0);
     for (const fixture of fixtures) {
@@ -899,52 +814,35 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const sharedPoolAddress = "0x0000000000000000000000000000000000000123";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `ethereum:${sharedPoolAddress}`,
-        stablecoin_id: "usdt-tether",
-        source: "gecko_terminal",
-        chain: "ethereum",
-        protocol: "uniswap-v3",
-        dex_id: "uniswap-v3",
-        symbol: "USDT/USDC",
         tvl_usd: 180000,
         volume_24h: 90000,
-        quality_multiplier: 0.85,
-        pool_type: "gt-concentrated",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: baseToken,
         quote_token: quoteToken,
-        quote_symbol: "USDC",
-        price_usd: 1,
         locked_liq_pct: null,
         discovered_at: now - 86400 * 2,
         refreshed_at: now,
-      },
-      {
+        raw_json: undefined,
+      }),
+      makeStagedPoolRow({
         pool_id: `ethereum:${sharedPoolAddress}`,
         stablecoin_id: "usdc-circle",
-        source: "gecko_terminal",
-        chain: "ethereum",
-        protocol: "uniswap-v3",
-        dex_id: "uniswap-v3",
         symbol: "USDC/USDT",
         tvl_usd: 180000,
         volume_24h: 90000,
-        quality_multiplier: 0.85,
-        pool_type: "gt-concentrated",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: baseToken,
         quote_token: quoteToken,
         quote_symbol: "USDT",
-        price_usd: 1,
         locked_liq_pct: null,
         discovered_at: now - 86400 * 2,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
@@ -965,29 +863,26 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const unconfirmedBalancerPool = "0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `plasma:${unconfirmedBalancerPool}`,
         stablecoin_id: "usdai-usd-ai",
-        source: "gecko_terminal",
         chain: "plasma",
         protocol: "balancer",
         dex_id: "balancer-v3-plasma",
         symbol: "USDai/USDT0",
         tvl_usd: 2250000,
         volume_24h: 0,
-        quality_multiplier: 0.85,
         pool_type: "stable",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
         quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         quote_symbol: "USDT0",
-        price_usd: 1,
         locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1019,7 +914,7 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const poolAddress = "0xffdf1e3160b60c2e499fa25e51b5c192b9b15e3b";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `base:${poolAddress}`,
         stablecoin_id: "bd-basedollar",
         source: "cg_onchain",
@@ -1036,12 +931,12 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
         quote_token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-        quote_symbol: "USDC",
         price_usd: 1.0047,
         locked_liq_pct: null,
         discovered_at: now - 60,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1066,7 +961,7 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const poolAddress = "0x1111111111111111111111111111111111111111";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `base:${poolAddress}`,
         stablecoin_id: "bd-basedollar",
         source: "cg_onchain",
@@ -1074,7 +969,6 @@ describe("mergeStagedPools", () => {
         protocol: "aerodrome",
         dex_id: "aerodrome-slipstream",
         symbol: "BD/USDC",
-        tvl_usd: 100000,
         volume_24h: 30000,
         quality_multiplier: 0.7,
         pool_type: "cg-cl-1bp",
@@ -1083,12 +977,12 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
         quote_token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-        quote_symbol: "USDC",
         price_usd: 1.0047,
         locked_liq_pct: null,
         discovered_at: now - 60,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1116,29 +1010,26 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const confirmedBalancerPool = "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `plasma:${confirmedBalancerPool}`,
         stablecoin_id: "usdai-usd-ai",
-        source: "gecko_terminal",
         chain: "plasma",
         protocol: "balancer",
         dex_id: "balancer-v3-plasma",
         symbol: "USDai/USDT0",
         tvl_usd: 547760,
         volume_24h: 20190,
-        quality_multiplier: 0.85,
         pool_type: "stable",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
         quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         quote_symbol: "USDT0",
-        price_usd: 1,
         locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1160,7 +1051,7 @@ describe("mergeStagedPools", () => {
     const orcaPool = "EJ3FwL8D2PkAaHmj1vawbR7fiUhXomt7vJhAaTBW4dnH";
     const raydiumPool = "6GGYCNjZ5jqNFRfjJqCRdYiiTZY47LfweYAA4RRsYb4A";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `solana:${orcaPool}`,
         stablecoin_id: "qcad-stablecorp",
         source: "cg_onchain",
@@ -1182,8 +1073,9 @@ describe("mergeStagedPools", () => {
         locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      },
-      {
+        raw_json: undefined,
+      }),
+      makeStagedPoolRow({
         pool_id: `solana:${raydiumPool}`,
         stablecoin_id: "susd-solayer",
         source: "cg_onchain",
@@ -1200,12 +1092,12 @@ describe("mergeStagedPools", () => {
         is_stable: null,
         base_token: "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X",
         quote_token: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        quote_symbol: "USDC",
         price_usd: 1.0002,
         locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1231,7 +1123,7 @@ describe("mergeStagedPools", () => {
     const now = 1710000000;
     const orcaPool = "2D9mokxthTheNAU6hCWGRXdNmhNQoypHs1JcRCbwkgLL";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `solana:${orcaPool}`,
         stablecoin_id: "qcad-stablecorp",
         source: "cg_onchain",
@@ -1253,7 +1145,8 @@ describe("mergeStagedPools", () => {
         locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1276,7 +1169,7 @@ describe("mergeStagedPools", () => {
     const uAddress = "0xce24439f2d9c6a2289f741120fe202248b666666";
     const wbnbAddress = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c";
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `bsc:${poolAddress}`,
         stablecoin_id: "u-united-stables",
         source: "dexscreener",
@@ -1294,11 +1187,11 @@ describe("mergeStagedPools", () => {
         base_token: uAddress,
         quote_token: wbnbAddress,
         quote_symbol: "WBNB",
-        price_usd: 1,
         locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
-      },
+        raw_json: undefined,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1414,24 +1307,17 @@ describe("mergeStagedPools", () => {
   it("extracts price observations from pools skipped by fingerprint dedup", async () => {
     const now = 1710000000;
     const mockDb = createMockDb([
-      {
+      makeStagedPoolRow({
         pool_id: `ethereum:${newPoolAddress}`,
-        stablecoin_id: "usdt-tether",
-        source: "gecko_terminal",
-        chain: "ethereum",
         protocol: "pancakeswap",
         dex_id: "pancakeswap-v3",
-        symbol: "USDT/USDC",
         tvl_usd: 80000,
         volume_24h: 40000,
         quality_multiplier: 0.5,
-        pool_type: "gt-concentrated",
         fee_tier: null,
         balance_ratio: null,
-        is_stable: 1,
         base_token: baseToken,
         quote_token: quoteToken,
-        quote_symbol: "USDC",
         price_usd: 1.0001,
         locked_liq_pct: null,
         raw_json: JSON.stringify({
@@ -1441,7 +1327,7 @@ describe("mergeStagedPools", () => {
         }),
         discovered_at: now - 86400 * 5,
         refreshed_at: now,
-      },
+      }),
     ]);
     const metrics = new Map();
     // Fingerprint is known (from DL yields) — will be deduped for metrics

@@ -1,21 +1,15 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { jsonResponse } from "@shared/test-utils/mock-fetch";
+import { wrapperRpcResponder } from "./m0-wrapper-underlying.test-support";
 import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
+import { fetchM0WrapperUnderlyingReserves } from "../m0-wrapper-underlying";
 
 const WRAPPER = "0x437cc33344a0b27a429f795ff6b469c72698b291";
 const M_TOKEN = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
 const SWAP_FACILITY = "0xb6807116b3b1b321a390594e31ecd6e0076f6278";
 const SWAPPER = "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd";
 
-function uint256Result(value: bigint | number): string {
-  return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
-}
-
-function addressResult(address: string): string {
-  return `0x${address.toLowerCase().slice(2).padStart(64, "0")}`;
-}
 
 function baseConfig(overrides: Partial<LiveReservesConfig["params"]> = {}): LiveReservesConfig {
   return {
@@ -40,26 +34,27 @@ function baseConfig(overrides: Partial<LiveReservesConfig["params"]> = {}): Live
   };
 }
 
+let unexpectedCalls: string[] = [];
+
+function installRpc(deployments: Parameters<typeof wrapperRpcResponder>[0]["deployments"], extension = false, routeUnavailable = false) {
+  const fixture = wrapperRpcResponder({
+    wrapper: WRAPPER, mToken: M_TOKEN, deployments,
+    ...(extension ? { swapFacility: SWAP_FACILITY, swapper: SWAPPER } : {}),
+    routeUnavailable,
+  });
+  unexpectedCalls = fixture.unexpected;
+  fetchWithRetryMock.mockImplementation(fixture.respond);
+}
+
 describe("fetchM0WrapperUnderlyingReserves", () => {
   beforeEach(() => {
     resetRpcMocks();
   });
+  afterEach(() => expect(unexpectedCalls).toEqual([]));
 
   it("reads direct WrappedMToken M balance as live redemption capacity", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(80_000_000_000000n) });
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(81_000_000_000000n) });
-      }
-      return null;
-    });
+    installRpc({ "https://rpc.example": { supply: 80_000_000_000000n, balance: 81_000_000_000000n } });
 
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
     const result = await fetchM0WrapperUnderlyingReserves(
       { id: "wm-m0", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
       baseConfig(),
@@ -88,31 +83,12 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
         settlementDelaySec: 0,
       },
     });
+    expect(result.metadata?.deployments).toBeUndefined();
   }, 15_000);
 
   it("verifies an M extension route through SwapFacility", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0xae06b7e4") return jsonResponse({ result: addressResult(SWAP_FACILITY) });
-      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(4_000_000_000000n) });
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(4_000_000_000000n) });
-      }
-      if (to === SWAP_FACILITY && call.data === "0x5c975abb") return jsonResponse({ result: uint256Result(0) });
-      if (to === SWAP_FACILITY && call.data.startsWith("0xd8e21132")) {
-        expect(call.data.toLowerCase()).toContain(SWAPPER.slice(2));
-        expect(call.data.toLowerCase()).toContain(WRAPPER.slice(2));
-        expect(call.data.toLowerCase()).toContain(M_TOKEN.slice(2));
-        return jsonResponse({ result: uint256Result(1) });
-      }
-      return null;
-    });
+    installRpc({ "https://rpc.example": { supply: 4_000_000_000000n, balance: 4_000_000_000000n } }, true);
 
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
     const result = await fetchM0WrapperUnderlyingReserves(
       { id: "usdsc-startale" } as StablecoinMeta,
       baseConfig({
@@ -138,24 +114,8 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
   });
 
   it("degrades M extension capacity when route probes cannot be verified", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0xae06b7e4") return jsonResponse({ result: addressResult(SWAP_FACILITY) });
-      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(4_000_000_000000n) });
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(4_000_000_000000n) });
-      }
-      if (to === SWAP_FACILITY && (call.data === "0x5c975abb" || call.data.startsWith("0xd8e21132"))) {
-        return jsonResponse({ error: { code: -32000, message: "route probe unavailable" } });
-      }
-      return null;
-    });
+    installRpc({ "https://rpc.example": { supply: 4_000_000_000000n, balance: 4_000_000_000000n } }, true, true);
 
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
     const result = await fetchM0WrapperUnderlyingReserves(
       { id: "usdsc-startale" } as StablecoinMeta,
       baseConfig({
@@ -185,20 +145,8 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
   });
 
   it("degrades under-backed wrappers instead of publishing score-grade coverage", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(100_000_000_000000n) });
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(92_000_000_000000n) });
-      }
-      return null;
-    });
+    installRpc({ "https://rpc.example": { supply: 100_000_000_000000n, balance: 92_000_000_000000n } });
 
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
     const result = await fetchM0WrapperUnderlyingReserves(
       { id: "wm-m0", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
       baseConfig(),
@@ -224,54 +172,17 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
     ]);
   });
 
-  it("does not report a deployment breakdown when no additionalDeployments are configured", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(80_000_000_000000n) });
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(81_000_000_000000n) });
-      }
-      return null;
-    });
-
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
-    const result = await fetchM0WrapperUnderlyingReserves(
-      { id: "wm-m0", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
-      baseConfig(),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
-
-    expect(result.metadata?.deployments).toBeUndefined();
-  });
-
   it("aggregates supply and underlying balance across the primary chain and additionalDeployments", async () => {
     const ETHEREUM_TOTAL_SUPPLY = 130_407_000000n;
     const ETHEREUM_M_BALANCE = 130_470_000000n;
     const FLUENT_TOTAL_SUPPLY = 2_925_967_000000n;
     const FLUENT_M_BALANCE = 2_929_656_000000n;
 
-    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      const isFluent = url === "https://rpc.fluent.xyz";
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(isFluent ? FLUENT_TOTAL_SUPPLY : ETHEREUM_TOTAL_SUPPLY) });
-      }
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(isFluent ? FLUENT_M_BALANCE : ETHEREUM_M_BALANCE) });
-      }
-      return null;
+    installRpc({
+      "https://rpc.example": { supply: ETHEREUM_TOTAL_SUPPLY, balance: ETHEREUM_M_BALANCE },
+      "https://rpc.fluent.xyz": { supply: FLUENT_TOTAL_SUPPLY, balance: FLUENT_M_BALANCE },
     });
 
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
     const result = await fetchM0WrapperUnderlyingReserves(
       { id: "usdnr-nerona", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
       baseConfig({ additionalDeployments: [{ chain: "fluent" }] }),
@@ -304,23 +215,11 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
   }, 15_000);
 
   it("fails closed when an additional deployment's reads fail, refusing to aggregate fewer chains", async () => {
-    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url === "https://rpc.fluent.xyz") {
-        return jsonResponse({ error: { code: -32000, message: "eth_call unavailable" } });
-      }
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      const to = call.to?.toLowerCase();
-      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
-      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(130_407_000000n) });
-      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
-      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(130_470_000000n) });
-      }
-      return null;
+    installRpc({
+      "https://rpc.example": { supply: 130_407_000000n, balance: 130_470_000000n },
+      "https://rpc.fluent.xyz": { supply: 0n, balance: 0n, unavailable: true },
     });
 
-    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
     await expect(
       fetchM0WrapperUnderlyingReserves(
         { id: "usdnr-nerona", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,

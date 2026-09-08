@@ -1,4 +1,4 @@
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 export const loaderFixtures = createLatestSchemaFixtureTracker();
 

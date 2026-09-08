@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
 import {
   loadPriceCorroborationObservations,

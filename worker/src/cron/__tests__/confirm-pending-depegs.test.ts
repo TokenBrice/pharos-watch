@@ -7,7 +7,7 @@ import {
   makePendingDepegRow,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 

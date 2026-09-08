@@ -232,7 +232,7 @@ beforeEach(() => {
 });
 
 describe("fetchEvmBranchBalancesReserves", () => {
-  it("keeps a non-opted-in coin byte-identical to the legacy reserve result", async () => {
+  it("preserves the legacy reserve result without redemption opt-in", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValueOnce(1_000_000_000_000_000_000n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 2000]]));
 
@@ -242,9 +242,11 @@ describe("fetchEvmBranchBalancesReserves", () => {
       signal,
     );
 
-    expect(JSON.stringify(result)).toBe(
-      '{"slices":[{"name":"wstETH","pct":100,"risk":"low"}],"metadata":{"branchCount":1,"freshnessMode":"not-applicable","details":{"proofKind":"onchain-branch-balances"}}}',
-    );
+    expect(result).toEqual({
+      slices: [{ name: "wstETH", pct: 100, risk: "low" }],
+      metadata: { branchCount: 1, freshnessMode: "not-applicable", details: { proofKind: "onchain-branch-balances" } },
+    });
+    expect(result.metadata).not.toHaveProperty("redemption");
     expect(fetchOnchainRawCall).not.toHaveBeenCalled();
   });
 

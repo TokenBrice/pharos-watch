@@ -12,6 +12,7 @@ describe("fetchYearnKongSources", () => {
     mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
+        matchBody: '"chainId":1}',
         body: {
           data: {
             vaults: [
@@ -28,10 +29,13 @@ describe("fetchYearnKongSources", () => {
           },
         },
       },
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
 
     const results = await fetchYearnKongSources();
-    expect(results.length).toBe(1);
+    expect(results.map((result) => result.yield.sourceKey)).toEqual([
+      "protocol-api:yearn:ethereum:0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+    ]);
     expect(results[0]).toEqual(
       expect.objectContaining({
         symbol: "USDC",
@@ -50,6 +54,7 @@ describe("fetchYearnKongSources", () => {
     mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
+        matchBody: '"chainId":1}',
         body: {
           data: {
             vaults: [
@@ -66,6 +71,7 @@ describe("fetchYearnKongSources", () => {
           },
         },
       },
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
     expect(await fetchYearnKongSources()).toEqual([]);
   });
@@ -74,6 +80,7 @@ describe("fetchYearnKongSources", () => {
     mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
+        matchBody: '"chainId":1}',
         body: {
           data: {
             vaults: [
@@ -90,6 +97,7 @@ describe("fetchYearnKongSources", () => {
           },
         },
       },
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
     const results = await fetchYearnKongSources();
     expect(results[0].yield.yieldSource).toContain("Kong");
@@ -100,6 +108,7 @@ describe("fetchYearnKongSources", () => {
     mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
+        matchBody: '"chainId":1}',
         body: {
           data: {
             vaults: [
@@ -116,6 +125,7 @@ describe("fetchYearnKongSources", () => {
           },
         },
       },
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
 
     const results = await fetchYearnKongSources();
@@ -127,6 +137,7 @@ describe("fetchYearnKongSources", () => {
     mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
+        matchBody: '"chainId":1}',
         body: {
           data: {
             vaults: [
@@ -146,6 +157,7 @@ describe("fetchYearnKongSources", () => {
           },
         },
       },
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
 
     const results = await fetchYearnKongSources();
@@ -164,5 +176,23 @@ describe("fetchYearnKongSources", () => {
         }),
       }),
     );
+  });
+
+  it("keeps same-address vaults on distinct chains and deduplicates within a chain", async () => {
+    const vault = {
+      address: "0xAbC", name: "USDC yVault", yearn: true, asset: { symbol: "USDC" },
+      tvl: { close: 50_000_000 }, apy: { net: 0.03 },
+      meta: { category: "Stablecoin", isRetired: false },
+    };
+    mockYieldSourceRoutes([
+      ...[1, 8453].map((chainId) => ({
+        match: "kong.yearn.fi", matchBody: `"chainId":${chainId}}`,
+        body: { data: { vaults: [vault, { ...vault, address: "0xabc" }] } },
+      })),
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
+    ]);
+    expect((await fetchYearnKongSources()).map((result) => result.yield.sourceKey)).toEqual([
+      "protocol-api:yearn:ethereum:0xabc", "protocol-api:yearn:base:0xabc",
+    ]);
   });
 });

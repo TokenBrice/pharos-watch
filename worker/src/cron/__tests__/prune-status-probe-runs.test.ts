@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { pruneStatusProbeRuns, runPruneStatusProbeRuns } from "../prune-status-probe-runs";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createTestDb = () => fixtures.open().db;

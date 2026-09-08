@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   getMintBurnRunState,
   resolveMintBurnResumeConfigKey,
   resolveRotatedConfigs,
   setMintBurnRunState,
 } from "../mint-burn/run-state";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 describe("resolveRotatedConfigs", () => {
   const configs = [

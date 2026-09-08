@@ -3,7 +3,7 @@ import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
-export const TEST_SIGNAL = AbortSignal.timeout(5_000);
+export const TEST_SIGNAL = new AbortController().signal;
 
 export function mockedReserveHelper<T extends (...args: never[]) => unknown>(helper: T) {
   return vi.mocked(helper);

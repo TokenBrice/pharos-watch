@@ -25,43 +25,18 @@ const USR_FROZEN_AT = Math.floor(Date.UTC(2026, 3, 27, 0, 0, 0) / 1000);
 const USR_FROZEN_EVENT_STARTED_AT = Math.floor(Date.UTC(2026, 3, 27, 12, 0, 0) / 1000);
 const USR_FROZEN_ELIGIBLE_AT = USR_FROZEN_EVENT_STARTED_AT + 86_400;
 
-function assessmentRow(overrides: Record<string, unknown> = {}) {
-  return {
-    event_id: 42,
-    stablecoin_id: "lusd-liquity",
-    symbol: "LUSD",
-    name: "Liquity USD",
-    peg_currency: "USD",
-    governance: "decentralized",
-    direction: "below",
-    started_at: STARTED_AT,
-    assessed_at: ASSESSED_AT,
-    event_age_sec: ASSESSED_AT - STARTED_AT,
-    checkpoint: "first",
-    methodology_version: DDR_METHODOLOGY_VERSION,
-    resolution_tier: "recovery_likely",
-    duration_suppressed: 0,
-    duration_suppressed_reason: null,
-    median_remaining_sec: 3_600,
-    iqr_low_remaining_sec: 1_800,
-    iqr_high_remaining_sec: 7_200,
-    stratum: "below - moderate - robust - USD",
-    horizons_json: JSON.stringify([
-      {
-        horizon: "6h",
-        state: "benchmarked",
-        probability: 0.55,
-        probabilityDisplay: "50-60%",
-        probabilityInterval: { lower: 0.5, upper: 0.6 },
-        rawAtRisk: 20,
-        uniqueCoins: 12,
-        intervalClosures: 11,
-        intervalNonClosures: 9,
-      },
-    ]),
-    factors_json: JSON.stringify([]),
-    ...overrides,
-  };
+function reviewHorizons() {
+  return [{
+    horizon: "6h" as const,
+    state: "benchmarked" as const,
+    probability: 0.55,
+    probabilityDisplay: "50-60%",
+    probabilityInterval: { lower: 0.5, upper: 0.6 },
+    rawAtRisk: 20,
+    uniqueCoins: 12,
+    intervalClosures: 11,
+    intervalNonClosures: 9,
+  }];
 }
 
 function durableStores(overrides: Partial<DdrV2StoreContracts> = {}): DdrV2StoreContracts {
@@ -87,19 +62,15 @@ function durableStores(overrides: Partial<DdrV2StoreContracts> = {}): DdrV2Store
 
 /** N distinct policy-universe incidents, each of which yields one DDRR coverage row. */
 function coverageIncidents(count: number) {
-  return Array.from({ length: count }, (_, index) => ({
+  return Array.from({ length: count }, (_, index) => (makeReviewIncident({
     incidentKey: `ddr2:coverage-${String(index).padStart(5, "0")}`,
     eventId: index + 1,
-    currentEventId: index + 1,
     stablecoinId: "lusd-liquity",
-    pegCurrency: "USD",
-    direction: "below" as const,
     startedAt: STARTED_AT - index,
     eligibleAt: ELIGIBLE_AT - index,
-    policyUniverseIncluded: true,
     incidentState: "active" as const,
     supersededByIncidentKey: null,
-  }));
+  })));
 }
 
 /**
@@ -118,7 +89,7 @@ function reviewDb(eventRows: Record<string, unknown>[], extra: MockTableConfig[]
   ]);
 }
 
-function incident(overrides: Record<string, unknown> = {}) {
+function makeReviewIncident(overrides: Record<string, unknown> = {}) {
   const eventId = typeof overrides.eventId === "number" ? overrides.eventId : 42;
   const currentEventId = typeof overrides.currentEventId === "number" ? overrides.currentEventId : eventId;
   return {
@@ -143,7 +114,7 @@ function sealedPrediction(overrides: Partial<ReviewSealedPrediction> = {}): Revi
   return {
     id: 55,
     publicPredictionId: 55,
-    incidentKey: incident().incidentKey,
+    incidentKey: makeReviewIncident().incidentKey,
     eventId: 42,
     assessmentId: 90,
     outcomeKind: "prediction",
@@ -168,7 +139,7 @@ function sealedPrediction(overrides: Partial<ReviewSealedPrediction> = {}): Revi
           suppressedReason: null,
           medianSec: 3_600,
           iqrSec: [1_800, 7_200],
-          horizons: JSON.parse(assessmentRow().horizons_json as string),
+          horizons: reviewHorizons(),
           stratum: "below - moderate - robust - USD",
         },
       },
@@ -180,7 +151,7 @@ function sealedPrediction(overrides: Partial<ReviewSealedPrediction> = {}): Revi
 function firstPublication(overrides: Partial<ReviewFirstPublication> = {}): ReviewFirstPublication {
   return {
     publicPredictionId: 55,
-    incidentKey: incident().incidentKey,
+    incidentKey: makeReviewIncident().incidentKey,
     snapshotToken: "ddr-public-55",
     snapshotGeneration: 1,
     publishedAt: ELIGIBLE_AT + 60,
@@ -261,27 +232,16 @@ function chunkAbortDb(input: {
 describe("buildDepegResolverReviewSnapshot", () => {
   it("can build DDRR from durable first-publication exposure when the v2 scorer is provided", async () => {
     const db = mockD1([]);
-    const stores = {
-      ensureCanonicalIncidents: vi.fn(async () => []),
-      recordLockDeferral: vi.fn(async () => undefined),
-      sealPublicPrediction: vi.fn(async () => {
-        throw new Error("not used");
-      }),
-      sealPublicNoCall: vi.fn(async () => {
-        throw new Error("not used");
-      }),
+    const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [
-        {
+        makeReviewIncident({
           incidentKey: "ddr2:22222222222222222222222222222222",
           eventId: 42,
-          currentEventId: 42,
           stablecoinId: "lusd-liquity",
-          pegCurrency: "USD",
-          direction: "below" as const,
           startedAt: STARTED_AT,
           eligibleAt: STARTED_AT + 86_400,
-          policyUniverseIncluded: true,
-        },
+          
+        }),
       ]),
       loadSealedPublicPredictions: vi.fn(async () => [
         {
@@ -311,11 +271,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
           firstPublished: true,
         },
       ]),
-      writePublicationManifest: vi.fn(async () => {
-        throw new Error("not used");
-      }),
-      loadPredictionErrata: vi.fn(async () => []),
-    } satisfies DdrV2StoreContracts;
+    });
     const v2ReviewBuilder = vi.fn(async () => ({
       _meta: {
         computedAt: ASSESSED_AT,
@@ -379,7 +335,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => {
         controller.abort("ddrr store abort");
-        return [incident()];
+        return [makeReviewIncident()];
       }),
       loadSealedPublicPredictions: vi.fn(async () => []),
     });
@@ -404,7 +360,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       recovery_price: null,
     }));
     const incidents = eventRows.map((row) =>
-      incident({
+      makeReviewIncident({
         incidentKey: `ddr2:chunked-actual-${String(row.id).padStart(3, "0")}`,
         eventId: row.id,
         currentEventId: row.id,
@@ -438,7 +394,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       recovery_price: null,
     }));
     const incidents = eventRows.map((row) =>
-      incident({
+      makeReviewIncident({
         incidentKey: `ddr2:chunked-tape-${String(row.id).padStart(3, "0")}`,
         eventId: row.id,
         currentEventId: row.id,
@@ -464,19 +420,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("caps unfiltered durable v2 incident review loads and marks the envelope truncated", async () => {
-    const incidents = Array.from({ length: 20_001 }, (_, index) => ({
-      incidentKey: `ddr2:incident-${String(index).padStart(5, "0")}`,
-      eventId: index + 1,
-      currentEventId: index + 1,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT - index,
-      eligibleAt: ELIGIBLE_AT - index,
-      policyUniverseIncluded: true,
-      incidentState: "active" as const,
-      supersededByIncidentKey: null,
-    }));
+    const incidents = coverageIncidents(20_001);
     const db = reviewDb([]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 
@@ -498,7 +442,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("reviews published durable v2 prediction payloads", async () => {
-    const reviewIncident = incident({ incidentKey: "ddr2:published-prediction" });
+    const reviewIncident = makeReviewIncident({ incidentKey: "ddr2:published-prediction" });
     const db = reviewDb([
       eventRow({ ended_at: ELIGIBLE_AT + 3_600, recovery_price: 1 }),
     ]);
@@ -523,10 +467,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("annotates auto-repaired and split incident lineage from one bounded D1 batch", async () => {
-    const autoRepairedIncident = incident({
+    const autoRepairedIncident = makeReviewIncident({
       incidentKey: "ddr2:auto-repaired-lineage",
     });
-    const splitIncident = incident({
+    const splitIncident = makeReviewIncident({
       incidentKey: "ddr2:split-child-lineage",
       eventId: 43,
       currentEventId: 43,
@@ -534,13 +478,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT + 3_600,
     });
     const db = reviewDb([
-      {
-        id: 42,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT + 3_600,
-        recovery_price: 1,
-      },
+      eventRow({ id: 42, ended_at: ELIGIBLE_AT + 3_600, recovery_price: 1 }),
       {
         id: 43,
         stablecoin_id: "lusd-liquity",
@@ -568,52 +506,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [autoRepairedIncident, splitIncident]),
       loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          id: 55,
-          publicPredictionId: 55,
-          incidentKey: autoRepairedIncident.incidentKey,
-          eventId: 42,
-          assessmentId: 90,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: ELIGIBLE_AT,
-          lockedAt: ELIGIBLE_AT,
-          eventAgeAtLockSec: 86_400,
-          lockTiming: "on_time" as const,
-          rowHash: "e".repeat(64),
-          sealedPayload: {
-            symbol: "LUSD",
-            name: "Liquity USD",
-            pegCurrency: "USD",
-            governance: "decentralized",
-            frozen: {
-              resolution: {
-                tier: "recovery_likely",
-                factors: [],
-              },
-              duration: {
-                suppressed: false,
-                suppressedReason: null,
-                medianSec: 3_600,
-                iqrSec: [1_800, 7_200],
-                horizons: JSON.parse(assessmentRow().horizons_json as string),
-                stratum: "below - moderate - robust - USD",
-              },
-            },
-          },
-        },
+        sealedPrediction({ incidentKey: autoRepairedIncident.incidentKey }),
       ]),
       loadFirstPublicationMembership: vi.fn(async () => [
-        {
-          publicPredictionId: 55,
-          incidentKey: autoRepairedIncident.incidentKey,
-          snapshotToken: "ddr-public-55",
-          snapshotGeneration: 3,
-          publishedAt: ELIGIBLE_AT + 60,
-          firstPublished: true,
-        },
+        firstPublication({ incidentKey: autoRepairedIncident.incidentKey, snapshotGeneration: 3 }),
       ]),
     });
 
@@ -638,14 +534,8 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("marks the reviewer snapshot degraded when lineage reads fail", async () => {
-    const lineageIncident = incident({ incidentKey: "ddr2:lineage-read-failure" });
-    const db = reviewDb([{
-      id: 42,
-      stablecoin_id: "lusd-liquity",
-      started_at: STARTED_AT,
-      ended_at: null,
-      recovery_price: null,
-    }], [
+    const lineageIncident = makeReviewIncident({ incidentKey: "ddr2:lineage-read-failure" });
+    const db = reviewDb([eventRow({ id: 42, ended_at: null, recovery_price: null })], [
       {
       match: "FROM depeg_resolver_incident_event_links",
       rows: [],
@@ -670,7 +560,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const lockedAt = originalStartedAt + 86_400;
     const tailStartedAt = lockedAt + 3_600;
     const recoveredAt = lockedAt + 10_000;
-    const reviewIncident = incident({
+    const reviewIncident = makeReviewIncident({
       incidentKey: "ddr2:sealed-repaired-tail",
       currentEventId: 89,
       startedAt: tailStartedAt,
@@ -724,7 +614,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const originalStartedAt = STARTED_AT;
     const lockedAt = originalStartedAt + 86_400;
     const tailStartedAt = lockedAt + 7_200;
-    const reviewIncident = incident({
+    const reviewIncident = makeReviewIncident({
       incidentKey: "ddr2:sealed-open-tail",
       eventId: 43,
       currentEventId: 90,
@@ -781,7 +671,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const originalStartedAt = STARTED_AT;
     const lockedAt = originalStartedAt + 86_400;
     const tailStartedAt = lockedAt + 7_200;
-    const canonical = incident({
+    const canonical = makeReviewIncident({
       incidentKey: "ddr2:canonical-open-tail",
       eventId: 43,
       currentEventId: 43,
@@ -790,7 +680,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       incidentState: "active",
       supersededByIncidentKey: null,
     });
-    const duplicateAlias = incident({
+    const duplicateAlias = makeReviewIncident({
       incidentKey: "ddr2:duplicate-open-tail",
       eventId: 90,
       currentEventId: 90,
@@ -844,8 +734,8 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("classifies v2 missed-lock coverage at lock boundaries and after deferrals close", async () => {
     const incidents = [
-      incident({ incidentKey: "ddr2:eq-recovered", eventId: 1, startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
-      incident({
+      makeReviewIncident({ incidentKey: "ddr2:eq-recovered", eventId: 1, startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
+      makeReviewIncident({
         incidentKey: "ddr2:deferral-closed",
         eventId: 2,
         startedAt: STARTED_AT,
@@ -857,7 +747,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
           lastState: "lock_deferred",
         },
       }),
-      incident({ incidentKey: "ddr2:terminal-unknown-time", eventId: 3, stablecoinId: "usr-resolv", startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
+      makeReviewIncident({ incidentKey: "ddr2:terminal-unknown-time", eventId: 3, stablecoinId: "usr-resolv", startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
     ];
     const db = reviewDb([
       eventRow({ id: 1, ended_at: ELIGIBLE_AT, recovery_price: 1 }),
@@ -878,8 +768,8 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("uses canonical dynamic eligibility when classifying DDRR coverage rows", async () => {
     const dynamicEligibleAt = STARTED_AT + 72 * 3600;
-    const activeIncident = incident({ incidentKey: "ddr2:dynamic-active-pending", eventId: 11, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
-    const recoveredIncident = incident({ incidentKey: "ddr2:dynamic-recovered-before-backstop", eventId: 12, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
+    const activeIncident = makeReviewIncident({ incidentKey: "ddr2:dynamic-active-pending", eventId: 11, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
+    const recoveredIncident = makeReviewIncident({ incidentKey: "ddr2:dynamic-recovered-before-backstop", eventId: 12, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
     const db = reviewDb([
       eventRow({ id: 11 }),
       eventRow({ id: 12, ended_at: STARTED_AT + 48 * 3600, recovery_price: 1 }),
@@ -927,7 +817,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       ["matrix-terminal-after", 207],
       ["matrix-system-deferral", 208],
       ["matrix-cron-gap", 209],
-    ].map(([stablecoinId, eventId, eligibleAt]) => incident({
+    ].map(([stablecoinId, eventId, eligibleAt]) => makeReviewIncident({
       incidentKey: `ddr2:${stablecoinId}`,
       eventId: eventId as number,
       stablecoinId: stablecoinId as string,
@@ -1066,17 +956,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("classifies terminal_before_prediction from tracked frozenAt evidence", async () => {
-    const incident = {
+    const incident = makeReviewIncident({
       incidentKey: "ddr2:usr-frozen-before-lock",
       eventId: 91,
-      currentEventId: 91,
       stablecoinId: "usr-resolv",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: USR_FROZEN_EVENT_STARTED_AT,
       eligibleAt: USR_FROZEN_ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+      
+    });
     const db = reviewDb([
       {
         id: 91,
@@ -1113,18 +1000,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(rawEligibleAt).toBeLessThan(USR_FROZEN_AT);
     expect(USR_FROZEN_AT).toBeLessThan(DDR_V2_EFFECTIVE_AT);
 
-    const incident = {
+    const incident = makeReviewIncident({
       incidentKey: "ddr2:usr-rollout-terminal-before-enable",
       eventId: 88045,
-      currentEventId: 88045,
       stablecoinId: "usr-resolv",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: rolloutStartedAt,
       eligibleAt: rawEligibleAt,
-      policyUniverseIncluded: true,
       rolloutActiveAtEnablement: true,
-    };
+    });
     const db = reviewDb([
       {
         id: 88045,
@@ -1158,26 +1041,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("uses tape lifecycle rows as terminal evidence when registry evidence is absent", async () => {
-    const incident = {
-      incidentKey: "ddr2:tape-terminal-before-lock",
-      eventId: 92,
-      currentEventId: 92,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const incident = makeReviewIncident({ incidentKey: "ddr2:tape-terminal-before-lock", eventId: 92 });
     const terminalTs = STARTED_AT + 3600;
     const db = reviewDb([
-      {
-        id: 92,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 92, ended_at: null, recovery_price: null }),
     ], [
       {
       match: "FROM tape_events",
@@ -1210,27 +1077,11 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("reuses cached tape terminal evidence when the tape token is unchanged", async () => {
-    const incident = {
-      incidentKey: "ddr2:tape-terminal-cache-hit",
-      eventId: 96,
-      currentEventId: 96,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const incident = makeReviewIncident({ incidentKey: "ddr2:tape-terminal-cache-hit", eventId: 96 });
     const terminalTs = STARTED_AT + 3600;
     const token = { rowCount: 1, maxTs: terminalTs * 1000, maxId: 7 };
     const db = reviewDb([
-      {
-        id: 96,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 96, ended_at: null, recovery_price: null }),
     ], [
       {
       match: "COUNT(*) as row_count",
@@ -1280,26 +1131,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("rejects YYYY-MM source date with year 0000 and falls back to tape timestamp (ddr-5 regression)", async () => {
-    const incident = {
-      incidentKey: "ddr2:year-zero-month-regression",
-      eventId: 93,
-      currentEventId: 93,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const incident = makeReviewIncident({ incidentKey: "ddr2:year-zero-month-regression", eventId: 93 });
     const terminalTs = STARTED_AT + 3600;
     const db = reviewDb([
-      {
-        id: 93,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 93, ended_at: null, recovery_price: null }),
     ], [
       {
       match: "FROM tape_events",
@@ -1330,61 +1165,19 @@ describe("buildDepegResolverReviewSnapshot", () => {
     });
   });
 
-  it("rethrows non-missing-table tape_events failures instead of failing open", async () => {
-    const incident = {
-      incidentKey: "ddr2:tape-query-fault",
-      eventId: 94,
-      currentEventId: 94,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
-    const db = reviewDb([
-      { id: 94, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-    ], [
-      {
-      match: "FROM tape_events",
-      rows: [],
-      throwError: new Error("D1_ERROR: database is locked"),
+  it.each(["D1_ERROR: database is locked", "D1_ERROR: no such table: tape_events"])(
+    "surfaces mandatory tape query failure: %s", async (message) => {
+      const incident = makeReviewIncident({ incidentKey: "ddr2:tape-query-fault", eventId: 94 });
+      const db = reviewDb([eventRow({ id: 94 })], [
+        { match: "FROM tape_events", rows: [], throwError: new Error(message) },
+      ]);
+      const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+      await expect(
+        buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores }),
+      ).rejects.toThrow(message);
     },
-    ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
-
-    await expect(
-      buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores }),
-    ).rejects.toThrow("D1_ERROR: database is locked");
-  });
-
-  it("surfaces a missing mandatory tape_events table", async () => {
-    const incident = {
-      incidentKey: "ddr2:tape-missing-table",
-      eventId: 95,
-      currentEventId: 95,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
-    const db = reviewDb([
-      { id: 95, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-    ], [
-      {
-      match: "FROM tape_events",
-      rows: [],
-      throwError: new Error("D1_ERROR: no such table: tape_events"),
-    },
-    ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
-
-    await expect(
-      buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores }),
-    ).rejects.toThrow("D1_ERROR: no such table: tape_events");
-  });
+  );
 
   it("does not backdate overlapping day-precision terminal evidence before lock", async () => {
     const startedAt = USR_FROZEN_AT - 12 * 3600;
@@ -1445,20 +1238,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
       loadCanonicalIncidents: vi.fn(async () => [incident]),
       loadSealedPublicPredictions: vi.fn(async () => [
         {
-          id: 11,
-          publicPredictionId: 11,
-          incidentKey: incident.incidentKey,
-          eventId: 95,
-          assessmentId: 95,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt,
-          lockedAt: eligibleAt,
-          eventAgeAtLockSec: 86_400,
-          lockTiming: "on_time" as const,
-          rowHash: "d".repeat(64),
+          ...sealedPrediction({
+            id: 11, publicPredictionId: 11, incidentKey: incident.incidentKey,
+            eventId: 95, assessmentId: 95, eligibleAt, lockedAt: eligibleAt, rowHash: "d".repeat(64),
+          }),
           sealedPayload: { kind: "prediction", symbol: "USR" },
         },
       ]),
@@ -1482,44 +1265,17 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("marks sealed unpublished rows as publication failed once the source closes", async () => {
-    const incident = {
-      incidentKey: "ddr2:sealed-unpublished",
-      eventId: 42,
-      currentEventId: 42,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const incident = makeReviewIncident({ incidentKey: "ddr2:sealed-unpublished", eventId: 42 });
     const db = reviewDb([
-      {
-        id: 42,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT + 10,
-        recovery_price: 1,
-      },
+      eventRow({ id: 42, ended_at: ELIGIBLE_AT + 10, recovery_price: 1 }),
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
       loadSealedPublicPredictions: vi.fn(async () => [
         {
-          id: 9,
-          publicPredictionId: 9,
-          incidentKey: incident.incidentKey,
-          eventId: 42,
-          assessmentId: 90,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: ELIGIBLE_AT,
-          lockedAt: ELIGIBLE_AT,
-          eventAgeAtLockSec: 86_400,
-          lockTiming: "on_time" as const,
-          rowHash: "c".repeat(64),
+          ...sealedPrediction({
+            id: 9, publicPredictionId: 9, incidentKey: incident.incidentKey, rowHash: "c".repeat(64),
+          }),
           sealedPayload: { kind: "prediction", symbol: "LUSD" },
         },
       ]),
@@ -1539,31 +1295,21 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("classifies active eligible lock deferrals without public predictions", async () => {
-    const incident = {
+    const incident = makeReviewIncident({
       incidentKey: "ddr2:active-lock-deferred",
       eventId: 44,
-      currentEventId: 44,
       stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: STARTED_AT,
       eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
       lockState: {
         eligibleAt: ELIGIBLE_AT,
         lastState: "lock_deferred" as const,
         lastDeferralReason: "strict_readiness_not_met",
         deferralCount: 1,
       },
-    };
+    });
     const db = reviewDb([
-      {
-        id: 44,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 44, ended_at: null, recovery_price: null }),
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
@@ -1583,56 +1329,25 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("marks published sealed rows with unparsable payloads as data quality gaps", async () => {
-    const incident = {
-      incidentKey: "ddr2:published-bad-payload",
-      eventId: 45,
-      currentEventId: 45,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const incident = makeReviewIncident({ incidentKey: "ddr2:published-bad-payload", eventId: 45 });
     const db = reviewDb([
-      {
-        id: 45,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 45, ended_at: null, recovery_price: null }),
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
       loadSealedPublicPredictions: vi.fn(async () => [
         {
-          id: 11,
-          publicPredictionId: 11,
-          incidentKey: incident.incidentKey,
-          eventId: 45,
-          assessmentId: 92,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: ELIGIBLE_AT,
-          lockedAt: ELIGIBLE_AT,
-          eventAgeAtLockSec: 86_400,
-          lockTiming: "on_time" as const,
-          rowHash: "e".repeat(64),
+          ...sealedPrediction({
+            id: 11, publicPredictionId: 11, incidentKey: incident.incidentKey, eventId: 45, assessmentId: 92,
+          }),
           sealedPayload: { symbol: "LUSD" },
         },
       ]),
       loadFirstPublicationMembership: vi.fn(async () => [
-        {
-          publicPredictionId: 11,
-          incidentKey: incident.incidentKey,
-          snapshotToken: "ddr-public-bad-payload",
-          snapshotGeneration: 3,
-          publishedAt: ELIGIBLE_AT + 60,
-          firstPublished: true,
-        },
+        firstPublication({
+          publicPredictionId: 11, incidentKey: incident.incidentKey,
+          snapshotToken: "ddr-public-bad-payload", snapshotGeneration: 3,
+        }),
       ]),
     });
 
@@ -1653,35 +1368,28 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("emits invalidated prediction rows when sealed public rows have errata", async () => {
-    const incident = {
-      incidentKey: "ddr2:invalidated-public-prediction",
-      eventId: 43,
-      currentEventId: 43,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const incident = makeReviewIncident({ incidentKey: "ddr2:invalidated-public-prediction", eventId: 43 });
     const originalNoCall = {
       lockedAt: ELIGIBLE_AT,
       eventAgeAtLockSec: 86_400,
       missingReasons: ["insufficient_signal"],
       relatedContext: {},
     };
+    const otherIncident = makeReviewIncident({ incidentKey: "ddr2:unrelated-prediction", eventId: 44 });
+    const erratum = {
+      publicPredictionId: 10, incidentKey: incident.incidentKey, eventId: 43, assessmentId: 91,
+      reason: "event_identity_error", operatorNote: "Fixture invalidation",
+      replacementAssessmentId: null, replacementRowHash: null, rowHashBefore: "d".repeat(64),
+      createdBy: "test",
+    };
     const db = reviewDb([
-      {
-        id: 43,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 44 }),
+      eventRow({ id: 43, ended_at: null, recovery_price: null }),
     ]);
     const stores = durableStores({
-      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadCanonicalIncidents: vi.fn(async () => [incident, otherIncident]),
       loadSealedPublicPredictions: vi.fn(async () => [
+        sealedPrediction({ id: 11, publicPredictionId: 11, eventId: 44, incidentKey: otherIncident.incidentKey }),
         {
           id: 10,
           publicPredictionId: 10,
@@ -1707,6 +1415,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
         },
       ]),
       loadFirstPublicationMembership: vi.fn(async () => [
+        firstPublication({ publicPredictionId: 11, incidentKey: otherIncident.incidentKey }),
         {
           publicPredictionId: 10,
           incidentKey: incident.incidentKey,
@@ -1717,20 +1426,12 @@ describe("buildDepegResolverReviewSnapshot", () => {
         },
       ]),
       loadPredictionErrata: vi.fn(async () => [
-        {
-          id: 1,
-          publicPredictionId: 10,
-          incidentKey: incident.incidentKey,
-          eventId: 43,
-          assessmentId: 91,
-          reason: "event_identity_error" as const,
-          operatorNote: "Fixture invalidation",
-          replacementAssessmentId: null,
-          replacementRowHash: null,
-          rowHashBefore: "d".repeat(64),
-          createdAt: ELIGIBLE_AT + 120,
-          createdBy: "test",
-        },
+        { ...erratum, id: 2, createdAt: ELIGIBLE_AT + 120 },
+        { ...erratum, id: 99, createdAt: ELIGIBLE_AT + 60 },
+        { ...erratum, id: 3, createdAt: ELIGIBLE_AT + 120 },
+        { ...erratum, id: 100, createdAt: ELIGIBLE_AT + 180, reason: "malformed-reason" },
+        { ...erratum, id: 101, publicPredictionId: 999, createdAt: ELIGIBLE_AT + 240 },
+        { ...erratum, id: 1, createdAt: ELIGIBLE_AT + 120 },
       ]),
     });
 
@@ -1747,11 +1448,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       predictionState: "invalidated",
       originalKind: "no_call",
       originalOutcome: originalNoCall,
-      latestErratum: expect.objectContaining({ state: "invalidated", reason: "event_identity_error" }),
-      errataCount: 1,
+      latestErratum: expect.objectContaining({ id: 3, createdAt: ELIGIBLE_AT + 120, state: "invalidated", reason: "event_identity_error" }),
+      errataCount: 4,
     });
     expect(snapshot.summary.headline.invalidatedPredictionCount).toBe(1);
-    expect(snapshot._meta.reviewedEventCount).toBe(1);
+    expect(snapshot._meta.reviewedEventCount).toBe(2);
+    expect(snapshot.rows.find((entry) => entry.incidentKey === otherIncident.incidentKey))
+      .toMatchObject({ kind: "prediction_review", publicPredictionId: 11 });
     expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
   });
 

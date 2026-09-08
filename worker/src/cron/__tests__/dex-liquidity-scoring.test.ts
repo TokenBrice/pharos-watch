@@ -178,7 +178,10 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { scoringTestState: S
   });
 }
 
-function curveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
+function curveExecutionModel(
+  tracked: { symbol: string; decimals: number; id: string } = { symbol: "USDC", decimals: 6, id: "usdc-circle" },
+  output: { symbol: string; decimals: number; id: string } = { symbol: "USDT", decimals: 6, id: "usdt-tether" },
+): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
   return {
     source: "curve",
     invariant: "stableswap",
@@ -188,55 +191,26 @@ function curveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["amm
     tokens: [
       {
         address: "0x0000000000000000000000000000000000000011",
-        symbol: "USDC",
-        decimals: 6,
+        symbol: tracked.symbol,
+        decimals: tracked.decimals,
         balance: 50_000,
         referencePriceUsd: 1,
         referencePriceSource: "tracked-market",
-        trackedAssetId: "usdc-circle",
+        trackedAssetId: tracked.id,
       },
       {
         address: "0x0000000000000000000000000000000000000012",
-        symbol: "USDT",
-        decimals: 6,
+        symbol: output.symbol,
+        decimals: output.decimals,
         balance: 50_000,
         referencePriceUsd: 1,
         referencePriceSource: "tracked-market",
-        trackedAssetId: "usdt-tether",
+        trackedAssetId: output.id,
       },
     ],
   };
 }
 
-function daiCurveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
-  return {
-    source: "curve",
-    invariant: "stableswap",
-    trackedTokenIndex: 0,
-    feeRate: 0.0004,
-    amplification: 200,
-    tokens: [
-      {
-        address: "0x0000000000000000000000000000000000000011",
-        symbol: "DAI",
-        decimals: 18,
-        balance: 50_000,
-        referencePriceUsd: 1,
-        referencePriceSource: "tracked-market",
-        trackedAssetId: "dai-makerdao",
-      },
-      {
-        address: "0x0000000000000000000000000000000000000012",
-        symbol: "USDC",
-        decimals: 6,
-        balance: 50_000,
-        referencePriceUsd: 1,
-        referencePriceSource: "tracked-market",
-        trackedAssetId: "usdc-circle",
-      },
-    ],
-  };
-}
 
 describe("dex-liquidity scoring", () => {
   afterEach(() => {
@@ -1051,7 +1025,10 @@ describe("dex-liquidity scoring", () => {
         volumeUsd7d: 140_000 - index,
         poolType: "curve-stableswap",
         source: "dl",
-        extra: { ammExecutionModel: daiCurveExecutionModel() },
+        extra: { ammExecutionModel: curveExecutionModel(
+          { symbol: "DAI", decimals: 18, id: "dai-makerdao" },
+          { symbol: "USDC", decimals: 6, id: "usdc-circle" },
+        ) },
       })),
     ];
 

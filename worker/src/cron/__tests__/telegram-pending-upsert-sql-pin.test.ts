@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { buildDedupeKey, buildPendingAlertEnqueueStatement } from "../../lib/telegram/pending-queue";
 import { buildSetBasedPendingHandoffStatements } from "../telegram-alert-target-plans/delivery";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { insertAlertJobTargetFixture, insertPendingSqlite, insertSourceEventSqlite } from "./telegram-pending-queue.test-support";
 import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram/pending-provenance";
 

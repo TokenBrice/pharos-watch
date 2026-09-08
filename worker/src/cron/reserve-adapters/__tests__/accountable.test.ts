@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -12,8 +12,10 @@ import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
+import { makeTimestampedYuzuPayload } from "./accountable.test-support";
 
-const signal = AbortSignal.timeout(5_000);
+let signal: AbortSignal;
+beforeEach(() => { signal = new AbortController().signal; });
 // Production removed NUSD's live config after its endpoint stopped resolving.
 // Keep this inline mapping fixture to exercise the reviewed historical
 // Accountable shape without re-enabling that production feed.
@@ -566,7 +568,7 @@ describe("adaptAccountableDashboard", () => {
     await fetchAccountableReserves(
       apxusd as never,
       apxusd.liveReservesConfig as LiveReservesConfig,
-      AbortSignal.timeout(5_000),
+      new AbortController().signal,
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -818,17 +820,7 @@ describe("adaptAccountableDashboard", () => {
 
   it("uses exposure_split_ts, not the newer dashboard envelope timestamp, for Yuzu freshness", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const result = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [{ ts: "1787600794262", reserves: 1_000 }],
-      },
-    });
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
 
     expect(result.metadata).toMatchObject({
       sourceTimestamp: 1_787_556_676,
@@ -839,17 +831,7 @@ describe("adaptAccountableDashboard", () => {
 
   it("keeps an approximately 81-hour-old truthful Yuzu exposure timestamp stale under the 3-day policy", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const result = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [{ ts: "1787600794262", reserves: 1_000 }],
-      },
-    });
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
 
     const validation = validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
@@ -864,20 +846,15 @@ describe("adaptAccountableDashboard", () => {
   it("rejects a timestamped Yuzu exposure split that misses the nearest timeline reserve total by more than 1%", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 63_527_322.23,
-        total_supply: 63_527_322.23,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: {
-          "[Global_Dollar]_USDG_Loop": { "": -15_725_261.164036 },
-          Liquidity_Buffer: { "": 79_252_583.394036 },
-        },
-        timeline: [{ ts: "1787600794262", reserves: 65_000_000 }],
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      total_reserves: 63_527_322.23,
+      total_supply: 63_527_322.23,
+      exposure_split: {
+        "[Global_Dollar]_USDG_Loop": { "": -15_725_261.164036 },
+        Liquidity_Buffer: { "": 79_252_583.394036 },
       },
-    })).rejects.toThrow(
+      timeline: [{ ts: "1787600794262", reserves: 65_000_000 }],
+    }))).rejects.toThrow(
       /Accountable exposure_split bucket total 63527322\.23 does not match total_reserves 65000000/,
     );
   });
@@ -885,36 +862,20 @@ describe("adaptAccountableDashboard", () => {
   it("fails closed when a timestamped Yuzu exposure split has no valid timeline reserve total", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [
-          { ts: "not-a-timestamp", reserves: 1_000 },
-          { ts: "1787600794262", reserves: 0 },
-        ],
-      },
-    })).rejects.toThrow(/no valid timeline reserve total/);
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      timeline: [
+        { ts: "not-a-timestamp", reserves: 1_000 },
+        { ts: "1787600794262", reserves: 0 },
+      ],
+    }))).rejects.toThrow(/no valid timeline reserve total/);
   });
 
   it("fails closed when the nearest Yuzu timeline reserve total is more than 24 hours away", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [{ ts: "1787466675000", reserves: 1_000 }],
-      },
-    })).rejects.toThrow(/no contemporaneous timeline reserve total/);
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      timeline: [{ ts: "1787466675000", reserves: 1_000 }],
+    }))).rejects.toThrow(/no contemporaneous timeline reserve total/);
   });
 
   it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {

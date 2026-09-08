@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../lib/yield-history-ownership-handoffs";
 import { loadYieldHistorySnapshots, MAX_PREVIOUS_TVL_HISTORY_ROWS } from "../yield-sync/history";
 

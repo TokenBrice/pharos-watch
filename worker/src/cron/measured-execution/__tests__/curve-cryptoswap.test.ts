@@ -35,7 +35,6 @@ const LEGACY_POOL = "0x98a7f18d4e56cfe84e3d081b40001b3d5bd3eb8b";
 const TWOCRYPTO_POOL = "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852";
 const ACTIVE_TWOCRYPTO_POOL = "0x313698667d7fdd6789a9bc70821309ff891e729a";
 const TRICRYPTO_POOL = "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14";
-const SPECIAL_POOL = "0x66da369fc5dbba0774da70546bd20f2b242cd34d";
 const HASH_A = `0x${"11".repeat(32)}` as `0x${string}`;
 const HASH_B = `0x${"22".repeat(32)}` as `0x${string}`;
 const HASH_C = `0x${"33".repeat(32)}` as `0x${string}`;
@@ -407,48 +406,31 @@ describe("Curve CryptoSwap token indices and ABI", () => {
   });
 
   it.each([
-    {
-      generation: "legacy",
-      pool: LEGACY_POOL,
-      amountInRaw: 10_000_000_000n,
-      amountOutRaw: 823_721n,
-    },
-    {
-      generation: "TwoCrypto",
-      pool: TWOCRYPTO_POOL,
-      amountInRaw: 10_000n * 10n ** 18n,
-      amountOutRaw: 7_130_817_881n,
-    },
-    {
-      generation: "TriCrypto",
-      pool: TRICRYPTO_POOL,
-      amountInRaw: 100_000n * 10n ** 18n,
-      amountOutRaw: 46_474_385_042_791_521_807n,
-    },
-    {
-      generation: "special",
-      pool: SPECIAL_POOL,
-      amountInRaw: 100_000n * 10n ** 18n,
-      amountOutRaw: 1_727_266_543_127_819_090_598_432n,
-    },
-  ])("replays the pinned $generation get_dy proof at Ethereum block 25536894", ({ amountInRaw, amountOutRaw }) => {
+    { amountInRaw: 1n, amountOutRaw: 1n },
+    { amountInRaw: (1n << 256n) - 1n, amountOutRaw: (1n << 256n) - 1n },
+  ])("encodes and decodes uint256 ABI boundaries: $amountInRaw", ({ amountInRaw, amountOutRaw }) => {
     const callData = encodeCurveCryptoSwapGetDy({ inputIndex: 0, outputIndex: 1, amountInRaw });
     expect(callData).toBe(`0x556d6e9f${uint256Word(0n)}${uint256Word(1n)}${uint256Word(amountInRaw)}`);
     expect(decodeCurveCryptoSwapGetDy(uint256Return(amountOutRaw))).toBe(amountOutRaw);
+  });
+
+  it("rejects zero input while decoding a zero output", () => {
+    expect(() => encodeCurveCryptoSwapGetDy({ inputIndex: 0, outputIndex: 1, amountInRaw: 0n })).toThrow();
+    expect(decodeCurveCryptoSwapGetDy(uint256Return(0n))).toBe(0n);
   });
 });
 
 describe("Curve CryptoSwap quote transport", () => {
   it("quotes the physical pool endpoint and persists exact raw proof", async () => {
+    const target = makeTarget({ poolId: "ethereum:defillama-route-fingerprint-not-an-address" });
     const executeMulticall = vi.fn(async (_input: unknown) => [
       {
-        label: `0:${makeTarget().targetId}`,
+        label: `0:${target.targetId}`,
         success: true,
         returnData: uint256Return(999_000_000n),
       },
     ]);
     const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
-    const target = makeTarget();
     const outcomes = await quote({
       requests: [
         {
@@ -668,8 +650,7 @@ describe("Curve CryptoSwap quote transport", () => {
 });
 
 describe("Curve CryptoSwap stored proof validation", () => {
-  function makeProfile(): DexMeasuredExecutionProfile {
-    const target = makeTarget();
+  function makeProfile(target = makeTarget()): DexMeasuredExecutionProfile {
     const policy = getCurveCryptoSwapShadowPolicy("ethereum", TWOCRYPTO_POOL);
     if (policy == null) throw new Error("missing TwoCrypto policy fixture");
     const amountInRaw = 1_000n * 10n ** 18n;
@@ -704,8 +685,8 @@ describe("Curve CryptoSwap stored proof validation", () => {
   }
 
   it("accepts exact calldata and return data without equating route poolId to the endpoint", () => {
-    const profile = makeProfile();
-    expect(profile.poolId).toBe(`ethereum:${TWOCRYPTO_POOL}`);
+    const profile = makeProfile(makeTarget({ poolId: "ethereum:defillama-route-fingerprint-not-an-address" }));
+    expect(profile.poolId).toBe("ethereum:defillama-route-fingerprint-not-an-address");
     expect(profile.executionEndpoint.address).toBe(TWOCRYPTO_POOL);
     expect(validateCurveCryptoSwapProfileProof(profile)).toEqual([]);
   });

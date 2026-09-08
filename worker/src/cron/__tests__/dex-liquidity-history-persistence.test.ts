@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
 import { makeFullScoreResult } from "./dex-liquidity-persistence.test-support";

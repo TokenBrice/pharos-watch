@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { runPruneDetailCache } from "../prune-detail-cache";
 import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createTestDb = fixtures.open;

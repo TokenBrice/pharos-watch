@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   buildDexPriceChallengerPublicationPlan,
   DEX_PRICE_CHALLENGER_BATCH_SIZE,

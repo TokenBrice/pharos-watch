@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DexMeasuredExecutionTargetSchema } from "@shared/types/measured-execution";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,

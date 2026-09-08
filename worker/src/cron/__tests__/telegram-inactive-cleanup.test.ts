@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 const { runTelegramInactiveCleanup } = await import("../telegram-inactive-cleanup");

@@ -1,9 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 const mockLoadSafetyScoreV9PublicationAttempt = vi.fn();
@@ -328,13 +332,7 @@ describe("snapshotSafetyGradeHistory", () => {
         prev_score: null,
       },
     ]);
-    const all = vi.fn().mockResolvedValue({ results: [] });
-    const bind = vi.fn(() => ({ statement: true }));
-    const batch = vi.fn().mockResolvedValue([]);
-    const db = makeNoopD1({
-      prepare: vi.fn(() => ({ all, bind })),
-      batch,
-    });
+    const { db, sqlite } = fixtures.open();
 
     const result = await snapshotSafetyGradeHistory(db);
 
@@ -343,6 +341,85 @@ describe("snapshotSafetyGradeHistory", () => {
       identityBoundaryBaselines: 1,
       skipped: 0,
     });
-    expect(batch).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT stablecoin_id, transition_kind, evaluation_build_digest, model_publication_generation_id, prev_grade FROM safety_score_history_v2").all()).toEqual([{
+      stablecoin_id: "usdc-circle",
+      transition_kind: "methodology-boundary-baseline",
+      evaluation_build_digest: identity.evaluationBuildDigest,
+      model_publication_generation_id: identity.publicationGenerationId,
+      prev_grade: null,
+    }]);
+  });
+
+  it("stores an initial baseline with no predecessor", async () => {
+    const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
+    });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    const { db, sqlite } = fixtures.open();
+    await snapshotSafetyGradeHistory(db);
+    expect(sqlite.prepare("SELECT stablecoin_id, grade, score, prev_grade, prev_score, transition_kind FROM safety_score_history_v2").all()).toEqual([{
+      stablecoin_id: "usdc-circle", grade: "A", score: 85,
+      prev_grade: null, prev_score: null, transition_kind: "initial-baseline",
+    }]);
+  });
+
+  it("stores comparable grade transitions but ignores score-only changes", async () => {
+    const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [
+        makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 }),
+        makeWorkerV9Card({ id: "usdt-tether", grade: "B", score: 74 }),
+      ],
+    });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    const identity = current.safetyScoreIdentity;
+    mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue(current.cards.map((card) => ({
+      history_id: `previous:${card.id}`, stablecoin_id: card.id,
+      recorded_at: current.updatedAt - 86400,
+      model: identity.model, identity_schema_version: identity.schemaVersion,
+      methodology_version: identity.methodologyVersion, policy_id: identity.policyId,
+      policy_digest: identity.policyDigest, evaluation_build_digest: identity.evaluationBuildDigest,
+      base_input_generation_id: identity.baseInputGenerationId,
+      model_publication_generation_id: identity.publicationGenerationId,
+      transition_kind: "initial-baseline", grade: "B", score: 72, prev_grade: null, prev_score: null,
+    })));
+    const { db, sqlite } = fixtures.open();
+    await snapshotSafetyGradeHistory(db);
+    expect(sqlite.prepare("SELECT stablecoin_id, grade, score, prev_grade, prev_score, transition_kind FROM safety_score_history_v2").all()).toEqual([{
+      stablecoin_id: "usdc-circle", grade: "A", score: 85,
+      prev_grade: "B", prev_score: 72, transition_kind: "organic-grade-change",
+    }]);
+  });
+
+  it.each(["generation-mismatch", "malformed-marker"])("fails closed for %s", async (fault) => {
+    const current = makeReportCardsV9Response({ updatedAt: Math.floor(Date.now() / 1000) });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    if (fault === "generation-mismatch") {
+      mockLoadSafetyScoreV9PublicationAttempt.mockResolvedValue({
+        outcome: "published-clean", publicationGenerationId: "another-generation",
+      });
+    } else {
+      mockGetCache.mockResolvedValue({ value: JSON.stringify([42]), updatedAt: current.updatedAt });
+    }
+    const { db, sqlite } = fixtures.open();
+    expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ status: "error", itemCount: 0 });
+    expect(sqlite.prepare("SELECT * FROM safety_score_history_v2").all()).toEqual([]);
+    expect(mockDeleteCache).not.toHaveBeenCalled();
+    expect(mockSetCache).not.toHaveBeenCalled();
+  });
+
+  it("preserves the affected marker when a clean asset's history write fails", async () => {
+    const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
+    });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    mockGetCache.mockResolvedValue({ value: JSON.stringify(["usdt-tether"]), updatedAt: current.updatedAt });
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec("CREATE TRIGGER fail_history BEFORE INSERT ON safety_score_history_v2 BEGIN SELECT RAISE(ABORT, 'history unavailable'); END");
+    await expect(snapshotSafetyGradeHistory(db)).rejects.toThrow("history unavailable");
+    expect(mockDeleteCache).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT * FROM safety_score_history_v2").all()).toEqual([]);
   });
 });

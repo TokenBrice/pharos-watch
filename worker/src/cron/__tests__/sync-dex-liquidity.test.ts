@@ -1,10 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import * as priceValidation from "../../lib/price-validation";
+import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const phaseFixtures = vi.hoisted(() => {
   function create(overrides: Record<string, unknown> = {}) {
@@ -716,11 +722,11 @@ describe("dex liquidity scoring stage cycle", () => {
       skipDimensions: [],
       priceObservations: stagedPriceObservations,
     });
+    let callsAtTelemetryEntry: number[] | undefined;
     vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
-      expect(fetchDataSources).not.toHaveBeenCalled();
-      expect(buildKnownPoolAddresses).not.toHaveBeenCalled();
-      expect(processPoolMetrics).not.toHaveBeenCalled();
-      expect(mergeStagedPools).not.toHaveBeenCalled();
+      callsAtTelemetryEntry = [
+        fetchDataSources, buildKnownPoolAddresses, processPoolMetrics, mergeStagedPools,
+      ].map((dependency) => vi.mocked(dependency).mock.calls.length);
       return {
         checkedSymbols: 0,
         venueCount: 0,
@@ -731,6 +737,8 @@ describe("dex liquidity scoring stage cycle", () => {
     });
 
     await runDexLiquidityScoringCycle(db, "graph-key");
+    expect(fetchMajorStablecoinOrderbookDepthSummary).toHaveBeenCalledOnce();
+    expect(callsAtTelemetryEntry).toEqual([0, 0, 0, 0]);
   });
 
   it("reports high-SLO stage metadata during source and scoring phases", async () => {
@@ -1071,17 +1079,23 @@ describe("dex liquidity scoring stage cycle", () => {
 
   it("waits for direct API fetches before loading primary and subgraph sources", async () => {
     const fluidGate = deferred<ReturnType<typeof makeDirectApiResult>>();
-    vi.mocked(fetchFluidPools).mockImplementationOnce(() => fluidGate.promise);
+    const entered = deferred<void>();
+    vi.mocked(fetchFluidPools).mockImplementationOnce(() => {
+      entered.resolve();
+      return fluidGate.promise;
+    });
 
     const syncPromise = runDexLiquidityScoringCycle(db, "graph-key");
 
-    await vi.waitFor(() => expect(fetchFluidPools).toHaveBeenCalledOnce());
-    expect(fetchDataSources).not.toHaveBeenCalled();
-    expect(fetchUniV3Data).not.toHaveBeenCalled();
-    expect(fetchAerodromeData).not.toHaveBeenCalled();
-
-    fluidGate.resolve(makeDirectApiResult());
-    await syncPromise;
+    try {
+      await entered.promise;
+      expect(fetchDataSources).not.toHaveBeenCalled();
+      expect(fetchUniV3Data).not.toHaveBeenCalled();
+      expect(fetchAerodromeData).not.toHaveBeenCalled();
+    } finally {
+      fluidGate.resolve(makeDirectApiResult());
+      await syncPromise;
+    }
     expect(fetchDataSources).toHaveBeenCalledOnce();
     expect(fetchUniV3Data).toHaveBeenCalledOnce();
     expect(fetchAerodromeData).toHaveBeenCalledOnce();
@@ -1176,14 +1190,42 @@ describe("dex liquidity scoring stage cycle", () => {
     ]);
   });
 
-  it("warns and falls back to reference pricing when the stablecoins cache is unusable", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("prices a euro quote from FX references when the stablecoins cache is unusable", async () => {
+    let observations: unknown;
+    const publishPrices = vi.mocked(computeDexPrices).getMockImplementation()!;
+    vi.mocked(computeDexPrices).mockImplementationOnce(async (...args) => {
+      observations = structuredClone(args[5]?.get("usdc-circle"));
+      return publishPrices(...args);
+    });
+    vi.spyOn(priceValidation, "loadPriceValidationReferences").mockResolvedValueOnce({
+      rates: { peggedEUR: 1.25 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000),
+    });
+    vi.mocked(convertToGtNewPools).mockImplementation(realPoolShaping.convertToGtNewPools);
+    vi.mocked(extractPriceObservations).mockImplementation(realPoolShaping.extractPriceObservations);
+    vi.mocked(fetchFluidPools).mockResolvedValueOnce({
+      pools: [{
+        source: "fluid", chain: "Ethereum", poolAddress: "0x1111111111111111111111111111111111111111",
+        poolType: "fluid", tokens: [
+          { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
+          { address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", symbol: "EURC", decimals: 6 },
+        ],
+        price: 0.8, tvlUsd: 1_000_000, volume24hUsd: 100_000,
+        feeRate: 0.0001, balances: [500_000, 400_000],
+      }],
+      ok: true, degraded: false, errors: [],
+    });
 
     await runDexLiquidityScoringCycle(db, "graph-key");
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback"),
+    expect(observations).toEqual([
+      expect.objectContaining({ price: 1, protocol: "fluid", sourceFamily: "direct_api" }),
+    ]);
+    const converted = vi.mocked(convertToGtNewPools).mock.results.flatMap((result) =>
+      result.type === "return" ? result.value.get("usdc-circle") ?? [] : [],
     );
+    expect(converted).toEqual([
+      expect.objectContaining({ address: "0x1111111111111111111111111111111111111111", price: 1 }),
+    ]);
   });
 
   it("records drift and evidence telemetry when previous run metadata exists", async () => {

@@ -3,7 +3,7 @@ import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mo
 import { projectTape } from "../project-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/tape-projectors/__tests__/test-support";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
 

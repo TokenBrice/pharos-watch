@@ -42,4 +42,41 @@ describe("fetchDefiLlamaPrices", () => {
       new AbortController().signal,
     )).rejects.toThrow("DefiLlama price fetch failed (503)");
   });
+
+  it("returns an empty map without network I/O for no assets", async () => {
+    expect(await fetchDefiLlamaPrices([], new AbortController().signal)).toEqual(new Map());
+    expect(fetchTextWithRetry).not.toHaveBeenCalled();
+  });
+
+  it("preserves separate logical keys for duplicate addresses and omits unavailable prices", async () => {
+    vi.mocked(fetchTextWithRetry).mockResolvedValue({
+      response: new Response(),
+      body: JSON.stringify({ coins: {
+        "ethereum:0xabc": { price: 2 },
+        "ethereum:0xzero": { price: 0 },
+        "ethereum:0xnegative": { price: -1 },
+      } }),
+    });
+    const prices = await fetchDefiLlamaPrices(
+      ["first", "second", "zero", "negative", "missing"].map((key) => ({
+        key, chain: "ethereum", address: key === "first" || key === "second" ? "0xABC" : `0x${key}`,
+      })),
+      new AbortController().signal,
+    );
+    expect(prices).toEqual(new Map([["first", 2], ["second", 2]]));
+  });
+
+  // audit: g042/C2 — disputed contract
+  it.fails("returns each caller's logical keys when an asset is reused in a request cache", async () => {
+    vi.mocked(fetchTextWithRetry).mockResolvedValue({
+      response: new Response(),
+      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2 } } }),
+    });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+    expect(await fetchDefiLlamaPrices([{ key: "first", chain: "ethereum", address: "0xABC" }], signal, ctx))
+      .toEqual(new Map([["first", 2]]));
+    expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
+      .toEqual(new Map([["second", 2]]));
+  });
 });

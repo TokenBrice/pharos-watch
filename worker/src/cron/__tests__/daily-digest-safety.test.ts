@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { collectGradeTransitions } from "../daily-digest/collectors-risk";
 import type {
@@ -8,7 +8,7 @@ import type {
   CollectorContext,
 } from "../daily-digest/collectors-shared";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const openDatabases: DatabaseSync[] = [];
 const nowSec = 1_785_000_000;

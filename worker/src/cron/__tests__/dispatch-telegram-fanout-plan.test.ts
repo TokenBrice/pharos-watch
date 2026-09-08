@@ -62,37 +62,27 @@ function fanoutEvents(overrides: Partial<TelegramFanoutPlanEvents> = {}): Telegr
 }
 
 describe("dispatch telegram fanout planning", () => {
-  it("loads every active family in the established fanout order", async () => {
-    const transcript: string[] = [];
-    const direct = vi.fn(async (_db: D1Database, _ids: string[], type: string) => {
-      transcript.push(`direct:${type}`);
-      return new Map();
-    });
-    const preset = vi.fn(async (_db: D1Database, _ids: string[], type: string) => {
-      transcript.push(`preset:${type}`);
-      return { kind: "ok" as const, rows: new Map() };
-    });
-    const global = vi.fn(async (_db: D1Database, type: string) => {
-      transcript.push(`global:${type}`);
-      return [];
-    });
-    const snooze = vi.fn(async () => {
-      transcript.push("snooze");
-      return new Map();
-    });
-    const explicitlyOff = vi.fn(async (_db: D1Database, _ids: readonly string[], type: string) => {
-      transcript.push(`explicit-off:${type}`);
-      return new Map();
-    });
+  it("assembles distinct subscriber families and omits inactive families", async () => {
+    const direct = vi.fn(async (_db: D1Database, ids: string[], type: string) =>
+      new Map(ids.map((id) => [id, [subscriber({ chat_id: `direct-${type}` })]])));
+    const preset = vi.fn(async (_db: D1Database, ids: string[], type: string) => ({
+      kind: "ok" as const,
+      rows: new Map(ids.map((id) => [id, [subscriber({ chat_id: `preset-${type}` })]])),
+    }));
+    const global = vi.fn(async (_db: D1Database, type: string) =>
+      [subscriber({ chat_id: `global-${type}`, isGlobal: true })]);
+    const snooze = vi.fn(async () => new Map([["dews-coin", new Set(["snoozed"])]]));
+    const explicitlyOff = vi.fn(async (_db: D1Database, ids: readonly string[], type: string) =>
+      new Map(ids.map((id) => [id, new Set([`off-${type}`])])));
 
-    await loadFanoutSubscriptionInputs(
+    const inputs = await loadFanoutSubscriptionInputs(
       {} as D1Database,
       {
         dewsIds: ["dews-coin"],
         depegIds: ["depeg-coin"],
         safetyIds: ["safety-coin"],
         launchIds: ["launch-coin"],
-        reserveIds: ["reserve-coin"],
+        reserveIds: [],
       },
       {
         loadSubscriberRowsBatch: direct,
@@ -104,14 +94,27 @@ describe("dispatch telegram fanout planning", () => {
       NOW_SEC,
     );
 
-    expect(transcript).toEqual([
-      "direct:dews", "direct:depeg", "direct:safety", "direct:launch", "direct:reserve",
-      "preset:dews", "preset:depeg", "preset:safety",
-      "global:dews", "global:depeg", "global:safety", "global:launch", "global:reserve",
-      "snooze",
-      "explicit-off:dews", "explicit-off:depeg", "explicit-off:safety",
-      "explicit-off:launch", "explicit-off:reserve",
-    ]);
+    for (const family of ["dews", "depeg", "safety", "launch"] as const) {
+      expect(inputs.direct[family].get(`${family}-coin`)?.map((row) => row.chat_id))
+        .toEqual([`direct-${family}`]);
+      expect(inputs.global[family].map((row) => row.chat_id)).toEqual([`global-${family}`]);
+      expect(inputs.perCoinExplicitlyOffMaps[family].get(`${family}-coin`)).toEqual(new Set([`off-${family}`]));
+    }
+    for (const family of ["dews", "depeg", "safety"] as const) {
+      expect(inputs.preset[family]).toEqual({
+        kind: "ok",
+        rows: new Map([[`${family}-coin`, [subscriber({ chat_id: `preset-${family}` })]]]),
+      });
+    }
+    expect(inputs.direct.reserve).toEqual(new Map());
+    expect(inputs.global.reserve).toEqual([]);
+    expect(inputs.perCoinExplicitlyOffMaps.reserve).toEqual(new Map());
+    expect(inputs.perCoinSnoozeMap).toEqual(new Map([["dews-coin", new Set(["snoozed"])]]));
+    const routing = buildTelegramAlertsByChat({
+      events: fanoutEvents({ dewsChanges: [{ ...DEWS_WARNING, stablecoinId: "dews-coin" }] }),
+      inputs, burstMarkers: {}, nowSec: NOW_SEC,
+    });
+    expect([...routing.alertsByChat.keys()].sort()).toEqual(["direct-dews", "global-dews", "preset-dews"]);
   });
 
   it("counts preset query and resolution failures without treating failed presets as subscribers", () => {

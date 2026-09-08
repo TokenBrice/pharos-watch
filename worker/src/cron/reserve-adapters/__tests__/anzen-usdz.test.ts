@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeAbiParameters } from "viem/utils";
+import { decodeFunctionData, encodeAbiParameters, parseAbi } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
@@ -34,6 +34,7 @@ vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
 import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
+  isHexResult,
   MULTICALL3_ADDRESS,
 } from "../../../lib/evm-rpc";
 import { fetchAnzenUsdzReserves } from "../anzen-usdz";
@@ -50,6 +51,10 @@ const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const ORACLE = "0x900fff3bbf47ded50fd4940d055e1324f38b0d4f";
 const ENDPOINT = "0x1a44076050125825900e736c501f859c50fe728c";
 const WAD = 10n ** 18n;
+const aggregateAbi = parseAbi([
+  "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[])",
+]);
+const globalSpctSupply = 999_999_999n * WAD;
 
 function word(value: bigint | boolean | string): `0x${string}` {
   if (typeof value === "string") {
@@ -86,7 +91,7 @@ function metadataResponse(): Response {
   }), { headers: { "content-type": "application/json" } });
 }
 
-function aggregateFor(chain: string, overrides: Record<number, `0x${string}`> = {}) {
+function aggregateFor(chain: string, data: string, overrides: Partial<Record<number, `0x${string}`>> = {}) {
   const chainIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain);
   const values: `0x${string}`[] = [
     word(supplies[chainIndex] ?? 1n),
@@ -116,14 +121,37 @@ function aggregateFor(chain: string, overrides: Record<number, `0x${string}`> = 
       overrides[21] ?? word(WAD),
     );
   }
+  const usdz = [ETHEREUM, BASE, ARBITRUM, BLAST, MANTA][chainIndex];
+  const addressArg = (selector: string, address: string) => `${selector}${address.slice(2).padStart(64, "0")}`;
+  const identities = [
+    ...["0x18160ddd", "0x313ce567", "0x95d89b41", "0x5e280f11"].map((selector) => [usdz, selector]),
+    ...["0x8abb1eb4", "0x090a1cc8", "0x3e413bee", "0x7dc0d1d0", "0x5c975abb", "0x58a6be1c", "0x295a5212", "0x5872e6fa", "0xf05a6b6d"].map((selector) => [ETHEREUM, selector]),
+    [SPCT, addressArg("0x70a08231", ETHEREUM)],
+    ...["0x664692f2", "0x5c975abb", "0x5872e6fa", "0xf05a6b6d"].map((selector) => [SPCT, selector]),
+    [SPCT, addressArg("0xc683630d", ETHEREUM)],
+    [USDC, addressArg("0x70a08231", SPCT)],
+    [USDC, addressArg("0x70a08231", ETHEREUM)],
+    [ORACLE, "0x98d5fdca"],
+  ];
+  if (!isHexResult(data)) throw new Error(`Unexpected non-hex ${chain} aggregate call data`);
+  const calls = decodeFunctionData({ abi: aggregateAbi, data }).args[0];
+  const responses = calls.map<[boolean, `0x${string}`]>((call) => {
+    const target = call.target.toLowerCase();
+    if (chain === "ethereum" && target === SPCT && call.callData === "0x18160ddd") {
+      return [true, word(globalSpctSupply)];
+    }
+    const index = identities.findIndex(([address, calldata]) => address === target && calldata === call.callData.toLowerCase());
+    if (index < 0 || !values[index]) throw new Error(`Unexpected ${chain} RPC: ${target} ${call.callData}`);
+    return [!(!["ethereum", "base"].includes(chain) && index === 3), values[index]];
+  });
   const encoded = encodeAbiParameters(
     [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }],
-    [[...values.map<[boolean, `0x${string}`]>((returnData, index) => [!(!["ethereum", "base"].includes(chain) && index === 3), returnData])]],
+    [responses],
   );
   return encoded;
 }
 
-function primeRpcMocks(overrides: Record<number, `0x${string}`> = {}, codeDrift = false): void {
+function primeRpcMocks(overrides: Partial<Record<number, `0x${string}`>> = {}, codeDrift = false): void {
   vi.mocked(fetchEvmCodeAtBlock).mockImplementation(async (chain, address) => {
     if (chain === "ethereum" && address.toLowerCase() === SPCT) return "0x7000";
     if (chain === "ethereum" && address.toLowerCase() === ORACLE) return "0x7001";
@@ -131,7 +159,7 @@ function primeRpcMocks(overrides: Record<number, `0x${string}`> = {}, codeDrift 
     const codeIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain ?? "");
     return codeDrift && chain === "blast" ? "0xdead" : `0x600${codeIndex}` as `0x${string}`;
   });
-  vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (chain) => aggregateFor(chain ?? "", overrides));
+  vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (chain, _to, data) => aggregateFor(chain ?? "", data, overrides));
 }
 
 function makeCoin(): StablecoinMeta {
@@ -235,12 +263,51 @@ describe("fetchAnzenUsdzReserves", () => {
   });
 
   it("does not call or use global SPCT totalSupply", async () => {
-    await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-    for (const [chain, to, data] of vi.mocked(fetchEvmCallHexAtBlock).mock.calls) {
-      if (chain === "ethereum") {
-        expect(to).toBe(MULTICALL3_ADDRESS);
-        expect(data.toLowerCase()).toContain(SPCT.slice(2));
-      }
+    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    const ethereumCalls = vi.mocked(fetchEvmCallHexAtBlock).mock.calls.filter(([chain]) => chain === "ethereum");
+    expect(ethereumCalls).toHaveLength(1);
+    const ethereumCall = ethereumCalls[0];
+    if (!ethereumCall || !isHexResult(ethereumCall[2])) throw new Error("Missing Ethereum aggregate call data");
+    const calls = decodeFunctionData({ abi: aggregateAbi, data: ethereumCall[2] }).args[0];
+    expect(calls.map((call) => [call.target.toLowerCase(), call.callData.slice(0, 10)]))
+      .not.toContainEqual([SPCT, "0x18160ddd"]);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
+    expect(result.metadata?.totalReserveUsd).not.toBe(Number(globalSpctSupply) / 1e18);
+  });
+
+  it("bounds redemption by either reserve USD or combined settlement balances, including zero", async () => {
+    for (const [reserve, spct, usdz, expected] of [
+      [3_000_000n, 4_000_000n, 2_000_000n, 3],
+      [9_000_000n, 4_000_000n, 2_000_000n, 6],
+      [9_000_000n, 0n, 0n, 0],
+    ] as const) {
+      primeRpcMocks({ 14: word(reserve), 19: word(spct), 20: word(usdz) });
+      const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+      expect(result.metadata?.redemption?.capacityUsd).toBe(expected);
+      expect(result.metadata?.details?.redemption).toMatchObject({ routeOpen: expected > 0 });
+    }
+  });
+
+  it("compounds both fees and rounds at half a basis point", async () => {
+    // 1% then 2% retains 97.02%; the small fee cases yield 100.495, 100.5, and 100.594 bps.
+    for (const [rate, coefficient, expected] of [[2_000n, 100_000n, 298], [5n, 100_000n, 100], [5n, 99_000n, 101], [6n, 100_000n, 101]] as const) {
+      primeRpcMocks({ 11: word(1_000n), 12: word(100_000n), 16: word(rate), 17: word(coefficient) });
+      const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+      expect(result.metadata?.redemption?.feeBps).toBe(expected);
+    }
+  });
+
+  it("rejects either invalid fee coefficient or excessive fee rate", async () => {
+    for (const overrides of [{ 12: word(0n) }, { 17: word(0n) }, { 11: word(100_000_001n) }, { 16: word(100_000_001n) }]) {
+      primeRpcMocks(overrides);
+      await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow(/coefficient/);
+    }
+  });
+
+  it("withholds redemption for SPCT pause, whitelist removal, and migration", async () => {
+    for (const overrides of [{ 15: word(true) }, { 18: word(false) }, { 10: word(1n) }]) {
+      primeRpcMocks(overrides);
+      await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow(/paused|migration/);
     }
   });
 });

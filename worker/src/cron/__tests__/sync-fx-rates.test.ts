@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { mockFetchRetry } from "../../test-helpers/cron";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   findCacheWrite,
   makeChainlinkFxRoutes,

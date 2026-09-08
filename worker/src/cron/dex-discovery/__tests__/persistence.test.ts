@@ -14,7 +14,7 @@ import {
 } from "../persistence";
 import { STAGED_POOL_MAX_TVL_USD } from "../types";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();

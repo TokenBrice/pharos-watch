@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { WORKER_CANARY_RUN_RETENTION_SEC } from "../../lib/canary-checks";
 
 const fixtures = createLatestSchemaFixtureTracker();

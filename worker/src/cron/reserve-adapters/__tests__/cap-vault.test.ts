@@ -22,9 +22,10 @@ vi.mock("../helpers", async (importOriginal) => {
 import { adaptCapVaultState, fetchCapVaultReserves } from "../cap-vault";
 import { fetchOnchainUint256, fetchOnchainRawCall } from "../helpers";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { makeCapAsset } from "./cap-vault.test-support";
 
 function makeSignal(): AbortSignal {
-  return AbortSignal.timeout(5_000);
+  return new AbortController().signal;
 }
 
 beforeEach(() => {
@@ -91,21 +92,7 @@ describe("adaptCapVaultState", () => {
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
       redemptionFeeBps: 0,
-      assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
-          coinId: "usdc-circle",
-          decimals: 6,
-          totalSupplied: 100,
-          totalBorrowed: 0,
-          available: 100,
-          paused: false,
-          pausedStatusUnavailable: false,
-          priceUsd: 1,
-        },
-      ],
+      assets: [makeCapAsset({ coinId: "usdc-circle", priceUsd: 1 })],
     });
 
     expect(result.metadata?.redemptionFeeBps).toBe(0);
@@ -118,20 +105,7 @@ describe("adaptCapVaultState", () => {
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
       redemptionFeeBps: null,
-      assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
-          decimals: 6,
-          totalSupplied: 100,
-          totalBorrowed: 0,
-          available: 100,
-          paused: false,
-          pausedStatusUnavailable: false,
-          priceUsd: 1,
-        },
-      ],
+      assets: [makeCapAsset({ priceUsd: 1 })],
     });
 
     expect(result.metadata?.redemptionFeeBps).toBeUndefined();
@@ -142,19 +116,7 @@ describe("adaptCapVaultState", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
-      assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
-          decimals: 6,
-          totalSupplied: 100,
-          totalBorrowed: 100,
-          available: 0,
-          paused: false,
-          pausedStatusUnavailable: false,
-        },
-      ],
+      assets: [makeCapAsset({ totalBorrowed: 100, available: 0 })],
     });
 
     expect(result.metadata?.redemption).toMatchObject({
@@ -167,20 +129,7 @@ describe("adaptCapVaultState", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
-      assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
-          decimals: 6,
-          totalSupplied: 100,
-          totalBorrowed: 0,
-          available: 100,
-          // Conservative fallback: treat unknown paused status as paused.
-          paused: true,
-          pausedStatusUnavailable: true,
-        },
-      ],
+      assets: [makeCapAsset({ paused: true, pausedStatusUnavailable: true })],
     });
 
     const statusWarning = result.warnings?.find((w) => w.code === "cap-vault-asset-status-unavailable");
@@ -194,19 +143,7 @@ describe("adaptCapVaultState", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
-      assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
-          decimals: 6,
-          totalSupplied: 100,
-          totalBorrowed: 0,
-          available: 100,
-          paused: false,
-          pausedStatusUnavailable: false,
-        },
-      ],
+      assets: [makeCapAsset()],
     });
 
     const pegWarning = result.warnings?.find((w) => w.code === "cap-vault-peg-assumed");
@@ -220,20 +157,15 @@ describe("adaptCapVaultState", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
-      assets: [
-        {
-          address: "0x9999999999999999999999999999999999999999",
-          name: "Cap asset 0x9999...9999",
-          risk: "high",
-          configured: false,
-          decimals: 18,
-          totalSupplied: 25,
-          totalBorrowed: 0,
-          available: 25,
-          paused: false,
-          pausedStatusUnavailable: false,
-        },
-      ],
+      assets: [makeCapAsset({
+        address: "0x9999999999999999999999999999999999999999",
+        name: "Cap asset 0x9999...9999",
+        risk: "high",
+        configured: false,
+        decimals: 18,
+        totalSupplied: 25,
+        available: 25,
+      })],
     });
 
     expect(result.slices).toEqual([
@@ -445,69 +377,23 @@ describe("fetchCapVaultReserves", () => {
     expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
 
-  it("fails closed when totalSupplies() returns null", async () => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: null,
-      totalBorrows: 0n,
-      available: 1_000000n,
-      paused: encodedFalse,
-    });
-
-    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/totalSupplies/);
-  });
-
-  it("fails closed when decimals() returns null", async () => {
-    primeMocks({
-      decimals: null,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: encodedFalse,
-    });
-
-    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/decimals/);
-  });
-
-  it("fails closed when decimals() returns an out-of-bound value", async () => {
-    primeMocks({
-      decimals: 37n,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: encodedFalse,
-    });
-
-    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/expected safe integer 0-36/);
-  });
-
-  it("fails closed when totalBorrows() returns null", async () => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: 50_000000n,
-      totalBorrows: null,
-      available: 50_000000n,
-      paused: encodedFalse,
-    });
-
-    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/totalBorrows/);
-  });
-
-  it("fails closed when available() returns null", async () => {
+  it.each([
+    ["totalSupplies", null, /totalSupplies/],
+    ["decimals", null, /decimals/],
+    ["decimals", 37n, /expected safe integer 0-36/],
+    ["totalBorrows", null, /totalBorrows/],
+    ["available", null, /available/],
+  ] as const)("fails closed when %s returns %s", async (field, value, error) => {
     primeMocks({
       decimals: 6n,
       totalSupplies: 50_000000n,
       totalBorrows: 0n,
-      available: null,
+      available: 50_000000n,
       paused: encodedFalse,
+      [field]: value,
     });
 
-    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/available/);
+    await expect(fetchCapVaultReserves(coin, config, makeSignal())).rejects.toThrow(error);
   });
 
   it("treats paused() undecodable value as paused (conservative) and emits an info warning", async () => {

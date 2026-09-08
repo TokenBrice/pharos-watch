@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   DEX_PRICE_SCENARIOS,
@@ -52,33 +53,50 @@ function failAfterSuccessfulBatches(db: D1Database, successfulBatchLimit: number
   });
 }
 
-function failOnceAfterCommittedPublication(db: D1Database): D1Database {
-  let batchCount = 0;
-  let injected = false;
-  return makeNoopD1({
-    prepare: (sql: string) => db.prepare(sql),
-    batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
-      batchCount++;
-      const result = await db.batch<T>(statements);
-      if (batchCount === 3 && !injected) {
-        injected = true;
-        throw new Error("D1_ERROR: internal error; reference injected-post-commit");
-      }
-      return result;
-    },
-  });
+function atPublication(
+  db: D1Database,
+  operation: "price" | "depth",
+  timing: "before" | "after",
+  inject: () => void,
+) {
+  const statementsBySql = new WeakMap<D1PreparedStatement, string>();
+  const injections: string[] = [];
+  const track = (statement: D1PreparedStatement, sql: string): D1PreparedStatement => {
+    statementsBySql.set(statement, sql);
+    const bind = statement.bind.bind(statement);
+    statement.bind = (...args: unknown[]) => track(bind(...args), sql);
+    return statement;
+  };
+  return {
+    injections,
+    db: makeNoopD1({
+      prepare: (sql: string) => track(db.prepare(sql), sql),
+      batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
+        const publication = statements.some((statement) => {
+          const sql = statementsBySql.get(statement) ?? "";
+          return operation === "price"
+            ? sql.includes("pharos:dex-scoring:price-publication-fence")
+            : /^\s*UPDATE dex_liquidity\s+SET depth_stability\b/.test(sql);
+        });
+        const fire = () => {
+          if (!publication || injections.length > 0) return;
+          injections.push(`${operation}:${timing}`);
+          inject();
+        };
+        if (timing === "before") fire();
+        const result = await db.batch<T>(statements);
+        if (timing === "after") fire();
+        return result;
+      },
+    }),
+  };
 }
 
 function supersedeBeforePublication(
   db: D1Database,
-  sqlite: import("node:sqlite").DatabaseSync,
-): D1Database {
-  let batchCount = 0;
-  return makeNoopD1({
-    prepare: (sql: string) => db.prepare(sql),
-    batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
-      batchCount++;
-      if (batchCount === 3) {
+  sqlite: DatabaseSync,
+) {
+  return atPublication(db, "price", "before", () => {
         const nextGenerationId = `${GENERATION_ID}-superseding`;
         sqlite.exec("BEGIN IMMEDIATE");
         try {
@@ -109,9 +127,6 @@ function supersedeBeforePublication(
           sqlite.exec("ROLLBACK");
           throw error;
         }
-      }
-      return db.batch<T>(statements);
-    },
   });
 }
 
@@ -210,10 +225,14 @@ describe("DEX scoring publication atomicity", () => {
   it("keeps the previous dex_prices generation when the final atomic batch fails", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();
     const before = readPublicPrices(sqlite);
+    const fault = atPublication(db, "price", "before", () => {
+      throw new Error("injected publication failure");
+    });
 
     await expect(
-      computePriceGeneration(failAfterSuccessfulBatches(db, 2), makeUsdPricePools(30), NOW_SEC),
-    ).rejects.toThrow("injected D1 batch failure");
+      computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC),
+    ).rejects.toThrow("injected publication failure");
+    expect(fault.injections).toEqual(["price:before"]);
 
     expect(readPublicPrices(sqlite)).toEqual(before);
     expect(
@@ -224,7 +243,11 @@ describe("DEX scoring publication atomicity", () => {
   it("replays an ambiguous post-commit publication without emptying dex_prices", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();
 
-    await computePriceGeneration(failOnceAfterCommittedPublication(db), makeUsdPricePools(30), NOW_SEC);
+    const fault = atPublication(db, "price", "after", () => {
+      throw new Error("D1_ERROR: internal error; reference injected-post-commit");
+    });
+    await computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC);
+    expect(fault.injections).toEqual(["price:after"]);
 
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM dex_prices WHERE updated_at = ?").get(NOW_SEC),
@@ -238,10 +261,12 @@ describe("DEX scoring publication atomicity", () => {
   it("rejects publication when a newer generation becomes current before the atomic write", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();
     const before = readPublicPrices(sqlite);
+    const fault = supersedeBeforePublication(db, sqlite);
 
     await expect(
-      computePriceGeneration(supersedeBeforePublication(db, sqlite), makeUsdPricePools(30), NOW_SEC),
+      computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC),
     ).rejects.toThrow("price publication fence/replacement changed 0 rows");
+    expect(fault.injections).toEqual(["price:before"]);
 
     expect(readPublicPrices(sqlite)).toEqual(before);
     expect(
@@ -492,10 +517,14 @@ describe("DEX scoring publication atomicity", () => {
     const stability = new Map(
       ACTIVE_STABLECOINS.slice(0, 60).map((coin, index) => [coin.id, 0.5 + index / 1_000] as const),
     );
+    const fault = atPublication(db, "depth", "before", () => {
+      throw new Error("injected publication failure");
+    });
 
     await expect(
-      computeDepthStability(failAfterSuccessfulBatches(db, 3), stability, GENERATION_ID),
-    ).rejects.toThrow("injected D1 batch failure");
+      computeDepthStability(fault.db, stability, GENERATION_ID),
+    ).rejects.toThrow("injected publication failure");
+    expect(fault.injections).toEqual(["depth:before"]);
 
     expect(
       sqlite

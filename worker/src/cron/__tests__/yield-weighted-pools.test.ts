@@ -2,23 +2,16 @@ import { describe, expect, it } from "vitest";
 import { buildWeightedYieldPoolGroupSource } from "../yield-sync/weighted-pools";
 import type { DlPool } from "../yield-sync/types";
 import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 function makePool(overrides: Partial<DlPool> & Pick<DlPool, "pool" | "tvlUsd" | "apy">): DlPool {
-  return {
+  return makeDlYieldPool({
+    project: "dtrinity-dusd",
+    symbol: "SDUSD",
+    apyBase: overrides.apy,
+    apyMean30d: overrides.apy,
     ...overrides,
-    pool: overrides.pool,
-    chain: overrides.chain ?? "Ethereum",
-    project: overrides.project ?? "dtrinity-dusd",
-    symbol: overrides.symbol ?? "SDUSD",
-    tvlUsd: overrides.tvlUsd,
-    apy: overrides.apy,
-    apyBase: overrides.apyBase ?? overrides.apy,
-    apyReward: overrides.apyReward ?? null,
-    apyMean30d: overrides.apyMean30d ?? overrides.apy,
-    stablecoin: overrides.stablecoin ?? true,
-    exposure: overrides.exposure ?? "single",
-    underlyingTokens: overrides.underlyingTokens ?? [],
-  };
+  });
 }
 
 function makeConfig(overrides: Partial<WeightedYieldPoolGroupConfig> = {}): WeightedYieldPoolGroupConfig {
@@ -95,23 +88,32 @@ describe("buildWeightedYieldPoolGroupSource", () => {
     expect(source).toBeNull();
   });
 
-  it("rejects spoofed weighted members whose identity metadata does not match the curated pool", () => {
-    const source = buildWeightedYieldPoolGroupSource(
-      makeConfig({ poolIds: ["spoofed"] }),
-      [
-        makePool({
-          pool: "spoofed",
-          tvlUsd: 1_000_000,
-          apy: 987.65,
-          chain: "AttackerChain",
-          project: "attacker-project",
-          symbol: "FAKE",
-          stablecoin: false,
-        }),
-      ],
-    );
+  it.each([
+    { chain: "AttackerChain" },
+    { project: "attacker-project" },
+    { symbol: "FAKE" },
+    { stablecoin: false },
+  ])("rejects an independently spoofed identity: %j", (identity) => {
+    const config = makeConfig({ poolIds: ["spoofed"] });
+    const accepted = makePool({ pool: "spoofed", tvlUsd: 1_000_000, apy: 5 });
+    expect(buildWeightedYieldPoolGroupSource(config, [accepted])?.currentApy).toBe(5);
+    expect(buildWeightedYieldPoolGroupSource(config, [{ ...accepted, ...identity }])).toBeNull();
+  });
 
-    expect(source).toBeNull();
+  it("weights each component using only its eligible TVL", () => {
+    const source = buildWeightedYieldPoolGroupSource(makeConfig(), [
+      makePool({ pool: "ethereum-pool", tvlUsd: 100, apy: 4, apyBase: null, apyReward: 2 }),
+      makePool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 300, apy: 8, apyBase: 6, apyReward: null }),
+    ]);
+    expect(source).toMatchObject({ currentApy: 7, apyBase: 6, apyReward: 2, sourceTvlUsd: 400 });
+  });
+
+  it("preserves all-null base and includes zero reward in its denominator", () => {
+    const source = buildWeightedYieldPoolGroupSource(makeConfig(), [
+      makePool({ pool: "ethereum-pool", tvlUsd: 100, apy: 4, apyBase: null, apyReward: 0 }),
+      makePool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 300, apy: 8, apyBase: null, apyReward: 4 }),
+    ]);
+    expect(source).toMatchObject({ currentApy: 7, apyBase: null, apyReward: 3 });
   });
 
   it("rejects weighted outputs that overflow finite numeric bounds", () => {

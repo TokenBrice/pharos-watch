@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { valueUsdFromBigIntPrice } from "../slice-math";
+import { valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
 
 describe("valueUsdFromBigIntPrice", () => {
   it("returns NaN for non-positive or non-finite prices", () => {
@@ -62,5 +62,12 @@ describe("valueUsdFromBigIntPrice", () => {
     // — both branches must converge on the same integer.
     const price = Number.MAX_SAFE_INTEGER;
     expect(valueUsdFromBigIntPrice(1_000_000n, 6, price)).toBe(price);
+  });
+});
+
+describe("worseRisk", () => {
+  it("retains the higher-risk exposure regardless of merge order", () => {
+    expect(worseRisk("low", "high")).toBe("high");
+    expect(worseRisk("high", "low")).toBe("high");
   });
 });

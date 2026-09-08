@@ -12,7 +12,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   buildDexLiquidityPublicationGenerationId,

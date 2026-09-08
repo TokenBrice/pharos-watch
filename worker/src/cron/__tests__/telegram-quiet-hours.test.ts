@@ -6,7 +6,7 @@ import {
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
 } from "../../lib/telegram/quiet-hours";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
 const { open, closeAll } = createLatestSchemaFixtureTracker();

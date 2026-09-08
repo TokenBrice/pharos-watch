@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
@@ -16,8 +16,11 @@ import { adaptCollateralPositions, fetchCollateralPositionsApiReserves } from ".
 import { fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
 import { mockedReserveHelper, TEST_SIGNAL } from "./reserve-adapter.test-support";
 
+const unexpectedBridgeRequests: unknown[] = [];
+afterEach(() => { expect(unexpectedBridgeRequests).toEqual([]); });
 beforeEach(() => {
   vi.clearAllMocks();
+  unexpectedBridgeRequests.length = 0;
 });
 
 describe("adaptCollateralPositions", () => {
@@ -453,11 +456,29 @@ function primeBridgeBasketMocks(options: {
     "bridge:1:inventory": word(balances[1]),
     "bridge:1:minter": word(true),
   };
-  mockedReserveHelper(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => calls.map((call) => ({
-    label: call.label,
-    success: call.label !== options.failedLabel,
-    returnData: defaults[call.label] ?? word(0n),
-  })));
+  const requests: Record<string, { contract: string; data: string }> = {};
+  for (const [index, bridge, token] of [[0, EURS_BRIDGE, EURS], [1, EURC_BRIDGE, EURC]] as const) {
+    const owner = bridge.slice(2).toLowerCase().padStart(64, "0");
+    requests[`bridge:${index}:underlying`] = { contract: bridge, data: "0x7439ae59" };
+    requests[`bridge:${index}:deuro`] = { contract: bridge, data: "0xd395d24b" };
+    requests[`bridge:${index}:decimals`] = { contract: token, data: "0x313ce567" };
+    requests[`bridge:${index}:inventory`] = { contract: token, data: `0x70a08231${owner}` };
+    requests[`bridge:${index}:minter`] = { contract: DEURO, data: `0xaa271e1a${owner}` };
+  }
+  mockedReserveHelper(fetchOnchainMulticall3).mockImplementation(async ({ calls, chain }) => {
+    if (chain !== "ethereum") {
+      unexpectedBridgeRequests.push({ chain });
+      throw new Error(`Unexpected bridge chain ${chain}`);
+    }
+    return calls.map((call) => {
+      const expected = requests[call.label];
+      if (!expected || call.contract.toLowerCase() !== expected.contract.toLowerCase() || call.data !== expected.data) {
+        unexpectedBridgeRequests.push(call);
+        throw new Error(`Unexpected bridge request ${JSON.stringify(call)}`);
+      }
+      return { label: call.label, success: call.label !== options.failedLabel, returnData: defaults[call.label] };
+    });
+  });
 }
 
 describe("fetchCollateralPositionsApiReserves bridge basket", () => {

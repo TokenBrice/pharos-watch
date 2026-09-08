@@ -32,7 +32,7 @@ import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
 import { loadYieldSyncState } from "../yield-sync/state-loading";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-families";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => sqliteFixtures.closeAll());

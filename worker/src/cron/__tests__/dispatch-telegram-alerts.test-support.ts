@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { vi } from "vitest";
 import { mockCircuitBreaker } from "../../test-helpers/cron";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { scoreToGrade } from "@shared/lib/report-card-core";
@@ -15,7 +15,7 @@ import {
   insertTelegramSubscriber,
   type TelegramSubscriberSeed,
 } from "./telegram-subscriber.test-support";
-import type { SqliteD1Options } from "../../test-helpers/sqlite-d1";
+import type { SqliteD1Options } from "@shared/test-utils/sqlite-d1";
 
 const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
   peggedAssets: [
@@ -507,9 +507,9 @@ function alertFlag(flags: AlertFlags | undefined, family: AlertFamilySeed): numb
   return flags?.[family] === true ? 1 : 0;
 }
 
-function seedSubscription(sqlite: DatabaseSync, input: DispatchSubscriptionSeed): void {
-  sqlite
-    .prepare(
+function seedSubscriptions(sqlite: DatabaseSync, inputs: DispatchSubscriptionSeed[]): void {
+  if (inputs.length === 0) return;
+  const statement = sqlite.prepare(
       `INSERT INTO telegram_subscriptions (
        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
        alert_launch, alert_reserve, dews_min_band, safety_mode,
@@ -517,8 +517,8 @@ function seedSubscription(sqlite: DatabaseSync, input: DispatchSubscriptionSeed)
        alert_depeg_override, alert_safety_override, alert_launch_override,
        alert_reserve_override
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
+    );
+  for (const input of inputs) statement.run(
       input.chatId,
       input.stablecoinId,
       alertFlag(input.alerts, "dews"),
@@ -744,7 +744,7 @@ function withDispatchOperationFaults(
 function seedDispatchFixture(sqlite: DatabaseSync, input: DispatchSeed): void {
   for (const [key, value] of Object.entries(input.cache ?? {})) seedCacheRow(sqlite, key, value);
   for (const row of input.subscribers ?? []) insertTelegramSubscriber(sqlite, row);
-  for (const row of input.subscriptions ?? []) seedSubscription(sqlite, row);
+  seedSubscriptions(sqlite, input.subscriptions ?? []);
   for (const row of input.presets ?? []) seedPreset(sqlite, row);
   for (const row of input.dews ?? []) seedDews(sqlite, row);
   for (const row of input.depegs ?? []) seedDepeg(sqlite, row);

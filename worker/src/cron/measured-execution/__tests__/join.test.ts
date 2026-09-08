@@ -49,7 +49,8 @@ import {
   UNISWAP_V4_HOOK_FREE_ADDRESS,
   getUniswapV4Deployment,
 } from "../uniswap-v4";
-import { makeCurve3PoolPacket, makeUniswapV3Target } from "./measured-execution.test-support";
+import { makeCurve3PoolPacket, makeV3Target } from "./measured-execution.test-support";
+import { makeJoinPoints, makeJoinPool, makeJoinQuote } from "./join.test-support";
 
 function curveCompositeRoute(policy: CurveMetapoolPolicy) {
   const poolId = `${policy.chain}:${policy.poolAddress}`;
@@ -203,52 +204,6 @@ function uniswapV4Route() {
   return { measuredTarget, profile };
 }
 
-function slipstreamTarget(): DexMeasuredExecutionTarget {
-  const input = {
-    schemaVersion: "dex-measured-target-v1" as const,
-    stablecoinId: "usdc-circle",
-    adapterProfileId: "aerodrome-slipstream-quoter-v2",
-    protocol: "aerodrome-slipstream",
-    chain: "base",
-    poolId: "base:0x3333333333333333333333333333333333333333",
-    poolTokenAddresses: [
-      "0x1111111111111111111111111111111111111111",
-      "0x2222222222222222222222222222222222222222",
-    ] as [`0x${string}`, `0x${string}`],
-    tokenIn: {
-      address: "0x1111111111111111111111111111111111111111" as const,
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdc-circle",
-    },
-    tokenOut: {
-      address: "0x2222222222222222222222222222222222222222" as const,
-      symbol: "USDT",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdt-tether",
-    },
-    tickSpacing: 1,
-    retainedTvlUsd: 100_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_000,
-  };
-  return {
-    ...input,
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: input.adapterProfileId,
-      stablecoinId: input.stablecoinId,
-      chain: input.chain,
-      protocol: input.protocol,
-      poolId: input.poolId,
-      tokenInAddress: input.tokenIn.address,
-      tokenOutAddress: input.tokenOut.address,
-      poolTokenAddresses: input.poolTokenAddresses,
-      tickSpacing: input.tickSpacing,
-    }),
-  };
-}
 
 describe("measured execution join activation", () => {
   it("joins reviewed hook-free Ethereum V4 evidence without an activation gate", () => {
@@ -581,7 +536,7 @@ describe("measured execution join activation", () => {
   });
 
   it("drops retired Optimism Uniswap V3 profiles at deployment validation", () => {
-    const measuredTarget = makeUniswapV3Target({ chain: "optimism" });
+    const measuredTarget = makeV3Target({ chain: "optimism" });
     const profile = buildDexMeasuredExecutionProfile({
       target: measuredTarget,
       targetGenerationId: "target-generation",
@@ -590,40 +545,9 @@ describe("measured execution join activation", () => {
       blockNumber: 25_536_894,
       endpointAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
       endpointCodeHash: "0xd833dcf44a912014423afa2b637f23b5db5b7dc492494cbe3f46026a6d57b424",
-      points: [
-        {
-          amountInRaw: "1000000000",
-          amountOutRaw: "999000000",
-          callData: "0x01",
-          returnData: "0x01",
-          inputUsd: 1_000,
-          outputUsd: 999,
-          costBps: 10,
-          passesCostBound: true,
-        },
-        {
-          amountInRaw: "100000000000",
-          amountOutRaw: "99900000000",
-          callData: "0x02",
-          returnData: "0x02",
-          inputUsd: 100_000,
-          outputUsd: 99_900,
-          costBps: 10,
-          passesCostBound: true,
-        },
-      ],
+      points: makeJoinPoints([[1_000, 999], [100_000, 99_900]]),
     });
-    const pool: PoolEntry = {
-      poolId: measuredTarget.poolId,
-      project: measuredTarget.protocol,
-      chain: measuredTarget.chain,
-      tvlUsd: measuredTarget.retainedTvlUsd,
-      symbol: "USDC-USDT",
-      volumeUsd1d: 0,
-      poolType: "uniswap-v3-1bp",
-      source: "dl",
-      extra: { measuredExecutionTarget: measuredTarget },
-    };
+    const pool = makeJoinPool(measuredTarget);
 
     const diagnostics = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
@@ -634,16 +558,7 @@ describe("measured execution join activation", () => {
         byTargetId: new Map([
           [
             measuredTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "quote-generation",
-              targetGenerationId: "target-generation",
-              resolution: "latest",
-              latestFailureReason: null,
-            },
+            makeJoinQuote(measuredTarget, profile),
           ],
         ]),
       },
@@ -667,7 +582,10 @@ describe("measured execution join activation", () => {
   });
 
   it("admits a valid Base Aerodrome Slipstream profile after activation", () => {
-    const measuredTarget = slipstreamTarget();
+    const measuredTarget = makeV3Target({
+      chain: "base", adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      protocol: "aerodrome-slipstream", feePips: undefined, tickSpacing: 1,
+    });
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Base Slipstream deployment");
     const profile = buildDexMeasuredExecutionProfile({
@@ -678,40 +596,9 @@ describe("measured execution join activation", () => {
       blockNumber: 49_039_054,
       endpointAddress: deployment.endpointAddress,
       endpointCodeHash: deployment.expectedCodeHash,
-      points: [
-        {
-          amountInRaw: "1000000000",
-          amountOutRaw: "999000000",
-          callData: "0x01",
-          returnData: "0x01",
-          inputUsd: 1_000,
-          outputUsd: 999,
-          costBps: 10,
-          passesCostBound: true,
-        },
-        {
-          amountInRaw: "100000000000",
-          amountOutRaw: "99900000000",
-          callData: "0x02",
-          returnData: "0x02",
-          inputUsd: 100_000,
-          outputUsd: 99_900,
-          costBps: 10,
-          passesCostBound: true,
-        },
-      ],
+      points: makeJoinPoints([[1_000, 999], [100_000, 99_900]]),
     });
-    const pool: PoolEntry = {
-      poolId: measuredTarget.poolId,
-      project: measuredTarget.protocol,
-      chain: measuredTarget.chain,
-      tvlUsd: measuredTarget.retainedTvlUsd,
-      symbol: "USDC-USDT",
-      volumeUsd1d: 0,
-      poolType: "aerodrome-slipstream-1bp",
-      source: "direct_api",
-      extra: { measuredExecutionTarget: measuredTarget },
-    };
+    const pool = makeJoinPool(measuredTarget, { poolType: "aerodrome-slipstream-1bp", source: "direct_api" });
 
     const diagnostics = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
@@ -722,16 +609,7 @@ describe("measured execution join activation", () => {
         byTargetId: new Map([
           [
             measuredTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "quote-generation",
-              targetGenerationId: "target-generation",
-              resolution: "latest",
-              latestFailureReason: null,
-            },
+            makeJoinQuote(measuredTarget, profile),
           ],
         ]),
       },
@@ -751,13 +629,7 @@ describe("measured execution join activation", () => {
         byTargetId: new Map([
           [
             measuredTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "quote-generation",
-              targetGenerationId: "target-generation",
+            makeJoinQuote(measuredTarget, profile, {
               resolution: "last-known-good",
               latestFailureReason: "quote-missing",
               observationHistory: {
@@ -770,7 +642,7 @@ describe("measured execution join activation", () => {
                 conservativeStatistic: "pointwise-minimum",
                 conservativeCapacityCurve: profile.capacityCurve,
               },
-            },
+            }),
           ],
         ]),
       },
@@ -784,7 +656,7 @@ describe("measured execution join activation", () => {
   });
 
   it("admits a fresh last-known-good profile with its original generation identity and quote clock", () => {
-    const measuredTarget = makeUniswapV3Target();
+    const measuredTarget = makeV3Target();
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
     const profile = buildDexMeasuredExecutionProfile({
@@ -795,31 +667,10 @@ describe("measured execution join activation", () => {
       blockNumber: 25_536_894,
       endpointAddress: deployment.endpointAddress,
       endpointCodeHash: deployment.expectedCodeHash,
-      points: [
-        {
-          amountInRaw: "1000000000",
-          amountOutRaw: "970000000",
-          callData: "0x01",
-          returnData: "0x01",
-          inputUsd: 1_000,
-          outputUsd: 970,
-          costBps: 300,
-          passesCostBound: false,
-        },
-      ],
+      points: makeJoinPoints([[1_000, 970]]),
     });
     const currentTarget = { ...measuredTarget, capturedAt: 2_000 };
-    const pool: PoolEntry = {
-      poolId: currentTarget.poolId,
-      project: currentTarget.protocol,
-      chain: currentTarget.chain,
-      tvlUsd: currentTarget.retainedTvlUsd,
-      symbol: "USDC-USDT",
-      volumeUsd1d: 0,
-      poolType: "uniswap-v3-1bp",
-      source: "dl",
-      extra: { measuredExecutionTarget: currentTarget },
-    };
+    const pool = makeJoinPool(currentTarget);
 
     const diagnostics = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([[currentTarget.stablecoinId, [pool]]]),
@@ -830,13 +681,7 @@ describe("measured execution join activation", () => {
         byTargetId: new Map([
           [
             currentTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "quote-generation-lkg",
-              targetGenerationId: "target-generation-lkg",
+            makeJoinQuote(measuredTarget, profile, {
               resolution: "last-known-good",
               latestFailureReason: "request-budget-exhausted",
               observationHistory: {
@@ -849,7 +694,7 @@ describe("measured execution join activation", () => {
                 conservativeStatistic: "pointwise-minimum",
                 conservativeCapacityCurve: profile.capacityCurve,
               },
-            },
+            }),
           ],
         ]),
       },
@@ -869,7 +714,7 @@ describe("measured execution join activation", () => {
   });
 
   it("retains a mature last-known-good route when its pool rotates out of the current shortlist", () => {
-    const measuredTarget = makeUniswapV3Target();
+    const measuredTarget = makeV3Target();
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
     const profile = buildDexMeasuredExecutionProfile({
@@ -880,28 +725,7 @@ describe("measured execution join activation", () => {
       blockNumber: 25_536_894,
       endpointAddress: deployment.endpointAddress,
       endpointCodeHash: deployment.expectedCodeHash,
-      points: [
-        {
-          amountInRaw: "1000000000",
-          amountOutRaw: "999000000",
-          callData: "0x01",
-          returnData: "0x01",
-          inputUsd: 1_000,
-          outputUsd: 999,
-          costBps: 10,
-          passesCostBound: true,
-        },
-        {
-          amountInRaw: "100000000000",
-          amountOutRaw: "99900000000",
-          callData: "0x02",
-          returnData: "0x02",
-          inputUsd: 100_000,
-          outputUsd: 99_900,
-          costBps: 10,
-          passesCostBound: true,
-        },
-      ],
+      points: makeJoinPoints([[1_000, 999], [100_000, 99_900]]),
     });
     const evidence = {
       quoteGenerationId: "quote-generation-latest",
@@ -910,14 +734,8 @@ describe("measured execution join activation", () => {
       byTargetId: new Map([
         [
           measuredTarget.targetId,
-          {
-            quotedTarget: measuredTarget,
-            status: "measured" as const,
-            failureReason: null,
-            profile,
-            quoteGenerationId: "quote-generation-lkg",
-            targetGenerationId: "target-generation-lkg",
-            resolution: "last-known-good" as const,
+          makeJoinQuote(measuredTarget, profile, {
+            resolution: "last-known-good",
             latestFailureReason: "quote-missing",
             observationHistory: {
               completeProducerCycleCount: 3,
@@ -929,7 +747,7 @@ describe("measured execution join activation", () => {
               conservativeStatistic: "pointwise-minimum" as const,
               conservativeCapacityCurve: profile.capacityCurve,
             },
-          },
+          }),
         ],
       ]),
     };
@@ -957,7 +775,7 @@ describe("measured execution join activation", () => {
   });
 
   it("does not retain an immature, stale, or still-current measured route", () => {
-    const measuredTarget = makeUniswapV3Target();
+    const measuredTarget = makeV3Target();
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
     const profile = buildDexMeasuredExecutionProfile({
@@ -968,18 +786,7 @@ describe("measured execution join activation", () => {
       blockNumber: 25_536_894,
       endpointAddress: deployment.endpointAddress,
       endpointCodeHash: deployment.expectedCodeHash,
-      points: [
-        {
-          amountInRaw: "1000000000",
-          amountOutRaw: "999000000",
-          callData: "0x01",
-          returnData: "0x01",
-          inputUsd: 1_000,
-          outputUsd: 999,
-          costBps: 10,
-          passesCostBound: true,
-        },
-      ],
+      points: makeJoinPoints([[1_000, 999]]),
     });
     const quote = {
       quotedTarget: measuredTarget,
@@ -1007,17 +814,7 @@ describe("measured execution join activation", () => {
       publishedAt: 2_000,
       byTargetId: new Map([[measuredTarget.targetId, quote]]),
     };
-    const currentPool: PoolEntry = {
-      poolId: measuredTarget.poolId,
-      project: measuredTarget.protocol,
-      chain: measuredTarget.chain,
-      tvlUsd: measuredTarget.retainedTvlUsd,
-      symbol: "USDC-USDT",
-      volumeUsd1d: 0,
-      poolType: "uniswap-v3-1bp",
-      source: "dl",
-      extra: { measuredExecutionTarget: measuredTarget },
-    };
+    const currentPool = makeJoinPool(measuredTarget);
 
     expect(
       buildDexMeasuredExecutionRetainedRoutePools({
@@ -1057,7 +854,7 @@ describe("measured execution join activation", () => {
   });
 
   it("rejects a last-known-good profile once its original quote clock is stale", () => {
-    const measuredTarget = makeUniswapV3Target();
+    const measuredTarget = makeV3Target();
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
     const profile = buildDexMeasuredExecutionProfile({
@@ -1068,30 +865,9 @@ describe("measured execution join activation", () => {
       blockNumber: 25_536_894,
       endpointAddress: deployment.endpointAddress,
       endpointCodeHash: deployment.expectedCodeHash,
-      points: [
-        {
-          amountInRaw: "1000000000",
-          amountOutRaw: "970000000",
-          callData: "0x01",
-          returnData: "0x01",
-          inputUsd: 1_000,
-          outputUsd: 970,
-          costBps: 300,
-          passesCostBound: false,
-        },
-      ],
+      points: makeJoinPoints([[1_000, 970]]),
     });
-    const pool: PoolEntry = {
-      poolId: measuredTarget.poolId,
-      project: measuredTarget.protocol,
-      chain: measuredTarget.chain,
-      tvlUsd: measuredTarget.retainedTvlUsd,
-      symbol: "USDC-USDT",
-      volumeUsd1d: 0,
-      poolType: "uniswap-v3-1bp",
-      source: "dl",
-      extra: { measuredExecutionTarget: measuredTarget },
-    };
+    const pool = makeJoinPool(measuredTarget);
 
     const diagnostics = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
@@ -1102,16 +878,10 @@ describe("measured execution join activation", () => {
         byTargetId: new Map([
           [
             measuredTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "quote-generation-lkg",
-              targetGenerationId: "target-generation-lkg",
+            makeJoinQuote(measuredTarget, profile, {
               resolution: "last-known-good",
               latestFailureReason: "quoter-rpc-unavailable",
-            },
+            }),
           ],
         ]),
       },

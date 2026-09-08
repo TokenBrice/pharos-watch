@@ -5,7 +5,7 @@ import {
   makePendingDepegRow,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,

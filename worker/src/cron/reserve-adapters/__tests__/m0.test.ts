@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import musdReserves from "@shared/data/stablecoins/domains/reserves/musd-metamask.json";
+import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citrea.json";
+import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
+import ctusdCoin from "@shared/data/stablecoins/coins/ctusd-citrea.json";
+import usdatCoin from "@shared/data/stablecoins/coins/usdat-saturn.json";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptM0Collateral, fetchM0Reserves } from "../m0";
@@ -32,7 +36,7 @@ const SAMPLE_PAYLOAD = {
 describe("adaptM0Collateral", () => {
   it("keeps M0-backed curated aggregate collateral on the conservative classification", () => {
     for (const coinId of ["musd-metamask"]) {
-      const aggregateCollateral = TRACKED_META_BY_ID.get(coinId)?.reserves?.find(
+      const aggregateCollateral = musdReserves.reserves.find(
         ({ name }) => name === "U.S. Treasury bills & cash (M0 eligible collateral)",
       );
       expect(aggregateCollateral, coinId).toMatchObject({
@@ -46,8 +50,8 @@ describe("adaptM0Collateral", () => {
   });
 
   it("keeps exact extension claims out of the generic M0 collateral cohort", () => {
-    const ctusd = TRACKED_META_BY_ID.get("ctusd-citrea");
-    const usdat = TRACKED_META_BY_ID.get("usdat-saturn");
+    const ctusd = { ...ctusdCoin, reserves: ctusdReserves.reserves } as unknown as StablecoinMeta;
+    const usdat = { ...usdatCoin, reserves: usdatReserves.reserves } as unknown as StablecoinMeta;
 
     expect(ctusd?.reserves).toEqual([
       expect.objectContaining({

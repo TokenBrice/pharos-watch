@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accumulateAnthropicStream } from "../anthropic-stream";
+import { accumulateAnthropicStream, AnthropicStreamFailure } from "../anthropic-stream";
 
 interface SseEvent {
   event: string;
@@ -8,21 +8,21 @@ interface SseEvent {
 
 function sseResponse(events: SseEvent[], opts?: { chunkSplitPattern?: number[] }): Response {
   const encoder = new TextEncoder();
-  const encoded = events
+  const encoded = encoder.encode(events
     .map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`)
-    .join("");
+    .join(""));
   const chunks: Uint8Array[] = [];
   if (opts?.chunkSplitPattern?.length) {
     let cursor = 0;
     for (const len of opts.chunkSplitPattern) {
-      chunks.push(encoder.encode(encoded.slice(cursor, cursor + len)));
+      chunks.push(encoded.slice(cursor, cursor + len));
       cursor += len;
     }
     if (cursor < encoded.length) {
-      chunks.push(encoder.encode(encoded.slice(cursor)));
+      chunks.push(encoded.slice(cursor));
     }
   } else {
-    chunks.push(encoder.encode(encoded));
+    chunks.push(encoded);
   }
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -68,11 +68,17 @@ describe("accumulateAnthropicStream", () => {
   });
 
   it("handles SSE frames split mid-event across chunks", async () => {
-    const events = happyPathEvents(["alpha ", "beta ", "gamma"]);
-    // Force chunk boundaries at odd positions so some events span multiple reads.
-    const response = sseResponse(events, { chunkSplitPattern: [5, 10, 50, 30, 70, 200, 1] });
+    const events = happyPathEvents(["café ", "東京"]);
+    // One byte per read necessarily bisects both two- and three-byte characters.
+    const response = sseResponse(events, { chunkSplitPattern: Array(1000).fill(1) });
     const result = await accumulateAnthropicStream(response);
-    expect(result.text).toBe("alpha beta gamma");
+    expect(result.text).toBe("café 東京");
+  });
+
+  it("ignores malformed frames before valid output", async () => {
+    const valid = await sseResponse(happyPathEvents(["retained"])).text();
+    const response = rawSseResponse(`event: content_block_delta\ndata: {broken\n\n${valid}`);
+    expect((await accumulateAnthropicStream(response)).text).toBe("retained");
   });
 
   it("joins multiple data lines in one SSE frame with newlines", async () => {
@@ -111,10 +117,16 @@ describe("accumulateAnthropicStream", () => {
 
   it("throws when the stream emits an SSE error event", async () => {
     const response = sseResponse([
-      { event: "message_start", data: { type: "message_start", message: { id: "msg_e" } } },
+      { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5", usage: { input_tokens: 100, cache_creation_input_tokens: 20, cache_read_input_tokens: 30 } } } },
+      { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 7 } } },
       { event: "error", data: { type: "error", error: { type: "overloaded_error", message: "Anthropic is over capacity" } } },
     ]);
-    await expect(accumulateAnthropicStream(response)).rejects.toThrow(/overloaded_error|over capacity/);
+    const failure = await accumulateAnthropicStream(response).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(AnthropicStreamFailure);
+    expect((failure as AnthropicStreamFailure).result).toEqual({
+      text: "", servedModel: "claude-opus-5", inputTokens: 100, cacheWriteTokens: 20,
+      cacheReadTokens: 30, outputTokens: 7, stopReason: "end_turn", refusalCategory: null,
+    });
   });
 
   it("cancels the response body when an SSE error exits before EOF", async () => {
@@ -223,21 +235,21 @@ describe("accumulateAnthropicStream", () => {
     // no text) now fails via the dedicated truncation guard rather than the
     // generic empty-text error; the stop reason and token count stay visible.
     const response = sseResponse([
-      { event: "message_start", data: { type: "message_start", message: { id: "msg_mt" } } },
+      { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5", usage: { input_tokens: 12 } } } },
       { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } } },
       { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "reasoning..." } } },
       { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
       { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "max_tokens" }, usage: { output_tokens: 15999 } } },
       { event: "message_stop", data: { type: "message_stop" } },
     ]);
-    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e as Error);
-    expect(err).toBeInstanceOf(Error);
-    const msg = (err as Error).message;
-    expect(msg).toMatch(/max_tokens/);
-    expect(msg).toMatch(/outputTokens=15999/);
+    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AnthropicStreamFailure);
+    expect((err as AnthropicStreamFailure).result).toMatchObject({
+      text: "", servedModel: "claude-opus-5", inputTokens: 12, stopReason: "max_tokens", outputTokens: 15999,
+    });
   });
 
-  it("still reports stop reason and delta histograms for a non-truncated empty stream", async () => {
+  it("retains structured usage for a non-truncated empty stream", async () => {
     const response = sseResponse([
       { event: "message_start", data: { type: "message_start", message: { id: "msg_empty2" } } },
       { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } } },
@@ -246,11 +258,11 @@ describe("accumulateAnthropicStream", () => {
       { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 42 } } },
       { event: "message_stop", data: { type: "message_stop" } },
     ]);
-    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e as Error);
-    expect(err).toBeInstanceOf(Error);
-    const msg = (err as Error).message;
-    expect(msg).toMatch(/stopReason=end_turn/);
-    expect(msg).toMatch(/thinking_delta/);
+    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AnthropicStreamFailure);
+    expect((err as AnthropicStreamFailure).result).toMatchObject({
+      text: "", stopReason: "end_turn", outputTokens: 42,
+    });
   });
 
   it("throws when the response has no body", async () => {

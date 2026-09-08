@@ -1,8 +1,9 @@
+import { fetchWithRetryMock, resetRpcMocks } from "./helpers/rpc-mock";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encodeAbiParameters } from "viem/utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import {
   MENTO_BIPOOL_MANAGER_ADDRESS,
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
@@ -26,7 +27,6 @@ import {
   fetchOnchainUint256,
 } from "../helpers";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
-import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -51,12 +51,6 @@ const CURRENT_DASHBOARD_MAX_PAYLOAD_LAG_SEC = 3 * 24 * 60 * 60;
 
 const MENTO_RESERVE_URL = "https://example.com/mento/reserve";
 const MENTO_DASHBOARD_URL = "https://reserve.mento.org/";
-// Mirrors the adapter's browser-style headers, embedded in the shared JSON/text request cache key.
-const MENTO_BROWSER_HEADERS = buildBrowserHeaders("https://reserve.mento.org", "https://reserve.mento.org/");
-const mentoReserveBrowserCacheKey = `json-get:${MENTO_RESERVE_URL}:12000:${JSON.stringify(MENTO_BROWSER_HEADERS)}`;
-const mentoReserveNeutralCacheKey = `json-get:${MENTO_RESERVE_URL}:12000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
-const mentoDashboardBrowserCacheKey = `text-get:${MENTO_DASHBOARD_URL}:12000:${JSON.stringify(MENTO_BROWSER_HEADERS)}`;
-const mentoDashboardNeutralCacheKey = `text-get:${MENTO_DASHBOARD_URL}:12000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
 const MENTO_DASHBOARD_HTML_FIXTURE = String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
 
 // --- Redemption telemetry fixtures ------------------------------------------
@@ -186,6 +180,40 @@ const SAMPLE_PAYLOAD = {
     ],
   },
 };
+
+const forbiddenFetch = vi.fn(() => { throw new Error("Unexpected real network request"); });
+const httpRequests: Array<{ url: string; identity: string; referer: string | null }> = [];
+const unexpectedHttpRequests: string[] = [];
+let rejectedIdentities: string[] = [];
+
+beforeEach(() => {
+  forbiddenFetch.mockClear();
+  vi.stubGlobal("fetch", forbiddenFetch);
+  resetRpcMocks();
+  httpRequests.length = 0;
+  unexpectedHttpRequests.length = 0;
+  rejectedIdentities = [];
+  fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
+    const identity = headers.has("origin") ? "browser" : "neutral";
+    httpRequests.push({ url, identity, referer: headers.get("referer") });
+    if (![MENTO_RESERVE_URL, MENTO_DASHBOARD_URL].includes(url)
+      || (identity === "browser" && headers.get("origin") !== "https://reserve.mento.org")) {
+      unexpectedHttpRequests.push(url);
+      return null;
+    }
+    if (rejectedIdentities.includes(`${url}:${identity}`)) {
+      return new Response("denied", { status: identity === "browser" ? 401 : 403 });
+    }
+    return new Response(url === MENTO_RESERVE_URL ? JSON.stringify(SAMPLE_PAYLOAD) : MENTO_DASHBOARD_HTML_FIXTURE);
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  expect(forbiddenFetch).not.toHaveBeenCalled();
+  expect(unexpectedHttpRequests).toEqual([]);
+});
 
 describe("mento adapter", () => {
   it("parses reserve entries from the analytics API payload", () => {
@@ -421,102 +449,51 @@ describe("mento adapter", () => {
     });
   });
 
-  it("stamps reserve composition with verified dashboard freshness when available", async () => {
+  it.each([
+    { reserveFails: false, dashboardFails: false },
+    { reserveFails: true, dashboardFails: false },
+    { reserveFails: false, dashboardFails: true },
+  ])("uses observed HTTP header fallback: $reserveFails / $dashboardFails", async ({ reserveFails, dashboardFails }) => {
+    rejectedIdentities = [
+      ...(reserveFails ? [`${MENTO_RESERVE_URL}:browser`] : []),
+      ...(dashboardFails ? [`${MENTO_DASHBOARD_URL}:browser`] : []),
+    ];
     const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      makeMentoConfig(),
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
-          [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
-        ]),
-      } as never,
+      { id: "cusd-celo" } as never, makeMentoConfig(), new AbortController().signal, { requestCache: new Map() },
     );
-
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
     });
+    expect(result.slices).toContainEqual({ name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" });
+    for (const [url, fallback] of [[MENTO_RESERVE_URL, reserveFails], [MENTO_DASHBOARD_URL, dashboardFails]] as const) {
+      expect(httpRequests.filter((request) => request.url === url).map(({ identity }) => identity))
+        .toEqual(fallback ? ["browser", "neutral"] : ["browser"]);
+    }
+    expect(httpRequests.filter(({ identity }) => identity === "browser").map(({ referer }) => referer))
+      .toEqual([MENTO_DASHBOARD_URL, MENTO_DASHBOARD_URL]);
   });
 
-  it("falls back to neutral headers for the reserve JSON fetch when browser-style headers fail", async () => {
-    // Mento's analytics API intermittently 404s Cloudflare Worker egress
-    // while serving 200 to browser-like clients; the neutral fetch identity
-    // is the recovery path when the browser-style headers are rejected.
+  it("retains both failed HTTP causes for reserve JSON", async () => {
+    rejectedIdentities = [`${MENTO_RESERVE_URL}:browser`, `${MENTO_RESERVE_URL}:neutral`];
+    const error = await fetchMentoReserves(
+      { id: "cusd-celo" } as never, makeMentoConfig(), new AbortController().signal, { requestCache: new Map() },
+    ).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    for (const cause of ["HTTP 401", "HTTP 403", MENTO_RESERVE_URL]) {
+      expect((error as Error).message).toContain(cause);
+    }
+    expect(httpRequests.filter(({ url }) => url === MENTO_RESERVE_URL).map(({ identity }) => identity)).toEqual(["browser", "neutral"]);
+  });
+
+  it("degrades freshness when both dashboard identities fail", async () => {
+    rejectedIdentities = [`${MENTO_DASHBOARD_URL}:browser`, `${MENTO_DASHBOARD_URL}:neutral`];
     const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      makeMentoConfig(),
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [mentoReserveBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
-          [mentoReserveNeutralCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
-          [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
-        ]),
-      } as never,
+      { id: "cusd-celo" } as never, makeMentoConfig(), new AbortController().signal, { requestCache: new Map() },
     );
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
-    });
-  });
-
-  it("throws a combined error when both header identities fail for the reserve JSON fetch", async () => {
-    await expect(fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      makeMentoConfig(),
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [mentoReserveBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
-          [mentoReserveNeutralCacheKey, Promise.reject(new Error("neutral headers rejected"))],
-          [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
-        ]),
-      } as never,
-    )).rejects.toThrow(
-      "browser fetch failed: browser headers rejected; neutral fetch failed: neutral headers rejected",
-    );
-  });
-
-  it("falls back to neutral headers for the dashboard timestamp fetch when browser-style headers fail", async () => {
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      makeMentoConfig(),
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
-          [mentoDashboardBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
-          [mentoDashboardNeutralCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
-        ]),
-      } as never,
-    );
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
-    });
-    expect(result.warnings).toBeUndefined();
-  });
-
-  it("degrades to unverified freshness with an info warning when both dashboard timestamp header identities fail", async () => {
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      makeMentoConfig(),
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
-          [mentoDashboardBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
-          [mentoDashboardNeutralCacheKey, Promise.reject(new Error("neutral headers rejected"))],
-        ]),
-      } as never,
-    );
-
     expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(result.warnings?.some((warning) => warning.code === "mento-dashboard-timestamp-failed")).toBe(true);
+    expect(result.warnings?.map(({ code }) => code)).toContain("mento-dashboard-timestamp-failed");
+    expect(httpRequests.filter(({ url }) => url === MENTO_DASHBOARD_URL).map(({ identity }) => identity)).toEqual(["browser", "neutral"]);
   });
 
   it("stamps CDP composition with verified dashboard freshness when available", () => {
@@ -597,10 +574,7 @@ describe("mento redemption telemetry", () => {
   }
 
   function makeRequestCache(): Map<string, Promise<unknown>> {
-    return new Map<string, Promise<unknown>>([
-      [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
-      [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
-    ]);
+    return new Map<string, Promise<unknown>>();
   }
 
   it("computes broker-pool capacity as the summed counter-asset buckets and fee as the max matched spread", async () => {
@@ -960,6 +934,32 @@ describe("mento redemption telemetry", () => {
     expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
   });
 
+  function runRedemption(id: string, config: LiveReservesConfig) {
+    return fetchMentoReserves(
+      { id } as never, config, new AbortController().signal, { requestCache: new Map() },
+    );
+  }
+
+  function fpmmConfig(cdpStablecoin: string, poolAddress: string) {
+    return makeRedemptionConfig({
+      cdpStablecoin,
+      redemption: { kind: "fpmm-pool", poolAddress, usdmTokenAddress: USDM_ADDRESS },
+    });
+  }
+
+  function liquityConfig() {
+    return makeRedemptionConfig({
+      cdpStablecoin: "GBPm",
+      redemption: {
+        kind: "liquity-v2-cr",
+        collateralRegistryAddress: "0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb",
+        troveManagerAddress: "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
+        activePoolAddress: "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2",
+        tokenAddress: "0xCCF663b1fF11028f0b19058d0f7B674004a40746",
+      },
+    });
+  }
+
   it("computes liquity-v2-cr capacity ratio and fee for the GBPm CDP branch", async () => {
     const ACTIVE_POOL = "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2";
     const TROVE_MANAGER = "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9";
@@ -979,23 +979,7 @@ describe("mento redemption telemetry", () => {
       address === GBPM_TOKEN ? 1_000n * 10n ** 18n : null
     ));
 
-    const config = makeRedemptionConfig({
-      cdpStablecoin: "GBPm",
-      redemption: {
-        kind: "liquity-v2-cr",
-        collateralRegistryAddress: COLLATERAL_REGISTRY,
-        troveManagerAddress: TROVE_MANAGER,
-        activePoolAddress: ACTIVE_POOL,
-        tokenAddress: GBPM_TOKEN,
-      },
-    });
-
-    const result = await fetchMentoReserves(
-      { id: "gbpm-mento" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
+    const result = await runRedemption("gbpm-mento", liquityConfig());
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityRatioOfSupply: 0.5,
@@ -1014,23 +998,7 @@ describe("mento redemption telemetry", () => {
     vi.mocked(fetchOnchainRateBps).mockResolvedValue(null);
     vi.mocked(fetchErc20TotalSupply).mockResolvedValue(null);
 
-    const config = makeRedemptionConfig({
-      cdpStablecoin: "GBPm",
-      redemption: {
-        kind: "liquity-v2-cr",
-        collateralRegistryAddress: "0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb",
-        troveManagerAddress: "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
-        activePoolAddress: "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2",
-        tokenAddress: "0xCCF663b1fF11028f0b19058d0f7B674004a40746",
-      },
-    });
-
-    const result = await fetchMentoReserves(
-      { id: "gbpm-mento" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
+    const result = await runRedemption("gbpm-mento", liquityConfig());
 
     expect(result.slices.length).toBeGreaterThan(0);
     expect(result.metadata?.redemption).toBeUndefined();
@@ -1050,21 +1018,7 @@ describe("mento redemption telemetry", () => {
       return null;
     });
 
-    const config = makeRedemptionConfig({
-      cdpStablecoin: "JPYm",
-      redemption: {
-        kind: "fpmm-pool",
-        poolAddress: POOL_ADDRESS,
-        usdmTokenAddress: USDM_ADDRESS,
-      },
-    });
-
-    const result = await fetchMentoReserves(
-      { id: "jpym-mento" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
+    const result = await runRedemption("jpym-mento", fpmmConfig("JPYm", POOL_ADDRESS));
 
     const redemption = result.metadata?.redemption as Record<string, unknown> | undefined;
     expect(redemption).toMatchObject({
@@ -1085,21 +1039,7 @@ describe("mento redemption telemetry", () => {
       data === FPMM_LP_FEE_SELECTOR ? 20n : null
     ));
 
-    const config = makeRedemptionConfig({
-      cdpStablecoin: "JPYm",
-      redemption: {
-        kind: "fpmm-pool",
-        poolAddress: POOL_ADDRESS,
-        usdmTokenAddress: USDM_ADDRESS,
-      },
-    });
-
-    const result = await fetchMentoReserves(
-      { id: "jpym-mento" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
+    const result = await runRedemption("jpym-mento", fpmmConfig("JPYm", POOL_ADDRESS));
 
     const redemption = result.metadata?.redemption as Record<string, unknown> | undefined;
     expect(redemption).toMatchObject({ capacityUsd: 750 });
@@ -1109,21 +1049,7 @@ describe("mento redemption telemetry", () => {
   it("fails closed when the fpmm-pool balance read fails, leaving reserve slices unaffected", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValue(null);
 
-    const config = makeRedemptionConfig({
-      cdpStablecoin: "CHFm",
-      redemption: {
-        kind: "fpmm-pool",
-        poolAddress: "0xDC81135fD82f02Cae736E261FB676B716663e8b8",
-        usdmTokenAddress: USDM_ADDRESS,
-      },
-    });
-
-    const result = await fetchMentoReserves(
-      { id: "chfm-mento" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
+    const result = await runRedemption("chfm-mento", fpmmConfig("CHFm", "0xDC81135fD82f02Cae736E261FB676B716663e8b8"));
 
     expect(result.slices.length).toBeGreaterThan(0);
     expect(result.metadata?.redemption).toBeUndefined();

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { seedOpenEvent, seedDexEvidence } from "./detect-depegs.test-support";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();

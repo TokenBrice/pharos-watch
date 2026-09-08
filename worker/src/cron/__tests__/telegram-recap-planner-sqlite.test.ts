@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
 import { buildTelegramRecapDedupeKey } from "../../lib/telegram/recap-store";

@@ -7,7 +7,7 @@ import {
 } from "../deployment-outcomes";
 import type { StagedPool } from "../types";
 import { stagedPool } from "./discovery.test-support";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 

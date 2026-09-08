@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
@@ -6,37 +7,10 @@ import {
   makeSafetySnapshotCache,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
-  seedActiveSafetySource,
   telegramDeliveryTranscript,
 } from "./dispatch-telegram-alerts.test-support";
 
-type SafetySnapshot = Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
 
-function snapshots(
-  harness: ReturnType<typeof createDispatchHarness>,
-  options: {
-    dews?: Record<string, string>;
-    dewsAlertable?: Record<string, string>;
-    depeg?: Record<string, unknown>;
-    safety?: SafetySnapshot | string;
-    safetySource?: SafetySnapshot;
-    updatedAt?: number;
-  } = {},
-) {
-  const updatedAt = options.updatedAt ?? Math.floor(Date.now() / 1000) - 60;
-  harness.cache("alert:dews-snapshot", options.dews ?? {}, updatedAt);
-  if (options.dewsAlertable !== undefined)
-    harness.cache("alert:dews-alertable-snapshot", options.dewsAlertable, updatedAt);
-  harness.cache("alert:depeg-snapshot", options.depeg ?? {}, updatedAt);
-  harness.cache(
-    "alert:safety-snapshot",
-    typeof options.safety === "string" ? options.safety : makeSafetySnapshotCache(options.safety ?? {}).value,
-    updatedAt,
-  );
-  if (options.safetySource !== undefined) {
-    seedActiveSafetySource(harness, options.safetySource, updatedAt);
-  }
-}
 
 function direct(chatId: string, alerts: Record<string, boolean>, options: Record<string, unknown> = {}) {
   return {
@@ -63,7 +37,7 @@ describe("dispatchTelegramAlerts", () => {
   it("detects DEWS/depeg/safety changes and fans out to subscribers", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       dews: { "usdc-circle": "CALM" },
       safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" } },
       safetySource: { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" } },
@@ -113,7 +87,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("suppresses only safety alerts when the live safety source cache is from the wrong generation", async () => {
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       dews: { "usdc-circle": "CALM" },
       safety: makeSafetySnapshotCache(
         { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.08" } },
@@ -150,7 +124,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("keeps eventless degraded-safety runs on the queue path without capturing the subscriber cohort", async () => {
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: makeSafetySnapshotCache(
         { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "9.0" } },
         "legacy-generation",
@@ -194,7 +168,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("fans out global all-stablecoin alert subscriptions without per-coin rows", async () => {
     const harness = createDispatchHarness();
-    snapshots(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", signals: { supply: { value: 45, available: true } } }],
       ...global("777", { dews: true }),
@@ -208,7 +182,7 @@ describe("dispatchTelegramAlerts", () => {
   it("sends global safety alerts only for material downgrades", async () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 66, methodologyVersion: "7.09" } };
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: { "usdc-circle": { grade: "B", score: 70, methodologyVersion: "7.09" } },
       safetySource: safety,
     });
@@ -225,7 +199,7 @@ describe("dispatchTelegramAlerts", () => {
   it("suppresses minor global safety downgrades", async () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" } };
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: { "usdc-circle": { grade: "B-", score: 65, methodologyVersion: "7.09" } },
       safetySource: safety,
     });
@@ -242,7 +216,7 @@ describe("dispatchTelegramAlerts", () => {
   it("batches resolved depeg lookups into one query", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       depeg: {
         "usdc-circle": { symbol: "USDC", direction: "below", deviationBps: 125, price: 0.9875, pegReference: 1 },
         "usdt-tether": { symbol: "USDT", direction: "below", deviationBps: 110, price: 0.989, pegReference: 1 },
@@ -283,7 +257,7 @@ describe("dispatchTelegramAlerts", () => {
     const now = Math.floor(Date.now() / 1000);
     const ids = Array.from({ length: 101 }, (_, index) => `synthetic-${index}`);
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       depeg: Object.fromEntries(
         ids.map((id, index) => [
           id,
@@ -317,7 +291,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("lets a per-coin DEWS threshold override a global all-stablecoin follow", async () => {
     const harness = createDispatchHarness();
-    snapshots(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", band: "ALERT" }],
       subscribers: [{ chatId: "777", global: { dews: true } }],
@@ -332,7 +306,7 @@ describe("dispatchTelegramAlerts", () => {
   it("lets a per-coin safety follow override the global material-only safety tier", async () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" } };
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: { "usdc-circle": { grade: "B-", score: 65, methodologyVersion: "7.09" } },
       safetySource: safety,
     });
@@ -350,7 +324,7 @@ describe("dispatchTelegramAlerts", () => {
   it("lets a restrictive per-coin safety mode suppress the global safety tier", async () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 66, methodologyVersion: "7.09" } };
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: { "usdc-circle": { grade: "B", score: 70, methodologyVersion: "7.09" } },
       safetySource: safety,
     });
@@ -371,7 +345,7 @@ describe("dispatchTelegramAlerts", () => {
     const now = 1_778_150_000;
     const updatedAt = now - 3_600;
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: JSON.stringify({ "usdc-circle": { grade: "A", score: 84 } }),
       safetySource: {
         "usdc-circle": { grade: "A", score: 84, methodologyVersion: "7.09" },
@@ -412,7 +386,7 @@ describe("dispatchTelegramAlerts", () => {
     const now = 1_778_150_000;
     const updatedAt = now - 3_600;
     const harness = createDispatchHarness();
-    snapshots(harness, {
+    seedDispatchSnapshots(harness, {
       safety: JSON.stringify({ "usdc-circle": { grade: "A", score: 84 } }),
       safetySource: {
         "usdc-circle": { grade: "A", score: 84, methodologyVersion: "7.09" },
@@ -443,7 +417,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("ignores DEWS transitions to CALM/WATCH", async () => {
     const harness = createDispatchHarness();
-    snapshots(harness, { dews: { "usdc-circle": "ALERT" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "ALERT" } });
     harness.seed({ dews: [{ stablecoinId: "usdc-circle", score: 20, band: "WATCH" }] });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
@@ -453,7 +427,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("does not resend the same DEWS alert band after a silent WATCH/CALM dip", async () => {
     const harness = createDispatchHarness();
-    snapshots(harness, { dews: { "uusd-youves": "WATCH" }, dewsAlertable: { "uusd-youves": "ALERT" } });
+    seedDispatchSnapshots(harness, { dews: { "uusd-youves": "WATCH" }, dewsAlertable: { "uusd-youves": "ALERT" } });
     harness.seed({ dews: [{ stablecoinId: "uusd-youves", score: 39, band: "ALERT" }] });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 

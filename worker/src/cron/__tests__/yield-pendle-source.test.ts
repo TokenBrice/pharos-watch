@@ -12,7 +12,7 @@ describe("fetchPendleMarketSources", () => {
     const futureExpiry = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
     mockYieldSourceRoutes([
       {
-        match: "api-v2.pendle.finance",
+        match: "/core/v1/1/markets?",
         body: {
           total: 1,
           limit: 100,
@@ -36,10 +36,12 @@ describe("fetchPendleMarketSources", () => {
           ],
         },
       },
+      { match: "/core/v1/42161/markets?", body: { results: [] } },
+      { match: "/core/v1/8453/markets?", body: { results: [] } },
     ]);
 
     const results = await fetchPendleMarketSources();
-    expect(results.length).toBeGreaterThanOrEqual(1);
+    expect(results.map((result) => result.yield.sourceKey)).toEqual(["protocol-api:pendle:ethereum:0xabc"]);
     expect(results[0].yield).toEqual(
       expect.objectContaining({
         currentApy: expect.closeTo(5.2, 0),
@@ -55,7 +57,7 @@ describe("fetchPendleMarketSources", () => {
     const futureExpiry = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
     mockYieldSourceRoutes([
       {
-        match: "api-v2.pendle.finance",
+        match: "/core/v1/1/markets?",
         body: {
           total: 1,
           limit: 100,
@@ -79,6 +81,8 @@ describe("fetchPendleMarketSources", () => {
           ],
         },
       },
+      { match: "/core/v1/42161/markets?", body: { results: [] } },
+      { match: "/core/v1/8453/markets?", body: { results: [] } },
     ]);
 
     const results = await fetchPendleMarketSources();
@@ -88,7 +92,7 @@ describe("fetchPendleMarketSources", () => {
   it("filters expired and implausibly high implied APY markets", async () => {
     mockYieldSourceRoutes([
       {
-        match: "api-v2.pendle.finance",
+        match: "/core/v1/1/markets?",
         body: {
           total: 2,
           limit: 100,
@@ -127,8 +131,28 @@ describe("fetchPendleMarketSources", () => {
           ],
         },
       },
+      { match: "/core/v1/42161/markets?", body: { results: [] } },
+      { match: "/core/v1/8453/markets?", body: { results: [] } },
     ]);
 
     await expect(fetchPendleMarketSources()).resolves.toEqual([]);
+  });
+
+  it("keeps same-address markets on distinct chains", async () => {
+    mockYieldSourceRoutes([1, 42161, 8453].map((chainId) => ({
+      match: `/core/v1/${chainId}/markets?`,
+      body: { results: [{
+        address: "0xabc", chainId, isActive: true,
+        expiry: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+        impliedApy: 0.05, underlyingAsset: { symbol: "USDC", address: "0xdef" },
+        assetRepresentation: "USDC", protocol: "Test", liquidity: { usd: 2_000_000 },
+        categoryIds: ["stables"],
+      }] },
+    })), { requireMatch: true });
+    expect((await fetchPendleMarketSources()).map((result) => result.yield.sourceKey)).toEqual([
+      "protocol-api:pendle:ethereum:0xabc",
+      "protocol-api:pendle:arbitrum:0xabc",
+      "protocol-api:pendle:base:0xabc",
+    ]);
   });
 });

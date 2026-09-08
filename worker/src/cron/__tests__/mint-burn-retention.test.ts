@@ -1,13 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   MINT_BURN_EVENT_RETENTION_SEC,
   MINT_BURN_HOURLY_RETENTION_SEC,
   pruneMintBurnRetention,
 } from "../mint-burn/retention";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const NOW_SEC = 1_800_000_000;
 const HOUR_SEC = 3600;

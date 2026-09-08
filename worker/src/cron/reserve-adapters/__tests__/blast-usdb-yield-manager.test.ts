@@ -31,7 +31,7 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
     const result = await fetchBlastUsdbYieldManagerReserves(
       coin!,
       coin!.liveReservesConfig!,
-      AbortSignal.timeout(5_000),
+      new AbortController().signal,
     );
 
     expect(result.slices).toEqual([
@@ -64,7 +64,7 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
     const result = await fetchBlastUsdbYieldManagerReserves(
       coin!,
       coin!.liveReservesConfig!,
-      AbortSignal.timeout(5_000),
+      new AbortController().signal,
     );
 
     expect(result.warnings).toEqual([

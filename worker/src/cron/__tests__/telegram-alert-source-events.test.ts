@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import type { TelegramDispatchEvents } from "../dispatch-telegram-events";
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";

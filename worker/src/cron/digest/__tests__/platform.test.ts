@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   classifyDigestChannelStatus,
   didDigestChannelDeliver,
@@ -9,7 +9,7 @@ import {
   resolveDigestLlmConfig,
   runDigestChannelDelivery,
 } from "../platform";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   buildTelegramCreds,
@@ -30,6 +30,11 @@ vi.mock("../../../lib/fetch-retry", () => ({
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 function anthropicSseResponse(events: Array<{ event: string; data: unknown }>): Response {
   const encoded = events
@@ -264,16 +269,14 @@ describe("insertDigestRecord", () => {
   function sqliteD1(
     sqlite: DatabaseSync,
     throwAfterRun?: (runCount: number) => Error | null,
-  ): D1Database & { getRunCount: () => number; getHistory: () => Array<{ sql: string; binds: unknown[] }> } {
+  ): D1Database & { getRunCount: () => number } {
     let runCount = 0;
-    const history: Array<{ sql: string; binds: unknown[] }> = [];
 
     return {
       prepare: (sql: string) => ({
         bind: (...binds: unknown[]) => ({
           run: async () => {
             runCount++;
-            history.push({ sql, binds: [...binds] });
             const result = sqlite.prepare(sql).run(...(binds as never[]));
             const error = throwAfterRun?.(runCount);
             if (error) throw error;
@@ -282,14 +285,13 @@ describe("insertDigestRecord", () => {
         }),
       }),
       getRunCount: () => runCount,
-      getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
     } as D1Database & {
       getRunCount: () => number;
-      getHistory: () => Array<{ sql: string; binds: unknown[] }>;
     };
   }
 
   it("retries transient D1 overloads", async () => {
+    vi.useFakeTimers();
     let attempts = 0;
     const db = makeNoopD1({
       prepare: () => ({
@@ -303,29 +305,37 @@ describe("insertDigestRecord", () => {
       }),
     });
 
-    await insertDigestRecord(makeOptions(db));
+    const pending = expect(insertDigestRecord(makeOptions(db))).resolves.toBeUndefined();
+    await vi.runAllTimersAsync();
+    await pending;
 
     expect(attempts).toBe(2);
   });
 
   it("does not duplicate the digest row when a retried D1 write already committed", async () => {
+    vi.useFakeTimers();
     const sqlite = setupDigestSqlite();
     const db = sqliteD1(sqlite, (runCount) =>
       runCount === 1 ? new Error("D1 DB storage operation exceeded timeout") : null,
     );
 
     try {
-      await insertDigestRecord(makeOptions(db));
+      const pending = expect(insertDigestRecord(makeOptions(db))).resolves.toBeUndefined();
+      await vi.runAllTimersAsync();
+      await pending;
 
       const rows = sqlite
         .prepare("SELECT generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta FROM daily_digest")
         .all();
-      const history = db.getHistory();
-
       expect(db.getRunCount()).toBe(2);
-      expect(rows).toHaveLength(1);
-      expect(history[0]?.sql).toContain("WHERE NOT EXISTS");
-      expect(history[0]?.binds.slice(0, 6)).toEqual(history[0]?.binds.slice(6));
+      expect(rows).toEqual([{
+        generated_at: 1_710_000_000,
+        digest_text: "Digest body",
+        digest_title: "Digest title",
+        input_data: '{"ok":true}',
+        digest_extended: "Extended body",
+        digest_meta: '{"type":"daily"}',
+      }]);
     } finally {
       sqlite.close();
     }

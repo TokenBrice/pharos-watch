@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockRegistry } from "../../test-helpers/cron";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -38,7 +38,7 @@ import {
   reserveMonthlyCredits,
 } from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

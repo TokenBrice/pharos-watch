@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 vi.mock("../../lib/fetch-retry", async () => {
   const { mockDailyDigestFetchRetryModule } = await import("./daily-digest.test-support");

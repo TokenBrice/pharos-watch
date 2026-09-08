@@ -22,7 +22,7 @@ import {
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => sqliteFixtures.closeAll());

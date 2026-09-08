@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 const fixtures = createLatestSchemaFixtureTracker();

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
 import { makePsiDailyDb, makePsiSnapshotDb, type MockD1Database } from "./snapshot-cron.test-support";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { snapshotPsiDaily } from "../snapshot-psi";
 
 const mockD1 = makePsiSnapshotDb;

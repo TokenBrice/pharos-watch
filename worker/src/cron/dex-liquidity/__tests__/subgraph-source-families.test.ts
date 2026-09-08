@@ -20,6 +20,20 @@ import {
 } from "../../measured-execution/inventory";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("subgraph source families", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -69,12 +83,15 @@ describe("subgraph source families", () => {
     const poolAddress = "0x3333333333333333333333333333333333333333";
     let inFlight = 0;
     let maxInFlight = 0;
+    const waveStarted = createDeferred<void>();
+    const releaseWave = createDeferred<void>();
     const fetchMock = mockFetch([{
       match: (request) => configuredChains.some(([, subgraphId]) => request.url.endsWith(subgraphId)),
       respond: async () => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, 5));
+        if (inFlight === 5) waveStarted.resolve(undefined);
+        await releaseWave.promise;
         inFlight--;
         return {
           body: {
@@ -102,7 +119,20 @@ describe("subgraph source families", () => {
     const chainAddressToId = new Map(
       configuredChains.map(([chain]) => [`${chain}:${token0}`, "usdc-circle"]),
     );
-    const result = await fetchUniV3Data("graph-key", new Map(), chainAddressToId);
+    const pending = fetchUniV3Data("graph-key", new Map(), chainAddressToId);
+    void pending.catch((error: unknown) => waveStarted.reject(error));
+    // Failure-only watchdog: release blocked work even if the concurrency cap regresses below five.
+    const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);
+    try {
+      await waveStarted.promise;
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      expect(inFlight).toBe(5);
+    } finally {
+      clearTimeout(deadlockGuard);
+      releaseWave.resolve(undefined);
+      await pending;
+    }
+    const result = await pending;
 
     expect(fetchMock).toHaveBeenCalledTimes(configuredChains.length);
     expect(maxInFlight).toBe(5);
@@ -154,12 +184,15 @@ describe("subgraph source families", () => {
     const token1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
     let inFlight = 0;
     let maxInFlight = 0;
+    const waveStarted = createDeferred<void>();
+    const releaseWave = createDeferred<void>();
     const fetchMock = mockFetch([{
       match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
       respond: async () => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, 5));
+        if (inFlight === 5) waveStarted.resolve(undefined);
+        await releaseWave.promise;
         inFlight--;
         return {
           body: { data: { pools: [
@@ -192,7 +225,20 @@ describe("subgraph source families", () => {
       },
     }], { requireMatch: true });
 
-    const result = await fetchUniswapV4Data("graph-key");
+    const pending = fetchUniswapV4Data("graph-key");
+    void pending.catch((error: unknown) => waveStarted.reject(error));
+    // Failure-only watchdog; successful runs wait on the response gate, never the clock.
+    const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);
+    try {
+      await waveStarted.promise;
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      expect(inFlight).toBe(5);
+    } finally {
+      clearTimeout(deadlockGuard);
+      releaseWave.resolve(undefined);
+      await pending;
+    }
+    const result = await pending;
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(maxInFlight).toBe(5);
     const key = buildUniswapV4ExecutionCandidateKey(

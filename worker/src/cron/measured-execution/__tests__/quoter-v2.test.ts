@@ -47,6 +47,8 @@ const DEMANDED_GRID_USD = [
 
 interface ReplayFixture {
   name: string;
+  scoreEligible: boolean;
+  proofMetadata: { sqrtPriceX96After: string; initializedTicksCrossed: number; gasEstimate: string };
   adapterProfileId:
     | "uniswap-v3-quoter-v2"
     | "pancakeswap-v3-quoter-v2"
@@ -68,6 +70,8 @@ interface ReplayFixture {
 const REPLAYS: readonly ReplayFixture[] = [
   {
     name: "Ethereum Uniswap USDC to USDT",
+    scoreEligible: true,
+    proofMetadata: { sqrtPriceX96After: "79248341565300603285363026789", initializedTicksCrossed: 1, gasEstimate: "97213" },
     adapterProfileId: "uniswap-v3-quoter-v2",
     protocol: "uniswap-v3",
     chain: "ethereum",
@@ -84,6 +88,8 @@ const REPLAYS: readonly ReplayFixture[] = [
   },
   {
     name: "BSC Pancake USDT to USDC",
+    scoreEligible: true,
+    proofMetadata: { sqrtPriceX96After: "79200766217472717101264714746", initializedTicksCrossed: 1, gasEstimate: "174083" },
     adapterProfileId: "pancakeswap-v3-quoter-v2",
     protocol: "pancakeswap",
     chain: "bsc",
@@ -100,6 +106,8 @@ const REPLAYS: readonly ReplayFixture[] = [
   },
   {
     name: "BSC Uniswap V3 USDT to USD1",
+    scoreEligible: false,
+    proofMetadata: { sqrtPriceX96After: "8314069294112984745549269", initializedTicksCrossed: 20, gasEstimate: "5911001" },
     adapterProfileId: "uniswap-v3-quoter-v2",
     protocol: "uniswap-v3",
     chain: "bsc",
@@ -115,7 +123,9 @@ const REPLAYS: readonly ReplayFixture[] = [
       "0x000000000000000000000000000000000000000000000bfc397127a06fb0c61300000000000000000000000000000000000000000006e092997bb0bfc1ca9dd5000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000005a31d9",
   },
   {
-    name: "Base Aerodrome Slipstream USDC to USDbC",
+    name: "synthetic Base Aerodrome Slipstream USDC to USDbC",
+    scoreEligible: true,
+    proofMetadata: { sqrtPriceX96After: "79248341565300603285363026789", initializedTicksCrossed: 1, gasEstimate: "97213" },
     adapterProfileId: "aerodrome-slipstream-quoter-v2",
     protocol: "aerodrome-slipstream",
     chain: "base",
@@ -199,7 +209,27 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   });
 
   for (const fixture of REPLAYS) {
-    it(`replays ${fixture.name} and binds the exact factory pool`, async () => {
+    it(`decodes the million-dollar wire vector for ${fixture.name}`, async () => {
+      const target = makeTarget(fixture);
+      const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+      rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+        async (_chain: string, calls: Array<{ label: string }>) =>
+          calls.map((call) => ({ label: call.label, success: true, returnData: fixture.quoteReturnData })),
+      );
+      const outcomes = await quoteQuoterV2Requests({
+        requests: [{ target, inputUsd: 1_000_000, endpointAddress: deployment.endpointAddress }],
+        blockNumber: fixture.blockNumber, chainRpcs: new Map(),
+      });
+      expect(outcomes).toEqual([expect.objectContaining({
+        targetId: target.targetId,
+        point: expect.objectContaining({
+          amountInRaw: fixture.amountInRaw, amountOutRaw: fixture.amountOutRaw,
+          returnData: fixture.quoteReturnData, adapterMetadata: fixture.proofMetadata,
+        }),
+      })]);
+    });
+
+    it(`constructs a synthetic scaled grid for ${fixture.name} and binds the exact factory pool`, async () => {
       const target = makeTarget(fixture);
       const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain);
       if (!deployment) throw new Error(`missing ${fixture.name} deployment`);
@@ -283,12 +313,8 @@ describe("QuoterV2 pinned-block replay proofs", () => {
         payload: { platform: "evm", blockNumber: fixture.blockNumber },
       });
       expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
-      if (
-        isDexMeasuredExecutionDeploymentScoreEligible(
-          fixture.adapterProfileId,
-          fixture.chain,
-        )
-      ) {
+      expect(isDexMeasuredExecutionDeploymentScoreEligible(fixture.adapterProfileId, fixture.chain))
+        .toBe(fixture.scoreEligible);
         const measuredExecution = toMaturePublicProfile(profile);
         const p4 = buildP4DexExitRouteObservations({
           stablecoinId: target.stablecoinId,
@@ -309,12 +335,10 @@ describe("QuoterV2 pinned-block replay proofs", () => {
         });
         expect(p4.coverage).toMatchObject({
           retainedPoolCount: 1,
-          scoreEligibleObservationCount: 1,
-          scoreEligiblePoolCount: 1,
+          scoreEligibleObservationCount: fixture.scoreEligible ? 1 : 0,
+          scoreEligiblePoolCount: fixture.scoreEligible ? 1 : 0,
           scoreEligibleCapabilityPoolCount: 1,
-          unsupportedPoolCount: 0,
         });
-      }
       profile.executionEndpoint.address = "0x0000000000000000000000000000000000000001";
       expect(validateQuoterV2ProfileProof(profile)).toContain("execution-endpoint-identity-mismatch");
     });
@@ -396,7 +420,10 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       rpcBudget: budget,
     });
 
-    expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
+    expect(outcomes).toEqual(Array.from({ length: 8 }, () => expect.objectContaining({
+      targetId: target.targetId, inputUsd: 1_000_000,
+      point: expect.objectContaining({ amountOutRaw: "1000428895951" }),
+    })));
     expect(budget.openChains).toEqual([]);
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([
       8, 4, 2, 2, 4, 2, 2,
@@ -512,7 +539,10 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       chainRpcs: new Map(),
     });
 
-    expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
+    expect(outcomes).toEqual(Array.from({ length: 3 }, () => expect.objectContaining({
+      targetId: target.targetId, inputUsd: 1_000_000,
+      point: expect.objectContaining({ amountOutRaw: "1000428895951" }),
+    })));
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([3, 1, 1]);
   });
 

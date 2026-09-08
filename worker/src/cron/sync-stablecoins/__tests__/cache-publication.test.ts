@@ -4,7 +4,7 @@ import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../.
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
 import { normalizeStablecoinsPayload } from "../shared";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache, getPriceCache } from "../../../lib/db-cache";
 import { makePeggedAsset } from "./_fixtures";
 

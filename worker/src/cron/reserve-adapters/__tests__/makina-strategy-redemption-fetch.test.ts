@@ -19,8 +19,9 @@ const evmRpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../lib/evm-rpc", () => evmRpcMocks);
+const hashMock = vi.hoisted(() => vi.fn());
 vi.mock("viem/utils", () => ({
-  keccak256: () => REVIEWED_IMPLEMENTATION_CODE_HASH,
+  keccak256: hashMock,
 }));
 
 import {
@@ -91,7 +92,7 @@ function mockMakinaJson(): void {
   });
 }
 
-function mockSuccessfulRouteReads(): void {
+function mockSuccessfulRouteReads(overrides: Record<string, `0x${string}`> = {}): void {
   vi.mocked(fetchEvmBlockNumber).mockResolvedValue(BLOCK);
   vi.mocked(fetchEvmStorageAtBlock).mockResolvedValue(addressResult(BEACON));
   vi.mocked(fetchEvmCallHexAtBlock).mockResolvedValue(addressResult(REVIEWED_IMPLEMENTATION));
@@ -99,6 +100,9 @@ function mockSuccessfulRouteReads(): void {
   vi.mocked(fetchEvmUint256AtBlock).mockResolvedValue(3_104_889_979n);
   vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
     calls.map((call) => {
+      if (call.label in overrides) {
+        return { label: call.label, success: true, returnData: overrides[call.label] };
+      }
       switch (call.label) {
         case "redeemer-machine":
           return { label: call.label, success: true, returnData: addressResult(MACHINE) };
@@ -134,6 +138,7 @@ function mockSuccessfulRouteReads(): void {
 describe("fetchMakinaStrategyReserves redemption telemetry", () => {
   beforeEach(() => {
     resetRpcMocks();
+    hashMock.mockReturnValue(REVIEWED_IMPLEMENTATION_CODE_HASH);
     mockMakinaJson();
     mockSuccessfulRouteReads();
   });
@@ -183,6 +188,58 @@ describe("fetchMakinaStrategyReserves redemption telemetry", () => {
       BLOCK,
       expect.any(Object),
     );
+  });
+
+  it.each([
+    { locked: 0n, converted: 0n, capacity: 120.722783, next: 343 },
+    { locked: 100n * 10n ** 18n, converted: 103_496_333n, capacity: 17.226450, next: 344 },
+  ])("subtracts converted locked shares from idle USDC: $capacity USD available", async ({ locked, converted, capacity, next }) => {
+    mockSuccessfulRouteReads({
+      "redeemer-locked-shares": uint256Result(locked),
+      "redeemer-next-request-id": uint256Result(next),
+    });
+    vi.mocked(fetchEvmUint256AtBlock).mockResolvedValue(converted);
+    const result = await fetchMakinaStrategyReserves(
+      dusdCoin(), baseConfig(), new AbortController().signal, { chainRpcs: testChainRpcs },
+    );
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: expect.closeTo(capacity, 6) });
+    expect(fetchEvmUint256AtBlock).toHaveBeenCalledWith(
+      "ethereum", MACHINE, `0x07a2d13a${uint256Result(locked).slice(2)}`, BLOCK, expect.any(Object),
+    );
+  });
+
+  it("withholds telemetry when unchanged implementation has a different runtime hash", async () => {
+    hashMock.mockReturnValue(`0x${"11".repeat(32)}`);
+    const result = await fetchMakinaStrategyReserves(
+      dusdCoin(), baseConfig(), new AbortController().signal, { chainRpcs: testChainRpcs },
+    );
+    expect(result.metadata?.totalReserveUsd).toBe(11_000);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings?.map(({ code }) => code)).toContain("makina-redemption-telemetry-unavailable");
+  });
+
+  it("withholds telemetry for each mismatched route identity", async () => {
+    for (const label of ["redeemer-machine", "machine-accounting-token", "machine-share-token"]) {
+      mockSuccessfulRouteReads({ [label]: addressResult("0x9999999999999999999999999999999999999999") });
+      const result = await fetchMakinaStrategyReserves(
+        dusdCoin(), baseConfig(), new AbortController().signal, { chainRpcs: testChainRpcs },
+      );
+      expect(result.metadata?.totalReserveUsd, label).toBe(11_000);
+      expect(result.metadata?.redemption, label).toBeUndefined();
+      expect(result.warnings?.map(({ code }) => code), label).toContain("makina-redemption-telemetry-unavailable");
+    }
+  });
+
+  it("withholds telemetry when finalized request counter reaches or exceeds next request", async () => {
+    for (const finalized of [344, 345]) {
+      mockSuccessfulRouteReads({ "redeemer-last-finalized-request-id": uint256Result(finalized) });
+      const result = await fetchMakinaStrategyReserves(
+        dusdCoin(), baseConfig(), new AbortController().signal, { chainRpcs: testChainRpcs },
+      );
+      expect(result.metadata?.totalReserveUsd).toBe(11_000);
+      expect(result.metadata?.redemption).toBeUndefined();
+      expect(result.warnings?.map(({ code }) => code)).toContain("makina-redemption-telemetry-unavailable");
+    }
   });
 
   it("keeps reserve composition but withholds queue capacity when the redeemer implementation drifts", async () => {

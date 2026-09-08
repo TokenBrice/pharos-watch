@@ -53,33 +53,43 @@ const config = {
 
 const coin = { id: "asusdf-astherus", symbol: "asUSDF" } as StablecoinMeta;
 
-function mockEarnState(overrides: { underlyingAddress?: string } = {}): void {
+function mockEarnState(overrides: {
+  underlyingAddress?: string;
+  shareAddress?: string;
+  balance?: bigint;
+  unvested?: bigint;
+  supply?: bigint;
+  price?: bigint;
+  paused?: bigint | null;
+  failedSelector?: string;
+} = {}): void {
   mockErc4626Rpc({
     extraHandlers: [({ call }) => {
       if (!call?.data) return undefined;
       const to = call.to?.toLowerCase();
       const data = call.data.toLowerCase();
+      if (data === overrides.failedSelector) return jsonResponse({ result: "0x" });
 
       if (to === EARN_ADDRESS && data === "0xb249b35d") {
         return jsonResponse({ result: addressResult(overrides.underlyingAddress ?? UNDERLYING_ADDRESS) });
       }
       if (to === EARN_ADDRESS && data === "0x1d30e266") {
-        return jsonResponse({ result: addressResult(SHARE_ADDRESS) });
+        return jsonResponse({ result: addressResult(overrides.shareAddress ?? SHARE_ADDRESS) });
       }
       if (to === UNDERLYING_ADDRESS && data === EARN_BALANCE_CALL_DATA) {
-        return jsonResponse({ result: uint256Result(UNDERLYING_BALANCE) });
+        return jsonResponse({ result: uint256Result(overrides.balance ?? UNDERLYING_BALANCE) });
       }
       if (to === SHARE_ADDRESS && data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(TOTAL_SUPPLY) });
+        return jsonResponse({ result: uint256Result(overrides.supply ?? TOTAL_SUPPLY) });
       }
       if (to === EARN_ADDRESS && data === "0x9e65741e") {
-        return jsonResponse({ result: uint256Result(EXCHANGE_PRICE) });
+        return jsonResponse({ result: uint256Result(overrides.price ?? EXCHANGE_PRICE) });
       }
       if (to === EARN_ADDRESS && data === "0xe7c2a608") {
-        return jsonResponse({ result: uint256Result(UNVESTED_AMOUNT) });
+        return jsonResponse({ result: uint256Result(overrides.unvested ?? UNVESTED_AMOUNT) });
       }
       if (to === EARN_ADDRESS && data === "0x5c975abb") {
-        return jsonResponse({ result: uint256Result(0n) });
+        return jsonResponse({ result: overrides.paused === null ? "0x" : uint256Result(overrides.paused ?? 0n) });
       }
       return undefined;
     }],
@@ -168,5 +178,40 @@ describe("fetchAstherusEarnWrapperReserves", () => {
 
     await expect(runTracked()).rejects.toThrow(/underlying-address identity drifted/);
     assertSingleAggregate3Batch();
+  });
+
+  it("distinguishes paused from unavailable route telemetry", async () => {
+    mockEarnState({ paused: 1n });
+    const paused = await runTracked();
+    expect(paused.metadata?.redemption?.routeStatus).toBe("paused");
+    expect(paused.warnings).toBeUndefined();
+    mockEarnState({ paused: null });
+    const unavailable = await runTracked();
+    expect(unavailable.metadata?.redemption?.routeStatus).toBe("unknown");
+    expect(unavailable.warnings).toContainEqual(expect.objectContaining({
+      code: "astherus-earn-wrapper-pause-unavailable",
+    }));
+  });
+
+  it("rejects zero and negative net backing", async () => {
+    for (const unvested of [UNDERLYING_BALANCE, UNDERLYING_BALANCE + 1n]) {
+      mockEarnState({ unvested });
+      await expect(runTracked()).rejects.toThrow(/net USDF backing is non-positive/);
+    }
+  });
+
+  it("degrades NAV only beyond the ten-basis-point boundary", async () => {
+    for (const [balance, divergent] of [[1001n * 10n ** 18n, false], [1001n * 10n ** 18n + 1n, true]] as const) {
+      mockEarnState({ balance, unvested: 0n, supply: 1000n * 10n ** 18n, price: 10n ** 18n });
+      const result = await runTracked();
+      expect(result.warnings?.some((warning) => warning.code === "erc4626-nav-divergence") ?? false).toBe(divergent);
+    }
+  });
+
+  it("rejects share identity drift independently of required numeric read failure", async () => {
+    mockEarnState({ shareAddress: "0x1111111111111111111111111111111111111111" });
+    await expect(runTracked()).rejects.toThrow(/share-address identity drifted/);
+    mockEarnState({ failedSelector: "0x9e65741e" });
+    await expect(runTracked()).rejects.toThrow(/exchange-price/);
   });
 });

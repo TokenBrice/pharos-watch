@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
-import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
+import { fetchWithRetryMock, resetRpcMocks } from "./helpers/rpc-mock";
 import { mockErc4626Rpc, runTrackedVault } from "./erc4626-single-asset.test-support";
 
 function uint256Result(value: bigint | number): string {
@@ -38,44 +37,14 @@ function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReserv
   return cloned;
 }
 
-function cloneConfigWithMorphoVaultV2Liquidity(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config) as LiveReservesConfig & {
-    params: { redemptionLiquidity?: { source: "morpho-vault-v2"; chainId: number } };
-  };
-  cloned.params.redemptionLiquidity = { source: "morpho-vault-v2", chainId: 1 };
-  return cloned;
-}
-
-function cloneConfigWithMorphoVaultV1Liquidity(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config) as LiveReservesConfig & {
-    params: { redemptionLiquidity?: { source: "morpho-vault-v1"; chainId: number } };
-  };
-  cloned.params.redemptionLiquidity = { source: "morpho-vault-v1", chainId: 1 };
-  return cloned;
-}
-
-function cloneConfigWithAtomicFullBacking(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config) as LiveReservesConfig & {
-    params: { redemptionLiquidity?: { source: "atomic-full-backing" } };
-  };
-  cloned.params.redemptionLiquidity = { source: "atomic-full-backing" };
-  return cloned;
-}
-
-function cloneConfigWithYearnV3Withdrawable(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config) as LiveReservesConfig & {
-    params: { redemptionLiquidity?: { source: "yearn-v3-withdrawable"; settlementDelaySec: number } };
-  };
-  cloned.params.redemptionLiquidity = { source: "yearn-v3-withdrawable", settlementDelaySec: 0 };
-  return cloned;
-}
-
-function cloneConfigWithSboldSpWithdrawable(config: LiveReservesConfig): LiveReservesConfig {
-  const cloned = structuredClone(config) as LiveReservesConfig & {
-    params: { redemptionLiquidity?: { source: "sbold-sp-withdrawable" } };
-  };
-  cloned.params.redemptionLiquidity = { source: "sbold-sp-withdrawable" };
-  return cloned;
+function withRedemptionLiquidity(redemptionLiquidity: {
+  source: "morpho-vault-v1" | "morpho-vault-v2" | "atomic-full-backing" | "yearn-v3-withdrawable" | "sbold-sp-withdrawable";
+  chainId?: number;
+  settlementDelaySec?: number;
+}) {
+  return (config: LiveReservesConfig): LiveReservesConfig => ({
+    ...config, params: { ...config.params, redemptionLiquidity },
+  });
 }
 
 // sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold). The
@@ -93,9 +62,9 @@ function calcFragmentsResult(
 }
 
 const catalogCases = [
-  { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc" },
-  { id: "savusd-avant", asset: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346" },
-  { id: "srusde-strata", asset: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3" },
+  { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", vault: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6" },
+  { id: "savusd-avant", asset: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346", vault: "0x06d47f3fb376649c3a9dafe069b3d6e35572219e" },
+  { id: "srusde-strata", asset: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", vault: "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003" },
 ] as const;
 
 // Yearn V3 vault: 5M idle plus two queued strategies (60M debt fully redeemable,
@@ -103,36 +72,37 @@ const catalogCases = [
 function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
   const strategyA = "0x1111111111111111111111111111111111111111";
   const strategyB = "0x2222222222222222222222222222222222222222";
+  const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
   mockErc4626Rpc({
     idleBalance: 5_000_000n,
     shutdown: isShutdownRaw,
     extraHandlers: [({ call }) => {
       if (!call) return undefined;
       const to = call.to?.toLowerCase();
-      if (call.data === "0x9aa7df94") {
+      if (to === vault && call.data === "0x9aa7df94") {
         return jsonResponse({ result: uint256Result(5_000_000n) });
       }
-      if (call.data === "0xa9bbf1cc") {
+      if (to === vault && call.data === "0xa9bbf1cc") {
         return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
       }
-      if (call.data.startsWith("0x39ebf823")) {
-        if (call.data.toLowerCase().includes(strategyA.slice(2).toLowerCase())) {
+      if (to === vault && call.data.startsWith("0x39ebf823")) {
+        if (call.data === `0x39ebf823${addressWord(strategyA)}`) {
           return jsonResponse({ result: strategyParamsResult(60_000_000n) });
         }
-        if (call.data.toLowerCase().includes(strategyB.slice(2).toLowerCase())) {
+        if (call.data === `0x39ebf823${addressWord(strategyB)}`) {
           return jsonResponse({ result: strategyParamsResult(35_000_000n) });
         }
       }
-      if (call.data.startsWith("0xd905777e") && to === strategyA) {
+      if (call.data === `0xd905777e${addressWord(vault)}` && to === strategyA) {
         return jsonResponse({ result: uint256Result(60_000_000n) });
       }
-      if (call.data.startsWith("0xd905777e") && to === strategyB) {
+      if (call.data === `0xd905777e${addressWord(vault)}` && to === strategyB) {
         return jsonResponse({ result: uint256Result(20_000_000n) });
       }
-      if (call.data.startsWith("0x07a2d13a") && to === strategyA) {
+      if (call.data === `0x07a2d13a${uint256Result(60_000_000n).slice(2)}` && to === strategyA) {
         return jsonResponse({ result: uint256Result(60_000_000n) });
       }
-      if (call.data.startsWith("0x07a2d13a") && to === strategyB) {
+      if (call.data === `0x07a2d13a${uint256Result(20_000_000n).slice(2)}` && to === strategyB) {
         return jsonResponse({ result: uint256Result(20_000_000n) });
       }
       return undefined;
@@ -151,9 +121,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
       if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
       return undefined;
     }] });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -213,10 +180,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("throws when the vault asset differs from the configured expectation", async () => {
-    mockErc4626Rpc({ asset: "0xdead", totalAssets: 1, totalSupply: undefined, convertedAssets: undefined, idleBalance: undefined, decimals: undefined });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
+    mockErc4626Rpc({ asset: "0xdead" });
 
     await expect(
       runTrackedVault("syrupusdc-maple"),
@@ -224,10 +188,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("throws when expected vault asset identity cannot be read", async () => {
-    mockErc4626Rpc({ asset: null, totalAssets: 1, totalSupply: undefined, convertedAssets: undefined, idleBalance: undefined, decimals: undefined });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
+    mockErc4626Rpc({ asset: null });
 
     await expect(
       runTrackedVault("syrupusdc-maple"),
@@ -235,10 +196,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("uses documented-eventual redemption telemetry when asset() is absent with no expected asset", async () => {
-    mockErc4626Rpc({ asset: null, idleBalance: undefined, decimals: undefined });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
+    mockErc4626Rpc({ asset: null, idleBalance: null, decimals: null });
 
     const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithoutExpectedAsset);
 
@@ -260,9 +218,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("suppresses redemption capacity when underlying decimals are invalid", async () => {
     mockErc4626Rpc({ decimals: 37 });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
@@ -278,11 +233,28 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
   });
 
+  it.each(["totalSupply", "convertedAssets", "idleBalance", "decimals"] as const)(
+    "withholds only telemetry requiring an unreadable %s while asset identity remains valid",
+    async (field) => {
+      mockErc4626Rpc({ [field]: null });
+      const result = await runTrackedVault("syrupusdc-maple");
+      expect(result.metadata).toMatchObject({
+        assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        totalAssetsRaw: "100000000",
+      });
+      if (field === "totalSupply" || field === "convertedAssets") {
+        expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+        expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
+        expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 25 });
+      } else {
+        expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+        expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-eventual", routeStatus: "unknown" });
+      }
+    },
+  );
+
   it("emits zero redemption capacity when idle underlying balance is zero", async () => {
     mockErc4626Rpc({ idleBalance: 0 });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -302,9 +274,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("reports a paused redemption route when the vault paused() returns true", async () => {
     mockErc4626Rpc({ paused: 1 });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.warnings).toBeUndefined();
@@ -321,10 +290,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("uses full convertible backing as capacity for atomic-full-backing vaults even with zero idle balance", async () => {
     mockErc4626Rpc({ idleBalance: 0 });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithAtomicFullBacking);
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "atomic-full-backing" }));
 
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "0",
@@ -346,16 +312,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("uses Yearn V3 default-queue withdrawable capacity when configured", async () => {
     mockYearnV3Rpc();
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithYearnV3Withdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -379,16 +336,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("opens the Yearn V3 route when withdrawable capacity is positive and isShutdown() is false", async () => {
     mockYearnV3Rpc(0);
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithYearnV3Withdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -406,16 +354,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("reports a paused Yearn V3 route when isShutdown() returns true", async () => {
     mockYearnV3Rpc(1);
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithYearnV3Withdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -439,10 +378,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       return undefined;
     }] });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -472,10 +408,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       return undefined;
     }] });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -496,13 +429,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
     mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
+      if (call?.data === "0xbf2428e6") return null;
       return undefined;
     }] });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata?.redemption).toEqual({
@@ -519,13 +450,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("degrades sBOLD to the idle balance when the calcFragments probe cannot be decoded", async () => {
     mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") return jsonResponse({ result: "0x" });
+      if (call?.data === "0xbf2428e6") return null;
       return undefined;
     }] });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -544,42 +473,50 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("sboldSpWithdrawableRaw");
   });
 
-  it("uses validated Morpho V2 vault liquidity when it exceeds idle underlying balance", async () => {
+  it.each([
+    {
+      source: "morpho-vault-v1" as const,
+      key: "vaultByAddress",
+      liquidity: { liquidity: { underlying: "30000000", usd: 30 } },
+      metadata: { morphoVaultV1LiquidityRaw: "30000000", morphoVaultV1LiquidityUsd: 30 },
+    },
+    {
+      source: "morpho-vault-v2" as const,
+      key: "vaultV2ByAddress",
+      liquidity: {
+        liquidity: "30000000", liquidityUsd: 30,
+        forceDeallocatableLiquidity: "35000000", forceDeallocatableLiquidityUsd: 35,
+      },
+      metadata: {
+        morphoVaultV2LiquidityRaw: "30000000", morphoVaultV2LiquidityUsd: 30,
+        morphoVaultV2ForceDeallocatableLiquidityRaw: "35000000", morphoVaultV2ForceDeallocatableLiquidityUsd: 35,
+      },
+    },
+  ])("uses $source liquidity rather than idle underlying balance", async ({ source, key, liquidity, metadata }) => {
     const morphoVariables: unknown[] = [];
     mockErc4626Rpc({ idleBalance: 0, extraHandlers: [({ url, body }) => {
       if (url !== "https://api.morpho.org/graphql") return undefined;
       morphoVariables.push(body.variables);
       return jsonResponse({
         data: {
-          vaultV2ByAddress: {
+          [key]: {
             address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
             listed: true,
             asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
             chain: { id: 1 },
-            liquidity: "30000000",
-            liquidityUsd: 30,
-            forceDeallocatableLiquidity: "35000000",
-            forceDeallocatableLiquidityUsd: 35,
+            ...liquidity,
             warnings: [],
           },
         },
       });
     }] });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithMorphoVaultV2Liquidity);
-
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source, chainId: 1 }));
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "0",
       redemptionCapacityRaw: "30000000",
-      redemptionCapacitySource: "morpho-vault-v2-liquidity",
-      morphoVaultV2LiquidityRaw: "30000000",
-      morphoVaultV2LiquidityUsd: 30,
-      morphoVaultV2ForceDeallocatableLiquidityRaw: "35000000",
-      morphoVaultV2ForceDeallocatableLiquidityUsd: 35,
+      redemptionCapacitySource: `${source}-liquidity`,
+      ...metadata,
       underlyingDecimals: 6,
       redemption: {
         capacityUsd: 30,
@@ -587,66 +524,10 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityKind: "live-direct",
         freshnessKind: "same-run-api",
         routeStatus: "open",
-        routeStatusReason: expect.stringContaining("Morpho listed-vault in-kind liquidity positive"),
         routeStatusSource: "protocol-api",
       },
     });
-    expect(morphoVariables).toEqual([
-      {
-        address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-        chainId: 1,
-      },
-    ]);
-  });
-
-  it("uses validated Morpho V1 vault liquidity when it exceeds idle underlying balance", async () => {
-    const morphoVariables: unknown[] = [];
-    mockErc4626Rpc({ idleBalance: 0, extraHandlers: [({ url, body }) => {
-      if (url !== "https://api.morpho.org/graphql") return undefined;
-      morphoVariables.push(body.variables);
-      return jsonResponse({
-        data: {
-          vaultByAddress: {
-            address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-            listed: true,
-            asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
-            chain: { id: 1 },
-            liquidity: { underlying: "30000000", usd: 30 },
-            warnings: [],
-          },
-        },
-      });
-    }] });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithMorphoVaultV1Liquidity);
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      idleUnderlyingBalanceRaw: "0",
-      redemptionCapacityRaw: "30000000",
-      redemptionCapacitySource: "morpho-vault-v1-liquidity",
-      morphoVaultV1LiquidityRaw: "30000000",
-      morphoVaultV1LiquidityUsd: 30,
-      underlyingDecimals: 6,
-      redemption: {
-        capacityUsd: 30,
-        capacityRatioOfSupply: 0.3,
-        capacityKind: "live-direct",
-        freshnessKind: "same-run-api",
-        routeStatus: "open",
-        routeStatusReason: expect.stringContaining("Morpho listed-vault in-kind liquidity positive"),
-        routeStatusSource: "protocol-api",
-      },
-    });
-    expect(morphoVariables).toEqual([
-      {
-        address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-        chainId: 1,
-      },
-    ]);
+    expect(morphoVariables).toEqual([{ address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", chainId: 1 }]);
   });
 
   it("falls back to idle capacity and degrades when Morpho V2 identity validation fails", async () => {
@@ -667,10 +548,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       });
     }] });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithMorphoVaultV2Liquidity);
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }));
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -695,15 +573,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("skips NAV ratio when totalSupply is zero but still emits readable idle capacity USD", async () => {
-    mockErc4626Rpc({ totalSupply: 0, convertedAssets: undefined, extraHandlers: [({ call }) => {
+    const conversionCalls: string[] = [];
+    mockErc4626Rpc({ totalSupply: 0, convertedAssets: null, extraHandlers: [({ call }) => {
       if (call?.data.startsWith("0x07a2d13a")) {
-        throw new Error("convertToAssets should not be called when totalSupply is zero");
+        conversionCalls.push(call.data);
       }
       return undefined;
     }] });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -720,13 +596,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
     expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(conversionCalls).toEqual([]);
   });
 
   it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {
     mockErc4626Rpc({ totalAssets: 100, totalSupply: 100, convertedAssets: 110, idleBalance: 0 });
-
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
-    expect(coin?.liveReservesConfig).toBeDefined();
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -742,10 +616,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("uses explicit RPC URLs for ERC-4626 vaults on chains without registry RPCs", async () => {
     const scenario = catalogCases[0];
-    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18 });
-
-    const coin = TRACKED_META_BY_ID.get(scenario.id);
-    expect(coin?.liveReservesConfig).toBeDefined();
+    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
 
     const result = await runTrackedVault(scenario.id);
 
@@ -776,10 +647,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("probes Avant savUSD as a high-risk avUSD wrapper", async () => {
     const scenario = catalogCases[1];
-    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18 });
-
-    const coin = TRACKED_META_BY_ID.get(scenario.id);
-    expect(coin?.liveReservesConfig).toBeDefined();
+    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
 
     const result = await runTrackedVault(scenario.id);
 
@@ -803,10 +671,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("probes Strata srUSDe as a high-risk USDe wrapper", async () => {
     const scenario = catalogCases[2];
-    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18 });
-
-    const coin = TRACKED_META_BY_ID.get(scenario.id);
-    expect(coin?.liveReservesConfig).toBeDefined();
+    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
 
     const result = await runTrackedVault(scenario.id);
 

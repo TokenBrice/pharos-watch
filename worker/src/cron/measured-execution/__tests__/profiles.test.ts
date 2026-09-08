@@ -107,6 +107,7 @@ describe("measured execution profile construction", () => {
       expect.objectContaining({ reverted: true, amountOutRaw: "0", returnData: "0x" }),
     ]);
     expect(profile.marginalOutputRatio).toBe(0);
-    expect(profile.capacityCurve.every((point) => point.executableUsd === 0)).toBe(true);
+    expect(profile.capacityCurve.map(({ requestedNotionalUsd, executableUsd }) => [requestedNotionalUsd, executableUsd]))
+      .toEqual([[100_000, 0], [1_000_000, 0], [10_000_000, 0], [25_000_000, 0]]);
   });
 });

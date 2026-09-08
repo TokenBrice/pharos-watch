@@ -460,16 +460,20 @@ describe("hook-free Uniswap V4 measured execution", () => {
     );
 
     const outcomes = await quoteUniswapV4Requests({
-      requests: Array.from({ length: 8 }, () => ({
-        target: measuredTarget,
-        inputUsd: 1_000,
+      requests: Array.from({ length: 8 }, (_, index) => ({
+        target: { ...measuredTarget, targetId: `${measuredTarget.targetId}-${index}` },
+        inputUsd: 1_000 + index,
         endpointAddress: deployment.endpointAddress,
       })),
       blockNumber: BLOCK,
       chainRpcs: new Map(),
     });
 
-    expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
+    expect(outcomes).toEqual(Array.from({ length: 8 }, (_, index) => expect.objectContaining({
+      targetId: `${measuredTarget.targetId}-${index}`,
+      inputUsd: 1_000 + index,
+      point: expect.objectContaining({ amountOutRaw: "999500000", outputUsd: 999.5 }),
+    })));
     expect(
       rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map(
         (call) => call[1].length,
@@ -522,9 +526,9 @@ describe("hook-free Uniswap V4 measured execution", () => {
     });
 
     const outcomes = await quoteUniswapV4Requests({
-      requests: Array.from({ length: 8 }, () => ({
-        target: measuredTarget,
-        inputUsd: 1_000,
+      requests: Array.from({ length: 8 }, (_, index) => ({
+        target: { ...measuredTarget, targetId: `${measuredTarget.targetId}-${index}` },
+        inputUsd: 1_000 + index,
         endpointAddress: deployment.endpointAddress,
       })),
       blockNumber: BLOCK,
@@ -532,11 +536,11 @@ describe("hook-free Uniswap V4 measured execution", () => {
       rpcBudget,
     });
 
-    expect(
-      outcomes.every(
-        (outcome) => outcome.failureReason === "request-budget-exhausted",
-      ),
-    ).toBe(true);
+    expect(outcomes).toEqual(Array.from({ length: 8 }, (_, index) => ({
+      targetId: `${measuredTarget.targetId}-${index}`,
+      inputUsd: 1_000 + index,
+      failureReason: "request-budget-exhausted",
+    })));
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { loadBlacklistConfigStates } from "../sync-support";
 import {
   claimBlacklistConfigAttempt,
