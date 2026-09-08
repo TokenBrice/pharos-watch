@@ -16,7 +16,7 @@ Use `package.json` for the full live npm-script list. `scripts/lib/automation-re
 
 `check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
 
-`check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. Ownership references must name a section when the target has at least 400 lines or 50 KiB.
+`check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. A verified doc at or above 400 lines or 50 KB must include a top `> **Agent navigation**` block. (The separate requirement that a doc-ownership reference name a section for such a target is enforced by `scripts/__tests__/doc-ownership-registry.test.ts`, not by this check.)
 
 Changed-file classification retains deletions and both sides of cross-area renames. Ordinary Git selection failures stop the check instead of producing an empty plan. Test selection uses that same change set and removes nonexistent test files only before execution. Parallel command failures, including thrown callbacks or spawn errors, cancel and settle siblings before the runner returns; explicit continue-on-error mode retains independent results.
 
@@ -281,12 +281,12 @@ const db = mockD1([
 - `rows` — array of row objects for `.all()` results
 - `first` — optional single object for `.first()` results
 - `batch()` — executes each statement and returns an array of results (SELECT statements use `.all()`; writes use `.run()`, falling back to `.all()`/`.first()`)
-- Unmatched SQL throws by default; pass `mockD1(tables, { allowUnmatched: true })` for permissive suites (the `requireMatch` option is deprecated)
+- Unmatched SQL always throws — there is no permissive mode. Add a `{ match, rows }` entry (or `allowUnused: true` on an entry you do not expect to fire) instead. The `requireMatch` option is deprecated and no longer changes behavior.
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
 - `mockD1(tables, { strict: true })` — shorthand for `requireMatch` + exact normalized SQL matching
 - `db.assertAllMatchesUsed()` — optional assertion that every configured match was exercised during the test
 
-Cross-runtime tests outside `worker/src` should use `scripts/test-utils/d1.ts` for minimal D1 and RemoteD1 mocks. `makeTestD1Database()` covers Pages Functions that need `prepare()`, `batch()`, and `getHistory()`, while `createRemoteD1Mock()` covers worker maintenance scripts that accept a `RemoteD1Client` dependency.
+Cross-runtime tests outside `worker/src` should use `createRemoteD1Mock()` from `scripts/test-utils/d1.ts` for worker maintenance scripts that accept a `RemoteD1Client` dependency. Pages Functions that need `prepare()`, `batch()`, and `getHistory()` use `makeTestD1Database()` from `@shared/test-utils/mock-d1`.
 
 ### Mock Fetch (`shared/test-utils/mock-fetch.ts`)
 
@@ -604,7 +604,7 @@ describe("syncFxRates", () => {
 
 | Scope | Restriction |
 | ----- | ----------- |
-| `worker/src/**` | No bare `viem` or non-`viem/utils` subpaths; no `src/lib/*` / `@/lib/*` (ADR-2, worker→frontend half) |
+| `worker/src/**` | No bare `viem`; among viem subpaths only `viem/utils` and `viem/siwe` are allowed (worker tests additionally allow `viem/accounts`). The ADR-2 worker→frontend half is not in this block: the custom `pharos/worker-import-boundaries` rule rejects any specifier containing `@/` or `src/` |
 | `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). The sole reviewed waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` |
 | `shared/lib/**` (excluding its tests) | No `@shared/*` aliases — use relative imports |
 | `src/app/**`, `src/components/**`, `worker/src/api/**` | No `sumPegBuckets` from `@shared/lib/supply`; cached `StablecoinData` supply reads use `getCirculatingRaw()`. The three raw-bucket parsers under `worker/src/api/` that pre-date a `StablecoinData` object are listed as glob exceptions in the config |

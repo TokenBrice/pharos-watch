@@ -31,7 +31,7 @@ Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-f
 
 ## Cron Schedule
 
-- **Critical lane pattern:** `4,34 * * * *` (every 30 minutes, offset at :04/:34)
+- **Critical lane pattern:** logical `4,34 * * * *`, deployed as hourly physical aliases `4 * * * *` and `34 * * * *` (every 30 minutes, offset at :04/:34)
 - **Extended lane pattern:** logical `18,48 * * * *`, deployed as hourly physical aliases `18 * * * *` and `48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain). The aliases preserve cadence and slot identity while qualifying each invocation for Cloudflare's hourly Cron CPU class; the combined expression was retired after same-version production runs repeatedly exhausted the sub-hourly 30-second class and were reconciled as `platform-abandoned`.
 - **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 6-hourly trigger (`3 */6 * * *`); `sync-dex-discovery` runs on a dedicated 2-hourly trigger (`6 */2 * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
@@ -336,7 +336,7 @@ Exact columns, constraints, and indexes live in `worker/migrations/0000_baseline
 
 `mint_burn_events` is the transaction-addressable recent event ledger with the protected 8-day retention policy above. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, and `atomic_roundtrip` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
 
-Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its backlog index. Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
+Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its provenance columns; migration `0234_mint_burn_price_repair_backlog_index.sql` owns the repair backlog index (`idx_mbe_historical_price_repair_backlog`). Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
 
 ### mint_burn_hourly (baseline `0000_baseline.sql`)
 

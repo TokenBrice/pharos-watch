@@ -27,7 +27,7 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 4. Compare `sqlite_master`, index lists, trigger definitions, and seeded row counts between both scratch databases. The only permitted differences are the recorded destructive-cleanup removals applied in step 2; any other difference blocks the squash.
 5. Point a preview Worker at the second database. Run the preview smoke set and one full cron tick; verify the cron ledgers and status probes show no migration-name coupling.
 6. Move every absorbed filename into a new squash block in `worker/migrations/MANIFEST.md`. Keep retired entries and historical filenames explicit, and leave only the new baseline plus the unsquashed tail on disk.
-7. Run `npm run check:migrations` and the normal focused Worker checks. Land the baseline, manifest, and file removals as one logical commit.
+7. If step 2 removed any object the current tree still creates, regenerate the fresh-replay schema manifest with `npm run check:migrations -- --write-schema-manifest` and confirm the `worker/migrations/EXPECTED_SCHEMA.txt` diff contains only those recorded destructive-cleanup removals. Then run `npm run check:migrations` and the normal focused Worker checks. Land the baseline, `worker/migrations/EXPECTED_SCHEMA.txt` (when regenerated), the manifest, and the file removals as one logical commit.
 8. During the production window, run the normal migration/deploy path and verify that the existing production database executes zero migration SQL for the squash. Existing databases already record the absorbed filenames; the replacement baseline is for fresh databases.
 9. Observe a full cron tick and the standard production probes, then keep the migration freeze through a 24-hour soak.
 

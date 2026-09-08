@@ -134,9 +134,8 @@ Important current taxonomy note:
 
 Do the research manually, or use the maintained skills when they match the task:
 
-- `stablecoin-addition-orchestrator`: run the full phase checklist and coordinate the supporting skills.
+- `stablecoin-addition-orchestrator`: gather generic scalar metadata, run the full phase checklist, and coordinate the supporting skills.
 - `stablecoin-runtime-price-marketcap-gate`: prove the hard active-asset price and market-cap path from Phase 1a.
-- `stablecoin-addition-orchestrator`: gather generic scalar metadata and route the full phase checklist.
 - `stablecoin-identity-contracts`: verify `geckoId`, populate known deployments, or discover missing chain coverage.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
 - `compliance-research`: research `genius`, `mica`, or both into the compliance sidecar.
@@ -353,7 +352,7 @@ Automated backstops:
 
 - The ordinary noncritical test `scripts/__tests__/weekly-curation-digest.test.ts` fails if any active/pre-launch coin lacks a nonblank `oneLiner`.
 - The same test pins the archetype cohort snapshot exactly (currently 39/39 covered after frozen coins and then variants are excluded), so it fails if any cohort coin lacks an archetype, if the cohort size changes, or if the baseline contains an unknown coin ID.
-- The same test pins the attestor-tier snapshot exactly (currently 77/77), so it fails if any `independent-audit` coin lacks an attestor tier or if that count changes.
+- The same test pins the attestor-tier snapshot exactly (currently 72/72), so it fails if any `independent-audit` coin lacks an attestor tier or if that count changes.
 - The ordinary noncritical runtime-parser test `src/lib/__tests__/term-markup.test.ts` fails if AI-summary term markup references unknown glossary slugs or leaves raw opening/closing markers.
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.
