@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { runOperatorCli } from "./operator-cli.test-support";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -6,7 +6,6 @@ import {
   runCurrentBalanceReconciliation,
 } from "../reconcile-blacklist-current-balances-from-kyc-rip";
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
-import { sqlString } from "../lib/remote-d1";
 
 const SCRIPT_NAME = "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts";
 
@@ -58,18 +57,18 @@ describe("current-balance kyc.rip reconciliation", () => {
     expect(() => parseCurrentBalanceArgs(["unexpected"])).toThrow(/Unexpected argument/);
   });
 
-  it("supports short help and direct-run usage exit codes", () => {
+  it("[entrypoint integration] supports short help and direct-run usage exit codes", async () => {
     expect(parseCurrentBalanceArgs(["-h"])).toMatchObject({ apply: false, help: true, remote: true });
 
     const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-    const help = spawnSync(tsx, [SCRIPT_NAME, "--help"], {
+    const help = await runOperatorCli(tsx, [SCRIPT_NAME, "--help"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });
     expect(help.status).toBe(0);
     expect(help.stdout).toContain(`Usage: tsx ${SCRIPT_NAME}`);
 
-    const unconfirmed = spawnSync(tsx, [SCRIPT_NAME, "--apply"], {
+    const unconfirmed = await runOperatorCli(tsx, [SCRIPT_NAME, "--apply"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });
@@ -140,7 +139,10 @@ describe("current-balance kyc.rip reconciliation", () => {
   });
 
   it("blocks destructive replacement when normalized rows are below the minimum", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(okPayload([currentRows[0]]));
+    const fetchImpl = vi.fn().mockResolvedValue(okPayload([
+      currentRows[0],
+      { ...currentRows[0], chain: "TRON", address: "invalid-tron-address" },
+    ]));
     const d1 = createRemoteD1Mock([{ count: 3 }]);
 
     await expect(
@@ -169,8 +171,4 @@ describe("current-balance kyc.rip reconciliation", () => {
     expect(d1.executeStatementsMock).not.toHaveBeenCalled();
   });
 
-  it("keeps SQL string escaping centralized", () => {
-    expect(sqlString("O'Hara")).toBe("'O''Hara'");
-    expect(sqlString(null)).toBe("NULL");
-  });
 });

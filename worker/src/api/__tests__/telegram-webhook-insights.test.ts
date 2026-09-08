@@ -12,6 +12,7 @@ import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
+  makeWorkerV9Pillars,
 } from "../../test-helpers/report-cards-v9";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
@@ -98,6 +99,64 @@ describe("buildBriefMessage", () => {
     expect(message).toContain("May be stale: latest digest is 3d old.");
     expect(message).toContain("Stored brief body.");
   });
+
+  it("selects the daily brief rather than a newer weekly digest", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO daily_digest
+        (generated_at, digest_text, input_data, digest_meta) VALUES (?, ?, '{}', ?)`);
+      insert.run(100, "daily chosen", null);
+      insert.run(200, "weekly excluded", '{"type":"weekly"}');
+      const message = await buildBriefMessage(db);
+      expect(message).toContain("daily chosen");
+      expect(message).not.toContain("weekly excluded");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("caps structured sections and suppresses fallback text", async () => {
+    const input = {
+      riskTape: Array.from({ length: 5 }, (_, i) => ({ label: `risk${i}`, value: `value${i}` })),
+      changeSummary: {
+        newSignals: [{ label: "new", detail: "new detail" }],
+        worsenedSignals: [{ label: "worse", detail: "worse detail" }],
+        resolvedSignals: Array.from({ length: 3 }, (_, i) => ({ label: `resolved${i}`, detail: "resolved detail" })),
+      },
+      nextTriggers: Array.from({ length: 4 }, (_, i) => ({ label: `trigger${i}`, thresholdLabel: `threshold${i}` })),
+    };
+    const message = await buildBriefMessage(mockD1([{ match: "FROM daily_digest", rows: [{
+      generated_at: Math.floor(Date.now() / 1000), digest_text: "fallback excluded", input_data: JSON.stringify(input),
+    }] }]));
+    for (const text of ["risk3: value3", "new: new detail", "worse: worse detail", "resolved1: resolved detail", "trigger2: threshold2"]) {
+      expect(message).toContain(text);
+    }
+    for (const text of ["risk4", "resolved2", "trigger3", "fallback excluded"]) {
+      expect(message).not.toContain(text);
+    }
+  });
+
+  it.each([
+    { text: "<daily>", extended: "<extended>", expected: "&lt;daily&gt;" },
+    { text: null, extended: "<extended>", expected: "&lt;extended&gt;" },
+  ])("escapes fallback text for malformed structured data: $expected", async ({ text, extended, expected }) => {
+    const message = await buildBriefMessage(mockD1([{ match: "FROM daily_digest", rows: [{
+      generated_at: Math.floor(Date.now() / 1000), digest_text: text, digest_extended: extended, input_data: "{",
+    }] }]));
+    expect(message).toContain(expected);
+    expect(message).not.toContain(text ?? extended);
+  });
+
+  it("marks a brief stale only after exactly 48 hours", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const db = mockD1([{ match: "FROM daily_digest", rows: [{
+      generated_at: 1_800_000_000 - 48 * 3600, digest_text: "boundary body", input_data: "{}",
+    }] }]);
+    expect(await buildBriefMessage(db)).not.toContain("May be stale");
+    vi.advanceTimersByTime(1000);
+    expect(await buildBriefMessage(db)).toContain("May be stale");
+  });
 });
 
 describe("buildTopMessage", () => {
@@ -113,33 +172,25 @@ describe("buildTopMessage", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T12:00:00Z"));
 
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            symbol: "USDC",
-            direction: "below",
-            peak_deviation_bps: 180,
-            display_price: 0.982,
-            peg_reference: 1,
-            started_at: Math.floor(Date.now() / 1000) - 3600,
-          },
-        ],
-      },
-    ]);
-
-    const message = await buildTopMessage(db, "depeg");
-
-    expect(message).toContain("Top active depegs");
-    expect(message).toContain("USDC");
-    expect(message).toContain("below peg 1.8%");
-    expect(message).toContain("price $0.9820");
-
-    const sql = db.getHistory()[0]?.sql ?? "";
-    expect(sql).toMatch(/\bCOALESCE\(peak_price,\s*start_price\) AS display_price\b/);
-    expect(sql).not.toMatch(/\bSELECT\b[\s\S]*,\s*price\s*,[\s\S]*\bFROM depeg_events\b/);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO depeg_events
+        (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
+         ended_at, start_price, peak_price, peg_reference)
+        VALUES (?, ?, 'peggedUSD', 'below', ?, 1, ?, ?, ?, 1)`);
+      insert.run("usdc-circle", "USDC", 180, null, 0.99, 0.982);
+      insert.run("dai-makerdao", "DAI", 100, null, 0.99, null);
+      insert.run("usdt-tether", "USDT", 900, 2, 0.91, 0.90);
+      const message = await buildTopMessage(db, "depeg");
+      expect(message).toContain("1. USDC");
+      expect(message).toContain("below peg 1.8%");
+      expect(message).toContain("price $0.9820");
+      expect(message).toContain("2. DAI");
+      expect(message).toContain("price $0.9900");
+      expect(message).not.toContain("USDT");
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("builds /top dews only from the exact published generation", async () => {
@@ -196,33 +247,10 @@ describe("buildTopMessage", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("filters /top yield rows to legacy or published yield_data rows", async () => {
-    const db = mockD1([
-      {
-        match: "FROM yield_data",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            symbol: "USDC",
-            current_apy: 4.4,
-            apy_30d: 4.2,
-            yield_source: "Aave V3",
-            pharos_yield_score: 31,
-            source_tvl_usd: 12_000_000,
-          },
-        ],
-      },
-    ]);
-
-    const message = await buildTopMessage(db, "yield");
-
-    expect(message).toContain("Top yields (PYS unavailable; expected model V9)");
-    expect(message).toContain("USDC");
-    const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
-    expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
-  });
-
   it("excludes staged and failed /top yield rows behaviorally", async () => {
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "error", reason: "v9-snapshot-unavailable", snapshot: null, detail: "missing",
+    });
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
             const insertYield = sqlite.prepare(
@@ -248,12 +276,14 @@ describe("buildTopMessage", () => {
         "gen-published",
         "published",
       );
-      insertYield.run("dai-makerdao", "dai-source", "DAI", 1, 3.1, 3.05, 3, "Legacy source", 22, 8_000_000, null, null);
+      insertYield.run("dai-makerdao", "dai-source", "DAI", 1, 3.1, 3.05, 3, "Legacy source", 99, 8_000_000, null, null);
 
       const message = await buildTopMessage(createSqliteD1(sqlite), "yield");
 
-      expect(message).toContain("USDC");
-      expect(message).toContain("DAI");
+      expect(message).toContain("1. USDC");
+      expect(message).toContain("2. DAI");
+      expect(message).toContain("PYS unavailable");
+      expect(message).not.toContain("PYS 99");
       expect(message).not.toContain("USDT");
       expect(message).not.toContain("USDe");
     } finally {
@@ -315,9 +345,6 @@ describe("buildTopMessage", () => {
     expect(yieldMessage).toContain("4.20% 30d");
     expect(yieldMessage).toContain("PYS unavailable");
     expect(yieldMessage).not.toContain("PYS 99");
-    const yieldSql = yieldDb.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql ?? "";
-    expect(yieldSql).toContain("ORDER BY apy_30d DESC");
-    expect(yieldSql).not.toContain("ORDER BY pharos_yield_score");
   });
 
   it("suggests the closest /top view for one-character typos", async () => {
@@ -365,6 +392,44 @@ describe("buildTopMessage", () => {
     expect(message).toContain("Model: V9 · 9.0 · report-cards:v9:1");
     expect(message).toContain("Weakest pillars");
     expect(db.getHistory()).toEqual([]);
+  });
+
+  it("ranks only the five highest rated cards from unordered input", async () => {
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "v9",
+      snapshot: makeWorkerReportCardsV9Response({ cards: [
+        ...[40, 90, 20, 80, 70, 60].map((score) => makeWorkerV9Card({ id: `coin-${score}`, score, grade: "A" })),
+        makeWorkerV9Card({ id: "unrated", score: null }),
+      ] }),
+    });
+    const message = await buildTopMessage(mockD1([]), "safety");
+    expect(message.split("\n").slice(1)).toEqual([
+      "1. coin-90 — A (90)", "2. coin-80 — A (80)", "3. coin-70 — A (70)",
+      "4. coin-60 — A (60)", "5. coin-40 — A (40)",
+    ]);
+  });
+
+  it("selects the weakest scored pillars and includes caps and dependency exposure", async () => {
+    const card = makeWorkerV9Card({
+      id: "usdc-circle",
+      pillars: makeWorkerV9Pillars({ backing: null, exit: 30, control: 12 }),
+      caps: [{ kind: "structural", limit: 80, source: "structural", reason: "reviewed limit", binding: true }],
+      dependencies: {
+        serial: [{ upstreamAssetId: "usdt-tether", score: 80, blocked: false }],
+        basket: [{ upstreamAssetId: "dai-makerdao", weight: 0.5, score: 70, boundedUnknown: false }],
+        cycleBlocked: false, reasonCodes: [],
+      },
+    });
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "v9", snapshot: makeWorkerReportCardsV9Response({ cards: [card] }),
+    });
+    const message = await buildWhyMessage(mockD1([]), "usdc-circle");
+    expect(message).toContain("- Control: 12\n- Exit: 30");
+    expect(message).not.toContain("- Backing:");
+    expect(message).toContain("1 active score cap");
+    expect(message).toContain("freeze exposure: direct");
+    expect(message).toContain("2 modeled dependencies");
+    expect(await buildWhyMessage(mockD1([]), "missing-coin")).toBe("No Safety Score is available for that coin yet.");
   });
 });
 

@@ -90,30 +90,35 @@ function extractVerificationToken(sentBody: unknown): string {
   return match[1];
 }
 
+let sentEmails: unknown[];
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2_000_000_000 * 1000));
+  sentEmails = [];
+  mockFetch([{
+    match: "https://api.resend.com/emails",
+    respond: async (request) => {
+      sentEmails.push(await request.clone().json());
+      return { body: { id: "email_123" } };
+    },
+  }], { requireMatch: true });
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
 describe("api key self-serve request handlers", () => {
   let sqlite: DatabaseSync;
   let db: D1Database;
-  let sentEmails: unknown[];
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2_000_000_000 * 1000));
     sqlite = setupSqlite();
     db = createSqliteD1(sqlite);
-    sentEmails = [];
-    mockFetch([{
-      match: "https://api.resend.com/emails",
-      respond: async (request) => {
-        sentEmails.push(await request.clone().json());
-        return { body: { id: "email_123" } };
-      },
-    }], { requireMatch: true });
   });
 
   afterEach(() => {
     sqlite.close();
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("creates only a pending verification request and email claim on initial request", async () => {
@@ -138,67 +143,6 @@ describe("api key self-serve request handlers", () => {
     expect((sentEmails[0] as { text: string }).text).toContain("https://pharos.watch/api/#akv_");
   });
 
-  it("returns no-store 400 for invalid initial request JSON", async () => {
-    const response = await handleApiKeyRequest(
-      throwingD1(),
-      rawPostRequest("/api/api-key-requests", "{"),
-      env(),
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
-    expect(sentEmails).toHaveLength(0);
-  });
-
-  it("returns no-store 400 for invalid verify request JSON", async () => {
-    const response = await handleApiKeyRequestVerify(
-      throwingD1(),
-      rawPostRequest("/api/api-key-requests/verify", "{"),
-      env(),
-      "api-key-pepper",
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
-    expect(sentEmails).toHaveLength(0);
-  });
-
-  it("returns no-store 413 for oversized initial request bodies before side effects", async () => {
-    const response = await handleApiKeyRequest(
-      throwingD1(),
-      rawPostRequest(
-        "/api/api-key-requests",
-        JSON.stringify(validBody()),
-        { "Content-Length": String(17 * 1024) },
-      ),
-      env(),
-    );
-
-    expect(response.status).toBe(413);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
-    expect(sentEmails).toHaveLength(0);
-  });
-
-  it("returns no-store 413 for oversized verify bodies before side effects", async () => {
-    const response = await handleApiKeyRequestVerify(
-      throwingD1(),
-      rawPostRequest(
-        "/api/api-key-requests/verify",
-        JSON.stringify({ token: "akv_example_verification_token" }),
-        { "Content-Length": "2048" },
-      ),
-      env(),
-      "api-key-pepper",
-    );
-
-    expect(response.status).toBe(413);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
-    expect(sentEmails).toHaveLength(0);
-  });
 
   it("accepts concise human-readable use cases", async () => {
     const suffix = Math.random().toString(36).slice(2, 10);
@@ -348,29 +292,6 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 1 });
   });
 
-  it("returns honeypot success without creating a request", async () => {
-    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
-      website: "https://bot.example",
-    })), env());
-
-    expect(response.status).toBe(200);
-    expect(sentEmails).toHaveLength(0);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 0 });
-  });
-
-  it("rejects oversized honeypot fields before side effects", async () => {
-    const response = await handleApiKeyRequest(
-      throwingD1(),
-      postRequest("/api/api-key-requests", validBody({
-        website: "x".repeat(301),
-      })),
-      env(),
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(sentEmails).toHaveLength(0);
-  });
 
   it("releases stale orphan pending claims via the deferred waitUntil sweep", async () => {
     sqlite.prepare(
@@ -395,16 +316,6 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims WHERE request_id = 'akr_orphan'").get()).toEqual({
       status: "released",
     });
-  });
-
-  it("fails closed when required email provider config is missing", async () => {
-    const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env({
-      RESEND_API_KEY: undefined,
-    }));
-
-    expect(response.status).toBe(503);
-    expect(response.headers.get("Retry-After")).toBe("60");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_requests").get()).toEqual({ count: 0 });
   });
 
   it("adds Retry-After on submission throttles", async () => {
@@ -478,11 +389,6 @@ describe("api key self-serve request handlers", () => {
     });
   });
 
-  it("redacts sensitive provider error details before logging", () => {
-    expect(redactProviderBody(
-      "builder@example.com https://pharos.watch/api/#akv_secret ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF",
-    )).toBe("[redacted-email] [redacted-url] [redacted-api-key]");
-  });
 
   it("does not create or return a token when claim validation storage fails", async () => {
     await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
@@ -718,5 +624,106 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 0 });
     expect(sqlite.prepare("SELECT reason FROM api_key_self_serve_revocations").get()).toEqual({ reason: "admin_reject" });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
+  });
+});
+
+describe("self-serve validation without storage", () => {
+  it("returns honeypot success without creating a request", async () => {
+    const response = await handleApiKeyRequest(throwingD1(), postRequest("/api/api-key-requests", validBody({
+      website: "https://bot.example",
+    })), env());
+
+    expect(response.status).toBe(200);
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("fails closed when required email provider config is missing", async () => {
+    const response = await handleApiKeyRequest(throwingD1(), postRequest("/api/api-key-requests", validBody()), env({
+      RESEND_API_KEY: undefined,
+    }));
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 400 for invalid initial request JSON", async () => {
+    const response = await handleApiKeyRequest(
+      throwingD1(),
+      rawPostRequest("/api/api-key-requests", "{"),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 400 for invalid verify request JSON", async () => {
+    const response = await handleApiKeyRequestVerify(
+      throwingD1(),
+      rawPostRequest("/api/api-key-requests/verify", "{"),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 413 for oversized initial request bodies before side effects", async () => {
+    const response = await handleApiKeyRequest(
+      throwingD1(),
+      rawPostRequest(
+        "/api/api-key-requests",
+        JSON.stringify(validBody()),
+        { "Content-Length": String(17 * 1024) },
+      ),
+      env(),
+    );
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(sentEmails).toHaveLength(0);
+  });
+
+  it("returns no-store 413 for oversized verify bodies before side effects", async () => {
+    const response = await handleApiKeyRequestVerify(
+      throwingD1(),
+      rawPostRequest(
+        "/api/api-key-requests/verify",
+        JSON.stringify({ token: "akv_example_verification_token" }),
+        { "Content-Length": "2048" },
+      ),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(sentEmails).toHaveLength(0);
+  });
+  it("rejects oversized honeypot fields before side effects", async () => {
+    const response = await handleApiKeyRequest(
+      throwingD1(),
+      postRequest("/api/api-key-requests", validBody({
+        website: "x".repeat(301),
+      })),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(sentEmails).toHaveLength(0);
+  });
+  it("redacts sensitive provider error details before logging", () => {
+    expect(redactProviderBody(
+      "builder@example.com https://pharos.watch/api/#akv_secret ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF",
+    )).toBe("[redacted-email] [redacted-url] [redacted-api-key]");
   });
 });

@@ -27,40 +27,9 @@ vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
   return { ...actual, recalcAffectedHours: vi.fn().mockResolvedValue(undefined) };
 });
 
-import { handleAuditDepegHistoryTrusted } from "../audit-depeg-history";
 import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-roundtrips";
 import { handleRemediateBlacklistAmountGapsTrusted } from "../remediate-blacklist-amount-gaps";
 import { handleBackfillSupplyHistoryTrusted } from "../backfill-supply-history";
-
-describe("handleAuditDepegHistory shape", () => {
-  it("returns 200 with the documented top-level audit shape for GET dry-run", async () => {
-    const db = mockD1([{ match: "depeg_events", rows: [] }]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-
-    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
-    expect(body).toMatchObject({
-      dryRun: true,
-      totalMatching: expect.any(Number),
-      offset: expect.any(Number),
-      limit: expect.any(Number),
-      auditedEvents: expect.any(Array),
-      deletedEvents: expect.any(Array),
-      daysRecomputed: expect.any(Number),
-    });
-  });
-
-  it("returns 400 with { error } when limit exceeds the audit cap", async () => {
-    const db = mockD1([]);
-    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&limit=999", { adminKey: "secret" });
-
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
-
-    const body = (await readJsonResponse(res, 400)) as { error: string };
-    expect(typeof body.error).toBe("string");
-  });
-});
 
 describe("handleReclassifyAtomicRoundtrips shape", () => {
   it("returns 200 with the documented top-level reclassify shape", async () => {

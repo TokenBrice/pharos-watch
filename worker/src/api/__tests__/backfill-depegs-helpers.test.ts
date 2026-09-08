@@ -8,6 +8,7 @@ import {
 import { summarizeBackfillReplayDiff } from "../backfill-depegs-preview";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makeBrzBackfillRow } from "./depeg-replay.test-support";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -443,23 +444,7 @@ describe("extractDepegEvents", () => {
 
 describe("summarizeBackfillReplayDiff", () => {
   it("reports an exact match when existing backfill rows match the replayed events", () => {
-    const existingRows = [
-      {
-        id: 10,
-        stablecoin_id: "brz-transfero",
-        symbol: "BRZ",
-        peg_type: "peggedREAL",
-        direction: "below",
-        peak_deviation_bps: -220,
-        started_at: 1_000,
-        ended_at: 2_000,
-        start_price: 0.19,
-        peak_price: 0.188,
-        recovery_price: 0.191,
-        peg_reference: 0.193,
-        source: "backfill",
-      },
-    ];
+    const existingRows = [makeBrzBackfillRow()];
 
     const summary = summarizeBackfillReplayDiff(existingRows, [
       {
@@ -485,23 +470,7 @@ describe("summarizeBackfillReplayDiff", () => {
   });
 
   it("reports removed ids and added event samples when the replay differs", () => {
-    const existingRows = [
-      {
-        id: 10,
-        stablecoin_id: "brz-transfero",
-        symbol: "BRZ",
-        peg_type: "peggedREAL",
-        direction: "below",
-        peak_deviation_bps: -220,
-        started_at: 1_000,
-        ended_at: 2_000,
-        start_price: 0.19,
-        peak_price: 0.188,
-        recovery_price: 0.191,
-        peg_reference: 0.193,
-        source: "backfill",
-      },
-    ];
+    const existingRows = [makeBrzBackfillRow()];
 
     const summary = summarizeBackfillReplayDiff(existingRows, [
       {

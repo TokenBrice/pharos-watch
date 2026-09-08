@@ -6,8 +6,6 @@ import {
   diffReplayArtifacts,
   extractCardGrades,
   runSafetyScoreV9DiffCli,
-  VERSION_ACTIVATION_KEYS,
-  VOLATILE_KEYS,
 } from "../diff-safety-score-v9-replays";
 
 // Minimal artifact shape. The card array lives at `pipeline.candidate.cards`
@@ -87,41 +85,19 @@ describe("diffReplayArtifacts", () => {
     expect(extractCardGrades({ pipeline: {} }).size).toBe(0);
   });
 
-  it("VOLATILE_KEYS covers the identity/timestamp family", () => {
-    for (const key of [
-      "publishedAt",
-      "safetyScoreIdentity",
-      "baseInputGenerationId",
-      "publicationGenerationId",
-      "evaluationBuildDigest",
-      "capturedAt",
-      "updatedAt",
-      "payloadSha256",
-      "contentSha256",
-      "generationId",
-      "releaseCandidateId",
-    ]) {
-      expect(VOLATILE_KEYS.has(key)).toBe(true);
+  it.each([
+    "publishedAt", "safetyScoreIdentity", "baseInputGenerationId", "publicationGenerationId",
+    "evaluationBuildDigest", "capturedAt", "updatedAt", "payloadSha256", "contentSha256",
+    "generationId", "releaseCandidateId", "stateDigest", "resultDigest", "scoreResultDigest",
+    "evaluatedSetDigest", "candidateId", "compilerFactSchemaDigest", "policyVersion",
+  ])("ignores %s at the candidate and nested card levels", (key) => {
+    for (const nested of [false, true]) {
+      const make = (value: string) => artifact(
+        [{ id: "usdc-circle", score: 85, ...(nested ? { evidence: [{ [key]: value }] } : {}) }],
+        nested ? {} : { [key]: value },
+      );
+      expect(diffReplayArtifacts(make("before"), make("after"))).toEqual({ equal: true, entries: [] });
     }
-  });
-
-  it("VERSION_ACTIVATION_KEYS covers the pinned-build and methodology-identity family", () => {
-    for (const key of [
-      "stateDigest",
-      "resultDigest",
-      "scoreResultDigest",
-      "evaluatedSetDigest",
-      "candidateId",
-      "compilerFactSchemaDigest",
-      "policyVersion",
-    ]) {
-      expect(VERSION_ACTIVATION_KEYS.has(key)).toBe(true);
-    }
-  });
-
-  it("keeps the two stripped families disjoint", () => {
-    const overlap = [...VERSION_ACTIVATION_KEYS].filter((key) => VOLATILE_KEYS.has(key));
-    expect(overlap).toEqual([]);
   });
 
   it("strips version-activation digests at every depth without hiding scored drift", () => {

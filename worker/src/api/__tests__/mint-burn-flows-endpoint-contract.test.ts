@@ -1,9 +1,10 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
+import { makeFlowHourlyRow } from "./mint-burn-flows.test-support";
 
 // ---------------------------------------------------------------------------
 // Contract tests (handler-level, using D1 mock)
@@ -17,25 +18,9 @@ describe("handleMintBurnFlows contract tests", () => {
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const hourlyRow = {
-    stablecoin_id: "usdt-tether",
-    chain_id: "ethereum",
-    hour_ts: nowSec - 3600,
-    mint_count: 5,
-    burn_count: 3,
-    mint_volume_usd: 10000,
-    burn_volume_usd: 5000,
-    net_flow_usd: 5000,
-  };
-
-  const stablecoinsCache = JSON.stringify({
-    peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
-  });
-
-  const db = mintBurnScenario({
-    nowSec,
-    rows: { hourly: [hourlyRow] },
-    stablecoinsCache: { value: stablecoinsCache, updatedAt: nowSec },
+  let db: D1Database;
+  beforeEach(() => {
+    db = mintBurnScenario({ nowSec, rows: { hourly: [makeFlowHourlyRow(nowSec)] } });
   });
 
   it("aggregate mode returns shape matching MintBurnFlowsResponseSchema", async () => {

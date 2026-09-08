@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleDigestSnapshot } from "../digest-snapshot";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const todayStr = new Date(nowSec * 1000).toISOString().slice(0, 10);
@@ -135,20 +136,24 @@ describe("handleDigestSnapshot", () => {
 
   it("orders snapshot depeg events by absolute deviation", async () => {
     const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
-    const db = mockD1([
-      {
-        match: "daily_digest",
-        rows: [{
-          generated_at: dayStart + 3600,
-          input_data: JSON.stringify({ totalMcapUsd: 100e9, mcap7dDelta: 1 }),
-        }],
-      },
-      { match: "depeg_events", rows: [] },
-      { match: "blacklist_events", rows: [] },
-    ]);
-
-    await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
-
-    expect(db.getHistory().some((entry) => entry.sql.includes("ORDER BY ABS(peak_deviation_bps) DESC"))).toBe(true);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+        .run(dayStart + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
+      const insert = sqlite.prepare(`INSERT INTO depeg_events
+        (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
+        VALUES (?, 'TEST', 'peggedUSD', ?, ?, ?, ?, 1, 1)`);
+      insert.run("small", "above", 100, dayStart, null);
+      insert.run("negative", "below", -900, dayStart - 100, null);
+      insert.run("positive", "above", 500, dayStart, null);
+      insert.run("future", "below", -2000, dayStart + 86400, null);
+      insert.run("closed", "below", -3000, dayStart - 1000, dayStart - 1);
+      const body = await readJsonResponse<{ depegEvents: { stablecoinId: string; peakDeviationBps: number }[] }>(
+        await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200);
+      expect(body.depegEvents.map((event) => [event.stablecoinId, event.peakDeviationBps]))
+        .toEqual([["negative", -900], ["positive", 500], ["small", 100]]);
+    } finally {
+      sqlite.close();
+    }
   });
 });

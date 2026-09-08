@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { runOperatorCli } from "./operator-cli.test-support";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseArgs } from "../rebuild-blacklist-current-balances";
@@ -51,16 +51,16 @@ describe("rebuild blacklist current balances script args", () => {
     expect(() => parseArgs(["tron"])).toThrow(/Unexpected argument/);
   });
 
-  it("prints help with exit 0 and reports usage mistakes with exit 2", () => {
+  it("[entrypoint integration] prints help with exit 0 and reports usage mistakes with exit 2", async () => {
     const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-    const help = spawnSync(tsx, ["worker/scripts/rebuild-blacklist-current-balances.ts", "--help"], {
+    const help = await runOperatorCli(tsx, ["worker/scripts/rebuild-blacklist-current-balances.ts", "--help"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });
     expect(help.status).toBe(0);
     expect(help.stdout).toContain("Usage: tsx worker/scripts/rebuild-blacklist-current-balances.ts");
 
-    const invalid = spawnSync(tsx, ["worker/scripts/rebuild-blacklist-current-balances.ts", "--bogus"], {
+    const invalid = await runOperatorCli(tsx, ["worker/scripts/rebuild-blacklist-current-balances.ts", "--bogus"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });

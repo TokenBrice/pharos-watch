@@ -185,6 +185,42 @@ describe("scheduled slot groups", () => {
     ]);
   });
 
+  it.each(["skipped_neutral", "degraded"] as const)("continues after %s despite configured stop predicates", async (status) => {
+    const successor = vi.fn(async () => ({ status: "ok" as const }));
+    const runtime = makeScheduledRuntime();
+    const summary = await runScheduledSlotGroups(runtime, "continuation", [{
+      mode: "serial", label: "chain", stopOnFailure: true, stopOnNonNeutralSkip: true,
+      tasks: [
+        { job: "first", run: async () => ({ status }) },
+        { job: "successor", run: successor },
+      ],
+    }]);
+    expect(successor).toHaveBeenCalledOnce();
+    expect(summary.jobs.map(({ job, outcome }) => [job, outcome])).toEqual([
+      ["first", status === "skipped_neutral" ? "skipped" : "degraded"], ["successor", "ok"],
+    ]);
+  });
+
+  it("stops only the failing parallel-serial chain", async () => {
+    const blocked = vi.fn();
+    const independent = vi.fn(async () => ({ status: "ok" as const }));
+    const runtime = buildRuntime(vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())));
+    const summary = await runScheduledSlotGroups(runtime, "independent chains", [{
+      mode: "parallel-serial", label: "chains", chains: [
+        { label: "failed", stopOnFailure: true, tasks: [
+          { job: "snapshot-supply", run: async () => { throw new Error("failed"); } },
+          { job: "snapshot-psi", run: blocked },
+        ] },
+        { label: "independent", tasks: [{ job: "snapshot-safety-grade-history", run: independent }] },
+      ],
+    }]);
+    expect(blocked).not.toHaveBeenCalled();
+    expect(independent).toHaveBeenCalledOnce();
+    expect(summary.jobs.map(({ job, outcome }) => [job, outcome])).toEqual([
+      ["snapshot-supply", "error"], ["snapshot-psi", "skipped"], ["snapshot-safety-grade-history", "ok"],
+    ]);
+  });
+
   it("flattens mixed group shapes for preflight accounting", () => {
     const tasks = flattenScheduledSlotGroupTasks([
       {

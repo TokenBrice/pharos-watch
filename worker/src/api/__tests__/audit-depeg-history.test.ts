@@ -5,6 +5,7 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helper
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { D1_BATCH_SIZE } from "../../lib/constants";
+import { makeAuditEvent } from "./depeg-replay.test-support";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 const DAY_SECONDS = 86_400;
@@ -129,6 +130,7 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(body.dryRun).toBe(true);
     expect(body.totalMatching).toBe(0);
     expect(body.limit).toBe(25);
+    expect(body).toMatchObject({ offset: 0, auditedEvents: [], deletedEvents: [], daysRecomputed: 0 });
   });
 
   it("rejects limit values above the bounded audit cap", async () => {
@@ -531,23 +533,10 @@ describe("handleAuditDepegHistory method safety", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    const event = {
-      id: 42,
-      stablecoin_id: "usdt-tether",
-      symbol: "USDT",
-      peg_type: "peggedUSD",
-      direction: "below",
-      peak_deviation_bps: -1500,
-      started_at: 1_800_000_000,
-      ended_at: 1_800_003_600,
-      start_price: 0.85,
-      peak_price: 0.85,
-      recovery_price: 0.999,
-      peg_reference: 1,
-      source: "live",
-      confirmation_sources: null,
-      pending_reason: null,
-    };
+    const event = makeAuditEvent({
+      id: 42, direction: "below", source: "live",
+      peak_deviation_bps: -1500, start_price: 0.85, peak_price: 0.85,
+    });
     const db = mockD1([]);
 
     const result = await auditEvents(db, {
@@ -639,23 +628,10 @@ describe("handleAuditDepegHistory method safety", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    const event = {
-      id: 45,
-      stablecoin_id: "usdt-tether",
-      symbol: "USDT",
-      peg_type: "peggedUSD",
-      direction: "below",
-      peak_deviation_bps: -150,
-      started_at: 1_800_000_000,
-      ended_at: 1_800_003_600,
-      start_price: 0.985,
-      peak_price: 0.985,
-      recovery_price: 0.999,
-      peg_reference: 1,
-      source: "live",
-      confirmation_sources: null,
-      pending_reason: null,
-    };
+    const event = makeAuditEvent({
+      id: 45, direction: "below", source: "live",
+      peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
+    });
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [event] },
       {
@@ -687,23 +663,10 @@ describe("handleAuditDepegHistory method safety", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    const event = {
-      id: 43,
-      stablecoin_id: "usdt-tether",
-      symbol: "USDT",
-      peg_type: "peggedUSD",
-      direction: "below",
-      peak_deviation_bps: -150,
-      started_at: 1_800_000_000,
-      ended_at: 1_800_003_600,
-      start_price: 0.985,
-      peak_price: 0.985,
-      recovery_price: 0.999,
-      peg_reference: 1,
-      source: "live",
-      confirmation_sources: null,
-      pending_reason: null,
-    };
+    const event = makeAuditEvent({
+      id: 43, direction: "below", source: "live",
+      peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
+    });
 
     const result = await auditEvents(mockD1([{ match: "FROM cache WHERE key = ?", rows: [], first: null }]), {
       events: [event],
@@ -730,23 +693,10 @@ describe("handleAuditDepegHistory method safety", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    const event = {
-      id: 44,
-      stablecoin_id: "usdt-tether",
-      symbol: "USDT",
-      peg_type: "peggedUSD",
-      direction: "below",
-      peak_deviation_bps: -150,
-      started_at: 1_800_000_000,
-      ended_at: 1_800_003_600,
-      start_price: 0.985,
-      peak_price: 0.985,
-      recovery_price: 0.999,
-      peg_reference: 1,
-      source: "live",
-      confirmation_sources: null,
-      pending_reason: null,
-    };
+    const event = makeAuditEvent({
+      id: 44, direction: "below", source: "live",
+      peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
+    });
     const db = mockD1([
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "FROM cache WHERE key = ?", rows: [], first: null },

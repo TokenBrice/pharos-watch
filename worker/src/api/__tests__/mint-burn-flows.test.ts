@@ -1,6 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
 import {
@@ -8,7 +7,7 @@ import {
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { makeFlowHourlyRow, makeFlowFallbackScenario, makeValidCachedAggregateFixture } from "./mint-burn-flows.test-support";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 
@@ -24,43 +23,10 @@ describe("handleMintBurnFlows contract tests", () => {
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const hourlyRow = {
-    stablecoin_id: "usdt-tether",
-    chain_id: "ethereum",
-    hour_ts: nowSec - 3600,
-    mint_count: 5,
-    burn_count: 3,
-    mint_volume_usd: 10000,
-    burn_volume_usd: 5000,
-    net_flow_usd: 5000,
-  };
+  const hourlyRow = makeFlowHourlyRow(nowSec);
 
   const stablecoinsCache = JSON.stringify({
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
-  });
-
-  const makeValidCachedAggregateFixture = (updatedAt: number, safetyScoreIdentity: unknown) => ({
-    gauge: {
-      score: 10,
-      band: "BUYING",
-      intensitySemantics: "signed-v2",
-      flightToQuality: true,
-      flightIntensity: 20,
-      classificationSource: "safety-score-v9-publication",
-      safetyScoreIdentity,
-      trackedCoins: 1,
-      trackedMcapUsd: 1,
-    },
-    coins: [],
-    hourly: [],
-    updatedAt: updatedAt - 60,
-    sync: {
-      lastSuccessfulSyncAt: updatedAt - 120,
-      freshnessStatus: "fresh",
-      warning: null,
-      classificationWarning: null,
-      criticalLaneHealthy: true,
-    },
   });
 
   it("filters aggregate flow metrics to configured stablecoin-chain pairs", async () => {
@@ -537,9 +503,7 @@ describe("handleMintBurnFlows contract tests", () => {
         baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
         publicationGenerationId: activeGenerationId,
       },
-      cards: [...ACTIVE_IDS]
-        .sort()
-        .map((id) => makeWorkerV9Card({ id, score: 80, grade: "A" })),
+      cards: [makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A" })],
     });
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValueOnce({
@@ -647,29 +611,7 @@ describe("handleMintBurnFlows contract tests", () => {
     };
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockRejectedValueOnce(new Error("canonical V9 read failed"));
-    const cachedBody = {
-      gauge: {
-        score: 10,
-        band: "BUYING",
-        intensitySemantics: "signed-v2" as const,
-        flightToQuality: true,
-        flightIntensity: 20,
-        classificationSource: "safety-score-v9-publication" as const,
-        safetyScoreIdentity: identity,
-        trackedCoins: 1,
-        trackedMcapUsd: 1,
-      },
-      coins: [],
-      hourly: [],
-      updatedAt: now - 60,
-      sync: {
-        lastSuccessfulSyncAt: now - 120,
-        freshnessStatus: "fresh" as const,
-        warning: null,
-        classificationWarning: null,
-        criticalLaneHealthy: true,
-      },
-    };
+    const cachedBody = makeValidCachedAggregateFixture(now, identity);
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
@@ -693,60 +635,13 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("serves cached aggregate fallback when live query fails after a cache miss", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const cachedBody = {
-      gauge: {
-        score: 0,
-        band: "NEUTRAL",
-        intensitySemantics: "signed-v2",
-        flightToQuality: false,
-        flightIntensity: 0,
-        trackedCoins: 1,
-        trackedMcapUsd: 0,
-      },
-      coins: [],
-      hourly: [],
-      updatedAt: now - 60,
-    };
-    let aggregateCacheLookups = 0;
-
-    const failingDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          all: async <T>() => {
-            if (sql.includes("FROM mint_burn_hourly")) {
-              throw new Error("simulated d1 failure");
-            }
-            return { results: [] as T[], success: true, meta: {} };
-          },
-          first: async <T>() => {
-            if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
-              const key = String(args[0] ?? "");
-              if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
-                aggregateCacheLookups += 1;
-                if (aggregateCacheLookups === 1) return null;
-                return {
-                  value: JSON.stringify(cachedBody),
-                  updated_at: now,
-                } as T;
-              }
-            }
-            return null;
-          },
-          run: async () => ({ success: true, meta: {} }),
-        }),
-        all: async <T>() => {
-          if (sql.includes("FROM mint_burn_hourly")) {
-            throw new Error("simulated d1 failure");
-          }
-          return { results: [] as T[], success: true, meta: {} };
-        },
-        first: async () => null,
-        run: async () => ({ success: true, meta: {} }),
-      }),
-    });
+    const cachedBody = makeValidCachedAggregateFixture(now, null);
+    const { db: failingDb, state } = makeFlowFallbackScenario(now, JSON.stringify(cachedBody), 720);
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
     const body = await readJsonResponse(res, 200);
+    expect(state.hourlyFailed).toBe(true);
+    expect(state.cacheReads).toBe(2);
     expect(body).toMatchObject({
       gauge: {
         flightToQuality: false,
@@ -773,7 +668,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const heldSnapshot = makeWorkerReportCardsV9Response({
       updatedAt: now,
       safetyScoreIdentity: identity,
-      cards: [...ACTIVE_IDS].sort().map((id) => makeWorkerV9Card({ id, score: 80, grade: "A" })),
+      cards: [makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A" })],
     });
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValueOnce({
@@ -799,46 +694,14 @@ describe("handleMintBurnFlows contract tests", () => {
         safetyScoreIdentity: identity,
       },
     });
-    const validCachedBody = makeValidCachedAggregateFixture(now, identity);
-    const cachedBody = {
-      ...validCachedBody,
-      gauge: {
-        ...validCachedBody.gauge,
-        safetyScoreIdentity: identity,
-      },
-    };
-    let aggregateCacheLookups = 0;
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          all: async <T>() => {
-            if (sql.includes("FROM mint_burn_hourly")) throw new Error("simulated d1 failure");
-            return { results: [] as T[], success: true, meta: {} };
-          },
-          first: async <T>() => {
-            if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
-              const key = String(args[0] ?? "");
-              if (key === "stablecoins") {
-                return { value: stablecoinsCache, updated_at: now } as T;
-              }
-              if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
-                aggregateCacheLookups += 1;
-                return aggregateCacheLookups === 1
-                  ? null
-                  : { value: JSON.stringify(cachedBody), updated_at: now } as T;
-              }
-            }
-            return null;
-          },
-          run: async () => ({ success: true, meta: {} }),
-        }),
-      }),
-    });
+    const cachedBody = makeValidCachedAggregateFixture(now, identity);
+    const { db, state } = makeFlowFallbackScenario(now, JSON.stringify(cachedBody));
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
 
-    expect(aggregateCacheLookups).toBe(2);
+    expect(state.cacheReads).toBe(2);
+    expect(state.hourlyFailed).toBe(true);
     expect(body.gauge).toMatchObject({
       flightToQuality: false,
       flightIntensity: 0,
@@ -851,41 +714,10 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("returns 503 when the aggregate fallback cache is malformed", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const failingDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          all: async <T>() => {
-            if (sql.includes("FROM mint_burn_hourly")) {
-              throw new Error("simulated d1 failure");
-            }
-            return { results: [] as T[], success: true, meta: {} };
-          },
-          first: async <T>() => {
-            if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
-              const key = String(args[0] ?? "");
-              if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
-                return {
-                  value: "{bad json",
-                  updated_at: now,
-                } as T;
-              }
-            }
-            return null;
-          },
-          run: async () => ({ success: true, meta: {} }),
-        }),
-        all: async <T>() => {
-          if (sql.includes("FROM mint_burn_hourly")) {
-            throw new Error("simulated d1 failure");
-          }
-          return { results: [] as T[], success: true, meta: {} };
-        },
-        first: async () => null,
-        run: async () => ({ success: true, meta: {} }),
-      }),
-    });
+    const { db: failingDb, state } = makeFlowFallbackScenario(now, "{bad json", 720);
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
+    expect(state.hourlyFailed).toBe(true);
 
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({

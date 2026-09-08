@@ -1,3 +1,4 @@
+import { pendingRowFromForget } from "./telegram-rows.test-support";
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
@@ -29,25 +30,6 @@ function pendingRowFromSetup(
   };
 }
 
-function pendingRowFromForget(
-  options: {
-    initiator_user_id?: string | null;
-    expires_at?: number;
-    action_type?: string;
-  } = {},
-): Record<string, unknown> {
-  return {
-    action_type: options.action_type ?? "forget-confirm",
-    action_payload: "{}",
-    alert_types: JSON.stringify([]),
-    resolved_ids: JSON.stringify([]),
-    ambiguous_ticker: "",
-    candidates: JSON.stringify([]),
-    remaining_tickers: JSON.stringify([]),
-    expires_at: options.expires_at ?? Math.floor(Date.now() / 1000) + 60,
-    initiator_user_id: options.initiator_user_id ?? null,
-  };
-}
 
 function makeCacheStablecoins(): string {
   return JSON.stringify({

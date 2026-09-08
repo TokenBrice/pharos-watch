@@ -1,113 +1,69 @@
-import { describe, expect, it } from "vitest";
-import type { MockD1Database } from "@shared/test-utils/mock-d1";
-import {
-  assertTelegramWrite,
-  mockTelegramD1 as mockD1,
-} from "../../../test-helpers/__shared/telegram";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
 import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../telegram-webhook-shared";
-import type { ResolvedCoin } from "../../../lib/telegram/alerts";
 
-const COIN: ResolvedCoin = {
-  id: "usdc-circle",
-  symbol: "USDC",
-  name: "USD Coin",
-};
+const COIN = { id: "usdc-circle", symbol: "USDC", name: "USD Coin" };
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
-function normalizeSql(sql: string): string {
-  return sql.replace(/\s+/g, " ").trim();
+function seeded() {
+  const fixture = fixtures.open();
+  fixture.sqlite.exec(`
+    INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation)
+    VALUES ('42', 1, 1, 7), ('neighbor', 1, 1, 12);
+    INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg, depeg_worsening_bps_step)
+    VALUES ('42', 'usdc-circle', 1, 100), ('neighbor', 'usdc-circle', 1, 500);
+  `);
+  return fixture;
 }
 
-function subscriptionInsert(db: MockD1Database): { sql: string; binds: unknown[] } {
-  return assertTelegramWrite(db, { sql: "INSERT INTO telegram_subscriptions" });
-}
-
-function expectPreferenceGenerationBump(db: MockD1Database): void {
-  const subscriber = assertTelegramWrite(db, { sql: "INSERT INTO telegram_subscribers" });
-  expect(subscriber?.sql).toContain(
-    "preference_generation = telegram_subscribers.preference_generation + 1",
-  );
-  expect(subscriber.binds[subscriber.binds.length - 1]).toBe(1);
-}
-
-async function settingsPath(setting: string, value: string): Promise<{ sql: string; binds: unknown[] }> {
-  const db = mockD1();
-  const prepared = prepareCoinSettingStatements(db, "42", "alice", COIN.id, setting, value);
-  expect(prepared.description).not.toBeNull();
-  await db.batch(prepared.statements);
-  expectPreferenceGenerationBump(db);
-  return subscriptionInsert(db);
-}
-
-async function setCommandPath(command: ParsedSetCommand): Promise<{ sql: string; binds: unknown[] }> {
-  const db = mockD1();
-  await applySettingToSubscriptions(db, "42", "alice", [COIN], command);
-  expectPreferenceGenerationBump(db);
-  return subscriptionInsert(db);
-}
-
-describe("per-coin subscription setting builders", () => {
-  it("emits identical depeg-off SQL from /set and /settings", async () => {
-    const fromSettings = await settingsPath("ds", "0");
-    const fromSet = await setCommandPath({
-      ticker: "USDC",
-      setting: "depeg",
-      enabled: false,
-    });
-
-    expect(normalizeSql(fromSettings.sql)).toBe(normalizeSql(fromSet.sql));
-    expect(fromSettings.binds).toEqual(fromSet.binds);
-    expect(fromSet.binds).toEqual(["42", COIN.id, 0]);
+describe("per-coin subscription persistence", () => {
+  it.each([
+    ["off", "0", { ticker: "USDC", setting: "depeg", enabled: false }, 0, null],
+    ["step", "250", { ticker: "USDC", setting: "depeg-step", enabled: true, step: 250 }, 1, 250],
+  ] as const)("persists %s through both settings consumers", async (_name, value, command, enabled, step) => {
+    for (const path of ["settings", "set"]) {
+      const { sqlite, db } = seeded();
+      if (path === "settings") {
+        await db.batch(prepareCoinSettingStatements(db, "42", "alice", COIN.id, "ds", value).statements);
+      } else {
+        await applySettingToSubscriptions(db, "42", "alice", [COIN], command);
+      }
+      expect(sqlite.prepare(`SELECT chat_id, alert_depeg, alert_depeg_override, depeg_worsening_bps_step
+        FROM telegram_subscriptions ORDER BY chat_id`).all()).toEqual([
+        { chat_id: "42", alert_depeg: enabled, alert_depeg_override: 1, depeg_worsening_bps_step: step },
+        { chat_id: "neighbor", alert_depeg: 1, alert_depeg_override: 0, depeg_worsening_bps_step: 500 },
+      ]);
+      expect(sqlite.prepare("SELECT chat_id, preference_generation FROM telegram_subscribers ORDER BY chat_id").all())
+        .toEqual([{ chat_id: "42", preference_generation: 8 }, { chat_id: "neighbor", preference_generation: 12 }]);
+    }
   });
 
-  it("emits identical depeg-step SQL from /set and /settings", async () => {
-    const fromSettings = await settingsPath("ds", "250");
-    const fromSet = await setCommandPath({
-      ticker: "USDC",
-      setting: "depeg-step",
-      enabled: true,
-      step: 250,
-    });
-
-    expect(normalizeSql(fromSettings.sql)).toBe(normalizeSql(fromSet.sql));
-    expect(fromSettings.binds).toEqual(fromSet.binds);
-    expect(fromSet.binds).toEqual(["42", COIN.id, 250]);
+  it("retains tuning when enabling depeg alerts", async () => {
+    const { sqlite, db } = seeded();
+    sqlite.exec("UPDATE telegram_subscriptions SET alert_depeg = 0 WHERE chat_id = '42'");
+    await applySettingToSubscriptions(db, "42", "alice", [COIN], { ticker: "USDC", setting: "depeg", enabled: true });
+    expect(sqlite.prepare("SELECT alert_depeg, depeg_worsening_bps_step FROM telegram_subscriptions WHERE chat_id = '42'").get())
+      .toEqual({ alert_depeg: 1, depeg_worsening_bps_step: 100 });
   });
 
-  it("marks settings-style off writes as explicit overrides", async () => {
-    const dewsOff = await setCommandPath({ ticker: "USDC", setting: "dews", enabled: false, minBand: null });
-    expect(normalizeSql(dewsOff.sql)).toContain("alert_dews_override = 1");
-
-    const depegOff = await setCommandPath({ ticker: "USDC", setting: "depeg", enabled: false });
-    expect(normalizeSql(depegOff.sql)).toContain("alert_depeg_override = 1");
-
-    const safetyOff = await setCommandPath({ ticker: "USDC", setting: "safety", enabled: false, mode: null });
-    expect(normalizeSql(safetyOff.sql)).toContain("alert_safety_override = 1");
-
-    const launchOff = await setCommandPath({ ticker: "USDC", setting: "launch", enabled: false });
-    expect(normalizeSql(launchOff.sql)).toContain("alert_launch_override = 1");
-
-    const reserveOff = await setCommandPath({ ticker: "USDC", setting: "reserve", enabled: false });
-    expect(normalizeSql(reserveOff.sql)).toContain("alert_reserve_override = 1");
-
-    const freezeOff = await setCommandPath({ ticker: "USDC", setting: "freeze", enabled: false });
-    expect(normalizeSql(freezeOff.sql)).toContain("alert_freeze_override = 1");
+  it.each(["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const)("retains explicit %s off intent", async (setting) => {
+    const { sqlite, db } = seeded();
+    sqlite.exec(`UPDATE telegram_subscriptions SET alert_${setting} = 1`);
+    const command = { ticker: "USDC", setting, enabled: false, minBand: null, mode: null } as ParsedSetCommand;
+    await applySettingToSubscriptions(db, "42", "alice", [COIN], command);
+    expect(sqlite.prepare(`SELECT chat_id, alert_${setting} AS enabled, alert_${setting}_override AS explicit
+      FROM telegram_subscriptions ORDER BY chat_id`).all()).toEqual([
+      { chat_id: "42", enabled: 0, explicit: 1 }, { chat_id: "neighbor", enabled: 1, explicit: 0 },
+    ]);
   });
 
-  it("persists freeze intent through the shared direct-follow builder", async () => {
-    const db = mockD1();
-    const statements = prepareSubscriberAndSubscriptionStatements(
-      db,
-      "42",
-      "alice",
-      new Set(["freeze"]),
-      [COIN.id],
-    );
-    await db.batch(statements);
-    const subscription = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"));
-    expect(subscription?.sql).toContain("alert_freeze");
-    expect(subscription?.sql).toContain("alert_freeze_override");
-    expect(subscription?.binds).toEqual(["42", COIN.id, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, null]);
+  it("persists freeze follow intent by named columns", async () => {
+    const { sqlite, db } = seeded();
+    await db.batch(prepareSubscriberAndSubscriptionStatements(db, "42", "alice", new Set(["freeze"]), [COIN.id]));
+    expect(sqlite.prepare("SELECT alert_freeze, alert_freeze_override FROM telegram_subscriptions WHERE chat_id = '42'").get())
+      .toEqual({ alert_freeze: 1, alert_freeze_override: 1 });
   });
 });

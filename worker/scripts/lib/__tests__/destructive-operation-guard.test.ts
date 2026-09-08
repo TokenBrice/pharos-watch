@@ -27,6 +27,38 @@ describe("parseDestructiveOperationMode", () => {
     });
   });
 
+  it("rejects confirmation naming another script", () => {
+    expect(() => parseDestructiveOperationMode({
+      argv: ["--execute", "--confirm", "another-script"],
+      scriptName: "repair",
+    })).toThrow("live mutation requires --execute --confirm repair");
+  });
+
+  it("allows a custom dry-run condition without bypassing confirmation when false", () => {
+    const options = {
+      scriptName: "repair",
+      cliOptions: { preview: { type: "boolean" as const } },
+      executeAsDryRunWhen: (values: Record<string, unknown>) => values.preview === true,
+    };
+    expect(parseDestructiveOperationMode({
+      ...options, argv: ["--execute", "--preview"],
+    }).dryRun).toBe(true);
+    expect(() => parseDestructiveOperationMode({
+      ...options, argv: ["--execute"],
+    })).toThrow("live mutation requires --execute --confirm repair");
+    expect(parseDestructiveOperationMode({
+      ...options, argv: ["--execute", "--confirm", "repair"],
+    }).dryRun).toBe(false);
+  });
+
+  it("never authorizes mutation on the configured help path", () => {
+    expect(parseDestructiveOperationMode({
+      argv: ["--execute", "--help", "--remote"],
+      cliOptions: { help: { type: "boolean" } },
+      scriptName: "repair",
+    })).toEqual({ dryRun: true, remote: true, targetFlag: "--remote" });
+  });
+
   it("supports compatibility execute aliases without skipping confirmation", () => {
     expect(() =>
       parseDestructiveOperationMode({

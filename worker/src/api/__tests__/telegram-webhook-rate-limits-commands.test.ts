@@ -260,7 +260,8 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     // /help still replied despite the flood-store failure.
-    expect(sentMessageBody().text.length).toBeGreaterThan(0);
+    expect(sentMessageBody().text).toContain("/subscribe");
+    expect(sentMessageBody().text).toContain("/status");
     warn.mockRestore();
   });
 
@@ -297,17 +298,6 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("replies to /start", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
-    const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/start"), "test-secret", "bot-token");
-
-    expect(res.status).toBe(200);
-    // `/start` now opens the setup wizard (P0-U2). The reply is the short
-    // wizard intro plus the branch keyboard; the long-form onboarding lives
-    // behind the "I'll type commands myself" branch and /help.
-    expect(sentMessageBody().text).toContain("Welcome");
-    expect(fetchSpy).toHaveBeenCalled();
-  });
 
   it("replies to /help", async () => {
     const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
@@ -406,7 +396,14 @@ describe("handleTelegramWebhook", () => {
         rows: [],
         first: {
           action_type: "subscribe",
-          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+          action_payload: JSON.stringify({
+            schemaVersion: 1,
+            alertTypes: ["dews"],
+            candidates: ambiguous.matches,
+            ambiguousTicker: "USDF",
+            resolvedIds: [],
+            remainingTickers: [],
+          }),
           alert_types: JSON.stringify(["dews"]),
           resolved_ids: JSON.stringify([]),
           ambiguous_ticker: "USDF",
@@ -745,10 +742,10 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    // /why renders the safety-grade explanation for USDC; no ticker-resolution error fires.
     const body = sentMessageBody().text;
-    expect(body).not.toContain("not found");
-    expect(body).not.toContain("Re-run /status");
+    expect(body).toContain("<b>USDC Safety Score</b>");
+    expect(body).toContain("Overall: A (85)");
+    expect(body).toContain('href="https://pharos.watch/stablecoin/usdc-circle"');
   });
 
   it("/start coverage_<coinId> dispatches into /coverage", async () => {
@@ -770,8 +767,11 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     const body = sentMessageBody().text;
-    expect(body).toContain("USDC");
-    expect(body).not.toContain("not found");
+    expect(body).toContain("<b>USDC coverage</b>");
+    expect(body).toContain("Price: yes");
+    expect(body).toContain("Active depeg: no");
+    expect(body).toContain("DEX liquidity: missing");
+    expect(body).toContain('href="https://pharos.watch/stablecoin/usdc-circle"');
   });
 
   it("handles direct /brief and deprecated /market commands", async () => {

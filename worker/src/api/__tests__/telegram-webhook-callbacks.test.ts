@@ -1,3 +1,4 @@
+import { makeBulkPendingRow } from "./telegram-rows.test-support";
 import { describe, expect, it, beforeEach } from "vitest";
 import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
@@ -160,35 +161,24 @@ describe("handleCallbackQuery", () => {
     expect(upsert!.binds[1]).toBeNull();
   });
 
-  it("unknown callback data returns a graceful ack", async () => {
+  it.each([undefined, { username: "mallory" }])("unknown callback gracefully acknowledges actor %j and records only one usage event", async (from) => {
     const db = mockTelegramD1([]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("garbage:whatever", { id: "cb2", from: undefined, message: { chat: { id: 42 }, message_id: 999 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("garbage:whatever", { id: "cb2", from, message: { chat: { id: 42 }, message_id: 999 } }));
 
     // No subscriber writes on unknown action.
     const history = db.getHistory();
-    expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+    expect(history).toHaveLength(1);
     const usageRow = history.find((h) => h.sql.includes("INSERT INTO telegram_usage_daily"));
     expect(usageRow).toBeDefined();
     expect(usageRow!.binds[1]).toBe("unknown_command");
     expect(usageRow!.binds[3]).toBe("unknown");
     expect(usageRow!.binds[4]).toBe("unknown");
+    expect(usageRow!.binds[6]).toBe("");
 
     const body = firstAckBody();
     expect(body.text).toBe("Action not recognized.");
   });
 
-  it("unknown action records only a usage row before allowlist rejection", async () => {
-    const db = mockTelegramD1([]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("garbage:xyz", { id: "cb-unknown", from: { username: "mallory" }, message: { chat: { id: 42 }, message_id: 999 } }));
-
-    const history = db.getHistory();
-    expect(history).toHaveLength(1);
-    expect(history[0].sql).toContain("INSERT INTO telegram_usage_daily");
-    expect(history[0].binds[1]).toBe("unknown_command");
-    expect(history[0].binds[3]).toBe("unknown");
-    expect(history[0].binds[4]).toBe("unknown");
-    expect(history[0].binds[6]).toBe("");
-  });
 
   it("silently acks a callback with no chat id", async () => {
     const db = mockTelegramD1([]);
@@ -205,23 +195,13 @@ describe("handleCallbackQuery", () => {
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "subscribe",
-            alertTypes: ["dews"],
-            presetIds: [],
-            coinIds: [],
-            subscribeAll: true,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
+        first: makeBulkPendingRow({
+          kind: "subscribe",
+          alertTypes: ["dews"],
+          presetIds: [],
+          coinIds: [],
+          subscribeAll: true,
+        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
       },
     ]);
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-bulk", from: { id: 7, username: "interloper" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
@@ -239,23 +219,13 @@ describe("handleCallbackQuery", () => {
     const db = mockTelegramD1([{
       match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
       rows: [],
-      first: {
-        action_type: "confirm-bulk",
-        action_payload: JSON.stringify({
-          kind: "subscribe",
-          alertTypes: ["dews"],
-          presetIds: ["usd-top25"],
-          coinIds: [],
-          subscribeAll: false,
-        }),
-        alert_types: JSON.stringify([]),
-        resolved_ids: JSON.stringify([]),
-        ambiguous_ticker: "",
-        candidates: JSON.stringify([]),
-        remaining_tickers: JSON.stringify([]),
-        expires_at: Math.floor(Date.now() / 1000) + 60,
-        initiator_user_id: "999",
-      },
+      first: makeBulkPendingRow({
+        kind: "subscribe",
+        alertTypes: ["dews"],
+        presetIds: ["usd-top25"],
+        coinIds: [],
+        subscribeAll: false,
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
     }]);
 
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-follow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
@@ -269,22 +239,12 @@ describe("handleCallbackQuery", () => {
     const db = mockTelegramD1([{
       match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
       rows: [],
-      first: {
-        action_type: "confirm-bulk",
-        action_payload: JSON.stringify({
-          kind: "unsubscribe",
-          presetIds: ["usd-top25"],
-          coinIds: [],
-          unsubscribeAll: false,
-        }),
-        alert_types: JSON.stringify([]),
-        resolved_ids: JSON.stringify([]),
-        ambiguous_ticker: "",
-        candidates: JSON.stringify([]),
-        remaining_tickers: JSON.stringify([]),
-        expires_at: Math.floor(Date.now() / 1000) + 60,
-        initiator_user_id: "999",
-      },
+      first: makeBulkPendingRow({
+        kind: "unsubscribe",
+        presetIds: ["usd-top25"],
+        coinIds: [],
+        unsubscribeAll: false,
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
     }]);
 
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-unfollow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));

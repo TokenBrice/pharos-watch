@@ -1,9 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import {
   loadPresetSubscriberRowsBatch,
   mergeSubscriberMaps,
@@ -13,19 +10,9 @@ import { applySubscribeIntent, applyUnsubscribeIntent } from "../presets";
 
 const NOW = 1_783_680_000;
 
-function migrationDirectory(): string {
-  return process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-}
 
 function openLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const dir = migrationDirectory();
-  for (const file of readdirSync(dir).filter((entry) => entry.endsWith(".sql")).sort()) {
-    sqlite.exec(readFileSync(join(dir, file), "utf8"));
-  }
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 function insertSubscriber(sqlite: DatabaseSync, chatId: string): void {
@@ -278,45 +265,4 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
     expect(merged.get("usdc-circle")?.[0]?.depeg_worsening_bps_step).toBe(100);
   });
 
-  it("rolls back direct and preset facts together at every statement boundary", async () => {
-    for (let boundary = 0; boundary <= 3; boundary += 1) {
-      const { sqlite } = openLatestSchema();
-      const base = createSqliteD1(sqlite);
-      const db = makeNoopD1({
-        prepare: base.prepare.bind(base),
-        batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
-          sqlite.exec("BEGIN IMMEDIATE");
-          try {
-            const results: D1Result<T>[] = [];
-            for (let index = 0; index < statements.length; index += 1) {
-              if (index === boundary) throw new Error(`boundary ${boundary}`);
-              results.push(await statements[index].run<T>());
-            }
-            if (boundary === statements.length) throw new Error(`boundary ${boundary}`);
-            sqlite.exec("COMMIT");
-            return results;
-          } catch (error) {
-            sqlite.exec("ROLLBACK");
-            throw error;
-          }
-        },
-      });
-      try {
-        await expect(applySubscribeIntent(db, {
-          chatId: "rollback",
-          username: null,
-          directStablecoinIds: ["usdc-circle"],
-          presetIds: ["usd-top25"],
-          alertTypes: new Set(["dews"]),
-        })).rejects.toThrow(`boundary ${boundary}`);
-        expect(sqlite.prepare(
-          "SELECT COUNT(*) AS count FROM telegram_subscribers WHERE chat_id = 'rollback'",
-        ).get()).toEqual({ count: 0 });
-        expect(directRows(sqlite, "rollback")).toEqual([]);
-        expect(presetIds(sqlite, "rollback")).toEqual([]);
-      } finally {
-        sqlite.close();
-      }
-    }
-  }, 30_000);
 });

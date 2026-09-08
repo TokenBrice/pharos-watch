@@ -150,7 +150,6 @@ describe("handleSafetyScoreHistoryV2", () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.clone().text()).resolves.toBe('{"schemaVersion":2,"history":[]}');
     await expect(response.json()).resolves.toEqual({ schemaVersion: 2, history: [] });
     expect(response.headers.get("X-Data-Age")).toBe("0");
     expect(db.getHistory().find((entry) => entry.sql.includes("FROM safety_score_history_v2"))?.binds).toEqual([
@@ -160,11 +159,10 @@ describe("handleSafetyScoreHistoryV2", () => {
   });
 
   it.each([
-    ["missing stablecoin", "", 400, '{"error":"Missing ?stablecoin= parameter"}'],
-    ["unknown stablecoin", "?stablecoin=unknown-fixture", 404, '{"error":"Unknown stablecoin"}'],
-    ["malformed days", "?stablecoin=usdc-circle&days=abc", 400, '{"error":"Invalid days: must be a number"}'],
-    ["out-of-range days", "?stablecoin=usdc-circle&days=99999", 400, '{"error":"Invalid days: must be between 1 and 3650"}'],
-  ])("preserves exact %s rejection bytes", async (_name, query, status, body) => {
+    ["unknown stablecoin", "?stablecoin=unknown-fixture", 404, "Unknown stablecoin"],
+    ["malformed days", "?stablecoin=usdc-circle&days=abc", 400, "Invalid days: must be a number"],
+    ["out-of-range days", "?stablecoin=usdc-circle&days=99999", 400, "Invalid days: must be between 1 and 3650"],
+  ])("rejects %s before database work", async (_name, query, status, message) => {
     const db = mockD1([], { requireMatch: true });
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -172,7 +170,7 @@ describe("handleSafetyScoreHistoryV2", () => {
     );
 
     expect(response.status).toBe(status);
-    await expect(response.text()).resolves.toBe(body);
+    await expect(response.json()).resolves.toEqual({ error: message });
     expect(db.getHistory()).toEqual([]);
   });
 

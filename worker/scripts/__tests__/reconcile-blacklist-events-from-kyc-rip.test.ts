@@ -1,8 +1,13 @@
-import { spawnSync } from "node:child_process";
+import { runOperatorCli } from "./operator-cli.test-support";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-events-from-kyc-rip";
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
+import { createLatestSchemaFixtureTracker } from "../../src/test-helpers/latest-schema-sqlite";
+import type { RemoteD1Client } from "../lib/remote-d1";
+
+const databases = createLatestSchemaFixtureTracker();
+afterEach(() => databases.closeAll());
 
 const SCRIPT_NAME = "worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts";
 
@@ -20,6 +25,53 @@ const eventRows = [
 ];
 
 describe("event kyc.rip reconciliation", () => {
+  it.each(["matching", "address", "transaction", "event", "partial-failure"])(
+    "persists only matching blacklist receipts: %s",
+    async (scenario) => {
+      const { sqlite } = databases.open();
+      const candidate = eventRows[0]!;
+      const txHash = candidate.tx_hash as `0x${string}`;
+      const contract = "0xdac17f958d2ee523a2206206994597c13d831ec7" as const;
+      const receipt = {
+        blockNumber: 20_000_000n,
+        logs: [{
+          address: contract,
+          topics: [scenario === "event"
+            ? "0xd7e9ec6e6ecd65492dce6bf513cd6867560d49544421d0783ddf06e76c24470c"
+            : "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc"] as `0x${string}`[],
+          data: `0x${"0".repeat(63)}${scenario === "address" ? "2" : "1"}` as `0x${string}`,
+          blockNumber: 20_000_000n,
+          transactionHash: scenario === "transaction" ? `0x${"2".repeat(64)}` as `0x${string}` : txHash,
+          logIndex: 7,
+        }],
+      };
+      const getTransactionReceipt = vi.fn().mockResolvedValue(receipt);
+      const rows = [candidate];
+      if (scenario === "partial-failure") {
+        rows.unshift({ ...candidate, address: "0x0000000000000000000000000000000000000002", tx_hash: `0x${"2".repeat(64)}` });
+        getTransactionReceipt.mockRejectedValueOnce(new Error("receipt unavailable"));
+      }
+      const d1: RemoteD1Client = {
+        query: <T,>(sql: string) => sqlite.prepare(sql).all() as T[],
+        queryRaw: () => "[]",
+        executeStatements: (statements) => { for (const sql of statements) sqlite.exec(sql); },
+      };
+      const summary = await runEventReconciliation(
+        { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
+        { d1, fetchImpl: vi.fn().mockResolvedValue(okPayload(rows)),
+          client: { getTransactionReceipt, getBlock: vi.fn().mockResolvedValue({ timestamp: 1_700_000_000n }) } },
+      );
+      const stored = sqlite.prepare("SELECT id, address, tx_hash, event_type, timestamp, block_number, contract_address, stablecoin, chain_id FROM blacklist_events").all();
+      const success = scenario === "matching" || scenario === "partial-failure";
+      expect(stored).toEqual(success ? [{
+        id: `ethereum-${txHash}-0x7`, address: candidate.address, tx_hash: txHash,
+        event_type: "blacklist", timestamp: 1_700_000_000, block_number: 20_000_000,
+        contract_address: contract, stablecoin: "USDT", chain_id: "ethereum",
+      }] : []);
+      expect(summary.inserted).toBe(success ? 1 : 0);
+    },
+  );
+
   it("defaults to dry-run and rejects invalid flags", () => {
     expect(parseEventArgs([])).toEqual({
       apply: false,
@@ -53,9 +105,9 @@ describe("event kyc.rip reconciliation", () => {
     expect(() => parseEventArgs(["unexpected"])).toThrow(/Unexpected argument/);
   });
 
-  it("prints direct-run help with exit 0", () => {
+  it("[entrypoint integration] prints direct-run help with exit 0", async () => {
     const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-    const result = spawnSync(tsx, [SCRIPT_NAME, "--help"], {
+    const result = await runOperatorCli(tsx, [SCRIPT_NAME, "--help"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });

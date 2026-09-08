@@ -1,6 +1,5 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../../src/lib/report-cards-fixed-input";
+import { createReplayFixedInput, type ReplayFixedInputOptions } from "./safety-score-v9-replay.test-support";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import {
@@ -27,80 +26,20 @@ const BASE_CLOCK_SEC = v9TestClockSec();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MutableReplay = { pipeline: any };
 
-interface ProductionReplayOptions {
-  activeAssetIds?: string[];
-  supplyById?: Record<string, number>;
-}
+const replayCache = new Map<string, string>();
 
-function dexLiquidityRow(observedAtSec: number) {
-  return {
-    liquidityScore: 90,
-    concentrationHhi: 0.5,
-    poolCount: 1,
-    chainCount: 1,
-    coverageClass: "primary" as const,
-    coverageConfidence: 1,
-    liquidityEvidenceClass: "measured" as const,
-    hasMeasuredLiquidityEvidence: true,
-    effectiveTvlUsd: 1_000_000,
-    balanceMeasuredTvlUsd: 1_000_000,
-    organicMeasuredTvlUsd: 1_000_000,
-    methodologyVersion: "dex:fixture-v1",
-    updatedAt: observedAtSec,
-  };
-}
-
-function chainSupply(current: number) {
-  return {
-    ethereum: {
-      current,
-      circulatingPrevDay: current,
-      circulatingPrevWeek: current,
-      circulatingPrevMonth: current,
-    },
-  };
-}
-
-function productionReplay(clockSec = BASE_CLOCK_SEC, options: ProductionReplayOptions = {}): MutableReplay {
-  const observedAtSec = clockSec - 100;
-  const activeAssetIds = options.activeAssetIds ?? ["usdc-circle"];
-  const fixedInput = createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    activeAssetIds,
-    capturedAt: new Date(clockSec * 1_000).toISOString(),
-    sourceGeneration: `report-cards:fixture:${clockSec}`,
-    dexGenerationId: `dex-liquidity-${observedAtSec}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
-    registryRevision: "registry:calibration-analysis-fixture",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec,
-    updatedAt: clockSec,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: observedAtSec, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {},
-    activeDepegPeakBpsById: {},
-    dexLiqMap: Object.fromEntries(activeAssetIds.map((assetId) => [assetId, dexLiquidityRow(observedAtSec)])),
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: Object.fromEntries(activeAssetIds.map((assetId) => [assetId, false])),
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: Object.fromEntries(
-      activeAssetIds.map((assetId) => [assetId, chainSupply(options.supplyById?.[assetId] ?? 10_000_000)]),
-    ),
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
-  });
+function productionReplay(clockSec = BASE_CLOCK_SEC, options: ReplayFixedInputOptions = {}): MutableReplay {
+  const key = JSON.stringify([clockSec, options]);
+  const cached = replayCache.get(key);
+  if (cached) return JSON.parse(cached) as MutableReplay;
+  const fixedInput = createReplayFixedInput(clockSec, options);
   const pipeline = buildSafetyScoreV9Candidate({
     fixedInput,
     publishedAtSec: clockSec + 10,
   });
-  return JSON.parse(JSON.stringify({ pipeline })) as MutableReplay;
+  const serialized = JSON.stringify({ pipeline });
+  replayCache.set(key, serialized);
+  return JSON.parse(serialized) as MutableReplay;
 }
 
 function resealResult(replay: MutableReplay): void {

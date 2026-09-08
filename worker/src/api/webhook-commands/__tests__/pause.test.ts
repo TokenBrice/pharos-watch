@@ -1,111 +1,63 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import type { WebhookCommandContext } from "../context";
+import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
 import { handlePause } from "../pause";
+import { makeCommandContext, buttonsFromMarkup, expectMiniAppButton } from "./webhook-commands.test-support";
 
-type InlineButton = { text?: string; web_app?: { url?: string } };
+const fixtures = createLatestSchemaFixtureTracker();
+const NOW = 1_800_000_000;
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW * 1000); });
+afterEach(() => { vi.useRealTimers(); fixtures.closeAll(); });
 
-function mockD1(
-  tables: Parameters<typeof baseMockD1>[0] = [],
-  options: Parameters<typeof baseMockD1>[1] = {},
-) {
-  return baseMockD1([
-    ...tables,
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-  ], options);
-}
-
-function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
-  return {
-    db: mockD1(),
-    chatId: "42",
-    chatType: "private",
-    username: "alice",
-    actorUserId: "99",
-    botToken: "bot-token",
-    replyToChat: vi.fn().mockResolvedValue(undefined),
-    replyToChatWithMarkup: vi.fn().mockResolvedValue(undefined),
-    ...overrides,
-  };
-}
-
-function buttonsFromMarkup(markup: unknown): InlineButton[] {
-  const typed = markup as { inline_keyboard?: InlineButton[][] } | undefined;
-  return (typed?.inline_keyboard ?? []).flat();
+function seeded() {
+  const fixture = fixtures.open();
+  fixture.sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, alert_snooze_until_ts, preference_generation)
+    VALUES ('42', 1, 1, 123, 7), ('neighbor', 1, 1, 456, 9)`);
+  return fixture;
 }
 
 describe("/pause command", () => {
-  beforeEach(() => {
-    vi.useRealTimers();
+  it.each([["", PAUSE_SENTINEL_TS], ["off", null], ["resume", null], ["4h", NOW + 14400]] as const)("persists %s only for the current chat", async (arg, until) => {
+    const { sqlite, db } = seeded();
+    const ctx = makeCommandContext(db);
+    await handlePause(ctx, arg);
+    expect(sqlite.prepare("SELECT chat_id, alert_snooze_until_ts, preference_generation FROM telegram_subscribers ORDER BY chat_id").all()).toEqual([
+      { chat_id: "42", alert_snooze_until_ts: until, preference_generation: 8 },
+      { chat_id: "neighbor", alert_snooze_until_ts: 456, preference_generation: 9 },
+    ]);
+    const options = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]?.[1];
+    expectMiniAppButton(buttonsFromMarkup(options?.replyMarkup), "Open in app", "snooze");
   });
 
-  it("writes the durable Paused sentinel with no arg", async () => {
-    const db = mockD1();
-    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChatWithMarkup });
-
-    await handlePause(ctx, "");
-
-    expect(
-      db.getHistory().some((entry) =>
-        entry.sql.includes("alert_snooze_until_ts = excluded.alert_snooze_until_ts") &&
-        entry.binds.includes(PAUSE_SENTINEL_TS),
-      ),
-    ).toBe(true);
-    const buttons = buttonsFromMarkup(replyToChatWithMarkup.mock.calls[0]?.[1]?.replyMarkup);
-    expect(buttons.some((b) => b.text === "Open in app" && b.web_app?.url?.includes("startapp=snooze"))).toBe(true);
-  });
-
-  it("clears the snooze on /pause off", async () => {
-    const db = mockD1();
-    const ctx = makeContext({ db });
-
-    await handlePause(ctx, "off");
-
-    expect(db.getHistory().some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.binds.includes(PAUSE_SENTINEL_TS))).toBe(false);
-  });
-
-  it("clears the snooze on /pause resume", async () => {
-    const db = mockD1();
-    const ctx = makeContext({ db });
-
-    await handlePause(ctx, "resume");
-
-    expect(db.getHistory().some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
-  });
-
-  it("writes a timed snooze (not the sentinel) for /pause 4h", async () => {
-    const nowMs = 1_700_000_000_000;
-    vi.useFakeTimers();
-    vi.setSystemTime(nowMs);
-    const db = mockD1();
-    const ctx = makeContext({ db });
-
+  it("uses the stored timed deadline after the clock advances", async () => {
+    const { sqlite, db } = seeded();
+    vi.setSystemTime((NOW + 3600) * 1000);
+    const ctx = makeCommandContext(db, {
+      storedIntent: { version: 1, kind: "command:pause", mutation: "required", payload: { snoozeUntil: NOW + 14400 } },
+    });
     await handlePause(ctx, "4h");
-
-    const expected = Math.floor(nowMs / 1000) + 4 * 60 * 60;
-    expect(
-      db.getHistory().some((entry) =>
-        entry.sql.includes("alert_snooze_until_ts = excluded.alert_snooze_until_ts") &&
-        entry.binds.includes(expected),
-      ),
-    ).toBe(true);
-    expect(db.getHistory().some((entry) => entry.binds.includes(PAUSE_SENTINEL_TS))).toBe(false);
-    vi.useRealTimers();
+    expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ alert_snooze_until_ts: NOW + 14400 });
   });
 
-  it("replies with usage help for an unknown arg without writing state", async () => {
-    const db = mockD1();
-    const replyToChat = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeContext({ db, replyToChat });
+  it("replies on applied retries without repeating preferences or fence confirmation", async () => {
+    const { sqlite, db } = seeded();
+    const before = sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all();
+    const confirm = vi.fn();
+    const ctx = makeCommandContext(db, { wasMutationApplied: true, confirmAtomicMutationApplied: confirm,
+      prepareMutationAppliedStatement: () => db.prepare("DELETE FROM telegram_subscribers") });
+    for (const arg of ["", "off", "4h"]) await handlePause(ctx, arg);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all()).toEqual(before);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(ctx.replyToChatWithMarkup).toHaveBeenCalledTimes(3);
+  });
 
+  it("rejects unknown arguments without changing preferences", async () => {
+    const { sqlite, db } = seeded();
+    const before = sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all();
+    const ctx = makeCommandContext(db);
     await handlePause(ctx, "forever");
-
-    expect(replyToChat.mock.calls[0]?.[0]).toContain("Usage: /pause");
-    expect(
-      db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscribers")),
-    ).toBe(false);
+    expect(ctx.replyToChat).toHaveBeenCalledOnce();
+    expect(sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all()).toEqual(before);
   });
 });

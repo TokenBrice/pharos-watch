@@ -1,3 +1,6 @@
+import { makeSubscriptionRow } from "./telegram-rows.test-support";
+import type { SubscriptionRow } from "../telegram-webhook-shared";
+import { telegramApiCallBody } from "../../test-helpers/__shared/telegram";
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   firstAckBody,
@@ -25,34 +28,23 @@ import {
 
 
 beforeEach(resetCallbackTest);
+function asMockSubscriptionRows(rows: SubscriptionRow[]): Record<string, unknown>[] {
+  return rows.map((row): Record<string, unknown> => ({ ...row }));
+}
 
 describe("handleCallbackQuery", () => {
   describe("watchlist manage (P1-U8)", () => {
-    function makeSubRow(stablecoinId: string) {
-      return {
-        stablecoin_id: stablecoinId,
-        alert_dews: 1,
-        alert_depeg: 0,
-        alert_safety: 0,
-        alert_launch: 0,
-        dews_min_band: null,
-        safety_mode: null,
-        depeg_worsening_bps_step: null,
-      };
-    }
 
     function editMessageBody(): {
       text: string;
       reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
     } {
-      const editCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("editMessageText"));
-      if (!editCall) throw new Error("No editMessageText call recorded");
-      return JSON.parse(((editCall[1] as RequestInit).body as string) ?? "{}");
+      return telegramApiCallBody(fetchSpy, "editMessageText", { last: false });
     }
 
     it("manage:page:0 edits the message with the first page of unsub buttons", async () => {
-      const subs = [makeSubRow("usdc-circle"), makeSubRow("dai-makerdao")];
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: subs }]);
+      const subs = [makeSubscriptionRow("usdc-circle"), makeSubscriptionRow("dai-makerdao")];
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(subs) }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:0", { id: "cb-manage-0", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const body = editMessageBody();
@@ -76,7 +68,7 @@ describe("handleCallbackQuery", () => {
         "lusd-liquity",
         "susd-synthetix",
       ];
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: ids.map(makeSubRow) }]);
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(ids.map((id) => makeSubscriptionRow(id))) }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:1", { id: "cb-manage-1", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const body = editMessageBody();
@@ -89,7 +81,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("manage:page in a group allows non-admin read-only pagination", async () => {
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [makeSubRow("usdc-circle")] }]);
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows([makeSubscriptionRow("usdc-circle")]) }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("manage:page:0", { id: "cb-manage-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 100 } }));
 
       expect(editMessageBody().text).toContain("Manage watchlist");
@@ -106,8 +98,8 @@ describe("handleCallbackQuery", () => {
 
     it("unsub:<id> deletes the subscription and re-renders the same page", async () => {
       // First call (DELETE batch). Second SELECT after delete returns the remaining row.
-      const remaining = [makeSubRow("dai-makerdao")];
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      const remaining = [makeSubscriptionRow("dai-makerdao")];
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(remaining) }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", { id: "cb-unsub", message: { chat: { id: 42, type: "private" }, message_id: 100 } }));
 
       const history = db.getHistory();
@@ -159,13 +151,13 @@ describe("handleCallbackQuery", () => {
     it("unsub:<id> shifts to the previous page when the current page becomes empty", async () => {
       // After the delete the chat has 5 remaining subs -> only page 0 remains.
       const remaining = [
-        makeSubRow("usdc-circle"),
-        makeSubRow("usdt-tether"),
-        makeSubRow("dai-makerdao"),
-        makeSubRow("frax-frax"),
-        makeSubRow("tusd-trueusd"),
+        makeSubscriptionRow("usdc-circle"),
+        makeSubscriptionRow("usdt-tether"),
+        makeSubscriptionRow("dai-makerdao"),
+        makeSubscriptionRow("frax-frax"),
+        makeSubscriptionRow("tusd-trueusd"),
       ];
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(remaining) }]);
       // The tapped message came from page 1 — its keyboard included `manage:page:0` Prev.
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:lusd-liquity", {
         id: "cb-unsub-shift",
@@ -201,8 +193,8 @@ describe("handleCallbackQuery", () => {
         "eurc-circle",
         "xaut-tether",
         "aeur-anchored-coins",
-      ].map(makeSubRow);
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: remaining }]);
+      ].map((id) => makeSubscriptionRow(id));
+      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: asMockSubscriptionRows(remaining) }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("unsub:usdc-circle", {
         id: "cb-unsub-relabel",
         message: {

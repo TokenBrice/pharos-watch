@@ -2,70 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { StatusCause } from "@shared/types/status";
 import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
+import { makeDb, readHistory, transition } from "./public-status-history.test-support";
 
 // Mock `assessPublicHealth` at the module level so tests can control the
 // publicHealth outcome without wiring up the full mint-burn / circuit /
 // cache fixture stack. vitest hoists vi.mock above the dynamic import below.
-const assessPublicHealthMock = vi.fn();
+const { assessPublicHealthMock } = vi.hoisted(() => ({ assessPublicHealthMock: vi.fn() }));
 vi.mock("../../lib/public-health-assessment", () => ({
   assessPublicHealth: assessPublicHealthMock,
 }));
 
 const { handlePublicStatusHistory } = await import("../public-status-history");
 
-type TransitionSeed = {
-  id: number;
-  previous_status: "healthy" | "degraded" | "stale" | null;
-  next_status: "healthy" | "degraded" | "stale";
-  raw_status: "healthy" | "degraded" | "stale";
-  transition_type: "degrade" | "recover" | "init";
-  reason: string;
-  causes: StatusCause[];
-  created_at: number;
-};
-
-function makeDb(params: {
-  transitions: TransitionSeed[];
-  stateStatus?: "healthy" | "degraded" | "stale";
-  stateLastChangedAt?: number | null;
-}) {
-  const stateRow = params.stateStatus
-    ? {
-        scope: "global",
-        current_status: params.stateStatus,
-        raw_status: params.stateStatus,
-        last_evaluated_at: Math.floor(Date.now() / 1000),
-        last_changed_at: params.stateLastChangedAt ?? Math.floor(Date.now() / 1000) - 3600,
-        consecutive_healthy: 0,
-        consecutive_degraded: 0,
-        consecutive_stale: 0,
-        confidence: 0.9,
-        causes_json: "[]",
-      }
-    : null;
-  return mockD1([
-    {
-      match: "FROM status_state",
-      rows: stateRow ? [stateRow] : [],
-      first: stateRow,
-    },
-    {
-      match: "FROM status_transitions",
-      rows: params.transitions.map((t) => ({
-        id: t.id,
-        scope: "global",
-        previous_status: t.previous_status,
-        next_status: t.next_status,
-        raw_status: t.raw_status,
-        transition_type: t.transition_type,
-        reason: t.reason,
-        confidence: 0.9,
-        causes_json: JSON.stringify(t.causes),
-        created_at: t.created_at,
-      })),
-    },
-  ]);
-}
 
 describe("handlePublicStatusHistory", () => {
   beforeEach(() => {
@@ -152,151 +100,25 @@ describe("handlePublicStatusHistory", () => {
   // currentStatus is sourced from assessPublicHealth — not the hysteresis-
   // smoothed status_state.current_status — so the hero and uptime bar agree.
   describe("public-impact filter + currentStatus alignment", () => {
-    it("omits transitions whose only cause is missing_prices_degraded", async () => {
+    it.each([
+      { name: "admin-only", status: "healthy", next: "degraded", codes: ["missing_prices_degraded"], severity: "warning", retained: false },
+      { name: "public stale", status: "stale", next: "stale", codes: ["cache_ratio_stale"], severity: "critical", retained: true },
+      { name: "mixed public and admin", status: "degraded", next: "degraded", codes: ["missing_prices_degraded", "cache_ratio_degraded"], severity: "warning", retained: true },
+      { name: "info-only", status: "healthy", next: "degraded", codes: ["watch_unhealthy_crons_present", "onchain_monitor_low_sample"], severity: "info", retained: false },
+    ] as const)("filters $name causes", async ({ status, next, codes, severity, retained }) => {
       const now = Math.floor(Date.now() / 1000);
-      const db = makeDb({
-        transitions: [{
-          id: 1,
-          previous_status: "healthy",
-          next_status: "degraded",
-          raw_status: "degraded",
-          transition_type: "degrade",
-          reason: "raw-degraded-consecutive-threshold",
-          causes: [{
-            code: "missing_prices_degraded",
-            layer: "data-quality",
-            severity: "warning",
-            message: "Missing price ratio is degraded (18.56% > 18.00%).",
-          }],
-          created_at: now - 3600,
-        }],
-      });
-
-      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
-
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as {
-        currentStatus: string;
-        transitions: unknown[];
-      };
-      expect(body.transitions).toHaveLength(0);
-      expect(body.currentStatus).toBe("healthy");
-    });
-
-    it("retains transitions caused by cache_ratio_stale", async () => {
-      const now = Math.floor(Date.now() / 1000);
-      const db = makeDb({
-        transitions: [{
-          id: 1,
-          previous_status: "healthy",
-          next_status: "stale",
-          raw_status: "stale",
-          transition_type: "degrade",
-          reason: "raw-stale-immediate-escalation",
-          causes: [{
-            code: "cache_ratio_stale",
-            layer: "availability",
-            severity: "critical",
-            message: "Cache freshness exceeded stale threshold.",
-          }],
-          created_at: now - 3600,
-        }],
-      });
-
-      assessPublicHealthMock.mockResolvedValue(makePublicHealth("stale"));
-
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as {
-        currentStatus: string;
-        transitions: Array<{ to: string }>;
-        lastChangedAt: number | null;
-      };
-      expect(body.transitions).toHaveLength(1);
-      expect(body.transitions[0].to).toBe("stale");
-      expect(body.currentStatus).toBe("stale");
-      expect(body.lastChangedAt).toBe(now - 3600);
-    });
-
-    it("retains transitions whose causes mix public and admin codes", async () => {
-      const now = Math.floor(Date.now() / 1000);
-      const db = makeDb({
-        transitions: [{
-          id: 1,
-          previous_status: "healthy",
-          next_status: "degraded",
-          raw_status: "degraded",
-          transition_type: "degrade",
-          reason: "raw-degraded-consecutive-threshold",
-          causes: [
-            {
-              code: "missing_prices_degraded",
-              layer: "data-quality",
-              severity: "warning",
-              message: "Missing price ratio is degraded (18.5% > 18%).",
-            },
-            {
-              code: "cache_ratio_degraded",
-              layer: "availability",
-              severity: "warning",
-              message: "Cache freshness exceeded degraded threshold.",
-            },
-          ],
-          created_at: now - 3600,
-        }],
-      });
-
-      assessPublicHealthMock.mockResolvedValue(makePublicHealth("degraded"));
-
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as {
-        currentStatus: string;
-        transitions: unknown[];
-      };
-      expect(body.transitions).toHaveLength(1);
-      expect(body.currentStatus).toBe("degraded");
-    });
-
-    it("omits transitions whose only cause is an info-severity watch item", async () => {
-      // info-severity causes never count as public-impacting, regardless of
-      // the code. This guards against a new data-quality info cause leaking
-      // into the public filter later.
-      const now = Math.floor(Date.now() / 1000);
-      const db = makeDb({
-        transitions: [{
-          id: 1,
-          previous_status: "healthy",
-          next_status: "degraded",
-          raw_status: "degraded",
-          transition_type: "degrade",
-          reason: "raw-degraded-consecutive-threshold",
-          causes: [
-            {
-              code: "watch_unhealthy_crons_present",
-              layer: "availability",
-              severity: "info",
-              message: "1 watch-tier cron job(s) are unavailable/stale.",
-            },
-            {
-              code: "onchain_monitor_low_sample",
-              layer: "data-quality",
-              severity: "info",
-              message: "On-chain monitor has only 2 recently refreshed coin(s).",
-            },
-          ],
-          created_at: now - 3600,
-        }],
-      });
-
-      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
-
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as { transitions: unknown[]; currentStatus: string };
-      expect(body.transitions).toHaveLength(0);
-      expect(body.currentStatus).toBe("healthy");
+      const causes: StatusCause[] = codes.map((code) => ({
+        code, layer: code.startsWith("missing") || code.startsWith("onchain") ? "data-quality" : "availability",
+        severity, message: code,
+      }));
+      const db = makeDb({ transitions: [transition({
+        id: 1, next_status: next, causes, created_at: now - 3600,
+      })] });
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth(status));
+      const body = await readHistory(db);
+      expect(body.currentStatus).toBe(status);
+      expect(body.transitions.map(({ id, to }) => ({ id, to }))).toEqual(retained ? [{ id: 1, to: next }] : []);
+      expect(body.lastChangedAt).toBe(retained ? now - 3600 : null);
     });
 
     it("does not reuse the admin state timestamp when public history has no matching transition", async () => {
@@ -314,12 +136,7 @@ describe("handlePublicStatusHistory", () => {
 
       assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as {
-        currentStatus: string;
-        lastChangedAt: number | null;
-      };
+      const body = await readHistory(db);
       expect(body.currentStatus).toBe("healthy");
       expect(body.lastChangedAt).toBeNull();
     });
@@ -349,11 +166,7 @@ describe("handlePublicStatusHistory", () => {
       });
       assessPublicHealthMock.mockResolvedValue(makePublicHealth("degraded"));
 
-      const res = await handlePublicStatusHistory(
-        db,
-        new Request("https://pharos.watch/api/public-status-history?window=24h"),
-      );
-      const body = (await res.json()) as { currentStatus: string; lastChangedAt: number | null };
+      const body = await readHistory(db);
 
       expect(body.currentStatus).toBe("degraded");
       expect(body.lastChangedAt).toBeNull();
@@ -413,12 +226,7 @@ describe("handlePublicStatusHistory", () => {
 
       assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as {
-        transitions: Array<{ id: number; from: string | null; to: string }>;
-        currentStatus: string;
-      };
+      const body = await readHistory(db);
 
       expect(body.currentStatus).toBe("healthy");
       expect(body.transitions.map((transition) => transition.id)).toEqual([3, 2, 1]);
@@ -468,9 +276,7 @@ describe("handlePublicStatusHistory", () => {
 
       assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
 
-      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, request);
-      const body = (await res.json()) as { transitions: unknown[]; currentStatus: string };
+      const body = await readHistory(db);
 
       expect(body.currentStatus).toBe("healthy");
       expect(body.transitions).toHaveLength(0);
