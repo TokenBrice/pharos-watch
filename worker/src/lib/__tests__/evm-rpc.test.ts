@@ -32,7 +32,9 @@ const {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
   fetchEvmCodeStatusAtBlock,
+  fetchEvmStorageAtBlock,
   fetchEvmUint256AtBlock,
+  fetchJsonRpcHexAtUrl,
   parseUint256Hex,
   resolveClosestBlockAtOrBeforeTimestamp,
 } = await import("../evm-rpc");
@@ -509,6 +511,44 @@ describe("evm-rpc helpers", () => {
     await expect(fetchEvmCodeAtBlock(undefined, "0xPool", "latest", {
       extraRpcUrls: ["https://rpc.example"],
     })).resolves.toBe("0x6000");
+  });
+
+  it("reads contract storage at a block and rejects empty storage results", async () => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: `0x${word(7)}` }));
+
+    await expect(
+      fetchEvmStorageAtBlock(undefined, "0xContract", "0x0", 1_234, {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBe(`0x${word(7)}`);
+
+    const body = JSON.parse(String(fetchWithRetryMock.mock.calls[0]?.[1]?.body)) as {
+      method: string;
+      params: unknown[];
+    };
+    expect(body.method).toBe("eth_getStorageAt");
+    expect(body.params).toEqual(["0xContract", "0x0", "0x4d2"]);
+
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x" }));
+    await expect(
+      fetchEvmStorageAtBlock(undefined, "0xContract", "0x0", "latest", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("reads a raw JSON-RPC hex result from a specific URL", async () => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0xdeadbeef" }));
+
+    await expect(
+      fetchJsonRpcHexAtUrl("https://rpc.example", "eth_chainId", []),
+    ).resolves.toBe("0xdeadbeef");
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x" }));
+    await expect(
+      fetchJsonRpcHexAtUrl("https://rpc.example", "eth_chainId", []),
+    ).resolves.toBeNull();
   });
 
   it("fetches block numbers and timestamps through the shared RPC path", async () => {

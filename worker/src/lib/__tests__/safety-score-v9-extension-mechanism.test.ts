@@ -8,6 +8,7 @@ import {
   buildSafetyScoreV9MechanismReview,
   deriveCommodityClaimMechanismExitFacts,
   expandOverlayReview,
+  getSafetyScoreV9MechanismExitFacts,
   getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismReviewedUnavailableComponents,
   getSafetyScoreV9MechanismOverlayEvidence,
@@ -58,6 +59,42 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
     expect(review.assuranceAndReconciliation.status.observationState).toBe("known");
     expect(review.assuranceAndReconciliation.quality).toBe("adequate");
+  });
+
+  it("restates every recorded assurance tier from the proof-of-reserves report", () => {
+    const qualityFor = (report: Record<string, unknown>): string | null => {
+      const review = buildSafetyScoreV9MechanismReview(
+        fixedInputStub({ alpha: [{}] }),
+        { id: "alpha", proofOfReserves: { latestReport: report } } as unknown as MechanismMeta,
+        "fiat-cash",
+      );
+      if (review?.archetype !== "fiat-cash") throw new Error("expected a fiat-cash review");
+      return review.assuranceAndReconciliation.quality;
+    };
+
+    // Unattested confidence caps the claim even under a strong method.
+    expect(
+      qualityFor({ assuranceMethod: "audit", scope: "assets-and-liabilities", confidence: "unknown" }),
+    ).toBe("limited");
+    expect(
+      qualityFor({ assuranceMethod: "audit", scope: "assets-and-liabilities", confidence: "high" }),
+    ).toBe("strong");
+    expect(
+      qualityFor({ assuranceMethod: "examination", scope: "reserve-addresses", confidence: "high" }),
+    ).toBe("adequate");
+    expect(
+      qualityFor({ assuranceMethod: "attestation", scope: "reserve-addresses", confidence: "high" }),
+    ).toBe("limited");
+    expect(
+      qualityFor({ assuranceMethod: "agreed-upon-procedures", scope: "assets-and-liabilities", confidence: "high" }),
+    ).toBe("adequate");
+    expect(
+      qualityFor({ assuranceMethod: "onchain-proof", scope: "assets-and-liabilities", confidence: "high" }),
+    ).toBe("adequate");
+    // An unrecognized assurance method cannot buy any quality claim.
+    expect(
+      qualityFor({ assuranceMethod: "self-attested", scope: "assets-and-liabilities", confidence: "high" }),
+    ).toBe("weak");
   });
 
   it("marks tbill duration evidence bounded only when maturity data exists", () => {
@@ -256,6 +293,21 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(componentsAt(admitted)).toEqual(expected);
     expect(componentsAt(expires - 1)).toEqual(expected);
     expect(componentsAt(expires)).toEqual([]);
+  });
+
+  it("projects exit facts from current overlays only, and none for profile-less cdp", () => {
+    // PaxG's curated physical-redemption statement is the single source for
+    // the commodity exit fact, at the quality the backing pillar grades.
+    expect(
+      getSafetyScoreV9MechanismExitFacts("paxg-paxos", "commodity-claim", Date.UTC(2026, 7, 20) / 1_000),
+    ).toEqual([{ factKey: "physical-redemption", disposition: "supported", quality: "limited" }]);
+    // A current CDP overlay without a profileReview projects no exit facts.
+    expect(getSafetyScoreV9MechanismExitFacts("usdd-tron-dao-reserve", "cdp", STUB_CLOCK_SEC)).toEqual([]);
+    // Same-day reviews are not yet current, and unknown assets project nothing.
+    expect(
+      getSafetyScoreV9MechanismExitFacts("paxg-paxos", "commodity-claim", Date.UTC(2026, 7, 11) / 1_000),
+    ).toEqual([]);
+    expect(getSafetyScoreV9MechanismExitFacts("unknown-asset", "cdp", STUB_CLOCK_SEC)).toEqual([]);
   });
 
   it("merges a gated fiat-cash overlay over the built review without degrading derived assurance", () => {
@@ -697,5 +749,122 @@ describe("buildSafetyScoreV9MechanismReview", () => {
         },
       }),
     ).toThrow(/sourceUrl must match/);
+  });
+
+  it("projects profile facts into known, unsupported, and bounded component dispositions", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "profile-alpha",
+      archetype: "fiat-cash",
+      reviewedAt: "2026-07-14",
+      sources: [{ label: "Issuer disclosures", url: "https://example.com/disclosures" }],
+      notes: "Profile-driven fiat-cash review under the ratified evidence standard.",
+      metrics: {},
+      components: {},
+      profileReview: {
+        profile: "allocated-commodity-claim",
+        facts: {
+          holderTitle: { disposition: "supported", quality: "strong" },
+          physicalAllocation: { disposition: "supported", quality: "adequate" },
+          custodianSegregation: { disposition: "supported", quality: "strong" },
+          bankruptcyRemoteness: { disposition: "supported", quality: "strong" },
+          custodyContinuity: { disposition: "supported", quality: "strong" },
+          insurance: { disposition: "method-unsupported" },
+          auditCadence: { disposition: "supported", quality: "strong" },
+          reserveReconciliation: { disposition: "issuer-undisclosed" },
+          physicalRedemption: { disposition: "supported", quality: "limited" },
+        },
+      },
+    });
+
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "fiat-cash") throw new Error("unexpected archetype");
+    // The weakest supported fact grades the component.
+    expect(review.claimAndSegregation).toMatchObject({
+      quality: "adequate",
+      status: { observationState: "known" },
+    });
+    expect(review.claimAndSegregation.status.evidenceRefIds).toEqual([
+      "extension-evidence:mechanism:claim-and-segregation",
+    ]);
+    // A method-unsupported fact projects as unsupported with a gap, no evidence.
+    expect(review.custodyContinuity).toMatchObject({
+      quality: null,
+      status: { observationState: "unsupported" },
+    });
+    expect(review.custodyContinuity.status.gapIds).toEqual(["extension-gap:mechanism:custody-continuity"]);
+    expect(review.custodyContinuity.status.evidenceRefIds).toEqual([]);
+    // A sourced nondisclosure stays bounded-unknown.
+    expect(review.assuranceAndReconciliation).toMatchObject({
+      quality: null,
+      status: { observationState: "bounded-unknown" },
+    });
+  });
+
+  it("rejects an overlay that omits a required archetype metric", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "metric-less-cdp",
+      archetype: "cdp",
+      reviewedAt: "2026-07-15",
+      sources: [{ label: "Protocol design", url: "https://example.com/design" }],
+      notes: "The metrics record is empty, so no CDP ratio is measurable.",
+      metrics: {},
+      components: {},
+    });
+    expect(() => expandOverlayReview(overlay)).toThrow(
+      /missing required cdp metric: collateralizationRatio/,
+    );
+  });
+
+  it("rejects metric applicability for keys the archetype never measures", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "stray-applicability",
+      archetype: "cdp",
+      reviewedAt: "2026-07-15",
+      sources: [{ label: "Protocol design", url: "https://example.com/design" }],
+      notes: "Applicability names a metric outside the archetype.",
+      metrics: { collateralizationRatio: 2.2, liquidationCapacityRatio: 0.6 },
+      metricApplicability: { redemptionDepth: { state: "measured" } },
+      components: {},
+    });
+    expect(() => expandOverlayReview(overlay)).toThrow(
+      /Unknown cdp mechanism metric applicability in overlay stray-applicability: redemptionDepth/,
+    );
+  });
+
+  it("rejects a non-measured metric applicability that still carries a number", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "numbered-not-applicable",
+      archetype: "cdp",
+      reviewedAt: "2026-07-15",
+      sources: [{ label: "Protocol design", url: "https://example.com/design" }],
+      notes: "A structural N/A cannot also report a measured ratio.",
+      metrics: { collateralizationRatio: 2.2, liquidationCapacityRatio: 0.6 },
+      metricApplicability: {
+        collateralizationRatio: {
+          state: "not-applicable",
+          rationale: "No independent vault system exists.",
+          sourceUrl: "https://example.com/design",
+        },
+      },
+      components: {},
+    });
+    expect(() => expandOverlayReview(overlay)).toThrow(
+      /has not-applicable collateralizationRatio with a numeric value/,
+    );
+  });
+
+  it("rejects null metrics on archetypes that do not admit partial measurement", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "null-algorithmic",
+      archetype: "algorithmic",
+      reviewedAt: "2026-07-20",
+      sources: [{ label: "Issuer methodology", url: "https://example.com/methodology" }],
+      notes: "Backing shares are always measured for algorithmic archetypes.",
+      metrics: { exogenousBackingShare: null, reflexiveBackingShare: 0.2, contractionCapacityRatio: 0.5 },
+      components: { contractionCapacity: { quality: "adequate" } },
+    });
+    expect(() => expandOverlayReview(overlay)).toThrow(
+      /support null metrics \(null-algorithmic\)/,
+    );
   });
 });

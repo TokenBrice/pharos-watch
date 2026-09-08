@@ -435,6 +435,70 @@ describe("buildCacheStatuses sentinel validation", () => {
     }));
     expect(statusFloor).toBe("stale");
   });
+
+  it("reports a table-query failure when cron timestamps rescue a missing sentinel", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          // No freshness:dex-liquidity sentinel row at all: the fallback path
+          // must surface the table failure, not a sentinel validation reason.
+          sentinelRow("yield-data", now - 180),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [{ job: "sync-dex-liquidity", started_at: now - 300 }] },
+      { match: "dex_liquidity", rows: [], throwError: new Error("table unavailable") },
+    ]);
+
+    const { caches, diagnostics, warnings } = await buildCacheStatuses(db, now);
+
+    expect(caches["dex-liquidity"]).toMatchObject({
+      ageSeconds: 300,
+      freshnessSource: "cron-fallback",
+      warning: "dex-liquidity: freshness table query failed; using cron fallback",
+    });
+    expect(diagnostics).toContainEqual({
+      key: "dex-liquidity",
+      freshnessSource: "cron-fallback",
+      warning: "dex-liquidity: freshness table query failed; using cron fallback",
+      failureSource: "table-freshness",
+    });
+    expect(warnings).toContain("dex-liquidity: freshness table query failed; using cron fallback");
+  });
+
+  it("escalates the global floor to stale when yield-data blows past its override ceiling", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          // ~5.5x the hourly budget: past the yield-data override stale
+          // ceiling (4x), so the per-cache override escalates the floor.
+          sentinelRow("yield-data", now - 20_000),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+    ]);
+
+    const { caches, statusFloor } = await buildCacheStatuses(db, now);
+
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 20_000, healthy: false });
+    expect(statusFloor).toBe("stale");
+  });
 });
 
 describe("buildCacheStatuses", () => {

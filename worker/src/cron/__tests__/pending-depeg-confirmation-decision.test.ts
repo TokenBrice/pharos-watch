@@ -11,6 +11,7 @@ import {
   DEPEG_PENDING_MIN_AGE_SEC,
 } from "../../lib/constants";
 import { normalizePendingDepegRow } from "../../lib/depeg-pending";
+import { deriveDepegSignal } from "../../lib/depeg-signals";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,
@@ -433,5 +434,45 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
       expect(state.pending).toMatchObject({ id: row.id });
       expect(state.outcomes).toEqual([]);
     }
+  });
+});
+
+describe("evaluatePromotionDecision promotion peak aggregation across channels", () => {
+  it("promotes with the deepest CEX peak candidate and credits confirmed pools in the event record", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({ id: 205, peak_seen_bps: -300, peak_price: 0.97 });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row,
+      authoritativePrice: 0.95,
+      primaryStatus: "confirm",
+      primarySameDirectionDepegged: true,
+      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
+      temporalSameDirectionConfirmed: true,
+    });
+    const evidence = makeEvidence({
+      cexStatus: "confirm",
+      cexPeakCandidate: { bps: -700, price: 0.93 },
+      poolStatus: "confirm",
+      poolConfirmations: [{
+        key: "curve:curve",
+        pool: { price: 0.94, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        signal: deriveDepegSignal(0.94, 1)!,
+      }],
+    });
+
+    await settle(db, plan, evidence);
+
+    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    expect(state.pending).toBeUndefined();
+    expect(state.events[0]).toMatchObject({
+      peak_deviation_bps: -700,
+      peak_price: 0.93,
+      confirmation_sources: "temporal:15m+primary:oracle:pyth+primary:oracle:chainlink+cex:binance+pool:curve:curve",
+    });
+    expect(state.outcomes[0]).toMatchObject({
+      outcome: "promoted",
+      final_decision_reason: "confirmed-by:temporal:15m+primary:oracle:pyth+primary:oracle:chainlink+cex:binance+pool:curve:curve",
+    });
   });
 });

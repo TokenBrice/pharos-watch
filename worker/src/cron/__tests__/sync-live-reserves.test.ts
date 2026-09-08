@@ -846,6 +846,131 @@ describe("syncLiveReserves", () => {
     expect(configuredRecoveryCalls).toHaveLength(0);
   });
 
+  it("skips remaining stale breaker recoveries when the finalization tail budget runs out mid-loop", async () => {
+    let nowMs = 1_700_000_000_000;
+    const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+    const staleState = JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: Math.floor(nowMs / 1000) - 30,
+      lastSuccessAt: null,
+      openedAt: Math.floor(nowMs / 1000) - 30,
+    });
+    recoverNoCandidateMock.mockImplementationOnce(async () => {
+      nowMs += 10_000;
+    });
+
+    try {
+      const { syncLiveReserves } = await import("../sync-live-reserves");
+      const db = mockD1([
+        {
+          match: "key LIKE 'circuit:%'",
+          rows: [
+            { key: "circuit:live-reserves:removed-a", value: staleState },
+            { key: "circuit:live-reserves:removed-b", value: staleState },
+          ],
+        },
+      ]);
+      const result = await syncLiveReserves(
+        db,
+        new AbortController().signal,
+        {},
+        undefined,
+        {
+          runBudgetMs: 5_000,
+          adapterTimeoutMs: 1,
+          d1FinalizeTimeoutMs: 1,
+          finalizationMarginMs: 1,
+        },
+      );
+      const metadata = JSON.parse(result?.metadata ?? "{}") as {
+        staleBreakerRecoveriesSkipped?: number;
+        finalizationTailBudgetExhausted?: boolean;
+      };
+
+      expect(metadata.staleBreakerRecoveriesSkipped).toBe(1);
+      expect(metadata.finalizationTailBudgetExhausted).toBe(true);
+      expect(recoverNoCandidateMock.mock.calls.map((call) => call[1])).toEqual([
+        "live-reserves:removed-a",
+      ]);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("keeps finalization best-effort and records a warning when stale breaker recovery fails", async () => {
+    const staleState = JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: Math.floor(Date.now() / 1000) - 30,
+      lastSuccessAt: null,
+      openedAt: Math.floor(Date.now() / 1000) - 30,
+    });
+    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+    recoverNoCandidateMock.mockRejectedValueOnce(new Error("stale recovery unavailable"));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "key LIKE 'circuit:%'",
+        rows: [{ key: "circuit:live-reserves:removed-adapter-key", value: staleState }],
+      },
+    ]);
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+
+    expect(result?.status).toBe("ok");
+    expect(recoverNoCandidateMock).toHaveBeenCalledTimes(1);
+    const recoveryFailureEvent = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-breaker-recovery-failed"
+    ));
+    expect(recoveryFailureEvent).toBeDefined();
+    const event = JSON.parse(String(recoveryFailureEvent?.binds[1])) as {
+      severity?: string;
+      metadata?: { error?: string };
+    };
+    expect(event.severity).toBe("warning");
+    expect(event.metadata?.error).toBe("stale recovery unavailable");
+  });
+
+  it("keeps finalization best-effort and records a warning when history pruning fails", async () => {
+    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
+    replacedStore = true;
+    vi.resetModules();
+    vi.doMock("../../lib/live-reserves/store", async () => ({
+      ...actualStore,
+      pruneLiveReserveHistory: vi.fn(async () => {
+        throw new Error("history prune unavailable");
+      }),
+    }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      historyPrune?: unknown;
+      historyPruneSkipped?: boolean;
+    };
+
+    expect(result?.status).toBe("ok");
+    expect(metadata.historyPrune).toBeUndefined();
+    expect(metadata.historyPruneSkipped).toBe(false);
+    const pruneFailureEvent = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-prune-failed"
+    ));
+    expect(pruneFailureEvent).toBeDefined();
+    const event = JSON.parse(String(pruneFailureEvent?.binds[1])) as {
+      severity?: string;
+      metadata?: { error?: string };
+    };
+    expect(event.severity).toBe("warning");
+    expect(event.metadata?.error).toBe("history prune unavailable");
+  });
+
   it("classifies parser drift in sync attempt metadata", async () => {
     mockAdapterRegistry(async () => {
       throw new Error("circle-transparency: layout-changed: missing reserve attributes");

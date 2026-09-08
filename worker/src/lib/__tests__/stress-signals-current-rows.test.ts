@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   loadPreviousStressSignalCurrentRows,
@@ -347,6 +347,82 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded).toBeNull();
     expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("serves a fresh single-coin latest row directly when no publication pointer exists", async () => {
+    const fresh = {
+      score: 25,
+      band: "WATCH",
+      signals_json: signalsJson,
+      computed_at: nowSec - 60,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "pharos:stress-signals:latest-one",
+        matchBinds: ["usdt-tether"],
+        rows: [fresh],
+        first: fresh,
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRowForCoin(
+      db,
+      "usdt-tether",
+      nowSec,
+      { staleAfterSec: 300 },
+    );
+
+    expect(loaded).toEqual(fresh);
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("reports a single-coin latest-read failure and falls back to canonical history", async () => {
+    const canonical = {
+      score: 12,
+      band: "CALM",
+      signals_json: signalsJson,
+      computed_at: nowSec - 120,
+    };
+    const onLatestReadError = vi.fn();
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "pharos:stress-signals:latest-one",
+        matchBinds: ["usdt-tether"],
+        rows: [],
+        throwError: new Error("D1 unavailable"),
+      },
+      {
+        match: "pharos:stress-signals:legacy-latest-one",
+        matchBinds: ["usdt-tether"],
+        rows: [canonical],
+        first: canonical,
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRowForCoin(
+      db,
+      "usdt-tether",
+      nowSec,
+      { staleAfterSec: 300, onLatestReadError },
+    );
+
+    expect(loaded).toEqual(canonical);
+    expect(onLatestReadError).toHaveBeenCalledTimes(1);
+    expect(String(onLatestReadError.mock.calls[0]?.[0])).toContain("D1 unavailable");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
